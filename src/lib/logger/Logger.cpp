@@ -44,8 +44,31 @@ Logger& Logger::getInstance()
 
 Logger::~Logger()
 {
-	while (m_sinks.empty() == false)
+	while (m_sinks.size() > 0)
 		delSink(*(m_sinks.begin()));
+}
+
+void Logger::start()
+{
+	m_thread = thread(&Logger::run, this);
+}
+
+void Logger::stop()
+{
+	if (m_thread.joinable())
+	{
+		m_logMessages.enqueue(NULL);
+		m_thread.join();
+	}
+}
+
+void Logger::setLevel(const Level& level)
+{
+	m_level = level;
+}
+void Logger::setLevel(const string& level)
+{
+	m_level = calcLevel(level);
 }
 
 void Logger::addConsole()
@@ -77,11 +100,6 @@ void Logger::log(const Level level, const string& data, ...)
 	}
 }
 
-void Logger::stop()
-{
-	m_logMessages.enqueue(NULL);
-	m_thread.join();
-}
 
 void Logger::run()
 {

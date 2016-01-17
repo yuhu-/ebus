@@ -17,36 +17,18 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef UTILS_DAEMON_H
-#define UTILS_DAEMON_H
+#ifndef NETWORK_TCPCLIENT_H
+#define NETWORK_TCPCLIENT_H
 
-#include <cstddef>
-#include <cstdio>
+#include "TCPSocket.h"
 
-class Daemon
+class TCPClient
 {
 
 public:
-	static Daemon& getInstance();
-
-	void start(const char* pidfile);
-
-	void stop();
-
-	bool status();
-
-private:
-	Daemon()
-	{
-	}
-	Daemon(const Daemon&);
-	Daemon& operator=(const Daemon&);
-
-	bool m_status = false;
-
-	const char* m_pidfile = NULL;
-	FILE* m_pidfd = NULL;
+	TCPSocket* connect(const string& server, const int& port);
 
 };
 
-#endif // UTILS_DAEMON_H
+#endif // NETWORK_TCPCLIENT_H
+

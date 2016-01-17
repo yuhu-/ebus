@@ -43,6 +43,21 @@ Level calcLevel(const string& level)
 	return (all);
 }
 
+Level LogMessage::getLevel() const
+{
+	return (m_level);
+}
+
+string LogMessage::getText() const
+{
+	return (m_text);
+}
+
+string LogMessage::getTime() const
+{
+	return (m_time);
+}
+
 LogMessage::LogMessage(const Level level, const string text)
 	: m_level(level), m_text(text)
 {

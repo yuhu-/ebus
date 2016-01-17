@@ -17,36 +17,52 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef UTILS_DAEMON_H
-#define UTILS_DAEMON_H
+#ifndef UTILS_PIPENOTIFY_H
+#define UTILS_PIPENOTIFY_H
 
-#include <cstddef>
-#include <cstdio>
+#include <unistd.h>
+#include <fcntl.h>
 
-class Daemon
+class PipeNotify
 {
 
 public:
-	static Daemon& getInstance();
+	PipeNotify()
+	{
+		int pipefd[2];
+		int ret = pipe(pipefd);
 
-	void start(const char* pidfile);
+		if (ret == 0)
+		{
+			m_recvfd = pipefd[0];
+			m_sendfd = pipefd[1];
 
-	void stop();
+			fcntl(m_sendfd, F_SETFL, O_NONBLOCK);
+		}
+	}
 
-	bool status();
+	~PipeNotify()
+	{
+		close(m_sendfd);
+		close(m_recvfd);
+	}
+
+	int notifyFD()
+	{
+		return (m_recvfd);
+	}
+
+	int notify() const
+	{
+		return (write(m_sendfd, "1", 1));
+	}
 
 private:
-	Daemon()
-	{
-	}
-	Daemon(const Daemon&);
-	Daemon& operator=(const Daemon&);
+	int m_recvfd;
 
-	bool m_status = false;
-
-	const char* m_pidfile = NULL;
-	FILE* m_pidfd = NULL;
+	int m_sendfd;
 
 };
 
-#endif // UTILS_DAEMON_H
+#endif // UTILS_PIPENOTIFY_H
+

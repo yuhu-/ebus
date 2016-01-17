@@ -22,12 +22,12 @@
 
 #include "LogMessage.h"
 #include "LogSink.h"
+#include "NQueue.h"
 
 #include <string>
 #include <vector>
 #include <map>
 #include <thread>
-#include "../utils/NQueue.h"
 
 using std::string;
 using std::vector;
@@ -40,25 +40,16 @@ public:
 	static Logger& getInstance();
 	~Logger();
 
-	void setLevel(const Level& level)
-	{
-		m_level = level;
-	}
-	void setLevel(const string& level)
-	{
-		m_level = calcLevel(level);
-	}
+	void start();
+	void stop();
+
+	void setLevel(const Level& level);
+	void setLevel(const string& level);
 
 	void addConsole();
 	void addFile(const char* file);
 
 	void log(const Level level, const string& text, ...);
-
-	void start()
-	{
-		m_thread = thread(&Logger::run, this);
-	}
-	void stop();
 
 private:
 	Logger()

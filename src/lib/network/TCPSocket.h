@@ -17,36 +17,44 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef UTILS_DAEMON_H
-#define UTILS_DAEMON_H
+#ifndef NETWORK_TCPSOCKET_H
+#define NETWORK_TCPSOCKET_H
 
-#include <cstddef>
-#include <cstdio>
+#include <string>
 
-class Daemon
+#include <sys/socket.h>
+
+using std::string;
+
+class TCPSocket
 {
+	friend class TCPClient;
+	friend class TCPServer;
 
 public:
-	static Daemon& getInstance();
+	~TCPSocket();
 
-	void start(const char* pidfile);
+	ssize_t send(const char* buffer, size_t len);
+	ssize_t recv(char* buffer, size_t len);
 
-	void stop();
+	int getPort() const;
 
-	bool status();
+	string getIP() const;
+
+	int getFD() const;
+
+	bool isValid();
 
 private:
-	Daemon()
-	{
-	}
-	Daemon(const Daemon&);
-	Daemon& operator=(const Daemon&);
+	int m_sfd;
 
-	bool m_status = false;
+	int m_port;
 
-	const char* m_pidfile = NULL;
-	FILE* m_pidfd = NULL;
+	string m_ip;
+
+	TCPSocket(int sfd, struct sockaddr_in* address);
 
 };
 
-#endif // UTILS_DAEMON_H
+#endif // NETWORK_TCPSOCKET_H
+

@@ -117,3 +117,8 @@ void Daemon::stop()
 		remove(m_pidfile);
 	}
 }
+
+bool Daemon::status()
+{
+	return (m_status);
+}

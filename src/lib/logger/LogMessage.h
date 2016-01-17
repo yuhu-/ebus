@@ -46,19 +46,9 @@ class LogMessage
 public:
 	LogMessage(const Level level, const string text);
 
-	Level getLevel() const
-	{
-		return (m_level);
-	}
-
-	string getText() const
-	{
-		return (m_text.c_str());
-	}
-	string getTime() const
-	{
-		return (m_time.c_str());
-	}
+	Level getLevel() const;
+	string getText() const;
+	string getTime() const;
 
 private:
 	Level m_level;
