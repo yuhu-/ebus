@@ -36,9 +36,6 @@ public:
 		: m_notify(false), m_mutex(), m_cond()
 	{
 	}
-//	virtual ~Notify()
-//	{
-//	}
 
 	void waitNotify()
 	{

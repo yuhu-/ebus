@@ -38,7 +38,8 @@ map<Level, string> LevelNames =
 Level calcLevel(const string& level)
 {
 	for (const auto& lvl : LevelNames)
-		if (strcasecmp(lvl.second.c_str(), level.c_str()) == 0) return (lvl.first);
+		if (strcasecmp(lvl.second.c_str(), level.c_str()) == 0)
+			return (lvl.first);
 
 	return (all);
 }

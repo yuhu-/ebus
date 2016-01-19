@@ -19,8 +19,6 @@
 
 #include "TCPClient.h"
 
-//#include <cstdlib>
-//#include <fcntl.h>
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <string.h>

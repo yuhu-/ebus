@@ -118,7 +118,11 @@ void Daemon::stop()
 	}
 }
 
-bool Daemon::status()
+bool Daemon::status() const
 {
 	return (m_status);
+}
+
+Daemon::Daemon()
+{
 }

@@ -24,6 +24,11 @@
 using std::ios;
 using std::ofstream;
 
+LogFile::LogFile(const char* file)
+	: m_file(file)
+{
+}
+
 void LogFile::write(const string& message) const
 {
 	ofstream ofs(m_file.c_str(), ios::app);

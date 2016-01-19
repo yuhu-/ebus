@@ -158,7 +158,7 @@ private:
 	void setOptVal(const char* option, const string value,
 		DataType datatype);
 
-	bool printVersion();
+	bool printVersion() const;
 
 	bool printHelp();
 

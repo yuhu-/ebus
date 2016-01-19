@@ -81,7 +81,7 @@ void Logger::addFile(const char* file)
 	addSink(new LogFile(file));
 }
 
-void Logger::log(const Level level, const string& data, ...)
+void Logger::log(const Level level, const string data, ...)
 {
 	if (m_level != off)
 	{
@@ -100,14 +100,15 @@ void Logger::log(const Level level, const string& data, ...)
 	}
 }
 
+Logger::Logger()
+{
+}
 
 void Logger::run()
 {
-	LogMessage* message;
-
 	while (true)
 	{
-		message = m_logMessages.dequeue();
+		LogMessage* message = m_logMessages.dequeue();
 		if (message == NULL) break;
 
 		if (m_level >= message->getLevel())

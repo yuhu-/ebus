@@ -33,12 +33,10 @@ public:
 
 	void stop();
 
-	bool status();
+	bool status() const;
 
 private:
-	Daemon()
-	{
-	}
+	Daemon();
 	Daemon(const Daemon&);
 	Daemon& operator=(const Daemon&);
 

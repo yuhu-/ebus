@@ -30,10 +30,7 @@ TCPServer::TCPServer(const int port, const string address)
 
 TCPServer::~TCPServer()
 {
-	if (m_lfd > 0)
-	{
-		close(m_lfd);
-	}
+	if (m_lfd > 0) close(m_lfd);
 }
 
 int TCPServer::start()
@@ -48,10 +45,14 @@ int TCPServer::start()
 	address.sin_family = AF_INET;
 	address.sin_port = htons(m_port);
 
-	if (m_address.size() > 0) inet_pton(AF_INET, m_address.c_str(),
-		&(address.sin_addr));
+	if (m_address.size() > 0)
+	{
+		inet_pton(AF_INET, m_address.c_str(), &(address.sin_addr));
+	}
 	else
+	{
 		address.sin_addr.s_addr = INADDR_ANY;
+	}
 
 	int optval = 1;
 	setsockopt(m_lfd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));

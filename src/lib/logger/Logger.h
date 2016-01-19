@@ -49,12 +49,10 @@ public:
 	void addConsole();
 	void addFile(const char* file);
 
-	void log(const Level level, const string& text, ...);
+	void log(const Level level, const string text, ...);
 
 private:
-	Logger()
-	{
-	}
+	Logger();
 	Logger(const Logger&);
 	Logger& operator=(const Logger&);
 

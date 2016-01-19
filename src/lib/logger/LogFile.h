@@ -26,10 +26,7 @@ class LogFile : public LogSink
 {
 
 public:
-	LogFile(const char* file)
-		: m_file(file)
-	{
-	}
+	explicit LogFile(const char* file);
 
 	virtual void write(const string& message) const;
 
