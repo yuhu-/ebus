@@ -17,8 +17,8 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef NETWORK_TCPCLIENT_H
-#define NETWORK_TCPCLIENT_H
+#ifndef LIBNETWORK_TCPCLIENT_H
+#define LIBNETWORK_TCPCLIENT_H
 
 #include "TCPSocket.h"
 
@@ -30,5 +30,5 @@ public:
 
 };
 
-#endif // NETWORK_TCPCLIENT_H
+#endif // LIBNETWORK_TCPCLIENT_H
 

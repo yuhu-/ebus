@@ -17,8 +17,8 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef UTILS_PIPENOTIFY_H
-#define UTILS_PIPENOTIFY_H
+#ifndef LIBUTILS_PIPENOTIFY_H
+#define LIBUTILS_PIPENOTIFY_H
 
 #include <unistd.h>
 #include <fcntl.h>
@@ -64,5 +64,5 @@ private:
 
 };
 
-#endif // UTILS_PIPENOTIFY_H
+#endif // LIBUTILS_PIPENOTIFY_H
 

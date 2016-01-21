@@ -17,8 +17,8 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef LOGGER_LOGGER_H
-#define LOGGER_LOGGER_H
+#ifndef LIBLOGGER_LOGGER_H
+#define LIBLOGGER_LOGGER_H
 
 #include "LogMessage.h"
 #include "LogSink.h"
@@ -70,4 +70,4 @@ private:
 	void delSink(const LogSink* sink);
 };
 
-#endif // LOGGER_LOGGER_H
+#endif // LIBLOGGER_LOGGER_H

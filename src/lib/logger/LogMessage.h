@@ -17,8 +17,8 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef LOGGER_LOGMESSAGE_H
-#define LOGGER_LOGMESSAGE_H
+#ifndef LIBLOGGER_LOGMESSAGE_H
+#define LIBLOGGER_LOGMESSAGE_H
 
 #include <string>
 #include <map>
@@ -58,4 +58,4 @@ private:
 
 };
 
-#endif // LOGGER_LOGMESSAGE_H
+#endif // LIBLOGGER_LOGMESSAGE_H

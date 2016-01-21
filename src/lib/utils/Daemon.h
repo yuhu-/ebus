@@ -17,8 +17,8 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef UTILS_DAEMON_H
-#define UTILS_DAEMON_H
+#ifndef LIBUTILS_DAEMON_H
+#define LIBUTILS_DAEMON_H
 
 #include <cstddef>
 #include <cstdio>
@@ -47,4 +47,4 @@ private:
 
 };
 
-#endif // UTILS_DAEMON_H
+#endif // LIBUTILS_DAEMON_H

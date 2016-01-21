@@ -17,8 +17,8 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef LOGGER_LOGCONSOLE_H
-#define LOGGER_LOGCONSOLE_H
+#ifndef LIBLOGGER_LOGCONSOLE_H
+#define LIBLOGGER_LOGCONSOLE_H
 
 #include "LogSink.h"
 
@@ -30,4 +30,4 @@ public:
 
 };
 
-#endif // LOGGER_LOGCONSOLE_H
+#endif // LIBLOGGER_LOGCONSOLE_H

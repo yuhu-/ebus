@@ -17,8 +17,8 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef UTILS_OPTION_H
-#define UTILS_OPTION_H
+#ifndef LIBUTILS_OPTION_H
+#define LIBUTILS_OPTION_H
 
 #include <string>
 #include <cstring>
@@ -159,4 +159,4 @@ private:
 	bool toStringOptions();
 };
 
-#endif // UTILS_OPTION_H
+#endif // LIBUTILS_OPTION_H

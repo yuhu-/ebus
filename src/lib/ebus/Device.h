@@ -17,8 +17,8 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef EBUS_DEVICE_H
-#define EBUS_DEVICE_H
+#ifndef LIBEBUS_DEVICE_H
+#define LIBEBUS_DEVICE_H
 
 #include <string>
 
@@ -60,4 +60,4 @@ private:
 
 };
 
-#endif // EBUS_DEVICE_H
+#endif // LIBEBUS_DEVICE_H

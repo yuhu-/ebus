@@ -17,8 +17,8 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef LOGGER_LOGSINK_H
-#define LOGGER_LOGSINK_H
+#ifndef LIBLOGGER_LOGSINK_H
+#define LIBLOGGER_LOGSINK_H
 
 #include <string>
 
@@ -38,4 +38,4 @@ public:
 
 };
 
-#endif // LOGGER_LOGSINK_H
+#endif // LIBLOGGER_LOGSINK_H

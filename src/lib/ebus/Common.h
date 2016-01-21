@@ -17,8 +17,8 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef EBUS_COMMON_H
-#define EBUS_COMMON_H
+#ifndef LIBEBUS_COMMON_H
+#define LIBEBUS_COMMON_H
 
 unsigned char calcCRC(const unsigned char byte, const unsigned char init);
 
@@ -28,5 +28,5 @@ bool isAddressValid(const unsigned char byte);
 
 unsigned char slaveAddress(const unsigned char masterAddress);
 
-#endif // EBUS_COMMON_H
+#endif // LIBEBUS_COMMON_H
 

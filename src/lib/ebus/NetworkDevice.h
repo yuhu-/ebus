@@ -17,8 +17,8 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef EBUS_NETWORKDEVICE_H
-#define EBUS_NETWORKDEVICE_H
+#ifndef LIBEBUS_NETWORKDEVICE_H
+#define LIBEBUS_NETWORKDEVICE_H
 
 #include "Device.h"
 
@@ -35,4 +35,4 @@ private:
 
 };
 
-#endif // EBUS_NETWORKDEVICE_H
+#endif // LIBEBUS_NETWORKDEVICE_H

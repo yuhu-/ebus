@@ -17,8 +17,8 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef UTILS_NOTIFY_H
-#define UTILS_NOTIFY_H
+#ifndef LIBUTILS_NOTIFY_H
+#define LIBUTILS_NOTIFY_H
 
 #include <mutex>
 #include <condition_variable>
@@ -60,4 +60,4 @@ private:
 
 };
 
-#endif // UTILS_NOTIFY_H
+#endif // LIBUTILS_NOTIFY_H

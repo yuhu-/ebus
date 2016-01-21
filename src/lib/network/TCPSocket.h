@@ -17,8 +17,8 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef NETWORK_TCPSOCKET_H
-#define NETWORK_TCPSOCKET_H
+#ifndef LIBNETWORK_TCPSOCKET_H
+#define LIBNETWORK_TCPSOCKET_H
 
 #include <string>
 
@@ -56,5 +56,5 @@ private:
 
 };
 
-#endif // NETWORK_TCPSOCKET_H
+#endif // LIBNETWORK_TCPSOCKET_H
 

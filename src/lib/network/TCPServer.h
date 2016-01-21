@@ -17,8 +17,8 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef NETWORK_TCPSERVER_H
-#define NETWORK_TCPSERVER_H
+#ifndef LIBNETWORK_TCPSERVER_H
+#define LIBNETWORK_TCPSERVER_H
 
 #include "TCPSocket.h"
 
@@ -46,5 +46,5 @@ private:
 
 };
 
-#endif // NETWORK_TCPSERVER_H
+#endif // LIBNETWORK_TCPSERVER_H
 

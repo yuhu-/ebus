@@ -17,8 +17,8 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef EBUS_SEQUENCE_H
-#define EBUS_SEQUENCE_H
+#ifndef LIBEBUS_SEQUENCE_H
+#define LIBEBUS_SEQUENCE_H
 
 #include <vector>
 #include <string>
@@ -66,5 +66,5 @@ private:
 
 };
 
-#endif // EBUS_SEQUENCE_H
+#endif // LIBEBUS_SEQUENCE_H
 

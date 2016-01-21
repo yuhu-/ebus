@@ -17,8 +17,8 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef UTILS_NQUEUE_H
-#define UTILS_NQUEUE_H
+#ifndef LIBUTILS_NQUEUE_H
+#define LIBUTILS_NQUEUE_H
 
 #include <queue>
 #include <mutex>
@@ -71,4 +71,4 @@ private:
 
 };
 
-#endif // UTILS_NQUEUE_H
+#endif // LIBUTILS_NQUEUE_H
