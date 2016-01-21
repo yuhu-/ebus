@@ -82,7 +82,7 @@ int main(int argc, char* argv[])
 	device.open();
 	if (device.isOpen() == true)
 	{
-		cout << "openPort successful." << endl;
+		cout << "open successful." << endl;
 
 		fstream file(O.getCommand().c_str(), ios::in | ios::binary);
 
@@ -109,7 +109,7 @@ int main(int argc, char* argv[])
 
 		device.close();
 		if (device.isOpen() == false)
-			cout << "closePort successful." << endl;
+			cout << "close successful." << endl;
 	}
 	else
 	{

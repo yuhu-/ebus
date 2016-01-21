@@ -53,7 +53,7 @@ unsigned char calcCRC(const unsigned char byte, const unsigned char init)
 	return ((unsigned char) (crcTable[init] ^ byte));
 }
 
-bool isMaster(unsigned char byte)
+bool isMaster(const unsigned char byte)
 {
 	unsigned char hi = (byte & 0xF0) >> 4;
 	unsigned char lo = (byte & 0x0F);
@@ -64,8 +64,14 @@ bool isMaster(unsigned char byte)
 			|| (lo == 0xF)));
 }
 
-bool isAddressValid(unsigned char byte)
+bool isAddressValid(const unsigned char byte)
 {
 	return (byte != 0xAA && byte != 0xA9);
+}
+
+unsigned char slaveAddress(const unsigned char masterAddress)
+{
+
+	return ((masterAddress + 0x05) & 0xFF);
 }
 

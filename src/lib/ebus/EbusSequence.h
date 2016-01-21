@@ -41,9 +41,10 @@ public:
 	explicit EbusSequence(const string& str);
 	explicit EbusSequence(Sequence& seq);
 
-	void decodeUpdate(Sequence& seq);
+	void decodeFull(Sequence& seq);
 
 	void createMaster(const string& str);
+	void createMaster(Sequence& seq);
 	void createSlave(Sequence& seq);
 
 	void clear();
@@ -61,11 +62,11 @@ public:
 
 	bool isValid() const;
 
-	const string printUpdate();
-	const string printMaster();
-	const string printSlave();
-	const string printMasterAck();
-	const string printSlaveAck();
+	const string toStringFull();
+	const string toStringMaster();
+	const string toStringSlave();
+	const string toStringMasterAck();
+	const string toStringSlaveAck();
 
 private:
 	SequenceType m_type;

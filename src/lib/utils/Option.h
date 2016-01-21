@@ -124,14 +124,8 @@ public:
 	bool missingCommand() const;
 
 private:
-	Option(const char* command, const char* argument)
-		: m_version(NULL), m_withCommand(command), m_withArgument(
-			argument)
-	{
-	}
-
+	Option(const char* command, const char* argument);
 	Option(const Option&);
-
 	Option& operator=(const Option&);
 
 	vector<opt_t> m_opts;
@@ -158,11 +152,11 @@ private:
 	void setOptVal(const char* option, const string value,
 		DataType datatype);
 
-	bool printVersion() const;
+	bool toStringVersion() const;
 
-	bool printHelp();
+	bool toStringHelp();
 
-	bool printOptions();
+	bool toStringOptions();
 };
 
 #endif // UTILS_OPTION_H

@@ -148,7 +148,7 @@ bool Sequence::isExtended() const
 	return (m_extended);
 }
 
-const string Sequence::print()
+const string Sequence::toString()
 {
 	stringstream sstr;
 

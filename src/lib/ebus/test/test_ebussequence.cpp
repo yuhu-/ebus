@@ -36,10 +36,10 @@ int main()
 		seq.push_back(bytes[i]);
 
 	EbusSequence eSeq(seq);
-	cout << eSeq.printUpdate() << endl;
+	cout << eSeq.toStringFull() << endl;
 
 	EbusSequence eSeq2("ff50b509030d0000");
-	cout << eSeq2.printMaster() << endl;
+	cout << eSeq2.toStringMaster() << endl;
 
 	seq.clear();
 	const unsigned char bytes2[] =
@@ -51,7 +51,7 @@ int main()
 
 	EbusSequence eSeq3;
 	eSeq3.createSlave(seq);
-	cout << eSeq3.printSlave() << endl;
+	cout << eSeq3.toStringSlave() << endl;
 
 	return (0);
 

@@ -57,7 +57,7 @@ public:
 
 	bool isExtended() const;
 
-	const string print();
+	const string toString();
 
 private:
 	vector<unsigned char> m_sequence;

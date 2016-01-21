@@ -60,10 +60,10 @@ EbusSequence::EbusSequence(const string& str)
 
 EbusSequence::EbusSequence(Sequence& seq)
 {
-	decodeUpdate(seq);
+	decodeFull(seq);
 }
 
-void EbusSequence::decodeUpdate(Sequence& seq)
+void EbusSequence::decodeFull(Sequence& seq)
 {
 	// sequence to short
 	if (seq.size() < 6)
@@ -141,7 +141,6 @@ void EbusSequence::decodeUpdate(Sequence& seq)
 
 void EbusSequence::createMaster(const string& str)
 {
-	m_masterState = EBUS_OK;
 	Sequence seq;
 
 	for (size_t i = 0; i + 1 < str.size(); i += 2)
@@ -150,6 +149,15 @@ void EbusSequence::createMaster(const string& str)
 			16);
 		seq.push_back((unsigned char) byte);
 	}
+
+	createMaster(seq);
+}
+
+void EbusSequence::createMaster(Sequence& seq)
+{
+	m_masterState = EBUS_OK;
+
+	seq.reduce();
 
 	// sequence to short
 	if (seq.size() < 5)
@@ -167,9 +175,18 @@ void EbusSequence::createMaster(const string& str)
 
 	setType(seq[1]);
 
-	m_master = seq;
+	if (seq.size() == ((size_t)5 + seq[4]))
+	{
+		m_master = seq;
+		m_masterCRC = seq.getCRC();
+	}
+	else
+	{
+		m_master = Sequence(seq, 0, 5 + seq[4]);
+		m_masterCRC = seq[5 + seq[4]];
 
-	m_masterCRC = seq.getCRC();
+		if (m_master.getCRC() != m_masterCRC) m_masterState = EBUS_WRN_CRC;
+	}
 }
 
 void EbusSequence::createSlave(Sequence& seq)
@@ -196,7 +213,6 @@ void EbusSequence::createSlave(Sequence& seq)
 	m_slaveCRC = seq[seq.size() - 1];
 
 	if (m_slave.getCRC() != m_slaveCRC) m_slaveState = EBUS_WRN_CRC;
-
 }
 
 void EbusSequence::clear()
@@ -272,29 +288,29 @@ bool EbusSequence::isValid() const
 	return ((m_masterState + m_slaveState) == EBUS_OK ? true : false);
 }
 
-const string EbusSequence::printUpdate()
+const string EbusSequence::toStringFull()
 {
 	stringstream sstr;
 
-	if (m_masterState < EBUS_OK) return (printMaster());
+	if (m_masterState < EBUS_OK) return (toStringMaster());
 
-	sstr << SequenceTypeNames[m_type] << " " << printMaster();
+	sstr << SequenceTypeNames[m_type] << " " << toStringMaster();
 
-	if (m_type == st_MasterMaster) sstr << " " << printMasterAck();
+	if (m_type == st_MasterMaster) sstr << " " << toStringMasterAck();
 
 	if (m_type == st_MasterSlave && m_masterState >= EBUS_OK)
-		sstr << " " << printSlave();
+		sstr << " " << toStringSlave();
 
 	return (sstr.str());
 }
 
-const string EbusSequence::printMaster()
+const string EbusSequence::toStringMaster()
 {
 	stringstream sstr;
 	if (m_masterState >= EBUS_OK)
 	{
 		sstr << (m_masterState == EBUS_WRN_CRC ? TTY_RED : TTY_RESET)
-			<< m_master.print() << TTY_RESET;
+			<< m_master.toString() << TTY_RESET;
 	}
 	else
 	{
@@ -305,13 +321,13 @@ const string EbusSequence::printMaster()
 	return (sstr.str());
 }
 
-const string EbusSequence::printSlave()
+const string EbusSequence::toStringSlave()
 {
 	stringstream sstr;
 	if (m_slaveState >= EBUS_OK)
 	{
 		sstr << (m_slaveState == EBUS_WRN_CRC ? TTY_RED : TTY_RESET)
-			<< m_slave.print() << TTY_RESET;
+			<< m_slave.toString() << TTY_RESET;
 	}
 	else
 	{
@@ -322,7 +338,7 @@ const string EbusSequence::printSlave()
 	return (sstr.str());
 }
 
-const string EbusSequence::printMasterAck()
+const string EbusSequence::toStringMasterAck()
 {
 	stringstream sstr;
 	if (m_masterState >= EBUS_OK)
@@ -339,7 +355,7 @@ const string EbusSequence::printMasterAck()
 	return (sstr.str());
 }
 
-const string EbusSequence::printSlaveAck()
+const string EbusSequence::toStringSlaveAck()
 {
 	stringstream sstr;
 	if (m_slaveState >= EBUS_OK)

@@ -184,14 +184,20 @@ bool Option::missingCommand() const
 	return (m_command.size() == 0 ? true : false);
 }
 
+Option::Option(const char* command, const char* argument)
+	: m_version(NULL), m_withCommand(command), m_withArgument(
+		argument)
+{
+}
+
 bool Option::checkOption(const string& option, const string& value)
 {
-	if (strcmp(option.c_str(), "options") == 0) return (printOptions());
+	if (strcmp(option.c_str(), "options") == 0) return (toStringOptions());
 
-	if (strcmp(option.c_str(), "version") == 0) return (printVersion());
+	if (strcmp(option.c_str(), "version") == 0) return (toStringVersion());
 
 	if (strcmp(option.c_str(), "h") == 0
-		|| strcmp(option.c_str(), "help") == 0) return (printHelp());
+		|| strcmp(option.c_str(), "help") == 0) return (toStringHelp());
 
 	for (o_it = m_opts.begin(); o_it < m_opts.end(); ++o_it)
 	{
@@ -204,7 +210,7 @@ bool Option::checkOption(const string& option, const string& value)
 			{
 				cerr << endl << "option requires an argument '"
 					<< option << "'" << endl;
-				return (printHelp());
+				return (toStringHelp());
 			}
 
 			// add given value to option
@@ -218,7 +224,7 @@ bool Option::checkOption(const string& option, const string& value)
 	}
 
 	cerr << endl << "unknown option '" << option << "'" << endl;
-	return (printHelp());
+	return (toStringHelp());
 }
 
 void Option::setOptVal(const char* option, const string value,
@@ -250,14 +256,14 @@ void Option::setOptVal(const char* option, const string value,
 	}
 }
 
-bool Option::printVersion() const
+bool Option::toStringVersion() const
 {
 	cerr << m_version << endl;
 
 	return (false);
 }
 
-bool Option::printHelp()
+bool Option::toStringHelp()
 {
 	cerr << endl << "Usage:" << endl << "  "
 		<< m_argv[0].substr(m_argv[0].find_last_of("/\\") + 1)
@@ -303,7 +309,7 @@ bool Option::printHelp()
 	return (false);
 }
 
-bool Option::printOptions()
+bool Option::toStringOptions()
 {
 	cerr << endl << "Options:" << endl << endl;
 

@@ -22,9 +22,11 @@
 
 unsigned char calcCRC(const unsigned char byte, const unsigned char init);
 
-bool isMaster(unsigned char byte);
+bool isMaster(const unsigned char byte);
 
-bool isAddressValid(unsigned char byte);
+bool isAddressValid(const unsigned char byte);
+
+unsigned char slaveAddress(const unsigned char masterAddress);
 
 #endif // EBUS_COMMON_H
 
