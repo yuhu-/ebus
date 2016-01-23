@@ -53,17 +53,12 @@ EbusSequence::EbusSequence()
 {
 }
 
-EbusSequence::EbusSequence(const string& str)
-{
-	createMaster(str);
-}
-
 EbusSequence::EbusSequence(Sequence& seq)
 {
-	decodeFull(seq);
+	decodeSequence(seq);
 }
 
-void EbusSequence::decodeFull(Sequence& seq)
+void EbusSequence::decodeSequence(Sequence& seq)
 {
 	// sequence to short
 	if (seq.size() < 6)
@@ -141,14 +136,7 @@ void EbusSequence::decodeFull(Sequence& seq)
 
 void EbusSequence::createMaster(const string& str)
 {
-	Sequence seq;
-
-	for (size_t i = 0; i + 1 < str.size(); i += 2)
-	{
-		unsigned long byte = strtoul(str.substr(i, 2).c_str(), NULL,
-			16);
-		seq.push_back((unsigned char) byte);
-	}
+	Sequence seq(str);
 
 	createMaster(seq);
 }
@@ -167,15 +155,22 @@ void EbusSequence::createMaster(Sequence& seq)
 	}
 
 	// master sequence to long
-	if ((int) seq[4] > 16)
+	if (seq.size() > (size_t) (5 + seq[4] + 1))
 	{
 		m_masterState = EBUS_ERR_LONG;
 		return;
 	}
 
+	// to much data bytes
+	if ((int) seq[4] > 16)
+	{
+		m_masterState = EBUS_ERR_BYTES;
+		return;
+	}
+
 	setType(seq[1]);
 
-	if (seq.size() == ((size_t)5 + seq[4]))
+	if (seq.size() == (size_t) (5 + seq[4]))
 	{
 		m_master = seq;
 		m_masterCRC = seq.getCRC();
@@ -185,8 +180,16 @@ void EbusSequence::createMaster(Sequence& seq)
 		m_master = Sequence(seq, 0, 5 + seq[4]);
 		m_masterCRC = seq[5 + seq[4]];
 
-		if (m_master.getCRC() != m_masterCRC) m_masterState = EBUS_WRN_CRC;
+		if (m_master.getCRC() != m_masterCRC) m_masterState =
+			EBUS_WRN_CRC;
 	}
+}
+
+void EbusSequence::createSlave(const string& str)
+{
+	Sequence seq(str);
+
+	createSlave(seq);
 }
 
 void EbusSequence::createSlave(Sequence& seq)
@@ -203,16 +206,31 @@ void EbusSequence::createSlave(Sequence& seq)
 	}
 
 	// slave sequence to long
-	if (seq[0] > 16)
+	if (seq.size() > (size_t) (1 + seq[0] + 1))
 	{
 		m_slaveState = EBUS_ERR_LONG;
 		return;
 	}
 
-	m_slave = Sequence(seq, 0, seq.size() - 1);
-	m_slaveCRC = seq[seq.size() - 1];
+	// to much data bytes
+	if (seq[0] > 16)
+	{
+		m_slaveState = EBUS_ERR_BYTES;
+		return;
+	}
 
-	if (m_slave.getCRC() != m_slaveCRC) m_slaveState = EBUS_WRN_CRC;
+	if (seq.size() == (size_t) (1 + seq[0]))
+	{
+		m_slave = seq;
+		m_slaveCRC = seq.getCRC();
+	}
+	else
+	{
+		m_slave = Sequence(seq, 0, 1 + seq[0]);
+		m_slaveCRC = seq[1 + seq[0]];
+
+		if (m_slave.getCRC() != m_slaveCRC) m_slaveState = EBUS_WRN_CRC;
+	}
 }
 
 void EbusSequence::clear()
@@ -226,7 +244,6 @@ void EbusSequence::clear()
 	m_slaveCRC = 0;
 	m_slaveACK = 0;
 	m_slaveState = EBUS_OK;
-
 }
 
 Sequence EbusSequence::getMaster() const

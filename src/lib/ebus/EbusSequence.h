@@ -26,7 +26,8 @@
 #define EBUS_OK          0 // success
 #define EBUS_ERR_SHORT  -1 // sequence to short
 #define EBUS_ERR_LONG   -2 // sequence to long
-#define EBUS_ERR_ACK    -3 // ack byte wrong
+#define EBUS_ERR_BYTES  -3 // to much data bytes
+#define EBUS_ERR_ACK    -4 // ack byte wrong
 
 enum SequenceType
 {
@@ -38,13 +39,14 @@ class EbusSequence
 
 public:
 	EbusSequence();
-	explicit EbusSequence(const string& str);
 	explicit EbusSequence(Sequence& seq);
 
-	void decodeFull(Sequence& seq);
+	void decodeSequence(Sequence& seq);
 
 	void createMaster(const string& str);
 	void createMaster(Sequence& seq);
+
+	void createSlave(const string& str);
 	void createSlave(Sequence& seq);
 
 	void clear();

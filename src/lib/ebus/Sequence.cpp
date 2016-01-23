@@ -33,6 +33,16 @@ Sequence::Sequence()
 {
 }
 
+Sequence::Sequence(const string& str)
+{
+	for (size_t i = 0; i + 1 < str.size(); i += 2)
+	{
+		unsigned long byte = strtoul(str.substr(i, 2).c_str(), NULL,
+			16);
+		push_back((unsigned char) byte, false);
+	}
+}
+
 Sequence::Sequence(const Sequence& seq, const size_t index, size_t len)
 {
 	if (len == 0) len = seq.size() - index;
