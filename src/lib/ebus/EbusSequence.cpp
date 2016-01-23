@@ -181,7 +181,7 @@ void EbusSequence::createMaster(Sequence& seq)
 		m_masterCRC = seq[5 + seq[4]];
 
 		if (m_master.getCRC() != m_masterCRC) m_masterState =
-			EBUS_WRN_CRC;
+		EBUS_WRN_CRC;
 	}
 }
 
@@ -338,23 +338,6 @@ const string EbusSequence::toStringMaster()
 	return (sstr.str());
 }
 
-const string EbusSequence::toStringSlave()
-{
-	stringstream sstr;
-	if (m_slaveState >= EBUS_OK)
-	{
-		sstr << (m_slaveState == EBUS_WRN_CRC ? TTY_RED : TTY_RESET)
-			<< m_slave.toString() << TTY_RESET;
-	}
-	else
-	{
-		sstr << TTY_RED << "Slave " << getErrorText(m_slaveState)
-			<< TTY_RESET;
-	}
-
-	return (sstr.str());
-}
-
 const string EbusSequence::toStringMasterAck()
 {
 	stringstream sstr;
@@ -372,6 +355,40 @@ const string EbusSequence::toStringMasterAck()
 	return (sstr.str());
 }
 
+const string EbusSequence::toStringMasterCRC()
+{
+	stringstream sstr;
+	if (m_masterState >= EBUS_OK)
+	{
+		sstr << nouppercase << hex << setw(2) << setfill('0')
+			<< static_cast<unsigned>(m_masterCRC);
+	}
+	else
+	{
+		sstr << TTY_RED << "Master " << getErrorText(m_masterState)
+			<< TTY_RESET;
+	}
+
+	return (sstr.str());
+}
+
+const string EbusSequence::toStringSlave()
+{
+	stringstream sstr;
+	if (m_slaveState >= EBUS_OK)
+	{
+		sstr << (m_slaveState == EBUS_WRN_CRC ? TTY_RED : TTY_RESET)
+			<< m_slave.toString() << TTY_RESET;
+	}
+	else
+	{
+		sstr << TTY_RED << "Slave " << getErrorText(m_slaveState)
+			<< TTY_RESET;
+	}
+
+	return (sstr.str());
+}
+
 const string EbusSequence::toStringSlaveAck()
 {
 	stringstream sstr;
@@ -379,6 +396,23 @@ const string EbusSequence::toStringSlaveAck()
 	{
 		sstr << nouppercase << hex << setw(2) << setfill('0')
 			<< static_cast<unsigned>(m_slaveACK);
+	}
+	else
+	{
+		sstr << TTY_RED << "Slave " << getErrorText(m_slaveState)
+			<< TTY_RESET;
+	}
+
+	return (sstr.str());
+}
+
+const string EbusSequence::toStringSlaveCRC()
+{
+	stringstream sstr;
+	if (m_slaveState >= EBUS_OK)
+	{
+		sstr << nouppercase << hex << setw(2) << setfill('0')
+			<< static_cast<unsigned>(m_slaveCRC);
 	}
 	else
 	{

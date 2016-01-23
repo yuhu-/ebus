@@ -65,10 +65,14 @@ public:
 	bool isValid() const;
 
 	const string toStringFull();
+
 	const string toStringMaster();
-	const string toStringSlave();
 	const string toStringMasterAck();
+	const string toStringMasterCRC();
+
+	const string toStringSlave();
 	const string toStringSlaveAck();
+	const string toStringSlaveCRC();
 
 private:
 	SequenceType m_type;

@@ -45,7 +45,6 @@ int main()
 	cout << "seq: ff52b509030d0600" << "   Master: " << master.toStringMaster() << endl;
 
 	seq.clear();
-
 	for (size_t i = 0; i < 9; i++)
 		seq.push_back(bytes[i]);
 
