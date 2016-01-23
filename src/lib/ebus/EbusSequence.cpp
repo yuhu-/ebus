@@ -97,8 +97,6 @@ void EbusSequence::decodeSequence(Sequence& seq)
 			m_slaveState = EBUS_ERR_ACK;
 			return;
 		}
-
-		// TODO handle NAK
 	}
 
 	if (m_type == st_MasterSlave)
@@ -129,8 +127,6 @@ void EbusSequence::decodeSequence(Sequence& seq)
 			m_masterState = EBUS_ERR_ACK;
 			return;
 		}
-
-		// TODO handle NAK
 	}
 }
 
