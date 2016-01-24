@@ -29,8 +29,8 @@ extern Logger& L;
 
 int Connection::m_ids = 0;
 
-Connection::Connection(TCPSocket* socket, NQueue<NetMessage*>* netMessages)
-	: m_socket(socket), m_netMessages(netMessages)
+Connection::Connection(TCPSocket* socket, NQueue<NetMessage*>* netMsgQueue)
+	: m_socket(socket), m_netMsgQueue(netMsgQueue)
 {
 	m_id = ++m_ids;
 }
@@ -132,7 +132,7 @@ void Connection::run()
 			// decode client data
 			data[datalen] = '\0';
 			NetMessage message(data);
-			m_netMessages->enqueue(&message);
+			m_netMsgQueue->enqueue(&message);
 
 			// wait for result
 			message.waitNotify();

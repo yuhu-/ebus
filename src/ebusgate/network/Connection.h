@@ -33,7 +33,7 @@ class Connection
 {
 
 public:
-	Connection(TCPSocket* socket, NQueue<NetMessage*>* netMessages);
+	Connection(TCPSocket* socket, NQueue<NetMessage*>* netMsgQueue);
 
 	void start();
 	void stop();
@@ -49,7 +49,7 @@ private:
 
 	TCPSocket* m_socket;
 
-	NQueue<NetMessage*>* m_netMessages;
+	NQueue<NetMessage*>* m_netMsgQueue;
 
 	PipeNotify m_notify;
 

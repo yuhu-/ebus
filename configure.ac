@@ -24,7 +24,7 @@ AC_CHECK_HEADERS([arpa/inet.h \
 		  time.h \
 		  termios.h])
 
-AC_CONFIG_SRCDIR([src/ebusgate/EBusGate.cpp])
+AC_CONFIG_SRCDIR([src/ebusgate/EbusGate.cpp])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES([Makefile
 		 src/lib/utils/Makefile

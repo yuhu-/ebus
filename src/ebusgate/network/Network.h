@@ -36,7 +36,7 @@ class Network
 
 public:
 	Network(const bool local, const int port,
-		NQueue<NetMessage*>* netMessages);
+		NQueue<NetMessage*>* netMsgQueue);
 
 	~Network();
 
@@ -51,7 +51,7 @@ private:
 
 	list<Connection*> m_connections;
 
-	NQueue<NetMessage*>* m_netMessages;
+	NQueue<NetMessage*>* m_netMsgQueue;
 
 	TCPServer* m_tcpServer;
 

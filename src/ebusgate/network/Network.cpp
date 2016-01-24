@@ -28,8 +28,8 @@
 extern Logger& L;
 
 Network::Network(const bool local, const int port,
-	NQueue<NetMessage*>* netMessages)
-	: m_netMessages(netMessages), m_listening(false)
+	NQueue<NetMessage*>* netMsgQueue)
+	: m_netMsgQueue(netMsgQueue), m_listening(false)
 {
 	if (local == true)
 	{
@@ -116,7 +116,7 @@ void Network::run()
 			if (socket == NULL) continue;
 
 			Connection* connection = new Connection(socket,
-				m_netMessages);
+				m_netMsgQueue);
 			if (connection == NULL) continue;
 
 			L.log(info, "[%05d] %s opened", connection->getID(),
