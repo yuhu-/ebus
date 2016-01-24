@@ -11,7 +11,8 @@ libutils_a_SOURCES = Daemon.cpp \
 		     Option.h \
 		     NQueue.h \
 		     PipeNotify.h \
-		     Notify.h
+		     Notify.h \
+		     Color.h
 
 distclean-local:
 	-rm -f Makefile.in

@@ -44,9 +44,7 @@ public:
 	ssize_t send(const unsigned char value);
 	ssize_t recv(unsigned char& value, const long sec, const long nsec);
 
-	const char* getDeviceName();
-
-	const char* getErrorText(const int error);
+	const string errorText(const int error) const;
 
 private:
 	const string m_deviceName;

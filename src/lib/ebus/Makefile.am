@@ -1,7 +1,8 @@
 AM_CXXFLAGS = -fpic \
 	      -Wall \
 	      -Wextra \
-	      -std=c++14
+	      -std=c++14 \
+	      -isystem$(top_srcdir)/src/lib/utils
 
 noinst_LIBRARIES = libebus.a
 

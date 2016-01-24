@@ -22,17 +22,16 @@
 
 #include "Sequence.h"
 
-#define EBUS_WRN_CRC     1 // crc differs
 #define EBUS_OK          0 // success
 #define EBUS_ERR_SHORT  -1 // sequence to short
 #define EBUS_ERR_LONG   -2 // sequence to long
 #define EBUS_ERR_BYTES  -3 // to much data bytes
-#define EBUS_ERR_ACK    -4 // ack byte wrong
+#define EBUS_ERR_CRC    -4 // crc differs
+#define EBUS_ERR_ACK    -5 // ack byte wrong
 
-enum SequenceType
-{
-	st_Broadcast = 0, st_MasterMaster, st_MasterSlave
-};
+#define EBUS_TYPE_BC     0
+#define EBUS_TYPE_MM     1
+#define EBUS_TYPE_MS     2
 
 class EbusSequence
 {
@@ -60,22 +59,22 @@ public:
 	int getSlaveState() const;
 
 	void setType(const unsigned char& byte);
-	SequenceType getType() const;
+	int getType() const;
 
 	bool isValid() const;
 
 	const string toStringFull();
 
 	const string toStringMaster();
-	const string toStringMasterAck();
 	const string toStringMasterCRC();
+	const string toStringMasterACK();
 
 	const string toStringSlave();
-	const string toStringSlaveAck();
 	const string toStringSlaveCRC();
+	const string toStringSlaveACK();
 
 private:
-	SequenceType m_type;
+	int m_type = -1;
 
 	Sequence m_master;
 	unsigned char m_masterCRC = 0;
@@ -87,7 +86,7 @@ private:
 	unsigned char m_slaveACK = 0;
 	int m_slaveState = EBUS_OK;
 
-	static const string getErrorText(const int error);
+	static const string errorText(const int error);
 
 };
 

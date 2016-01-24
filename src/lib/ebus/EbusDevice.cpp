@@ -20,11 +20,24 @@
 #include "EbusDevice.h"
 #include "SerialDevice.h"
 #include "NetworkDevice.h"
+#include "Color.h"
 
 #include <cstring>
 #include <sstream>
+#include <map>
 
 using std::ostringstream;
+using std::map;
+
+map<int, string> DeviceErrors =
+{
+{ DEV_WRN_EOF, "EOF during receiving reached" },
+{ DEV_WRN_TIMEOUT, "Timeout during receiving reached" },
+{ DEV_ERR_OPEN, "Error occurred when opening the input device " },
+{ DEV_ERR_VALID, "File descriptor of input device is invalid" },
+{ DEV_ERR_RECV, "Error occurred during data receiving" },
+{ DEV_ERR_SEND, "Error occurred during data sending" },
+{ DEV_ERR_POLL, "Error occurred at ppoll waiting" } };
 
 EbusDevice::EbusDevice(const string deviceName, const bool noDeviceCheck)
 	: m_deviceName(deviceName), m_noDeviceCheck(noDeviceCheck)
@@ -73,48 +86,19 @@ ssize_t EbusDevice::recv(unsigned char& value, const long sec, const long nsec)
 	return (m_device->recv(value, sec, nsec));
 }
 
-const char* EbusDevice::getDeviceName()
-{
-	return (m_deviceName.c_str());
-}
-
-const char* EbusDevice::getErrorText(const int error)
+const string EbusDevice::errorText(const int error) const
 {
 	ostringstream result;
 
-	switch (error)
-	{
-	case DEV_WRN_EOF:
-		result << "\033[1;33mEOF during receiving reached\033[0m";
-		break;
-	case DEV_WRN_TIMEOUT:
-		result << "\033[1;33mTimeout during receiving reached\033[0m";
-		break;
-	case DEV_ERR_OPEN:
-		result
-			<< "\033[1;31mError occurred when opening the input device "
-			<< getDeviceName() << "\033[0m";
-		break;
-	case DEV_ERR_VALID:
-		result
-			<< "\033[1;31mFile descriptor of input device is invalid\033[0m";
-		break;
-	case DEV_ERR_RECV:
-		result
-			<< "\033[1;31mError occurred during data receiving\033[0m";
-		break;
-	case DEV_ERR_SEND:
-		result << "\033[1;31mError occurred during data sending\033[0m";
-		break;
-	case DEV_ERR_POLL:
-		result << "\033[1;31mError occurred at ppoll waiting\033[0m";
-		break;
-	default:
-		result << "\033[1;31mUnknown error code\033[0m";
-		break;
-	}
+	(error > DEV_OK) ? result << color::yellow : result << color::red;
 
-	return (result.str().c_str());
+	result << DeviceErrors[error];
+
+	(error == DEV_ERR_OPEN) ? result << m_deviceName : "";
+
+	result << color::reset;
+
+	return (result.str());
 }
 
 void EbusDevice::setType(const DeviceType type)
