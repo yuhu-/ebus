@@ -25,15 +25,15 @@
 #include <sys/time.h>
 
 map<Level, string> LevelNames =
-	{
-		{ off, "OFF" },
-		{ fatal, "FATAL" },
-		{ error, "ERROR" },
-		{ warn, "WARN" },
-		{ info, "INFO" },
-		{ debug, "DEBUG" },
-		{ trace, "TRACE" },
-		{ all, "ALL" } };
+{
+{ off, "OFF" },
+{ fatal, "FATAL" },
+{ error, "ERROR" },
+{ warn, "WARN" },
+{ info, "INFO" },
+{ debug, "DEBUG" },
+{ trace, "TRACE" },
+{ all, "ALL" } };
 
 Level calcLevel(const string& level)
 {

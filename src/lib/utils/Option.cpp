@@ -185,8 +185,7 @@ bool Option::missingCommand() const
 }
 
 Option::Option(const char* command, const char* argument)
-	: m_version(NULL), m_withCommand(command), m_withArgument(
-		argument)
+	: m_version(NULL), m_withCommand(command), m_withArgument(argument)
 {
 }
 
