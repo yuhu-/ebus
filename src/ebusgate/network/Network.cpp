@@ -40,7 +40,7 @@ Network::Network(const bool local, const int port,
 		m_tcpServer = new TCPServer(port, "0.0.0.0");
 	}
 
-	if (m_tcpServer != NULL && m_tcpServer->start() == 0) m_listening =
+	if (m_tcpServer != nullptr && m_tcpServer->start() == 0) m_listening =
 		true;
 
 }
@@ -97,7 +97,7 @@ void Network::run()
 	while (true)
 	{
 		// wait for new fd event
-		int ret = ppoll(fds, nfds, &tdiff, NULL);
+		int ret = ppoll(fds, nfds, &tdiff, nullptr);
 
 		if (ret == 0)
 		{
@@ -113,11 +113,11 @@ void Network::run()
 		{
 
 			TCPSocket* socket = m_tcpServer->newSocket();
-			if (socket == NULL) continue;
+			if (socket == nullptr) continue;
 
 			Connection* connection = new Connection(socket,
 				m_netMsgQueue);
-			if (connection == NULL) continue;
+			if (connection == nullptr) continue;
 
 			L.log(info, "[%05d] %s opened", connection->getID(),
 				socket->getIP().c_str());

@@ -19,9 +19,10 @@
 
 #include "TCPServer.h"
 
+#include <cstring>
+
 #include <unistd.h>
 #include <arpa/inet.h>
-#include <string.h>
 
 TCPServer::TCPServer(const int port, const string address)
 	: m_port(port), m_address(address)
@@ -69,7 +70,7 @@ int TCPServer::start()
 
 TCPSocket* TCPServer::newSocket()
 {
-	if (m_listening == false) return (NULL);
+	if (m_listening == false) return (nullptr);
 
 	struct sockaddr_in address;
 	socklen_t len = sizeof(address);
@@ -77,7 +78,7 @@ TCPSocket* TCPServer::newSocket()
 	memset(&address, 0, sizeof(address));
 
 	int sfd = accept(m_lfd, (struct sockaddr*) &address, &len);
-	if (sfd < 0) return (NULL);
+	if (sfd < 0) return (nullptr);
 
 	return (new TCPSocket(sfd, &address));
 }

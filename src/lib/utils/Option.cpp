@@ -185,7 +185,7 @@ bool Option::missingCommand() const
 }
 
 Option::Option(const char* command, const char* argument)
-	: m_version(NULL), m_withCommand(command), m_withArgument(argument)
+	: m_version(nullptr), m_withCommand(command), m_withArgument(argument)
 {
 }
 
@@ -235,17 +235,17 @@ void Option::setOptVal(const char* option, const string value,
 		m_optvals[option] = true;
 		break;
 	case dt_hex:
-		m_optvals[option] = strtol(value.c_str(), NULL, 16);
+		m_optvals[option] = strtol(value.c_str(), nullptr, 16);
 		break;
 	case dt_int:
-		m_optvals[option] = strtol(value.c_str(), NULL, 10);
+		m_optvals[option] = strtol(value.c_str(), nullptr, 10);
 		break;
 	case dt_long:
-		m_optvals[option] = strtol(value.c_str(), NULL, 10);
+		m_optvals[option] = strtol(value.c_str(), nullptr, 10);
 		break;
 	case dt_float:
 		m_optvals[option] = static_cast<float>(strtod(value.c_str(),
-		NULL));
+			nullptr));
 		break;
 	case dt_string:
 		m_optvals[option] = value.c_str();

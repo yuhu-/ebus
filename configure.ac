@@ -18,10 +18,9 @@ AC_CHECK_HEADERS([arpa/inet.h \
 		  fcntl.h \
 		  netdb.h \
 		  poll.h \
-		  pthread.h \
 		  sys/ioctl.h \
 		  sys/time.h \
-		  time.h \
+		  sys/socket.h \
 		  termios.h])
 
 AC_CONFIG_SRCDIR([src/ebusgate/EbusGate.cpp])

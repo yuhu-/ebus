@@ -45,14 +45,14 @@ int NetworkDevice::openDevice(const string device, const bool noDeviceCheck)
 
 	hostport = strdup(device.c_str());
 	const char* host = strtok(hostport, ":");
-	const char* port = strtok(NULL, ":");
+	const char* port = strtok(nullptr, ":");
 
 	if (inet_addr(host) == INADDR_NONE)
 	{
 		struct hostent* he;
 
 		he = gethostbyname(host);
-		if (he == NULL)
+		if (he == nullptr)
 		{
 			free(hostport);
 			return (DEV_ERR_OPEN);
@@ -71,7 +71,7 @@ int NetworkDevice::openDevice(const string device, const bool noDeviceCheck)
 	}
 
 	sock.sin_family = AF_INET;
-	sock.sin_port = htons(strtol(port, NULL, 10));
+	sock.sin_port = htons(strtol(port, nullptr, 10));
 
 	m_fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (m_fd < 0)

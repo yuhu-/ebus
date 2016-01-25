@@ -19,9 +19,10 @@
 
 #include "TCPClient.h"
 
+#include <cstring>
+
 #include <arpa/inet.h>
 #include <netdb.h>
-#include <string.h>
 
 TCPSocket* TCPClient::connect(const string& server, const int& port)
 {
@@ -35,24 +36,24 @@ TCPSocket* TCPClient::connect(const string& server, const int& port)
 		struct hostent* he;
 
 		he = gethostbyname(server.c_str());
-		if (he == NULL) return (NULL);
+		if (he == nullptr) return (nullptr);
 
 		memcpy(&address.sin_addr, he->h_addr_list[0], he->h_length);
 	}
 	else
 	{
 		ret = inet_aton(server.c_str(), &address.sin_addr);
-		if (ret == 0) return (NULL);
+		if (ret == 0) return (nullptr);
 	}
 
 	address.sin_family = AF_INET;
 	address.sin_port = htons(port);
 
 	int sfd = socket(AF_INET, SOCK_STREAM, 0);
-	if (sfd < 0) return (NULL);
+	if (sfd < 0) return (nullptr);
 
 	ret = ::connect(sfd, (struct sockaddr*) &address, sizeof(address));
-	if (ret < 0) return (NULL);
+	if (ret < 0) return (nullptr);
 
 	return (new TCPSocket(sfd, &address));
 }

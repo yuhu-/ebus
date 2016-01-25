@@ -42,8 +42,8 @@ private:
 
 	bool m_status = false;
 
-	const char* m_pidfile = NULL;
-	FILE* m_pidfd = NULL;
+	const char* m_pidfile = nullptr;
+	FILE* m_pidfd = nullptr;
 
 };
 

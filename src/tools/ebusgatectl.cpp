@@ -81,7 +81,7 @@ string fetchData(TCPSocket* socket, bool& listening)
 	{
 
 		// wait for new fd event
-		int ret = ppoll(fds, nfds, &tdiff, NULL);
+		int ret = ppoll(fds, nfds, &tdiff, nullptr);
 
 		bool newData = false;
 		bool newInput = false;
@@ -148,7 +148,7 @@ bool connect(const char* host, int port, bool once)
 	TCPClient* client = new TCPClient();
 	TCPSocket* socket = client->connect(host, port);
 
-	if (socket != NULL)
+	if (socket != nullptr)
 	{
 		do
 		{

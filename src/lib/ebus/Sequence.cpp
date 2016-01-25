@@ -37,7 +37,7 @@ Sequence::Sequence(const string& str)
 {
 	for (size_t i = 0; i + 1 < str.size(); i += 2)
 	{
-		unsigned long byte = strtoul(str.substr(i, 2).c_str(), NULL,
+		unsigned long byte = strtoul(str.substr(i, 2).c_str(), nullptr,
 			16);
 		push_back((unsigned char) byte, false);
 	}

@@ -89,18 +89,18 @@ void Daemon::start(const char* pidfile)
 
 	umask(S_IWGRP | S_IRWXO);
 
-	if (m_pidfd != NULL)
+	if (m_pidfd != nullptr)
 	{
-		setbuf(m_pidfd, NULL);
+		setbuf(m_pidfd, nullptr);
 		if (lockf(fileno(m_pidfd), F_TLOCK, 0) < 0
 			|| fprintf(m_pidfd, "%d\n", getpid()) <= 0)
 		{
 			fclose(m_pidfd);
-			m_pidfd = NULL;
+			m_pidfd = nullptr;
 		}
 	}
 
-	if (m_pidfd == NULL)
+	if (m_pidfd == nullptr)
 	{
 		cerr << "can't open pid file: " << m_pidfile << endl;
 		exit(EXIT_FAILURE);
@@ -111,7 +111,7 @@ void Daemon::start(const char* pidfile)
 
 void Daemon::stop()
 {
-	if (m_pidfd != NULL)
+	if (m_pidfd != nullptr)
 	{
 		if (fclose(m_pidfd) < 0) return;
 		remove(m_pidfile);

@@ -84,7 +84,7 @@ ssize_t Device::recv(unsigned char& value, const long sec, const long nsec)
 		fds[0].fd = m_fd;
 		fds[0].events = POLLIN;
 
-		ret = ppoll(fds, nfds, &tdiff, NULL);
+		ret = ppoll(fds, nfds, &tdiff, nullptr);
 
 		if (ret == -1) return (DEV_ERR_POLL);
 		if (ret == 0) return (DEV_WRN_TIMEOUT);

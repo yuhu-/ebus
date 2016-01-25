@@ -57,7 +57,7 @@ void Logger::stop()
 {
 	if (m_thread.joinable())
 	{
-		m_logMessages.enqueue(NULL);
+		m_logMessages.enqueue(nullptr);
 		m_thread.join();
 	}
 }
@@ -109,7 +109,7 @@ void Logger::run()
 	while (true)
 	{
 		LogMessage* message = m_logMessages.dequeue();
-		if (message == NULL) break;
+		if (message == nullptr) break;
 
 		if (m_level >= message->getLevel())
 		{

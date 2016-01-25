@@ -20,8 +20,8 @@
 #include "LogMessage.h"
 
 #include <algorithm>
+#include <cstring>
 
-#include <string.h>
 #include <sys/time.h>
 
 map<Level, string> LevelNames =

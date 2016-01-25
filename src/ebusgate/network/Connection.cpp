@@ -84,7 +84,7 @@ void Connection::run()
 	{
 
 		// wait for new fd event
-		int ret = ppoll(fds, nfds, &tdiff, NULL);
+		int ret = ppoll(fds, nfds, &tdiff, nullptr);
 
 		bool newData = false;
 		if (ret != 0)

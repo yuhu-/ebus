@@ -22,7 +22,7 @@
 #endif
 
 #include "Option.h"
-#include <EbusDevice.h>
+#include "EbusDevice.h"
 
 #include <iostream>
 #include <cstdlib>

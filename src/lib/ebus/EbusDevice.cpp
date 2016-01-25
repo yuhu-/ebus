@@ -42,10 +42,10 @@ map<int, string> DeviceErrors =
 EbusDevice::EbusDevice(const string deviceName, const bool noDeviceCheck)
 	: m_deviceName(deviceName), m_noDeviceCheck(noDeviceCheck)
 {
-	m_device = NULL;
+	m_device = nullptr;
 
-	if (strchr(deviceName.c_str(), '/') == NULL
-		&& strchr(deviceName.c_str(), ':') != NULL)
+	if (strchr(deviceName.c_str(), '/') == nullptr
+		&& strchr(deviceName.c_str(), ':') != nullptr)
 	{
 		setType(dt_network);
 		m_noDeviceCheck = true;
@@ -103,7 +103,7 @@ const string EbusDevice::errorText(const int error) const
 
 void EbusDevice::setType(const DeviceType type)
 {
-	if (m_device != NULL) delete m_device;
+	if (m_device != nullptr) delete m_device;
 
 	switch (type)
 	{
