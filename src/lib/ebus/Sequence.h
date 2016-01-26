@@ -26,13 +26,10 @@
 using std::string;
 using std::vector;
 
-#define SYN       0xAA  // synchronization byte
+#define SYN       0xaa  // synchronization byte
 #define SYNEXT    0x01  // extended synchronization byte
-#define EXT       0xA9  // extend byte
+#define EXT       0xa9  // extend byte
 #define EXTEXT    0x00  // extended extend byte
-#define ACK       0x00  // positive acknowledge
-#define NAK       0xFF  // negative acknowledge
-#define BROADCAST 0xFE  // broadcast destination address
 
 class Sequence
 {
@@ -59,6 +56,9 @@ public:
 	bool isExtended() const;
 
 	const string toString();
+	const vector<unsigned char> getSequence() const;
+
+	static const string toString(const vector<unsigned char>& sequence);
 
 private:
 	vector<unsigned char> m_sequence;

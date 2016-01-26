@@ -51,23 +51,23 @@ unsigned char calcCRC(const unsigned char byte, const unsigned char init)
 
 bool isMaster(const unsigned char byte)
 {
-	unsigned char hi = (byte & 0xF0) >> 4;
-	unsigned char lo = (byte & 0x0F);
+	unsigned char hi = (byte & 0xf0) >> 4;
+	unsigned char lo = (byte & 0x0f);
 
 	return (((hi == 0x0) || (hi == 0x1) || (hi == 0x3) || (hi == 0x7)
-		|| (hi == 0xF))
+		|| (hi == 0xf))
 		&& ((lo == 0x0) || (lo == 0x1) || (lo == 0x3) || (lo == 0x7)
-			|| (lo == 0xF)));
+			|| (lo == 0xf)));
 }
 
-bool isAddressValid(const unsigned char byte)
+bool isSlave(const unsigned char byte)
 {
-	return (byte != 0xAA && byte != 0xA9);
+	return (isMaster(byte) == false && byte != 0xaa && byte != 0xa9);
 }
 
 unsigned char slaveAddress(const unsigned char masterAddress)
 {
 
-	return ((masterAddress + 0x05) & 0xFF);
+	return ((masterAddress + 0x05) & 0xff);
 }
 

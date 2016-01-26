@@ -37,7 +37,7 @@ int main()
 		seq.push_back(bytes[i]);
 
 	EbusSequence full(seq);
-	cout << "seq: " << seq.toString() << " Full: " << full.toStringFull()
+	cout << "seq: " << seq.toString() << " Full: " << full.toStringLog()
 		<< endl;
 
 	// TEST MASTER

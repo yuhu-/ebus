@@ -24,7 +24,7 @@ unsigned char calcCRC(const unsigned char byte, const unsigned char init);
 
 bool isMaster(const unsigned char byte);
 
-bool isAddressValid(const unsigned char byte);
+bool isSlave(const unsigned char byte);
 
 unsigned char slaveAddress(const unsigned char masterAddress);
 

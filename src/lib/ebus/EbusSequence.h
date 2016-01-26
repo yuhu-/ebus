@@ -28,10 +28,16 @@
 #define EBUS_ERR_BYTES  -3 // to much data bytes
 #define EBUS_ERR_CRC    -4 // crc differs
 #define EBUS_ERR_ACK    -5 // ack byte wrong
+#define EBUS_ERR_MASTER -6 // wrong master address
+#define EBUS_ERR_SLAVE  -7 // wrong slave address
 
 #define EBUS_TYPE_BC     0
 #define EBUS_TYPE_MM     1
 #define EBUS_TYPE_MS     2
+
+#define ACK       0x00  // positive acknowledge
+#define NAK       0xff  // negative acknowledge
+#define BROADCAST 0xfe  // broadcast destination address
 
 class EbusSequence
 {
@@ -51,10 +57,12 @@ public:
 	void clear();
 
 	Sequence getMaster() const;
+	size_t getMasterNN() const;
 	unsigned char getMasterCRC() const;
 	int getMasterState() const;
 
 	Sequence getSlave() const;
+	size_t getSlaveNN() const;
 	unsigned char getSlaveCRC() const;
 	int getSlaveState() const;
 
@@ -63,7 +71,8 @@ public:
 
 	bool isValid() const;
 
-	const string toStringFull();
+	const string toString();
+	const string toStringLog();
 
 	const string toStringMaster();
 	const string toStringMasterCRC();
@@ -77,11 +86,13 @@ private:
 	int m_type = -1;
 
 	Sequence m_master;
+	size_t m_masterNN = 0;
 	unsigned char m_masterCRC = 0;
 	unsigned char m_masterACK = 0;
 	int m_masterState = EBUS_OK;
 
 	Sequence m_slave;
+	size_t m_slaveNN = 0;
 	unsigned char m_slaveCRC = 0;
 	unsigned char m_slaveACK = 0;
 	int m_slaveState = EBUS_OK;
