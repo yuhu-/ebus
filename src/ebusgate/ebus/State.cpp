@@ -133,6 +133,9 @@ void State::reset(EbusHandler* h)
 	if (m_ebusMessage != nullptr)
 	{
 		m_ebusMessage->notify();
+
+		if (m_ebusMessage->isIntern() == true) delete m_ebusMessage;
+
 		m_ebusMessage = nullptr;
 	}
 }

@@ -19,8 +19,17 @@
 
 #include "EbusMessage.h"
 
+#include <sstream>
+
+using std::ostringstream;
+
 EbusMessage::EbusMessage(EbusSequence eSeq)
 	: Notify(), m_ebusSequence(eSeq)
+{
+}
+
+EbusMessage::EbusMessage(EbusSequence eSeq, const bool intern)
+	: Notify(), m_ebusSequence(eSeq), m_intern(intern)
 {
 }
 
@@ -34,26 +43,31 @@ void EbusMessage::setResult(const string result)
 	m_result = result;
 }
 
-string EbusMessage::getResult()
+const string EbusMessage::getResult()
 {
-	string result;
+	ostringstream result;
 
 	if (m_result.size() != 0)
 	{
-		result = m_result;
+		result << m_result;
 	}
 	else if (m_ebusSequence.getType() == EBUS_TYPE_BC)
 	{
-		result = "done";
+		result << "done";
 	}
 	else if (m_ebusSequence.getType() == EBUS_TYPE_MM)
 	{
-		result = m_ebusSequence.toStringSlaveACK();
+		result << m_ebusSequence.toStringSlaveACK();
 	}
 	else
 	{
-		result = m_ebusSequence.toStringSlave();
+		result << m_ebusSequence.toStringSlave();
 	}
 
-	return (result);
+	return (result.str());
+}
+
+bool EbusMessage::isIntern() const
+{
+	return (m_intern);
 }

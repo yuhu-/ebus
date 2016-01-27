@@ -30,7 +30,7 @@
 #define EBUS_ERR_CRC    -4 // crc differs
 #define EBUS_ERR_ACK    -5 // ack byte wrong
 #define EBUS_ERR_MASTER -6 // wrong master address
-#define EBUS_ERR_SLAVE  -7 // wrong slave address
+#define EBUS_ERR_SLAVE  -7 // slave address is invalid
 
 #define EBUS_TYPE_BC     0
 #define EBUS_TYPE_MM     1
