@@ -17,29 +17,31 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef EBUS_SENDRESPONSE_H
-#define EBUS_SENDRESPONSE_H
+#ifndef EBUS_HANDLEBROADCAST_H
+#define EBUS_HANDLEBROADCAST_H
 
 #include "State.h"
 
-class SendResponse : public State
+class HandleBroadcast : public State
 {
 
 public:
-	static SendResponse* getInstance()
+	static HandleBroadcast* getInstance()
 	{
-		return (&m_sendResponse);
+		return (&m_handleBroadcast);
 	}
 
 	int run(EbusHandler* h);
 	const char* toString() const;
 
 private:
-	SendResponse();
-	static SendResponse m_sendResponse;
+	HandleBroadcast();
+	static HandleBroadcast m_handleBroadcast;
 
-	static bool createResponse(EbusSequence& eSeq);
+	static int needAction(const EbusSequence& eSeq);
+	static bool createMessage(const unsigned char source,
+		const unsigned char target, EbusSequence& eSeq);
 
 };
 
-#endif // EBUS_SENDRESPONSE_H
+#endif // EBUS_HANDLEBROADCAST_H

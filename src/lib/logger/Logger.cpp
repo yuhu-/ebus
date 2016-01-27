@@ -28,7 +28,7 @@
 #include <sstream>
 
 using std::istringstream;
-using std::stringstream;
+using std::ostringstream;
 using std::endl;
 using std::setw;
 using std::setfill;
@@ -113,7 +113,7 @@ void Logger::run()
 
 		if (m_level >= message->getLevel())
 		{
-			stringstream sstr;
+			ostringstream sstr;
 
 			sstr << "[" << message->getTime() << "] " << setw(5)
 				<< setfill(' ') << left

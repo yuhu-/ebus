@@ -24,7 +24,7 @@
 #include <algorithm>
 
 using std::pair;
-using std::stringstream;
+using std::ostringstream;
 using std::copy_n;
 using std::back_inserter;
 
@@ -47,12 +47,12 @@ void EbusDataStore::write(const EbusSequence& eSeq)
 	copy_n(eSeq.getMaster().getSequence().begin(), size,
 		back_inserter(key));
 
-	map<vector<unsigned char>, EbusSequence>::const_iterator it =
+	map<vector<unsigned char>, EbusSequence>::iterator it =
 		m_eSeqStore.find(key);
 
 	if (it != m_eSeqStore.end())
 	{
-		it->second;
+		it->second = eSeq;
 		L.log(debug, "%03d - update key %s", m_eSeqStore.size(),
 			Sequence::toString(key).c_str());
 	}
@@ -67,7 +67,7 @@ void EbusDataStore::write(const EbusSequence& eSeq)
 
 const string EbusDataStore::read(const string& str)
 {
-	stringstream result;
+	ostringstream result;
 	const Sequence seq(str);
 	vector<unsigned char> key(seq.getSequence());
 

@@ -27,7 +27,7 @@
 
 using std::ios;
 using std::map;
-using std::stringstream;
+using std::ostringstream;
 
 extern Logger& L;
 
@@ -49,7 +49,8 @@ map<int, string> StateErros =
 { STATE_ERR_ACK_WRONG, "received ACK byte is wrong" },
 { STATE_WRN_RECV_RESP, "received response is invalid -> retry" },
 { STATE_ERR_RECV_RESP, "received response is invalid -> failed" },
-{ STATE_WRN_RECV_MESS, "to me addressed message is invalid" },
+{ STATE_WRN_RECV_MESS, "at me addressed message is invalid" },
+{ STATE_WRN_RECV_IMPL, "at me addressed message is not implemented" },
 { STATE_ERR_SEND_FAIL, "sending response failed" } };
 
 State::~State()
@@ -138,7 +139,7 @@ void State::reset(EbusHandler* h)
 
 const string State::errorText(const int error)
 {
-	stringstream result;
+	ostringstream result;
 
 	if (error == 0)
 	{

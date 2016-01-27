@@ -21,9 +21,19 @@
 #include "Listen.h"
 #include "Logger.h"
 
+#include <algorithm>
+
+using std::copy_n;
+using std::back_inserter;
+
 extern Logger& L;
 
 SendResponse SendResponse::m_sendResponse;
+
+map<vector<unsigned char>, string> RespondMessages =
+{
+{
+{ 0x07, 0x04 }, "0a7a454741544501010101" } };
 
 int SendResponse::run(EbusHandler* h)
 {
@@ -71,7 +81,9 @@ int SendResponse::run(EbusHandler* h)
 
 	L.log(info, "%s", eSeq.toStringMaster().c_str());
 
-	if (eSeq.getMasterState() == EBUS_OK)
+	if (eSeq.getMasterState() == EBUS_OK
+		&& (eSeq.getType() == EBUS_TYPE_MM
+			|| createResponse(eSeq) == true))
 	{
 		byte = ACK;
 	}
@@ -84,9 +96,18 @@ int SendResponse::run(EbusHandler* h)
 	result = writeRead(h, byte, 0);
 	if (result != DEV_OK) return (result);
 
-	if (eSeq.getMasterState() != EBUS_OK)
+	if (byte == NAK)
 	{
-		L.log(debug, "%s", errorText(STATE_WRN_RECV_MESS).c_str());
+		if (eSeq.getMasterState() != EBUS_OK)
+		{
+			L.log(info, "%s",
+				errorText(STATE_WRN_RECV_MESS).c_str());
+		}
+		else
+		{
+			L.log(info, "%s",
+				errorText(STATE_WRN_RECV_IMPL).c_str());
+		}
 	}
 	else if (eSeq.getType() == EBUS_TYPE_MM)
 	{
@@ -96,16 +117,9 @@ int SendResponse::run(EbusHandler* h)
 	}
 	else
 	{
-		// prepare answer
-		L.log(info, "Prepare answer for %s",
+		// handle response
+		L.log(info, "handle response for %s",
 			eSeq.toStringLog().c_str());
-
-		if (eSeq.getMaster()[2] == 0x07 && eSeq.getMaster()[3] == 0x04)
-		{
-			string msg_0704 = "0a7a454741544500010000";
-			eSeq.clear();
-			eSeq.createSlave(msg_0704);
-		}
 
 		for (int retry = 1; retry >= 0; retry--)
 		{
@@ -128,7 +142,7 @@ int SendResponse::run(EbusHandler* h)
 
 			if (byte != ACK && byte != NAK)
 			{
-				L.log(warn, "%s",
+				L.log(info, "%s",
 					errorText(STATE_ERR_ACK_WRONG).c_str());
 				break;
 			}
@@ -140,12 +154,12 @@ int SendResponse::run(EbusHandler* h)
 			{
 				if (retry == 1)
 				{
-					L.log(debug, "%s",
+					L.log(info, "%s",
 						errorText(STATE_WRN_ACK_NEG).c_str());
 				}
 				else
 				{
-					L.log(warn, "%s",
+					L.log(info, "%s",
 						errorText(STATE_ERR_ACK_NEG).c_str());
 					L.log(info, "%s",
 						errorText(STATE_ERR_SEND_FAIL).c_str());
@@ -167,5 +181,24 @@ SendResponse::SendResponse()
 const char* SendResponse::toString() const
 {
 	return ("SendResponse");
+}
+
+bool SendResponse::createResponse(EbusSequence& eSeq)
+{
+	vector<unsigned char> key;
+
+	copy_n(eSeq.getMaster().getSequence().begin() + 2, 2,
+		back_inserter(key));
+
+	map<vector<unsigned char>, string>::iterator it = RespondMessages.find(
+		key);
+
+	if (it != RespondMessages.end())
+	{
+		eSeq.createSlave(it->second);
+		if (eSeq.getSlaveState() == EBUS_OK) return (true);
+	}
+
+	return (false);
 }
 

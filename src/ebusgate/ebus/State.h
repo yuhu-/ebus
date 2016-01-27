@@ -29,7 +29,8 @@
 #define STATE_WRN_PRI_LOST    3 // priority class lost
 #define STATE_WRN_ACK_NEG     4 // received ACK is negative -> retry
 #define STATE_WRN_RECV_RESP   5 // received response is invalid -> retry
-#define STATE_WRN_RECV_MESS   6 // to me addressed message is invalid
+#define STATE_WRN_RECV_MESS   6 // at me addressed message is invalid
+#define STATE_WRN_RECV_IMPL   7 // at me addressed message is not implemented
 
 #define STATE_ERR_LOCK_FAIL  -1 // lock ebus failed
 #define STATE_ERR_ACK_NEG    -2 // received ACK is negative -> failed

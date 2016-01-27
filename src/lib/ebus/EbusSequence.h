@@ -22,6 +22,7 @@
 
 #include "Sequence.h"
 
+#define EBUS_EMPTY       1 // is empty
 #define EBUS_OK          0 // success
 #define EBUS_ERR_SHORT  -1 // sequence to short
 #define EBUS_ERR_LONG   -2 // sequence to long
@@ -48,6 +49,9 @@ public:
 
 	void decodeSequence(Sequence& seq);
 
+	void createMaster(const unsigned char& source,
+		const unsigned char& target, const string& str);
+	void createMaster(const unsigned char& source, const string& str);
 	void createMaster(const string& str);
 	void createMaster(Sequence& seq);
 
@@ -60,6 +64,8 @@ public:
 	size_t getMasterNN() const;
 	unsigned char getMasterCRC() const;
 	int getMasterState() const;
+	unsigned char getMasterSource() const;
+	unsigned char getMasterTarget() const;
 
 	Sequence getSlave() const;
 	size_t getSlaveNN() const;
@@ -89,13 +95,15 @@ private:
 	size_t m_masterNN = 0;
 	unsigned char m_masterCRC = 0;
 	unsigned char m_masterACK = 0;
-	int m_masterState = EBUS_OK;
+	int m_masterState = EBUS_EMPTY;
+	unsigned char m_masterSource = 0;
+	unsigned char m_masterTarget = 0;
 
 	Sequence m_slave;
 	size_t m_slaveNN = 0;
 	unsigned char m_slaveCRC = 0;
 	unsigned char m_slaveACK = 0;
-	int m_slaveState = EBUS_OK;
+	int m_slaveState = EBUS_EMPTY;
 
 	static const string errorText(const int error);
 

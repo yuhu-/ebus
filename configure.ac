@@ -18,6 +18,7 @@ AC_CHECK_HEADERS([arpa/inet.h \
 		  fcntl.h \
 		  netdb.h \
 		  poll.h \
+		  pthread.h \
 		  sys/ioctl.h \
 		  sys/time.h \
 		  sys/socket.h \

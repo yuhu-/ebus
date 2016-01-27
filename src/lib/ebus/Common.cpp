@@ -65,6 +65,11 @@ bool isSlave(const unsigned char byte)
 	return (isMaster(byte) == false && byte != 0xaa && byte != 0xa9);
 }
 
+bool isValidAddress(const unsigned char byte)
+{
+	return (byte != 0xaa && byte != 0xa9);
+}
+
 unsigned char slaveAddress(const unsigned char masterAddress)
 {
 

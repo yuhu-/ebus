@@ -46,14 +46,15 @@ class EbusHandler : public Notify
 	friend class SendMessage;
 	friend class RecvResponse;
 	friend class SendResponse;
+	friend class HandleBroadcast;
 
 public:
 	EbusHandler(const unsigned char address, const string device,
 		const bool noDeviceCheck, const long reopenTime,
 		const long arbitrationTime, const long receiveTimeout,
 		const int lockCounter, const int lockRetries,
-		const bool response, const bool store, const bool logRaw,
-		const bool dumpRaw, const char* dumpRawFile,
+		const bool response, const bool broadcast, const bool store,
+		const bool logRaw, const bool dumpRaw, const char* dumpRawFile,
 		const long dumpRawFileMaxSize);
 
 	~EbusHandler();
@@ -91,6 +92,7 @@ private:
 	int m_lockCounter;
 	int m_lockRetries;
 	bool m_response;
+	bool m_broadcast;
 	bool m_store;
 
 	int m_lastResult;

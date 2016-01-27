@@ -23,7 +23,7 @@
 #include <sstream>
 #include <iomanip>
 
-using std::stringstream;
+using std::ostringstream;
 using std::nouppercase;
 using std::hex;
 using std::setw;
@@ -160,7 +160,7 @@ bool Sequence::isExtended() const
 
 const string Sequence::toString()
 {
-	stringstream sstr;
+	ostringstream sstr;
 
 	for (size_t i = 0; i < m_sequence.size(); i++)
 		sstr << nouppercase << hex << setw(2) << setfill('0')
@@ -176,7 +176,7 @@ const vector<unsigned char> Sequence::getSequence() const
 
 const string Sequence::toString(const vector<unsigned char>& sequence)
 {
-	stringstream sstr;
+	ostringstream sstr;
 
 	for (size_t i = 0; i < sequence.size(); i++)
 		sstr << nouppercase << hex << setw(2) << setfill('0')

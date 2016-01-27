@@ -26,7 +26,7 @@
 #include <cstdlib>
 #include <map>
 
-using std::stringstream;
+using std::ostringstream;
 using std::nouppercase;
 using std::hex;
 using std::setw;
@@ -37,13 +37,14 @@ using std::map;
 
 map<int, string> SequenceErrors =
 {
+{ EBUS_EMPTY, "is empty" },
 { EBUS_ERR_SHORT, "sequence to short" },
 { EBUS_ERR_LONG, "sequence to long" },
 { EBUS_ERR_BYTES, "sequence to much data bytes" },
 { EBUS_ERR_CRC, "sequence CRC error" },
 { EBUS_ERR_ACK, "sequence ACK error" },
 { EBUS_ERR_MASTER, "wrong master address" },
-{ EBUS_ERR_SLAVE, "wrong slave address" }, };
+{ EBUS_ERR_SLAVE, "slave address is invalid" }, };
 
 EbusSequence::EbusSequence()
 {
@@ -95,6 +96,23 @@ void EbusSequence::decodeSequence(Sequence& seq)
 	}
 }
 
+void EbusSequence::createMaster(const unsigned char& source, const unsigned char& target,const string& str)
+{
+	ostringstream master;
+	master << nouppercase << hex << setw(2) << setfill('0') << static_cast<unsigned>(source);
+	master << nouppercase << hex << setw(2) << setfill('0') << static_cast<unsigned>(target);
+	master << nouppercase << setw(0) << str;
+	createMaster(master.str());
+}
+
+void EbusSequence::createMaster(const unsigned char& source, const string& str)
+{
+	ostringstream master;
+	master << nouppercase << hex << setw(2) << setfill('0') << static_cast<unsigned>(source);
+	master << nouppercase << setw(0) << str;
+	createMaster(master.str());
+}
+
 void EbusSequence::createMaster(const string& str)
 {
 	Sequence seq(str);
@@ -134,13 +152,15 @@ void EbusSequence::createMaster(Sequence& seq)
 		return;
 	}
 
-	// wrong slave address
-	if (isSlave(seq[1]) == false)
+	// slave address is invalid
+	if (isValidAddress(seq[1]) == false)
 	{
 		m_masterState = EBUS_ERR_SLAVE;
 		return;
 	}
 
+	m_masterSource = seq[0];
+	m_masterTarget = seq[1];
 	setType(seq[1]);
 	m_masterNN = seq[4];
 
@@ -209,15 +229,21 @@ void EbusSequence::createSlave(Sequence& seq)
 
 void EbusSequence::clear()
 {
+	m_type = -1;
+
 	m_master.clear();
+	m_masterNN = 0;
 	m_masterCRC = 0;
 	m_masterACK = 0;
-	m_masterState = EBUS_OK;
+	m_masterState = EBUS_EMPTY;
+	m_masterSource = 0;
+	m_masterTarget = 0;
 
 	m_slave.clear();
+	m_slaveNN = 0;
 	m_slaveCRC = 0;
 	m_slaveACK = 0;
-	m_slaveState = EBUS_OK;
+	m_slaveState = EBUS_EMPTY;
 }
 
 Sequence EbusSequence::getMaster() const
@@ -238,6 +264,16 @@ unsigned char EbusSequence::getMasterCRC() const
 int EbusSequence::getMasterState() const
 {
 	return (m_masterState);
+}
+
+unsigned char EbusSequence::getMasterSource() const
+{
+	return (m_masterSource);
+}
+
+unsigned char EbusSequence::getMasterTarget() const
+{
+	return (m_masterTarget);
 }
 
 Sequence EbusSequence::getSlave() const
@@ -291,7 +327,7 @@ bool EbusSequence::isValid() const
 
 const string EbusSequence::toString()
 {
-	stringstream sstr;
+	ostringstream sstr;
 
 	sstr << toStringMaster();
 
@@ -304,7 +340,7 @@ const string EbusSequence::toString()
 
 const string EbusSequence::toStringLog()
 {
-	stringstream sstr;
+	ostringstream sstr;
 
 	if (m_masterState != EBUS_OK) return (toStringMaster());
 
@@ -333,7 +369,7 @@ const string EbusSequence::toStringLog()
 
 const string EbusSequence::toStringMaster()
 {
-	stringstream sstr;
+	ostringstream sstr;
 	if (m_masterState != EBUS_OK)
 	{
 		sstr << color::red << m_master.toString() << "Master "
@@ -349,7 +385,7 @@ const string EbusSequence::toStringMaster()
 
 const string EbusSequence::toStringMasterCRC()
 {
-	stringstream sstr;
+	ostringstream sstr;
 	if (m_masterState != EBUS_OK)
 	{
 		sstr << color::red << m_master.toString() << "Master "
@@ -366,7 +402,7 @@ const string EbusSequence::toStringMasterCRC()
 
 const string EbusSequence::toStringMasterACK()
 {
-	stringstream sstr;
+	ostringstream sstr;
 	if (m_masterState != EBUS_OK)
 	{
 		sstr << color::red << m_master.toString() << "Master "
@@ -383,7 +419,7 @@ const string EbusSequence::toStringMasterACK()
 
 const string EbusSequence::toStringSlave()
 {
-	stringstream sstr;
+	ostringstream sstr;
 	if (m_slaveState != EBUS_OK)
 	{
 		sstr << color::red << m_slave.toString() << "Slave "
@@ -398,7 +434,7 @@ const string EbusSequence::toStringSlave()
 
 const string EbusSequence::toStringSlaveCRC()
 {
-	stringstream sstr;
+	ostringstream sstr;
 	if (m_slaveState != EBUS_OK)
 	{
 		sstr << color::red << m_slave.toString() << "Slave "
@@ -415,7 +451,7 @@ const string EbusSequence::toStringSlaveCRC()
 
 const string EbusSequence::toStringSlaveACK()
 {
-	stringstream sstr;
+	ostringstream sstr;
 	if (m_slaveState != EBUS_OK)
 	{
 		sstr << color::red << m_slave.toString() << "Slave "
@@ -432,7 +468,7 @@ const string EbusSequence::toStringSlaveACK()
 
 const string EbusSequence::errorText(const int error)
 {
-	stringstream result;
+	ostringstream result;
 
 	result << SequenceErrors[error];
 

@@ -20,6 +20,7 @@
 #include "Listen.h"
 #include "LockBus.h"
 #include "SendResponse.h"
+#include "HandleBroadcast.h"
 #include "Common.h"
 #include "Logger.h"
 
@@ -50,15 +51,30 @@ int Listen::run(EbusHandler* h)
 			EbusSequence eSeq(m_sequence);
 			L.log(info, "%s", eSeq.toStringLog().c_str());
 
-			if (eSeq.isValid() == true && h->m_store == true)
-				h->m_ebusDataStore->write(eSeq);
+			if (eSeq.isValid() == true)
+			{
+				if (h->m_store == true)
+					h->m_ebusDataStore->write(eSeq);
+
+				if (h->m_broadcast
+					== true&& m_sequence[1] == BROADCAST)
+				{
+					h->changeState(
+						HandleBroadcast::getInstance());
+					eSeq.clear();
+					return (result);
+				}
+			}
 
 			if (m_sequence.size() == 1 && m_lockCounter < 2)
 				m_lockCounter = 2;
 
-			m_sequence.clear();
 			eSeq.clear();
+			m_sequence.clear();
 		}
+
+//		TODO send 0704 at startup
+//		{ 0x07, 0x04 }, "07040a7a454741544501010101" },
 
 		// check for new EbusMessage
 		if (m_ebusMessage == nullptr && h->m_ebusMsgQueue.size() != 0)
