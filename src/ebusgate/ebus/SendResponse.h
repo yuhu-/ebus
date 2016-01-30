@@ -38,8 +38,6 @@ private:
 	SendResponse();
 	static SendResponse m_sendResponse;
 
-	static bool createResponse(EbusSequence& eSeq);
-
 };
 
 #endif // EBUS_SENDRESPONSE_H

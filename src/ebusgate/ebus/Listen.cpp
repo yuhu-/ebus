@@ -19,8 +19,7 @@
 
 #include "Listen.h"
 #include "LockBus.h"
-#include "SendResponse.h"
-#include "HandleBroadcast.h"
+#include "RecvMessage.h"
 #include "Common.h"
 #include "Logger.h"
 
@@ -55,15 +54,6 @@ int Listen::run(EbusHandler* h)
 			{
 				if (h->m_store == true)
 					h->m_ebusDataStore->write(eSeq);
-
-				if (h->m_broadcast
-					== true&& m_sequence[1] == BROADCAST)
-				{
-					h->changeState(
-						HandleBroadcast::getInstance());
-					eSeq.clear();
-					return (result);
-				}
 			}
 
 			if (m_sequence.size() == 1 && m_lockCounter < 2)
@@ -73,32 +63,31 @@ int Listen::run(EbusHandler* h)
 			m_sequence.clear();
 		}
 
-//		TODO send 0704 at startup
-//		{ 0x07, 0x04 }, "07040a7a454741544501010101" },
-
 		// check for new EbusMessage
-		if (m_ebusMessage == nullptr && h->m_ebusMsgQueue.size() != 0)
+		if (m_activeMessage == nullptr && h->m_ebusMsgQueue.size() != 0)
 		{
 			L.log(trace, "pending ebus messages: %d",
 				h->m_ebusMsgQueue.size());
-			m_ebusMessage = h->m_ebusMsgQueue.dequeue();
+			m_activeMessage = h->m_ebusMsgQueue.dequeue();
 		}
 
 		// handle EbusMessage
-		if (m_ebusMessage != nullptr && m_lockCounter == 0)
+		if (m_activeMessage != nullptr && m_lockCounter == 0)
 			h->changeState(LockBus::getInstance());
 	}
 	else
 	{
 		m_sequence.push_back(byte);
 
-		// handle messages to my slave address
-		if (h->m_response == true)
+		// handle broadcast and at me addressed messages
+		if (m_sequence.size() == 2)
 		{
-			if (m_sequence.size() == 2
-				&& m_sequence[1] == slaveAddress(h->m_address))
-				h->changeState(SendResponse::getInstance());
+			if (m_sequence[1] == BROADCAST
+				|| m_sequence[1] == h->m_address
+				|| m_sequence[1] == slaveAddress(h->m_address))
+				h->changeState(RecvMessage::getInstance());
 		}
+
 	}
 
 	return (result);

@@ -35,6 +35,7 @@ EbusDataStore::~EbusDataStore()
 	m_eSeqStore.clear();
 }
 
+// TODO rework key and search
 void EbusDataStore::write(const EbusSequence& eSeq)
 {
 	vector<unsigned char> key;

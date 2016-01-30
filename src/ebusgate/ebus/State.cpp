@@ -19,8 +19,8 @@
 
 #include "State.h"
 #include "EbusHandler.h"
-#include "Logger.h"
 #include "Color.h"
+#include "Logger.h"
 
 #include <iomanip>
 #include <map>
@@ -35,23 +35,28 @@ long State::m_reopenTime = 0;
 int State::m_lockCounter = 0;
 int State::m_lockRetries = 0;
 Sequence State::m_sequence;
-EbusMessage* State::m_ebusMessage = nullptr;
+EbusMessage* State::m_activeMessage = nullptr;
+EbusMessage* State::m_passiveMessage = nullptr;
 
 map<int, string> StateErros =
 {
+{ STATE_INF_PRI_FIT, "priority class fit -> retry" },
+
 { STATE_WRN_BYTE_DIF, "written/read byte difference" },
 { STATE_WRN_ARB_LOST, "arbitration lost" },
 { STATE_WRN_PRI_LOST, "priority class lost" },
-{ STATE_INF_PRI_FIT, "priority class fit -> retry" },
-{ STATE_ERR_LOCK_FAIL, "lock ebus failed" },
 { STATE_WRN_ACK_NEG, "received ACK is negative -> retry" },
+{ STATE_WRN_RECV_RESP, "received response is invalid -> retry" },
+{ STATE_WRN_RECV_MSG, "at me addressed message is invalid" },
+{ STATE_WRN_NOT_DEF, "at me addressed message is not defined" },
+
+{ STATE_ERR_LOCK_FAIL, "lock ebus failed" },
 { STATE_ERR_ACK_NEG, "received ACK is negative -> failed" },
 { STATE_ERR_ACK_WRONG, "received ACK byte is wrong" },
-{ STATE_WRN_RECV_RESP, "received response is invalid -> retry" },
+{ STATE_ERR_NN_WRONG, "received NN byte is wrong" },
 { STATE_ERR_RECV_RESP, "received response is invalid -> failed" },
-{ STATE_WRN_RECV_MESS, "at me addressed message is invalid" },
-{ STATE_WRN_RECV_IMPL, "at me addressed message is not implemented" },
-{ STATE_ERR_SEND_FAIL, "sending response failed" } };
+{ STATE_ERR_CREA_MSG, "creating the message failed" },
+{ STATE_ERR_SEND_FAIL, "sending the response message failed" } };
 
 State::~State()
 {
@@ -130,13 +135,17 @@ void State::reset(EbusHandler* h)
 	m_lockRetries = 0;
 	m_sequence.clear();
 
-	if (m_ebusMessage != nullptr)
+	if (m_activeMessage != nullptr)
 	{
-		m_ebusMessage->notify();
+		m_activeMessage->notify();
+		m_activeMessage = nullptr;
+	}
 
-		if (m_ebusMessage->isIntern() == true) delete m_ebusMessage;
-
-		m_ebusMessage = nullptr;
+	if (m_passiveMessage != nullptr)
+	{
+		EbusMessage* tmp = m_passiveMessage;
+		m_passiveMessage = nullptr;
+		delete tmp;
 	}
 }
 

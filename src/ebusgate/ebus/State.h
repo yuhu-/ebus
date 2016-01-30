@@ -29,14 +29,16 @@
 #define STATE_WRN_PRI_LOST    3 // priority class lost
 #define STATE_WRN_ACK_NEG     4 // received ACK is negative -> retry
 #define STATE_WRN_RECV_RESP   5 // received response is invalid -> retry
-#define STATE_WRN_RECV_MESS   6 // at me addressed message is invalid
-#define STATE_WRN_RECV_IMPL   7 // at me addressed message is not implemented
+#define STATE_WRN_RECV_MSG    6 // at me addressed message is invalid
+#define STATE_WRN_NOT_DEF     7 // at me addressed message is not defined
 
 #define STATE_ERR_LOCK_FAIL  -1 // lock ebus failed
 #define STATE_ERR_ACK_NEG    -2 // received ACK is negative -> failed
 #define STATE_ERR_ACK_WRONG  -3 // received ACK byte is wrong
-#define STATE_ERR_RECV_RESP  -4 // received response is invalid -> failed
-#define STATE_ERR_SEND_FAIL  -5 // sending response failed
+#define STATE_ERR_NN_WRONG   -4 // received NN byte is wrong
+#define STATE_ERR_RECV_RESP  -5 // received response is invalid -> failed
+#define STATE_ERR_CREA_MSG   -6 // creating the message failed
+#define STATE_ERR_SEND_FAIL  -7 // sending the response message failed
 
 class State
 {
@@ -52,7 +54,8 @@ protected:
 	static int m_lockCounter;
 	static int m_lockRetries;
 	static Sequence m_sequence;
-	static EbusMessage* m_ebusMessage;
+	static EbusMessage* m_activeMessage;
+	static EbusMessage* m_passiveMessage;
 
 	static void changeState(EbusHandler* h, State* state);
 	static int read(EbusHandler* h, unsigned char& byte, const long sec,

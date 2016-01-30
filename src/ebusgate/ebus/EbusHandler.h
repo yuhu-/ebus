@@ -43,19 +43,19 @@ class EbusHandler : public Notify
 	friend class Listen;
 	friend class LockBus;
 	friend class FreeBus;
+	friend class Action;
 	friend class SendMessage;
 	friend class RecvResponse;
+	friend class RecvMessage;
 	friend class SendResponse;
-	friend class HandleBroadcast;
 
 public:
 	EbusHandler(const unsigned char address, const string device,
 		const bool noDeviceCheck, const long reopenTime,
 		const long arbitrationTime, const long receiveTimeout,
-		const int lockCounter, const int lockRetries,
-		const bool response, const bool broadcast, const bool store,
-		const bool logRaw, const bool dumpRaw, const char* dumpRawFile,
-		const long dumpRawFileMaxSize);
+		const int lockCounter, const int lockRetries, const bool active,
+		const bool store, const bool logRaw, const bool dumpRaw,
+		const char* dumpRawFile, const long dumpRawFileMaxSize);
 
 	~EbusHandler();
 
@@ -75,7 +75,7 @@ public:
 	void setDumpRawMaxSize(const long maxSize);
 
 	void addMessage(EbusMessage* message);
-	const string lookMessage(const string& str) const;
+	const string grabMessage(const string& str) const;
 
 private:
 	thread m_thread;
@@ -91,8 +91,7 @@ private:
 	long m_receiveTimeout;
 	int m_lockCounter;
 	int m_lockRetries;
-	bool m_response;
-	bool m_broadcast;
+	bool m_active;
 	bool m_store;
 
 	int m_lastResult;

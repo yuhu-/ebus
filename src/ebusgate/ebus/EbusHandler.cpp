@@ -31,16 +31,14 @@ extern Logger& L;
 EbusHandler::EbusHandler(const unsigned char address, const string device,
 	const bool noDeviceCheck, const long reopenTime,
 	const long arbitrationTime, const long receiveTimeout,
-	const int lockCounter, const int lockRetries, const bool response,
-	const bool broadcast, const bool store, const bool logRaw,
-	const bool dumpRaw, const char* dumpRawFile,
-	const long dumpRawFileMaxSize)
+	const int lockCounter, const int lockRetries, const bool active,
+	const bool store, const bool logRaw, const bool dumpRaw,
+	const char* dumpRawFile, const long dumpRawFileMaxSize)
 	: m_address(address), m_reopenTime(reopenTime), m_arbitrationTime(
 		arbitrationTime), m_receiveTimeout(receiveTimeout), m_lockCounter(
-		lockCounter), m_lockRetries(lockRetries), m_response(response), m_broadcast(
-		broadcast), m_store(store), m_lastResult(DEV_OK), m_logRaw(
-		logRaw), m_dumpRawFile(dumpRawFile), m_dumpRawFileMaxSize(
-		dumpRawFileMaxSize)
+		lockCounter), m_lockRetries(lockRetries), m_active(active), m_store(
+		store), m_lastResult(DEV_OK), m_logRaw(logRaw), m_dumpRawFile(
+		dumpRawFile), m_dumpRawFileMaxSize(dumpRawFileMaxSize)
 {
 	m_device = new EbusDevice(device, noDeviceCheck);
 	changeState(Connect::getInstance());
@@ -145,7 +143,7 @@ void EbusHandler::addMessage(EbusMessage* message)
 	m_ebusMsgQueue.enqueue(message);
 }
 
-const string EbusHandler::lookMessage(const string& str) const
+const string EbusHandler::grabMessage(const string& str) const
 {
 	return (m_ebusDataStore->read(str));
 }

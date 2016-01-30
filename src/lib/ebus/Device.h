@@ -26,7 +26,9 @@ using std::string;
 
 #define DEV_WRN_EOF      2  // 0 bytes received
 #define DEV_WRN_TIMEOUT  1  // timeout during receive
+
 #define DEV_OK           0  // success
+
 #define DEV_ERR_OPEN    -1  // error opening device
 #define DEV_ERR_VALID   -2  // invalid file descriptor
 #define DEV_ERR_RECV    -3  // receive error

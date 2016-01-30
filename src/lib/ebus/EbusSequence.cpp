@@ -38,6 +38,7 @@ using std::map;
 map<int, string> SequenceErrors =
 {
 { EBUS_EMPTY, "is empty" },
+
 { EBUS_ERR_SHORT, "sequence to short" },
 { EBUS_ERR_LONG, "sequence to long" },
 { EBUS_ERR_BYTES, "sequence to much data bytes" },
@@ -51,11 +52,6 @@ EbusSequence::EbusSequence()
 }
 
 EbusSequence::EbusSequence(Sequence& seq)
-{
-	decodeSequence(seq);
-}
-
-void EbusSequence::decodeSequence(Sequence& seq)
 {
 	seq.reduce();
 
@@ -83,34 +79,45 @@ void EbusSequence::decodeSequence(Sequence& seq)
 	if (m_type != EBUS_TYPE_BC)
 	{
 		m_slaveACK = seq[5 + m_masterNN + 1];
-
 		if (m_slaveACK != ACK && m_slaveACK != NAK) m_slaveState =
 		EBUS_ERR_ACK;
 	}
+
+	// TODO handle NAK from slave
 
 	if (m_type == EBUS_TYPE_MS)
 	{
 		Sequence slave(seq, 5 + m_masterNN + 2,
 			1 + seq[5 + m_masterNN + 2] + 1);
 		createSlave(slave);
+
+		m_masterACK = seq[(5 + m_masterNN + 3 + m_slaveNN + 1)];
+		if (m_masterACK != ACK && m_masterACK != NAK) m_masterState =
+		EBUS_ERR_ACK;
+
+		// TODO handle NAK from master
 	}
 }
 
-void EbusSequence::createMaster(const unsigned char& source, const unsigned char& target,const string& str)
+void EbusSequence::createMaster(const unsigned char& source,
+	const unsigned char& target, const string& str)
 {
-	ostringstream master;
-	master << nouppercase << hex << setw(2) << setfill('0') << static_cast<unsigned>(source);
-	master << nouppercase << hex << setw(2) << setfill('0') << static_cast<unsigned>(target);
-	master << nouppercase << setw(0) << str;
-	createMaster(master.str());
+	ostringstream ostr;
+	ostr << nouppercase << hex << setw(2) << setfill('0')
+		<< static_cast<unsigned>(source);
+	ostr << nouppercase << hex << setw(2) << setfill('0')
+		<< static_cast<unsigned>(target);
+	ostr << nouppercase << setw(0) << str;
+	createMaster(ostr.str());
 }
 
 void EbusSequence::createMaster(const unsigned char& source, const string& str)
 {
-	ostringstream master;
-	master << nouppercase << hex << setw(2) << setfill('0') << static_cast<unsigned>(source);
-	master << nouppercase << setw(0) << str;
-	createMaster(master.str());
+	ostringstream ostr;
+	ostr << nouppercase << hex << setw(2) << setfill('0')
+		<< static_cast<unsigned>(source);
+	ostr << nouppercase << setw(0) << str;
+	createMaster(ostr.str());
 }
 
 void EbusSequence::createMaster(const string& str)
@@ -159,8 +166,8 @@ void EbusSequence::createMaster(Sequence& seq)
 		return;
 	}
 
-	m_masterSource = seq[0];
-	m_masterTarget = seq[1];
+	m_masterQQ = seq[0];
+	m_masterZZ = seq[1];
 	setType(seq[1]);
 	m_masterNN = seq[4];
 
@@ -231,19 +238,30 @@ void EbusSequence::clear()
 {
 	m_type = -1;
 
+	m_masterQQ = 0;
+	m_masterZZ = 0;
+
 	m_master.clear();
 	m_masterNN = 0;
 	m_masterCRC = 0;
 	m_masterACK = 0;
 	m_masterState = EBUS_EMPTY;
-	m_masterSource = 0;
-	m_masterTarget = 0;
 
 	m_slave.clear();
 	m_slaveNN = 0;
 	m_slaveCRC = 0;
 	m_slaveACK = 0;
 	m_slaveState = EBUS_EMPTY;
+}
+
+unsigned char EbusSequence::getMasterQQ() const
+{
+	return (m_masterQQ);
+}
+
+unsigned char EbusSequence::getMasterZZ() const
+{
+	return (m_masterZZ);
 }
 
 Sequence EbusSequence::getMaster() const
@@ -266,14 +284,9 @@ int EbusSequence::getMasterState() const
 	return (m_masterState);
 }
 
-unsigned char EbusSequence::getMasterSource() const
+void EbusSequence::setMasterACK(const unsigned char& byte)
 {
-	return (m_masterSource);
-}
-
-unsigned char EbusSequence::getMasterTarget() const
-{
-	return (m_masterTarget);
+	m_masterACK = byte;
 }
 
 Sequence EbusSequence::getSlave() const
@@ -294,6 +307,11 @@ unsigned char EbusSequence::getSlaveCRC() const
 int EbusSequence::getSlaveState() const
 {
 	return (m_slaveState);
+}
+
+void EbusSequence::setSlaveACK(const unsigned char& byte)
+{
+	m_slaveACK = byte;
 }
 
 void EbusSequence::setType(const unsigned char& byte)
@@ -346,17 +364,17 @@ const string EbusSequence::toStringLog()
 
 	if (m_type == EBUS_TYPE_BC)
 	{
-		sstr << color::blue << "BC " << color::reset
+		sstr << color::blue << "BC" << color::reset << " "
 			<< toStringMaster();
 	}
 	else if (m_type == EBUS_TYPE_MM)
 	{
-		sstr << color::cyan << "MM " << color::reset
+		sstr << color::cyan << "MM" << color::reset << " "
 			<< toStringMaster();
 	}
 	else
 	{
-		sstr << color::magenta << "MS " << color::reset
+		sstr << color::magenta << "MS" << color::reset << " "
 			<< toStringMaster();
 	}
 

@@ -23,7 +23,9 @@
 #include "Sequence.h"
 
 #define EBUS_EMPTY       1 // is empty
+
 #define EBUS_OK          0 // success
+
 #define EBUS_ERR_SHORT  -1 // sequence to short
 #define EBUS_ERR_LONG   -2 // sequence to long
 #define EBUS_ERR_BYTES  -3 // to much data bytes
@@ -47,8 +49,6 @@ public:
 	EbusSequence();
 	explicit EbusSequence(Sequence& seq);
 
-	void decodeSequence(Sequence& seq);
-
 	void createMaster(const unsigned char& source,
 		const unsigned char& target, const string& str);
 	void createMaster(const unsigned char& source, const string& str);
@@ -60,17 +60,22 @@ public:
 
 	void clear();
 
+	unsigned char getMasterQQ() const;
+	unsigned char getMasterZZ() const;
+
 	Sequence getMaster() const;
 	size_t getMasterNN() const;
 	unsigned char getMasterCRC() const;
 	int getMasterState() const;
-	unsigned char getMasterSource() const;
-	unsigned char getMasterTarget() const;
+
+	void setMasterACK(const unsigned char& byte);
 
 	Sequence getSlave() const;
 	size_t getSlaveNN() const;
 	unsigned char getSlaveCRC() const;
 	int getSlaveState() const;
+
+	void setSlaveACK(const unsigned char& byte);
 
 	void setType(const unsigned char& byte);
 	int getType() const;
@@ -91,13 +96,14 @@ public:
 private:
 	int m_type = -1;
 
+	unsigned char m_masterQQ = 0;
+	unsigned char m_masterZZ = 0;
+
 	Sequence m_master;
 	size_t m_masterNN = 0;
 	unsigned char m_masterCRC = 0;
 	unsigned char m_masterACK = 0;
 	int m_masterState = EBUS_EMPTY;
-	unsigned char m_masterSource = 0;
-	unsigned char m_masterTarget = 0;
 
 	Sequence m_slave;
 	size_t m_slaveNN = 0;
@@ -106,7 +112,6 @@ private:
 	int m_slaveState = EBUS_EMPTY;
 
 	static const string errorText(const int error);
-
 };
 
 #endif // LIBEBUS_EBUSSEQUENCE_H

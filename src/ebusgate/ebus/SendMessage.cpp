@@ -29,7 +29,7 @@ SendMessage SendMessage::m_sendMessage;
 
 int SendMessage::run(EbusHandler* h)
 {
-	EbusSequence& eSeq = m_ebusMessage->getEbusSequence();
+	EbusSequence& eSeq = m_activeMessage->getEbusSequence();
 	int result;
 
 	for (int retry = 1; retry >= 0; retry--)
@@ -50,8 +50,7 @@ int SendMessage::run(EbusHandler* h)
 		{
 			L.log(info, "broadcast sent");
 
-			reset(h);
-			h->changeState(Listen::getInstance());
+			h->changeState(FreeBus::getInstance());
 			break;
 		}
 
@@ -65,7 +64,7 @@ int SendMessage::run(EbusHandler* h)
 		{
 			L.log(warn, "%s",
 				errorText(STATE_ERR_ACK_WRONG).c_str());
-			m_ebusMessage->setResult(
+			m_activeMessage->setResult(
 				errorText(STATE_ERR_ACK_WRONG));
 
 			h->changeState(FreeBus::getInstance());
@@ -96,7 +95,7 @@ int SendMessage::run(EbusHandler* h)
 			{
 				L.log(warn, "%s",
 					errorText(STATE_ERR_ACK_NEG).c_str());
-				m_ebusMessage->setResult(
+				m_activeMessage->setResult(
 					errorText(STATE_ERR_ACK_NEG));
 
 				h->changeState(FreeBus::getInstance());

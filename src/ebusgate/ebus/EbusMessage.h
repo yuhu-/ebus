@@ -20,27 +20,23 @@
 #ifndef EBUS_EBUSMESSAGE_H
 #define EBUS_EBUSMESSAGE_H
 
-#include "Notify.h"
 #include "EbusSequence.h"
+#include "Notify.h"
 
 class EbusMessage : public Notify
 {
 
 public:
 	explicit EbusMessage(EbusSequence eSeq);
-	EbusMessage(EbusSequence eSeq, const bool intern);
 
 	EbusSequence& getEbusSequence();
 
 	void setResult(const string result);
 	const string getResult();
 
-	bool isIntern() const;
-
 private:
 	EbusSequence m_ebusSequence;
 
-	bool m_intern = false;
 	string m_result;
 
 };

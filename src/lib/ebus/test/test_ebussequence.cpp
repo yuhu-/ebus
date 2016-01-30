@@ -19,7 +19,6 @@
 
 #include "EbusSequence.h"
 #include <iostream>
-#include <iomanip>
 
 using std::cout;
 using std::endl;
@@ -37,13 +36,16 @@ int main()
 		seq.push_back(bytes[i]);
 
 	EbusSequence full(seq);
+
+
+
 	cout << "seq: " << seq.toString() << " Full: " << full.toStringLog()
 		<< endl;
 
 	// TEST MASTER
 	EbusSequence master;
 	master.createMaster("ff52b509030d0600");
-	cout << "seq: ff52b509030d0600" << "   Master: "
+	cout << "seq: ff52b509030d0600" << "   Master : "
 		<< master.toStringMaster() << endl;
 
 	seq.clear();
@@ -52,7 +54,7 @@ int main()
 
 	EbusSequence master2;
 	master2.createMaster(seq);
-	cout << "seq: " << seq.toString() << " Master: "
+	cout << "seq: " << seq.toString() << " Master2: "
 		<< master2.toStringMaster() << endl;
 
 	// TEST SLAVE

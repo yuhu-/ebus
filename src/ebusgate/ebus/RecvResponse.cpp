@@ -19,6 +19,7 @@
 
 #include "RecvResponse.h"
 #include "FreeBus.h"
+#include "Listen.h"
 #include "Logger.h"
 
 extern Logger& L;
@@ -27,7 +28,7 @@ RecvResponse RecvResponse::m_recvResponse;
 
 int RecvResponse::run(EbusHandler* h)
 {
-	EbusSequence& eSeq = m_ebusMessage->getEbusSequence();
+	EbusSequence& eSeq = m_activeMessage->getEbusSequence();
 	unsigned char byte;
 	Sequence seq;
 	int result;
@@ -37,6 +38,15 @@ int RecvResponse::run(EbusHandler* h)
 		// receive NN
 		result = read(h, byte, 1, 0);
 		if (result != DEV_OK) return (result);
+
+		// check against max. possible size
+		if (byte > 0x10)
+		{
+			L.log(warn, "%s", errorText(STATE_ERR_NN_WRONG).c_str());
+			reset(h);
+			h->changeState(Listen::getInstance());
+			return (DEV_OK);
+		}
 
 		seq.push_back(byte);
 
@@ -81,7 +91,7 @@ int RecvResponse::run(EbusHandler* h)
 		{
 			L.log(warn, "%s",
 				errorText(STATE_ERR_RECV_RESP).c_str());
-			m_ebusMessage->setResult(
+			m_activeMessage->setResult(
 				errorText(STATE_ERR_RECV_RESP));
 		}
 	}

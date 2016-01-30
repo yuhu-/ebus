@@ -30,11 +30,11 @@ LockBus LockBus::m_lockBus;
 
 int LockBus::run(EbusHandler* h)
 {
-	EbusSequence& eSeq = m_ebusMessage->getEbusSequence();
+	EbusSequence& eSeq = m_activeMessage->getEbusSequence();
 	if (eSeq.getMasterState() != EBUS_OK)
 	{
 		L.log(debug, "%s", eSeq.toStringMaster().c_str());
-		m_ebusMessage->setResult(eSeq.toStringMaster());
+		m_activeMessage->setResult(eSeq.toStringMaster());
 
 		reset(h);
 		h->changeState(Listen::getInstance());
@@ -78,7 +78,7 @@ int LockBus::run(EbusHandler* h)
 		{
 			L.log(warn, "%s",
 				errorText(STATE_ERR_LOCK_FAIL).c_str());
-			m_ebusMessage->setResult(
+			m_activeMessage->setResult(
 				errorText(STATE_ERR_LOCK_FAIL));
 
 			reset(h);

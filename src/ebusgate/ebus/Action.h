@@ -17,48 +17,32 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
-#include "EbusMessage.h"
+#ifndef EBUS_ACTION_H
+#define EBUS_ACTION_H
 
-#include <sstream>
+#include "State.h"
 
-using std::ostringstream;
-
-EbusMessage::EbusMessage(EbusSequence eSeq)
-	: Notify(), m_ebusSequence(eSeq)
+class Action : public State
 {
-}
 
-EbusSequence& EbusMessage::getEbusSequence()
-{
-	return (m_ebusSequence);
-}
-
-void EbusMessage::setResult(const string result)
-{
-	m_result = result;
-}
-
-const string EbusMessage::getResult()
-{
-	ostringstream result;
-
-	if (m_result.size() != 0)
+public:
+	static Action* getInstance()
 	{
-		result << m_result;
-	}
-	else if (m_ebusSequence.getType() == EBUS_TYPE_BC)
-	{
-		result << "done";
-	}
-	else if (m_ebusSequence.getType() == EBUS_TYPE_MM)
-	{
-		result << m_ebusSequence.toStringSlaveACK();
-	}
-	else
-	{
-		result << m_ebusSequence.toStringSlave();
+		return (&m_action);
 	}
 
-	return (result.str());
-}
+	int run(EbusHandler* h);
+	const char* toString() const;
 
+private:
+	Action();
+	static Action m_action;
+
+	static int findAction(const EbusSequence& eSeq);
+	static bool createResponse(EbusSequence& eSeq);
+	static bool createMessage(const unsigned char source,
+		const unsigned char target, EbusSequence& eSeq);
+
+};
+
+#endif // EBUS_ACTION_H

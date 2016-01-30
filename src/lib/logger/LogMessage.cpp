@@ -27,13 +27,11 @@
 map<Level, string> LevelNames =
 {
 { off, "OFF" },
-{ fatal, "FATAL" },
 { error, "ERROR" },
 { warn, "WARN" },
 { info, "INFO" },
 { debug, "DEBUG" },
-{ trace, "TRACE" },
-{ all, "ALL" } };
+{ trace, "TRACE" } };
 
 Level calcLevel(const string& level)
 {
@@ -41,7 +39,7 @@ Level calcLevel(const string& level)
 		if (strcasecmp(lvl.second.c_str(), level.c_str()) == 0)
 			return (lvl.first);
 
-	return (all);
+	return (info);
 }
 
 Level LogMessage::getLevel() const

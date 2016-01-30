@@ -22,7 +22,11 @@
 #include "Listen.h"
 #include "Logger.h"
 
+#include <sstream>
+
 #include <unistd.h>
+
+using std::ostringstream;
 
 extern Logger& L;
 
@@ -42,7 +46,8 @@ int Connect::run(EbusHandler* h)
 		}
 		else
 		{
-			L.log(info, "ebus connection attempt failed");
+			L.log(error, "%s",
+				h->m_device->errorText(h->m_lastResult).c_str());
 			sleep(1);
 			m_reopenTime++;
 
@@ -54,8 +59,18 @@ int Connect::run(EbusHandler* h)
 	}
 
 	reset(h);
-	h->changeState(Listen::getInstance());
 
+//	if (h->m_active == true)
+//	{
+//		EbusSequence eSeq;
+//		eSeq.createMaster(h->m_address, BROADCAST,
+//			"07040a7a454741544501010101");
+//
+//		if (eSeq.getMasterState() == EBUS_OK)
+//			h->addMessage(new EbusMessage(EbusSequence()));
+//	}
+
+	h->changeState(Listen::getInstance());
 	return (result);
 }
 

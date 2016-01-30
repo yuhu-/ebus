@@ -33,6 +33,7 @@ map<int, string> DeviceErrors =
 {
 { DEV_WRN_EOF, "EOF during receiving reached" },
 { DEV_WRN_TIMEOUT, "Timeout during receiving reached" },
+
 { DEV_ERR_OPEN, "Error occurred when opening the input device " },
 { DEV_ERR_VALID, "File descriptor of input device is invalid" },
 { DEV_ERR_RECV, "Error occurred during data receiving" },

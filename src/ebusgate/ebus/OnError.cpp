@@ -29,8 +29,8 @@ OnError OnError::m_onError;
 int OnError::run(EbusHandler* h)
 {
 	L.log(error, "%s", h->m_device->errorText(h->m_lastResult).c_str());
-	if (m_ebusMessage != nullptr)
-		m_ebusMessage->setResult(
+	if (m_activeMessage != nullptr)
+		m_activeMessage->setResult(
 			h->m_device->errorText(h->m_lastResult));
 
 	reset(h);

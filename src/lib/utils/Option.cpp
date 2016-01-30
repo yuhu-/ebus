@@ -83,11 +83,9 @@ bool Option::parseArgs(int argc, char* argv[])
 	// walk through all arguments
 	for (i = 1; i < argc; i++)
 	{
-
 		// find option with long format '--'
 		if (_argv[i].rfind("--") == 0 && _argv[i].size() > 2)
 		{
-
 			// is next item an added argument?
 			if (i + 1 < argc
 				&& _argv[i + 1].rfind("-", 0) == string::npos)
@@ -102,16 +100,13 @@ bool Option::parseArgs(int argc, char* argv[])
 			}
 
 			lastOption = true;
-
-			// find option with short format '-'
 		}
+		// find option with short format '-'
 		else if (_argv[i].rfind("-") == 0 && _argv[i].size() > 1)
 		{
-
 			// walk through all characters
 			for (size_t j = 1; j < _argv[i].size(); j++)
 			{
-
 				// only last charater could have an argument
 				if (i + 1 < argc
 					&& _argv[i + 1].rfind("-", 0)
@@ -130,7 +125,6 @@ bool Option::parseArgs(int argc, char* argv[])
 			}
 
 			lastOption = true;
-
 		}
 		else
 		{
@@ -143,9 +137,7 @@ bool Option::parseArgs(int argc, char* argv[])
 			{
 				lastOption = false;
 			}
-
 		}
-
 	}
 
 	if (i < argc && strlen(m_withCommand) != 0)
@@ -158,7 +150,6 @@ bool Option::parseArgs(int argc, char* argv[])
 			// save args of command
 			for (++i; i < argc; i++)
 				m_arguments.push_back(_argv[i]);
-
 		}
 	}
 
@@ -203,7 +194,6 @@ bool Option::checkOption(const string& option, const string& value)
 	{
 		if (o_it->shortname == option || o_it->name == option)
 		{
-
 			// need this option and argument?
 			if (o_it->optiontype == ot_mandatory
 				&& value.size() == 0)
@@ -353,7 +343,6 @@ bool Option::toStringOptions()
 		{
 			cerr << getOptVal<const char*>(o_it->name) << endl;
 		}
-
 	}
 
 	cerr << endl;
