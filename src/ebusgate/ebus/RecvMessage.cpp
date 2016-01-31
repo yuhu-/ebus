@@ -101,13 +101,14 @@ int RecvMessage::run(EbusHandler* h)
 
 	if (eSeq.getMasterState() == EBUS_OK)
 	{
-		if (h->m_store == true && eSeq.getType() != EBUS_TYPE_MS)
+		if (eSeq.getType() != EBUS_TYPE_MS)
 		{
 			if (eSeq.getType() == EBUS_TYPE_MM)
 				eSeq.setSlaveACK(byte);
 
 			L.log(info, "%s", eSeq.toStringLog().c_str());
-			h->storeMessage(eSeq);
+
+			if (h->m_store == true) h->storeMessage(eSeq);
 		}
 
 		if (h->m_active == true)
