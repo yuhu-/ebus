@@ -107,7 +107,7 @@ int RecvMessage::run(EbusHandler* h)
 				eSeq.setSlaveACK(byte);
 
 			L.log(info, "%s", eSeq.toStringLog().c_str());
-			h->m_ebusDataStore->write(eSeq);
+			h->storeMessage(eSeq);
 		}
 
 		if (h->m_active == true)

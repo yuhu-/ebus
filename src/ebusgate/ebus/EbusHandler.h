@@ -21,16 +21,17 @@
 #define EBUS_EBUSHANDLER_H
 
 #include "EbusMessage.h"
-#include "EbusDataStore.h"
 #include "EbusDevice.h"
 #include "NQueue.h"
 #include "Notify.h"
 
 #include <fstream>
 #include <thread>
+#include <map>
 
 using std::ofstream;
 using std::thread;
+using std::map;
 
 class State;
 
@@ -75,7 +76,7 @@ public:
 	void setDumpRawMaxSize(const long maxSize);
 
 	void addMessage(EbusMessage* message);
-	const string grabMessage(const string& str) const;
+	const string grabMessage(const string& str);
 
 private:
 	thread m_thread;
@@ -110,11 +111,13 @@ private:
 
 	NQueue<EbusMessage*> m_ebusMsgQueue;
 
-	EbusDataStore* m_ebusDataStore = nullptr;
+	map<vector<unsigned char>, EbusSequence> m_eSeqStore;
 
 	void run();
 
 	void changeState(State* state);
+
+	void storeMessage(const EbusSequence& eSeq);
 
 };
 

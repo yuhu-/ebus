@@ -53,7 +53,7 @@ int Listen::run(EbusHandler* h)
 			if (eSeq.isValid() == true)
 			{
 				if (h->m_store == true)
-					h->m_ebusDataStore->write(eSeq);
+					h->storeMessage(eSeq);
 			}
 
 			if (m_sequence.size() == 1 && m_lockCounter < 2)

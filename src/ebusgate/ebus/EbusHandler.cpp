@@ -24,7 +24,14 @@
 #include "OnError.h"
 #include "Logger.h"
 
+#include <sstream>
+#include <algorithm>
+
 using std::ios;
+using std::pair;
+using std::ostringstream;
+using std::copy_n;
+using std::back_inserter;
 
 extern Logger& L;
 
@@ -44,8 +51,6 @@ EbusHandler::EbusHandler(const unsigned char address, const string device,
 	changeState(Connect::getInstance());
 
 	setDumpRaw(dumpRaw);
-
-	m_ebusDataStore = new EbusDataStore();
 }
 
 EbusHandler::~EbusHandler()
@@ -58,7 +63,7 @@ EbusHandler::~EbusHandler()
 
 	m_dumpRawStream.close();
 
-	delete m_ebusDataStore;
+	m_eSeqStore.clear();
 }
 
 void EbusHandler::start()
@@ -143,9 +148,28 @@ void EbusHandler::addMessage(EbusMessage* message)
 	m_ebusMsgQueue.enqueue(message);
 }
 
-const string EbusHandler::grabMessage(const string& str) const
+const string EbusHandler::grabMessage(const string& str)
 {
-	return (m_ebusDataStore->read(str));
+	ostringstream result;
+	const Sequence seq(str);
+	vector<unsigned char> key(seq.getSequence());
+
+	map<vector<unsigned char>, EbusSequence>::iterator it =
+		m_eSeqStore.find(key);
+	if (it != m_eSeqStore.end())
+	{
+		result << it->second.toString();
+		L.log(debug, "key %s found %s", Sequence::toString(key).c_str(),
+			result.str().c_str());
+	}
+	else
+	{
+		result << "not found";
+		L.log(debug, "key %s not found",
+			Sequence::toString(key).c_str());
+	}
+
+	return (result.str());
 }
 
 void EbusHandler::run()
@@ -171,4 +195,36 @@ void EbusHandler::changeState(State* state)
 		L.log(trace, "State: %s", m_state->toString());
 	}
 }
+
+// TODO rework key and search
+void EbusHandler::storeMessage(const EbusSequence& eSeq)
+{
+	vector<unsigned char> key;
+	int size = eSeq.getMasterNN();
+
+	if (size > 3) size = 3;
+
+	size += 5;
+
+	copy_n(eSeq.getMaster().getSequence().begin(), size,
+		back_inserter(key));
+
+	map<vector<unsigned char>, EbusSequence>::iterator it =
+		m_eSeqStore.find(key);
+
+	if (it != m_eSeqStore.end())
+	{
+		it->second = eSeq;
+		L.log(debug, "%03d - update key %s", m_eSeqStore.size(),
+			Sequence::toString(key).c_str());
+	}
+	else
+	{
+		m_eSeqStore.insert(
+			pair<vector<unsigned char>, EbusSequence>(key, eSeq));
+		L.log(debug, "%03d - insert key %s", m_eSeqStore.size(),
+			Sequence::toString(key).c_str());
+	}
+}
+
 
