@@ -59,7 +59,7 @@ BaseLoop::BaseLoop()
 
 	m_ebushandler->start();
 
-	m_network = new Network(O.getOptVal<bool>("localhost"),
+	m_network = new Network(O.getOptVal<bool>("local"),
 		O.getOptVal<int>("port"), &m_netMsgQueue);
 	m_network->start();
 }
