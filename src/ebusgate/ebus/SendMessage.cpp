@@ -48,8 +48,7 @@ int SendMessage::run(EbusHandler* h)
 		// Broadcast ends here
 		if (eSeq.getType() == EBUS_TYPE_BC)
 		{
-			L.log(info, "broadcast sent");
-
+			L.log(info, "%s done", eSeq.toStringLog().c_str());
 			h->changeState(FreeBus::getInstance());
 			break;
 		}
@@ -75,6 +74,7 @@ int SendMessage::run(EbusHandler* h)
 			// Master Master ends here
 			if (eSeq.getType() == EBUS_TYPE_MM)
 			{
+				L.log(info, "%s done", eSeq.toStringLog().c_str());
 				h->changeState(FreeBus::getInstance());
 			}
 			else

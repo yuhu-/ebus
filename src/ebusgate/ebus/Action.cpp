@@ -51,7 +51,9 @@ map<vector<unsigned char>, int> ActionTypes =
 {
 { 0x07, 0xfe }, at_send_BC },
 {
-{ 0xb5, 0x05 }, at_doNothing } };
+{ 0xb5, 0x05 }, at_doNothing },
+{
+{ 0xb5, 0x16 }, at_doNothing } };
 
 map<vector<unsigned char>, string> ActionMessages =
 {

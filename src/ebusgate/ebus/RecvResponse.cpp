@@ -42,7 +42,8 @@ int RecvResponse::run(EbusHandler* h)
 		// check against max. possible size
 		if (byte > 0x10)
 		{
-			L.log(warn, "%s", errorText(STATE_ERR_NN_WRONG).c_str());
+			L.log(warn, "%s",
+				errorText(STATE_ERR_NN_WRONG).c_str());
 			reset(h);
 			h->changeState(Listen::getInstance());
 			return (DEV_OK);
@@ -75,11 +76,17 @@ int RecvResponse::run(EbusHandler* h)
 			byte = NAK;
 		}
 
+		eSeq.setMasterACK(byte);
+
 		// send ACK
 		result = writeRead(h, byte, 0);
 		if (result != DEV_OK) return (result);
 
-		if (eSeq.getSlaveState() == EBUS_OK) break;
+		if (eSeq.getSlaveState() == EBUS_OK)
+		{
+			L.log(info, "%s done", eSeq.toStringLog().c_str());
+			break;
+		}
 
 		if (retry == 1)
 		{
