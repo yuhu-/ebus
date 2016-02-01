@@ -90,6 +90,26 @@ void EbusHandler::close()
 	m_forceState = Idle::getInstance();
 }
 
+bool EbusHandler::getActive()
+{
+	return (m_active);
+}
+
+void EbusHandler::setActive(const bool active)
+{
+	m_active = active;
+}
+
+bool EbusHandler::getStore()
+{
+	return (m_store);
+}
+
+void EbusHandler::setStore(const bool store)
+{
+	m_store = store;
+}
+
 bool EbusHandler::getLogRaw()
 {
 	return (m_logRaw);
@@ -226,5 +246,4 @@ void EbusHandler::storeMessage(const EbusSequence& eSeq)
 			Sequence::toString(key).c_str());
 	}
 }
-
 

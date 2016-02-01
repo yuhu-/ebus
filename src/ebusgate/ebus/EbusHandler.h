@@ -66,6 +66,12 @@ public:
 	void open();
 	void close();
 
+	bool getActive();
+	void setActive(const bool active);
+
+	bool getStore();
+	void setStore(const bool store);
+
 	bool getLogRaw();
 	void setLogRaw(const bool logRaw);
 

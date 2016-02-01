@@ -33,6 +33,8 @@ enum Command
 	c_close,
 	c_send,
 	c_grab,
+	c_active,
+	c_store,
 	c_loglevel,
 	c_raw,
 	c_dump,

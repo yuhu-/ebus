@@ -36,6 +36,8 @@ map<Command, string> CommandNames =
 { c_close, "CLOSE" },
 { c_send, "SEND" },
 { c_grab, "GRAB" },
+{ c_active, "ACTIVE" },
+{ c_store, "STORE" },
 { c_loglevel, "LOGLEVEL" },
 { c_raw, "RAW" },
 { c_dump, "DUMP" },
@@ -280,6 +282,34 @@ string BaseLoop::decodeMessage(const string& data)
 		result << m_ebushandler->grabMessage(msg.str());
 		break;
 	}
+	case c_active:
+	{
+		if (args.size() != argPos)
+		{
+			result << "usage: 'active'";
+			break;
+		}
+
+		bool enabled = !m_ebushandler->getActive();
+		m_ebushandler->setActive(enabled);
+		result
+			<< (enabled ?
+				"active mode enabled" : "active mode disabled");
+		break;
+	}
+	case c_store:
+	{
+		if (args.size() != argPos)
+		{
+			result << "usage: 'store'";
+			break;
+		}
+
+		bool enabled = !m_ebushandler->getStore();
+		m_ebushandler->setStore(enabled);
+		result << (enabled ? "storing enabled" : "storing disabled");
+		break;
+	}
 	case c_loglevel:
 	{
 		if (args.size() != argPos + 1)
@@ -361,6 +391,8 @@ const string BaseLoop::formatHelp()
 		<< " send       - write ebus values           'send ZZPBSBNNDx'"
 		<< endl
 		<< " grab       - grab ebus values from store 'grab QQZZPBSBNNDx'"
+		<< endl << " active     - toggle active mode          'active'"
+		<< endl << " store      - toggle storing data         'store'"
 		<< endl
 		<< " loglevel   - change logging level        'loglevel level'"
 		<< endl << " raw        - toggle raw output           'raw'"
