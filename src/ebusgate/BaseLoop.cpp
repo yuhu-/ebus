@@ -23,8 +23,10 @@
 #include "EbusSequence.h"
 
 #include <iomanip>
+#include <iterator>
 
 using std::istringstream;
+using std::istream_iterator;
 using std::endl;
 
 extern Logger& L;
@@ -144,45 +146,9 @@ string BaseLoop::decodeMessage(const string& data)
 	ostringstream result;
 
 	// prepare data
-	string token, previous;
-	istringstream stream(data);
-	vector<string> args;
-	bool escaped = false;
-
-	while (getline(stream, token, ' ') != 0)
-	{
-		if (escaped == true)
-		{
-			args.pop_back();
-			if (token.length() > 0
-				&& token[token.length() - 1] == '"')
-			{
-				token = token.substr(0, token.length() - 1);
-				escaped = false;
-			}
-			token = previous + " " + token;
-		}
-		else if (token.length() == 0)
-		{
-			// allow multiple space chars for a single delimiter
-			continue;
-		}
-		else if (token[0] == '"')
-		{
-			token = token.substr(1);
-			if (token.length() > 0
-				&& token[token.length() - 1] == '"')
-			{
-				token = token.substr(0, token.length() - 1);
-			}
-			else
-			{
-				escaped = true;
-			}
-		}
-		args.push_back(token);
-		previous = token;
-	}
+	istringstream istr(data);
+	vector<string> args = vector<string>(istream_iterator<string>(istr),
+		istream_iterator<string>());
 
 	if (args.size() == 0) return ("command missing");
 
