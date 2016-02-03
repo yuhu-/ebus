@@ -95,7 +95,8 @@ const string EbusDevice::errorText(const int error) const
 
 	result << DeviceErrors[error];
 
-	(error == DEV_ERR_OPEN) ? result << m_deviceName : "";
+	if (error == DEV_ERR_OPEN)
+		result << m_deviceName;
 
 	result << color::reset;
 
