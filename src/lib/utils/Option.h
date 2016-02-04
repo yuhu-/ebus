@@ -93,8 +93,7 @@ class Option
 {
 
 public:
-	static Option& getInstance(const char* command = "",
-		const char* argument = "");
+	static Option& getInstance(const char* command = "", const char* argument = "");
 
 	~Option();
 
@@ -102,8 +101,7 @@ public:
 
 	void addText(const char* text);
 
-	void addOption(const char* name, const char* shortname, OptVal optval,
-		DataType datatype, OptionType optiontype,
+	void addOption(const char* name, const char* shortname, OptVal optval, DataType datatype, OptionType optiontype,
 		const char* description);
 
 	template<typename T>
@@ -149,8 +147,7 @@ private:
 	vector<string> m_arguments;
 
 	bool checkOption(const string& option, const string& value);
-	void setOptVal(const char* option, const string value,
-		DataType datatype);
+	void setOptVal(const char* option, const string value, DataType datatype);
 
 	bool toStringVersion() const;
 

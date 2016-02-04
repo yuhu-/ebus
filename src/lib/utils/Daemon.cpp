@@ -92,8 +92,7 @@ void Daemon::start(const char* pidfile)
 	if (m_pidfd != nullptr)
 	{
 		setbuf(m_pidfd, nullptr);
-		if (lockf(fileno(m_pidfd), F_TLOCK, 0) < 0
-			|| fprintf(m_pidfd, "%d\n", getpid()) <= 0)
+		if (lockf(fileno(m_pidfd), F_TLOCK, 0) < 0 || fprintf(m_pidfd, "%d\n", getpid()) <= 0)
 		{
 			fclose(m_pidfd);
 			m_pidfd = nullptr;

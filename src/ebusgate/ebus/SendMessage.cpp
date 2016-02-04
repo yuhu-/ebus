@@ -61,10 +61,8 @@ int SendMessage::run(EbusHandler* h)
 
 		if (byte != ACK && byte != NAK)
 		{
-			L.log(warn, "%s",
-				errorText(STATE_ERR_ACK_WRONG).c_str());
-			m_activeMessage->setResult(
-				errorText(STATE_ERR_ACK_WRONG));
+			L.log(warn, "%s", errorText(STATE_ERR_ACK_WRONG).c_str());
+			m_activeMessage->setResult(errorText(STATE_ERR_ACK_WRONG));
 
 			h->changeState(FreeBus::getInstance());
 			break;
@@ -88,15 +86,12 @@ int SendMessage::run(EbusHandler* h)
 		{
 			if (retry == 1)
 			{
-				L.log(debug, "%s",
-					errorText(STATE_WRN_ACK_NEG).c_str());
+				L.log(debug, "%s", errorText(STATE_WRN_ACK_NEG).c_str());
 			}
 			else
 			{
-				L.log(warn, "%s",
-					errorText(STATE_ERR_ACK_NEG).c_str());
-				m_activeMessage->setResult(
-					errorText(STATE_ERR_ACK_NEG));
+				L.log(warn, "%s", errorText(STATE_ERR_ACK_NEG).c_str());
+				m_activeMessage->setResult(errorText(STATE_ERR_ACK_NEG));
 
 				h->changeState(FreeBus::getInstance());
 			}

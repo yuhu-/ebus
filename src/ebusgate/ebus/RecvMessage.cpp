@@ -90,8 +90,7 @@ int RecvMessage::run(EbusHandler* h)
 		else
 		{
 			byte = NAK;
-			L.log(info, "%s",
-				errorText(STATE_WRN_RECV_MSG).c_str());
+			L.log(info, "%s", errorText(STATE_WRN_RECV_MSG).c_str());
 		}
 
 		// send ACK
@@ -103,8 +102,7 @@ int RecvMessage::run(EbusHandler* h)
 	{
 		if (eSeq.getType() != EBUS_TYPE_MS)
 		{
-			if (eSeq.getType() == EBUS_TYPE_MM)
-				eSeq.setSlaveACK(byte);
+			if (eSeq.getType() == EBUS_TYPE_MM) eSeq.setSlaveACK(byte);
 
 			L.log(info, "%s", eSeq.toStringLog().c_str());
 

@@ -43,18 +43,14 @@ void define_args()
 
 	O.addText("Options:\n");
 
-	O.addOption("address", "a", OptVal(0xff), dt_hex, ot_mandatory,
-		"\tebus device address [FF]");
+	O.addOption("address", "a", OptVal(0xff), dt_hex, ot_mandatory, "\tebus device address [FF]");
 
-	O.addOption("foreground", "f", OptVal(false), dt_bool, ot_none,
-		"run in foreground\n");
+	O.addOption("foreground", "f", OptVal(false), dt_bool, ot_none, "run in foreground\n");
 
-	O.addOption("device", "d", OptVal("/dev/ttyUSB0"), dt_string,
-		ot_mandatory,
+	O.addOption("device", "d", OptVal("/dev/ttyUSB0"), dt_string, ot_mandatory,
 		"\tebus device (serial or network) [/dev/ttyUSB0]");
 
-	O.addOption("nodevicecheck", "n", OptVal(false), dt_bool, ot_none,
-		"disable test of local ebus device");
+	O.addOption("nodevicecheck", "n", OptVal(false), dt_bool, ot_none, "disable test of local ebus device");
 
 	O.addOption("reopentime", "", OptVal(60), dt_long, ot_mandatory,
 		"max. time to open ebus device in 'sec' [60]\n");
@@ -68,41 +64,33 @@ void define_args()
 	O.addOption("lockcounter", "", OptVal(5), dt_int, ot_mandatory,
 		"number of characters after a successful ebus access [5] (max: 25)");
 
-	O.addOption("lockretries", "", OptVal(2), dt_int, ot_mandatory,
-		"number of retries to lock ebus [2]\n");
+	O.addOption("lockretries", "", OptVal(2), dt_int, ot_mandatory, "number of retries to lock ebus [2]\n");
 
-	O.addOption("active", "", OptVal(false), dt_bool, ot_none,
-		"\thandle broadcast and at me addressed messages\n");
+	O.addOption("active", "", OptVal(false), dt_bool, ot_none, "\thandle broadcast and at me addressed messages\n");
 
-	O.addOption("store", "", OptVal(false), dt_bool, ot_none,
-		"\tstore received messages\n");
+	O.addOption("store", "", OptVal(false), dt_bool, ot_none, "\tstore received messages\n");
 
-	O.addOption("port", "p", OptVal(8888), dt_int, ot_mandatory,
-		"\tlisten port [8888]");
+	O.addOption("port", "p", OptVal(8888), dt_int, ot_mandatory, "\tlisten port [8888]");
 
-	O.addOption("local", "", OptVal(false), dt_bool, ot_none,
-		"\tlisten only on localhost\n");
+	O.addOption("local", "", OptVal(false), dt_bool, ot_none, "\tlisten only on localhost\n");
 
-	O.addOption("logfile", "", OptVal("/var/log/ebusgate.log"), dt_string,
-		ot_mandatory, "\tlog file name [/var/log/ebusgate.log]");
+	O.addOption("logfile", "", OptVal("/var/log/ebusgate.log"), dt_string, ot_mandatory,
+		"\tlog file name [/var/log/ebusgate.log]");
 
 	O.addOption("loglevel", "", OptVal("info"), dt_string, ot_mandatory,
 		"\tset logging level - off|error|warn|info|debug|trace [info]");
 
-	O.addOption("raw", "", OptVal(false), dt_bool, ot_none,
-		"\ttoggle raw output\n");
+	O.addOption("raw", "", OptVal(false), dt_bool, ot_none, "\ttoggle raw output\n");
 
-	O.addOption("pidfile", "", OptVal("/var/run/ebusgate.pid"), dt_string,
-		ot_mandatory, "\tpid file name [/var/run/ebusgate.pid]\n");
+	O.addOption("pidfile", "", OptVal("/var/run/ebusgate.pid"), dt_string, ot_mandatory,
+		"\tpid file name [/var/run/ebusgate.pid]\n");
 
-	O.addOption("dump", "", OptVal(false), dt_bool, ot_none,
-		"\ttoggle raw dump");
+	O.addOption("dump", "", OptVal(false), dt_bool, ot_none, "\ttoggle raw dump");
 
-	O.addOption("dumpfile", "", OptVal("/tmp/ebus_dump.bin"), dt_string,
-		ot_mandatory, "\tdump file name [/tmp/ebus_dump.bin]");
+	O.addOption("dumpfile", "", OptVal("/tmp/ebus_dump.bin"), dt_string, ot_mandatory,
+		"\tdump file name [/tmp/ebus_dump.bin]");
 
-	O.addOption("dumpsize", "", OptVal(100), dt_long, ot_mandatory,
-		"\tmax size for dump file in 'kB' [100]");
+	O.addOption("dumpsize", "", OptVal(100), dt_long, ot_mandatory, "\tmax size for dump file in 'kB' [100]");
 }
 
 void shutdown()

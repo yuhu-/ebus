@@ -49,22 +49,16 @@ BaseLoop::BaseLoop()
 {
 	m_ownAddress = O.getOptVal<int>("address") & 0xff;
 
-	m_ebushandler = new EbusHandler(O.getOptVal<int>("address") & 0xff,
-		O.getOptVal<const char*>("device"),
-		O.getOptVal<bool>("nodevicecheck"),
-		O.getOptVal<long>("reopentime"),
-		O.getOptVal<long>("arbitrationtime"),
-		O.getOptVal<long>("receivetimeout"),
-		O.getOptVal<int>("lockcounter"),
-		O.getOptVal<int>("lockretries"), O.getOptVal<bool>("active"),
-		O.getOptVal<bool>("store"), O.getOptVal<bool>("raw"),
-		O.getOptVal<bool>("dump"), O.getOptVal<const char*>("dumpfile"),
-		O.getOptVal<long>("dumpsize"));
+	m_ebushandler = new EbusHandler(O.getOptVal<int>("address") & 0xff, O.getOptVal<const char*>("device"),
+		O.getOptVal<bool>("nodevicecheck"), O.getOptVal<long>("reopentime"),
+		O.getOptVal<long>("arbitrationtime"), O.getOptVal<long>("receivetimeout"),
+		O.getOptVal<int>("lockcounter"), O.getOptVal<int>("lockretries"), O.getOptVal<bool>("active"),
+		O.getOptVal<bool>("store"), O.getOptVal<bool>("raw"), O.getOptVal<bool>("dump"),
+		O.getOptVal<const char*>("dumpfile"), O.getOptVal<long>("dumpsize"));
 
 	m_ebushandler->start();
 
-	m_network = new Network(O.getOptVal<bool>("local"),
-		O.getOptVal<int>("port"), &m_netMsgQueue);
+	m_network = new Network(O.getOptVal<bool>("local"), O.getOptVal<int>("port"), &m_netMsgQueue);
 	m_network->start();
 }
 
@@ -135,8 +129,7 @@ void BaseLoop::addMessage(NetMessage* message)
 Command BaseLoop::getCase(const string& command)
 {
 	for (const auto& cmd : CommandNames)
-		if (strcasecmp(cmd.second.c_str(), command.c_str()) == 0)
-			return (cmd.first);
+		if (strcasecmp(cmd.second.c_str(), command.c_str()) == 0) return (cmd.first);
 
 	return (c_invalid);
 }
@@ -147,8 +140,7 @@ string BaseLoop::decodeMessage(const string& data)
 
 	// prepare data
 	istringstream istr(data);
-	vector<string> args = vector<string>(istream_iterator<string>(istr),
-		istream_iterator<string>());
+	vector<string> args = vector<string>(istream_iterator<string>(istr), istream_iterator<string>());
 
 	if (args.size() == 0) return ("command missing");
 
@@ -209,8 +201,7 @@ string BaseLoop::decodeMessage(const string& data)
 		// send message
 		if (eSeq.isValid() == true)
 		{
-			L.log(debug, "enqueue: %s",
-				eSeq.toStringMaster().c_str());
+			L.log(debug, "enqueue: %s", eSeq.toStringMaster().c_str());
 			EbusMessage* ebusMessage = new EbusMessage(eSeq);
 			m_ebushandler->addMessage(ebusMessage);
 			ebusMessage->waitNotify();
@@ -220,8 +211,7 @@ string BaseLoop::decodeMessage(const string& data)
 		else
 		{
 			result << eSeq.toStringMaster();
-			L.log(debug, "error: %s",
-				eSeq.toStringMaster().c_str());
+			L.log(debug, "error: %s", eSeq.toStringMaster().c_str());
 		}
 		break;
 	}
@@ -258,9 +248,7 @@ string BaseLoop::decodeMessage(const string& data)
 
 		bool enabled = !m_ebushandler->getActive();
 		m_ebushandler->setActive(enabled);
-		result
-			<< (enabled ?
-				"active mode enabled" : "active mode disabled");
+		result << (enabled ? "active mode enabled" : "active mode disabled");
 		break;
 	}
 	case c_store:
@@ -280,8 +268,7 @@ string BaseLoop::decodeMessage(const string& data)
 	{
 		if (args.size() != argPos + 1)
 		{
-			result
-				<< "usage: 'loglevel level' (level: off|error|warn|info|debug|trace)";
+			result << "usage: 'loglevel level' (level: off|error|warn|info|debug|trace)";
 			break;
 		}
 
@@ -300,9 +287,7 @@ string BaseLoop::decodeMessage(const string& data)
 
 		bool enabled = !m_ebushandler->getLogRaw();
 		m_ebushandler->setLogRaw(enabled);
-		result
-			<< (enabled ?
-				"raw output enabled" : "raw output disabled");
+		result << (enabled ? "raw output enabled" : "raw output disabled");
 		break;
 	}
 	case c_dump:
@@ -351,21 +336,19 @@ bool BaseLoop::isHex(const string& str, ostringstream& result)
 const string BaseLoop::formatHelp()
 {
 	ostringstream ostr;
-	ostr << "commands:" << endl
-		<< " open       - connect with ebus           'open'" << endl
-		<< " close      - disconnect from ebus        'close'" << endl
-		<< " send       - write ebus values           'send ZZPBSBNNDx'"
-		<< endl
-		<< " grab       - grab ebus values from store 'grab QQZZPBSBNNDx'"
-		<< endl << " active     - toggle active mode          'active'"
-		<< endl << " store      - toggle storing data         'store'"
-		<< endl
-		<< " loglevel   - change logging level        'loglevel level'"
-		<< endl << " raw        - toggle raw output           'raw'"
-		<< endl << " dump       - toggle raw dump             'dump'"
-		<< endl << " stop       - stop daemon                 'stop'"
-		<< endl << " quit       - close connection            'quit'"
-		<< endl << " help       - print this page             'help'";
+	ostr << "commands:" << endl;
+	ostr << "  open       - connect with ebus           'open'" << endl;
+	ostr << " close      - disconnect from ebus        'close'" << endl;
+	ostr << " send       - write ebus values           'send ZZPBSBNNDx'" << endl;
+	ostr << " grab       - grab ebus values from store 'grab QQZZPBSBNNDx'" << endl;
+	ostr << " active     - toggle active mode          'active'" << endl;
+	ostr << " store      - toggle storing data         'store'" << endl
+	ostr << " loglevel   - change logging level        'loglevel level'" << endl;
+	ostr << " raw        - toggle raw output           'raw'" << endl;
+	ostr << " dump       - toggle raw dump             'dump'" << endl;
+	ostr << " stop       - stop daemon                 'stop'" << endl;
+	ostr << " quit       - close connection            'quit'" << endl;
+	ostr << " help       - print this page             'help'";
 
 	return (ostr.str());
 }

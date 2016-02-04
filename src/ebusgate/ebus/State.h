@@ -58,11 +58,9 @@ protected:
 	static EbusMessage* m_passiveMessage;
 
 	static void changeState(EbusHandler* h, State* state);
-	static int read(EbusHandler* h, unsigned char& byte, const long sec,
-		const long nsec);
+	static int read(EbusHandler* h, unsigned char& byte, const long sec, const long nsec);
 	static int write(EbusHandler* h, const unsigned char& byte);
-	static int writeRead(EbusHandler* h, const unsigned char& byte,
-		const long timeout);
+	static int writeRead(EbusHandler* h, const unsigned char& byte, const long timeout);
 
 	static void reset(EbusHandler* h);
 

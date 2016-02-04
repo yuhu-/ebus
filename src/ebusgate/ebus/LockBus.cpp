@@ -64,22 +64,18 @@ int LockBus::run(EbusHandler* h)
 			if ((byte & 0x0f) != (eSeq.getMaster()[0] & 0x0f))
 			{
 				m_lockCounter = h->m_lockCounter;
-				L.log(debug, "%s",
-					errorText(STATE_WRN_PRI_LOST).c_str());
+				L.log(debug, "%s", errorText(STATE_WRN_PRI_LOST).c_str());
 			}
 			else
 			{
 				m_lockCounter = 1;
-				L.log(debug, "%s",
-					errorText(STATE_INF_PRI_FIT).c_str());
+				L.log(debug, "%s", errorText(STATE_INF_PRI_FIT).c_str());
 			}
 		}
 		else
 		{
-			L.log(warn, "%s",
-				errorText(STATE_ERR_LOCK_FAIL).c_str());
-			m_activeMessage->setResult(
-				errorText(STATE_ERR_LOCK_FAIL));
+			L.log(warn, "%s", errorText(STATE_ERR_LOCK_FAIL).c_str());
+			m_activeMessage->setResult(errorText(STATE_ERR_LOCK_FAIL));
 
 			reset(h);
 		}

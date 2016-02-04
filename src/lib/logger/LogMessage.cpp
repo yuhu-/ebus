@@ -21,8 +21,15 @@
 
 #include <algorithm>
 #include <cstring>
+//#include <sstream>
+//#include <chrono>
+//#include <iomanip>
 
 #include <sys/time.h>
+
+//using std::ostringstream;
+//using std::setw;
+//using std::setfill;
 
 map<Level, string> LevelNames =
 {
@@ -36,8 +43,7 @@ map<Level, string> LevelNames =
 Level calcLevel(const string& level)
 {
 	for (const auto& lvl : LevelNames)
-		if (strcasecmp(lvl.second.c_str(), level.c_str()) == 0)
-			return (lvl.first);
+		if (strcasecmp(lvl.second.c_str(), level.c_str()) == 0) return (lvl.first);
 
 	return (info);
 }
@@ -68,9 +74,23 @@ LogMessage::LogMessage(const Level level, const string text)
 	gettimeofday(&tv, &tz);
 	tm = localtime(&tv.tv_sec);
 
-	sprintf(&time[0], "%04d-%02d-%02d %02d:%02d:%02d.%03ld",
-		tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour,
-		tm->tm_min, tm->tm_sec, tv.tv_usec / 1000);
+	sprintf(&time[0], "%04d-%02d-%02d %02d:%02d:%02d.%03ld", tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday,
+		tm->tm_hour, tm->tm_min, tm->tm_sec, tv.tv_usec / 1000);
 
 	m_time = string(time);
 }
+
+//LogMessage::LogMessage(const Level level, const string text)
+//	: m_level(level), m_text(text)
+//{
+//	auto now = std::chrono::system_clock::now();
+//	auto in_time_t = std::chrono::system_clock::to_time_t(now);
+//	auto ms = std::chrono::duration_cast < std::chrono::milliseconds
+//		> (now.time_since_epoch());
+//
+//	ostringstream ostr;
+//	ostr << std::put_time(localtime(&in_time_t), "%Y-%m-%d %X.") << setw(3)
+//		<< setfill('0') << ms.count() % 1000;
+//	m_time =  ostr.str();
+//}
+

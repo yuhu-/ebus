@@ -45,8 +45,7 @@ EbusDevice::EbusDevice(const string deviceName, const bool noDeviceCheck)
 {
 	m_device = nullptr;
 
-	if (strchr(deviceName.c_str(), '/') == nullptr
-		&& strchr(deviceName.c_str(), ':') != nullptr)
+	if (strchr(deviceName.c_str(), '/') == nullptr && strchr(deviceName.c_str(), ':') != nullptr)
 	{
 		setType(dt_network);
 		m_noDeviceCheck = true;
@@ -95,8 +94,7 @@ const string EbusDevice::errorText(const int error) const
 
 	result << DeviceErrors[error];
 
-	if (error == DEV_ERR_OPEN)
-		result << m_deviceName;
+	if (error == DEV_ERR_OPEN) result << m_deviceName;
 
 	result << color::reset;
 

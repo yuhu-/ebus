@@ -37,9 +37,7 @@ int OnError::run(EbusHandler* h)
 		L.log(error, "%s", h->m_device->errorText(h->m_lastResult).c_str());
 	}
 
-	if (m_activeMessage != nullptr)
-		m_activeMessage->setResult(
-			h->m_device->errorText(h->m_lastResult));
+	if (m_activeMessage != nullptr) m_activeMessage->setResult(h->m_device->errorText(h->m_lastResult));
 
 	reset(h);
 
@@ -47,8 +45,7 @@ int OnError::run(EbusHandler* h)
 	{
 		h->m_device->close();
 
-		if (h->m_device->isOpen() == false)
-			L.log(info, "ebus disconnected");
+		if (h->m_device->isOpen() == false) L.log(info, "ebus disconnected");
 
 		h->changeState(Connect::getInstance());
 	}

@@ -29,24 +29,19 @@ int main()
 
 	// TEST FULL
 	const unsigned char bytes[] =
-	{ 0xff, 0x52, 0xb5, 0x09, 0x03, 0x0d, 0x06, 0x00, 0x43, 0x00, 0x03,
-		0xb0, 0xfb, 0xa9, 0x01, 0xd0, 0x00 };
+	{ 0xff, 0x52, 0xb5, 0x09, 0x03, 0x0d, 0x06, 0x00, 0x43, 0x00, 0x03, 0xb0, 0xfb, 0xa9, 0x01, 0xd0, 0x00 };
 
 	for (size_t i = 0; i < sizeof(bytes); i++)
 		seq.push_back(bytes[i]);
 
 	EbusSequence full(seq);
 
-
-
-	cout << "seq: " << seq.toString() << " Full: " << full.toStringLog()
-		<< endl;
+	cout << "seq: " << seq.toString() << " Full: " << full.toStringLog() << endl;
 
 	// TEST MASTER
 	EbusSequence master;
 	master.createMaster("ff52b509030d0600");
-	cout << "seq: ff52b509030d0600" << "   Master : "
-		<< master.toStringMaster() << endl;
+	cout << "seq: ff52b509030d0600" << "   Master : " << master.toStringMaster() << endl;
 
 	seq.clear();
 	for (size_t i = 0; i < 9; i++)
@@ -54,14 +49,12 @@ int main()
 
 	EbusSequence master2;
 	master2.createMaster(seq);
-	cout << "seq: " << seq.toString() << " Master2: "
-		<< master2.toStringMaster() << endl;
+	cout << "seq: " << seq.toString() << " Master2: " << master2.toStringMaster() << endl;
 
 	// TEST SLAVE
 	EbusSequence slave;
 	slave.createSlave("03b0fbaa");
-	cout << "seq: 03b0fbaa" << "   Slave: " << slave.toStringSlave()
-		<< endl;
+	cout << "seq: 03b0fbaa" << "   Slave: " << slave.toStringSlave() << endl;
 
 	seq.clear();
 	for (size_t i = 10; i < sizeof(bytes) - 1; i++)
@@ -69,8 +62,7 @@ int main()
 
 	EbusSequence slave2;
 	slave2.createSlave(seq);
-	cout << "seq: " << seq.toString() << " Slave: "
-		<< slave2.toStringSlave() << endl;
+	cout << "seq: " << seq.toString() << " Slave: " << slave2.toStringSlave() << endl;
 
 	return (0);
 }

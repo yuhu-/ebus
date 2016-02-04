@@ -27,8 +27,7 @@
 
 extern Logger& L;
 
-Network::Network(const bool local, const int port,
-	NQueue<NetMessage*>* netMsgQueue)
+Network::Network(const bool local, const int port, NQueue<NetMessage*>* netMsgQueue)
 	: m_netMsgQueue(netMsgQueue), m_listening(false)
 {
 	if (local == true)
@@ -40,8 +39,7 @@ Network::Network(const bool local, const int port,
 		m_tcpServer = new TCPServer(port, "0.0.0.0");
 	}
 
-	if (m_tcpServer != nullptr && m_tcpServer->start() == 0) m_listening =
-		true;
+	if (m_tcpServer != nullptr && m_tcpServer->start() == 0) m_listening = true;
 
 }
 
@@ -115,12 +113,10 @@ void Network::run()
 			TCPSocket* socket = m_tcpServer->newSocket();
 			if (socket == nullptr) continue;
 
-			Connection* connection = new Connection(socket,
-				m_netMsgQueue);
+			Connection* connection = new Connection(socket, m_netMsgQueue);
 			if (connection == nullptr) continue;
 
-			L.log(info, "[%05d] %s opened", connection->getID(),
-				socket->getIP().c_str());
+			L.log(info, "[%05d] %s opened", connection->getID(), socket->getIP().c_str());
 
 			connection->start();
 			m_connections.push_back(connection);
@@ -132,8 +128,7 @@ void Network::run()
 
 void Network::cleanConnections()
 {
-	for (auto c_it = m_connections.begin(); c_it != m_connections.end();
-		c_it++)
+	for (auto c_it = m_connections.begin(); c_it != m_connections.end(); c_it++)
 	{
 		if ((*c_it)->isClosed() == true)
 		{
@@ -141,8 +136,7 @@ void Network::cleanConnections()
 			c_it = m_connections.erase(c_it);
 			connection->stop();
 			delete connection;
-			L.log(trace, "dead connection removed - %d",
-				m_connections.size());
+			L.log(trace, "dead connection removed - %d", m_connections.size());
 		}
 	}
 }

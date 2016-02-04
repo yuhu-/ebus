@@ -35,17 +35,14 @@ using std::back_inserter;
 
 extern Logger& L;
 
-EbusHandler::EbusHandler(const unsigned char address, const string device,
-	const bool noDeviceCheck, const long reopenTime,
-	const long arbitrationTime, const long receiveTimeout,
-	const int lockCounter, const int lockRetries, const bool active,
-	const bool store, const bool logRaw, const bool dumpRaw,
+EbusHandler::EbusHandler(const unsigned char address, const string device, const bool noDeviceCheck,
+	const long reopenTime, const long arbitrationTime, const long receiveTimeout, const int lockCounter,
+	const int lockRetries, const bool active, const bool store, const bool logRaw, const bool dumpRaw,
 	const char* dumpRawFile, const long dumpRawFileMaxSize)
-	: m_address(address), m_reopenTime(reopenTime), m_arbitrationTime(
-		arbitrationTime), m_receiveTimeout(receiveTimeout), m_lockCounter(
-		lockCounter), m_lockRetries(lockRetries), m_active(active), m_store(
-		store), m_lastResult(DEV_OK), m_logRaw(logRaw), m_dumpRawFile(
-		dumpRawFile), m_dumpRawFileMaxSize(dumpRawFileMaxSize)
+	: m_address(address), m_reopenTime(reopenTime), m_arbitrationTime(arbitrationTime), m_receiveTimeout(
+		receiveTimeout), m_lockCounter(lockCounter), m_lockRetries(lockRetries), m_active(active), m_store(
+		store), m_lastResult(DEV_OK), m_logRaw(logRaw), m_dumpRawFile(dumpRawFile), m_dumpRawFileMaxSize(
+		dumpRawFileMaxSize)
 {
 	m_device = new EbusDevice(device, noDeviceCheck);
 	changeState(Connect::getInstance());
@@ -137,8 +134,7 @@ void EbusHandler::setDumpRaw(const bool dumpRaw)
 	}
 	else
 	{
-		m_dumpRawStream.open(m_dumpRawFile.c_str(),
-			ios::binary | ios::app);
+		m_dumpRawStream.open(m_dumpRawFile.c_str(), ios::binary | ios::app);
 		m_dumpRawFileSize = 0;
 	}
 }
@@ -152,8 +148,7 @@ void EbusHandler::setDumpRawFile(const string& dumpFile)
 
 	if (m_dumpRaw == true)
 	{
-		m_dumpRawStream.open(m_dumpRawFile.c_str(),
-			ios::binary | ios::app);
+		m_dumpRawStream.open(m_dumpRawFile.c_str(), ios::binary | ios::app);
 		m_dumpRawFileSize = 0;
 	}
 }
@@ -174,19 +169,16 @@ const string EbusHandler::grabMessage(const string& str)
 	const Sequence seq(str);
 	vector<unsigned char> key(seq.getSequence());
 
-	map<vector<unsigned char>, EbusSequence>::iterator it =
-		m_eSeqStore.find(key);
+	map<vector<unsigned char>, EbusSequence>::iterator it = m_eSeqStore.find(key);
 	if (it != m_eSeqStore.end())
 	{
 		result << it->second.toString();
-		L.log(debug, "key %s found %s", Sequence::toString(key).c_str(),
-			result.str().c_str());
+		L.log(debug, "key %s found %s", Sequence::toString(key).c_str(), result.str().c_str());
 	}
 	else
 	{
 		result << "not found";
-		L.log(debug, "key %s not found",
-			Sequence::toString(key).c_str());
+		L.log(debug, "key %s not found", Sequence::toString(key).c_str());
 	}
 
 	return (result.str());
@@ -226,24 +218,19 @@ void EbusHandler::storeMessage(const EbusSequence& eSeq)
 
 	size += 5;
 
-	copy_n(eSeq.getMaster().getSequence().begin(), size,
-		back_inserter(key));
+	copy_n(eSeq.getMaster().getSequence().begin(), size, back_inserter(key));
 
-	map<vector<unsigned char>, EbusSequence>::iterator it =
-		m_eSeqStore.find(key);
+	map<vector<unsigned char>, EbusSequence>::iterator it = m_eSeqStore.find(key);
 
 	if (it != m_eSeqStore.end())
 	{
 		it->second = eSeq;
-		L.log(debug, "%03d - update key %s", m_eSeqStore.size(),
-			Sequence::toString(key).c_str());
+		L.log(debug, "%03d - update key %s", m_eSeqStore.size(), Sequence::toString(key).c_str());
 	}
 	else
 	{
-		m_eSeqStore.insert(
-			pair<vector<unsigned char>, EbusSequence>(key, eSeq));
-		L.log(debug, "%03d - insert key %s", m_eSeqStore.size(),
-			Sequence::toString(key).c_str());
+		m_eSeqStore.insert(pair<vector<unsigned char>, EbusSequence>(key, eSeq));
+		L.log(debug, "%03d - insert key %s", m_eSeqStore.size(), Sequence::toString(key).c_str());
 	}
 }
 

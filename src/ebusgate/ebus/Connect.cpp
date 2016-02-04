@@ -46,13 +46,11 @@ int Connect::run(EbusHandler* h)
 		}
 		else
 		{
-			L.log(error, "%s",
-				h->m_device->errorText(h->m_lastResult).c_str());
+			L.log(error, "%s", h->m_device->errorText(h->m_lastResult).c_str());
 			sleep(1);
 			m_reopenTime++;
 
-			if (m_reopenTime > h->m_reopenTime)
-				h->changeState(Idle::getInstance());
+			if (m_reopenTime > h->m_reopenTime) h->changeState(Idle::getInstance());
 
 			return (result);
 		}
@@ -63,11 +61,9 @@ int Connect::run(EbusHandler* h)
 	if (h->m_active == true)
 	{
 		EbusSequence eSeq;
-		eSeq.createMaster(h->m_address, BROADCAST,
-			"07040a7a454741544501010101");
+		eSeq.createMaster(h->m_address, BROADCAST, "07040a7a454741544501010101");
 
-		if (eSeq.getMasterState() == EBUS_OK)
-			h->addMessage(new EbusMessage(eSeq));
+		if (eSeq.getMasterState() == EBUS_OK) h->addMessage(new EbusMessage(eSeq));
 	}
 
 	h->changeState(Listen::getInstance());

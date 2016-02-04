@@ -35,8 +35,7 @@ class Network
 {
 
 public:
-	Network(const bool local, const int port,
-		NQueue<NetMessage*>* netMsgQueue);
+	Network(const bool local, const int port, NQueue<NetMessage*>* netMsgQueue);
 
 	~Network();
 

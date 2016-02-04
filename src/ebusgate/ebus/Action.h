@@ -40,8 +40,7 @@ private:
 
 	static int findAction(const EbusSequence& eSeq);
 	static bool createResponse(EbusSequence& eSeq);
-	static bool createMessage(const unsigned char source,
-		const unsigned char target, EbusSequence& eSeq);
+	static bool createMessage(const unsigned char source, const unsigned char target, EbusSequence& eSeq);
 
 };
 

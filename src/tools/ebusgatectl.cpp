@@ -45,11 +45,9 @@ void define_args()
 		"   hint: try 'help' for available ebusgate commands.\n\n"
 		"Options:\n");
 
-	O.addOption("server", "s", OptVal("localhost"), dt_string, ot_mandatory,
-		"name or ip (localhost)");
+	O.addOption("server", "s", OptVal("localhost"), dt_string, ot_mandatory, "name or ip (localhost)");
 
-	O.addOption("port", "p", OptVal(8888), dt_int, ot_mandatory,
-		"port (8888)");
+	O.addOption("port", "p", OptVal(8888), dt_int, ot_mandatory, "port (8888)");
 
 }
 
@@ -109,12 +107,8 @@ string fetchData(TCPSocket* socket, bool& listening)
 				for (int i = 0; i < datalen; i++)
 					ss << data[i];
 
-				if ((ss.str().length() >= 2
-					&& ss.str()[ss.str().length() - 2]
-						== '\n'
-					&& ss.str()[ss.str().length() - 1]
-						== '\n') || listening == true)
-					break;
+				if ((ss.str().length() >= 2 && ss.str()[ss.str().length() - 2] == '\n'
+					&& ss.str()[ss.str().length() - 1] == '\n') || listening == true) break;
 
 			}
 			else
@@ -131,8 +125,7 @@ string fetchData(TCPSocket* socket, bool& listening)
 			socket->send(message.c_str(), message.size());
 
 			if (strncasecmp(message.c_str(), "QUIT", 4) == 0
-				|| strncasecmp(message.c_str(), "STOP", 4) == 0)
-				exit(EXIT_SUCCESS);
+				|| strncasecmp(message.c_str(), "STOP", 4) == 0) exit(EXIT_SUCCESS);
 
 			message.clear();
 		}
@@ -176,19 +169,14 @@ bool connect(const char* host, int port, bool once)
 			{
 				bool listening = false;
 
-				if (strncasecmp(message.c_str(), "LISTEN", 6)
-					== 0)
+				if (strncasecmp(message.c_str(), "LISTEN", 6) == 0)
 				{
 					listening = true;
 					while (listening)
 					{
-						string result(
-							fetchData(socket,
-								listening));
+						string result(fetchData(socket, listening));
 						cout << result;
-						if (strncasecmp(result.c_str(),
-							"LISTEN STOPPED", 14)
-							== 0) break;
+						if (strncasecmp(result.c_str(), "LISTEN STOPPED", 14) == 0) break;
 					}
 				}
 				else
@@ -227,13 +215,11 @@ int main(int argc, char* argv[])
 
 	if (O.missingCommand() == true)
 	{
-		connect(O.getOptVal<const char*>("server"),
-			O.getOptVal<int>("port"), false);
+		connect(O.getOptVal<const char*>("server"), O.getOptVal<int>("port"), false);
 	}
 	else
 	{
-		connect(O.getOptVal<const char*>("server"),
-			O.getOptVal<int>("port"), true);
+		connect(O.getOptVal<const char*>("server"), O.getOptVal<int>("port"), true);
 	}
 
 	exit(EXIT_SUCCESS);

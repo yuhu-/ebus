@@ -42,8 +42,7 @@ int RecvResponse::run(EbusHandler* h)
 		// check against max. possible size
 		if (byte > 0x10)
 		{
-			L.log(warn, "%s",
-				errorText(STATE_ERR_NN_WRONG).c_str());
+			L.log(warn, "%s", errorText(STATE_ERR_NN_WRONG).c_str());
 			reset(h);
 			h->changeState(Listen::getInstance());
 			return (DEV_OK);
@@ -91,15 +90,12 @@ int RecvResponse::run(EbusHandler* h)
 		if (retry == 1)
 		{
 			seq.clear();
-			L.log(debug, "%s",
-				errorText(STATE_WRN_RECV_RESP).c_str());
+			L.log(debug, "%s", errorText(STATE_WRN_RECV_RESP).c_str());
 		}
 		else
 		{
-			L.log(warn, "%s",
-				errorText(STATE_ERR_RECV_RESP).c_str());
-			m_activeMessage->setResult(
-				errorText(STATE_ERR_RECV_RESP));
+			L.log(warn, "%s", errorText(STATE_ERR_RECV_RESP).c_str());
+			m_activeMessage->setResult(errorText(STATE_ERR_RECV_RESP));
 		}
 	}
 

@@ -91,12 +91,8 @@ void Connection::run()
 		{
 
 			// new data from notify
-			if (ret < 0
-				|| (fds[0].revents
-					& (POLLIN | POLLERR | POLLHUP
-						| POLLRDHUP))
-				|| (fds[1].revents & (POLLERR | POLLHUP)))
-				break;
+			if (ret < 0 || (fds[0].revents & (POLLIN | POLLERR | POLLHUP | POLLRDHUP))
+				|| (fds[1].revents & (POLLERR | POLLHUP))) break;
 
 			// new data from socket
 			newData = fds[1].revents & POLLIN;
@@ -113,8 +109,7 @@ void Connection::run()
 			{
 				if (m_socket->isValid() == true)
 				{
-					datalen = m_socket->recv(data,
-						sizeof(data) - 1);
+					datalen = m_socket->recv(data, sizeof(data) - 1);
 				}
 
 				else
@@ -123,9 +118,7 @@ void Connection::run()
 				}
 
 				// removed closed socket
-				if (datalen <= 0
-					|| strncasecmp(data, "QUIT", 4) == 0)
-					break;
+				if (datalen <= 0 || strncasecmp(data, "QUIT", 4) == 0) break;
 
 			}
 

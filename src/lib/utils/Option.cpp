@@ -56,8 +56,8 @@ void Option::addText(const char* text)
 	m_opts.push_back(opt);
 }
 
-void Option::addOption(const char* name, const char* shortname, OptVal optval,
-	DataType datatype, OptionType optiontype, const char* description)
+void Option::addOption(const char* name, const char* shortname, OptVal optval, DataType datatype, OptionType optiontype,
+	const char* description)
 {
 	if (strlen(name) != 0)
 	{
@@ -87,16 +87,13 @@ bool Option::parseArgs(int argc, char* argv[])
 		if (_argv[i].rfind("--") == 0 && _argv[i].size() > 2)
 		{
 			// is next item an added argument?
-			if (i + 1 < argc
-				&& _argv[i + 1].rfind("-", 0) == string::npos)
+			if (i + 1 < argc && _argv[i + 1].rfind("-", 0) == string::npos)
 			{
-				if (checkOption(_argv[i].substr(2),
-					_argv[i + 1]) == false) return (false);
+				if (checkOption(_argv[i].substr(2), _argv[i + 1]) == false) return (false);
 			}
 			else
 			{
-				if (checkOption(_argv[i].substr(2), "")
-					== false) return (false);
+				if (checkOption(_argv[i].substr(2), "") == false) return (false);
 			}
 
 			lastOption = true;
@@ -108,19 +105,14 @@ bool Option::parseArgs(int argc, char* argv[])
 			for (size_t j = 1; j < _argv[i].size(); j++)
 			{
 				// only last charater could have an argument
-				if (i + 1 < argc
-					&& _argv[i + 1].rfind("-", 0)
-						== string::npos
+				if (i + 1 < argc && _argv[i + 1].rfind("-", 0) == string::npos
 					&& j + 1 == _argv[i].size())
 				{
-					if (checkOption(_argv[i].substr(j, 1),
-						_argv[i + 1]) == false)
-						return (false);
+					if (checkOption(_argv[i].substr(j, 1), _argv[i + 1]) == false) return (false);
 				}
 				else
 				{
-					if (checkOption(_argv[i].substr(j, 1),
-						"") == false) return (false);
+					if (checkOption(_argv[i].substr(j, 1), "") == false) return (false);
 				}
 			}
 
@@ -187,26 +179,21 @@ bool Option::checkOption(const string& option, const string& value)
 
 	if (strcmp(option.c_str(), "version") == 0) return (toStringVersion());
 
-	if (strcmp(option.c_str(), "h") == 0
-		|| strcmp(option.c_str(), "help") == 0) return (toStringHelp());
+	if (strcmp(option.c_str(), "h") == 0 || strcmp(option.c_str(), "help") == 0) return (toStringHelp());
 
 	for (o_it = m_opts.begin(); o_it < m_opts.end(); ++o_it)
 	{
 		if (o_it->shortname == option || o_it->name == option)
 		{
 			// need this option and argument?
-			if (o_it->optiontype == ot_mandatory
-				&& value.size() == 0)
+			if (o_it->optiontype == ot_mandatory && value.size() == 0)
 			{
-				cerr << endl << "option requires an argument '"
-					<< option << "'" << endl;
+				cerr << endl << "option requires an argument '" << option << "'" << endl;
 				return (toStringHelp());
 			}
 
 			// add given value to option
-			if ((o_it->optiontype == ot_optional
-				&& value.size() != 0)
-				|| o_it->optiontype != ot_optional)
+			if ((o_it->optiontype == ot_optional && value.size() != 0) || o_it->optiontype != ot_optional)
 				setOptVal(o_it->name, value, o_it->datatype);
 
 			return (true);
@@ -217,8 +204,7 @@ bool Option::checkOption(const string& option, const string& value)
 	return (toStringHelp());
 }
 
-void Option::setOptVal(const char* option, const string value,
-	DataType datatype)
+void Option::setOptVal(const char* option, const string value, DataType datatype)
 {
 	switch (datatype)
 	{
@@ -235,8 +221,7 @@ void Option::setOptVal(const char* option, const string value,
 		m_optvals[option] = strtol(value.c_str(), nullptr, 10);
 		break;
 	case dt_float:
-		m_optvals[option] = static_cast<float>(strtod(value.c_str(),
-			nullptr));
+		m_optvals[option] = static_cast<float>(strtod(value.c_str(), nullptr));
 		break;
 	case dt_string:
 		m_optvals[option] = value.c_str();
@@ -255,16 +240,14 @@ bool Option::toStringVersion() const
 
 bool Option::toStringHelp()
 {
-	cerr << endl << "Usage:" << endl << "  "
-		<< m_argv[0].substr(m_argv[0].find_last_of("/\\") + 1)
+	cerr << endl << "Usage:" << endl << "  " << m_argv[0].substr(m_argv[0].find_last_of("/\\") + 1)
 		<< " [Options...]";
 
 	if (strlen(m_withCommand) != 0)
 	{
 		if (strlen(m_withArgument) != 0)
 		{
-			cerr << " " << m_withCommand << " " << m_withArgument
-				<< endl << endl;
+			cerr << " " << m_withCommand << " " << m_withArgument << endl << endl;
 		}
 		else
 		{
@@ -284,17 +267,13 @@ bool Option::toStringHelp()
 		}
 		else
 		{
-			const char* c =
-				(strlen(o_it->shortname) == 1) ?
-					o_it->shortname : " ";
-			cerr << ((strcmp(c, " ") == 0) ? " " : "-") << c
-				<< " | --" << o_it->name << "\t"
+			const char* c = (strlen(o_it->shortname) == 1) ? o_it->shortname : " ";
+			cerr << ((strcmp(c, " ") == 0) ? " " : "-") << c << " | --" << o_it->name << "\t"
 				<< o_it->description << endl;
 		}
 	}
 
-	cerr << endl << "   | --options\n   | --version\n-h | --help" << endl
-		<< endl;
+	cerr << endl << "   | --options\n   | --version\n-h | --help" << endl << endl;
 
 	return (false);
 }
@@ -307,10 +286,8 @@ bool Option::toStringOptions()
 	{
 		if (strcmp(o_it->name, "__text_only__") == 0) continue;
 
-		const char* c =
-			(strlen(o_it->shortname) == 1) ? o_it->shortname : " ";
-		cerr << ((strcmp(c, " ") == 0) ? " " : "-") << c << " | --"
-			<< o_it->name << " = ";
+		const char* c = (strlen(o_it->shortname) == 1) ? o_it->shortname : " ";
+		cerr << ((strcmp(c, " ") == 0) ? " " : "-") << c << " | --" << o_it->name << " = ";
 		if (o_it->datatype == dt_bool)
 		{
 			if (getOptVal<bool>(o_it->name) == true)
@@ -324,8 +301,7 @@ bool Option::toStringOptions()
 		}
 		else if (o_it->datatype == dt_hex)
 		{
-			cerr << hex << getOptVal<int>(o_it->name) << dec
-				<< endl;
+			cerr << hex << getOptVal<int>(o_it->name) << dec << endl;
 		}
 		else if (o_it->datatype == dt_int)
 		{

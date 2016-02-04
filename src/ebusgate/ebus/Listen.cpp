@@ -52,12 +52,10 @@ int Listen::run(EbusHandler* h)
 
 			if (eSeq.isValid() == true)
 			{
-				if (h->m_store == true)
-					h->storeMessage(eSeq);
+				if (h->m_store == true) h->storeMessage(eSeq);
 			}
 
-			if (m_sequence.size() == 1 && m_lockCounter < 2)
-				m_lockCounter = 2;
+			if (m_sequence.size() == 1 && m_lockCounter < 2) m_lockCounter = 2;
 
 			eSeq.clear();
 			m_sequence.clear();
@@ -66,14 +64,12 @@ int Listen::run(EbusHandler* h)
 		// check for new EbusMessage
 		if (m_activeMessage == nullptr && h->m_ebusMsgQueue.size() != 0)
 		{
-			L.log(trace, "pending ebus messages: %d",
-				h->m_ebusMsgQueue.size());
+			L.log(trace, "pending ebus messages: %d", h->m_ebusMsgQueue.size());
 			m_activeMessage = h->m_ebusMsgQueue.dequeue();
 		}
 
 		// handle EbusMessage
-		if (m_activeMessage != nullptr && m_lockCounter == 0)
-			h->changeState(LockBus::getInstance());
+		if (m_activeMessage != nullptr && m_lockCounter == 0) h->changeState(LockBus::getInstance());
 	}
 	else
 	{
@@ -82,8 +78,7 @@ int Listen::run(EbusHandler* h)
 		// handle broadcast and at me addressed messages
 		if (m_sequence.size() == 2)
 		{
-			if (m_sequence[1] == BROADCAST
-				|| m_sequence[1] == h->m_address
+			if (m_sequence[1] == BROADCAST || m_sequence[1] == h->m_address
 				|| m_sequence[1] == slaveAddress(h->m_address))
 				h->changeState(RecvMessage::getInstance());
 		}

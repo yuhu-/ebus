@@ -50,8 +50,7 @@ int SendResponse::run(EbusHandler* h)
 
 		if (byte != ACK && byte != NAK)
 		{
-			L.log(info, "%s",
-				errorText(STATE_ERR_ACK_WRONG).c_str());
+			L.log(info, "%s", errorText(STATE_ERR_ACK_WRONG).c_str());
 			break;
 		}
 		else if (byte == ACK)
@@ -62,15 +61,12 @@ int SendResponse::run(EbusHandler* h)
 		{
 			if (retry == 1)
 			{
-				L.log(info, "%s",
-					errorText(STATE_WRN_ACK_NEG).c_str());
+				L.log(info, "%s", errorText(STATE_WRN_ACK_NEG).c_str());
 			}
 			else
 			{
-				L.log(info, "%s",
-					errorText(STATE_ERR_ACK_NEG).c_str());
-				L.log(info, "%s",
-					errorText(STATE_ERR_SEND_FAIL).c_str());
+				L.log(info, "%s", errorText(STATE_ERR_ACK_NEG).c_str());
+				L.log(info, "%s", errorText(STATE_ERR_SEND_FAIL).c_str());
 			}
 		}
 	}

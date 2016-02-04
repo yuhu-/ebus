@@ -87,8 +87,7 @@ EbusSequence::EbusSequence(Sequence& seq)
 
 	if (m_type == EBUS_TYPE_MS)
 	{
-		Sequence slave(seq, 5 + m_masterNN + 2,
-			1 + seq[5 + m_masterNN + 2] + 1);
+		Sequence slave(seq, 5 + m_masterNN + 2, 1 + seq[5 + m_masterNN + 2] + 1);
 		createSlave(slave);
 
 		m_masterACK = seq[(5 + m_masterNN + 3 + m_slaveNN + 1)];
@@ -99,14 +98,11 @@ EbusSequence::EbusSequence(Sequence& seq)
 	}
 }
 
-void EbusSequence::createMaster(const unsigned char& source,
-	const unsigned char& target, const string& str)
+void EbusSequence::createMaster(const unsigned char& source, const unsigned char& target, const string& str)
 {
 	ostringstream ostr;
-	ostr << nouppercase << hex << setw(2) << setfill('0')
-		<< static_cast<unsigned>(source);
-	ostr << nouppercase << hex << setw(2) << setfill('0')
-		<< static_cast<unsigned>(target);
+	ostr << nouppercase << hex << setw(2) << setfill('0') << static_cast<unsigned>(source);
+	ostr << nouppercase << hex << setw(2) << setfill('0') << static_cast<unsigned>(target);
 	ostr << nouppercase << setw(0) << str;
 	createMaster(ostr.str());
 }
@@ -114,8 +110,7 @@ void EbusSequence::createMaster(const unsigned char& source,
 void EbusSequence::createMaster(const unsigned char& source, const string& str)
 {
 	ostringstream ostr;
-	ostr << nouppercase << hex << setw(2) << setfill('0')
-		<< static_cast<unsigned>(source);
+	ostr << nouppercase << hex << setw(2) << setfill('0') << static_cast<unsigned>(source);
 	ostr << nouppercase << setw(0) << str;
 	createMaster(ostr.str());
 }
@@ -337,8 +332,7 @@ int EbusSequence::getType() const
 
 bool EbusSequence::isValid() const
 {
-	if (m_type != EBUS_TYPE_MS)
-		return (m_masterState == EBUS_OK ? true : false);
+	if (m_type != EBUS_TYPE_MS) return (m_masterState == EBUS_OK ? true : false);
 
 	return ((m_masterState + m_slaveState) == EBUS_OK ? true : false);
 }
@@ -364,18 +358,15 @@ const string EbusSequence::toStringLog()
 
 	if (m_type == EBUS_TYPE_BC)
 	{
-		sstr << color::blue << "BC" << color::reset << " "
-			<< toStringMaster();
+		sstr << color::blue << "BC" << color::reset << " " << toStringMaster();
 	}
 	else if (m_type == EBUS_TYPE_MM)
 	{
-		sstr << color::cyan << "MM" << color::reset << " "
-			<< toStringMaster();
+		sstr << color::cyan << "MM" << color::reset << " " << toStringMaster();
 	}
 	else
 	{
-		sstr << color::magenta << "MS" << color::reset << " "
-			<< toStringMaster();
+		sstr << color::magenta << "MS" << color::reset << " " << toStringMaster();
 	}
 
 	if (m_type == EBUS_TYPE_MM) sstr << " " << toStringMasterACK();
@@ -390,8 +381,7 @@ const string EbusSequence::toStringMaster()
 	ostringstream sstr;
 	if (m_masterState != EBUS_OK)
 	{
-		sstr << color::red << m_master.toString() << "Master "
-			<< errorText(m_masterState) << color::reset;
+		sstr << color::red << m_master.toString() << "Master " << errorText(m_masterState) << color::reset;
 	}
 	else
 	{
@@ -406,13 +396,11 @@ const string EbusSequence::toStringMasterCRC()
 	ostringstream sstr;
 	if (m_masterState != EBUS_OK)
 	{
-		sstr << color::red << m_master.toString() << "Master "
-			<< errorText(m_masterState) << color::reset;
+		sstr << color::red << m_master.toString() << "Master " << errorText(m_masterState) << color::reset;
 	}
 	else
 	{
-		sstr << nouppercase << hex << setw(2) << setfill('0')
-			<< static_cast<unsigned>(m_masterCRC);
+		sstr << nouppercase << hex << setw(2) << setfill('0') << static_cast<unsigned>(m_masterCRC);
 	}
 
 	return (sstr.str());
@@ -423,13 +411,11 @@ const string EbusSequence::toStringMasterACK()
 	ostringstream sstr;
 	if (m_masterState != EBUS_OK)
 	{
-		sstr << color::red << m_master.toString() << "Master "
-			<< errorText(m_masterState) << color::reset;
+		sstr << color::red << m_master.toString() << "Master " << errorText(m_masterState) << color::reset;
 	}
 	else
 	{
-		sstr << nouppercase << hex << setw(2) << setfill('0')
-			<< static_cast<unsigned>(m_masterACK);
+		sstr << nouppercase << hex << setw(2) << setfill('0') << static_cast<unsigned>(m_masterACK);
 	}
 
 	return (sstr.str());
@@ -440,8 +426,7 @@ const string EbusSequence::toStringSlave()
 	ostringstream sstr;
 	if (m_slaveState != EBUS_OK)
 	{
-		sstr << color::red << m_slave.toString() << "Slave "
-			<< errorText(m_slaveState) << color::reset;
+		sstr << color::red << m_slave.toString() << "Slave " << errorText(m_slaveState) << color::reset;
 	}
 	else
 	{
@@ -455,13 +440,11 @@ const string EbusSequence::toStringSlaveCRC()
 	ostringstream sstr;
 	if (m_slaveState != EBUS_OK)
 	{
-		sstr << color::red << m_slave.toString() << "Slave "
-			<< errorText(m_slaveState) << color::reset;
+		sstr << color::red << m_slave.toString() << "Slave " << errorText(m_slaveState) << color::reset;
 	}
 	else
 	{
-		sstr << nouppercase << hex << setw(2) << setfill('0')
-			<< static_cast<unsigned>(m_slaveCRC);
+		sstr << nouppercase << hex << setw(2) << setfill('0') << static_cast<unsigned>(m_slaveCRC);
 	}
 
 	return (sstr.str());
@@ -472,13 +455,11 @@ const string EbusSequence::toStringSlaveACK()
 	ostringstream sstr;
 	if (m_slaveState != EBUS_OK)
 	{
-		sstr << color::red << m_slave.toString() << "Slave "
-			<< errorText(m_slaveState) << color::reset;
+		sstr << color::red << m_slave.toString() << "Slave " << errorText(m_slaveState) << color::reset;
 	}
 	else
 	{
-		sstr << nouppercase << hex << setw(2) << setfill('0')
-			<< static_cast<unsigned>(m_slaveACK);
+		sstr << nouppercase << hex << setw(2) << setfill('0') << static_cast<unsigned>(m_slaveACK);
 	}
 
 	return (sstr.str());

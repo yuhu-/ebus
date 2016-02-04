@@ -44,9 +44,7 @@ int main()
 		unsigned char byte = 0;
 		ret = device.recv(byte, 0, 0);
 
-		if (ret == DEV_OK)
-			cout << hex << setw(2) << setfill('0')
-				<< static_cast<unsigned>(byte) << endl;
+		if (ret == DEV_OK) cout << hex << setw(2) << setfill('0') << static_cast<unsigned>(byte) << endl;
 
 		count++;
 	}

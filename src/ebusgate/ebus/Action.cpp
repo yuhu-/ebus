@@ -99,8 +99,7 @@ int Action::run(EbusHandler* h)
 
 		if (createResponse(eSeq) == true)
 		{
-			L.log(debug, "response: %s",
-				eSeq.toStringSlave().c_str());
+			L.log(debug, "response: %s", eSeq.toStringSlave().c_str());
 			m_passiveMessage = new EbusMessage(eSeq);
 			h->changeState(SendResponse::getInstance());
 			return (DEV_OK);
@@ -114,8 +113,7 @@ int Action::run(EbusHandler* h)
 	{
 		if (createMessage(h->m_address, target, eSeq) == true)
 		{
-			L.log(debug, "enqueue: %s",
-				eSeq.toStringMaster().c_str());
+			L.log(debug, "enqueue: %s", eSeq.toStringMaster().c_str());
 			h->addMessage(new EbusMessage(eSeq));
 		}
 		else
@@ -143,8 +141,7 @@ int Action::findAction(const EbusSequence& eSeq)
 {
 	vector<unsigned char> key;
 
-	copy_n(eSeq.getMaster().getSequence().begin() + 2, 2,
-		back_inserter(key));
+	copy_n(eSeq.getMaster().getSequence().begin() + 2, 2, back_inserter(key));
 
 	map<vector<unsigned char>, int>::iterator it = ActionTypes.find(key);
 
@@ -158,11 +155,9 @@ bool Action::createResponse(EbusSequence& eSeq)
 {
 	vector<unsigned char> key;
 
-	copy_n(eSeq.getMaster().getSequence().begin() + 2, 2,
-		back_inserter(key));
+	copy_n(eSeq.getMaster().getSequence().begin() + 2, 2, back_inserter(key));
 
-	map<vector<unsigned char>, string>::iterator it = ActionMessages.find(
-		key);
+	map<vector<unsigned char>, string>::iterator it = ActionMessages.find(key);
 
 	if (it != ActionMessages.end())
 	{
@@ -174,16 +169,13 @@ bool Action::createResponse(EbusSequence& eSeq)
 }
 
 // TODO implement search for variable key length
-bool Action::createMessage(const unsigned char source,
-	const unsigned char target, EbusSequence& eSeq)
+bool Action::createMessage(const unsigned char source, const unsigned char target, EbusSequence& eSeq)
 {
 	vector<unsigned char> key;
 
-	copy_n(eSeq.getMaster().getSequence().begin() + 2, 2,
-		back_inserter(key));
+	copy_n(eSeq.getMaster().getSequence().begin() + 2, 2, back_inserter(key));
 
-	map<vector<unsigned char>, string>::iterator it = ActionMessages.find(
-		key);
+	map<vector<unsigned char>, string>::iterator it = ActionMessages.find(key);
 
 	if (it != ActionMessages.end())
 	{

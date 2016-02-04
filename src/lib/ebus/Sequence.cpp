@@ -37,8 +37,7 @@ Sequence::Sequence(const string& str)
 {
 	for (size_t i = 0; i + 1 < str.size(); i += 2)
 	{
-		unsigned long byte = strtoul(str.substr(i, 2).c_str(), nullptr,
-			16);
+		unsigned long byte = strtoul(str.substr(i, 2).c_str(), nullptr, 16);
 		push_back((unsigned char) byte, false);
 	}
 }
@@ -163,8 +162,7 @@ const string Sequence::toString()
 	ostringstream sstr;
 
 	for (size_t i = 0; i < m_sequence.size(); i++)
-		sstr << nouppercase << hex << setw(2) << setfill('0')
-			<< static_cast<unsigned>(m_sequence[i]);
+		sstr << nouppercase << hex << setw(2) << setfill('0') << static_cast<unsigned>(m_sequence[i]);
 
 	return (sstr.str());
 }
@@ -179,8 +177,7 @@ const string Sequence::toString(const vector<unsigned char>& sequence)
 	ostringstream sstr;
 
 	for (size_t i = 0; i < sequence.size(); i++)
-		sstr << nouppercase << hex << setw(2) << setfill('0')
-			<< static_cast<unsigned>(sequence[i]);
+		sstr << nouppercase << hex << setw(2) << setfill('0') << static_cast<unsigned>(sequence[i]);
 
 	return (sstr.str());
 }

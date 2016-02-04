@@ -67,15 +67,13 @@ void State::changeState(EbusHandler* h, State* state)
 	h->changeState(state);
 }
 
-int State::read(EbusHandler* h, unsigned char& byte, const long sec,
-	const long nsec)
+int State::read(EbusHandler* h, unsigned char& byte, const long sec, const long nsec)
 {
 	int result = h->m_device->recv(byte, sec, nsec);
 
 	if (h->m_logRaw == true && result == DEV_OK) L.log(info, "<%02x", byte);
 
-	if (h->m_dumpRaw == true && result == DEV_OK
-		&& h->m_dumpRawStream.is_open() == true)
+	if (h->m_dumpRaw == true && result == DEV_OK && h->m_dumpRawStream.is_open() == true)
 	{
 		h->m_dumpRawStream.write((char*) &byte, 1);
 		h->m_dumpRawFileSize++;
@@ -86,13 +84,10 @@ int State::read(EbusHandler* h, unsigned char& byte, const long sec,
 		{
 			string oldfile = h->m_dumpRawFile + ".old";
 
-			if (rename(h->m_dumpRawFile.c_str(), oldfile.c_str())
-				== 0)
+			if (rename(h->m_dumpRawFile.c_str(), oldfile.c_str()) == 0)
 			{
 				h->m_dumpRawStream.close();
-				h->m_dumpRawStream.open(
-					h->m_dumpRawFile.c_str(),
-					ios::binary | ios::app);
+				h->m_dumpRawStream.open(h->m_dumpRawFile.c_str(), ios::binary | ios::app);
 				h->m_dumpRawFileSize = 0;
 			}
 		}
@@ -110,8 +105,7 @@ int State::write(EbusHandler* h, const unsigned char& byte)
 	return (result);
 }
 
-int State::writeRead(EbusHandler* h, const unsigned char& byte,
-	const long timeout)
+int State::writeRead(EbusHandler* h, const unsigned char& byte, const long timeout)
 {
 	int result = State::write(h, byte);
 
@@ -120,9 +114,7 @@ int State::writeRead(EbusHandler* h, const unsigned char& byte,
 		unsigned char readByte;
 		result = State::read(h, readByte, 0, timeout);
 
-		if (readByte != byte)
-			L.log(trace, "%s",
-				errorText(STATE_WRN_BYTE_DIF).c_str());
+		if (readByte != byte) L.log(trace, "%s", errorText(STATE_WRN_BYTE_DIF).c_str());
 	}
 
 	return (result);

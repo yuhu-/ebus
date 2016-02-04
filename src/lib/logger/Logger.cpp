@@ -115,10 +115,8 @@ void Logger::run()
 		{
 			ostringstream sstr;
 
-			sstr << "[" << message->getTime() << "] " << setw(5)
-				<< setfill(' ') << left
-				<< LevelNames[(Level) message->getLevel()]
-				<< " " << message->getText() << endl;
+			sstr << "[" << message->getTime() << "] " << setw(5) << setfill(' ') << left
+				<< LevelNames[(Level) message->getLevel()] << " " << message->getText() << endl;
 
 			for (const auto& sink : m_sinks)
 				sink->write(sstr.str());
@@ -130,8 +128,7 @@ void Logger::run()
 
 void Logger::addSink(LogSink* sink)
 {
-	vector<LogSink*>::iterator it = find(m_sinks.begin(), m_sinks.end(),
-		sink);
+	vector<LogSink*>::iterator it = find(m_sinks.begin(), m_sinks.end(), sink);
 
 	if (it == m_sinks.end()) m_sinks.push_back(sink);
 
@@ -139,8 +136,7 @@ void Logger::addSink(LogSink* sink)
 
 void Logger::delSink(const LogSink* sink)
 {
-	vector<LogSink*>::iterator it = find(m_sinks.begin(), m_sinks.end(),
-		sink);
+	vector<LogSink*>::iterator it = find(m_sinks.begin(), m_sinks.end(), sink);
 
 	if (it == m_sinks.end()) return;
 
