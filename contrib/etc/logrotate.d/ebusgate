@@ -1,0 +1,9 @@
+/var/log/ebusgate.log {
+	rotate 7
+	size 1M
+	copytruncate
+	compress
+	missingok
+	notifempty
+	daily
+}

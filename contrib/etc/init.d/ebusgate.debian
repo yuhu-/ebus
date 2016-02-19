@@ -1,0 +1,48 @@
+#!/bin/sh
+
+### BEGIN INIT INFO
+# Provides:        ebusgate
+# Required-Start:  $network $remote_fs $syslog
+# Required-Stop:   $network $remote_fs $syslog
+# Default-Start:   2 3 4 5
+# Default-Stop:
+# Short-Description: Start ebusgate
+### END INIT INFO
+
+PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/bin
+
+if test -f /etc/default/ebusgate; then
+    . /etc/default/ebusgate
+fi
+
+. /lib/lsb/init-functions
+
+DAEMON=/usr/bin/ebusgate
+PIDFILE=/var/run/ebusgate.pid
+
+test -x $DAEMON || exit 5
+
+case $1 in
+	start)
+		log_daemon_msg "Starting ebusgate" "ebusgate"
+		start-stop-daemon --start --quiet --oknodo --pidfile $PIDFILE --exec $DAEMON -- $EBUSGATE_OPTS
+		status=$?
+		log_end_msg $status
+  		;;
+	stop)
+		log_daemon_msg "Stopping ebusgate" "ebusgate"
+  		start-stop-daemon --stop --quiet --oknodo --pidfile $PIDFILE
+		log_end_msg $?
+		rm -f $PIDFILE
+  		;;
+	restart|force-reload)
+		$0 stop && sleep 2 && $0 start
+  		;;
+	status)
+		status_of_proc $DAEMON "ebusgate"
+		;;
+	*)
+		echo "Usage: $0 {start|stop|restart|force-reload|status}"
+		exit 2
+		;;
+esac

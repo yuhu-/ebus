@@ -1,0 +1,5 @@
+# Default settings for ebusgate. This file is sourced by /bin/sh from
+# /etc/init.d/ebusgate.
+
+# Options to pass to the ebusgate.
+# EBUSGATE_ARGS="-d /dev/ttyUSB0"

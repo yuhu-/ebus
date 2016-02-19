@@ -1,0 +1,15 @@
+#!/sbin/runscript
+# Copyright 1999-2013 Gentoo Foundation
+# Distributed under the terms of the GNU General Public License v2
+# $Header: $
+
+command="/usr/bin/ebusgate"
+command_args="${EBUSGATE_ARGS}"
+start_stop_daemon_args="--quiet"
+description="ebus gateway daemon"
+
+depend() {
+	need localmount
+	use logger
+}
+
