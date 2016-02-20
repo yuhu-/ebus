@@ -33,8 +33,6 @@ using std::ostringstream;
 using std::copy_n;
 using std::back_inserter;
 
-extern Logger& L;
-
 EbusHandler::EbusHandler(const unsigned char address, const string device, const bool noDeviceCheck,
 	const long reopenTime, const long arbitrationTime, const long receiveTimeout, const int lockCounter,
 	const int lockRetries, const bool active, const bool store, const bool logRaw, const bool dumpRaw,
@@ -165,6 +163,8 @@ void EbusHandler::addMessage(EbusMessage* message)
 
 const string EbusHandler::grabMessage(const string& str)
 {
+	Logger& L = Logger::getLogger("EbusHandler::grabMessage");
+
 	ostringstream result;
 	const Sequence seq(str);
 	vector<unsigned char> key(seq.getSequence());
@@ -201,16 +201,20 @@ void EbusHandler::run()
 
 void EbusHandler::changeState(State* state)
 {
+	Logger& L = Logger::getLogger("EbusHandler::changeState");
+
 	if (m_state != state)
 	{
 		m_state = state;
-		L.log(trace, "State: %s", m_state->toString());
+		L.log(trace, "%s", m_state->toString());
 	}
 }
 
 // TODO rework key and search
 void EbusHandler::storeMessage(const EbusSequence& eSeq)
 {
+	Logger& L = Logger::getLogger("EbusHandler::storeMessage");
+
 	vector<unsigned char> key;
 	int size = eSeq.getMasterNN();
 

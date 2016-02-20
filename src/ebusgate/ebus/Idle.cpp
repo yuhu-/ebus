@@ -20,12 +20,12 @@
 #include "Idle.h"
 #include "Logger.h"
 
-extern Logger& L;
-
 Idle Idle::m_idle;
 
 int Idle::run(EbusHandler* h)
 {
+	Logger& L = Logger::getLogger("Idle::run");
+
 	if (h->m_device->isOpen() == true)
 	{
 

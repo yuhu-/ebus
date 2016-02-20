@@ -21,12 +21,12 @@
 #include "Listen.h"
 #include "Logger.h"
 
-extern Logger& L;
-
 SendResponse SendResponse::m_sendResponse;
 
 int SendResponse::run(EbusHandler* h)
 {
+	Logger& L = Logger::getLogger("SendResponse::run");
+
 	EbusSequence& eSeq = m_passiveMessage->getEbusSequence();
 	int result;
 	unsigned char byte;

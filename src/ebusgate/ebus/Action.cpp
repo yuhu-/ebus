@@ -28,8 +28,6 @@
 using std::copy_n;
 using std::back_inserter;
 
-extern Logger& L;
-
 Action Action::m_action;
 
 enum ActionType
@@ -64,6 +62,8 @@ map<vector<unsigned char>, string> ActionMessages =
 
 int Action::run(EbusHandler* h)
 {
+	Logger& L = Logger::getLogger("Action::run");
+
 	EbusSequence eSeq;
 	eSeq.createMaster(m_sequence);
 

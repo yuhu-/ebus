@@ -25,8 +25,6 @@
 
 #include <poll.h>
 
-extern Logger& L;
-
 Network::Network(const bool local, const int port, NQueue<NetMessage*>* netMsgQueue)
 	: m_netMsgQueue(netMsgQueue), m_listening(false)
 {
@@ -73,6 +71,8 @@ void Network::stop()
 
 void Network::run()
 {
+	Logger& L = Logger::getLogger("Network::run");
+
 	if (m_listening == false) return;
 
 	struct timespec tdiff;
@@ -128,6 +128,8 @@ void Network::run()
 
 void Network::cleanConnections()
 {
+	Logger& L = Logger::getLogger("Network::cleanConnections");
+
 	for (auto c_it = m_connections.begin(); c_it != m_connections.end(); c_it++)
 	{
 		if ((*c_it)->isClosed() == true)

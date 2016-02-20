@@ -25,8 +25,6 @@
 
 #include <poll.h>
 
-extern Logger& L;
-
 int Connection::m_ids = 0;
 
 Connection::Connection(TCPSocket* socket, NQueue<NetMessage*>* netMsgQueue)
@@ -61,6 +59,8 @@ int Connection::getID() const
 
 void Connection::run()
 {
+	Logger& L = Logger::getLogger("Connection::run");
+
 	struct timespec tdiff;
 
 	// set timeout

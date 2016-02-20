@@ -28,12 +28,12 @@
 
 using std::ostringstream;
 
-extern Logger& L;
-
 Connect Connect::m_connect;
 
 int Connect::run(EbusHandler* h)
 {
+	Logger& L = Logger::getLogger("Connect::run");
+
 	int result = DEV_OK;
 
 	if (h->m_device->isOpen() == false)

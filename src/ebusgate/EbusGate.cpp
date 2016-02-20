@@ -33,7 +33,6 @@
 
 Option& O = Option::getInstance();
 Daemon& D = Daemon::getInstance();
-Logger& L = Logger::getInstance();
 
 BaseLoop* baseloop = nullptr;
 
@@ -95,6 +94,8 @@ void define_args()
 
 void shutdown()
 {
+	Logger& L = Logger::getLogger("shutdown");
+
 	// stop threads
 	if (baseloop != nullptr)
 	{
@@ -119,6 +120,8 @@ void shutdown()
 
 void signal_handler(int sig)
 {
+	Logger& L = Logger::getLogger("signal_handler");
+
 	switch (sig)
 	{
 	case SIGHUP:
@@ -140,6 +143,8 @@ void signal_handler(int sig)
 
 int main(int argc, char* argv[])
 {
+	Logger& L = Logger::getLogger("main");
+
 	// define arguments and application variables
 	define_args();
 

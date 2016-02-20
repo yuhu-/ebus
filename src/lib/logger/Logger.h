@@ -37,7 +37,7 @@ class Logger
 {
 
 public:
-	static Logger& getInstance();
+	static Logger& getLogger(const string& function);
 	~Logger();
 
 	void start();
@@ -61,6 +61,8 @@ private:
 	vector<LogSink*> m_sinks;
 
 	NQueue<LogMessage*> m_logMessages;
+
+	string m_function;
 
 	Level m_level = info;
 

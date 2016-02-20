@@ -22,12 +22,12 @@
 #include "Listen.h"
 #include "Logger.h"
 
-extern Logger& L;
-
 RecvResponse RecvResponse::m_recvResponse;
 
 int RecvResponse::run(EbusHandler* h)
 {
+	Logger& L = Logger::getLogger("RecvResponse::run");
+
 	EbusSequence& eSeq = m_activeMessage->getEbusSequence();
 	unsigned char byte;
 	Sequence seq;

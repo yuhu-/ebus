@@ -21,12 +21,12 @@
 #include "Listen.h"
 #include "Logger.h"
 
-extern Logger& L;
-
 FreeBus FreeBus::m_freeBus;
 
 int FreeBus::run(EbusHandler* h)
 {
+	Logger& L = Logger::getLogger("FreeBus::run");
+
 	unsigned char byte = SYN;
 
 	int result = writeRead(h, byte, 0);

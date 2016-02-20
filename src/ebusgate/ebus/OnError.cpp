@@ -22,12 +22,12 @@
 #include "Listen.h"
 #include "Logger.h"
 
-extern Logger& L;
-
 OnError OnError::m_onError;
 
 int OnError::run(EbusHandler* h)
 {
+	Logger& L = Logger::getLogger("OnError::run");
+
 	if (h->m_lastResult > DEV_OK)
 	{
 		L.log(warn, "%s", h->m_device->errorText(h->m_lastResult).c_str());

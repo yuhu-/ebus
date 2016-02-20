@@ -29,8 +29,6 @@ using std::ios;
 using std::map;
 using std::ostringstream;
 
-extern Logger& L;
-
 long State::m_reopenTime = 0;
 int State::m_lockCounter = 0;
 int State::m_lockRetries = 0;
@@ -69,6 +67,8 @@ void State::changeState(EbusHandler* h, State* state)
 
 int State::read(EbusHandler* h, unsigned char& byte, const long sec, const long nsec)
 {
+	Logger& L = Logger::getLogger("State::read");
+
 	int result = h->m_device->recv(byte, sec, nsec);
 
 	if (h->m_logRaw == true && result == DEV_OK) L.log(info, "<%02x", byte);
@@ -98,6 +98,8 @@ int State::read(EbusHandler* h, unsigned char& byte, const long sec, const long 
 
 int State::write(EbusHandler* h, const unsigned char& byte)
 {
+	Logger& L = Logger::getLogger("State::write");
+
 	int result = h->m_device->send(byte);
 
 	if (h->m_logRaw == true && result == DEV_OK) L.log(info, ">%02x", byte);
@@ -107,6 +109,8 @@ int State::write(EbusHandler* h, const unsigned char& byte)
 
 int State::writeRead(EbusHandler* h, const unsigned char& byte, const long timeout)
 {
+	Logger& L = Logger::getLogger("State::writeRead");
+
 	int result = State::write(h, byte);
 
 	if (result == DEV_OK)

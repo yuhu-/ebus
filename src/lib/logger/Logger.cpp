@@ -36,10 +36,11 @@ using std::left;
 
 extern map<Level, string> LevelNames;
 
-Logger& Logger::getInstance()
+Logger& Logger::getLogger(const string& function)
 {
-	static Logger instance;
-	return (instance);
+	static Logger logger;
+	logger.m_function = function;
+	return (logger);
 }
 
 Logger::~Logger()
@@ -92,7 +93,7 @@ void Logger::log(const Level level, const string data, ...)
 		if (vasprintf(&tmp, data.c_str(), ap) != -1)
 		{
 			string buffer(tmp);
-			m_logMessages.enqueue(new LogMessage(level, buffer));
+			m_logMessages.enqueue(new LogMessage(m_function, level, buffer));
 		}
 
 		va_end(ap);
@@ -116,7 +117,8 @@ void Logger::run()
 			ostringstream sstr;
 
 			sstr << "[" << message->getTime() << "] " << setw(5) << setfill(' ') << left
-				<< LevelNames[(Level) message->getLevel()] << " " << message->getText() << endl;
+				<< LevelNames[(Level) message->getLevel()] << " " << message->getFunction() << " "
+				<< message->getText() << endl;
 
 			for (const auto& sink : m_sinks)
 				sink->write(sstr.str());

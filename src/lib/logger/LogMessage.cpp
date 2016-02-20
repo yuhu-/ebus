@@ -48,6 +48,11 @@ Level calcLevel(const string& level)
 	return (info);
 }
 
+string LogMessage::getFunction() const
+{
+	return (m_function);
+}
+
 Level LogMessage::getLevel() const
 {
 	return (m_level);
@@ -63,8 +68,8 @@ string LogMessage::getTime() const
 	return (m_time);
 }
 
-LogMessage::LogMessage(const Level level, const string text)
-	: m_level(level), m_text(text)
+LogMessage::LogMessage(const string function, const Level level, const string text)
+	: m_function(function), m_level(level), m_text(text)
 {
 	char time[24];
 	struct timeval tv;

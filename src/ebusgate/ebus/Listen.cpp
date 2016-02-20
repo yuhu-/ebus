@@ -23,12 +23,12 @@
 #include "Common.h"
 #include "Logger.h"
 
-extern Logger& L;
-
 Listen Listen::m_listen;
 
 int Listen::run(EbusHandler* h)
 {
+	Logger& L = Logger::getLogger("Listen::run");
+
 	unsigned char byte = 0;
 
 	int result = read(h, byte, 1, 0);

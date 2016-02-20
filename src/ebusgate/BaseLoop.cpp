@@ -20,7 +20,6 @@
 #include "BaseLoop.h"
 #include "Logger.h"
 #include "Option.h"
-#include "EbusSequence.h"
 
 #include <iomanip>
 #include <iterator>
@@ -29,7 +28,6 @@ using std::istringstream;
 using std::istream_iterator;
 using std::endl;
 
-extern Logger& L;
 extern Option& O;
 
 map<Command, string> CommandNames =
@@ -85,6 +83,8 @@ BaseLoop::~BaseLoop()
 
 void BaseLoop::start()
 {
+	Logger& L = Logger::getLogger("BaseLoop::start");
+
 	while (true)
 	{
 		string result;
@@ -136,6 +136,8 @@ Command BaseLoop::getCase(const string& command)
 
 string BaseLoop::decodeMessage(const string& data)
 {
+	Logger& L = Logger::getLogger("BaseLoop::decodeMessage");
+
 	ostringstream result;
 
 	// prepare data
@@ -337,12 +339,12 @@ const string BaseLoop::formatHelp()
 {
 	ostringstream ostr;
 	ostr << "commands:" << endl;
-	ostr << "  open       - connect with ebus           'open'" << endl;
+	ostr << " open       - connect with ebus           'open'" << endl;
 	ostr << " close      - disconnect from ebus        'close'" << endl;
 	ostr << " send       - write ebus values           'send ZZPBSBNNDx'" << endl;
 	ostr << " grab       - grab ebus values from store 'grab QQZZPBSBNNDx'" << endl;
 	ostr << " active     - toggle active mode          'active'" << endl;
-	ostr << " store      - toggle storing data         'store'" << endl
+	ostr << " store      - toggle storing data         'store'" << endl;
 	ostr << " loglevel   - change logging level        'loglevel level'" << endl;
 	ostr << " raw        - toggle raw output           'raw'" << endl;
 	ostr << " dump       - toggle raw dump             'dump'" << endl;

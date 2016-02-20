@@ -24,12 +24,12 @@
 
 #include <unistd.h>
 
-extern Logger& L;
-
 LockBus LockBus::m_lockBus;
 
 int LockBus::run(EbusHandler* h)
 {
+	Logger& L = Logger::getLogger("LockBus::run");
+
 	EbusSequence& eSeq = m_activeMessage->getEbusSequence();
 	if (eSeq.getMasterState() != EBUS_OK)
 	{

@@ -22,12 +22,12 @@
 #include "Action.h"
 #include "Logger.h"
 
-extern Logger& L;
-
 RecvMessage RecvMessage::m_recvMessage;
 
 int RecvMessage::run(EbusHandler* h)
 {
+	Logger& L = Logger::getLogger("RecvMessage::run");
+
 	int result;
 	unsigned char byte;
 
