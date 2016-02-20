@@ -31,13 +31,14 @@
 
 #include <dirent.h>
 
-Option& O = Option::getInstance();
 Daemon& D = Daemon::getInstance();
 
 BaseLoop* baseloop = nullptr;
 
 void define_args()
 {
+	Option& O = Option::getOption();
+
 	O.setVersion("" PACKAGE_STRING"");
 
 	O.addText("Options:\n");
@@ -144,6 +145,7 @@ void signal_handler(int sig)
 int main(int argc, char* argv[])
 {
 	Logger& L = Logger::getLogger("main");
+	Option& O = Option::getOption();
 
 	// define arguments and application variables
 	define_args();

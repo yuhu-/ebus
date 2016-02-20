@@ -35,7 +35,7 @@ using std::cin;
 using std::cout;
 using std::endl;
 
-Option& O = Option::getInstance("Command", "{Args...}");
+Option& O = Option::getOption("Command", "{Args...}");
 
 void define_args()
 {

@@ -28,7 +28,7 @@ using std::endl;
 using std::hex;
 using std::dec;
 
-Option& Option::getInstance(const char* command, const char* argument)
+Option& Option::getOption(const char* command, const char* argument)
 {
 	static Option instance(command, argument);
 	return (instance);

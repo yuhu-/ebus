@@ -28,8 +28,6 @@ using std::istringstream;
 using std::istream_iterator;
 using std::endl;
 
-extern Option& O;
-
 map<Command, string> CommandNames =
 {
 { c_open, "OPEN" },
@@ -45,6 +43,8 @@ map<Command, string> CommandNames =
 
 BaseLoop::BaseLoop()
 {
+	Option& O = Option::getOption();
+
 	m_ownAddress = O.getOptVal<int>("address") & 0xff;
 
 	m_ebushandler = new EbusHandler(O.getOptVal<int>("address") & 0xff, O.getOptVal<const char*>("device"),

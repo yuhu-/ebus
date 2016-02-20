@@ -39,7 +39,7 @@ using std::hex;
 using std::setw;
 using std::setfill;
 
-Option& O = Option::getInstance("/path/dumpfile");
+Option& O = Option::getOption("/path/dumpfile");
 
 void define_args()
 {

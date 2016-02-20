@@ -93,7 +93,7 @@ class Option
 {
 
 public:
-	static Option& getInstance(const char* command = "", const char* argument = "");
+	static Option& getOption(const char* command = "", const char* argument = "");
 
 	~Option();
 
