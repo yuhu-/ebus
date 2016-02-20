@@ -31,8 +31,6 @@
 
 #include <dirent.h>
 
-Daemon& D = Daemon::getInstance();
-
 BaseLoop* baseloop = nullptr;
 
 void define_args()
@@ -110,7 +108,7 @@ void shutdown()
 	signal(SIGTERM, SIG_DFL);
 
 	// delete daemon pid file
-	if (D.status() == true) D.stop();
+	if (Daemon::getDaemon().status() == true) Daemon::getDaemon().stop();
 
 	// stop logger
 	L.log(info, "ebusgate stopped");
@@ -160,7 +158,7 @@ int main(int argc, char* argv[])
 	else
 	{
 		// make me daemon
-		D.start(O.getOptVal<const char*>("pidfile"));
+		Daemon::getDaemon().start(O.getOptVal<const char*>("pidfile"));
 		L.addFile(O.getOptVal<const char*>("logfile"));
 	}
 

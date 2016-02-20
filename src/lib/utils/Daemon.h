@@ -27,7 +27,7 @@ class Daemon
 {
 
 public:
-	static Daemon& getInstance();
+	static Daemon& getDaemon();
 
 	void start(const char* pidfile);
 

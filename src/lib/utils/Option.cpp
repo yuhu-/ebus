@@ -30,8 +30,8 @@ using std::dec;
 
 Option& Option::getOption(const char* command, const char* argument)
 {
-	static Option instance(command, argument);
-	return (instance);
+	static Option option(command, argument);
+	return (option);
 }
 
 Option::~Option()

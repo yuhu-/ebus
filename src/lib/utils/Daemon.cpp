@@ -30,10 +30,10 @@
 using std::cerr;
 using std::endl;
 
-Daemon& Daemon::getInstance()
+Daemon& Daemon::getDaemon()
 {
-	static Daemon instance;
-	return (instance);
+	static Daemon daemon;
+	return (daemon);
 }
 
 void Daemon::start(const char* pidfile)
