@@ -26,7 +26,7 @@ class Idle : public State
 {
 
 public:
-	static Idle* getInstance()
+	static Idle* getIdle()
 	{
 		return (&m_idle);
 	}

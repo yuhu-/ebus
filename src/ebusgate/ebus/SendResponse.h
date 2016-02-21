@@ -26,7 +26,7 @@ class SendResponse : public State
 {
 
 public:
-	static SendResponse* getInstance()
+	static SendResponse* getSendResponse()
 	{
 		return (&m_sendResponse);
 	}

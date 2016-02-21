@@ -26,7 +26,7 @@ class Listen : public State
 {
 
 public:
-	static Listen* getInstance()
+	static Listen* getListen()
 	{
 		return (&m_listen);
 	}

@@ -101,7 +101,7 @@ int Action::run(EbusHandler* h)
 		{
 			L.log(debug, "response: %s", eSeq.toStringSlave().c_str());
 			m_passiveMessage = new EbusMessage(eSeq);
-			h->changeState(SendResponse::getInstance());
+			h->changeState(SendResponse::getSendResponse());
 			return (DEV_OK);
 		}
 		else
@@ -123,7 +123,7 @@ int Action::run(EbusHandler* h)
 	}
 
 	m_sequence.clear();
-	h->changeState(Listen::getInstance());
+	h->changeState(Listen::getListen());
 	return (DEV_OK);
 }
 

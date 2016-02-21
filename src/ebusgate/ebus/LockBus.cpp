@@ -37,7 +37,7 @@ int LockBus::run(EbusHandler* h)
 		m_activeMessage->setResult(eSeq.toStringMaster());
 
 		reset(h);
-		h->changeState(Listen::getInstance());
+		h->changeState(Listen::getListen());
 		return (DEV_OK);
 	}
 
@@ -80,12 +80,12 @@ int LockBus::run(EbusHandler* h)
 			reset(h);
 		}
 
-		h->changeState(Listen::getInstance());
+		h->changeState(Listen::getListen());
 	}
 	else
 	{
 		L.log(debug, "ebus locked");
-		h->changeState(SendMessage::getInstance());
+		h->changeState(SendMessage::getSendMessage());
 	}
 
 	return (result);

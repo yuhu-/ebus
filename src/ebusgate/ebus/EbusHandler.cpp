@@ -43,7 +43,7 @@ EbusHandler::EbusHandler(const unsigned char address, const string device, const
 		dumpRawFileMaxSize)
 {
 	m_device = new EbusDevice(device, noDeviceCheck);
-	changeState(Connect::getInstance());
+	changeState(Connect::getConnect());
 
 	setDumpRaw(dumpRaw);
 }
@@ -68,7 +68,7 @@ void EbusHandler::start()
 
 void EbusHandler::stop()
 {
-	m_forceState = Idle::getInstance();
+	m_forceState = Idle::getIdle();
 	notify();
 	m_running = false;
 	m_thread.join();
@@ -76,13 +76,13 @@ void EbusHandler::stop()
 
 void EbusHandler::open()
 {
-	m_forceState = Connect::getInstance();
+	m_forceState = Connect::getConnect();
 	notify();
 }
 
 void EbusHandler::close()
 {
-	m_forceState = Idle::getInstance();
+	m_forceState = Idle::getIdle();
 }
 
 bool EbusHandler::getActive()
@@ -189,7 +189,7 @@ void EbusHandler::run()
 	while (m_running == true)
 	{
 		m_lastResult = m_state->run(this);
-		if (m_lastResult != DEV_OK) changeState(OnError::getInstance());
+		if (m_lastResult != DEV_OK) changeState(OnError::getOnError());
 
 		if (m_forceState != nullptr)
 		{

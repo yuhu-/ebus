@@ -69,7 +69,7 @@ int Listen::run(EbusHandler* h)
 		}
 
 		// handle EbusMessage
-		if (m_activeMessage != nullptr && m_lockCounter == 0) h->changeState(LockBus::getInstance());
+		if (m_activeMessage != nullptr && m_lockCounter == 0) h->changeState(LockBus::getLockBus());
 	}
 	else
 	{
@@ -80,7 +80,7 @@ int Listen::run(EbusHandler* h)
 		{
 			if (m_sequence[1] == BROADCAST || m_sequence[1] == h->m_address
 				|| m_sequence[1] == slaveAddress(h->m_address))
-				h->changeState(RecvMessage::getInstance());
+				h->changeState(RecvMessage::getRecvMessage());
 		}
 
 	}

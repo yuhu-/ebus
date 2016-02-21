@@ -75,7 +75,7 @@ int SendResponse::run(EbusHandler* h)
 	L.log(info, "%s", eSeq.toStringLog().c_str());
 
 	reset(h);
-	h->changeState(Listen::getInstance());
+	h->changeState(Listen::getListen());
 
 	return (DEV_OK);
 }

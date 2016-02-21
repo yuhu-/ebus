@@ -26,7 +26,7 @@ class OnError : public State
 {
 
 public:
-	static OnError* getInstance()
+	static OnError* getOnError()
 	{
 		return (&m_onError);
 	}

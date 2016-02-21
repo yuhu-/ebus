@@ -35,7 +35,7 @@ int FreeBus::run(EbusHandler* h)
 	L.log(debug, "ebus freed");
 
 	reset(h);
-	h->changeState(Listen::getInstance());
+	h->changeState(Listen::getListen());
 
 	return (result);
 }

@@ -49,7 +49,7 @@ int SendMessage::run(EbusHandler* h)
 		if (eSeq.getType() == EBUS_TYPE_BC)
 		{
 			L.log(info, "%s done", eSeq.toStringLog().c_str());
-			h->changeState(FreeBus::getInstance());
+			h->changeState(FreeBus::getFreeBus());
 			break;
 		}
 
@@ -64,7 +64,7 @@ int SendMessage::run(EbusHandler* h)
 			L.log(warn, "%s", errorText(STATE_ERR_ACK_WRONG).c_str());
 			m_activeMessage->setResult(errorText(STATE_ERR_ACK_WRONG));
 
-			h->changeState(FreeBus::getInstance());
+			h->changeState(FreeBus::getFreeBus());
 			break;
 		}
 		else if (byte == ACK)
@@ -73,11 +73,11 @@ int SendMessage::run(EbusHandler* h)
 			if (eSeq.getType() == EBUS_TYPE_MM)
 			{
 				L.log(info, "%s done", eSeq.toStringLog().c_str());
-				h->changeState(FreeBus::getInstance());
+				h->changeState(FreeBus::getFreeBus());
 			}
 			else
 			{
-				h->changeState(RecvResponse::getInstance());
+				h->changeState(RecvResponse::getRecvResponse());
 			}
 
 			break;
@@ -93,7 +93,7 @@ int SendMessage::run(EbusHandler* h)
 				L.log(warn, "%s", errorText(STATE_ERR_ACK_NEG).c_str());
 				m_activeMessage->setResult(errorText(STATE_ERR_ACK_NEG));
 
-				h->changeState(FreeBus::getInstance());
+				h->changeState(FreeBus::getFreeBus());
 			}
 		}
 	}

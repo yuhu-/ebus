@@ -26,7 +26,7 @@ class RecvMessage : public State
 {
 
 public:
-	static RecvMessage* getInstance()
+	static RecvMessage* getRecvMessage()
 	{
 		return (&m_recvMessage);
 	}

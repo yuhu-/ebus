@@ -26,7 +26,7 @@ class Action : public State
 {
 
 public:
-	static Action* getInstance()
+	static Action* getAction()
 	{
 		return (&m_action);
 	}

@@ -47,10 +47,10 @@ int OnError::run(EbusHandler* h)
 
 		if (h->m_device->isOpen() == false) L.log(info, "ebus disconnected");
 
-		h->changeState(Connect::getInstance());
+		h->changeState(Connect::getConnect());
 	}
 	else
-		h->changeState(Listen::getInstance());
+		h->changeState(Listen::getListen());
 
 	return (DEV_OK);
 }

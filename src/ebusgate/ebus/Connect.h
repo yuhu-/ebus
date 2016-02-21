@@ -26,7 +26,7 @@ class Connect : public State
 {
 
 public:
-	static Connect* getInstance()
+	static Connect* getConnect()
 	{
 		return (&m_connect);
 	}

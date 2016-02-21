@@ -26,7 +26,7 @@ class FreeBus : public State
 {
 
 public:
-	static FreeBus* getInstance()
+	static FreeBus* getFreeBus()
 	{
 		return (&m_freeBus);
 	}

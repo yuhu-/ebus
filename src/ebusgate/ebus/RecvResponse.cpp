@@ -44,7 +44,7 @@ int RecvResponse::run(EbusHandler* h)
 		{
 			L.log(warn, "%s", errorText(STATE_ERR_NN_WRONG).c_str());
 			reset(h);
-			h->changeState(Listen::getInstance());
+			h->changeState(Listen::getListen());
 			return (DEV_OK);
 		}
 
@@ -99,7 +99,7 @@ int RecvResponse::run(EbusHandler* h)
 		}
 	}
 
-	h->changeState(FreeBus::getInstance());
+	h->changeState(FreeBus::getFreeBus());
 
 	return (result);
 }

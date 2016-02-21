@@ -26,7 +26,7 @@ class SendMessage : public State
 {
 
 public:
-	static SendMessage* getInstance()
+	static SendMessage* getSendMessage()
 	{
 		return (&m_sendMessage);
 	}

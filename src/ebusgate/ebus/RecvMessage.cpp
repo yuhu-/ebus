@@ -47,7 +47,7 @@ int RecvMessage::run(EbusHandler* h)
 	{
 		L.log(warn, "%s", errorText(STATE_ERR_NN_WRONG).c_str());
 		reset(h);
-		h->changeState(Listen::getInstance());
+		h->changeState(Listen::getListen());
 		return (DEV_OK);
 	}
 
@@ -111,13 +111,13 @@ int RecvMessage::run(EbusHandler* h)
 
 		if (h->m_active == true)
 		{
-			h->changeState(Action::getInstance());
+			h->changeState(Action::getAction());
 			return (DEV_OK);
 		}
 	}
 
 	m_sequence.clear();
-	h->changeState(Listen::getInstance());
+	h->changeState(Listen::getListen());
 	return (DEV_OK);
 }
 

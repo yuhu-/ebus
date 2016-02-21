@@ -50,7 +50,7 @@ int Connect::run(EbusHandler* h)
 			sleep(1);
 			m_reopenTime++;
 
-			if (m_reopenTime > h->m_reopenTime) h->changeState(Idle::getInstance());
+			if (m_reopenTime > h->m_reopenTime) h->changeState(Idle::getIdle());
 
 			return (result);
 		}
@@ -66,7 +66,7 @@ int Connect::run(EbusHandler* h)
 		if (eSeq.getMasterState() == EBUS_OK) h->addMessage(new EbusMessage(eSeq));
 	}
 
-	h->changeState(Listen::getInstance());
+	h->changeState(Listen::getListen());
 	return (result);
 }
 

@@ -26,7 +26,7 @@ class LockBus : public State
 {
 
 public:
-	static LockBus* getInstance()
+	static LockBus* getLockBus()
 	{
 		return (&m_lockBus);
 	}

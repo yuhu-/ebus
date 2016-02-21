@@ -26,7 +26,7 @@ class RecvResponse : public State
 {
 
 public:
-	static RecvResponse* getInstance()
+	static RecvResponse* getRecvResponse()
 	{
 		return (&m_recvResponse);
 	}
