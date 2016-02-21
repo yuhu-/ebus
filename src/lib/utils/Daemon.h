@@ -22,6 +22,9 @@
 
 #include <cstddef>
 #include <cstdio>
+#include <string>
+
+using std::string;
 
 class Daemon
 {
@@ -29,7 +32,7 @@ class Daemon
 public:
 	static Daemon& getDaemon();
 
-	void start(const char* pidfile);
+	void start(const string pidfile);
 
 	void stop();
 
@@ -42,7 +45,7 @@ private:
 
 	bool m_status = false;
 
-	const char* m_pidfile = nullptr;
+	string m_pidfile;
 	FILE* m_pidfd = nullptr;
 
 };

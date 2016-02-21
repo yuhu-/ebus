@@ -36,7 +36,7 @@ Daemon& Daemon::getDaemon()
 	return (daemon);
 }
 
-void Daemon::start(const char* pidfile)
+void Daemon::start(const string pidfile)
 {
 	m_pidfile = pidfile;
 
@@ -85,7 +85,7 @@ void Daemon::start(const char* pidfile)
 	close(STDERR_FILENO);
 
 	// write pidfile and try to lock it
-	m_pidfd = fopen(m_pidfile, "w+");
+	m_pidfd = fopen(m_pidfile.c_str(), "w+");
 
 	umask(S_IWGRP | S_IRWXO);
 
@@ -113,7 +113,7 @@ void Daemon::stop()
 	if (m_pidfd != nullptr)
 	{
 		if (fclose(m_pidfd) < 0) return;
-		remove(m_pidfile);
+		remove(m_pidfile.c_str());
 	}
 }
 
