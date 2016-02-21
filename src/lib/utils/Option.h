@@ -93,11 +93,11 @@ class Option
 {
 
 public:
-	static Option& getOption(const char* command = "", const char* argument = "");
+	static Option& getOption(const string command = "", const string argument = "");
 
 	~Option();
 
-	void setVersion(const char* version);
+	void setVersion(const string version);
 
 	void addText(const char* text);
 
@@ -122,7 +122,7 @@ public:
 	bool missingCommand() const;
 
 private:
-	Option(const char* command, const char* argument);
+	Option(const string command, const string argument);
 	Option(const Option&);
 	Option& operator=(const Option&);
 
@@ -136,12 +136,9 @@ private:
 
 	vector<string> m_argv;
 
-	const char* m_version;
-
-	const char* m_withCommand;
-
-	const char* m_withArgument;
-
+	string m_version;
+	string m_withCommand;
+	string m_withArgument;
 	string m_command;
 
 	vector<string> m_arguments;

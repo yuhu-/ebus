@@ -28,7 +28,7 @@ using std::endl;
 using std::hex;
 using std::dec;
 
-Option& Option::getOption(const char* command, const char* argument)
+Option& Option::getOption(const string command, const string argument)
 {
 	static Option option(command, argument);
 	return (option);
@@ -40,7 +40,7 @@ Option::~Option()
 	m_optvals.clear();
 }
 
-void Option::setVersion(const char* version)
+void Option::setVersion(const string version)
 {
 	m_version = version;
 }
@@ -121,7 +121,7 @@ bool Option::parseArgs(int argc, char* argv[])
 		else
 		{
 			// break loop with command
-			if (lastOption == false && strlen(m_withCommand) != 0)
+			if (lastOption == false && m_withCommand.size() != 0)
 			{
 				break;
 			}
@@ -132,12 +132,12 @@ bool Option::parseArgs(int argc, char* argv[])
 		}
 	}
 
-	if (i < argc && strlen(m_withCommand) != 0)
+	if (i < argc && m_withCommand.size() != 0)
 	{
 		// save command
 		m_command = _argv[i];
 
-		if (strlen(m_withArgument) != 0)
+		if (m_withArgument.size() != 0)
 		{
 			// save args of command
 			for (++i; i < argc; i++)
@@ -168,8 +168,8 @@ bool Option::missingCommand() const
 	return (m_command.size() == 0 ? true : false);
 }
 
-Option::Option(const char* command, const char* argument)
-	: m_version(nullptr), m_withCommand(command), m_withArgument(argument)
+Option::Option(const string command, const string argument)
+	: m_withCommand(command), m_withArgument(argument)
 {
 }
 
@@ -243,9 +243,9 @@ bool Option::toStringHelp()
 	cerr << endl << "Usage:" << endl << "  " << m_argv[0].substr(m_argv[0].find_last_of("/\\") + 1)
 		<< " [Options...]";
 
-	if (strlen(m_withCommand) != 0)
+	if (m_withCommand.size() != 0)
 	{
-		if (strlen(m_withArgument) != 0)
+		if (m_withArgument.size() != 0)
 		{
 			cerr << " " << m_withCommand << " " << m_withArgument << endl << endl;
 		}

@@ -53,7 +53,7 @@ class EbusHandler : public Notify
 public:
 	EbusHandler(const unsigned char address, const string device, const bool noDeviceCheck, const long reopenTime,
 		const long arbitrationTime, const long receiveTimeout, const int lockCounter, const int lockRetries,
-		const bool active, const bool store, const bool logRaw, const bool dumpRaw, const char* dumpRawFile,
+		const bool active, const bool store, const bool logRaw, const bool dumpRaw, const string dumpRawFile,
 		const long dumpRawFileMaxSize);
 
 	~EbusHandler();
