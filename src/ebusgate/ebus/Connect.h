@@ -32,7 +32,7 @@ public:
 	}
 
 	int run(EbusHandler* h);
-	const char* toString() const;
+	const string toString() const;
 
 private:
 	Connect();

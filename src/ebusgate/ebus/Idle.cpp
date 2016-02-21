@@ -45,7 +45,7 @@ Idle::Idle()
 {
 }
 
-const char* Idle::toString() const
+const string Idle::toString() const
 {
 	return ("Idle");
 }

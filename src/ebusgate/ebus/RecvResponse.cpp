@@ -108,7 +108,7 @@ RecvResponse::RecvResponse()
 {
 }
 
-const char* RecvResponse::toString() const
+const string RecvResponse::toString() const
 {
 	return ("RecvResponse");
 }

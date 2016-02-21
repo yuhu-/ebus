@@ -59,7 +59,7 @@ OnError::OnError()
 {
 }
 
-const char* OnError::toString() const
+const string OnError::toString() const
 {
 	return ("OnError");
 }

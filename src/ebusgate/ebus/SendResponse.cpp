@@ -84,7 +84,7 @@ SendResponse::SendResponse()
 {
 }
 
-const char* SendResponse::toString() const
+const string SendResponse::toString() const
 {
 	return ("SendResponse");
 }

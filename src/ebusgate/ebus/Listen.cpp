@@ -92,7 +92,7 @@ Listen::Listen()
 {
 }
 
-const char* Listen::toString() const
+const string Listen::toString() const
 {
 	return ("Listen");
 }

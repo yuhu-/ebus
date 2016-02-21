@@ -105,7 +105,7 @@ SendMessage::SendMessage()
 {
 }
 
-const char* SendMessage::toString() const
+const string SendMessage::toString() const
 {
 	return ("SendMessage");
 }

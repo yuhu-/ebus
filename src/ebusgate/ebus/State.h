@@ -45,7 +45,7 @@ class State
 
 public:
 	virtual int run(EbusHandler* h) = 0;
-	virtual const char* toString() const = 0;
+	virtual const string toString() const = 0;
 
 protected:
 	virtual ~State();

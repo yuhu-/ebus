@@ -131,7 +131,7 @@ Action::Action()
 {
 }
 
-const char* Action::toString() const
+const string Action::toString() const
 {
 	return ("Action");
 }

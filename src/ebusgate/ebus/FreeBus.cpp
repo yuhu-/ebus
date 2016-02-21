@@ -44,7 +44,7 @@ FreeBus::FreeBus()
 {
 }
 
-const char* FreeBus::toString() const
+const string FreeBus::toString() const
 {
 	return ("FreeBus");
 }

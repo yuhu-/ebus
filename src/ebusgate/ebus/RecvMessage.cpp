@@ -125,7 +125,7 @@ RecvMessage::RecvMessage()
 {
 }
 
-const char* RecvMessage::toString() const
+const string RecvMessage::toString() const
 {
 	return ("RecvMessage");
 }

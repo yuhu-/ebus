@@ -74,7 +74,7 @@ Connect::Connect()
 {
 }
 
-const char* Connect::toString() const
+const string Connect::toString() const
 {
 	return ("Connect");
 }

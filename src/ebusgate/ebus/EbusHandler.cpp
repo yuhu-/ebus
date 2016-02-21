@@ -206,7 +206,7 @@ void EbusHandler::changeState(State* state)
 	if (m_state != state)
 	{
 		m_state = state;
-		L.log(trace, "%s", m_state->toString());
+		L.log(trace, "%s", m_state->toString().c_str());
 	}
 }
 

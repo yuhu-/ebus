@@ -95,7 +95,7 @@ LockBus::LockBus()
 {
 }
 
-const char* LockBus::toString() const
+const string LockBus::toString() const
 {
 	return ("LockBus");
 }
