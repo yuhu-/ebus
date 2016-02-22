@@ -137,24 +137,24 @@ void EbusHandler::setDumpRaw(const bool dumpRaw)
 	}
 }
 
-void EbusHandler::setDumpRawFile(const string& dumpFile)
-{
-	if (dumpFile == m_dumpRawFile) return;
-
-	m_dumpRawStream.close();
-	m_dumpRawFile = dumpFile;
-
-	if (m_dumpRaw == true)
-	{
-		m_dumpRawStream.open(m_dumpRawFile.c_str(), ios::binary | ios::app);
-		m_dumpRawFileSize = 0;
-	}
-}
-
-void EbusHandler::setDumpRawMaxSize(const long maxSize)
-{
-	m_dumpRawFileMaxSize = maxSize;
-}
+//void EbusHandler::setDumpRawFile(const string& dumpFile)
+//{
+//	if (dumpFile == m_dumpRawFile) return;
+//
+//	m_dumpRawStream.close();
+//	m_dumpRawFile = dumpFile;
+//
+//	if (m_dumpRaw == true)
+//	{
+//		m_dumpRawStream.open(m_dumpRawFile.c_str(), ios::binary | ios::app);
+//		m_dumpRawFileSize = 0;
+//	}
+//}
+//
+//void EbusHandler::setDumpRawMaxSize(const long maxSize)
+//{
+//	m_dumpRawFileMaxSize = maxSize;
+//}
 
 void EbusHandler::addMessage(EbusMessage* message)
 {

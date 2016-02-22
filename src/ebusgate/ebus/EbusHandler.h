@@ -76,8 +76,8 @@ public:
 	bool getDumpRaw() const;
 	void setDumpRaw(const bool dumpRaw);
 
-	void setDumpRawFile(const string& dumpFile);
-	void setDumpRawMaxSize(const long maxSize);
+//	void setDumpRawFile(const string& dumpFile);
+//	void setDumpRawMaxSize(const long maxSize);
 
 	void addMessage(EbusMessage* message);
 	const string grabMessage(const string& str);
