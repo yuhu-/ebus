@@ -135,7 +135,7 @@ string fetchData(TCPSocket* socket, bool& listening)
 	return (ss.str());
 }
 
-bool connect(const char* host, int port, bool once)
+bool connect(const string& host, const int& port, bool once)
 {
 
 	TCPClient* client = new TCPClient();

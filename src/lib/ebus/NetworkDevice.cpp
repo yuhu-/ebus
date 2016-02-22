@@ -35,59 +35,40 @@ int NetworkDevice::openDevice(const string device, const bool noDeviceCheck)
 {
 	m_noDeviceCheck = noDeviceCheck;
 
-	struct sockaddr_in sock;
-	char* hostport;
+	struct sockaddr_in address;
 	int ret;
 
 	m_open = false;
 
-	memset((char*) &sock, 0, sizeof(sock));
+	memset((char*) &address, 0, sizeof(address));
 
-	hostport = strdup(device.c_str());
-	const char* host = strtok(hostport, ":");
-	const char* port = strtok(nullptr, ":");
+	const string host = device.substr(0, device.find(":"));
+	const string port = device.substr(device.find(":") + 1);
 
-	if (inet_addr(host) == INADDR_NONE)
+	if (inet_addr(host.c_str()) == INADDR_NONE)
 	{
 		struct hostent* he;
 
-		he = gethostbyname(host);
-		if (he == nullptr)
-		{
-			free(hostport);
-			return (DEV_ERR_OPEN);
-		}
+		he = gethostbyname(host.c_str());
+		if (he == nullptr) return (DEV_ERR_OPEN);
 
-		memcpy(&sock.sin_addr, he->h_addr_list[0], he->h_length);
+		memcpy(&address.sin_addr, he->h_addr_list[0], he->h_length);
 	}
 	else
 	{
-		ret = inet_aton(host, &sock.sin_addr);
-		if (ret == 0)
-		{
-			free(hostport);
-			return (DEV_ERR_OPEN);
-		}
+		ret = inet_aton(host.c_str(), &address.sin_addr);
+		if (ret == 0) return (DEV_ERR_OPEN);
 	}
 
-	sock.sin_family = AF_INET;
-	sock.sin_port = htons(strtol(port, nullptr, 10));
+	address.sin_family = AF_INET;
+	address.sin_port = htons(strtol(port.c_str(), nullptr, 10));
 
 	m_fd = socket(AF_INET, SOCK_STREAM, 0);
-	if (m_fd < 0)
-	{
-		free(hostport);
-		return (DEV_ERR_OPEN);
-	}
+	if (m_fd < 0) return (DEV_ERR_OPEN);
 
-	ret = connect(m_fd, (struct sockaddr*) &sock, sizeof(sock));
-	if (ret < 0)
-	{
-		free(hostport);
-		return (DEV_ERR_OPEN);
-	}
+	ret = connect(m_fd, (struct sockaddr*) &address, sizeof(address));
+	if (ret < 0) return (DEV_ERR_OPEN);
 
-	free(hostport);
 	m_open = true;
 
 	return (DEV_OK);

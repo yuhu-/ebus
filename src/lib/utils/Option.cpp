@@ -28,7 +28,7 @@ using std::endl;
 using std::hex;
 using std::dec;
 
-Option& Option::getOption(const string command, const string argument)
+Option& Option::getOption(const string& command, const string& argument)
 {
 	static Option option(command, argument);
 	return (option);
@@ -40,12 +40,12 @@ Option::~Option()
 	m_optvals.clear();
 }
 
-void Option::setVersion(const string version)
+void Option::setVersion(const string& version)
 {
 	m_version = version;
 }
 
-void Option::addText(const char* text)
+void Option::addText(const string& text)
 {
 	opt_t opt;
 	opt.name = "__text_only__";
@@ -56,10 +56,10 @@ void Option::addText(const char* text)
 	m_opts.push_back(opt);
 }
 
-void Option::addOption(const char* name, const char* shortname, OptVal optval, DataType datatype, OptionType optiontype,
-	const char* description)
+void Option::addOption(const string& name, const string& shortname, const OptVal& optval, const DataType& datatype,
+	const OptionType& optiontype, const string& description)
 {
-	if (strlen(name) != 0)
+	if (name.size() != 0)
 	{
 		m_optvals[name] = optval;
 
@@ -153,7 +153,7 @@ int Option::numArgs() const
 	return (m_arguments.size());
 }
 
-string Option::getArg(const int num) const
+string Option::getArg(const int& num) const
 {
 	return (m_arguments[num]);
 }
@@ -168,7 +168,7 @@ bool Option::missingCommand() const
 	return (m_command.size() == 0 ? true : false);
 }
 
-Option::Option(const string command, const string argument)
+Option::Option(const string& command, const string& argument)
 	: m_withCommand(command), m_withArgument(argument)
 {
 }
@@ -204,7 +204,7 @@ bool Option::checkOption(const string& option, const string& value)
 	return (toStringHelp());
 }
 
-void Option::setOptVal(const char* option, const string value, DataType datatype)
+void Option::setOptVal(const string& option, const string value, DataType datatype)
 {
 	switch (datatype)
 	{
@@ -261,15 +261,15 @@ bool Option::toStringHelp()
 
 	for (o_it = m_opts.begin(); o_it < m_opts.end(); ++o_it)
 	{
-		if (strcmp(o_it->name, "__text_only__") == 0)
+		if (strcmp(o_it->name.c_str(), "__text_only__") == 0)
 		{
 			cerr << o_it->description << endl;
 		}
 		else
 		{
-			const char* c = (strlen(o_it->shortname) == 1) ? o_it->shortname : " ";
-			cerr << ((strcmp(c, " ") == 0) ? " " : "-") << c << " | --" << o_it->name << "\t"
-				<< o_it->description << endl;
+			const string c = (o_it->shortname.size() == 1) ? o_it->shortname.c_str() : " ";
+			cerr << ((c == " ") ? " " : "-") << c << " | --" << o_it->name << "\t" << o_it->description
+				<< endl;
 		}
 	}
 
@@ -284,10 +284,11 @@ bool Option::toStringOptions()
 
 	for (o_it = m_opts.begin(); o_it < m_opts.end(); ++o_it)
 	{
-		if (strcmp(o_it->name, "__text_only__") == 0) continue;
+		if (strcmp(o_it->name.c_str(), "__text_only__") == 0) continue;
 
-		const char* c = (strlen(o_it->shortname) == 1) ? o_it->shortname : " ";
-		cerr << ((strcmp(c, " ") == 0) ? " " : "-") << c << " | --" << o_it->name << " = ";
+		const string c = (o_it->shortname.size() == 1) ? o_it->shortname.c_str() : " ";
+		cerr << ((c == " ") ? " " : "-") << c << " | --" << o_it->name << " = ";
+
 		if (o_it->datatype == dt_bool)
 		{
 			if (getOptVal<bool>(o_it->name) == true)

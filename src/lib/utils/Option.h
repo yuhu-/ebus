@@ -47,9 +47,9 @@ enum OptionType
 
 typedef struct
 {
-	const char* name;
-	const char* shortname;
-	const char* description;
+	string name;
+	string shortname;
+	string description;
 	DataType datatype;
 	OptionType optiontype;
 } opt_t;
@@ -93,19 +93,19 @@ class Option
 {
 
 public:
-	static Option& getOption(const string command = "", const string argument = "");
+	static Option& getOption(const string& command = "", const string& argument = "");
 
 	~Option();
 
-	void setVersion(const string version);
+	void setVersion(const string& version);
 
-	void addText(const char* text);
+	void addText(const string& text);
 
-	void addOption(const char* name, const char* shortname, OptVal optval, DataType datatype, OptionType optiontype,
-		const char* description);
+	void addOption(const string& name, const string& shortname, const OptVal& optval, const DataType& datatype,
+		const OptionType& optiontype, const string& description);
 
 	template<typename T>
-	T getOptVal(const char* name)
+	T getOptVal(const string& name)
 	{
 		ov_it = m_optvals.find(name);
 		return (reinterpret_cast<T&>(ov_it->second));
@@ -115,14 +115,14 @@ public:
 
 	int numArgs() const;
 
-	string getArg(const int num) const;
+	string getArg(const int& num) const;
 
 	string getCommand() const;
 
 	bool missingCommand() const;
 
 private:
-	Option(const string command, const string argument);
+	Option(const string& command, const string& argument);
 	Option(const Option&);
 	Option& operator=(const Option&);
 
@@ -130,9 +130,9 @@ private:
 
 	vector<opt_t>::const_iterator o_it;
 
-	map<const char*, OptVal> m_optvals;
+	map<const string, OptVal> m_optvals;
 
-	map<const char*, OptVal>::iterator ov_it;
+	map<const string, OptVal>::iterator ov_it;
 
 	vector<string> m_argv;
 
@@ -144,7 +144,7 @@ private:
 	vector<string> m_arguments;
 
 	bool checkOption(const string& option, const string& value);
-	void setOptVal(const char* option, const string value, DataType datatype);
+	void setOptVal(const string& option, const string value, DataType datatype);
 
 	bool toStringVersion() const;
 
