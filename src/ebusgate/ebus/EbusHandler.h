@@ -97,6 +97,7 @@ private:
 	int m_lockCounter;
 	int m_lockRetries;
 	bool m_active;
+	bool m_activeDone = false;
 	bool m_store;
 
 	int m_lastResult;

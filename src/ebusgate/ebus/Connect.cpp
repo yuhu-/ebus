@@ -58,14 +58,6 @@ int Connect::run(EbusHandler* h)
 
 	reset(h);
 
-	if (h->m_active == true)
-	{
-		EbusSequence eSeq;
-		eSeq.createMaster(h->m_address, BROADCAST, "07040a7a454741544501010101");
-
-		if (eSeq.getMasterState() == EBUS_OK) h->addMessage(new EbusMessage(eSeq));
-	}
-
 	h->changeState(Listen::getListen());
 	return (result);
 }

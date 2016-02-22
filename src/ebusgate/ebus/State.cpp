@@ -134,6 +134,14 @@ void State::reset(EbusHandler* h)
 	if (m_activeMessage != nullptr)
 	{
 		m_activeMessage->notify();
+
+		if (h->m_activeDone == false)
+		{
+			EbusMessage* ebusMessage = m_activeMessage;
+			delete ebusMessage;
+			h->m_activeDone = true;
+		}
+
 		m_activeMessage = nullptr;
 	}
 

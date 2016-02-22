@@ -46,6 +46,14 @@ EbusHandler::EbusHandler(const unsigned char address, const string device, const
 	changeState(Connect::getConnect());
 
 	setDumpRaw(dumpRaw);
+
+	if (m_active == true)
+	{
+		EbusSequence eSeq;
+		eSeq.createMaster(m_address, BROADCAST, "07040a7a454741544501010101");
+
+		if (eSeq.getMasterState() == EBUS_OK) addMessage(new EbusMessage(eSeq));
+	}
 }
 
 EbusHandler::~EbusHandler()
