@@ -18,73 +18,47 @@
  */
 
 #include "Logger.h"
-#include "LogConsole.h"
-#include "LogFile.h"
 
-#include <iostream>
-#include <iomanip>
-#include <algorithm>
 #include <cstdarg>
-#include <sstream>
 
-using std::istringstream;
-using std::ostringstream;
-using std::endl;
-using std::setw;
-using std::setfill;
-using std::left;
-
-extern map<Level, string> LevelNames;
-
-Logger& Logger::getLogger(const string& function)
+Logger::Logger(const char* function)
+	: m_logHandler(LogHandler::getLogHandler()), m_function(function)
 {
-	static Logger logger;
-	logger.m_function = function;
-	return (logger);
-}
-
-Logger::~Logger()
-{
-	while (m_sinks.size() > 0)
-		delSink(*(m_sinks.begin()));
 }
 
 void Logger::start()
 {
-	m_thread = thread(&Logger::run, this);
+	m_logHandler.start();
 }
 
 void Logger::stop()
 {
-	if (m_thread.joinable())
-	{
-		m_logMessages.enqueue(nullptr);
-		m_thread.join();
-	}
+	m_logHandler.stop();
 }
 
 void Logger::setLevel(const Level& level)
 {
-	m_level = level;
+	m_logHandler.setLevel(level);
 }
+
 void Logger::setLevel(const string& level)
 {
-	m_level = calcLevel(level);
+	m_logHandler.setLevel(level);
 }
 
 void Logger::addConsole()
 {
-	addSink(new LogConsole());
+	m_logHandler.addConsole();
 }
 
-void Logger::addFile(const char* file)
+void Logger::addFile(const string& file)
 {
-	addSink(new LogFile(file));
+	m_logHandler.addFile(file);
 }
 
-void Logger::log(const Level level, const string data, ...)
+void Logger::log(const Level& level, const string data, ...)
 {
-	if (m_level != off)
+	if (m_logHandler.getLevel() != off)
 	{
 		char* tmp;
 		va_list ap;
@@ -93,55 +67,10 @@ void Logger::log(const Level level, const string data, ...)
 		if (vasprintf(&tmp, data.c_str(), ap) != -1)
 		{
 			string buffer(tmp);
-			m_logMessages.enqueue(new LogMessage(m_function, level, buffer));
+			m_logHandler.log(new LogMessage(m_function, level, buffer));
 		}
 
 		va_end(ap);
 		free(tmp);
 	}
-}
-
-Logger::Logger()
-{
-}
-
-void Logger::run()
-{
-	while (true)
-	{
-		LogMessage* message = m_logMessages.dequeue();
-		if (message == nullptr) break;
-
-		if (m_level >= message->getLevel())
-		{
-			ostringstream sstr;
-
-			sstr << "[" << message->getTime() << "] " << setw(5) << setfill(' ') << left
-				<< LevelNames[(Level) message->getLevel()] << " " << message->getFunction() << " "
-				<< message->getText() << endl;
-
-			for (const auto& sink : m_sinks)
-				sink->write(sstr.str());
-		}
-
-		delete message;
-	}
-}
-
-void Logger::addSink(LogSink* sink)
-{
-	vector<LogSink*>::iterator it = find(m_sinks.begin(), m_sinks.end(), sink);
-
-	if (it == m_sinks.end()) m_sinks.push_back(sink);
-
-}
-
-void Logger::delSink(const LogSink* sink)
-{
-	vector<LogSink*>::iterator it = find(m_sinks.begin(), m_sinks.end(), sink);
-
-	if (it == m_sinks.end()) return;
-
-	m_sinks.erase(it);
-	delete sink;
 }

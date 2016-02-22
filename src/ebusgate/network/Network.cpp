@@ -71,7 +71,7 @@ void Network::stop()
 
 void Network::run()
 {
-	Logger& L = Logger::getLogger("Network::run");
+	Logger L = Logger("Network::run");
 
 	if (m_listening == false) return;
 
@@ -128,7 +128,7 @@ void Network::run()
 
 void Network::cleanConnections()
 {
-	Logger& L = Logger::getLogger("Network::cleanConnections");
+	Logger L = Logger("Network::cleanConnections");
 
 	for (auto c_it = m_connections.begin(); c_it != m_connections.end(); c_it++)
 	{

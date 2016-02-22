@@ -163,7 +163,7 @@ void EbusHandler::addMessage(EbusMessage* message)
 
 const string EbusHandler::grabMessage(const string& str)
 {
-	Logger& L = Logger::getLogger("EbusHandler::grabMessage");
+	Logger L = Logger("EbusHandler::grabMessage");
 
 	ostringstream result;
 	const Sequence seq(str);
@@ -201,7 +201,7 @@ void EbusHandler::run()
 
 void EbusHandler::changeState(State* state)
 {
-	Logger& L = Logger::getLogger("EbusHandler::changeState");
+	Logger L = Logger("EbusHandler::changeState");
 
 	if (m_state != state)
 	{
@@ -213,7 +213,7 @@ void EbusHandler::changeState(State* state)
 // TODO rework key and search
 void EbusHandler::storeMessage(const EbusSequence& eSeq)
 {
-	Logger& L = Logger::getLogger("EbusHandler::storeMessage");
+	Logger L = Logger("EbusHandler::storeMessage");
 
 	vector<unsigned char> key;
 	int size = eSeq.getMasterNN();

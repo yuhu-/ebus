@@ -13,6 +13,8 @@ liblogger_a_SOURCES = LogMessage.cpp \
 		      LogConsole.h \
 		      LogFile.cpp \
 		      LogFile.h \
+		      LogHandler.cpp \
+		      LogHandler.h \
 		      Logger.cpp \
 		      Logger.h
 

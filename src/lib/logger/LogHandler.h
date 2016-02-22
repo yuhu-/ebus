@@ -17,32 +17,58 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef LIBLOGGER_LOGGER_H
-#define LIBLOGGER_LOGGER_H
+#ifndef LIBLOGGER_LOGBASE_H
+#define LIBLOGGER_LOGBASE_H
 
-#include "LogHandler.h"
+#include "LogMessage.h"
+#include "LogSink.h"
+#include "NQueue.h"
 
-class Logger
+#include <string>
+#include <vector>
+#include <map>
+#include <thread>
+
+using std::string;
+using std::vector;
+using std::thread;
+
+class LogHandler
 {
 
 public:
-	explicit Logger(const char* function);
+	static LogHandler& getLogHandler();
+	~LogHandler();
 
 	void start();
 	void stop();
 
+	Level getLevel() const;
 	void setLevel(const Level& level);
 	void setLevel(const string& level);
 
 	void addConsole();
 	void addFile(const string& file);
 
-	void log(const Level& level, const string data, ...);
+	void log(const LogMessage* logMessage);
 
 private:
-	LogHandler& m_logHandler;
-	const char* m_function;
+	LogHandler();
+	LogHandler(const LogHandler&);
+	LogHandler& operator=(const LogHandler&);
 
+	thread m_thread;
+
+	vector<LogSink*> m_sinks;
+
+	NQueue<const LogMessage*> m_logMessages;
+
+	Level m_level = info;
+
+	void run();
+
+	void addSink(LogSink* sink);
+	void delSink(const LogSink* sink);
 };
 
-#endif // LIBLOGGER_LOGGER_H
+#endif // LIBLOGGER_LOGBASE_H

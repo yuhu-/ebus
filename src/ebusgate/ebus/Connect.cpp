@@ -32,7 +32,7 @@ Connect Connect::m_connect;
 
 int Connect::run(EbusHandler* h)
 {
-	Logger& L = Logger::getLogger("Connect::run");
+	Logger L = Logger("Connect::run");
 
 	int result = DEV_OK;
 

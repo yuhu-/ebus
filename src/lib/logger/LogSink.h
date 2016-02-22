@@ -24,7 +24,7 @@
 
 using std::string;
 
-class Logger;
+class LogHandler;
 
 class LogSink
 {

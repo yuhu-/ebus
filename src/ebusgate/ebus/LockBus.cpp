@@ -28,7 +28,7 @@ LockBus LockBus::m_lockBus;
 
 int LockBus::run(EbusHandler* h)
 {
-	Logger& L = Logger::getLogger("LockBus::run");
+	Logger L = Logger("LockBus::run");
 
 	EbusSequence& eSeq = m_activeMessage->getEbusSequence();
 	if (eSeq.getMasterState() != EBUS_OK)

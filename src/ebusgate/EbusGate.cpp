@@ -21,10 +21,10 @@
 #include <config.h>
 #endif
 
-#include "Logger.h"
 #include "Daemon.h"
 #include "Option.h"
 #include "BaseLoop.h"
+#include "Logger.h"
 
 #include <csignal>
 #include <iostream>
@@ -93,7 +93,7 @@ void define_args()
 
 void shutdown()
 {
-	Logger& L = Logger::getLogger("shutdown");
+	Logger L = Logger("shutdown");
 
 	// stop threads
 	if (baseloop != nullptr)
@@ -112,14 +112,15 @@ void shutdown()
 
 	// stop logger
 	L.log(info, "ebusgate stopped");
-	L.stop();
 
+	L.stop();
 	exit(EXIT_SUCCESS);
+
 }
 
 void signal_handler(int sig)
 {
-	Logger& L = Logger::getLogger("signal_handler");
+	Logger L = Logger("signal_handler");
 
 	switch (sig)
 	{
@@ -142,14 +143,14 @@ void signal_handler(int sig)
 
 int main(int argc, char* argv[])
 {
-	Logger& L = Logger::getLogger("main");
-	Option& O = Option::getOption();
-
 	// define arguments and application variables
+	Option& O = Option::getOption();
 	define_args();
 
 	// parse arguments
 	if (O.parseArgs(argc, argv) == false) return (EXIT_SUCCESS);
+
+	Logger L = Logger("main");
 
 	if (O.getOptVal<bool>("foreground") == true)
 	{
@@ -177,7 +178,8 @@ int main(int argc, char* argv[])
 	baseloop = new BaseLoop();
 	baseloop->start();
 
-	// shutdown
+	// shutdown and exit
 	shutdown();
+
 }
 

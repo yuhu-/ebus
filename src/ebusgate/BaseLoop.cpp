@@ -18,8 +18,8 @@
  */
 
 #include "BaseLoop.h"
-#include "Logger.h"
 #include "Option.h"
+#include <Logger.h>
 
 #include <iomanip>
 #include <iterator>
@@ -83,7 +83,7 @@ BaseLoop::~BaseLoop()
 
 void BaseLoop::start()
 {
-	Logger& L = Logger::getLogger("BaseLoop::start");
+	Logger L = Logger("BaseLoop::start");
 
 	while (true)
 	{
@@ -136,7 +136,7 @@ Command BaseLoop::getCase(const string& command)
 
 string BaseLoop::decodeMessage(const string& data)
 {
-	Logger& L = Logger::getLogger("BaseLoop::decodeMessage");
+	Logger L = Logger("BaseLoop::decodeMessage");
 
 	ostringstream result;
 

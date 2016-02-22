@@ -27,7 +27,7 @@ SendMessage SendMessage::m_sendMessage;
 
 int SendMessage::run(EbusHandler* h)
 {
-	Logger& L = Logger::getLogger("SendMessage::run");
+	Logger L = Logger("SendMessage::run");
 
 	EbusSequence& eSeq = m_activeMessage->getEbusSequence();
 	int result;

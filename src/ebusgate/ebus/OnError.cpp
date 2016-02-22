@@ -26,7 +26,7 @@ OnError OnError::m_onError;
 
 int OnError::run(EbusHandler* h)
 {
-	Logger& L = Logger::getLogger("OnError::run");
+	Logger L = Logger("OnError::run");
 
 	if (h->m_lastResult > DEV_OK)
 	{

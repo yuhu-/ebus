@@ -59,7 +59,7 @@ int Connection::getID() const
 
 void Connection::run()
 {
-	Logger& L = Logger::getLogger("Connection::run");
+	Logger L = Logger("Connection::run");
 
 	struct timespec tdiff;
 

@@ -26,7 +26,7 @@ RecvMessage RecvMessage::m_recvMessage;
 
 int RecvMessage::run(EbusHandler* h)
 {
-	Logger& L = Logger::getLogger("RecvMessage::run");
+	Logger L = Logger("RecvMessage::run");
 
 	int result;
 	unsigned char byte;

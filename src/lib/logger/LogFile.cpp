@@ -24,7 +24,7 @@
 using std::ios;
 using std::ofstream;
 
-LogFile::LogFile(const char* file)
+LogFile::LogFile(const string& file)
 	: m_file(file)
 {
 }

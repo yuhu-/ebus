@@ -25,7 +25,7 @@ SendResponse SendResponse::m_sendResponse;
 
 int SendResponse::run(EbusHandler* h)
 {
-	Logger& L = Logger::getLogger("SendResponse::run");
+	Logger L = Logger("SendResponse::run");
 
 	EbusSequence& eSeq = m_passiveMessage->getEbusSequence();
 	int result;

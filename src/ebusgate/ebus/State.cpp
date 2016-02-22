@@ -67,7 +67,7 @@ void State::changeState(EbusHandler* h, State* state)
 
 int State::read(EbusHandler* h, unsigned char& byte, const long sec, const long nsec)
 {
-	Logger& L = Logger::getLogger("State::read");
+	Logger L = Logger("State::read");
 
 	int result = h->m_device->recv(byte, sec, nsec);
 
@@ -98,7 +98,7 @@ int State::read(EbusHandler* h, unsigned char& byte, const long sec, const long 
 
 int State::write(EbusHandler* h, const unsigned char& byte)
 {
-	Logger& L = Logger::getLogger("State::write");
+	Logger L = Logger("State::write");
 
 	int result = h->m_device->send(byte);
 
@@ -109,7 +109,7 @@ int State::write(EbusHandler* h, const unsigned char& byte)
 
 int State::writeRead(EbusHandler* h, const unsigned char& byte, const long timeout)
 {
-	Logger& L = Logger::getLogger("State::writeRead");
+	Logger L = Logger("State::writeRead");
 
 	int result = State::write(h, byte);
 

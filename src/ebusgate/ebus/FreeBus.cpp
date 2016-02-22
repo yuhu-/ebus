@@ -25,7 +25,7 @@ FreeBus FreeBus::m_freeBus;
 
 int FreeBus::run(EbusHandler* h)
 {
-	Logger& L = Logger::getLogger("FreeBus::run");
+	Logger L = Logger("FreeBus::run");
 
 	unsigned char byte = SYN;
 

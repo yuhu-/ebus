@@ -26,7 +26,7 @@ RecvResponse RecvResponse::m_recvResponse;
 
 int RecvResponse::run(EbusHandler* h)
 {
-	Logger& L = Logger::getLogger("RecvResponse::run");
+	Logger L = Logger("RecvResponse::run");
 
 	EbusSequence& eSeq = m_activeMessage->getEbusSequence();
 	unsigned char byte;

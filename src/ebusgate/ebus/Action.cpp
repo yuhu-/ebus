@@ -62,7 +62,7 @@ map<vector<unsigned char>, string> ActionMessages =
 
 int Action::run(EbusHandler* h)
 {
-	Logger& L = Logger::getLogger("Action::run");
+	Logger L = Logger("Action::run");
 
 	EbusSequence eSeq;
 	eSeq.createMaster(m_sequence);

@@ -27,7 +27,7 @@ Listen Listen::m_listen;
 
 int Listen::run(EbusHandler* h)
 {
-	Logger& L = Logger::getLogger("Listen::run");
+	Logger L = Logger("Listen::run");
 
 	unsigned char byte = 0;
 

@@ -24,11 +24,10 @@ Idle Idle::m_idle;
 
 int Idle::run(EbusHandler* h)
 {
-	Logger& L = Logger::getLogger("Idle::run");
+	Logger L = Logger("Idle::run");
 
 	if (h->m_device->isOpen() == true)
 	{
-
 		h->m_device->close();
 
 		if (h->m_device->isOpen() == false) L.log(info, "ebus disconnected");
