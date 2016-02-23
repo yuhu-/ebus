@@ -215,11 +215,11 @@ int main(int argc, char* argv[])
 
 	if (O.missingCommand() == true)
 	{
-		connect(O.getString("server"), O.getInt("port"), false);
+		connect(O.getString("server"), O.getLong("port"), false);
 	}
 	else
 	{
-		connect(O.getString("server"), O.getInt("port"), true);
+		connect(O.getString("server"), O.getLong("port"), true);
 	}
 
 	exit(EXIT_SUCCESS);
