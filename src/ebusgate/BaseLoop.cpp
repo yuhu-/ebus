@@ -45,18 +45,16 @@ BaseLoop::BaseLoop()
 {
 	Option& O = Option::getOption();
 
-	m_ownAddress = O.getOptVal<int>("address") & 0xff;
+	m_ownAddress = O.getInt("address") & 0xff;
 
-	m_ebushandler = new EbusHandler(O.getOptVal<int>("address") & 0xff, O.getOptVal<const char*>("device"),
-		O.getOptVal<bool>("nodevicecheck"), O.getOptVal<long>("reopentime"),
-		O.getOptVal<long>("arbitrationtime"), O.getOptVal<long>("receivetimeout"),
-		O.getOptVal<int>("lockcounter"), O.getOptVal<int>("lockretries"), O.getOptVal<bool>("active"),
-		O.getOptVal<bool>("store"), O.getOptVal<bool>("raw"), O.getOptVal<bool>("dump"),
-		O.getOptVal<const char*>("dumpfile"), O.getOptVal<long>("dumpsize"));
+	m_ebushandler = new EbusHandler(O.getInt("address") & 0xff, O.getString("device"), O.getBool("nodevicecheck"),
+		O.getLong("reopentime"), O.getLong("arbitrationtime"), O.getLong("receivetimeout"),
+		O.getInt("lockcounter"), O.getInt("lockretries"), O.getBool("active"), O.getBool("store"),
+		O.getBool("raw"), O.getBool("dump"), O.getString("dumpfile"), O.getLong("dumpsize"));
 
 	m_ebushandler->start();
 
-	m_network = new Network(O.getOptVal<bool>("local"), O.getOptVal<int>("port"), &m_netMsgQueue);
+	m_network = new Network(O.getBool("local"), O.getInt("port"), &m_netMsgQueue);
 	m_network->start();
 }
 

@@ -54,10 +54,9 @@ void define_args()
 		"          4. start ebusgatefeed: 'ebusgatefeed -d /dev/ttyUSB6 /path/to/ebus_dump.bin'\n\n"
 		"Options:\n");
 
-	O.addOption("device", "d", OptVal("/dev/ttyUSB"), dt_string, ot_mandatory,
-		"link on pseudo terminal device (/dev/ttyUSB)");
+	O.addString("device", "d", "/dev/ttyUSB", ot_mandatory, "link on pseudo terminal device (/dev/ttyUSB)");
 
-	O.addOption("time", "t", OptVal(10000), dt_long, ot_mandatory, "delay between 2 bytes in 'us' (10000)");
+	O.addLong("time", "t", 10000, ot_mandatory, "delay between 2 bytes in 'us' (10000)");
 
 }
 
@@ -75,7 +74,7 @@ int main(int argc, char* argv[])
 		exit(EXIT_FAILURE);
 	}
 
-	EbusDevice device(O.getOptVal<const char*>("device"), true);
+	EbusDevice device(O.getString("device"), true);
 
 	device.open();
 	if (device.isOpen() == true)
@@ -93,14 +92,14 @@ int main(int argc, char* argv[])
 				cout << hex << setw(2) << setfill('0') << static_cast<unsigned>(byte) << endl;
 
 				device.send(byte);
-				usleep(O.getOptVal<long>("time"));
+				usleep(O.getLong("time"));
 			}
 
 			file.close();
 		}
 		else
 		{
-			cout << "error opening file " << O.getOptVal<const char*>("file") << endl;
+			cout << "error opening file " << O.getString("file") << endl;
 		}
 
 		device.close();
@@ -108,7 +107,7 @@ int main(int argc, char* argv[])
 	}
 	else
 	{
-		cout << "error opening device " << O.getOptVal<const char*>("device") << endl;
+		cout << "error opening device " << O.getString("device") << endl;
 	}
 
 	exit(EXIT_SUCCESS);

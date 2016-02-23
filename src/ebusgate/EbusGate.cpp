@@ -41,54 +41,47 @@ void define_args()
 
 	O.addText("Options:\n");
 
-	O.addOption("address", "a", OptVal(0xff), dt_hex, ot_mandatory, "\tebus device address [FF]");
+	O.addHex("address", "a", 0xff, ot_mandatory, "\tebus device address [FF]");
 
-	O.addOption("foreground", "f", OptVal(false), dt_bool, ot_none, "run in foreground\n");
+	O.addBool("foreground", "f", false, ot_none, "run in foreground\n");
 
-	O.addOption("device", "d", OptVal("/dev/ttyUSB0"), dt_string, ot_mandatory,
-		"\tebus device (serial or network) [/dev/ttyUSB0]");
+	O.addString("device", "d", "/dev/ttyUSB0", ot_mandatory, "\tebus device (serial or network) [/dev/ttyUSB0]");
 
-	O.addOption("nodevicecheck", "n", OptVal(false), dt_bool, ot_none, "disable test of local ebus device");
+	O.addBool("nodevicecheck", "n", false, ot_none, "disable test of local ebus device");
 
-	O.addOption("reopentime", "", OptVal(60), dt_long, ot_mandatory,
-		"max. time to open ebus device in 'sec' [60]\n");
+	O.addLong("reopentime", "", 60, ot_mandatory, "max. time to open ebus device in 'sec' [60]\n");
 
-	O.addOption("arbitrationtime", "", OptVal(4400), dt_long, ot_mandatory,
-		"waiting time for arbitration test 'us' [4400]");
+	O.addLong("arbitrationtime", "", 4400, ot_mandatory, "waiting time for arbitration test 'us' [4400]");
 
-	O.addOption("receivetimeout", "", OptVal(4700), dt_long, ot_mandatory,
-		"max. time for receiving of one sequence sign 'us' [4700]");
+	O.addLong("receivetimeout", "", 4700, ot_mandatory, "max. time for receiving of one sequence sign 'us' [4700]");
 
-	O.addOption("lockcounter", "", OptVal(5), dt_int, ot_mandatory,
+	O.addInt("lockcounter", "", 5, ot_mandatory,
 		"number of characters after a successful ebus access [5] (max: 25)");
 
-	O.addOption("lockretries", "", OptVal(2), dt_int, ot_mandatory, "number of retries to lock ebus [2]\n");
+	O.addInt("lockretries", "", 2, ot_mandatory, "number of retries to lock ebus [2]\n");
 
-	O.addOption("active", "", OptVal(false), dt_bool, ot_none, "\thandle broadcast and at me addressed messages\n");
+	O.addBool("active", "", false, ot_none, "\thandle broadcast and at me addressed messages\n");
 
-	O.addOption("store", "", OptVal(false), dt_bool, ot_none, "\tstore received messages\n");
+	O.addBool("store", "", false, ot_none, "\tstore received messages\n");
 
-	O.addOption("port", "p", OptVal(8888), dt_int, ot_mandatory, "\tlisten port [8888]");
+	O.addInt("port", "p", 8888, ot_mandatory, "\tlisten port [8888]");
 
-	O.addOption("local", "", OptVal(false), dt_bool, ot_none, "\tlisten only on localhost\n");
+	O.addBool("local", "", false, ot_none, "\tlisten only on localhost\n");
 
-	O.addOption("logfile", "", OptVal("/var/log/ebusgate.log"), dt_string, ot_mandatory,
-		"\tlog file name [/var/log/ebusgate.log]");
+	O.addString("logfile", "", "/var/log/ebusgate.log", ot_mandatory, "\tlog file name [/var/log/ebusgate.log]");
 
-	O.addOption("loglevel", "", OptVal("info"), dt_string, ot_mandatory,
+	O.addString("loglevel", "", "info", ot_mandatory,
 		"\tset logging level - off|error|warn|info|debug|trace [info]");
 
-	O.addOption("raw", "", OptVal(false), dt_bool, ot_none, "\ttoggle raw output\n");
+	O.addBool("raw", "", false, ot_none, "\ttoggle raw output\n");
 
-	O.addOption("pidfile", "", OptVal("/var/run/ebusgate.pid"), dt_string, ot_mandatory,
-		"\tpid file name [/var/run/ebusgate.pid]\n");
+	O.addString("pidfile", "", "/var/run/ebusgate.pid", ot_mandatory, "\tpid file name [/var/run/ebusgate.pid]\n");
 
-	O.addOption("dump", "", OptVal(false), dt_bool, ot_none, "\ttoggle raw dump");
+	O.addBool("dump", "", false, ot_none, "\ttoggle raw dump");
 
-	O.addOption("dumpfile", "", OptVal("/tmp/ebus_dump.bin"), dt_string, ot_mandatory,
-		"\tdump file name [/tmp/ebus_dump.bin]");
+	O.addString("dumpfile", "", "/tmp/ebus_dump.bin", ot_mandatory, "\tdump file name [/tmp/ebus_dump.bin]");
 
-	O.addOption("dumpsize", "", OptVal(100), dt_long, ot_mandatory, "\tmax size for dump file in 'kB' [100]");
+	O.addLong("dumpsize", "", 100, ot_mandatory, "\tmax size for dump file in 'kB' [100]");
 }
 
 void shutdown()
@@ -152,15 +145,15 @@ int main(int argc, char* argv[])
 
 	Logger L = Logger("main");
 
-	if (O.getOptVal<bool>("foreground") == true)
+	if (O.getBool("foreground") == true)
 	{
 		L.addConsole();
 	}
 	else
 	{
 		// make me daemon
-		Daemon::getDaemon().start(O.getOptVal<const char*>("pidfile"));
-		L.addFile(O.getOptVal<const char*>("logfile"));
+		Daemon::getDaemon().start(O.getString("pidfile"));
+		L.addFile(O.getString("logfile"));
 	}
 
 	// trap signals that we expect to receive
@@ -169,7 +162,7 @@ int main(int argc, char* argv[])
 	signal(SIGTERM, signal_handler);
 
 	// start logger
-	L.setLevel(O.getOptVal<const char*>("loglevel"));
+	L.setLevel(O.getString("loglevel"));
 	L.start();
 
 	L.log(info, "ebusgate started");

@@ -45,9 +45,9 @@ void define_args()
 		"   hint: try 'help' for available ebusgate commands.\n\n"
 		"Options:\n");
 
-	O.addOption("server", "s", OptVal("localhost"), dt_string, ot_mandatory, "name or ip (localhost)");
+	O.addString("server", "s", "localhost", ot_mandatory, "name or ip (localhost)");
 
-	O.addOption("port", "p", OptVal(8888), dt_int, ot_mandatory, "port (8888)");
+	O.addLong("port", "p", 8888, ot_mandatory, "port (8888)");
 
 }
 
@@ -215,11 +215,11 @@ int main(int argc, char* argv[])
 
 	if (O.missingCommand() == true)
 	{
-		connect(O.getOptVal<const char*>("server"), O.getOptVal<int>("port"), false);
+		connect(O.getString("server"), O.getInt("port"), false);
 	}
 	else
 	{
-		connect(O.getOptVal<const char*>("server"), O.getOptVal<int>("port"), true);
+		connect(O.getString("server"), O.getInt("port"), true);
 	}
 
 	exit(EXIT_SUCCESS);

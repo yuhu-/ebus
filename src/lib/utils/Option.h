@@ -29,68 +29,34 @@ using std::string;
 using std::vector;
 using std::map;
 
-enum DataType
-{
-	dt_none,    // default for __text_only__
-	dt_bool,    // boolean
-	dt_hex,     // hex integer
-	dt_int,     // dec integer
-	dt_long,    // long
-	dt_float,   // float
-	dt_string   // string
-};
-
 enum OptionType
 {
 	ot_none, ot_optional, ot_mandatory
 };
 
-typedef struct
-{
-	string name;
-	string shortname;
-	string description;
-	DataType datatype;
-	OptionType optiontype;
-} opt_t;
-
-union OptVal
-{
-	bool b;
-	int i;
-	long l;
-	float f;
-	const char* c;
-
-	OptVal()
-	{
-		memset(this, 0, sizeof(OptVal));
-	}
-
-	OptVal(bool _b)
-		: b(_b)
-	{
-	}
-	OptVal(int _i)
-		: i(_i)
-	{
-	}
-	OptVal(long _l)
-		: l(_l)
-	{
-	}
-	OptVal(float _f)
-		: f(_f)
-	{
-	}
-	OptVal(const char* _c)
-		: c(_c)
-	{
-	}
-};
-
 class Option
 {
+
+private:
+	enum DataType
+	{
+		dt_none,    // default for __text_only__
+		dt_bool,    // boolean
+		dt_hex,     // hex integer
+		dt_int,     // dec integer
+		dt_long,    // long
+		dt_float,   // float
+		dt_string   // string
+	};
+
+	typedef struct
+	{
+		string name;
+		string shortname;
+		string description;
+		DataType datatype;
+		OptionType optiontype;
+	} option_t;
 
 public:
 	static Option& getOption(const string& command = "", const string& argument = "");
@@ -101,15 +67,23 @@ public:
 
 	void addText(const string& text);
 
-	void addOption(const string& name, const string& shortname, const OptVal& optval, const DataType& datatype,
-		const OptionType& optiontype, const string& description);
+	void addBool(const string& name, const string& shortname, const bool& data, const OptionType& optiontype,
+		const string& description);
 
-	template<typename T>
-	T getOptVal(const string& name)
-	{
-		ov_it = m_optvals.find(name);
-		return (reinterpret_cast<T&>(ov_it->second));
-	}
+	void addHex(const string& name, const string& shortname, const int& data, const OptionType& optiontype,
+		const string& description);
+
+	void addInt(const string& name, const string& shortname, const int& data, const OptionType& optiontype,
+		const string& description);
+
+	void addLong(const string& name, const string& shortname, const long& data, const OptionType& optiontype,
+		const string& description);
+
+	void addFloat(const string& name, const string& shortname, const float& data, const OptionType& optiontype,
+		const string& description);
+
+	void addString(const string& name, const string& shortname, const string& data, const OptionType& optiontype,
+		const string& description);
 
 	bool parseArgs(int argc, char* argv[]);
 
@@ -121,18 +95,28 @@ public:
 
 	bool missingCommand() const;
 
+	bool getBool(const string& name);
+
+	int getInt(const string& name);
+
+	long getLong(const string& name);
+
+	float getFloat(const string& name);
+
+	string getString(const string& name);
+
 private:
 	Option(const string& command, const string& argument);
 	Option(const Option&);
 	Option& operator=(const Option&);
 
-	vector<opt_t> m_opts;
+	vector<option_t> m_options;
 
-	vector<opt_t>::const_iterator o_it;
-
-	map<const string, OptVal> m_optvals;
-
-	map<const string, OptVal>::iterator ov_it;
+	map<const string, bool> m_bools;
+	map<const string, int> m_ints;
+	map<const string, long> m_longs;
+	map<const string, float> m_floats;
+	map<const string, string> m_strings;
 
 	vector<string> m_argv;
 
@@ -143,8 +127,12 @@ private:
 
 	vector<string> m_arguments;
 
-	bool checkOption(const string& option, const string& value);
+	void addOption(const string& name, const string& shortname, const DataType& datatype,
+		const OptionType& optiontype, const string& description);
+
 	void setOptVal(const string& option, const string value, DataType datatype);
+
+	bool checkOption(const string& option, const string& value);
 
 	bool toStringVersion() const;
 
