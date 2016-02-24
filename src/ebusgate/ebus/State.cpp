@@ -158,17 +158,11 @@ const string State::errorText(const int error)
 	ostringstream result;
 
 	if (error == 0)
-	{
 		result << color::green << StateErros[error];
-	}
 	else if (error > 0)
-	{
 		result << color::yellow << StateErros[error];
-	}
 	else
-	{
 		result << color::red << StateErros[error];
-	}
 
 	result << color::reset;
 

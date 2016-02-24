@@ -29,13 +29,9 @@ Network::Network(const bool local, const int port, NQueue<NetMessage*>* netMsgQu
 	: m_netMsgQueue(netMsgQueue), m_listening(false)
 {
 	if (local == true)
-	{
 		m_tcpServer = new TCPServer(port, "127.0.0.1");
-	}
 	else
-	{
 		m_tcpServer = new TCPServer(port, "0.0.0.0");
-	}
 
 	if (m_tcpServer != nullptr && m_tcpServer->start() == 0) m_listening = true;
 

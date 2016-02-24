@@ -214,13 +214,9 @@ int main(int argc, char* argv[])
 	if (O.parseArgs(argc, argv) == false) exit(EXIT_FAILURE);
 
 	if (O.missingCommand() == true)
-	{
 		connect(O.getString("server"), O.getLong("port"), false);
-	}
 	else
-	{
 		connect(O.getString("server"), O.getLong("port"), true);
-	}
 
 	exit(EXIT_SUCCESS);
 }

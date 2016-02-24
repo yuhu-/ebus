@@ -43,21 +43,13 @@ const string EbusMessage::getResult()
 	ostringstream result;
 
 	if (m_result.size() != 0)
-	{
 		result << m_result;
-	}
 	else if (m_ebusSequence.getType() == EBUS_TYPE_BC)
-	{
 		result << "done";
-	}
 	else if (m_ebusSequence.getType() == EBUS_TYPE_MM)
-	{
 		result << m_ebusSequence.toStringSlaveACK();
-	}
 	else
-	{
 		result << m_ebusSequence.toStringSlave();
-	}
 
 	return (result.str());
 }

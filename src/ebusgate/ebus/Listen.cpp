@@ -50,10 +50,7 @@ int Listen::run(EbusHandler* h)
 			EbusSequence eSeq(m_sequence);
 			L.log(info, "%s", eSeq.toStringLog().c_str());
 
-			if (eSeq.isValid() == true)
-			{
-				if (h->m_store == true) h->storeMessage(eSeq);
-			}
+			if (eSeq.isValid() == true && h->m_store == true) h->storeMessage(eSeq);
 
 			if (m_sequence.size() == 1 && m_lockCounter < 2) m_lockCounter = 2;
 
@@ -76,12 +73,10 @@ int Listen::run(EbusHandler* h)
 		m_sequence.push_back(byte);
 
 		// handle broadcast and at me addressed messages
-		if (m_sequence.size() == 2)
-		{
-			if (m_sequence[1] == BROADCAST || m_sequence[1] == h->m_address
-				|| m_sequence[1] == slaveAddress(h->m_address))
-				h->changeState(RecvMessage::getRecvMessage());
-		}
+		if (m_sequence.size() == 2
+			&& (m_sequence[1] == BROADCAST || m_sequence[1] == h->m_address
+				|| m_sequence[1] == slaveAddress(h->m_address)))
+			h->changeState(RecvMessage::getRecvMessage());
 
 	}
 

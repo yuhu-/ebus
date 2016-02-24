@@ -132,13 +132,9 @@ void Sequence::reduce()
 		else if (extended == true)
 		{
 			if (m_sequence[i] == SYNEXT)
-			{
 				tmp.push_back(SYN);
-			}
 			else
-			{
 				tmp.push_back(EXT);
-			}
 
 			extended = false;
 		}

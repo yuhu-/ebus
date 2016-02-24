@@ -177,13 +177,10 @@ bool Option::parseArgs(int argc, char* argv[])
 		{
 			// break loop with command
 			if (lastOption == false && m_withCommand.size() != 0)
-			{
 				break;
-			}
 			else
-			{
 				lastOption = false;
-			}
+
 		}
 	}
 
@@ -338,13 +335,9 @@ bool Option::toStringHelp()
 	if (m_withCommand.size() != 0)
 	{
 		if (m_withArgument.size() != 0)
-		{
 			cerr << " " << m_withCommand << " " << m_withArgument << endl << endl;
-		}
 		else
-		{
 			cerr << " " << m_withCommand << endl << endl;
-		}
 	}
 	else
 	{
@@ -384,13 +377,9 @@ bool Option::toStringOptions()
 		if (option.datatype == dt_bool)
 		{
 			if (getBool(option.name) == true)
-			{
 				cerr << "yes" << endl;
-			}
 			else
-			{
 				cerr << "no" << endl;
-			}
 		}
 		else if (option.datatype == dt_hex)
 		{

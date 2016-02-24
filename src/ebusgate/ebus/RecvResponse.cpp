@@ -67,13 +67,9 @@ int RecvResponse::run(EbusHandler* h)
 		eSeq.createSlave(seq);
 
 		if (eSeq.getSlaveState() == EBUS_OK)
-		{
 			byte = ACK;
-		}
 		else
-		{
 			byte = NAK;
-		}
 
 		eSeq.setMasterACK(byte);
 

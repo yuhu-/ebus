@@ -47,13 +47,9 @@ int TCPServer::start()
 	address.sin_port = htons(m_port);
 
 	if (m_address.size() > 0)
-	{
 		inet_pton(AF_INET, m_address.c_str(), &(address.sin_addr));
-	}
 	else
-	{
 		address.sin_addr.s_addr = INADDR_ANY;
-	}
 
 	int optval = 1;
 	setsockopt(m_lfd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));

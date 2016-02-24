@@ -99,13 +99,9 @@ void BaseLoop::start()
 
 		// decode message
 		if (strcasecmp(data.c_str(), "STOP") != 0)
-		{
 			result = decodeMessage(data);
-		}
 		else
-		{
 			result = "done";
-		}
 
 		L.log(info, "<<< %s", result.c_str());
 		result += "\n\n";

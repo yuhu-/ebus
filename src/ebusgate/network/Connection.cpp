@@ -108,14 +108,9 @@ void Connection::run()
 			if (newData == true)
 			{
 				if (m_socket->isValid() == true)
-				{
 					datalen = m_socket->recv(data, sizeof(data) - 1);
-				}
-
 				else
-				{
 					break;
-				}
 
 				// removed closed socket
 				if (datalen <= 0 || strncasecmp(data, "QUIT", 4) == 0) break;

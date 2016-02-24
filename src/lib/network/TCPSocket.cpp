@@ -55,13 +55,9 @@ int TCPSocket::getFD() const
 bool TCPSocket::isValid()
 {
 	if (fcntl(m_sfd, F_GETFL) == -1)
-	{
 		return (false);
-	}
 	else
-	{
 		return (true);
-	}
 }
 
 TCPSocket::TCPSocket(int sfd, struct sockaddr_in* address)

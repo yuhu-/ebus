@@ -29,13 +29,9 @@ int OnError::run(EbusHandler* h)
 	Logger L = Logger("OnError::run");
 
 	if (h->m_lastResult > DEV_OK)
-	{
 		L.log(warn, "%s", h->m_device->errorText(h->m_lastResult).c_str());
-	}
 	else
-	{
 		L.log(error, "%s", h->m_device->errorText(h->m_lastResult).c_str());
-	}
 
 	if (m_activeMessage != nullptr) m_activeMessage->setResult(h->m_device->errorText(h->m_lastResult));
 
