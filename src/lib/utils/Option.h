@@ -36,8 +36,6 @@ enum OptionType
 
 class Option
 {
-
-private:
 	enum DataType
 	{
 		dt_none,    // default for __text_only__

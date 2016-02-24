@@ -20,7 +20,6 @@
 #ifndef NETWORK_NETWORK_H
 #define NETWORK_NETWORK_H
 
-#include "NetMessage.h"
 #include "Connection.h"
 #include "TCPServer.h"
 
