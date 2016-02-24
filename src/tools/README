@@ -1,0 +1,69 @@
+ebusgatectl
+-----------
+
+ebusgatectl is a tcp socket client for ebusgate.
+
+Usage:
+  ebusgatectl [Options...] Command {Args...}
+
+ 'ebusgatectl' is a tcp socket client for ebusgate.
+
+   hint: try 'help' for available ebusgate commands.
+
+Options:
+
+-s | --server	name or ip (localhost)
+-p | --port	port (8888)
+
+   | --options
+   | --version
+-h | --help
+
+
+$ ebusgatectl help
+
+commands
+ open       - connect with ebus           'open'
+ close      - disconnect from ebus        'close'
+ send       - write ebus values           'send ZZPBSBNNDx'
+ grab       - grab ebus values from store 'grab QQZZPBSBNNDx'
+ active     - toggle active mode          'active'
+ store      - toggle storing data         'store'
+ loglevel   - change logging level        'loglevel level'
+ raw        - toggle raw output           'raw'
+ dump       - toggle raw dump             'dump'
+ stop       - stop daemon                 'stop'
+ quit       - close connection            'quit'
+ help       - print this page             'help'
+
+
+
+ebusgatefeed
+------------
+
+Usage:
+  ebusgatefeed [Options...] /path/dumpfile
+
+ 'ebusgatefeed' sends hex values from dump file to a pseudo terminal device (pty)
+
+   Usage: 1. 'socat -d -d pty,raw,echo=0 pty,raw,echo=0'
+          2. create symbol links to appropriate devices
+             for example: 'ln -s /dev/pts/5 /dev/ttyUSB5'
+                          'ln -s /dev/pts/6 /dev/ttyUSB6'
+          3. start ebusgate: 'ebusgate -f -n -d /dev/ttyUSB5'
+          4. start ebusgatefeed: 'ebusgatefeed -d /dev/ttyUSB6 /path/to/ebus_dump.bin'
+
+Options:
+
+-d | --device	link on pseudo terminal device (/dev/ttyUSB)
+-t | --time	delay between 2 bytes in 'us' (10000)
+
+   | --options
+   | --version
+-h | --help
+
+
+
+For bugs and missing features use github issue system.
+
+The author can be contacted at roland.jax@liwest.at.
