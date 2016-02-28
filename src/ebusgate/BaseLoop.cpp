@@ -91,7 +91,7 @@ BaseLoop::~BaseLoop()
 
 void BaseLoop::start()
 {
-	Logger L = Logger("BaseLoop::start");
+	Logger logger = Logger("BaseLoop::start");
 
 	while (true)
 	{
@@ -105,7 +105,7 @@ void BaseLoop::start()
 		while ((pos = data.find("\r\n", pos)) != string::npos)
 			data.erase(pos, 2);
 
-		L.log(info, ">>> %s", data.c_str());
+		logger.info(">>> %s", data.c_str());
 
 		// decode message
 		if (strcasecmp(data.c_str(), "STOP") != 0)
@@ -113,7 +113,7 @@ void BaseLoop::start()
 		else
 			result = "done";
 
-		L.log(info, "<<< %s", result.c_str());
+		logger.info("<<< %s", result.c_str());
 		result += "\n\n";
 
 		// send result to client
@@ -140,7 +140,7 @@ Command BaseLoop::getCase(const string& command)
 
 string BaseLoop::decodeMessage(const string& data)
 {
-	Logger L = Logger("BaseLoop::decodeMessage");
+	Logger logger = Logger("BaseLoop::decodeMessage");
 
 	ostringstream result;
 
@@ -207,7 +207,7 @@ string BaseLoop::decodeMessage(const string& data)
 		// send message
 		if (eSeq.isValid() == true)
 		{
-			L.log(debug, "enqueue: %s", eSeq.toStringMaster().c_str());
+			logger.debug("enqueue: %s", eSeq.toStringMaster().c_str());
 			EbusMessage* ebusMessage = new EbusMessage(eSeq);
 			m_ebusHandler->addMessage(ebusMessage);
 			ebusMessage->waitNotify();
@@ -217,7 +217,7 @@ string BaseLoop::decodeMessage(const string& data)
 		else
 		{
 			result << eSeq.toStringMaster();
-			L.log(debug, "error: %s", eSeq.toStringMaster().c_str());
+			logger.debug("error: %s", eSeq.toStringMaster().c_str());
 		}
 		break;
 	}
@@ -240,7 +240,7 @@ string BaseLoop::decodeMessage(const string& data)
 		}
 
 		// grab message
-		L.log(debug, "grab: %s", msg.str().c_str());
+		logger.debug("grab: %s", msg.str().c_str());
 		result << m_ebusHandler->grabMessage(msg.str());
 		break;
 	}
@@ -278,7 +278,7 @@ string BaseLoop::decodeMessage(const string& data)
 			break;
 		}
 
-		L.setLevel(calcLevel(args[argPos]));
+		logger.setLevel(calcLevel(args[argPos]));
 		result << "done";
 		break;
 

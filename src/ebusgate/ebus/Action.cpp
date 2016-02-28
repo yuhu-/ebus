@@ -62,7 +62,7 @@ map<vector<unsigned char>, string> ActionMessages =
 
 int Action::run(EbusHandler* h)
 {
-	Logger L = Logger("Action::run");
+	Logger logger = Logger("Action::run");
 
 	EbusSequence eSeq;
 	eSeq.createMaster(m_sequence);
@@ -70,12 +70,12 @@ int Action::run(EbusHandler* h)
 	int action = findAction(eSeq);
 	unsigned char target = 0;
 
-	L.log(debug, "handle action type %d", action);
+	logger.debug("handle action type %d", action);
 
 	switch (action)
 	{
 	case at_notDefined:
-		L.log(warn, "%s", errorText(STATE_WRN_NOT_DEF).c_str());
+		logger.warn("%s", errorText(STATE_WRN_NOT_DEF).c_str());
 		break;
 	case at_doNothing:
 	case at_response:
@@ -99,26 +99,26 @@ int Action::run(EbusHandler* h)
 
 		if (createResponse(eSeq) == true)
 		{
-			L.log(debug, "response: %s", eSeq.toStringSlave().c_str());
+			logger.debug("response: %s", eSeq.toStringSlave().c_str());
 			m_passiveMessage = new EbusMessage(eSeq);
 			h->changeState(SendResponse::getSendResponse());
 			return (DEV_OK);
 		}
 		else
 		{
-			L.log(warn, "%s", STATE_ERR_CREA_MSG);
+			logger.warn("%s", STATE_ERR_CREA_MSG);
 		}
 	}
 	else if (action > at_response)
 	{
 		if (createMessage(h->m_address, target, eSeq) == true)
 		{
-			L.log(debug, "enqueue: %s", eSeq.toStringMaster().c_str());
+			logger.debug("enqueue: %s", eSeq.toStringMaster().c_str());
 			h->addMessage(new EbusMessage(eSeq));
 		}
 		else
 		{
-			L.log(warn, "%s", STATE_ERR_CREA_MSG);
+			logger.warn("%s", STATE_ERR_CREA_MSG);
 		}
 	}
 

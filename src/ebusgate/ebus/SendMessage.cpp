@@ -27,7 +27,7 @@ SendMessage SendMessage::m_sendMessage;
 
 int SendMessage::run(EbusHandler* h)
 {
-	Logger L = Logger("SendMessage::run");
+	Logger logger = Logger("SendMessage::run");
 
 	EbusSequence& eSeq = m_activeMessage->getEbusSequence();
 	int result;
@@ -48,7 +48,7 @@ int SendMessage::run(EbusHandler* h)
 		// Broadcast ends here
 		if (eSeq.getType() == EBUS_TYPE_BC)
 		{
-			L.log(info, "%s done", eSeq.toStringLog().c_str());
+			logger.info("%s done", eSeq.toStringLog().c_str());
 			h->changeState(FreeBus::getFreeBus());
 			break;
 		}
@@ -61,7 +61,7 @@ int SendMessage::run(EbusHandler* h)
 
 		if (byte != ACK && byte != NAK)
 		{
-			L.log(warn, "%s", errorText(STATE_ERR_ACK_WRONG).c_str());
+			logger.warn("%s", errorText(STATE_ERR_ACK_WRONG).c_str());
 			m_activeMessage->setResult(errorText(STATE_ERR_ACK_WRONG));
 
 			h->changeState(FreeBus::getFreeBus());
@@ -72,7 +72,7 @@ int SendMessage::run(EbusHandler* h)
 			// Master Master ends here
 			if (eSeq.getType() == EBUS_TYPE_MM)
 			{
-				L.log(info, "%s done", eSeq.toStringLog().c_str());
+				logger.info("%s done", eSeq.toStringLog().c_str());
 				h->changeState(FreeBus::getFreeBus());
 			}
 			else
@@ -86,11 +86,11 @@ int SendMessage::run(EbusHandler* h)
 		{
 			if (retry == 1)
 			{
-				L.log(debug, "%s", errorText(STATE_WRN_ACK_NEG).c_str());
+				logger.debug("%s", errorText(STATE_WRN_ACK_NEG).c_str());
 			}
 			else
 			{
-				L.log(warn, "%s", errorText(STATE_ERR_ACK_NEG).c_str());
+				logger.warn("%s", errorText(STATE_ERR_ACK_NEG).c_str());
 				m_activeMessage->setResult(errorText(STATE_ERR_ACK_NEG));
 
 				h->changeState(FreeBus::getFreeBus());

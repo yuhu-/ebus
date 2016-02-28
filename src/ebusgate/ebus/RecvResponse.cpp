@@ -26,7 +26,7 @@ RecvResponse RecvResponse::m_recvResponse;
 
 int RecvResponse::run(EbusHandler* h)
 {
-	Logger L = Logger("RecvResponse::run");
+	Logger logger = Logger("RecvResponse::run");
 
 	EbusSequence& eSeq = m_activeMessage->getEbusSequence();
 	unsigned char byte;
@@ -42,7 +42,7 @@ int RecvResponse::run(EbusHandler* h)
 		// check against max. possible size
 		if (byte > 0x10)
 		{
-			L.log(warn, "%s", errorText(STATE_ERR_NN_WRONG).c_str());
+			logger.warn("%s", errorText(STATE_ERR_NN_WRONG).c_str());
 			reset(h);
 			h->changeState(Listen::getListen());
 			return (DEV_OK);
@@ -79,18 +79,18 @@ int RecvResponse::run(EbusHandler* h)
 
 		if (eSeq.getSlaveState() == EBUS_OK)
 		{
-			L.log(info, "%s done", eSeq.toStringLog().c_str());
+			logger.info("%s done", eSeq.toStringLog().c_str());
 			break;
 		}
 
 		if (retry == 1)
 		{
 			seq.clear();
-			L.log(debug, "%s", errorText(STATE_WRN_RECV_RESP).c_str());
+			logger.debug("%s", errorText(STATE_WRN_RECV_RESP).c_str());
 		}
 		else
 		{
-			L.log(warn, "%s", errorText(STATE_ERR_RECV_RESP).c_str());
+			logger.warn("%s", errorText(STATE_ERR_RECV_RESP).c_str());
 			m_activeMessage->setResult(errorText(STATE_ERR_RECV_RESP));
 		}
 	}

@@ -67,11 +67,11 @@ void State::changeState(EbusHandler* h, State* state)
 
 int State::read(EbusHandler* h, unsigned char& byte, const long sec, const long nsec)
 {
-	Logger L = Logger("State::read");
+	Logger logger = Logger("State::read");
 
 	int result = h->m_device->recv(byte, sec, nsec);
 
-	if (h->m_logRaw == true && result == DEV_OK) L.log(info, "<%02x", byte);
+	if (h->m_logRaw == true && result == DEV_OK) logger.info("<%02x", byte);
 
 	if (h->m_dumpRaw == true && result == DEV_OK && h->m_dumpRawStream.is_open() == true)
 	{
@@ -98,18 +98,18 @@ int State::read(EbusHandler* h, unsigned char& byte, const long sec, const long 
 
 int State::write(EbusHandler* h, const unsigned char& byte)
 {
-	Logger L = Logger("State::write");
+	Logger logger = Logger("State::write");
 
 	int result = h->m_device->send(byte);
 
-	if (h->m_logRaw == true && result == DEV_OK) L.log(info, ">%02x", byte);
+	if (h->m_logRaw == true && result == DEV_OK) logger.info(">%02x", byte);
 
 	return (result);
 }
 
 int State::writeRead(EbusHandler* h, const unsigned char& byte, const long timeout)
 {
-	Logger L = Logger("State::writeRead");
+	Logger logger = Logger("State::writeRead");
 
 	int result = State::write(h, byte);
 
@@ -118,7 +118,7 @@ int State::writeRead(EbusHandler* h, const unsigned char& byte, const long timeo
 		unsigned char readByte;
 		result = State::read(h, readByte, 0, timeout);
 
-		if (readByte != byte) L.log(trace, "%s", errorText(STATE_WRN_BYTE_DIF).c_str());
+		if (readByte != byte) logger.trace("%s", errorText(STATE_WRN_BYTE_DIF).c_str());
 	}
 
 	return (result);

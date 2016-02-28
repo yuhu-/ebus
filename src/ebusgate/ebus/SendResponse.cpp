@@ -25,7 +25,7 @@ SendResponse SendResponse::m_sendResponse;
 
 int SendResponse::run(EbusHandler* h)
 {
-	Logger L = Logger("SendResponse::run");
+	Logger logger = Logger("SendResponse::run");
 
 	EbusSequence& eSeq = m_passiveMessage->getEbusSequence();
 	int result;
@@ -50,7 +50,7 @@ int SendResponse::run(EbusHandler* h)
 
 		if (byte != ACK && byte != NAK)
 		{
-			L.log(info, "%s", errorText(STATE_ERR_ACK_WRONG).c_str());
+			logger.info("%s", errorText(STATE_ERR_ACK_WRONG).c_str());
 			break;
 		}
 		else if (byte == ACK)
@@ -61,18 +61,18 @@ int SendResponse::run(EbusHandler* h)
 		{
 			if (retry == 1)
 			{
-				L.log(info, "%s", errorText(STATE_WRN_ACK_NEG).c_str());
+				logger.info("%s", errorText(STATE_WRN_ACK_NEG).c_str());
 			}
 			else
 			{
-				L.log(info, "%s", errorText(STATE_ERR_ACK_NEG).c_str());
-				L.log(info, "%s", errorText(STATE_ERR_SEND_FAIL).c_str());
+				logger.info("%s", errorText(STATE_ERR_ACK_NEG).c_str());
+				logger.info("%s", errorText(STATE_ERR_SEND_FAIL).c_str());
 			}
 		}
 	}
 
 	eSeq.setMasterACK(byte);
-	L.log(info, "%s", eSeq.toStringLog().c_str());
+	logger.info("%s", eSeq.toStringLog().c_str());
 
 	reset(h);
 	h->changeState(Listen::getListen());

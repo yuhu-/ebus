@@ -171,7 +171,7 @@ void EbusHandler::addMessage(EbusMessage* message)
 
 const string EbusHandler::grabMessage(const string& str)
 {
-	Logger L = Logger("EbusHandler::grabMessage");
+	Logger logger = Logger("EbusHandler::grabMessage");
 
 	ostringstream ostr;
 	const Sequence seq(str);
@@ -181,12 +181,12 @@ const string EbusHandler::grabMessage(const string& str)
 	if (it != m_eSeqStore.end())
 	{
 		ostr << it->second.toString();
-		L.log(debug, "key %s found %s", Sequence::toString(key).c_str(), ostr.str().c_str());
+		logger.debug("key %s found %s", Sequence::toString(key).c_str(), ostr.str().c_str());
 	}
 	else
 	{
 		ostr << "not found";
-		L.log(debug, "key %s not found", Sequence::toString(key).c_str());
+		logger.debug("key %s not found", Sequence::toString(key).c_str());
 	}
 
 	return (ostr.str());
@@ -209,19 +209,19 @@ void EbusHandler::run()
 
 void EbusHandler::changeState(State* state)
 {
-	Logger L = Logger("EbusHandler::changeState");
+	Logger logger = Logger("EbusHandler::changeState");
 
 	if (m_state != state)
 	{
 		m_state = state;
-		L.log(trace, "%s", m_state->toString().c_str());
+		logger.trace("%s", m_state->toString().c_str());
 	}
 }
 
 // TODO rework key and search
 void EbusHandler::storeMessage(const EbusSequence& eSeq)
 {
-	Logger L = Logger("EbusHandler::storeMessage");
+	Logger logger = Logger("EbusHandler::storeMessage");
 
 	vector<unsigned char> key;
 	int size = eSeq.getMasterNN();
@@ -237,12 +237,12 @@ void EbusHandler::storeMessage(const EbusSequence& eSeq)
 	if (it != m_eSeqStore.end())
 	{
 		it->second = eSeq;
-		L.log(debug, "%03d - update key %s", m_eSeqStore.size(), Sequence::toString(key).c_str());
+		logger.debug("%03d - update key %s", m_eSeqStore.size(), Sequence::toString(key).c_str());
 	}
 	else
 	{
 		m_eSeqStore.insert(pair<vector<unsigned char>, EbusSequence>(key, eSeq));
-		L.log(debug, "%03d - insert key %s", m_eSeqStore.size(), Sequence::toString(key).c_str());
+		logger.debug("%03d - insert key %s", m_eSeqStore.size(), Sequence::toString(key).c_str());
 	}
 }
 

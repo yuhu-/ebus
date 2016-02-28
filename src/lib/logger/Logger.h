@@ -37,11 +37,41 @@ public:
 	void addConsole();
 	void addFile(const string& file);
 
-	void log(const Level& level, const string data, ...);
+	template<typename Data, typename... Args>
+	void error(Data data, Args... args)
+	{
+	    log(Level::error, data, args...) ;
+	}
+
+	template<typename Data, typename... Args>
+	void warn(Data data, Args... args)
+	{
+	    log(Level::warn, data, args...) ;
+	}
+
+	template<typename Data, typename... Args>
+	void info(Data data, Args... args)
+	{
+	    log(Level::info, data, args...) ;
+	}
+
+	template<typename Data, typename... Args>
+	void debug(Data data, Args... args)
+	{
+	    log(Level::debug, data, args...) ;
+	}
+
+	template<typename Data, typename... Args>
+	void trace(Data data, Args... args)
+	{
+	    log(Level::trace, data, args...) ;
+	}
 
 private:
 	LogHandler& m_logHandler;
 	const char* m_function;
+
+	void log(const Level& level, const string data, ...);
 
 };
 

@@ -64,8 +64,8 @@ void UDPReceiver::stop()
 
 void UDPReceiver::run()
 {
-	Logger L = Logger("UDPReceiver::run");
-	L.log(info, "listening started on %s", m_udpServer->toString().c_str());
+	Logger logger = Logger("UDPReceiver::run");
+	logger.info("listening started on %s", m_udpServer->toString().c_str());
 
 	struct timespec tdiff;
 
@@ -119,12 +119,12 @@ void UDPReceiver::run()
 			char ip[17];
 			inet_ntop(AF_INET, (struct in_addr*) &(sock.sin_addr.s_addr), ip, sizeof(ip) - 1);
 
-			L.log(info, "[%05d] %s opened", m_ids, ip);
+			logger.info("[%05d] %s opened", m_ids, ip);
 
 			// removed closed socket
 			if (datalen <= 0 || strncasecmp(data, "QUIT", 4) == 0)
 			{
-				L.log(info, "[%05d] connection closed", m_ids);
+				logger.info("[%05d] connection closed", m_ids);
 				continue;
 			}
 
@@ -141,7 +141,7 @@ void UDPReceiver::run()
 
 			m_socket->send(result.c_str(), result.size(), (const struct sockaddr_in*) &sock, socklen);
 
-			L.log(info, "[%05d] connection closed", m_ids);
+			logger.info("[%05d] connection closed", m_ids);
 		}
 
 	}
@@ -152,6 +152,6 @@ void UDPReceiver::run()
 		m_socket = nullptr;
 	}
 
-	L.log(info, "listening stopped");
+	logger.info("listening stopped");
 }
 

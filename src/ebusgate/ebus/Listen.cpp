@@ -27,7 +27,7 @@ Listen Listen::m_listen;
 
 int Listen::run(EbusHandler* h)
 {
-	Logger L = Logger("Listen::run");
+	Logger logger = Logger("Listen::run");
 
 	unsigned char byte = 0;
 
@@ -39,16 +39,16 @@ int Listen::run(EbusHandler* h)
 		if (m_lockCounter != 0)
 		{
 			m_lockCounter--;
-			L.log(trace, "lockCounter: %d", m_lockCounter);
+			logger.trace("lockCounter: %d", m_lockCounter);
 		}
 
 		// decode EbusSequence
 		if (m_sequence.size() != 0)
 		{
-			L.log(debug, "%s", m_sequence.toString().c_str());
+			logger.debug("%s", m_sequence.toString().c_str());
 
 			EbusSequence eSeq(m_sequence);
-			L.log(info, "%s", eSeq.toStringLog().c_str());
+			logger.info("%s", eSeq.toStringLog().c_str());
 
 			if (eSeq.isValid() == true && h->m_store == true) h->storeMessage(eSeq);
 
@@ -61,7 +61,7 @@ int Listen::run(EbusHandler* h)
 		// check for new EbusMessage
 		if (m_activeMessage == nullptr && h->m_ebusMsgQueue.size() != 0)
 		{
-			L.log(trace, "pending ebus messages: %d", h->m_ebusMsgQueue.size());
+			logger.trace("pending ebus messages: %d", h->m_ebusMsgQueue.size());
 			m_activeMessage = h->m_ebusMsgQueue.dequeue();
 		}
 

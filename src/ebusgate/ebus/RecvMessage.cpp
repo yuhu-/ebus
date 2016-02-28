@@ -26,7 +26,7 @@ RecvMessage RecvMessage::m_recvMessage;
 
 int RecvMessage::run(EbusHandler* h)
 {
-	Logger L = Logger("RecvMessage::run");
+	Logger logger = Logger("RecvMessage::run");
 
 	int result;
 	unsigned char byte;
@@ -45,7 +45,7 @@ int RecvMessage::run(EbusHandler* h)
 	// check against max. possible size
 	if (m_sequence[4] > 16)
 	{
-		L.log(warn, "%s", errorText(STATE_ERR_NN_WRONG).c_str());
+		logger.warn("%s", errorText(STATE_ERR_NN_WRONG).c_str());
 		reset(h);
 		h->changeState(Listen::getListen());
 		return (DEV_OK);
@@ -76,7 +76,7 @@ int RecvMessage::run(EbusHandler* h)
 		if (byte == SYN || byte == EXT) bytes++;
 	}
 
-	L.log(debug, "%s", m_sequence.toString().c_str());
+	logger.debug("%s", m_sequence.toString().c_str());
 
 	EbusSequence eSeq;
 	eSeq.createMaster(m_sequence);
@@ -90,7 +90,7 @@ int RecvMessage::run(EbusHandler* h)
 		else
 		{
 			byte = NAK;
-			L.log(info, "%s", errorText(STATE_WRN_RECV_MSG).c_str());
+			logger.info("%s", errorText(STATE_WRN_RECV_MSG).c_str());
 		}
 
 		// send ACK
@@ -104,7 +104,7 @@ int RecvMessage::run(EbusHandler* h)
 		{
 			if (eSeq.getType() == EBUS_TYPE_MM) eSeq.setSlaveACK(byte);
 
-			L.log(info, "%s", eSeq.toStringLog().c_str());
+			logger.info("%s", eSeq.toStringLog().c_str());
 
 			if (h->m_store == true) h->storeMessage(eSeq);
 		}

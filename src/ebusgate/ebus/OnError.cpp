@@ -26,12 +26,12 @@ OnError OnError::m_onError;
 
 int OnError::run(EbusHandler* h)
 {
-	Logger L = Logger("OnError::run");
+	Logger logger = Logger("OnError::run");
 
 	if (h->m_lastResult > DEV_OK)
-		L.log(warn, "%s", h->m_device->errorText(h->m_lastResult).c_str());
+		logger.warn("%s", h->m_device->errorText(h->m_lastResult).c_str());
 	else
-		L.log(error, "%s", h->m_device->errorText(h->m_lastResult).c_str());
+		logger.error("%s", h->m_device->errorText(h->m_lastResult).c_str());
 
 	if (m_activeMessage != nullptr) m_activeMessage->setResult(h->m_device->errorText(h->m_lastResult));
 
@@ -41,7 +41,7 @@ int OnError::run(EbusHandler* h)
 	{
 		h->m_device->close();
 
-		if (h->m_device->isOpen() == false) L.log(info, "ebus disconnected");
+		if (h->m_device->isOpen() == false) logger.info("ebus disconnected");
 
 		h->changeState(Connect::getConnect());
 	}

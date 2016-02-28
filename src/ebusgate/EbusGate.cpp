@@ -84,7 +84,7 @@ void define_args()
 
 void shutdown()
 {
-	Logger L = Logger("shutdown");
+	Logger logger = Logger("shutdown");
 
 	// stop threads
 	if (baseloop != nullptr)
@@ -102,32 +102,32 @@ void shutdown()
 	if (Daemon::getDaemon().status() == true) Daemon::getDaemon().stop();
 
 	// stop logger
-	L.log(info, "ebusgate stopped");
+	logger.info("ebusgate stopped");
 
-	L.stop();
+	logger.stop();
 	exit(EXIT_SUCCESS);
 
 }
 
 void signal_handler(int sig)
 {
-	Logger L = Logger("signal_handler");
+	Logger logger = Logger("signal_handler");
 
 	switch (sig)
 	{
 	case SIGHUP:
-		L.log(info, "SIGHUP received");
+		logger.info("SIGHUP received");
 		break;
 	case SIGINT:
-		L.log(info, "SIGINT received");
+		logger.info("SIGINT received");
 		shutdown();
 		break;
 	case SIGTERM:
-		L.log(info, "SIGTERM received");
+		logger.info("SIGTERM received");
 		shutdown();
 		break;
 	default:
-		L.log(info, "undefined signal %s", strsignal(sig));
+		logger.info("undefined signal %s", strsignal(sig));
 		break;
 	}
 }
@@ -141,17 +141,17 @@ int main(int argc, char* argv[])
 	Options& O = Options::getOption();
 	if (O.parse(argc, argv) == false) return (EXIT_SUCCESS);
 
-	Logger L = Logger("main");
+	Logger logger = Logger("main");
 
 	if (O.getBool("foreground") == true)
 	{
-		L.addConsole();
+		logger.addConsole();
 	}
 	else
 	{
 		// make me daemon
 		Daemon::getDaemon().start(O.getString("pidfile"));
-		L.addFile(O.getString("logfile"));
+		logger.addFile(O.getString("logfile"));
 	}
 
 	// trap signals that we expect to receive
@@ -160,10 +160,10 @@ int main(int argc, char* argv[])
 	signal(SIGTERM, signal_handler);
 
 	// start logger
-	L.setLevel(O.getString("loglevel"));
-	L.start();
+	logger.setLevel(O.getString("loglevel"));
+	logger.start();
 
-	L.log(info, "ebusgate started");
+	logger.info("ebusgate started");
 
 	// create baseloop
 	baseloop = new BaseLoop();

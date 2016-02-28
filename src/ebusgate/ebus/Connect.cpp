@@ -32,7 +32,7 @@ Connect Connect::m_connect;
 
 int Connect::run(EbusHandler* h)
 {
-	Logger L = Logger("Connect::run");
+	Logger logger = Logger("Connect::run");
 
 	int result = DEV_OK;
 
@@ -42,11 +42,11 @@ int Connect::run(EbusHandler* h)
 
 		if (h->m_device->isOpen() == true && result == DEV_OK)
 		{
-			L.log(info, "ebus connected");
+			logger.info("ebus connected");
 		}
 		else
 		{
-			L.log(error, "%s", h->m_device->errorText(h->m_lastResult).c_str());
+			logger.error("%s", h->m_device->errorText(h->m_lastResult).c_str());
 			sleep(1);
 			m_reopenTime++;
 
