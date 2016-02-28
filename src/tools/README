@@ -1,8 +1,6 @@
 ebusgatectl
 -----------
 
-ebusgatectl is a tcp socket client for ebusgate.
-
 Usage:
  ebusgatectl [Options...] Command {Argument}
 
