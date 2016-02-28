@@ -35,51 +35,49 @@ BaseLoop* baseloop = nullptr;
 
 void define_args()
 {
-	Options& O = Options::getOption();
+	Options& options = Options::getOption();
 
-	O.setVersion("" PACKAGE_STRING"");
+	options.setVersion("" PACKAGE_STRING"");
 
-//	O.addText("Options:\n");
+	options.addHex("address", "a", 0xff, "\tebus device address [FF]");
 
-	O.addHex("address", "a", 0xff, "\tebus device address [FF]");
+	options.addBool("foreground", "f", false, "run in foreground\n");
 
-	O.addBool("foreground", "f", false, "run in foreground\n");
+	options.addString("device", "d", "/dev/ttyUSB0", "\tebus device (serial or network) [/dev/ttyUSB0]");
 
-	O.addString("device", "d", "/dev/ttyUSB0", "\tebus device (serial or network) [/dev/ttyUSB0]");
+	options.addBool("nodevicecheck", "n", false, "disable test of local ebus device");
 
-	O.addBool("nodevicecheck", "n", false, "disable test of local ebus device");
+	options.addLong("reopentime", "", 60, "max. time to open ebus device in 'sec' [60]\n");
 
-	O.addLong("reopentime", "", 60, "max. time to open ebus device in 'sec' [60]\n");
+	options.addLong("arbitrationtime", "", 4400, "waiting time for arbitration test 'us' [4400]");
 
-	O.addLong("arbitrationtime", "", 4400, "waiting time for arbitration test 'us' [4400]");
+	options.addLong("receivetimeout", "", 4700, "max. time for receiving of one sequence sign 'us' [4700]");
 
-	O.addLong("receivetimeout", "", 4700, "max. time for receiving of one sequence sign 'us' [4700]");
+	options.addInt("lockcounter", "", 5, "number of characters after a successful ebus access [5] (max: 25)");
 
-	O.addInt("lockcounter", "", 5, "number of characters after a successful ebus access [5] (max: 25)");
+	options.addInt("lockretries", "", 2, "number of retries to lock ebus [2]\n");
 
-	O.addInt("lockretries", "", 2, "number of retries to lock ebus [2]\n");
+	options.addBool("active", "", false, "\thandle broadcast and at me addressed messages\n");
 
-	O.addBool("active", "", false, "\thandle broadcast and at me addressed messages\n");
+	options.addBool("store", "", false, "\tstore received messages\n");
 
-	O.addBool("store", "", false, "\tstore received messages\n");
+	options.addInt("port", "p", 8888, "\tlisten port [8888]");
 
-	O.addInt("port", "p", 8888, "\tlisten port [8888]");
+	options.addBool("local", "", false, "\tlisten only on localhost\n");
 
-	O.addBool("local", "", false, "\tlisten only on localhost\n");
+	options.addString("logfile", "", "/var/log/ebusgate.log", "\tlog file name [/var/log/ebusgate.log]");
 
-	O.addString("logfile", "", "/var/log/ebusgate.log", "\tlog file name [/var/log/ebusgate.log]");
+	options.addString("loglevel", "", "info", "\tset logging level - off|error|warn|info|debug|trace [info]");
 
-	O.addString("loglevel", "", "info", "\tset logging level - off|error|warn|info|debug|trace [info]");
+	options.addBool("raw", "", false, "\ttoggle raw output\n");
 
-	O.addBool("raw", "", false, "\ttoggle raw output\n");
+	options.addString("pidfile", "", "/var/run/ebusgate.pid", "\tpid file name [/var/run/ebusgate.pid]\n");
 
-	O.addString("pidfile", "", "/var/run/ebusgate.pid", "\tpid file name [/var/run/ebusgate.pid]\n");
+	options.addBool("dump", "", false, "\ttoggle raw dump");
 
-	O.addBool("dump", "", false, "\ttoggle raw dump");
+	options.addString("dumpfile", "", "/tmp/ebus_dump.bin", "\tdump file name [/tmp/ebus_dump.bin]");
 
-	O.addString("dumpfile", "", "/tmp/ebus_dump.bin", "\tdump file name [/tmp/ebus_dump.bin]");
-
-	O.addLong("dumpsize", "", 100, "\tmax size for dump file in 'kB' [100]");
+	options.addLong("dumpsize", "", 100, "\tmax size for dump file in 'kB' [100]");
 }
 
 void shutdown()
@@ -138,20 +136,20 @@ int main(int argc, char* argv[])
 	define_args();
 
 	// parse arguments
-	Options& O = Options::getOption();
-	if (O.parse(argc, argv) == false) return (EXIT_SUCCESS);
+	Options& options = Options::getOption();
+	if (options.parse(argc, argv) == false) return (EXIT_SUCCESS);
 
 	Logger logger = Logger("main");
 
-	if (O.getBool("foreground") == true)
+	if (options.getBool("foreground") == true)
 	{
 		logger.addConsole();
 	}
 	else
 	{
 		// make me daemon
-		Daemon::getDaemon().start(O.getString("pidfile"));
-		logger.addFile(O.getString("logfile"));
+		Daemon::getDaemon().start(options.getString("pidfile"));
+		logger.addFile(options.getString("logfile"));
 	}
 
 	// trap signals that we expect to receive
@@ -160,7 +158,7 @@ int main(int argc, char* argv[])
 	signal(SIGTERM, signal_handler);
 
 	// start logger
-	logger.setLevel(O.getString("loglevel"));
+	logger.setLevel(options.getString("loglevel"));
 	logger.start();
 
 	logger.info("ebusgate started");

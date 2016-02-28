@@ -43,21 +43,22 @@ map<Command, string> CommandNames =
 
 BaseLoop::BaseLoop()
 {
-	Options& O = Options::getOption();
+	Options& options = Options::getOption();
 
-	m_ownAddress = O.getInt("address") & 0xff;
+	m_ownAddress = options.getInt("address") & 0xff;
 
-	m_ebusHandler = new EbusHandler(O.getInt("address") & 0xff, O.getString("device"), O.getBool("nodevicecheck"),
-		O.getLong("reopentime"), O.getLong("arbitrationtime"), O.getLong("receivetimeout"),
-		O.getInt("lockcounter"), O.getInt("lockretries"), O.getBool("active"), O.getBool("store"),
-		O.getBool("raw"), O.getBool("dump"), O.getString("dumpfile"), O.getLong("dumpsize"));
+	m_ebusHandler = new EbusHandler(options.getInt("address") & 0xff, options.getString("device"),
+		options.getBool("nodevicecheck"), options.getLong("reopentime"), options.getLong("arbitrationtime"),
+		options.getLong("receivetimeout"), options.getInt("lockcounter"), options.getInt("lockretries"),
+		options.getBool("active"), options.getBool("store"), options.getBool("raw"), options.getBool("dump"),
+		options.getString("dumpfile"), options.getLong("dumpsize"));
 
 	m_ebusHandler->start();
 
-	m_tcpAcceptor = new TCPAcceptor(O.getBool("local"), O.getInt("port"), &m_netMsgQueue);
+	m_tcpAcceptor = new TCPAcceptor(options.getBool("local"), options.getInt("port"), &m_netMsgQueue);
 	m_tcpAcceptor->start();
 
-	m_udpReceiver = new UDPReceiver(O.getBool("local"), O.getInt("port"), &m_netMsgQueue);
+	m_udpReceiver = new UDPReceiver(options.getBool("local"), options.getInt("port"), &m_netMsgQueue);
 	m_udpReceiver->start();
 }
 

@@ -41,11 +41,11 @@ using std::setfill;
 
 void define_args()
 {
-	Options& O = Options::getOption("/path/dumpfile");
+	Options& options = Options::getOption("/path/dumpfile");
 
-	O.setVersion("ebusgatefeed is part of " "" PACKAGE_STRING"");
+	options.setVersion("ebusgatefeed is part of " "" PACKAGE_STRING"");
 
-	O.addDescription(" 'ebusgatefeed' sends hex values from dump file to a pseudo terminal device (pty)\n\n"
+	options.addDescription(" 'ebusgatefeed' sends hex values from dump file to a pseudo terminal device (pty)\n\n"
 		"  Example: 1. 'socat -d -d pty,raw,echo=0 pty,raw,echo=0'\n"
 		"           2. create symbol links to appropriate devices\n"
 		"              for example: 'ln -s /dev/pts/5 /dev/ttyUSB5'\n"
@@ -53,9 +53,9 @@ void define_args()
 		"           3. start ebusgate: 'ebusgate -f -n -d /dev/ttyUSB5'\n"
 		"           4. start ebusgatefeed: 'ebusgatefeed -d /dev/ttyUSB6 /path/to/ebus_dump.bin'");
 
-	O.addString("device", "d", "/dev/ttyUSB", "link on pseudo terminal device (/dev/ttyUSB)");
+	options.addString("device", "d", "/dev/ttyUSB", "link on pseudo terminal device (/dev/ttyUSB)");
 
-	O.addLong("time", "t", 10000, "delay between 2 bytes in 'us' (10000)");
+	options.addLong("time", "t", 10000, "delay between 2 bytes in 'us' (10000)");
 
 }
 
@@ -65,23 +65,23 @@ int main(int argc, char* argv[])
 	define_args();
 
 	// parse arguments
-	Options& O = Options::getOption();
-	if (O.parse(argc, argv) == false) return (EXIT_SUCCESS);
+	Options& options = Options::getOption();
+	if (options.parse(argc, argv) == false) return (EXIT_SUCCESS);
 
-	if (O.missingCommand() == true)
+	if (options.missingCommand() == true)
 	{
 		cout << "ebus dump file is required." << endl;
 		exit(EXIT_FAILURE);
 	}
 
-	EbusDevice device(O.getString("device"), true);
+	EbusDevice device(options.getString("device"), true);
 
 	device.open();
 	if (device.isOpen() == true)
 	{
 		cout << "open successful." << endl;
 
-		fstream file(O.getCommand().c_str(), ios::in | ios::binary);
+		fstream file(options.getCommand().c_str(), ios::in | ios::binary);
 
 		if (file.is_open() == true)
 		{
@@ -92,14 +92,14 @@ int main(int argc, char* argv[])
 				cout << hex << setw(2) << setfill('0') << static_cast<unsigned>(byte) << endl;
 
 				device.send(byte);
-				usleep(O.getLong("time"));
+				usleep(options.getLong("time"));
 			}
 
 			file.close();
 		}
 		else
 		{
-			cout << "error opening file " << O.getString("file") << endl;
+			cout << "error opening file " << options.getString("file") << endl;
 		}
 
 		device.close();
@@ -107,7 +107,7 @@ int main(int argc, char* argv[])
 	}
 	else
 	{
-		cout << "error opening device " << O.getString("device") << endl;
+		cout << "error opening device " << options.getString("device") << endl;
 	}
 
 	exit(EXIT_SUCCESS);

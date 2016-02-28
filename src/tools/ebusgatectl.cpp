@@ -38,34 +38,34 @@ using std::endl;
 
 void define_args()
 {
-	Options& O = Options::getOption("Command", "{Argument}");
+	Options& options = Options::getOption("Command", "{Argument}");
 
-	O.setVersion("ebusgatectl is part of " "" PACKAGE_STRING"");
+	options.setVersion("ebusgatectl is part of " "" PACKAGE_STRING"");
 
-	O.addDescription(" 'ebusgatectl' is a tcp/udp socket client for ebusgate.\n"
+	options.addDescription(" 'ebusgatectl' is a tcp/udp socket client for ebusgate.\n"
 		"  hint: try 'help' for available ebusgate commands.");
 
-	O.addString("server", "s", "localhost", "name or ip (localhost)");
+	options.addString("server", "s", "localhost", "name or ip (localhost)");
 
-	O.addLong("port", "p", 8888, "port (8888)");
+	options.addLong("port", "p", 8888, "port (8888)");
 
-	O.addBool("udp", "u", false, "connect via udp");
+	options.addBool("udp", "u", false, "connect via udp");
 }
 
 void connect(const string& host, const int& port, const bool& udp)
 {
-	Options& O = Options::getOption();
+	Options& options = Options::getOption();
 
 	Client* client = new Client();
 	Socket* socket = client->newSocket(host, port, udp);
 
 	if (socket != nullptr)
 	{
-		string message = O.getCommand();
-		for (int i = 0; i < O.numArgs(); i++)
+		string message = options.getCommand();
+		for (int i = 0; i < options.numArgs(); i++)
 		{
 			message += " ";
-			message += O.getArg(i);
+			message += options.getArg(i);
 		}
 
 		socket->send(message.c_str(), message.size(), client->getSock(), sizeof(struct sockaddr_in));
@@ -96,10 +96,10 @@ int main(int argc, char* argv[])
 	define_args();
 
 	// parse arguments
-	Options& O = Options::getOption();
-	if (O.parse(argc, argv) == false) exit(EXIT_FAILURE);
+	Options& options = Options::getOption();
+	if (options.parse(argc, argv) == false) exit(EXIT_FAILURE);
 
-	connect(O.getString("server"), O.getLong("port"), O.getBool("udp"));
+	connect(options.getString("server"), options.getLong("port"), options.getBool("udp"));
 
 	exit(EXIT_SUCCESS);
 }
