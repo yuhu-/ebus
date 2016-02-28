@@ -4,7 +4,7 @@ ebusgate
 ebusgate provides a communication interface too ebus equipped systems.
 
 Usage:
-  ebusgate [Options...]
+ ebusgate [Options...]
 
 Options:
 
@@ -37,7 +37,7 @@ Options:
    | --dumpfile		dump file name [/tmp/ebus_dump.bin]
    | --dumpsize		max size for dump file in 'kB' [100]
 
-   | --options
+   | --values
    | --version
 -h | --help
 

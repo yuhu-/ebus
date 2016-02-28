@@ -4,20 +4,22 @@ ebusgatectl
 ebusgatectl is a tcp socket client for ebusgate.
 
 Usage:
-  ebusgatectl [Options...] Command {Args...}
+ ebusgatectl [Options...] Command {Argument}
 
- 'ebusgatectl' is a tcp socket client for ebusgate.
-
-   hint: try 'help' for available ebusgate commands.
+Description:
+ 'ebusgatectl' is a tcp/udp socket client for ebusgate.
+  hint: try 'help' for available ebusgate commands.
 
 Options:
 
 -s | --server	name or ip (localhost)
 -p | --port	port (8888)
+-u | --udp	connect via udp
 
-   | --options
+   | --values
    | --version
 -h | --help
+
 
 
 $ ebusgatectl help
@@ -42,23 +44,24 @@ ebusgatefeed
 ------------
 
 Usage:
-  ebusgatefeed [Options...] /path/dumpfile
+ ebusgatefeed [Options...] /path/dumpfile
 
+Description:
  'ebusgatefeed' sends hex values from dump file to a pseudo terminal device (pty)
 
-   Usage: 1. 'socat -d -d pty,raw,echo=0 pty,raw,echo=0'
-          2. create symbol links to appropriate devices
-             for example: 'ln -s /dev/pts/5 /dev/ttyUSB5'
-                          'ln -s /dev/pts/6 /dev/ttyUSB6'
-          3. start ebusgate: 'ebusgate -f -n -d /dev/ttyUSB5'
-          4. start ebusgatefeed: 'ebusgatefeed -d /dev/ttyUSB6 /path/to/ebus_dump.bin'
+  Example: 1. 'socat -d -d pty,raw,echo=0 pty,raw,echo=0'
+           2. create symbol links to appropriate devices
+              for example: 'ln -s /dev/pts/5 /dev/ttyUSB5'
+                           'ln -s /dev/pts/6 /dev/ttyUSB6'
+           3. start ebusgate: 'ebusgate -f -n -d /dev/ttyUSB5'
+           4. start ebusgatefeed: 'ebusgatefeed -d /dev/ttyUSB6 /path/to/ebus_dump.bin'
 
 Options:
 
 -d | --device	link on pseudo terminal device (/dev/ttyUSB)
 -t | --time	delay between 2 bytes in 'us' (10000)
 
-   | --options
+   | --values
    | --version
 -h | --help
 
