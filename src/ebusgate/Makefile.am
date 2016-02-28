@@ -13,10 +13,12 @@ bin_PROGRAMS = ebusgate
 
 ebusgate_SOURCES = network/NetMessage.cpp \
 		   network/NetMessage.h \
-		   network/Connection.cpp \
-		   network/Connection.h \
-		   network/Network.cpp \
-		   network/Network.h \
+		   network/TCPConnection.cpp \
+		   network/TCPConnection.h \
+		   network/TCPAcceptor.cpp \
+		   network/TCPAcceptor.h \
+		   network/UDPReceiver.cpp \
+		   network/UDPReceiver.h \
 		   ebus/EbusMessage.cpp \
 		   ebus/EbusMessage.h \
 		   ebus/State.cpp \

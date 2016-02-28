@@ -173,23 +173,23 @@ const string EbusHandler::grabMessage(const string& str)
 {
 	Logger L = Logger("EbusHandler::grabMessage");
 
-	ostringstream result;
+	ostringstream ostr;
 	const Sequence seq(str);
 	vector<unsigned char> key(seq.getSequence());
 
 	map<vector<unsigned char>, EbusSequence>::iterator it = m_eSeqStore.find(key);
 	if (it != m_eSeqStore.end())
 	{
-		result << it->second.toString();
-		L.log(debug, "key %s found %s", Sequence::toString(key).c_str(), result.str().c_str());
+		ostr << it->second.toString();
+		L.log(debug, "key %s found %s", Sequence::toString(key).c_str(), ostr.str().c_str());
 	}
 	else
 	{
-		result << "not found";
+		ostr << "not found";
 		L.log(debug, "key %s not found", Sequence::toString(key).c_str());
 	}
 
-	return (result.str());
+	return (ostr.str());
 }
 
 void EbusHandler::run()

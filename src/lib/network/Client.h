@@ -17,51 +17,25 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef NETWORK_NETWORK_H
-#define NETWORK_NETWORK_H
+#ifndef LIBNETWORK_CLIENT_H
+#define LIBNETWORK_CLIENT_H
 
-#include "Connection.h"
-#include "TCPServer.h"
+#include "Socket.h"
 
-#include <string>
-#include <thread>
-#include <list>
+#include <netdb.h>
 
-using std::list;
-using std::thread;
-
-class Network
+class Client
 {
 
 public:
-	Network(const bool local, const int port, NQueue<NetMessage*>* netMsgQueue);
+	Socket* newSocket(const string& address, const int& port, const bool& udp = false);
 
-	~Network();
-
-	void start();
-	void stop();
+	const struct sockaddr_in* getSock();
 
 private:
-	Network(const Network&);
-	Network& operator=(const Network&);
-
-	thread m_thread;
-
-	list<Connection*> m_connections;
-
-	NQueue<NetMessage*>* m_netMsgQueue;
-
-	TCPServer* m_tcpServer;
-
-	PipeNotify m_notify;
-
-	bool m_listening;
-
-	void run();
-
-	void cleanConnections();
+	struct sockaddr_in m_client;
 
 };
 
-#endif // NETWORK_NETWORK_H
+#endif // LIBNETWORK_CLIENT_H
 

@@ -17,34 +17,50 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef LIBNETWORK_TCPSERVER_H
-#define LIBNETWORK_TCPSERVER_H
+#ifndef NETWORK_TCPACCEPTOR_H
+#define NETWORK_TCPACCEPTOR_H
 
-#include "TCPSocket.h"
+#include "TCPConnection.h"
+#include "Server.h"
 
-class TCPServer
+#include <string>
+#include <thread>
+#include <list>
+
+using std::list;
+using std::thread;
+
+class TCPAcceptor
 {
 
 public:
-	TCPServer(const int port, const string address);
-	~TCPServer();
+	TCPAcceptor(const bool& local, const int& port, NQueue<NetMessage*>* netMsgQueue);
+	~TCPAcceptor();
 
-	int start();
-
-	TCPSocket* newSocket();
-
-	int getFD() const;
+	void start();
+	void stop();
 
 private:
-	int m_lfd = 0;
+	TCPAcceptor(const TCPAcceptor&);
+	TCPAcceptor& operator=(const TCPAcceptor&);
 
-	int m_port;
+	thread m_thread;
 
-	string m_address;
+	list<TCPConnection*> m_connections;
 
-	bool m_listening = false;
+	NQueue<NetMessage*>* m_netMsgQueue;
+
+	Server* m_tcpServer = nullptr;
+
+	PipeNotify m_notify;
+
+	bool m_running;
+
+	void run();
+
+	void cleanConnections();
 
 };
 
-#endif // LIBNETWORK_TCPSERVER_H
+#endif // NETWORK_TCPACCEPTOR_H
 

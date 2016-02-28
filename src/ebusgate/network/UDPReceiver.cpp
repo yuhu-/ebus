@@ -17,28 +17,43 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
-#include "Connection.h"
+#include "UDPReceiver.h"
 #include "Logger.h"
 
 #include <cstring>
 #include <iostream>
 
+#include <arpa/inet.h>
 #include <poll.h>
 
-int Connection::m_ids = 0;
-
-Connection::Connection(TCPSocket* socket, NQueue<NetMessage*>* netMsgQueue)
-	: m_socket(socket), m_netMsgQueue(netMsgQueue)
+UDPReceiver::UDPReceiver(const bool& local, const int& port, NQueue<NetMessage*>* netMsgQueue)
+	: m_netMsgQueue(netMsgQueue), m_running(false)
 {
-	m_id = ++m_ids;
+	if (local == true)
+		m_udpServer = new Server("127.0.0.1", port, true);
+	else
+		m_udpServer = new Server("0.0.0.0", port, true);
+
+	if (m_udpServer != nullptr && m_udpServer->start() == 0)
+	{
+		m_socket = m_udpServer->newSocket();
+		if (m_socket != nullptr) m_running = true;
+	}
+
 }
 
-void Connection::start()
+UDPReceiver::~UDPReceiver()
 {
-	m_thread = thread(&Connection::run, this);
+	delete m_udpServer;
+	m_udpServer = nullptr;
 }
 
-void Connection::stop()
+void UDPReceiver::start()
+{
+	m_thread = thread(&UDPReceiver::run, this);
+}
+
+void UDPReceiver::stop()
 {
 	if (m_thread.joinable())
 	{
@@ -47,74 +62,70 @@ void Connection::stop()
 	}
 }
 
-bool Connection::isClosed() const
+void UDPReceiver::run()
 {
-	return (m_closed);
-}
-
-int Connection::getID() const
-{
-	return (m_id);
-}
-
-void Connection::run()
-{
-	Logger L = Logger("Connection::run");
+	Logger L = Logger("UDPReceiver::run");
+	L.log(info, "listening started on %s", m_udpServer->toString().c_str());
 
 	struct timespec tdiff;
 
 	// set timeout
 	tdiff.tv_sec = 2;
 	tdiff.tv_nsec = 0;
-	int notifyFD = m_notify.notifyFD();
-	int sockFD = m_socket->getFD();
 
 	int nfds = 2;
 	struct pollfd fds[nfds];
 
 	memset(fds, 0, sizeof(struct pollfd) * nfds);
 
-	fds[0].fd = notifyFD;
+	fds[0].fd = m_notify.notifyFD();
 	fds[0].events = POLLIN | POLLERR | POLLHUP | POLLRDHUP;
 
-	fds[1].fd = sockFD;
+	fds[1].fd = m_udpServer->getFD();
 	fds[1].events = POLLIN | POLLERR | POLLHUP | POLLRDHUP;
 
-	while (m_closed == false)
+	while (true)
 	{
-
 		// wait for new fd event
 		int ret = ppoll(fds, nfds, &tdiff, nullptr);
 
 		bool newData = false;
 		if (ret != 0)
 		{
-
 			// new data from notify
 			if (ret < 0 || (fds[0].revents & (POLLIN | POLLERR | POLLHUP | POLLRDHUP))
-				|| (fds[1].revents & (POLLERR | POLLHUP))) break;
+				|| (fds[1].revents & (POLLERR | POLLHUP | POLLRDHUP))) break;
 
 			// new data from socket
 			newData = fds[1].revents & POLLIN;
-			m_closed = fds[1].revents & POLLRDHUP;
-
 		}
 
-		if (newData == true || m_listening == true)
+		if (newData == true)
 		{
-			char data[256];
-			ssize_t datalen = 0;
+			m_ids++;
 
-			if (newData == true)
+			struct sockaddr_in sock;
+			socklen_t socklen = sizeof(struct sockaddr_in);
+			char data[1024];
+			ssize_t datalen;
+
+			memset(data, '\0', sizeof(data));
+
+			if (m_socket->isValid() == true)
+				datalen = m_socket->recv(data, sizeof(data) - 1, &sock, &socklen);
+			else
+				break;
+
+			char ip[17];
+			inet_ntop(AF_INET, (struct in_addr*) &(sock.sin_addr.s_addr), ip, sizeof(ip) - 1);
+
+			L.log(info, "[%05d] %s opened", m_ids, ip);
+
+			// removed closed socket
+			if (datalen <= 0 || strncasecmp(data, "QUIT", 4) == 0)
 			{
-				if (m_socket->isValid() == true)
-					datalen = m_socket->recv(data, sizeof(data) - 1);
-				else
-					break;
-
-				// removed closed socket
-				if (datalen <= 0 || strncasecmp(data, "QUIT", 4) == 0) break;
-
+				L.log(info, "[%05d] connection closed", m_ids);
+				continue;
 			}
 
 			// decode client data
@@ -128,7 +139,9 @@ void Connection::run()
 
 			if (m_socket->isValid() == false) break;
 
-			m_socket->send(result.c_str(), result.size());
+			m_socket->send(result.c_str(), result.size(), (const struct sockaddr_in*) &sock, socklen);
+
+			L.log(info, "[%05d] connection closed", m_ids);
 		}
 
 	}
@@ -139,7 +152,6 @@ void Connection::run()
 		m_socket = nullptr;
 	}
 
-	m_closed = true;
-	L.log(info, "[%05d] connection closed", getID());
+	L.log(info, "listening stopped");
 }
 

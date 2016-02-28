@@ -21,7 +21,7 @@
 #include <config.h>
 #endif
 
-#include "Option.h"
+#include "Options.h"
 #include "EbusDevice.h"
 
 #include <iostream>
@@ -39,24 +39,23 @@ using std::hex;
 using std::setw;
 using std::setfill;
 
-Option& O = Option::getOption("/path/dumpfile");
-
 void define_args()
 {
+	Options& O = Options::getOption("/path/dumpfile");
+
 	O.setVersion("ebusgatefeed is part of " "" PACKAGE_STRING"");
 
-	O.addText(" 'ebusgatefeed' sends hex values from dump file to a pseudo terminal device (pty)\n\n"
-		"   Usage: 1. 'socat -d -d pty,raw,echo=0 pty,raw,echo=0'\n"
-		"          2. create symbol links to appropriate devices\n"
-		"             for example: 'ln -s /dev/pts/5 /dev/ttyUSB5'\n"
-		"                          'ln -s /dev/pts/6 /dev/ttyUSB6'\n"
-		"          3. start ebusgate: 'ebusgate -f -n -d /dev/ttyUSB5'\n"
-		"          4. start ebusgatefeed: 'ebusgatefeed -d /dev/ttyUSB6 /path/to/ebus_dump.bin'\n\n"
-		"Options:\n");
+	O.addDescription(" 'ebusgatefeed' sends hex values from dump file to a pseudo terminal device (pty)\n\n"
+		"  Example: 1. 'socat -d -d pty,raw,echo=0 pty,raw,echo=0'\n"
+		"           2. create symbol links to appropriate devices\n"
+		"              for example: 'ln -s /dev/pts/5 /dev/ttyUSB5'\n"
+		"                           'ln -s /dev/pts/6 /dev/ttyUSB6'\n"
+		"           3. start ebusgate: 'ebusgate -f -n -d /dev/ttyUSB5'\n"
+		"           4. start ebusgatefeed: 'ebusgatefeed -d /dev/ttyUSB6 /path/to/ebus_dump.bin'");
 
-	O.addString("device", "d", "/dev/ttyUSB", ot_mandatory, "link on pseudo terminal device (/dev/ttyUSB)");
+	O.addString("device", "d", "/dev/ttyUSB", "link on pseudo terminal device (/dev/ttyUSB)");
 
-	O.addLong("time", "t", 10000, ot_mandatory, "delay between 2 bytes in 'us' (10000)");
+	O.addLong("time", "t", 10000, "delay between 2 bytes in 'us' (10000)");
 
 }
 
@@ -66,7 +65,8 @@ int main(int argc, char* argv[])
 	define_args();
 
 	// parse arguments
-	if (O.parseArgs(argc, argv) == false) return (EXIT_SUCCESS);
+	Options& O = Options::getOption();
+	if (O.parse(argc, argv) == false) return (EXIT_SUCCESS);
 
 	if (O.missingCommand() == true)
 	{

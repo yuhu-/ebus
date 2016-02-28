@@ -155,12 +155,12 @@ bool Sequence::isExtended() const
 
 const string Sequence::toString()
 {
-	ostringstream sstr;
+	ostringstream ostr;
 
 	for (size_t i = 0; i < m_sequence.size(); i++)
-		sstr << nouppercase << hex << setw(2) << setfill('0') << static_cast<unsigned>(m_sequence[i]);
+		ostr << nouppercase << hex << setw(2) << setfill('0') << static_cast<unsigned>(m_sequence[i]);
 
-	return (sstr.str());
+	return (ostr.str());
 }
 
 const vector<unsigned char> Sequence::getSequence() const
@@ -170,11 +170,11 @@ const vector<unsigned char> Sequence::getSequence() const
 
 const string Sequence::toString(const vector<unsigned char>& sequence)
 {
-	ostringstream sstr;
+	ostringstream ostr;
 
 	for (size_t i = 0; i < sequence.size(); i++)
-		sstr << nouppercase << hex << setw(2) << setfill('0') << static_cast<unsigned>(sequence[i]);
+		ostr << nouppercase << hex << setw(2) << setfill('0') << static_cast<unsigned>(sequence[i]);
 
-	return (sstr.str());
+	return (ostr.str());
 }
 

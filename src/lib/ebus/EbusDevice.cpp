@@ -88,17 +88,17 @@ ssize_t EbusDevice::recv(unsigned char& value, const long sec, const long nsec)
 
 const string EbusDevice::errorText(const int error) const
 {
-	ostringstream result;
+	ostringstream ostr;
 
-	(error > DEV_OK) ? result << color::yellow : result << color::red;
+	(error > DEV_OK) ? ostr << color::yellow : ostr << color::red;
 
-	result << DeviceErrors[error];
+	ostr << DeviceErrors[error];
 
-	if (error == DEV_ERR_OPEN) result << m_deviceName;
+	if (error == DEV_ERR_OPEN) ostr << m_deviceName;
 
-	result << color::reset;
+	ostr << color::reset;
 
-	return (result.str());
+	return (ostr.str());
 }
 
 void EbusDevice::setType(const DeviceType type)

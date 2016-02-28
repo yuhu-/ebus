@@ -40,17 +40,17 @@ void EbusMessage::setResult(const string result)
 
 const string EbusMessage::getResult()
 {
-	ostringstream result;
+	ostringstream ostr;
 
 	if (m_result.size() != 0)
-		result << m_result;
+		ostr << m_result;
 	else if (m_ebusSequence.getType() == EBUS_TYPE_BC)
-		result << "done";
+		ostr << "done";
 	else if (m_ebusSequence.getType() == EBUS_TYPE_MM)
-		result << m_ebusSequence.toStringSlaveACK();
+		ostr << m_ebusSequence.toStringSlaveACK();
 	else
-		result << m_ebusSequence.toStringSlave();
+		ostr << m_ebusSequence.toStringSlave();
 
-	return (result.str());
+	return (ostr.str());
 }
 

@@ -17,42 +17,42 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
-#include "TCPSocket.h"
+#include "Socket.h"
 
 #include <unistd.h>
 #include <fcntl.h>
 #include <arpa/inet.h>
 
-TCPSocket::~TCPSocket()
+Socket::~Socket()
 {
 	close(m_sfd);
 }
 
-ssize_t TCPSocket::send(const char* buffer, size_t len)
+ssize_t Socket::send(const char* buffer, size_t len, const struct sockaddr_in* address, const socklen_t addrlen)
 {
-	return (::send(m_sfd, buffer, len, MSG_NOSIGNAL));
+	return (sendto(m_sfd, buffer, len, MSG_NOSIGNAL, (const struct sockaddr*) address, addrlen));
 }
-ssize_t TCPSocket::recv(char* buffer, size_t len)
+ssize_t Socket::recv(char* buffer, size_t len, struct sockaddr_in* address, socklen_t* addrlen)
 {
-	return (::recv(m_sfd, buffer, len, 0));
+	return (recvfrom(m_sfd, buffer, len, 0, (struct sockaddr*) address, addrlen));
 }
 
-int TCPSocket::getPort() const
+int Socket::getPort() const
 {
 	return (m_port);
 }
 
-string TCPSocket::getIP() const
+string Socket::getIP() const
 {
 	return (m_ip);
 }
 
-int TCPSocket::getFD() const
+int Socket::getFD() const
 {
 	return (m_sfd);
 }
 
-bool TCPSocket::isValid()
+bool Socket::isValid()
 {
 	if (fcntl(m_sfd, F_GETFL) == -1)
 		return (false);
@@ -60,7 +60,7 @@ bool TCPSocket::isValid()
 		return (true);
 }
 
-TCPSocket::TCPSocket(int sfd, struct sockaddr_in* address)
+Socket::Socket(int sfd, struct sockaddr_in* address)
 	: m_sfd(sfd)
 {
 	char ip[17];

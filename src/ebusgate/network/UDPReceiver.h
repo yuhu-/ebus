@@ -17,43 +17,49 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
-#include "EbusDevice.h"
+#ifndef NETWORK_UDPRECEIVER_H
+#define NETWORK_UDPRECEIVER_H
 
-#include <iostream>
-#include <iomanip>
+#include "NetMessage.h"
+#include "PipeNotify.h"
+#include "NQueue.h"
+#include "Server.h"
 
-using std::cout;
-using std::endl;
-using std::hex;
-using std::setw;
-using std::setfill;
+#include <thread>
 
-int main()
+using std::thread;
+
+class UDPReceiver
 {
-	string dev("/dev/ttyUSB5");
-	EbusDevice device(dev, true);
 
-	device.open();
+public:
+	UDPReceiver(const bool& local, const int& port, NQueue<NetMessage*>* netMsgQueue);
+	~UDPReceiver();
 
-	if (device.isOpen() == true) cout << "openPort successful." << endl;
+	void start();
+	void stop();
 
-	int count = 0;
+private:
+	UDPReceiver(const UDPReceiver&);
+	UDPReceiver& operator=(const UDPReceiver&);
 
-	while (true)
-	{
-		int ret;
-		unsigned char byte = 0;
-		ret = device.recv(byte, 0, 0);
+	thread m_thread;
 
-		if (ret == DEV_OK) cout << hex << setw(2) << setfill('0') << static_cast<unsigned>(byte) << endl;
+	NQueue<NetMessage*>* m_netMsgQueue;
 
-		count++;
-	}
+	Server* m_udpServer = nullptr;
 
-	device.close();
+	Socket* m_socket = nullptr;
 
-	if (device.isOpen() == false) cout << "closePort successful." << endl;
+	PipeNotify m_notify;
 
-	return (0);
+	bool m_running;
 
-}
+	int m_ids = 0;
+
+	void run();
+
+};
+
+#endif // NETWORK_UDPRECEIVER_H
+

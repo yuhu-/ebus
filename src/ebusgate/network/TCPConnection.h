@@ -17,37 +17,35 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef NETWORK_CONNECTION_H
-#define NETWORK_CONNECTION_H
+#ifndef NETWORK_TCPCONNECTION_H
+#define NETWORK_TCPCONNECTION_H
 
 #include "NetMessage.h"
-#include "TCPSocket.h"
 #include "PipeNotify.h"
 #include "NQueue.h"
+#include "Socket.h"
 
 #include <thread>
 
 using std::thread;
 
-class Connection
+class TCPConnection
 {
 
 public:
-	Connection(TCPSocket* socket, NQueue<NetMessage*>* netMsgQueue);
+	TCPConnection(Socket* socket, NQueue<NetMessage*>* netMsgQueue);
 
 	void start();
 	void stop();
 
 	bool isClosed() const;
 
-	int getID() const;
-
 private:
 	thread m_thread;
 
 	bool m_closed = false;
 
-	TCPSocket* m_socket;
+	Socket* m_socket = nullptr;
 
 	NQueue<NetMessage*>* m_netMsgQueue;
 
@@ -57,11 +55,9 @@ private:
 
 	static int m_ids;
 
-	bool m_listening = false;
-
 	void run();
 
 };
 
-#endif // NETWORK_CONNECTION_H
+#endif // NETWORK_TCPCONNECTION_H
 

@@ -17,44 +17,57 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
-#include "TCPClient.h"
+#include "Client.h"
 
 #include <cstring>
 
 #include <arpa/inet.h>
-#include <netdb.h>
 
-TCPSocket* TCPClient::connect(const string& server, const int& port)
+Socket* Client::newSocket(const string& address, const int& port, const bool& udp)
 {
-	struct sockaddr_in address;
 	int ret;
 
-	memset((char*) &address, 0, sizeof(address));
+	memset((char*) &m_client, 0, sizeof(m_client));
 
-	if (inet_addr(server.c_str()) == INADDR_NONE)
+	if (inet_addr(address.c_str()) == INADDR_NONE)
 	{
 		struct hostent* he;
 
-		he = gethostbyname(server.c_str());
+		he = gethostbyname(address.c_str());
 		if (he == nullptr) return (nullptr);
 
-		memcpy(&address.sin_addr, he->h_addr_list[0], he->h_length);
+		memcpy(&m_client.sin_addr, he->h_addr_list[0], he->h_length);
 	}
 	else
 	{
-		ret = inet_aton(server.c_str(), &address.sin_addr);
+		ret = inet_aton(address.c_str(), &m_client.sin_addr);
 		if (ret == 0) return (nullptr);
 	}
 
-	address.sin_family = AF_INET;
-	address.sin_port = htons(port);
+	m_client.sin_family = AF_INET;
+	m_client.sin_port = htons(port);
 
-	int sfd = socket(AF_INET, SOCK_STREAM, 0);
-	if (sfd < 0) return (nullptr);
+	int sfd;
 
-	ret = ::connect(sfd, (struct sockaddr*) &address, sizeof(address));
-	if (ret < 0) return (nullptr);
+	if (udp == true)
+	{
+		sfd = socket(AF_INET, SOCK_DGRAM, 0);
+		if (sfd < 0) return (nullptr);
+	}
+	else
+	{
+		sfd = socket(AF_INET, SOCK_STREAM, 0);
+		if (sfd < 0) return (nullptr);
 
-	return (new TCPSocket(sfd, &address));
+		ret = connect(sfd, (struct sockaddr*) &m_client, sizeof(m_client));
+		if (ret < 0) return (nullptr);
+	}
+
+	return (new Socket(sfd, &m_client));
+}
+
+const struct sockaddr_in* Client::getSock()
+{
+	return (&m_client);
 }
 

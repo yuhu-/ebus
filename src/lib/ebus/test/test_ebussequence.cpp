@@ -18,6 +18,7 @@
  */
 
 #include "EbusSequence.h"
+
 #include <iostream>
 
 using std::cout;

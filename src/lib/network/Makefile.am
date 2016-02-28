@@ -5,12 +5,12 @@ AM_CXXFLAGS = -fpic \
 
 noinst_LIBRARIES = libnetwork.a
 
-libnetwork_a_SOURCES = TCPSocket.cpp \
-		       TCPSocket.h \
-		       TCPClient.cpp \
-		       TCPClient.h \
-		       TCPServer.cpp \
-		       TCPServer.h
+libnetwork_a_SOURCES = Socket.cpp \
+		       Socket.h \
+		       Client.cpp \
+		       Client.h \
+		       Server.cpp \
+		       Server.h
 
 distclean-local:
 	-rm -f Makefile.in

@@ -17,9 +17,9 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
+#include "Options.h"
 #include "BaseLoop.h"
-#include "Option.h"
-#include <Logger.h>
+#include "Logger.h"
 
 #include <iomanip>
 #include <iterator>
@@ -43,35 +43,45 @@ map<Command, string> CommandNames =
 
 BaseLoop::BaseLoop()
 {
-	Option& O = Option::getOption();
+	Options& O = Options::getOption();
 
 	m_ownAddress = O.getInt("address") & 0xff;
 
-	m_ebushandler = new EbusHandler(O.getInt("address") & 0xff, O.getString("device"), O.getBool("nodevicecheck"),
+	m_ebusHandler = new EbusHandler(O.getInt("address") & 0xff, O.getString("device"), O.getBool("nodevicecheck"),
 		O.getLong("reopentime"), O.getLong("arbitrationtime"), O.getLong("receivetimeout"),
 		O.getInt("lockcounter"), O.getInt("lockretries"), O.getBool("active"), O.getBool("store"),
 		O.getBool("raw"), O.getBool("dump"), O.getString("dumpfile"), O.getLong("dumpsize"));
 
-	m_ebushandler->start();
+	m_ebusHandler->start();
 
-	m_network = new Network(O.getBool("local"), O.getInt("port"), &m_netMsgQueue);
-	m_network->start();
+	m_tcpAcceptor = new TCPAcceptor(O.getBool("local"), O.getInt("port"), &m_netMsgQueue);
+	m_tcpAcceptor->start();
+
+	m_udpReceiver = new UDPReceiver(O.getBool("local"), O.getInt("port"), &m_netMsgQueue);
+	m_udpReceiver->start();
 }
 
 BaseLoop::~BaseLoop()
 {
-	if (m_network != nullptr)
+	if (m_udpReceiver != nullptr)
 	{
-		m_network->stop();
-		delete m_network;
-		m_network = nullptr;
+		m_udpReceiver->stop();
+		delete m_udpReceiver;
+		m_udpReceiver = nullptr;
 	}
 
-	if (m_ebushandler != nullptr)
+	if (m_tcpAcceptor != nullptr)
 	{
-		m_ebushandler->stop();
-		delete m_ebushandler;
-		m_ebushandler = nullptr;
+		m_tcpAcceptor->stop();
+		delete m_tcpAcceptor;
+		m_tcpAcceptor = nullptr;
+	}
+
+	if (m_ebusHandler != nullptr)
+	{
+		m_ebusHandler->stop();
+		delete m_ebusHandler;
+		m_ebusHandler = nullptr;
 	}
 
 	while (m_netMsgQueue.size() > 0)
@@ -157,7 +167,7 @@ string BaseLoop::decodeMessage(const string& data)
 			break;
 		}
 
-		m_ebushandler->open();
+		m_ebusHandler->open();
 		result << "done";
 		break;
 	}
@@ -169,7 +179,7 @@ string BaseLoop::decodeMessage(const string& data)
 			break;
 		}
 
-		m_ebushandler->close();
+		m_ebusHandler->close();
 		result << "done";
 		break;
 	}
@@ -199,7 +209,7 @@ string BaseLoop::decodeMessage(const string& data)
 		{
 			L.log(debug, "enqueue: %s", eSeq.toStringMaster().c_str());
 			EbusMessage* ebusMessage = new EbusMessage(eSeq);
-			m_ebushandler->addMessage(ebusMessage);
+			m_ebusHandler->addMessage(ebusMessage);
 			ebusMessage->waitNotify();
 			result << ebusMessage->getResult();
 			delete ebusMessage;
@@ -231,7 +241,7 @@ string BaseLoop::decodeMessage(const string& data)
 
 		// grab message
 		L.log(debug, "grab: %s", msg.str().c_str());
-		result << m_ebushandler->grabMessage(msg.str());
+		result << m_ebusHandler->grabMessage(msg.str());
 		break;
 	}
 	case c_active:
@@ -242,8 +252,8 @@ string BaseLoop::decodeMessage(const string& data)
 			break;
 		}
 
-		bool enabled = !m_ebushandler->getActive();
-		m_ebushandler->setActive(enabled);
+		bool enabled = !m_ebusHandler->getActive();
+		m_ebusHandler->setActive(enabled);
 		result << (enabled ? "active mode enabled" : "active mode disabled");
 		break;
 	}
@@ -255,8 +265,8 @@ string BaseLoop::decodeMessage(const string& data)
 			break;
 		}
 
-		bool enabled = !m_ebushandler->getStore();
-		m_ebushandler->setStore(enabled);
+		bool enabled = !m_ebusHandler->getStore();
+		m_ebusHandler->setStore(enabled);
 		result << (enabled ? "storing enabled" : "storing disabled");
 		break;
 	}
@@ -281,8 +291,8 @@ string BaseLoop::decodeMessage(const string& data)
 			break;
 		}
 
-		bool enabled = !m_ebushandler->getLogRaw();
-		m_ebushandler->setLogRaw(enabled);
+		bool enabled = !m_ebusHandler->getLogRaw();
+		m_ebusHandler->setLogRaw(enabled);
 		result << (enabled ? "raw output enabled" : "raw output disabled");
 		break;
 	}
@@ -294,8 +304,8 @@ string BaseLoop::decodeMessage(const string& data)
 			break;
 		}
 
-		bool enabled = !m_ebushandler->getDumpRaw();
-		m_ebushandler->setDumpRaw(enabled);
+		bool enabled = !m_ebusHandler->getDumpRaw();
+		m_ebusHandler->setDumpRaw(enabled);
 		result << (enabled ? "raw dump enabled" : "raw dump disabled");
 		break;
 	}

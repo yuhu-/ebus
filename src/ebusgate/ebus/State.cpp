@@ -155,17 +155,17 @@ void State::reset(EbusHandler* h)
 
 const string State::errorText(const int error)
 {
-	ostringstream result;
+	ostringstream errStr;
 
 	if (error == 0)
-		result << color::green << StateErros[error];
+		errStr << color::green << StateErros[error];
 	else if (error > 0)
-		result << color::yellow << StateErros[error];
+		errStr << color::yellow << StateErros[error];
 	else
-		result << color::red << StateErros[error];
+		errStr << color::red << StateErros[error];
 
-	result << color::reset;
+	errStr << color::reset;
 
-	return (result.str());
+	return (errStr.str());
 }
 

@@ -22,7 +22,7 @@
 #endif
 
 #include "Daemon.h"
-#include "Option.h"
+#include "Options.h"
 #include "BaseLoop.h"
 #include "Logger.h"
 
@@ -35,53 +35,51 @@ BaseLoop* baseloop = nullptr;
 
 void define_args()
 {
-	Option& O = Option::getOption();
+	Options& O = Options::getOption();
 
 	O.setVersion("" PACKAGE_STRING"");
 
-	O.addText("Options:\n");
+//	O.addText("Options:\n");
 
-	O.addHex("address", "a", 0xff, ot_mandatory, "\tebus device address [FF]");
+	O.addHex("address", "a", 0xff, "\tebus device address [FF]");
 
-	O.addBool("foreground", "f", false, ot_none, "run in foreground\n");
+	O.addBool("foreground", "f", false, "run in foreground\n");
 
-	O.addString("device", "d", "/dev/ttyUSB0", ot_mandatory, "\tebus device (serial or network) [/dev/ttyUSB0]");
+	O.addString("device", "d", "/dev/ttyUSB0", "\tebus device (serial or network) [/dev/ttyUSB0]");
 
-	O.addBool("nodevicecheck", "n", false, ot_none, "disable test of local ebus device");
+	O.addBool("nodevicecheck", "n", false, "disable test of local ebus device");
 
-	O.addLong("reopentime", "", 60, ot_mandatory, "max. time to open ebus device in 'sec' [60]\n");
+	O.addLong("reopentime", "", 60, "max. time to open ebus device in 'sec' [60]\n");
 
-	O.addLong("arbitrationtime", "", 4400, ot_mandatory, "waiting time for arbitration test 'us' [4400]");
+	O.addLong("arbitrationtime", "", 4400, "waiting time for arbitration test 'us' [4400]");
 
-	O.addLong("receivetimeout", "", 4700, ot_mandatory, "max. time for receiving of one sequence sign 'us' [4700]");
+	O.addLong("receivetimeout", "", 4700, "max. time for receiving of one sequence sign 'us' [4700]");
 
-	O.addInt("lockcounter", "", 5, ot_mandatory,
-		"number of characters after a successful ebus access [5] (max: 25)");
+	O.addInt("lockcounter", "", 5, "number of characters after a successful ebus access [5] (max: 25)");
 
-	O.addInt("lockretries", "", 2, ot_mandatory, "number of retries to lock ebus [2]\n");
+	O.addInt("lockretries", "", 2, "number of retries to lock ebus [2]\n");
 
-	O.addBool("active", "", false, ot_none, "\thandle broadcast and at me addressed messages\n");
+	O.addBool("active", "", false, "\thandle broadcast and at me addressed messages\n");
 
-	O.addBool("store", "", false, ot_none, "\tstore received messages\n");
+	O.addBool("store", "", false, "\tstore received messages\n");
 
-	O.addInt("port", "p", 8888, ot_mandatory, "\tlisten port [8888]");
+	O.addInt("port", "p", 8888, "\tlisten port [8888]");
 
-	O.addBool("local", "", false, ot_none, "\tlisten only on localhost\n");
+	O.addBool("local", "", false, "\tlisten only on localhost\n");
 
-	O.addString("logfile", "", "/var/log/ebusgate.log", ot_mandatory, "\tlog file name [/var/log/ebusgate.log]");
+	O.addString("logfile", "", "/var/log/ebusgate.log", "\tlog file name [/var/log/ebusgate.log]");
 
-	O.addString("loglevel", "", "info", ot_mandatory,
-		"\tset logging level - off|error|warn|info|debug|trace [info]");
+	O.addString("loglevel", "", "info", "\tset logging level - off|error|warn|info|debug|trace [info]");
 
-	O.addBool("raw", "", false, ot_none, "\ttoggle raw output\n");
+	O.addBool("raw", "", false, "\ttoggle raw output\n");
 
-	O.addString("pidfile", "", "/var/run/ebusgate.pid", ot_mandatory, "\tpid file name [/var/run/ebusgate.pid]\n");
+	O.addString("pidfile", "", "/var/run/ebusgate.pid", "\tpid file name [/var/run/ebusgate.pid]\n");
 
-	O.addBool("dump", "", false, ot_none, "\ttoggle raw dump");
+	O.addBool("dump", "", false, "\ttoggle raw dump");
 
-	O.addString("dumpfile", "", "/tmp/ebus_dump.bin", ot_mandatory, "\tdump file name [/tmp/ebus_dump.bin]");
+	O.addString("dumpfile", "", "/tmp/ebus_dump.bin", "\tdump file name [/tmp/ebus_dump.bin]");
 
-	O.addLong("dumpsize", "", 100, ot_mandatory, "\tmax size for dump file in 'kB' [100]");
+	O.addLong("dumpsize", "", 100, "\tmax size for dump file in 'kB' [100]");
 }
 
 void shutdown()
@@ -137,11 +135,11 @@ void signal_handler(int sig)
 int main(int argc, char* argv[])
 {
 	// define arguments and application variables
-	Option& O = Option::getOption();
 	define_args();
 
 	// parse arguments
-	if (O.parseArgs(argc, argv) == false) return (EXIT_SUCCESS);
+	Options& O = Options::getOption();
+	if (O.parse(argc, argv) == false) return (EXIT_SUCCESS);
 
 	Logger L = Logger("main");
 

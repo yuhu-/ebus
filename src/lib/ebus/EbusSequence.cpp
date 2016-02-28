@@ -333,108 +333,108 @@ bool EbusSequence::isValid() const
 
 const string EbusSequence::toString()
 {
-	ostringstream sstr;
+	ostringstream ostr;
 
-	sstr << toStringMaster();
+	ostr << toStringMaster();
 
-	if (m_type == EBUS_TYPE_MM) sstr << " " << toStringMasterACK();
+	if (m_type == EBUS_TYPE_MM) ostr << " " << toStringMasterACK();
 
-	if (m_type == EBUS_TYPE_MS) sstr << " " << toStringSlave();
+	if (m_type == EBUS_TYPE_MS) ostr << " " << toStringSlave();
 
-	return (sstr.str());
+	return (ostr.str());
 }
 
 const string EbusSequence::toStringLog()
 {
-	ostringstream sstr;
+	ostringstream ostr;
 
 	if (m_masterState != EBUS_OK) return (toStringMaster());
 
 	if (m_type == EBUS_TYPE_BC)
-		sstr << color::blue << "BC" << color::reset << " " << toStringMaster();
+		ostr << color::blue << "BC" << color::reset << " " << toStringMaster();
 	else if (m_type == EBUS_TYPE_MM)
-		sstr << color::cyan << "MM" << color::reset << " " << toStringMaster();
+		ostr << color::cyan << "MM" << color::reset << " " << toStringMaster();
 	else
-		sstr << color::magenta << "MS" << color::reset << " " << toStringMaster();
+		ostr << color::magenta << "MS" << color::reset << " " << toStringMaster();
 
-	if (m_type == EBUS_TYPE_MM) sstr << " " << toStringMasterACK();
+	if (m_type == EBUS_TYPE_MM) ostr << " " << toStringMasterACK();
 
-	if (m_type == EBUS_TYPE_MS) sstr << " " << toStringSlave();
+	if (m_type == EBUS_TYPE_MS) ostr << " " << toStringSlave();
 
-	return (sstr.str());
+	return (ostr.str());
 }
 
 const string EbusSequence::toStringMaster()
 {
-	ostringstream sstr;
+	ostringstream ostr;
 	if (m_masterState != EBUS_OK)
-		sstr << color::red << m_master.toString() << "Master " << errorText(m_masterState) << color::reset;
+		ostr << color::red << m_master.toString() << "Master " << errorText(m_masterState) << color::reset;
 	else
-		sstr << m_master.toString();
+		ostr << m_master.toString();
 
-	return (sstr.str());
+	return (ostr.str());
 }
 
 const string EbusSequence::toStringMasterCRC()
 {
-	ostringstream sstr;
+	ostringstream ostr;
 	if (m_masterState != EBUS_OK)
-		sstr << color::red << m_master.toString() << "Master " << errorText(m_masterState) << color::reset;
+		ostr << color::red << m_master.toString() << "Master " << errorText(m_masterState) << color::reset;
 	else
-		sstr << nouppercase << hex << setw(2) << setfill('0') << static_cast<unsigned>(m_masterCRC);
+		ostr << nouppercase << hex << setw(2) << setfill('0') << static_cast<unsigned>(m_masterCRC);
 
-	return (sstr.str());
+	return (ostr.str());
 }
 
 const string EbusSequence::toStringMasterACK()
 {
-	ostringstream sstr;
+	ostringstream ostr;
 	if (m_masterState != EBUS_OK)
-		sstr << color::red << m_master.toString() << "Master " << errorText(m_masterState) << color::reset;
+		ostr << color::red << m_master.toString() << "Master " << errorText(m_masterState) << color::reset;
 	else
-		sstr << nouppercase << hex << setw(2) << setfill('0') << static_cast<unsigned>(m_masterACK);
+		ostr << nouppercase << hex << setw(2) << setfill('0') << static_cast<unsigned>(m_masterACK);
 
-	return (sstr.str());
+	return (ostr.str());
 }
 
 const string EbusSequence::toStringSlave()
 {
-	ostringstream sstr;
+	ostringstream ostr;
 	if (m_slaveState != EBUS_OK)
-		sstr << color::red << m_slave.toString() << "Slave " << errorText(m_slaveState) << color::reset;
+		ostr << color::red << m_slave.toString() << "Slave " << errorText(m_slaveState) << color::reset;
 	else
-		sstr << m_slave.toString();
+		ostr << m_slave.toString();
 
-	return (sstr.str());
+	return (ostr.str());
 }
 
 const string EbusSequence::toStringSlaveCRC()
 {
-	ostringstream sstr;
+	ostringstream ostr;
 	if (m_slaveState != EBUS_OK)
-		sstr << color::red << m_slave.toString() << "Slave " << errorText(m_slaveState) << color::reset;
+		ostr << color::red << m_slave.toString() << "Slave " << errorText(m_slaveState) << color::reset;
 	else
-		sstr << nouppercase << hex << setw(2) << setfill('0') << static_cast<unsigned>(m_slaveCRC);
+		ostr << nouppercase << hex << setw(2) << setfill('0') << static_cast<unsigned>(m_slaveCRC);
 
-	return (sstr.str());
+	return (ostr.str());
 }
 
 const string EbusSequence::toStringSlaveACK()
 {
-	ostringstream sstr;
+	ostringstream ostr;
 	if (m_slaveState != EBUS_OK)
-		sstr << color::red << m_slave.toString() << "Slave " << errorText(m_slaveState) << color::reset;
+		ostr << color::red << m_slave.toString() << "Slave " << errorText(m_slaveState) << color::reset;
 	else
-		sstr << nouppercase << hex << setw(2) << setfill('0') << static_cast<unsigned>(m_slaveACK);
+		ostr << nouppercase << hex << setw(2) << setfill('0') << static_cast<unsigned>(m_slaveACK);
 
-	return (sstr.str());
+	return (ostr.str());
 }
 
 const string EbusSequence::errorText(const int error)
 {
-	ostringstream result;
+	ostringstream errStr;
 
-	result << SequenceErrors[error];
+	errStr << SequenceErrors[error];
 
-	return (result.str());
+	return (errStr.str());
 }

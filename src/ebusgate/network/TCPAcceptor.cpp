@@ -17,7 +17,7 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
-#include "Network.h"
+#include "TCPAcceptor.h"
 #include "Logger.h"
 
 #include <cstring>
@@ -25,23 +25,23 @@
 
 #include <poll.h>
 
-Network::Network(const bool local, const int port, NQueue<NetMessage*>* netMsgQueue)
-	: m_netMsgQueue(netMsgQueue), m_listening(false)
+TCPAcceptor::TCPAcceptor(const bool& local, const int& port, NQueue<NetMessage*>* netMsgQueue)
+	: m_netMsgQueue(netMsgQueue), m_running(false)
 {
 	if (local == true)
-		m_tcpServer = new TCPServer(port, "127.0.0.1");
+		m_tcpServer = new Server("127.0.0.1", port);
 	else
-		m_tcpServer = new TCPServer(port, "0.0.0.0");
+		m_tcpServer = new Server("0.0.0.0", port);
 
-	if (m_tcpServer != nullptr && m_tcpServer->start() == 0) m_listening = true;
+	if (m_tcpServer != nullptr && m_tcpServer->start() == 0) m_running = true;
 
 }
 
-Network::~Network()
+TCPAcceptor::~TCPAcceptor()
 {
 	while (m_connections.size() > 0)
 	{
-		Connection* connection = m_connections.back();
+		TCPConnection* connection = m_connections.back();
 		m_connections.pop_back();
 		connection->stop();
 		delete connection;
@@ -51,12 +51,12 @@ Network::~Network()
 	m_tcpServer = nullptr;
 }
 
-void Network::start()
+void TCPAcceptor::start()
 {
-	m_thread = thread(&Network::run, this);
+	m_thread = thread(&TCPAcceptor::run, this);
 }
 
-void Network::stop()
+void TCPAcceptor::stop()
 {
 	if (m_thread.joinable())
 	{
@@ -65,11 +65,12 @@ void Network::stop()
 	}
 }
 
-void Network::run()
+void TCPAcceptor::run()
 {
-	Logger L = Logger("Network::run");
+	if (m_running == false) return;
 
-	if (m_listening == false) return;
+	Logger L = Logger("TCPAcceptor::run");
+	L.log(info, "listening started on %s", m_tcpServer->toString().c_str());
 
 	struct timespec tdiff;
 
@@ -83,10 +84,10 @@ void Network::run()
 	memset(fds, 0, sizeof(struct pollfd) * nfds);
 
 	fds[0].fd = m_notify.notifyFD();
-	fds[0].events = POLLIN;
+	fds[0].events = POLLIN | POLLERR | POLLHUP | POLLRDHUP;
 
 	fds[1].fd = m_tcpServer->getFD();
-	fds[1].events = POLLIN;
+	fds[1].events = POLLIN | POLLERR | POLLHUP | POLLRDHUP;
 
 	while (true)
 	{
@@ -100,19 +101,17 @@ void Network::run()
 		}
 
 		// new data from notify
-		if (fds[0].revents & POLLIN) break;
+		if ((fds[0].revents & (POLLIN | POLLERR | POLLHUP | POLLRDHUP))
+			|| (fds[1].revents & (POLLERR | POLLHUP | POLLRDHUP))) break;
 
 		// new data from socket
 		if (fds[1].revents & POLLIN)
 		{
-
-			TCPSocket* socket = m_tcpServer->newSocket();
+			Socket* socket = m_tcpServer->newSocket();
 			if (socket == nullptr) continue;
 
-			Connection* connection = new Connection(socket, m_netMsgQueue);
+			TCPConnection* connection = new TCPConnection(socket, m_netMsgQueue);
 			if (connection == nullptr) continue;
-
-			L.log(info, "[%05d] %s opened", connection->getID(), socket->getIP().c_str());
 
 			connection->start();
 			m_connections.push_back(connection);
@@ -120,17 +119,18 @@ void Network::run()
 
 	}
 
+	L.log(info, "listening stopped");
 }
 
-void Network::cleanConnections()
+void TCPAcceptor::cleanConnections()
 {
-	Logger L = Logger("Network::cleanConnections");
+	Logger L = Logger("TCPAcceptor::cleanConnections");
 
 	for (auto c_it = m_connections.begin(); c_it != m_connections.end(); c_it++)
 	{
 		if ((*c_it)->isClosed() == true)
 		{
-			Connection* connection = *c_it;
+			TCPConnection* connection = *c_it;
 			c_it = m_connections.erase(c_it);
 			connection->stop();
 			delete connection;

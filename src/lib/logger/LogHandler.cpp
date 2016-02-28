@@ -104,14 +104,14 @@ void LogHandler::run()
 
 		if (m_level >= message->getLevel())
 		{
-			ostringstream sstr;
+			ostringstream ostr;
 
-			sstr << "[" << message->getTime() << "] " << setw(5) << setfill(' ') << left
+			ostr << "[" << message->getTime() << "] " << setw(5) << setfill(' ') << left
 				<< LevelNames[(Level) message->getLevel()] << " " << message->getFunction() << " "
 				<< message->getText() << endl;
 
 			for (const auto& sink : m_sinks)
-				sink->write(sstr.str());
+				sink->write(ostr.str());
 		}
 
 		delete message;

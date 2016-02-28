@@ -17,44 +17,38 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef LIBNETWORK_TCPSOCKET_H
-#define LIBNETWORK_TCPSOCKET_H
+#ifndef LIBNETWORK_SERVER_H
+#define LIBNETWORK_SERVER_H
 
-#include <string>
+#include "Socket.h"
 
-#include <sys/socket.h>
-
-using std::string;
-
-class TCPSocket
+class Server
 {
-	friend class TCPClient;
-	friend class TCPServer;
 
 public:
-	~TCPSocket();
+	Server(const string& address, const int& port, const bool& udp = false);
+	~Server();
 
-	ssize_t send(const char* buffer, size_t len);
-	ssize_t recv(char* buffer, size_t len);
+	int start();
 
-	int getPort() const;
-
-	string getIP() const;
+	Socket* newSocket();
 
 	int getFD() const;
 
-	bool isValid();
+	string toString() const;
 
 private:
-	int m_sfd;
+	int m_sfd = 0;
+
+	string m_address;
 
 	int m_port;
 
-	string m_ip;
+	bool m_udp;
 
-	TCPSocket(int sfd, struct sockaddr_in* address);
+	bool m_ready = false;
 
 };
 
-#endif // LIBNETWORK_TCPSOCKET_H
+#endif // LIBNETWORK_SERVER_H
 

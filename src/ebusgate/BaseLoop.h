@@ -20,8 +20,9 @@
 #ifndef BASELOOP_H
 #define BASELOOP_H
 
-#include "Network.h"
 #include "EbusHandler.h"
+#include "TCPAcceptor.h"
+#include "UDPReceiver.h"
 
 #include <cstring>
 
@@ -29,17 +30,7 @@ using std::ostringstream;
 
 enum Command
 {
-	c_open,
-	c_close,
-	c_send,
-	c_grab,
-	c_active,
-	c_store,
-	c_loglevel,
-	c_raw,
-	c_dump,
-	c_help,
-	c_invalid
+	c_open, c_close, c_send, c_grab, c_active, c_store, c_loglevel, c_raw, c_dump, c_help, c_invalid
 };
 
 class BaseLoop
@@ -60,8 +51,9 @@ private:
 	bool m_running = true;
 
 	unsigned char m_ownAddress = 0;
-	EbusHandler* m_ebushandler = nullptr;
-	Network* m_network = nullptr;
+	EbusHandler* m_ebusHandler = nullptr;
+	TCPAcceptor* m_tcpAcceptor = nullptr;
+	UDPReceiver* m_udpReceiver = nullptr;
 	NQueue<NetMessage*> m_netMsgQueue;
 
 	static Command getCase(const string& item);

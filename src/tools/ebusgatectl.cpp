@@ -21,8 +21,9 @@
 #include <config.h>
 #endif
 
-#include "Option.h"
-#include "TCPClient.h"
+#include "Options.h"
+#include "Client.h"
+#include "Server.h"
 
 #include <iostream>
 #include <sstream>
@@ -35,161 +36,49 @@ using std::cin;
 using std::cout;
 using std::endl;
 
-Option& O = Option::getOption("Command", "{Args...}");
-
 void define_args()
 {
+	Options& O = Options::getOption("Command", "{Argument}");
+
 	O.setVersion("ebusgatectl is part of " "" PACKAGE_STRING"");
 
-	O.addText(" 'ebusgatectl' is a tcp socket client for ebusgate.\n\n"
-		"   hint: try 'help' for available ebusgate commands.\n\n"
-		"Options:\n");
+	O.addDescription(" 'ebusgatectl' is a tcp/udp socket client for ebusgate.\n"
+		"  hint: try 'help' for available ebusgate commands.");
 
-	O.addString("server", "s", "localhost", ot_mandatory, "name or ip (localhost)");
+	O.addString("server", "s", "localhost", "name or ip (localhost)");
 
-	O.addLong("port", "p", 8888, ot_mandatory, "port (8888)");
+	O.addLong("port", "p", 8888, "port (8888)");
 
+	O.addBool("udp", "u", false, "connect via udp");
 }
 
-string fetchData(TCPSocket* socket, bool& listening)
+void connect(const string& host, const int& port, const bool& udp)
 {
-	char data[1024];
-	ssize_t datalen;
-	ostringstream ss;
-	string message;
+	Options& O = Options::getOption();
 
-	struct timespec tdiff;
-
-	// set timeout
-	tdiff.tv_sec = 0;
-	tdiff.tv_nsec = 1E8;
-
-	int nfds = 2;
-	struct pollfd fds[nfds];
-
-	memset(fds, 0, sizeof(struct pollfd) * nfds);
-
-	fds[0].fd = STDIN_FILENO;
-	fds[0].events = POLLIN;
-
-	fds[1].fd = socket->getFD();
-	fds[1].events = POLLIN;
-
-	while (true)
-	{
-
-		// wait for new fd event
-		int ret = ppoll(fds, nfds, &tdiff, nullptr);
-
-		bool newData = false;
-		bool newInput = false;
-		if (ret != 0)
-		{
-			// new data from notify
-			newInput = fds[0].revents & POLLIN;
-
-			// new data from socket
-			newData = fds[1].revents & POLLIN;
-		}
-
-		if (newData == true)
-		{
-			if (socket->isValid() == true)
-			{
-				datalen = socket->recv(data, sizeof(data));
-
-				if (datalen < 0)
-				{
-					perror("recv");
-					break;
-				}
-
-				for (int i = 0; i < datalen; i++)
-					ss << data[i];
-
-				if ((ss.str().length() >= 2 && ss.str()[ss.str().length() - 2] == '\n'
-					&& ss.str()[ss.str().length() - 1] == '\n') || listening == true) break;
-
-			}
-			else
-			{
-				break;
-			}
-
-		}
-		else if (newInput == true)
-		{
-			getline(cin, message);
-			message += '\n';
-
-			socket->send(message.c_str(), message.size());
-
-			if (strncasecmp(message.c_str(), "QUIT", 4) == 0
-				|| strncasecmp(message.c_str(), "STOP", 4) == 0) exit(EXIT_SUCCESS);
-
-			message.clear();
-		}
-
-	}
-
-	return (ss.str());
-}
-
-bool connect(const string& host, const int& port, bool once)
-{
-
-	TCPClient* client = new TCPClient();
-	TCPSocket* socket = client->connect(host, port);
+	Client* client = new Client();
+	Socket* socket = client->newSocket(host, port, udp);
 
 	if (socket != nullptr)
 	{
-		do
+		string message = O.getCommand();
+		for (int i = 0; i < O.numArgs(); i++)
 		{
-			string message;
+			message += " ";
+			message += O.getArg(i);
+		}
 
-			if (once == false)
-			{
-				cout << host << ": ";
-				getline(cin, message);
-			}
-			else
-			{
-				message = O.getCommand();
-				for (int i = 0; i < O.numArgs(); i++)
-				{
-					message += " ";
-					message += O.getArg(i);
-				}
-			}
+		socket->send(message.c_str(), message.size(), client->getSock(), sizeof(struct sockaddr_in));
 
-			socket->send(message.c_str(), message.size());
-
-			if (strncasecmp(message.c_str(), "QUIT", 4) != 0
-				&& strncasecmp(message.c_str(), "STOP", 4) != 0)
-			{
-				bool listening = false;
-
-				if (strncasecmp(message.c_str(), "LISTEN", 6) == 0)
-				{
-					listening = true;
-					while (listening)
-					{
-						string result(fetchData(socket, listening));
-						cout << result;
-						if (strncasecmp(result.c_str(), "LISTEN STOPPED", 14) == 0) break;
-					}
-				}
-				else
-				{
-					cout << fetchData(socket, listening);
-				}
-			}
-			else
-			{
-				break;
-			}
-
-		} while (once == false);
+		if (strncasecmp(message.c_str(), "QUIT", 4) != 0 && strncasecmp(message.c_str(), "STOP", 4) != 0)
+		{
+			struct sockaddr_in sock;
+			socklen_t socklen = sizeof(struct sockaddr_in);
+			char data[1024];
+			ssize_t datalen = socket->recv(data, sizeof(data) - 1, &sock, &socklen);
+			data[datalen] = '\0';
+			cout << data;
+		}
 
 		delete socket;
 	}
@@ -199,10 +88,6 @@ bool connect(const string& host, const int& port, bool once)
 	}
 
 	delete client;
-
-	if (once == false) return (false);
-
-	return (true);
 }
 
 int main(int argc, char* argv[])
@@ -211,12 +96,10 @@ int main(int argc, char* argv[])
 	define_args();
 
 	// parse arguments
-	if (O.parseArgs(argc, argv) == false) exit(EXIT_FAILURE);
+	Options& O = Options::getOption();
+	if (O.parse(argc, argv) == false) exit(EXIT_FAILURE);
 
-	if (O.missingCommand() == true)
-		connect(O.getString("server"), O.getLong("port"), false);
-	else
-		connect(O.getString("server"), O.getLong("port"), true);
+	connect(O.getString("server"), O.getLong("port"), O.getBool("udp"));
 
 	exit(EXIT_SUCCESS);
 }

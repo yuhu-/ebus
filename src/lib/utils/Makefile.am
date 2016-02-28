@@ -7,8 +7,8 @@ noinst_LIBRARIES = libutils.a
 
 libutils_a_SOURCES = Daemon.cpp \
 		     Daemon.h \
-		     Option.cpp \
-		     Option.h \
+		     Options.cpp \
+		     Options.h \
 		     NQueue.h \
 		     PipeNotify.h \
 		     Notify.h \
