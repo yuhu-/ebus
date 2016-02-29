@@ -101,7 +101,7 @@ public:
 
 	bool toStringUsage();
 
-	bool toStringDescription();
+	bool toStringDescription() const;
 
 	bool toStringOptions();
 

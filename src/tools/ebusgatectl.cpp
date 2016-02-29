@@ -18,7 +18,7 @@
  */
 
 #ifdef HAVE_CONFIG_H
-#include <config.h>
+#include "config.h"
 #endif
 
 #include "Options.h"
@@ -38,7 +38,7 @@ using std::endl;
 
 void define_args()
 {
-	Options& options = Options::getOption("Command", "{Argument}");
+	Options& options = Options::getOption("Command", "[Arguments]");
 
 	options.setVersion("ebusgatectl is part of " "" PACKAGE_STRING"");
 

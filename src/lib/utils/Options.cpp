@@ -233,13 +233,18 @@ bool Options::parse(int argc, char* argv[])
 				save(saveIndexShort, _argv[i]);
 				saveIndexShort = -1;
 			}
-			else if (m_withCommand.empty() == false && m_command.empty() == true)
+			else if (m_withCommand.empty() == true)
 			{
-				m_command = _argv[i];
+				cerr << endl << " Error: The given string '" << _argv[i] << "' is not needed." << endl
+					<< endl;
+				return (toStringUsage());
 			}
 			else
 			{
-				m_arguments.push_back(_argv[i]);
+				m_command = _argv[i++];
+
+				while (i < argc)
+					m_arguments.push_back(_argv[i++]);
 			}
 		}
 	}
@@ -329,8 +334,7 @@ bool Options::toStringHelp()
 
 bool Options::toStringUsage()
 {
-	cerr << endl << "Usage:" << endl << " " << m_argv[0].substr(m_argv[0].find_last_of("/\\") + 1)
-		<< " [Options...]";
+	cerr << endl << "Usage:" << endl << " " << m_argv[0].substr(m_argv[0].find_last_of("/\\") + 1) << " [Options]";
 
 	if (m_withCommand.size() != 0)
 	{
@@ -345,7 +349,7 @@ bool Options::toStringUsage()
 	return (false);
 }
 
-bool Options::toStringDescription()
+bool Options::toStringDescription() const
 {
 	cerr << "Description:" << endl << m_description << endl << endl;
 
