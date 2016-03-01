@@ -34,33 +34,29 @@ NetworkDevice::~NetworkDevice()
 int NetworkDevice::openDevice(const string device, const bool noDeviceCheck)
 {
 	m_noDeviceCheck = noDeviceCheck;
-
-	struct sockaddr_in address;
-	int ret;
-
 	m_open = false;
 
+	int ret;
+
+	struct sockaddr_in address;
 	memset((char*) &address, 0, sizeof(address));
 
 	const string host = device.substr(0, device.find(":"));
 	const string port = device.substr(device.find(":") + 1);
 
-	if (inet_addr(host.c_str()) == INADDR_NONE)
-	{
-		struct hostent* he;
+	struct addrinfo hints, *servinfo;
+	memset(&hints, 0, sizeof hints);
 
-		he = gethostbyname(host.c_str());
-		if (he == nullptr) return (DEV_ERR_OPEN);
+	hints.ai_family = AF_INET;
+	hints.ai_socktype = SOCK_STREAM;
 
-		memcpy(&address.sin_addr, he->h_addr_list[0], he->h_length);
-	}
-	else
-	{
-		ret = inet_aton(host.c_str(), &address.sin_addr);
-		if (ret == 0) return (DEV_ERR_OPEN);
-	}
+	ret = getaddrinfo(host.c_str(), nullptr, &hints, &servinfo);
+	if (ret < 0) return (DEV_ERR_OPEN);
 
-	address.sin_family = AF_INET;
+	address = *(reinterpret_cast<sockaddr_in*>(servinfo->ai_addr));
+
+	freeaddrinfo(servinfo);
+
 	address.sin_port = htons(strtol(port.c_str(), nullptr, 10));
 
 	m_fd = socket(AF_INET, SOCK_STREAM, 0);

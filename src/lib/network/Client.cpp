@@ -26,25 +26,25 @@
 Socket* Client::newSocket(const string& address, const int& port, const bool& udp)
 {
 	int ret;
+	struct addrinfo hints, *servinfo;
 
+	memset(&hints, 0, sizeof hints);
 	memset((char*) &m_client, 0, sizeof(m_client));
 
-	if (inet_addr(address.c_str()) == INADDR_NONE)
-	{
-		struct hostent* he;
+	hints.ai_family = AF_INET;
 
-		he = gethostbyname(address.c_str());
-		if (he == nullptr) return (nullptr);
-
-		memcpy(&m_client.sin_addr, he->h_addr_list[0], he->h_length);
-	}
+	if (udp == true)
+		hints.ai_socktype = SOCK_DGRAM;
 	else
-	{
-		ret = inet_aton(address.c_str(), &m_client.sin_addr);
-		if (ret == 0) return (nullptr);
-	}
+		hints.ai_socktype = SOCK_STREAM;
 
-	m_client.sin_family = AF_INET;
+	ret = getaddrinfo(address.c_str(), nullptr, &hints, &servinfo);
+	if (ret < 0) return (nullptr);
+
+	m_client = *(reinterpret_cast<sockaddr_in*>(servinfo->ai_addr));
+
+	freeaddrinfo(servinfo);
+
 	m_client.sin_port = htons(port);
 
 	int sfd;
