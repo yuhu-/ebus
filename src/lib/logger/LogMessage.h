@@ -28,7 +28,7 @@ using std::map;
 
 enum Level
 {
-	off = 0x00, error = 0x01, warn = 0x02, info = 0x04, debug = 0x08, trace = 0x10
+	l_off = 0x00, l_error = 0x01, l_warn = 0x02, l_info = 0x04, l_debug = 0x08, l_trace = 0x10
 };
 
 Level calcLevel(const string& level);

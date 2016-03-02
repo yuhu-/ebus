@@ -58,7 +58,7 @@ void Logger::addFile(const string& file)
 
 void Logger::log(const Level& level, const string data, ...)
 {
-	if (m_logHandler.getLevel() != off)
+	if (m_logHandler.getLevel() != l_off)
 	{
 		char* tmp;
 		va_list ap;

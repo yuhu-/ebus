@@ -63,7 +63,7 @@ private:
 
 	NQueue<const LogMessage*> m_logMessages;
 
-	Level m_level = info;
+	Level m_level = l_info;
 
 	void run();
 

@@ -40,31 +40,31 @@ public:
 	template<typename Data, typename... Args>
 	void error(Data data, Args... args)
 	{
-	    log(Level::error, data, args...) ;
+	    log(Level::l_error, data, args...) ;
 	}
 
 	template<typename Data, typename... Args>
 	void warn(Data data, Args... args)
 	{
-	    log(Level::warn, data, args...) ;
+	    log(Level::l_warn, data, args...) ;
 	}
 
 	template<typename Data, typename... Args>
 	void info(Data data, Args... args)
 	{
-	    log(Level::info, data, args...) ;
+	    log(Level::l_info, data, args...) ;
 	}
 
 	template<typename Data, typename... Args>
 	void debug(Data data, Args... args)
 	{
-	    log(Level::debug, data, args...) ;
+	    log(Level::l_debug, data, args...) ;
 	}
 
 	template<typename Data, typename... Args>
 	void trace(Data data, Args... args)
 	{
-	    log(Level::trace, data, args...) ;
+	    log(Level::l_trace, data, args...) ;
 	}
 
 private:
