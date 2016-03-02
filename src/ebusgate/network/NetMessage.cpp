@@ -19,8 +19,8 @@
 
 #include "NetMessage.h"
 
-NetMessage::NetMessage(const string data)
-	: Notify(), m_data(data)
+NetMessage::NetMessage(const string& data, const string& ip, const long& port)
+	: Notify(), m_data(data), m_ip(ip), m_port(port)
 {
 }
 
@@ -37,4 +37,14 @@ string NetMessage::getResult() const
 void NetMessage::setResult(const string result)
 {
 	m_result = result;
+}
+
+string NetMessage::getIP() const
+{
+	return (m_ip);
+}
+
+long NetMessage::getPort() const
+{
+	return (m_port);
 }

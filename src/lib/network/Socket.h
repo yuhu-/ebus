@@ -37,7 +37,7 @@ public:
 	ssize_t send(const char* buffer, size_t len, const struct sockaddr_in* address, const socklen_t addrlen);
 	ssize_t recv(char* buffer, size_t len, struct sockaddr_in* address, socklen_t* addrlen);
 
-	int getPort() const;
+	long getPort() const;
 
 	string getIP() const;
 
@@ -50,7 +50,7 @@ private:
 
 	string m_ip;
 
-	int m_port;
+	long m_port;
 
 	Socket(int sfd, struct sockaddr_in* address);
 

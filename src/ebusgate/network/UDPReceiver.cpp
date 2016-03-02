@@ -130,7 +130,7 @@ void UDPReceiver::run()
 
 			// decode client data
 			data[datalen] = '\0';
-			NetMessage message(data);
+			NetMessage message(data, m_socket->getIP(), m_socket->getPort());
 			m_netMsgQueue->enqueue(&message);
 
 			// wait for result

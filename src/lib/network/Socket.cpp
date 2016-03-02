@@ -37,7 +37,7 @@ ssize_t Socket::recv(char* buffer, size_t len, struct sockaddr_in* address, sock
 	return (recvfrom(m_sfd, buffer, len, 0, (struct sockaddr*) address, addrlen));
 }
 
-int Socket::getPort() const
+long Socket::getPort() const
 {
 	return (m_port);
 }
