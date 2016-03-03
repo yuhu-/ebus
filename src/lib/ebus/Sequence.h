@@ -38,7 +38,6 @@ class Sequence
 public:
 	Sequence();
 	explicit Sequence(const string& str);
-	Sequence(const Sequence& seq);
 	Sequence(const Sequence& seq, const size_t index, size_t len = 0);
 
 	void push_back(const unsigned char& byte, const bool isExtended = true);
