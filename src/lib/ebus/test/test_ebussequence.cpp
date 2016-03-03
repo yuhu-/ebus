@@ -65,5 +65,9 @@ int main()
 	slave2.createSlave(seq);
 	cout << "seq: " << seq.toString() << " Slave: " << slave2.toStringSlave() << endl;
 
+	// TEST COPY
+	EbusSequence copy(master);
+	cout << "seq: ff52b509030d0600" << "   Copy : " << copy.toStringMaster() << endl;
+
 	return (0);
 }

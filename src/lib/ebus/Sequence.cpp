@@ -42,6 +42,11 @@ Sequence::Sequence(const string& str)
 	}
 }
 
+Sequence::Sequence(const Sequence& seq)
+{
+	Sequence(seq, 0);
+}
+
 Sequence::Sequence(const Sequence& seq, const size_t index, size_t len)
 {
 	if (len == 0) len = seq.size() - index;

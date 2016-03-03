@@ -47,6 +47,7 @@ class EbusSequence
 
 public:
 	EbusSequence();
+	EbusSequence(const EbusSequence& eSeq);
 	explicit EbusSequence(Sequence& seq);
 
 	void createMaster(const unsigned char& source, const unsigned char& target, const string& str);

@@ -51,6 +51,26 @@ EbusSequence::EbusSequence()
 {
 }
 
+EbusSequence::EbusSequence(const EbusSequence& eSeq)
+{
+	m_type = eSeq.m_type;
+
+	m_masterQQ = eSeq.m_masterQQ;
+	m_masterZZ = eSeq.m_masterZZ;
+
+	m_master = eSeq.m_master;
+	m_masterNN = eSeq.m_masterNN;
+	m_masterCRC = eSeq.m_masterCRC;
+	m_masterACK = eSeq.m_masterACK;
+	m_masterState = eSeq.m_masterState;
+
+	m_slave = eSeq.m_slave;
+	m_slaveNN = eSeq.m_slaveNN;
+	m_slaveCRC = eSeq.m_slaveCRC;
+	m_slaveACK = eSeq.m_slaveACK;
+	m_slaveState = eSeq.m_slaveState;
+}
+
 EbusSequence::EbusSequence(Sequence& seq)
 {
 	seq.reduce();
