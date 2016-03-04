@@ -58,7 +58,7 @@ public:
 	const string toString();
 	const vector<unsigned char> getSequence() const;
 
-	bool compare(const Sequence& seq, const size_t& pos);
+	bool compare(const Sequence& seq, const size_t& pos = 0);
 
 	int search(const Sequence& seq);
 
