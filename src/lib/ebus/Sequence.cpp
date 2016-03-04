@@ -28,6 +28,7 @@ using std::nouppercase;
 using std::hex;
 using std::setw;
 using std::setfill;
+using std::equal;
 
 Sequence::Sequence()
 {
@@ -166,6 +167,22 @@ const string Sequence::toString()
 const vector<unsigned char> Sequence::getSequence() const
 {
 	return (m_sequence);
+}
+
+bool Sequence::compare(const Sequence& seq, const size_t& pos)
+{
+	if (equal(m_sequence.begin() + pos, m_sequence.begin() + pos + seq.size(), seq.m_sequence.begin()) == true)
+		return (true);
+
+	return (false);
+}
+
+int Sequence::search(const Sequence& seq)
+{
+	for (size_t i = 0; i + seq.size() <= m_sequence.size(); i++)
+		if (compare(seq, i) == true) return (i);
+
+	return (-1);
 }
 
 const string Sequence::toString(const vector<unsigned char>& sequence)

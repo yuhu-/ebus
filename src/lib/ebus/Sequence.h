@@ -58,6 +58,10 @@ public:
 	const string toString();
 	const vector<unsigned char> getSequence() const;
 
+	bool compare(const Sequence& seq, const size_t& pos);
+
+	int search(const Sequence& seq);
+
 	static const string toString(const vector<unsigned char>& sequence);
 
 private:

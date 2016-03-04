@@ -20,6 +20,7 @@
 #include "EbusSequence.h"
 
 #include <iostream>
+#include <iomanip>
 
 using std::cout;
 using std::endl;
@@ -65,9 +66,46 @@ int main()
 	slave2.createSlave(seq);
 	cout << "seq: " << seq.toString() << " Slave: " << slave2.toStringSlave() << endl;
 
-	// TEST COPY
-	EbusSequence copy(master);
-	cout << "seq: ff52b509030d0600" << "   Copy : " << copy.toStringMaster() << endl;
+	// TEST COMPARE, SEARCH
+	Sequence source("ff52b509030d0600");
+	Sequence test1("ff52b509030d0600");
+	Sequence test2("ff52b509030d0601");
+	Sequence part1("0d0600");
+	Sequence part2("0d0601");
+
+	cout << "source: " << source.toString() << endl;
+	cout << "test1:  " << test1.toString() << endl;
+
+	if (source.compare(test1, 0) == true)
+		cout << "compare source : test1 ==> equal" << endl;
+	else
+		cout << "compare source : test1 ==> not equal" << endl;
+
+	cout << "test2:  " << test2.toString() << endl;
+
+	if (source.compare(test2, 0) == true)
+		cout << "compare source : test2 ==> equal" << endl;
+	else
+		cout << "compare source : test2 ==> not equal" << endl;
+
+	cout << "part1:  " << part1.toString() << endl;
+
+	if (source.compare(part1, 5) == true)
+		cout << "compare source[5] : part1 ==> equal" << endl;
+	else
+		cout << "compare source[5] : part1 ==> not equal" << endl;
+
+	if (source.search(part1) >= 0)
+		cout << "search  source : part1 ==> found at " << source.search(part1) << endl;
+	else
+		cout << "search  source : part1 ==> not found" << endl;
+
+	cout << "part2:  " << part2.toString() << endl;
+
+	if (source.search(part2) >= 0)
+		cout << "search  source : part2 ==> found at " << source.search(part2) << endl;
+	else
+		cout << "search  source : part2 ==> not found" << endl;
 
 	return (0);
 }
