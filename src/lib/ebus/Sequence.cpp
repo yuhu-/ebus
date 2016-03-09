@@ -171,8 +171,8 @@ const vector<unsigned char> Sequence::getSequence() const
 
 bool Sequence::compare(const Sequence& seq, const size_t& pos)
 {
-	if (equal(m_sequence.begin() + pos, m_sequence.begin() + pos + seq.size(), seq.m_sequence.begin()) == true
-		&& seq.size() == m_sequence.size()) return (true);
+	if (equal(m_sequence.begin() + pos, m_sequence.begin() + pos + seq.size(), seq.m_sequence.begin()) == true)
+		return (true);
 
 	return (false);
 }

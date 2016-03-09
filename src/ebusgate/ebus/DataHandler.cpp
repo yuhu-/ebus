@@ -137,7 +137,7 @@ bool DataHandler::subscribe(const string& ip, const long& port, const string& fi
 	size_t filtIndex;
 
 	for (filtIndex = 0; filtIndex < m_filter.size(); filtIndex++)
-		if (m_filter[filtIndex].seq.compare(seq) == true) break;
+		if (seq.compare(m_filter[filtIndex].seq) == true) break;
 
 	if (filtIndex == m_filter.size())
 	{
@@ -230,7 +230,7 @@ bool DataHandler::unsubscribe(const string& ip, const long& port, const string& 
 	size_t filtIndex;
 
 	for (filtIndex = 0; filtIndex < m_filter.size(); filtIndex++)
-		if (m_filter[filtIndex].seq.compare(seq) == true) break;
+		if (seq.compare(m_filter[filtIndex].seq) == true) break;
 
 	if (filtIndex == m_filter.size())
 	{
@@ -328,6 +328,18 @@ void DataHandler::run()
 		{
 			EbusSequence* eSeq = m_ebusDataQueue.dequeue();
 			logger.trace("%s", eSeq->toString().c_str());
+			Sequence seq = eSeq->getMaster();
+
+			for (auto& filter : m_filter)
+			{
+				if (seq.search(filter.seq) >= 0)
+				{
+					logger.debug("found: %s in %s (%d)", filter.seq.toString().c_str(),
+						seq.toString().c_str(), filter.id);
+					//todo send :-)
+				}
+			}
+
 			delete eSeq;
 		}
 	}
