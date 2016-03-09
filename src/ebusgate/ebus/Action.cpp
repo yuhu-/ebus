@@ -114,7 +114,7 @@ int Action::run(EbusHandler* h)
 		if (createMessage(h->m_address, target, eSeq) == true)
 		{
 			logger.debug("enqueue: %s", eSeq.toStringMaster().c_str());
-			h->addMessage(new EbusMessage(eSeq));
+			h->enqueue(new EbusMessage(eSeq));
 		}
 		else
 		{
@@ -143,7 +143,7 @@ int Action::findAction(const EbusSequence& eSeq)
 
 	copy_n(eSeq.getMaster().getSequence().begin() + 2, 2, back_inserter(key));
 
-	map<vector<unsigned char>, int>::iterator it = ActionTypes.find(key);
+	auto it = ActionTypes.find(key);
 
 	if (it != ActionTypes.end()) return (it->second);
 
@@ -157,7 +157,7 @@ bool Action::createResponse(EbusSequence& eSeq)
 
 	copy_n(eSeq.getMaster().getSequence().begin() + 2, 2, back_inserter(key));
 
-	map<vector<unsigned char>, string>::iterator it = ActionMessages.find(key);
+	auto it = ActionMessages.find(key);
 
 	if (it != ActionMessages.end())
 	{
@@ -175,7 +175,7 @@ bool Action::createMessage(const unsigned char source, const unsigned char targe
 
 	copy_n(eSeq.getMaster().getSequence().begin() + 2, 2, back_inserter(key));
 
-	map<vector<unsigned char>, string>::iterator it = ActionMessages.find(key);
+	auto it = ActionMessages.find(key);
 
 	if (it != ActionMessages.end())
 	{

@@ -74,6 +74,8 @@ int SendResponse::run(EbusHandler* h)
 	eSeq.setMasterACK(byte);
 	logger.info("%s", eSeq.toStringLog().c_str());
 
+	h->m_dataHandler->enqueue(eSeq);
+
 	reset(h);
 	h->changeState(Listen::getListen());
 

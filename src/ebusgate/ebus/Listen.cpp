@@ -50,7 +50,7 @@ int Listen::run(EbusHandler* h)
 			EbusSequence eSeq(m_sequence);
 			logger.info("%s", eSeq.toStringLog().c_str());
 
-			if (eSeq.isValid() == true && h->m_store == true) h->storeMessage(eSeq);
+			if (eSeq.isValid() == true) h->m_dataHandler->enqueue(eSeq);
 
 			if (m_sequence.size() == 1 && m_lockCounter < 2) m_lockCounter = 2;
 

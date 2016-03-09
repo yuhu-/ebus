@@ -22,6 +22,7 @@
 
 #include "EbusMessage.h"
 #include "EbusDevice.h"
+#include "DataHandler.h"
 #include "NQueue.h"
 #include "Notify.h"
 
@@ -53,8 +54,8 @@ class EbusHandler : public Notify
 public:
 	EbusHandler(const unsigned char address, const string device, const bool noDeviceCheck, const long reopenTime,
 		const long arbitrationTime, const long receiveTimeout, const int lockCounter, const int lockRetries,
-		const bool active, const bool store, const bool logRaw, const bool dumpRaw, const string dumpRawFile,
-		const long dumpRawFileMaxSize);
+		const bool active, const bool dumpRaw, const string dumpRawFile, const long dumpRawFileMaxSize,
+		const bool logRaw);
 
 	~EbusHandler();
 
@@ -65,64 +66,58 @@ public:
 	void close();
 
 	bool getActive();
-	void setActive(const bool active);
-
-	bool getStore();
-	void setStore(const bool store);
-
-	bool getLogRaw();
-	void setLogRaw(const bool logRaw);
+	void setActive(const bool& active);
 
 	bool getDumpRaw() const;
-	void setDumpRaw(const bool dumpRaw);
+	void setDumpRaw(const bool& dumpRaw);
 
-//	void setDumpRawFile(const string& dumpFile);
-//	void setDumpRawMaxSize(const long maxSize);
+	bool getLogRaw();
+	void setLogRaw(const bool& logRaw);
 
-	void addMessage(EbusMessage* message);
-	const string grabMessage(const string& str);
+	void enqueue(EbusMessage* message);
+
+	bool subscribe(const string& ip, const long& port, const string& filter, ostringstream& result);
+	bool unsubscribe(const string& ip, const long& port, const string& filter, ostringstream& result);
 
 private:
 	thread m_thread;
 
 	bool m_running = true;
 
+	DataHandler* m_dataHandler = nullptr;
+
 	State* m_state = nullptr;
 	State* m_forceState = nullptr;
 
 	const unsigned char m_address;
 	long m_reopenTime;
+
 	long m_arbitrationTime;
 	long m_receiveTimeout;
+
 	int m_lockCounter;
 	int m_lockRetries;
+
 	bool m_active;
 	bool m_activeDone = false;
-	bool m_store;
 
 	int m_lastResult;
 
 	EbusDevice* m_device;
 
-	bool m_logRaw = false;
 	bool m_dumpRaw = false;
-
 	string m_dumpRawFile;
-
 	long m_dumpRawFileMaxSize;
 	long m_dumpRawFileSize = 0;
-
 	ofstream m_dumpRawStream;
 
-	NQueue<EbusMessage*> m_ebusMsgQueue;
+	bool m_logRaw = false;
 
-	map<vector<unsigned char>, EbusSequence> m_eSeqStore;
+	NQueue<EbusMessage*> m_ebusMsgQueue;
 
 	void run();
 
 	void changeState(State* state);
-
-	void storeMessage(const EbusSequence& eSeq);
 
 };
 

@@ -2,7 +2,7 @@ ebusgatectl
 -----------
 
 Usage:
- ebusgatectl [Options...] Command {Argument}
+ ebusgatectl [Options] Command [Arguments]
 
 Description:
  'ebusgatectl' is a tcp/udp socket client for ebusgate.
@@ -22,19 +22,26 @@ Options:
 
 $ ebusgatectl help
 
-commands
- open       - connect with ebus           'open'
- close      - disconnect from ebus        'close'
- send       - write ebus values           'send ZZPBSBNNDx'
- grab       - grab ebus values from store 'grab QQZZPBSBNNDx'
- active     - toggle active mode          'active'
- store      - toggle storing data         'store'
- loglevel   - change logging level        'loglevel level'
- raw        - toggle raw output           'raw'
- dump       - toggle raw dump             'dump'
- stop       - stop daemon                 'stop'
- quit       - close connection            'quit'
- help       - print this page             'help'
+commands:
+ open         - open ebus connection
+ close        - close ebus connection
+
+ send         - write message onto ebus 'send ZZPBSBNNDx'
+
+ subscribe    - start forwarding ebus messages 'subscribe [-s server] [-p port] [filter]'
+ unsubscribe  - stop forwarding ebus messages 'unsubscribe [-s server] [-p port] [filter]'
+
+ active       - enable/disable active ebus mode
+
+ dump         - enable/disable raw data dumping
+
+ loglevel     - change logging level 'loglevel level'
+ lograw       - enable/disable raw data logging
+
+ stop         - stop running daemon and exit
+ quit         - close tcp connection
+
+ help         - print this page
 
 
 
@@ -42,7 +49,7 @@ ebusgatefeed
 ------------
 
 Usage:
- ebusgatefeed [Options...] /path/dumpfile
+ ebusgatefeed [Options] /path/dumpfile
 
 Description:
  'ebusgatefeed' sends hex values from dump file to a pseudo terminal device (pty)

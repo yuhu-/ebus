@@ -27,7 +27,7 @@ class EbusMessage : public Notify
 {
 
 public:
-	explicit EbusMessage(EbusSequence eSeq);
+	explicit EbusMessage(EbusSequence& eSeq);
 
 	EbusSequence& getEbusSequence();
 

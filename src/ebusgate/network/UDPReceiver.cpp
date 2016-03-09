@@ -118,6 +118,7 @@ void UDPReceiver::run()
 
 			char ip[17];
 			inet_ntop(AF_INET, (struct in_addr*) &(sock.sin_addr.s_addr), ip, sizeof(ip) - 1);
+			long port = ntohs(sock.sin_port);
 
 			logger.info("[%05d] %s opened", m_ids, ip);
 
@@ -130,7 +131,7 @@ void UDPReceiver::run()
 
 			// decode client data
 			data[datalen] = '\0';
-			NetMessage message(data, m_socket->getIP(), m_socket->getPort());
+			NetMessage message(data, ip, port);
 			m_netMsgQueue->enqueue(&message);
 
 			// wait for result

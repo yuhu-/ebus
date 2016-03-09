@@ -35,13 +35,15 @@ using std::back_inserter;
 
 EbusHandler::EbusHandler(const unsigned char address, const string device, const bool noDeviceCheck,
 	const long reopenTime, const long arbitrationTime, const long receiveTimeout, const int lockCounter,
-	const int lockRetries, const bool active, const bool store, const bool logRaw, const bool dumpRaw,
-	const string dumpRawFile, const long dumpRawFileMaxSize)
+	const int lockRetries, const bool active, const bool dumpRaw, const string dumpRawFile,
+	const long dumpRawFileMaxSize, const bool logRaw)
 	: m_address(address), m_reopenTime(reopenTime), m_arbitrationTime(arbitrationTime), m_receiveTimeout(
-		receiveTimeout), m_lockCounter(lockCounter), m_lockRetries(lockRetries), m_active(active), m_store(
-		store), m_lastResult(DEV_OK), m_logRaw(logRaw), m_dumpRawFile(dumpRawFile), m_dumpRawFileMaxSize(
-		dumpRawFileMaxSize)
+		receiveTimeout), m_lockCounter(lockCounter), m_lockRetries(lockRetries), m_active(active), m_lastResult(
+	DEV_OK), m_dumpRawFile(dumpRawFile), m_dumpRawFileMaxSize(dumpRawFileMaxSize), m_logRaw(logRaw)
 {
+	m_dataHandler = new DataHandler();
+	m_dataHandler->start();
+
 	m_device = new EbusDevice(device, noDeviceCheck);
 	changeState(Connect::getConnect());
 
@@ -52,7 +54,7 @@ EbusHandler::EbusHandler(const unsigned char address, const string device, const
 		EbusSequence eSeq;
 		eSeq.createMaster(m_address, BROADCAST, "07040a7a454741544501010101");
 
-		if (eSeq.getMasterState() == EBUS_OK) addMessage(new EbusMessage(eSeq));
+		if (eSeq.getMasterState() == EBUS_OK) enqueue(new EbusMessage(eSeq));
 	}
 }
 
@@ -66,7 +68,12 @@ EbusHandler::~EbusHandler()
 
 	m_dumpRawStream.close();
 
-	m_eSeqStore.clear();
+	if (m_dataHandler != nullptr)
+	{
+		m_dataHandler->stop();
+		delete m_dataHandler;
+		m_dataHandler = nullptr;
+	}
 }
 
 void EbusHandler::start()
@@ -98,29 +105,9 @@ bool EbusHandler::getActive()
 	return (m_active);
 }
 
-void EbusHandler::setActive(const bool active)
+void EbusHandler::setActive(const bool& active)
 {
 	m_active = active;
-}
-
-bool EbusHandler::getStore()
-{
-	return (m_store);
-}
-
-void EbusHandler::setStore(const bool store)
-{
-	m_store = store;
-}
-
-bool EbusHandler::getLogRaw()
-{
-	return (m_logRaw);
-}
-
-void EbusHandler::setLogRaw(const bool logRaw)
-{
-	m_logRaw = logRaw;
 }
 
 bool EbusHandler::getDumpRaw() const
@@ -128,7 +115,7 @@ bool EbusHandler::getDumpRaw() const
 	return (m_dumpRaw);
 }
 
-void EbusHandler::setDumpRaw(const bool dumpRaw)
+void EbusHandler::setDumpRaw(const bool& dumpRaw)
 {
 	if (dumpRaw == m_dumpRaw) return;
 
@@ -145,51 +132,37 @@ void EbusHandler::setDumpRaw(const bool dumpRaw)
 	}
 }
 
-//void EbusHandler::setDumpRawFile(const string& dumpFile)
-//{
-//	if (dumpFile == m_dumpRawFile) return;
-//
-//	m_dumpRawStream.close();
-//	m_dumpRawFile = dumpFile;
-//
-//	if (m_dumpRaw == true)
-//	{
-//		m_dumpRawStream.open(m_dumpRawFile.c_str(), ios::binary | ios::app);
-//		m_dumpRawFileSize = 0;
-//	}
-//}
-//
-//void EbusHandler::setDumpRawMaxSize(const long maxSize)
-//{
-//	m_dumpRawFileMaxSize = maxSize;
-//}
+bool EbusHandler::getLogRaw()
+{
+	return (m_logRaw);
+}
 
-void EbusHandler::addMessage(EbusMessage* message)
+void EbusHandler::setLogRaw(const bool& logRaw)
+{
+	m_logRaw = logRaw;
+}
+
+void EbusHandler::enqueue(EbusMessage* message)
 {
 	m_ebusMsgQueue.enqueue(message);
 }
 
-const string EbusHandler::grabMessage(const string& str)
+bool EbusHandler::subscribe(const string& ip, const long& port, const string& filter, ostringstream& result)
 {
-	Logger logger = Logger("EbusHandler::grabMessage");
+	Logger logger = Logger("EbusHandler::subscribe");
+	m_dataHandler->subscribe(ip, port, filter, result);
+	logger.info("%s", m_dataHandler->toString().c_str());
+	return (true);
+//	return (m_dataHandler->subscribe(ip, port, filter, result));
+}
 
-	ostringstream ostr;
-	const Sequence seq(str);
-	vector<unsigned char> key(seq.getSequence());
-
-	map<vector<unsigned char>, EbusSequence>::iterator it = m_eSeqStore.find(key);
-	if (it != m_eSeqStore.end())
-	{
-		ostr << it->second.toString();
-		logger.debug("key %s found %s", Sequence::toString(key).c_str(), ostr.str().c_str());
-	}
-	else
-	{
-		ostr << "not found";
-		logger.debug("key %s not found", Sequence::toString(key).c_str());
-	}
-
-	return (ostr.str());
+bool EbusHandler::unsubscribe(const string& ip, const long& port, const string& filter, ostringstream& result)
+{
+	Logger logger = Logger("EbusHandler::unsubscribe");
+	m_dataHandler->unsubscribe(ip, port, filter, result);
+	logger.info("%s", m_dataHandler->toString().c_str());
+	return (true);
+//	return (m_dataHandler->unsubscribe(ip, port, filter, result));
 }
 
 void EbusHandler::run()
@@ -218,31 +191,30 @@ void EbusHandler::changeState(State* state)
 	}
 }
 
-// TODO rework key and search
-void EbusHandler::storeMessage(const EbusSequence& eSeq)
-{
-	Logger logger = Logger("EbusHandler::storeMessage");
-
-	vector<unsigned char> key;
-	int size = eSeq.getMasterNN();
-
-	if (size > 3) size = 3;
-
-	size += 5;
-
-	copy_n(eSeq.getMaster().getSequence().begin(), size, back_inserter(key));
-
-	map<vector<unsigned char>, EbusSequence>::iterator it = m_eSeqStore.find(key);
-
-	if (it != m_eSeqStore.end())
-	{
-		it->second = eSeq;
-		logger.debug("%03d - update key %s", m_eSeqStore.size(), Sequence::toString(key).c_str());
-	}
-	else
-	{
-		m_eSeqStore.insert(pair<vector<unsigned char>, EbusSequence>(key, eSeq));
-		logger.debug("%03d - insert key %s", m_eSeqStore.size(), Sequence::toString(key).c_str());
-	}
-}
+//-void EbusHandler::storeMessage(const EbusSequence& eSeq)
+//-{
+//-       Logger logger = Logger("EbusHandler::storeMessage");
+//-
+//-       vector<unsigned char> key;
+//-       int size = eSeq.getMasterNN();
+//-
+//-       if (size > 3) size = 3;
+//-
+//-       size += 5;
+//-
+//-       copy_n(eSeq.getMaster().getSequence().begin(), size, back_inserter(key));
+//-
+//-       map<vector<unsigned char>, EbusSequence>::iterator it = m_eSeqStore.find(key);
+//-
+//-       if (it != m_eSeqStore.end())
+//-       {
+//-               it->second = eSeq;
+//-               logger.debug("%03d - update key %s", m_eSeqStore.size(), Sequence::toString(key).c_str());
+//-       }
+//-       else
+//-       {
+//-               m_eSeqStore.insert(pair<vector<unsigned char>, EbusSequence>(key, eSeq));
+//-               logger.debug("%03d - insert key %s", m_eSeqStore.size(), Sequence::toString(key).c_str());
+//-       }
+//-}
 

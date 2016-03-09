@@ -106,7 +106,7 @@ int RecvMessage::run(EbusHandler* h)
 
 			logger.info("%s", eSeq.toStringLog().c_str());
 
-			if (h->m_store == true) h->storeMessage(eSeq);
+			h->m_dataHandler->enqueue(eSeq);
 		}
 
 		if (h->m_active == true)

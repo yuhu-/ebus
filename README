@@ -1,16 +1,15 @@
 ebusgate
 --------
 
-ebusgate provides a communication interface too ebus equipped systems.
-
 Usage:
- ebusgate [Options...]
+ ebusgate [Options]
+
+Description:
+ ebusgate provides a communication interface too ebus equipped systems.
 
 Options:
 
 -a | --address		ebus device address [FF]
--f | --foreground	run in foreground
-
 -d | --device		ebus device (serial or network) [/dev/ttyUSB0]
 -n | --nodevicecheck	disable test of local ebus device
    | --reopentime	max. time to open ebus device in 'sec' [60]
@@ -22,20 +21,20 @@ Options:
 
    | --active		handle broadcast and at me addressed messages
 
-   | --store		store received messages
+   | --dump		enable/disable raw data dumping
+   | --dumpfile		dump file name [/tmp/ebus_dump.bin]
+   | --dumpsize		max size for dump file in 'kB' [100]
 
 -p | --port		listen port [8888]
    | --local		listen only on localhost
 
-   | --logfile		log file name [/var/log/ebusgate.log]
-   | --loglevel		set logging level - off|error|warn|info|debug|trace [info]
-   | --raw		toggle raw output
+-f | --foreground	run in foreground
 
    | --pidfile		pid file name [/var/run/ebusgate.pid]
 
-   | --dump		toggle raw dump
-   | --dumpfile		dump file name [/tmp/ebus_dump.bin]
-   | --dumpsize		max size for dump file in 'kB' [100]
+   | --logfile		log file name [/var/log/ebusgate.log]
+   | --loglevel		set logging level - off|error|warn|info|debug|trace [info]
+   | --lograw		enable/disable raw data logging
 
    | --values
    | --version

@@ -30,7 +30,7 @@ using std::ostringstream;
 
 enum Command
 {
-	c_open, c_close, c_send, c_grab, c_active, c_store, c_loglevel, c_raw, c_dump, c_help, c_invalid
+	c_invalid, c_open, c_close, c_send, c_subscribe, c_unsubscribe, c_active, c_dump, c_loglevel, c_lograw, c_help
 };
 
 class BaseLoop
@@ -42,7 +42,7 @@ public:
 
 	void start();
 
-	void addMessage(NetMessage* message);
+	void enqueue(NetMessage* message);
 
 private:
 	BaseLoop(const BaseLoop&);
@@ -58,9 +58,14 @@ private:
 
 	static Command getCase(const string& item);
 
-	string decodeMessage(const string& data);
+	string decodeMessage(const string& data, const string& ip, const long& port);
 
-	static bool isHex(const string& str, ostringstream& result);
+	static bool isHex(const string& str, ostringstream& result, const int& nibbles);
+
+	static bool isNum(const string& str, ostringstream& result);
+
+	void handleSubscribe(const vector<string>& args, const string& srcIP, const long& srcPort,
+		const bool& subscribe, ostringstream& result);
 
 	static const string formatHelp();
 

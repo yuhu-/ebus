@@ -18,7 +18,7 @@
  */
 
 #ifdef HAVE_CONFIG_H
-#include <config.h>
+#include "config.h"
 #endif
 
 #include "Daemon.h"
@@ -39,9 +39,9 @@ void define_args()
 
 	options.setVersion("" PACKAGE_STRING"");
 
-	options.addHex("address", "a", 0xff, "\tebus device address [FF]");
+	options.addDescription(" ebusgate provides a communication interface too ebus equipped systems.");
 
-	options.addBool("foreground", "f", false, "run in foreground\n");
+	options.addHex("address", "a", 0xff, "\tebus device address [FF]");
 
 	options.addString("device", "d", "/dev/ttyUSB0", "\tebus device (serial or network) [/dev/ttyUSB0]");
 
@@ -59,25 +59,26 @@ void define_args()
 
 	options.addBool("active", "", false, "\thandle broadcast and at me addressed messages\n");
 
-	options.addBool("store", "", false, "\tstore received messages\n");
+	options.addBool("dump", "", false, "\tenable/disable raw data dumping");
+
+	options.addString("dumpfile", "", "/tmp/ebus_dump.bin", "\tdump file name [/tmp/ebus_dump.bin]");
+
+	options.addLong("dumpsize", "", 100, "\tmax size for dump file in 'kB' [100]\n");
 
 	options.addInt("port", "p", 8888, "\tlisten port [8888]");
 
 	options.addBool("local", "", false, "\tlisten only on localhost\n");
 
+	options.addBool("foreground", "f", false, "run in foreground\n");
+
+	options.addString("pidfile", "", "/var/run/ebusgate.pid", "\tpid file name [/var/run/ebusgate.pid]\n");
+
 	options.addString("logfile", "", "/var/log/ebusgate.log", "\tlog file name [/var/log/ebusgate.log]");
 
 	options.addString("loglevel", "", "info", "\tset logging level - off|error|warn|info|debug|trace [info]");
 
-	options.addBool("raw", "", false, "\ttoggle raw output\n");
+	options.addBool("lograw", "", false, "\tenable/disable raw data logging");
 
-	options.addString("pidfile", "", "/var/run/ebusgate.pid", "\tpid file name [/var/run/ebusgate.pid]\n");
-
-	options.addBool("dump", "", false, "\ttoggle raw dump");
-
-	options.addString("dumpfile", "", "/tmp/ebus_dump.bin", "\tdump file name [/tmp/ebus_dump.bin]");
-
-	options.addLong("dumpsize", "", 100, "\tmax size for dump file in 'kB' [100]");
 }
 
 void shutdown()

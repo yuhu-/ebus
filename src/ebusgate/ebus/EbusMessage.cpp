@@ -23,7 +23,7 @@
 
 using std::ostringstream;
 
-EbusMessage::EbusMessage(EbusSequence eSeq)
+EbusMessage::EbusMessage(EbusSequence& eSeq)
 	: Notify(), m_ebusSequence(eSeq)
 {
 }

@@ -47,6 +47,8 @@ ebusgate_SOURCES = network/NetMessage.cpp \
 		   ebus/RecvResponse.h \
 		   ebus/EbusHandler.cpp \
 		   ebus/EbusHandler.h \
+		   ebus/DataHandler.cpp \
+		   ebus/DataHandler.h \
 		   BaseLoop.cpp \
 		   BaseLoop.h \
 		   EbusGate.cpp

@@ -24,20 +24,24 @@
 #include <iomanip>
 #include <iterator>
 
+#include <netdb.h>
+#include <arpa/inet.h>
+
 using std::istringstream;
 using std::istream_iterator;
 using std::endl;
+using std::to_string;
 
 map<Command, string> CommandNames =
 {
 { c_open, "OPEN" },
 { c_close, "CLOSE" },
 { c_send, "SEND" },
-{ c_grab, "GRAB" },
+{ c_subscribe, "SUBSCRIBE" },
+{ c_unsubscribe, "UNSUBSCRIBE" },
 { c_active, "ACTIVE" },
-{ c_store, "STORE" },
 { c_loglevel, "LOGLEVEL" },
-{ c_raw, "RAW" },
+{ c_lograw, "LOGRAW" },
 { c_dump, "DUMP" },
 { c_help, "HELP" } };
 
@@ -50,8 +54,8 @@ BaseLoop::BaseLoop()
 	m_ebusHandler = new EbusHandler(options.getInt("address") & 0xff, options.getString("device"),
 		options.getBool("nodevicecheck"), options.getLong("reopentime"), options.getLong("arbitrationtime"),
 		options.getLong("receivetimeout"), options.getInt("lockcounter"), options.getInt("lockretries"),
-		options.getBool("active"), options.getBool("store"), options.getBool("raw"), options.getBool("dump"),
-		options.getString("dumpfile"), options.getLong("dumpsize"));
+		options.getBool("active"), options.getBool("dump"), options.getString("dumpfile"),
+		options.getLong("dumpsize"), options.getBool("lograw"));
 
 	m_ebusHandler->start();
 
@@ -110,9 +114,9 @@ void BaseLoop::start()
 
 		// decode message
 		if (strcasecmp(data.c_str(), "STOP") != 0)
-			result = decodeMessage(data);
+			result = decodeMessage(data, message->getIP(), message->getPort());
 		else
-			result = "done";
+			result = "stopped";
 
 		logger.info("<<< %s", result.c_str());
 		result += "\n\n";
@@ -126,7 +130,7 @@ void BaseLoop::start()
 	}
 }
 
-void BaseLoop::addMessage(NetMessage* message)
+void BaseLoop::enqueue(NetMessage* message)
 {
 	m_netMsgQueue.enqueue(message);
 }
@@ -139,7 +143,7 @@ Command BaseLoop::getCase(const string& command)
 	return (c_invalid);
 }
 
-string BaseLoop::decodeMessage(const string& data)
+string BaseLoop::decodeMessage(const string& data, const string& ip, const long& port)
 {
 	Logger logger = Logger("BaseLoop::decodeMessage");
 
@@ -169,7 +173,7 @@ string BaseLoop::decodeMessage(const string& data)
 		}
 
 		m_ebusHandler->open();
-		result << "done";
+		result << "connected";
 		break;
 	}
 	case c_close:
@@ -181,68 +185,65 @@ string BaseLoop::decodeMessage(const string& data)
 		}
 
 		m_ebusHandler->close();
-		result << "done";
+		result << "disconnected";
 		break;
 	}
 	case c_send:
 	{
-		if (args.size() < argPos + 1)
+		if (args.size() != argPos + 1)
 		{
 			result << "usage: 'send ZZPBSBNNDx'";
 			break;
 		}
 
-		ostringstream msg;
-		while (argPos < args.size())
-			msg << args[argPos++];
-
-		if (isHex(msg.str(), result) == false)
+		if (isHex(args[argPos], result, 2) == true)
 		{
-			msg.str("");
-			break;
+			EbusSequence eSeq;
+			eSeq.createMaster(m_ownAddress, args[argPos]);
+
+			// send message
+			if (eSeq.isValid() == true)
+			{
+				logger.debug("enqueue: %s", eSeq.toStringMaster().c_str());
+				EbusMessage* ebusMessage = new EbusMessage(eSeq);
+				m_ebusHandler->enqueue(ebusMessage);
+				ebusMessage->waitNotify();
+				result << ebusMessage->getResult();
+				delete ebusMessage;
+				break;
+			}
+			else
+			{
+				result << eSeq.toStringMaster();
+			}
 		}
 
-		EbusSequence eSeq;
-		eSeq.createMaster(m_ownAddress, msg.str());
+		logger.debug("error: %s", result.str().c_str());
 
-		// send message
-		if (eSeq.isValid() == true)
-		{
-			logger.debug("enqueue: %s", eSeq.toStringMaster().c_str());
-			EbusMessage* ebusMessage = new EbusMessage(eSeq);
-			m_ebusHandler->addMessage(ebusMessage);
-			ebusMessage->waitNotify();
-			result << ebusMessage->getResult();
-			delete ebusMessage;
-		}
-		else
-		{
-			result << eSeq.toStringMaster();
-			logger.debug("error: %s", eSeq.toStringMaster().c_str());
-		}
 		break;
 	}
-	case c_grab:
+	case c_subscribe:
 	{
-		if (args.size() < argPos + 1)
+		if (args.size() > argPos + 5)
 		{
-			result << "usage: 'grab QQZZPBSBNNDx'";
+			result << "usage: 'sub [-s server] [-p port] [filter]'";
 			break;
 		}
 
-		ostringstream msg;
-		while (argPos < args.size())
-			msg << args[argPos++];
+		handleSubscribe(args, ip, port, true, result);
 
-		if (isHex(msg.str(), result) == false)
+		break;
+	}
+	case c_unsubscribe:
+	{
+		if (args.size() > argPos + 5)
 		{
-			msg.str("");
+			result << "usage: 'unsub [-s server] [-p port] [filter]'";
 			break;
 		}
 
-		// grab message
-		logger.debug("grab: %s", msg.str().c_str());
-		result << m_ebusHandler->grabMessage(msg.str());
+		handleSubscribe(args, ip, port, false, result);
+
 		break;
 	}
 	case c_active:
@@ -258,45 +259,6 @@ string BaseLoop::decodeMessage(const string& data)
 		result << (enabled ? "active mode enabled" : "active mode disabled");
 		break;
 	}
-	case c_store:
-	{
-		if (args.size() != argPos)
-		{
-			result << "usage: 'store'";
-			break;
-		}
-
-		bool enabled = !m_ebusHandler->getStore();
-		m_ebusHandler->setStore(enabled);
-		result << (enabled ? "storing enabled" : "storing disabled");
-		break;
-	}
-	case c_loglevel:
-	{
-		if (args.size() != argPos + 1)
-		{
-			result << "usage: 'loglevel level' (level: off|error|warn|info|debug|trace)";
-			break;
-		}
-
-		logger.setLevel(calcLevel(args[argPos]));
-		result << "done";
-		break;
-
-	}
-	case c_raw:
-	{
-		if (args.size() != argPos)
-		{
-			result << "usage: 'raw'";
-			break;
-		}
-
-		bool enabled = !m_ebusHandler->getLogRaw();
-		m_ebusHandler->setLogRaw(enabled);
-		result << (enabled ? "raw output enabled" : "raw output disabled");
-		break;
-	}
 	case c_dump:
 	{
 		if (args.size() != argPos)
@@ -310,6 +272,32 @@ string BaseLoop::decodeMessage(const string& data)
 		result << (enabled ? "raw dump enabled" : "raw dump disabled");
 		break;
 	}
+	case c_loglevel:
+	{
+		if (args.size() != argPos + 1)
+		{
+			result << "usage: 'loglevel level' (level: off|error|warn|info|debug|trace)";
+			break;
+		}
+
+		logger.setLevel(calcLevel(args[argPos]));
+		result << "changed";
+		break;
+
+	}
+	case c_lograw:
+	{
+		if (args.size() != argPos)
+		{
+			result << "usage: 'lograw'";
+			break;
+		}
+
+		bool enabled = !m_ebusHandler->getLogRaw();
+		m_ebusHandler->setLogRaw(enabled);
+		result << (enabled ? "raw output enabled" : "raw output disabled");
+		break;
+	}
 	case c_help:
 	{
 		result << formatHelp();
@@ -320,9 +308,9 @@ string BaseLoop::decodeMessage(const string& data)
 	return (result.str());
 }
 
-bool BaseLoop::isHex(const string& str, ostringstream& result)
+bool BaseLoop::isHex(const string& str, ostringstream& result, const int& nibbles)
 {
-	if ((str.length() % 2) != 0)
+	if ((str.length() % nibbles) != 0)
 	{
 		result << "invalid hex string";
 		return (false);
@@ -332,7 +320,7 @@ bool BaseLoop::isHex(const string& str, ostringstream& result)
 	{
 		if (isxdigit(str[i]) == false)
 		{
-			result << "invalid char " << str[i];
+			result << "invalid char '" << str[i] << "'";
 			return (false);
 		}
 	}
@@ -340,22 +328,133 @@ bool BaseLoop::isHex(const string& str, ostringstream& result)
 	return (true);
 }
 
+bool BaseLoop::isNum(const string& str, ostringstream& result)
+{
+	for (size_t i = 0; i < str.size(); ++i)
+	{
+		if (isdigit(str[i]) == false)
+		{
+			result << "invalid char '" << str[i] << "'";
+			return (false);
+		}
+	}
+
+	return (true);
+}
+
+void BaseLoop::handleSubscribe(const vector<string>& args, const string& srcIP, const long& srcPort,
+	const bool& subscribe, ostringstream& result)
+{
+	string dstIP;
+	long dstPort = -1;
+	string filter;
+
+	size_t argPos = 1;
+
+	while (argPos < args.size())
+	{
+		if (args[argPos] == "-s")
+		{
+			if (argPos + 1 < args.size())
+			{
+				argPos++;
+				dstIP = args[argPos];
+
+				struct addrinfo hints, *servinfo;
+				memset(&hints, 0, sizeof hints);
+
+				hints.ai_family = AF_INET;
+				hints.ai_socktype = SOCK_DGRAM;
+
+				if (getaddrinfo(dstIP.c_str(), nullptr, &hints, &servinfo) < 0)
+				{
+					result << "server '" << dstIP << "' is invalid";
+					return;
+				}
+
+				char ip[INET_ADDRSTRLEN];
+				struct sockaddr_in* address = (struct sockaddr_in*) servinfo->ai_addr;
+
+				dstIP = inet_ntop(AF_INET, (struct in_addr*) &(address->sin_addr.s_addr), ip,
+				INET_ADDRSTRLEN);
+
+				freeaddrinfo(servinfo);
+			}
+			else
+			{
+				result << "server is missing";
+				return;
+			}
+		}
+		else if (args[argPos] == "-p")
+		{
+			if (argPos + 1 < args.size())
+			{
+				argPos++;
+
+				if (isNum(args[argPos], result) == false) return;
+
+				dstPort = strtol(args[argPos].c_str(), nullptr, 10);
+
+				if (dstPort < 0 || dstPort > 65535)
+				{
+					result << "port '" << dstPort << "' is invalid (0-65535)";
+					return;
+				}
+			}
+			else
+			{
+				result << "port is missing";
+				return;
+			}
+		}
+		else
+		{
+			filter = args[argPos];
+			if (isHex(filter, result, 1) == false)
+			{
+				result << " in filter " << args[argPos];
+				return;
+			}
+		}
+
+		argPos++;
+	}
+
+	if (dstIP.empty() == true) dstIP = srcIP;
+
+	if (dstPort < 0) dstPort = srcPort;
+
+	if (subscribe == true)
+		m_ebusHandler->subscribe(dstIP, dstPort, filter, result);
+	else
+		m_ebusHandler->unsubscribe(dstIP, dstPort, filter, result);
+}
+
 const string BaseLoop::formatHelp()
 {
 	ostringstream ostr;
 	ostr << "commands:" << endl;
-	ostr << " open       - connect with ebus           'open'" << endl;
-	ostr << " close      - disconnect from ebus        'close'" << endl;
-	ostr << " send       - write ebus values           'send ZZPBSBNNDx'" << endl;
-	ostr << " grab       - grab ebus values from store 'grab QQZZPBSBNNDx'" << endl;
-	ostr << " active     - toggle active mode          'active'" << endl;
-	ostr << " store      - toggle storing data         'store'" << endl;
-	ostr << " loglevel   - change logging level        'loglevel level'" << endl;
-	ostr << " raw        - toggle raw output           'raw'" << endl;
-	ostr << " dump       - toggle raw dump             'dump'" << endl;
-	ostr << " stop       - stop daemon                 'stop'" << endl;
-	ostr << " quit       - close connection            'quit'" << endl;
-	ostr << " help       - print this page             'help'";
+	ostr << " open         - open ebus connection" << endl;
+	ostr << " close        - close ebus connection" << endl << endl;
+
+	ostr << " send         - write message onto ebus 'send ZZPBSBNNDx'" << endl << endl;
+
+	ostr << " subscribe    - start forwarding ebus messages 'subscribe [-s server] [-p port] [filter]'" << endl;
+	ostr << " unsubscribe  - stop forwarding ebus messages 'unsubscribe [-s server] [-p port] [filter]'" << endl
+		<< endl;
+
+	ostr << " active       - enable/disable active ebus mode" << endl << endl;
+
+	ostr << " dump         - enable/disable raw data dumping" << endl << endl;
+
+	ostr << " loglevel     - change logging level 'loglevel level'" << endl;
+	ostr << " lograw       - enable/disable raw data logging" << endl << endl;
+
+	ostr << " stop         - stop running daemon and exit" << endl;
+	ostr << " quit         - close tcp connection" << endl << endl;
+
+	ostr << " help         - print this page";
 
 	return (ostr.str());
 }
