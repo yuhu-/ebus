@@ -22,7 +22,6 @@
 
 #include <iomanip>
 #include <algorithm>
-#include <iostream>
 
 using std::make_tuple;
 using std::ostringstream;

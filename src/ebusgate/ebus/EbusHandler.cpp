@@ -191,30 +191,4 @@ void EbusHandler::changeState(State* state)
 	}
 }
 
-//-void EbusHandler::storeMessage(const EbusSequence& eSeq)
-//-{
-//-       Logger logger = Logger("EbusHandler::storeMessage");
-//-
-//-       vector<unsigned char> key;
-//-       int size = eSeq.getMasterNN();
-//-
-//-       if (size > 3) size = 3;
-//-
-//-       size += 5;
-//-
-//-       copy_n(eSeq.getMaster().getSequence().begin(), size, back_inserter(key));
-//-
-//-       map<vector<unsigned char>, EbusSequence>::iterator it = m_eSeqStore.find(key);
-//-
-//-       if (it != m_eSeqStore.end())
-//-       {
-//-               it->second = eSeq;
-//-               logger.debug("%03d - update key %s", m_eSeqStore.size(), Sequence::toString(key).c_str());
-//-       }
-//-       else
-//-       {
-//-               m_eSeqStore.insert(pair<vector<unsigned char>, EbusSequence>(key, eSeq));
-//-               logger.debug("%03d - insert key %s", m_eSeqStore.size(), Sequence::toString(key).c_str());
-//-       }
-//-}
 
