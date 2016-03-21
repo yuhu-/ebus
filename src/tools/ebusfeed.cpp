@@ -43,15 +43,15 @@ void define_args()
 {
 	Options& options = Options::getOption("/path/dumpfile");
 
-	options.setVersion("ebusgatefeed is part of " "" PACKAGE_STRING"");
+	options.setVersion("ebusfeed is part of " "" PACKAGE_STRING"");
 
-	options.addDescription(" 'ebusgatefeed' sends hex values from dump file to a pseudo terminal device (pty)\n\n"
+	options.addDescription(" 'ebusfeed' sends hex values from dump file to a pseudo terminal device (pty)\n\n"
 		"  Example: 1. 'socat -d -d pty,raw,echo=0 pty,raw,echo=0'\n"
 		"           2. create symbol links to appropriate devices\n"
 		"              for example: 'ln -s /dev/pts/5 /dev/ttyUSB5'\n"
 		"                           'ln -s /dev/pts/6 /dev/ttyUSB6'\n"
 		"           3. start ebusgate: 'ebusgate -f -n -d /dev/ttyUSB5'\n"
-		"           4. start ebusgatefeed: 'ebusgatefeed -d /dev/ttyUSB6 /path/to/ebus_dump.bin'");
+		"           4. start ebusfeed: 'ebusfeed -d /dev/ttyUSB6 /path/to/ebus_dump.bin'");
 
 	options.addString("device", "d", "/dev/ttyUSB", "link on pseudo terminal device (/dev/ttyUSB)");
 

@@ -17,44 +17,42 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef LIBNETWORK_SOCKET_H
-#define LIBNETWORK_SOCKET_H
+#include "Filter.h"
 
-#include <string>
+#include <iomanip>
 
-#include <sys/socket.h>
+using std::ostringstream;
 
-using std::string;
+int Filter::uniqueID = 1;
 
-class Socket
+Filter::Filter(const Sequence& seq)
+	: m_id(uniqueID++), m_seq(seq)
 {
-	friend class Client;
-	friend class Server;
+}
 
-public:
-	~Socket();
+int Filter::getID() const
+{
+	return (m_id);
+}
 
-	ssize_t send(const char* buffer, size_t len, const struct sockaddr_in* address, const socklen_t addrlen);
-	ssize_t recv(char* buffer, size_t len, struct sockaddr_in* address, socklen_t* addrlen);
+const Sequence Filter::getFilter() const
+{
+	return (m_seq);
+}
 
-	string getIP() const;
+bool Filter::equal(const Sequence& seq)
+{
+	if (m_seq.compare(seq) == 0) return (true);
 
-	long getPort() const;
+	return (false);
+}
 
-	int getFD() const;
+const string Filter::toString()
+{
+	ostringstream ostr;
 
-	bool isValid();
+	ostr << "id: " << m_id << " filter: " << m_seq.toString();
 
-private:
-	int m_sfd;
-
-	string m_ip;
-
-	long m_port;
-
-	Socket(int sfd, struct sockaddr_in* address);
-
-};
-
-#endif // LIBNETWORK_SOCKET_H
+	return (ostr.str());
+}
 

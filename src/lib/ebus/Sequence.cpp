@@ -48,30 +48,30 @@ Sequence::Sequence(const Sequence& seq, const size_t index, size_t len)
 	if (len == 0) len = seq.size() - index;
 
 	for (size_t i = index; i < index + len; i++)
-		m_sequence.push_back(seq.m_sequence[i]);
+		m_seq.push_back(seq.m_seq[i]);
 
 	m_extended = seq.m_extended;
 }
 
 void Sequence::push_back(const unsigned char& byte, const bool isExtended)
 {
-	m_sequence.push_back(byte);
+	m_seq.push_back(byte);
 	m_extended = isExtended;
 }
 
 const unsigned char& Sequence::operator[](const size_t index) const
 {
-	return (m_sequence[index]);
+	return (m_seq[index]);
 }
 
 size_t Sequence::size() const
 {
-	return (m_sequence.size());
+	return (m_seq.size());
 }
 
 void Sequence::clear()
 {
-	m_sequence.clear();
+	m_seq.clear();
 	m_extended = false;
 }
 
@@ -81,8 +81,8 @@ unsigned char Sequence::getCRC()
 
 	unsigned char crc = 0;
 
-	for (size_t i = 0; i < m_sequence.size(); i++)
-		crc = calcCRC(m_sequence[i], crc);
+	for (size_t i = 0; i < m_seq.size(); i++)
+		crc = calcCRC(m_seq[i], crc);
 
 	if (m_extended == false) reduce();
 
@@ -95,25 +95,25 @@ void Sequence::extend()
 
 	vector<unsigned char> tmp;
 
-	for (size_t i = 0; i < m_sequence.size(); i++)
+	for (size_t i = 0; i < m_seq.size(); i++)
 	{
-		if (m_sequence[i] == SYN)
+		if (m_seq[i] == SYN)
 		{
 			tmp.push_back(EXT);
 			tmp.push_back(SYNEXT);
 		}
-		else if (m_sequence[i] == EXT)
+		else if (m_seq[i] == EXT)
 		{
 			tmp.push_back(EXT);
 			tmp.push_back(EXTEXT);
 		}
 		else
 		{
-			tmp.push_back(m_sequence[i]);
+			tmp.push_back(m_seq[i]);
 		}
 	}
 
-	m_sequence = tmp;
+	m_seq = tmp;
 	m_extended = true;
 }
 
@@ -124,15 +124,15 @@ void Sequence::reduce()
 	vector<unsigned char> tmp;
 	bool extended = false;
 
-	for (size_t i = 0; i < m_sequence.size(); i++)
+	for (size_t i = 0; i < m_seq.size(); i++)
 	{
-		if (m_sequence[i] == SYN || m_sequence[i] == EXT)
+		if (m_seq[i] == SYN || m_seq[i] == EXT)
 		{
 			extended = true;
 		}
 		else if (extended == true)
 		{
-			if (m_sequence[i] == SYNEXT)
+			if (m_seq[i] == SYNEXT)
 				tmp.push_back(SYN);
 			else
 				tmp.push_back(EXT);
@@ -141,11 +141,11 @@ void Sequence::reduce()
 		}
 		else
 		{
-			tmp.push_back(m_sequence[i]);
+			tmp.push_back(m_seq[i]);
 		}
 	}
 
-	m_sequence = tmp;
+	m_seq = tmp;
 	m_extended = false;
 }
 
@@ -158,29 +158,32 @@ const string Sequence::toString()
 {
 	ostringstream ostr;
 
-	for (size_t i = 0; i < m_sequence.size(); i++)
-		ostr << nouppercase << hex << setw(2) << setfill('0') << static_cast<unsigned>(m_sequence[i]);
+	for (size_t i = 0; i < m_seq.size(); i++)
+		ostr << nouppercase << hex << setw(2) << setfill('0') << static_cast<unsigned>(m_seq[i]);
 
 	return (ostr.str());
 }
 
 const vector<unsigned char> Sequence::getSequence() const
 {
-	return (m_sequence);
+	return (m_seq);
 }
 
-bool Sequence::compare(const Sequence& seq, const size_t& pos)
+size_t Sequence::find(const Sequence& seq, size_t pos) const noexcept
 {
-	if (equal(m_sequence.begin() + pos, m_sequence.begin() + pos + seq.size(), seq.m_sequence.begin()) == true)
-		return (true);
+	for (size_t i = pos; i + seq.size() <= m_seq.size(); i++)
+		if (equal(m_seq.begin() + i, m_seq.begin() + i + seq.size(), seq.m_seq.begin()) == true) return (i);
 
-	return (false);
+	return (npos);
 }
 
-int Sequence::search(const Sequence& seq)
+int Sequence::compare(const Sequence& seq) const noexcept
 {
-	for (size_t i = 0; i + seq.size() <= m_sequence.size(); i++)
-		if (compare(seq, i) == true) return (i);
+	if (m_seq.size() < seq.size())
+		return (-1);
+	else if (m_seq.size() > seq.size())
+		return (1);
+	else if (equal(m_seq.begin(), m_seq.end(), seq.m_seq.begin()) == true) return (0);
 
 	return (-1);
 }

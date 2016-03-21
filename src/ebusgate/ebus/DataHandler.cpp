@@ -21,21 +21,39 @@
 #include "Logger.h"
 
 #include <iomanip>
-#include <algorithm>
 
-using std::make_tuple;
 using std::ostringstream;
 using std::endl;
-using std::get;
-using std::remove;
 
-int DataHandler::hostID = 1;
-int DataHandler::filterID = 1;
+DataHandler::DataHandler()
+{
+}
 
 DataHandler::~DataHandler()
 {
 	while (m_ebusDataQueue.size() > 0)
 		delete m_ebusDataQueue.dequeue();
+
+	while (m_host.size() > 0)
+	{
+		Host* host = m_host.back();
+		m_host.pop_back();
+		delete host;
+	}
+
+	while (m_filter.size() > 0)
+	{
+		Filter* filter = m_filter.back();
+		m_filter.pop_back();
+		delete filter;
+	}
+
+	while (m_relation.size() > 0)
+	{
+		Relation* relation = m_relation.back();
+		m_relation.pop_back();
+		delete relation;
+	}
 }
 
 void DataHandler::start()
@@ -53,259 +71,184 @@ void DataHandler::stop()
 	}
 }
 
-bool DataHandler::subscribe(const string& ip, const long& port, const string& filter, ostringstream& result)
+bool DataHandler::subscribe(const string& ip, long port, const string& filter, ostringstream& result)
 {
-	tuple<string, long> ipPort = make_tuple(ip, port);
-	bool oldHost = true;
-	size_t hostIndex;
+	Logger logger = Logger("DataHandler::subscribe");
 
-	for (hostIndex = 0; hostIndex < m_hosts.size(); hostIndex++)
-		if (m_hosts[hostIndex].ipPort == ipPort) break;
+	Host* host = getHost(ip, port);
 
-	if (hostIndex == m_hosts.size())
+	// new host
+	if (host == nullptr)
 	{
-		Host newHost;
+		host = addHost(ip, port, (not filter.empty()));
+		logger.debug("host %d added", host->getID());
 
-		newHost.ipPort = ipPort;
-		newHost.id = hostID++;
-		newHost.filter = (not filter.empty());
+		// host with filter
+		if (host->hasFilter() == true)
+		{
+			const Filter* filt = getFilter(filter);
 
-		m_hosts.push_back(newHost);
+			// new filter
+			if (filt == nullptr)
+			{
+				filt = addFilter(filter);
+				logger.debug("filter %d added", filt->getID());
+			}
 
-		oldHost = false;
+			addRelation(host->getID(), filt->getID());
+			logger.debug("relation [%d:%d] added", host->getID(), filt->getID());
+
+			result << "host with filter subscribed";
+		}
+
+		// host without filter
+		else
+		{
+			result << "host without filter subscribed";
+		}
 	}
 
-	if (filter.empty() == true)
+	// old host
+	else
 	{
-		if (m_hosts[hostIndex].filter == false)
+		// host with filter
+		if (host->hasFilter() == true)
 		{
-			if (oldHost == false)
-				result << "host added";
+			// no new filter
+			if (filter.empty() == true)
+			{
+				host->setFilter(false);
+				logger.debug("host %d filter updated", host->getID());
+
+				delRelationByHost(host->getID());
+				clrFilter();
+
+				result << "host " << host->getID() << " filter updated, associated filter removed";
+			}
+
+			// new filter
 			else
-				result << "host skipped - already subscribed";
+			{
+				const Filter* filt = getFilter(filter);
 
-			return (true);
-		}
-
-		vector<tuple<int, int>> delHostFilter;
-
-		for (const auto& hostFilter : m_hostFilter)
-			if (get<0>(hostFilter) == m_hosts[hostIndex].id) delHostFilter.push_back(hostFilter);
-
-		for (const auto& delHost : delHostFilter)
-			m_hostFilter.erase(remove(m_hostFilter.begin(), m_hostFilter.end(), delHost),
-				m_hostFilter.end());
-
-		vector<int> filterIDs;
-
-		for (const auto& oldFilter : m_filter)
-		{
-			bool found = false;
-
-			for (const auto& hostFilter : m_hostFilter)
-				if (get<1>(hostFilter) == oldFilter.id)
+				// new filter
+				if (filt == nullptr)
 				{
-					found = true;
-					break;
+					filt = addFilter(filter);
+					logger.debug("filter %d added", filt->getID());
 				}
 
-			if (found == false) filterIDs.push_back(oldFilter.id);
-		}
-
-		for (const auto& filtID : filterIDs)
-		{
-			for (auto it = m_filter.cbegin(); it != m_filter.cend(); it++)
-				if (it->id == filtID)
+				// new relation
+				if (getRelation(host->getID(), filt->getID()) == nullptr)
 				{
-					m_filter.erase(it);
-					break;
+					addRelation(host->getID(), filt->getID());
+					logger.debug("relation [%d:%d] added", host->getID(), filt->getID());
+
+					result << "filter to existing host added";
 				}
+
+				// old relation
+				else
+				{
+					result << "host with this filter already subscribed, filter ignored";
+				}
+			}
 		}
 
-		m_hosts[hostIndex].filter = false;
-		result << "filter entries for this host deleted";
-		return (true);
-	}
-
-	if (m_hosts[hostIndex].filter == false && oldHost == true)
-	{
-		result << "filter skipped - host without filter already subscribed";
-		return (true);
-	}
-
-	Sequence seq(filter);
-	size_t filtIndex;
-
-	for (filtIndex = 0; filtIndex < m_filter.size(); filtIndex++)
-		if (seq.compare(m_filter[filtIndex].seq) == true) break;
-
-	if (filtIndex == m_filter.size())
-	{
-		Filter newFilter;
-
-		newFilter.seq = seq;
-		newFilter.id = filterID++;
-
-		m_filter.push_back(newFilter);
-	}
-
-	for (const auto& hostFilter : m_hostFilter)
-		if (get<0>(hostFilter) == m_hosts[hostIndex].id && get<1>(hostFilter) == m_filter[filtIndex].id)
+		// host without filter
+		else
 		{
-			result << "host and filter already subscribed";
-			return (true);
+			// no new filter
+			if (filter.empty() == true)
+				result << "host without filter already subscribed, host ignored";
+
+			// new filter
+			else
+				result << "host without filter already subscribed, filter ignored";
+
 		}
+	}
 
-	m_hostFilter.push_back(make_tuple(m_hosts[hostIndex].id, m_filter[filtIndex].id));
-
-	result << "host and filter added";
-
+	logger.info("%s", result.str().c_str());
 	return (true);
 }
 
-bool DataHandler::unsubscribe(const string& ip, const long& port, const string& filter, ostringstream& result)
+bool DataHandler::unsubscribe(const string& ip, long port, const string& filter, ostringstream& result)
 {
+	Logger logger = Logger("DataHandler::unsubscribe");
 
-	tuple<string, long> ipPort = make_tuple(ip, port);
-	size_t hostIndex;
+	Host* host = getHost(ip, port);
 
-	for (hostIndex = 0; hostIndex < m_hosts.size(); hostIndex++)
-		if (m_hosts[hostIndex].ipPort == ipPort) break;
-
-	if (hostIndex == m_hosts.size())
+	// host not found
+	if (host == nullptr)
 	{
 		result << "host not found";
-		return (true);
 	}
 
-	int countFilter = 0;
-	for (const auto& hostFilter : m_hostFilter)
-		if (get<0>(hostFilter) == m_hosts[hostIndex].id) countFilter++;
-
-	if (filter.empty() == true || countFilter <= 1)
+	// host found
+	else
 	{
-		vector<tuple<int, int>> delHostFilter;
-
-		for (const auto& hostFilter : m_hostFilter)
-			if (get<0>(hostFilter) == m_hosts[hostIndex].id) delHostFilter.push_back(hostFilter);
-
-		for (const auto& delHost : delHostFilter)
-			m_hostFilter.erase(remove(m_hostFilter.begin(), m_hostFilter.end(), delHost),
-				m_hostFilter.end());
-
-		vector<int> filterIDs;
-
-		for (const auto& oldFilter : m_filter)
+		// host with filter
+		if (host->hasFilter() == true)
 		{
-			bool found = false;
-
-			for (const auto& hostFilter : m_hostFilter)
-				if (get<1>(hostFilter) == oldFilter.id)
-				{
-					found = true;
-					break;
-				}
-
-			if (found == false) filterIDs.push_back(oldFilter.id);
-		}
-
-		for (const auto& filtID : filterIDs)
-		{
-			for (auto it = m_filter.cbegin(); it != m_filter.cend(); it++)
-				if (it->id == filtID)
-				{
-					m_filter.erase(it);
-					break;
-				}
-		}
-
-		m_hosts.erase(m_hosts.begin() + hostIndex);
-
-		result << "host and filter entries deleted";
-		return (true);
-	}
-
-	tuple<int, int> delHostFilter;
-	Sequence seq(filter);
-	size_t filtIndex;
-
-	for (filtIndex = 0; filtIndex < m_filter.size(); filtIndex++)
-		if (seq.compare(m_filter[filtIndex].seq) == true) break;
-
-	if (filtIndex == m_filter.size())
-	{
-		result << "filter not found";
-		return (true);
-	}
-
-	for (const auto& hostFilter : m_hostFilter)
-		if (get<0>(hostFilter) == m_hosts[hostIndex].id && get<1>(hostFilter) == m_filter[filtIndex].id)
-			delHostFilter = hostFilter;
-
-	m_hostFilter.erase(remove(m_hostFilter.begin(), m_hostFilter.end(), delHostFilter), m_hostFilter.end());
-
-	countFilter = 0;
-	for (const auto& hostFilter : m_hostFilter)
-		if (get<1>(hostFilter) == m_filter[filtIndex].id) countFilter++;
-
-	if (countFilter == 0)
-	{
-		for (auto it = m_filter.cbegin(); it != m_filter.cend(); it++)
-			if (it->id == m_filter[filtIndex].id)
+			// without filter
+			if (filter.empty() == true)
 			{
-				m_filter.erase(it);
-				break;
+				int hostID = delHost(ip, port);
+				logger.debug("host %d removed", hostID);
+
+				delRelationByHost(hostID);
+				clrFilter();
+
+				result << "host " << hostID << " removed, associated filter removed";
 			}
+
+			// with filter
+			else
+			{
+				// filter not found
+				if (getFilter(filter) == nullptr)
+				{
+					result << "filter not found";
+				}
+
+				// filter found
+				else
+				{
+					int filtID = delFilter(filter);
+					logger.debug("filter %d removed", filtID);
+// todo check
+					delRelationByFilter(filtID);
+					clrHost();
+
+					result << "filter " << filtID << " removed";
+				}
+
+			}
+		}
+
+		// host without filter
+		else
+		{
+			// without filter
+			if (filter.empty() == true)
+			{
+				int hostID = delHost(ip, port);
+				logger.debug("host %d removed", hostID);
+
+				result << "host " << hostID << " removed";
+			}
+
+			// with filter
+			else
+			{
+				result << "host without filter subscribed, filter ignored";
+			}
+		}
 	}
 
-	result << "filter deleted";
+	logger.info("%s", result.str().c_str());
 	return (true);
-}
-
-const string DataHandler::toString()
-{
-	ostringstream ostr;
-
-	ostr << endl << toStringHosts();
-
-	if (m_filter.empty() == false) ostr << endl << toStringFilters();
-
-	if (m_hostFilter.empty() == false) ostr << endl << toStringHostFilter();
-
-	ostr << endl;
-
-	return (ostr.str());
-}
-
-const string DataHandler::toStringHosts()
-{
-	ostringstream ostr;
-
-	for (Host host : m_hosts)
-		ostr << get<0>(host.ipPort) << " " << get<1>(host.ipPort) << " " << host.id << " " << host.filter
-			<< endl;
-
-	return (ostr.str());
-}
-
-const string DataHandler::toStringFilters()
-{
-	ostringstream ostr;
-
-	for (Filter filter : m_filter)
-		ostr << filter.seq.toString() << " " << filter.id << endl;
-
-	return (ostr.str());
-}
-
-const string DataHandler::toStringHostFilter()
-{
-	ostringstream ostr;
-
-	for (const auto& hostFilter : m_hostFilter)
-		ostr << get<0>(hostFilter) << " " << get<1>(hostFilter) << endl;
-
-	return (ostr.str());
 }
 
 void DataHandler::enqueue(const EbusSequence& eSeq)
@@ -315,6 +258,51 @@ void DataHandler::enqueue(const EbusSequence& eSeq)
 		m_ebusDataQueue.enqueue(new EbusSequence(eSeq));
 		notify();
 	}
+}
+
+const string DataHandler::toString()
+{
+	ostringstream ostr;
+
+	ostr << endl << toStringHost();
+
+	if (m_filter.empty() == false) ostr << endl << toStringFilter();
+
+	if (m_relation.empty() == false) ostr << endl << toStringRelation();
+
+	ostr << endl;
+
+	return (ostr.str());
+}
+
+const string DataHandler::toStringHost()
+{
+	ostringstream ostr;
+
+	for (Host* host : m_host)
+		ostr << host->toString() << endl;
+
+	return (ostr.str());
+}
+
+const string DataHandler::toStringFilter()
+{
+	ostringstream ostr;
+
+	for (Filter* filter : m_filter)
+		ostr << filter->toString() << endl;
+
+	return (ostr.str());
+}
+
+const string DataHandler::toStringRelation()
+{
+	ostringstream ostr;
+
+	for (Relation* relation : m_relation)
+		ostr << relation->toString() << endl;
+
+	return (ostr.str());
 }
 
 void DataHandler::run()
@@ -328,19 +316,226 @@ void DataHandler::run()
 		{
 			EbusSequence* eSeq = m_ebusDataQueue.dequeue();
 			logger.trace("%s", eSeq->toString().c_str());
-			Sequence seq = eSeq->getMaster();
+//			Sequence seq = eSeq->getMaster();
 
-			for (auto& filter : m_filter)
-			{
-				if (seq.search(filter.seq) >= 0)
-				{
-					logger.debug("found: %s in %s (%d)", filter.seq.toString().c_str(),
-						seq.toString().c_str(), filter.id);
-					//todo send :-)
-				}
-			}
+//			for (auto& filter : m_filter)
+//			{
+//				if (seq.search(filter.seq) >= 0)
+//				{
+//					logger.debug("found: %s in %s (%d)", filter.seq.toString().c_str(),
+//						seq.toString().c_str(), filter.id);
+//					//todo send :-)
+//				}
+//			}
 
 			delete eSeq;
 		}
 	}
 }
+
+Host* DataHandler::getHost(const string& ip, long port) const
+{
+	for (size_t index = 0; index < m_host.size(); index++)
+		if (m_host[index]->equal(ip, port) == true) return (m_host[index]);
+
+	return (nullptr);
+}
+
+Host* DataHandler::addHost(const string& ip, long port, bool filter)
+{
+	size_t index;
+
+	for (index = 0; index < m_host.size(); index++)
+		if (m_host[index]->equal(ip, port) == true) break;
+
+	if (index == m_host.size())
+		m_host.push_back(new Host(ip, port, filter));
+	else
+		m_host[index]->setFilter(filter);
+
+	return (m_host[index]);
+}
+
+int DataHandler::delHost(const string& ip, long port)
+{
+	for (size_t index = 0; index < m_host.size(); index++)
+		if (m_host[index]->equal(ip, port) == true)
+		{
+			Host* host = m_host[index];
+			int id = host->getID();
+
+			m_host.erase(m_host.begin() + index);
+			m_host.shrink_to_fit();
+
+			delete host;
+			return (id);
+		}
+
+	return (0);
+}
+
+void DataHandler::clrHost()
+{
+	auto it = m_host.begin();
+
+	while (it != m_host.end())
+	{
+		bool notFound = true;
+
+		for (Relation* relation : m_relation)
+			if ((*it)->getID() == relation->getHostID())
+			{
+				notFound = false;
+				break;
+			}
+
+		if (notFound == true)
+		{
+			Host* host = *it;
+			it = m_host.erase(it);
+			delete host;
+		}
+		else
+		{
+			it++;
+		}
+	}
+
+	m_host.shrink_to_fit();
+}
+
+const Filter* DataHandler::getFilter(const string& filter) const
+{
+	Sequence seq(filter);
+
+	for (size_t index = 0; index < m_filter.size(); index++)
+		if (m_filter[index]->equal(seq) == true) return (m_filter[index]);
+
+	return (nullptr);
+}
+
+const Filter* DataHandler::addFilter(const string& filter)
+{
+	Sequence seq(filter);
+	size_t index;
+
+	for (index = 0; index < m_filter.size(); index++)
+		if (m_filter[index]->equal(seq) == true) break;
+
+	if (index == m_filter.size()) m_filter.push_back(new Filter(seq));
+
+	return (m_filter[index]);
+}
+
+int DataHandler::delFilter(const string& filter)
+{
+	Sequence seq(filter);
+
+	for (size_t index = 0; index < m_filter.size(); index++)
+		if (m_filter[index]->equal(seq) == true)
+		{
+			Filter* _filter = m_filter[index];
+			int id = _filter->getID();
+
+			m_filter.erase(m_filter.begin() + index);
+			m_filter.shrink_to_fit();
+
+			delete _filter;
+			return (id);
+		}
+
+	return (0);
+}
+
+void DataHandler::clrFilter()
+{
+	auto it = m_filter.begin();
+
+	while (it != m_filter.end())
+	{
+		bool notFound = true;
+
+		for (Relation* relation : m_relation)
+			if ((*it)->getID() == relation->getFilterID())
+			{
+				notFound = false;
+				break;
+			}
+
+		if (notFound == true)
+		{
+			Filter* filter = *it;
+			it = m_filter.erase(it);
+			delete filter;
+		}
+		else
+		{
+			it++;
+		}
+	}
+
+	m_filter.shrink_to_fit();
+}
+
+const Relation* DataHandler::getRelation(int hostID, int filterID) const
+{
+	for (size_t index = 0; index < m_relation.size(); index++)
+		if (m_relation[index]->equal(hostID, filterID) == true) return (m_relation[index]);
+
+	return (nullptr);
+}
+
+const Relation* DataHandler::addRelation(int hostID, int filterID)
+{
+	size_t index;
+
+	for (index = 0; index < m_relation.size(); index++)
+		if (m_relation[index]->equal(hostID, filterID) == true) break;
+
+	if (index == m_relation.size()) m_relation.push_back(new Relation(hostID, filterID));
+
+	return (m_relation[index]);
+}
+
+void DataHandler::delRelationByHost(int hostID)
+{
+	auto it = m_relation.begin();
+
+	while (it != m_relation.end())
+	{
+		if ((*it)->getHostID() == hostID)
+		{
+			Relation* relation = *it;
+			it = m_relation.erase(it);
+			delete relation;
+		}
+		else
+		{
+			it++;
+		}
+	}
+
+	m_relation.shrink_to_fit();
+}
+
+void DataHandler::delRelationByFilter(int filterID)
+{
+	auto it = m_relation.begin();
+
+	while (it != m_relation.end())
+	{
+		if ((*it)->getFilterID() == filterID)
+		{
+			Relation* relation = *it;
+			it = m_relation.erase(it);
+			delete relation;
+		}
+		else
+		{
+			it++;
+		}
+	}
+
+	m_relation.shrink_to_fit();
+}
+

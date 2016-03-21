@@ -58,14 +58,14 @@ private:
 
 	static Command getCase(const string& item);
 
-	string decodeMessage(const string& data, const string& ip, const long& port);
+	string decodeMessage(const string& data, const string& ip, long port);
 
-	static bool isHex(const string& str, ostringstream& result, const int& nibbles);
+	static bool isHex(const string& str, ostringstream& result, int nibbles);
 
 	static bool isNum(const string& str, ostringstream& result);
 
-	void handleSubscribe(const vector<string>& args, const string& srcIP, const long& srcPort,
-		const bool& subscribe, ostringstream& result);
+	void handleSubscribe(const vector<string>& args, const string& srcIP, long srcPort, bool subscribe,
+		ostringstream& result);
 
 	static const string formatHelp();
 

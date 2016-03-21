@@ -21,49 +21,36 @@
 #define EBUS_DATAHANDLER_H
 
 #include "EbusSequence.h"
+#include "Host.h"
+#include "Filter.h"
+#include "Relation.h"
 #include "NQueue.h"
 #include "Notify.h"
 
 #include <thread>
-#include <map>
-#include <tuple>
 
 using std::thread;
-using std::map;
-using std::tuple;
 using std::ostringstream;
 
 class DataHandler : public Notify
 {
 
-	struct Host
-	{
-		tuple<string, long> ipPort;
-		bool filter;
-		int id;
-	};
-
-	struct Filter
-	{
-		Sequence seq;
-		int id;
-	};
-
 public:
+	DataHandler();
 	~DataHandler();
 
 	void start();
 	void stop();
 
-	bool subscribe(const string& ip, const long& port, const string& filter, ostringstream& result);
-	bool unsubscribe(const string& ip, const long& port, const string& filter, ostringstream& result);
-
-	const string toString();
-	const string toStringHosts();
-	const string toStringFilters();
-	const string toStringHostFilter();
+	bool subscribe(const string& ip, long port, const string& filter, ostringstream& result);
+	bool unsubscribe(const string& ip, long port, const string& filter, ostringstream& result);
 
 	void enqueue(const EbusSequence& eSeq);
+
+	const string toString();
+	const string toStringHost();
+	const string toStringFilter();
+	const string toStringRelation();
 
 private:
 	thread m_thread;
@@ -72,17 +59,28 @@ private:
 
 	NQueue<EbusSequence*> m_ebusDataQueue;
 
-	static int hostID;
+	vector<Host*> m_host;
 
-	vector<Host> m_hosts;
+	vector<Filter*> m_filter;
 
-	static int filterID;
-
-	vector<Filter> m_filter;
-
-	vector<tuple<int, int>> m_hostFilter;
+	vector<Relation*> m_relation;
 
 	void run();
+
+	Host* getHost(const string& ip, long port) const;
+	Host* addHost(const string& ip, long port, bool filter);
+	int delHost(const string& ip, long port);
+	void clrHost();
+
+	const Filter* getFilter(const string& filter) const;
+	const Filter* addFilter(const string& filter);
+	int delFilter(const string& filter);
+	void clrFilter();
+
+	const Relation* getRelation(int hostID, int filterID) const;
+	const Relation* addRelation(int hostID, int filterID);
+	void delRelationByHost(int hostID);
+	void delRelationByFilter(int filterID);
 };
 
 #endif // EBUS_DATAHANDLER_H

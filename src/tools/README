@@ -1,11 +1,11 @@
-ebusgatectl
+ebusctl
 -----------
 
 Usage:
- ebusgatectl [Options] Command [Arguments]
+ ebusctl [Options] Command [Arguments]
 
 Description:
- 'ebusgatectl' is a tcp/udp socket client for ebusgate.
+ 'ebusctl' is a tcp/udp socket client for ebusgate.
   hint: try 'help' for available ebusgate commands.
 
 Options:
@@ -20,7 +20,7 @@ Options:
 
 
 
-$ ebusgatectl help
+$ ebusctl help
 
 commands:
  open         - open ebus connection
@@ -45,21 +45,21 @@ commands:
 
 
 
-ebusgatefeed
+ebusfeed
 ------------
 
 Usage:
- ebusgatefeed [Options] /path/dumpfile
+ ebusfeed [Options] /path/dumpfile
 
 Description:
- 'ebusgatefeed' sends hex values from dump file to a pseudo terminal device (pty)
+ 'ebusfeed' sends hex values from dump file to a pseudo terminal device (pty)
 
   Example: 1. 'socat -d -d pty,raw,echo=0 pty,raw,echo=0'
            2. create symbol links to appropriate devices
               for example: 'ln -s /dev/pts/5 /dev/ttyUSB5'
                            'ln -s /dev/pts/6 /dev/ttyUSB6'
            3. start ebusgate: 'ebusgate -f -n -d /dev/ttyUSB5'
-           4. start ebusgatefeed: 'ebusgatefeed -d /dev/ttyUSB6 /path/to/ebus_dump.bin'
+           4. start ebusfeed: 'ebusfeed -d /dev/ttyUSB6 /path/to/ebus_dump.bin'
 
 Options:
 

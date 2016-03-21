@@ -17,44 +17,45 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef LIBNETWORK_SOCKET_H
-#define LIBNETWORK_SOCKET_H
+#ifndef EBUS_HOST_H
+#define EBUS_HOST_H
+
+#include "Client.h"
 
 #include <string>
 
-#include <sys/socket.h>
-
 using std::string;
 
-class Socket
+class Host
 {
-	friend class Client;
-	friend class Server;
 
 public:
-	~Socket();
+	Host(const string& ip, const long& port, const bool& filter);
+	~Host();
 
-	ssize_t send(const char* buffer, size_t len, const struct sockaddr_in* address, const socklen_t addrlen);
-	ssize_t recv(char* buffer, size_t len, struct sockaddr_in* address, socklen_t* addrlen);
+	Host(const Host& consumer);
+
+	int getID() const;
 
 	string getIP() const;
-
 	long getPort() const;
 
-	int getFD() const;
+	void setFilter(const bool& filter);
+	bool hasFilter() const;
 
-	bool isValid();
+	bool equal(const string& ip, const long& port) const;
+
+	const string toString();
 
 private:
-	int m_sfd;
+	static int uniqueID;
 
-	string m_ip;
+	int m_id;
+	bool m_filter;
 
-	long m_port;
-
-	Socket(int sfd, struct sockaddr_in* address);
-
+	Client m_client;
+	Socket* m_socket;
 };
 
-#endif // LIBNETWORK_SOCKET_H
+#endif // EBUS_HOST_H
 

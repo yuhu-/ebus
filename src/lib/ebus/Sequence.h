@@ -23,8 +23,8 @@
 #include <vector>
 #include <string>
 
-using std::string;
 using std::vector;
+using std::string;
 
 #define SYN       0xaa  // synchronization byte
 #define SYNEXT    0x01  // extended synchronization byte
@@ -36,6 +36,8 @@ class Sequence
 	friend class EbusSequence;
 
 public:
+	static const size_t npos = -1;
+
 	Sequence();
 	explicit Sequence(const string& str);
 	Sequence(const Sequence& seq, const size_t index, size_t len = 0);
@@ -58,14 +60,14 @@ public:
 	const string toString();
 	const vector<unsigned char> getSequence() const;
 
-	bool compare(const Sequence& seq, const size_t& pos = 0);
+	size_t find(const Sequence& seq, size_t pos = 0) const noexcept;
 
-	int search(const Sequence& seq);
+	int compare(const Sequence& seq) const noexcept;
 
 	static const string toString(const vector<unsigned char>& sequence);
 
 private:
-	vector<unsigned char> m_sequence;
+	vector<unsigned char> m_seq;
 
 	bool m_extended = false;
 

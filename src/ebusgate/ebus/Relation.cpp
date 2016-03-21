@@ -17,44 +17,40 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef LIBNETWORK_SOCKET_H
-#define LIBNETWORK_SOCKET_H
+#include "Relation.h"
 
-#include <string>
+#include <iomanip>
 
-#include <sys/socket.h>
+using std::ostringstream;
 
-using std::string;
-
-class Socket
+Relation::Relation(int hostID, int filterID)
+	: m_hostID(hostID), m_filterID(filterID)
 {
-	friend class Client;
-	friend class Server;
+}
 
-public:
-	~Socket();
+int Relation::getHostID() const
+{
+	return (m_hostID);
+}
 
-	ssize_t send(const char* buffer, size_t len, const struct sockaddr_in* address, const socklen_t addrlen);
-	ssize_t recv(char* buffer, size_t len, struct sockaddr_in* address, socklen_t* addrlen);
+int Relation::getFilterID() const
+{
+	return (m_filterID);
+}
 
-	string getIP() const;
+bool Relation::equal(int hostID, int filterID)
+{
+	if (m_hostID == hostID && m_filterID == filterID) return (true);
 
-	long getPort() const;
+	return (false);
+}
 
-	int getFD() const;
+const string Relation::toString()
+{
+	ostringstream ostr;
 
-	bool isValid();
+	ostr << "host: " << m_hostID << " filter: " << m_filterID;
 
-private:
-	int m_sfd;
-
-	string m_ip;
-
-	long m_port;
-
-	Socket(int sfd, struct sockaddr_in* address);
-
-};
-
-#endif // LIBNETWORK_SOCKET_H
+	return (ostr.str());
+}
 

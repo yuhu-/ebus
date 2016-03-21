@@ -143,7 +143,7 @@ Command BaseLoop::getCase(const string& command)
 	return (c_invalid);
 }
 
-string BaseLoop::decodeMessage(const string& data, const string& ip, const long& port)
+string BaseLoop::decodeMessage(const string& data, const string& ip, long port)
 {
 	Logger logger = Logger("BaseLoop::decodeMessage");
 
@@ -308,7 +308,7 @@ string BaseLoop::decodeMessage(const string& data, const string& ip, const long&
 	return (result.str());
 }
 
-bool BaseLoop::isHex(const string& str, ostringstream& result, const int& nibbles)
+bool BaseLoop::isHex(const string& str, ostringstream& result, int nibbles)
 {
 	if ((str.length() % nibbles) != 0)
 	{
@@ -342,8 +342,8 @@ bool BaseLoop::isNum(const string& str, ostringstream& result)
 	return (true);
 }
 
-void BaseLoop::handleSubscribe(const vector<string>& args, const string& srcIP, const long& srcPort,
-	const bool& subscribe, ostringstream& result)
+void BaseLoop::handleSubscribe(const vector<string>& args, const string& srcIP, long srcPort, bool subscribe,
+	ostringstream& result)
 {
 	string dstIP;
 	long dstPort = -1;

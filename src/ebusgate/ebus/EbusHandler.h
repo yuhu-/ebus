@@ -66,18 +66,18 @@ public:
 	void close();
 
 	bool getActive();
-	void setActive(const bool& active);
+	void setActive(bool active);
 
 	bool getDumpRaw() const;
-	void setDumpRaw(const bool& dumpRaw);
+	void setDumpRaw(bool dumpRaw);
 
 	bool getLogRaw();
-	void setLogRaw(const bool& logRaw);
+	void setLogRaw(bool logRaw);
 
 	void enqueue(EbusMessage* message);
 
-	bool subscribe(const string& ip, const long& port, const string& filter, ostringstream& result);
-	bool unsubscribe(const string& ip, const long& port, const string& filter, ostringstream& result);
+	bool subscribe(const string& ip, long port, const string& filter, ostringstream& result);
+	bool unsubscribe(const string& ip, long port, const string& filter, ostringstream& result);
 
 private:
 	thread m_thread;

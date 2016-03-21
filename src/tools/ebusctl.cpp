@@ -40,9 +40,9 @@ void define_args()
 {
 	Options& options = Options::getOption("Command", "[Arguments]");
 
-	options.setVersion("ebusgatectl is part of " "" PACKAGE_STRING"");
+	options.setVersion("ebusctl is part of " "" PACKAGE_STRING"");
 
-	options.addDescription(" 'ebusgatectl' is a tcp/udp socket client for ebusgate.\n"
+	options.addDescription(" 'ebusctl' is a tcp/udp socket client for ebusgate.\n"
 		"  hint: try 'help' for available ebusgate commands.");
 
 	options.addString("server", "s", "localhost", "name or ip (localhost)");

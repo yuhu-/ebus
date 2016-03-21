@@ -19,6 +19,14 @@ ebusgate_SOURCES = network/NetMessage.cpp \
 		   network/TCPAcceptor.h \
 		   network/UDPReceiver.cpp \
 		   network/UDPReceiver.h \
+		   ebus/Relation.cpp \
+		   ebus/Relation.h \
+		   ebus/Filter.cpp \
+		   ebus/Filter.h \
+		   ebus/Host.cpp \
+		   ebus/Host.h \
+		   ebus/DataHandler.cpp \
+		   ebus/DataHandler.h \
 		   ebus/EbusMessage.cpp \
 		   ebus/EbusMessage.h \
 		   ebus/State.cpp \
@@ -47,8 +55,6 @@ ebusgate_SOURCES = network/NetMessage.cpp \
 		   ebus/RecvResponse.h \
 		   ebus/EbusHandler.cpp \
 		   ebus/EbusHandler.h \
-		   ebus/DataHandler.cpp \
-		   ebus/DataHandler.h \
 		   BaseLoop.cpp \
 		   BaseLoop.h \
 		   EbusGate.cpp

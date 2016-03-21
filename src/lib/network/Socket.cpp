@@ -37,14 +37,14 @@ ssize_t Socket::recv(char* buffer, size_t len, struct sockaddr_in* address, sock
 	return (recvfrom(m_sfd, buffer, len, 0, (struct sockaddr*) address, addrlen));
 }
 
-long Socket::getPort() const
-{
-	return (m_port);
-}
-
 string Socket::getIP() const
 {
 	return (m_ip);
+}
+
+long Socket::getPort() const
+{
+	return (m_port);
 }
 
 int Socket::getFD() const

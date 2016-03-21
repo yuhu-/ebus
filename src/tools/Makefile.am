@@ -6,20 +6,20 @@ AM_CXXFLAGS = -fpic \
 	      -isystem$(top_srcdir)/src/lib/network \
 	      -isystem$(top_srcdir)/src/lib/ebus
 
-bin_PROGRAMS = ebusgatectl \
-	       ebusgatefeed
+bin_PROGRAMS = ebusctl \
+	       ebusfeed
 
-ebusgatectl_SOURCES = ebusgatectl.cpp
+ebusctl_SOURCES = ebusctl.cpp
 
-ebusgatectl_LDADD = $(top_srcdir)/src/lib/utils/libutils.a \
-		    $(top_srcdir)/src/lib/network/libnetwork.a \
-		    $(top_srcdir)/src/lib/ebus/libebus.a
+ebusctl_LDADD = $(top_srcdir)/src/lib/utils/libutils.a \
+		$(top_srcdir)/src/lib/network/libnetwork.a \
+		$(top_srcdir)/src/lib/ebus/libebus.a
 
-ebusgatefeed_SOURCES = ebusgatefeed.cpp
+ebusfeed_SOURCES = ebusfeed.cpp
 
-ebusgatefeed_LDADD = $(top_srcdir)/src/lib/utils/libutils.a \
-		     $(top_srcdir)/src/lib/network/libnetwork.a \
-		     $(top_srcdir)/src/lib/ebus/libebus.a
+ebusfeed_LDADD = $(top_srcdir)/src/lib/utils/libutils.a \
+		 $(top_srcdir)/src/lib/network/libnetwork.a \
+		 $(top_srcdir)/src/lib/ebus/libebus.a
 
 distclean-local:
 	-rm -f Makefile.in

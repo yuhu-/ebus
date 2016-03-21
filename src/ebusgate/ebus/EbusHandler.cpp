@@ -105,7 +105,7 @@ bool EbusHandler::getActive()
 	return (m_active);
 }
 
-void EbusHandler::setActive(const bool& active)
+void EbusHandler::setActive(bool active)
 {
 	m_active = active;
 }
@@ -115,7 +115,7 @@ bool EbusHandler::getDumpRaw() const
 	return (m_dumpRaw);
 }
 
-void EbusHandler::setDumpRaw(const bool& dumpRaw)
+void EbusHandler::setDumpRaw(bool dumpRaw)
 {
 	if (dumpRaw == m_dumpRaw) return;
 
@@ -137,7 +137,7 @@ bool EbusHandler::getLogRaw()
 	return (m_logRaw);
 }
 
-void EbusHandler::setLogRaw(const bool& logRaw)
+void EbusHandler::setLogRaw(bool logRaw)
 {
 	m_logRaw = logRaw;
 }
@@ -147,7 +147,7 @@ void EbusHandler::enqueue(EbusMessage* message)
 	m_ebusMsgQueue.enqueue(message);
 }
 
-bool EbusHandler::subscribe(const string& ip, const long& port, const string& filter, ostringstream& result)
+bool EbusHandler::subscribe(const string& ip, long port, const string& filter, ostringstream& result)
 {
 	Logger logger = Logger("EbusHandler::subscribe");
 	m_dataHandler->subscribe(ip, port, filter, result);
@@ -156,7 +156,7 @@ bool EbusHandler::subscribe(const string& ip, const long& port, const string& fi
 //	return (m_dataHandler->subscribe(ip, port, filter, result));
 }
 
-bool EbusHandler::unsubscribe(const string& ip, const long& port, const string& filter, ostringstream& result)
+bool EbusHandler::unsubscribe(const string& ip, long port, const string& filter, ostringstream& result)
 {
 	Logger logger = Logger("EbusHandler::unsubscribe");
 	m_dataHandler->unsubscribe(ip, port, filter, result);

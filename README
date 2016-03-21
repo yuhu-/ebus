@@ -45,8 +45,8 @@ Options:
 tools (see local README)
 ------------------------
 
-- ebusgatectl
-- ebusgatefeed
+- ebusctl
+- ebusfeed
 
 
 
