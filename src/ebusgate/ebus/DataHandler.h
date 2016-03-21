@@ -67,6 +67,8 @@ private:
 
 	void run();
 
+	void send(EbusSequence* eSeq) const;
+
 	Host* getHost(const string& ip, long port) const;
 	Host* addHost(const string& ip, long port, bool filter);
 	int delHost(const string& ip, long port);

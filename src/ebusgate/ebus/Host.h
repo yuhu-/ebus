@@ -33,8 +33,6 @@ public:
 	Host(const string& ip, const long& port, const bool& filter);
 	~Host();
 
-	Host(const Host& consumer);
-
 	int getID() const;
 
 	string getIP() const;
@@ -44,6 +42,8 @@ public:
 	bool hasFilter() const;
 
 	bool equal(const string& ip, const long& port) const;
+
+	void send(const string& message);
 
 	const string toString();
 

@@ -29,9 +29,10 @@ public:
 	explicit Filter(const Sequence& seq);
 
 	int getID() const;
-	const Sequence getFilter() const;
+	Sequence getFilter() const;
 
 	bool equal(const Sequence& seq);
+	bool match(const Sequence& seq);
 
 	const string toString();
 

@@ -217,7 +217,7 @@ bool DataHandler::unsubscribe(const string& ip, long port, const string& filter,
 				{
 					int filtID = delFilter(filter);
 					logger.debug("filter %d removed", filtID);
-// todo check
+
 					delRelationByFilter(filtID);
 					clrHost();
 
@@ -316,21 +316,41 @@ void DataHandler::run()
 		{
 			EbusSequence* eSeq = m_ebusDataQueue.dequeue();
 			logger.trace("%s", eSeq->toString().c_str());
-//			Sequence seq = eSeq->getMaster();
-
-//			for (auto& filter : m_filter)
-//			{
-//				if (seq.search(filter.seq) >= 0)
-//				{
-//					logger.debug("found: %s in %s (%d)", filter.seq.toString().c_str(),
-//						seq.toString().c_str(), filter.id);
-//					//todo send :-)
-//				}
-//			}
-
+			send(eSeq);
 			delete eSeq;
 		}
 	}
+}
+
+void DataHandler::send(EbusSequence* eSeq) const
+{
+	Logger logger = Logger("DataHandler::send");
+
+	for (const auto& host : m_host)
+		if (host->hasFilter() == false)
+		{
+			logger.debug("send to: %s:%d", host->getIP().c_str(), host->getPort());
+			host->send(eSeq->toString());
+		}
+
+	for (const auto& filter : m_filter)
+		if (filter->match(eSeq->getMaster()) == true)
+		{
+			logger.trace("%s match in %s", filter->getFilter().toString().c_str(),
+				eSeq->getMaster().toString().c_str());
+
+			for (const auto& relation : m_relation)
+				if (relation->getFilterID() == filter->getID())
+				{
+					for (const auto& host : m_host)
+						if (host->hasFilter() == true && host->getID() == relation->getHostID())
+						{
+							logger.debug("send to: %s:%d", host->getIP().c_str(),
+								host->getPort());
+							host->send(eSeq->toString());
+						}
+				}
+		}
 }
 
 Host* DataHandler::getHost(const string& ip, long port) const

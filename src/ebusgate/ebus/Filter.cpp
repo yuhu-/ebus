@@ -35,7 +35,7 @@ int Filter::getID() const
 	return (m_id);
 }
 
-const Sequence Filter::getFilter() const
+Sequence Filter::getFilter() const
 {
 	return (m_seq);
 }
@@ -43,6 +43,13 @@ const Sequence Filter::getFilter() const
 bool Filter::equal(const Sequence& seq)
 {
 	if (m_seq.compare(seq) == 0) return (true);
+
+	return (false);
+}
+
+bool Filter::match(const Sequence& seq)
+{
+	if (seq.find(m_seq) != Sequence::npos) return (true);
 
 	return (false);
 }

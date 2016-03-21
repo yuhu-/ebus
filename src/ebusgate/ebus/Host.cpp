@@ -22,6 +22,7 @@
 #include <iomanip>
 
 using std::ostringstream;
+using std::endl;
 
 int Host::uniqueID = 1;
 
@@ -64,6 +65,16 @@ bool Host::hasFilter() const
 bool Host::equal(const string& ip, const long& port) const
 {
 	return ((m_socket->getIP() == ip && m_socket->getPort() == port) ? true : false);
+}
+
+void Host::send(const string& message)
+{
+	if (m_socket->isValid() == true)
+	{
+		ostringstream ostr(message);
+		ostr << endl;
+		m_socket->send(ostr.str().c_str(), ostr.str().size(), m_client.getSock(), sizeof(struct sockaddr_in));
+	}
 }
 
 const string Host::toString()
