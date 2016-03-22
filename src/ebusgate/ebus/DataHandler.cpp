@@ -253,7 +253,7 @@ bool DataHandler::unsubscribe(const string& ip, long port, const string& filter,
 
 void DataHandler::enqueue(const EbusSequence& eSeq)
 {
-	if (m_filter.empty() == false)
+	if (m_host.empty() == false)
 	{
 		m_ebusDataQueue.enqueue(new EbusSequence(eSeq));
 		notify();
@@ -345,7 +345,7 @@ void DataHandler::send(EbusSequence* eSeq) const
 					for (const auto& host : m_host)
 						if (host->hasFilter() == true && host->getID() == relation->getHostID())
 						{
-							logger.debug("send to: %s:%d", host->getIP().c_str(),
+							logger.debug("to %s:%d sent", host->getIP().c_str(),
 								host->getPort());
 							host->send(eSeq->toString());
 						}

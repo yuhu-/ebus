@@ -149,20 +149,12 @@ void EbusHandler::enqueue(EbusMessage* message)
 
 bool EbusHandler::subscribe(const string& ip, long port, const string& filter, ostringstream& result)
 {
-	Logger logger = Logger("EbusHandler::subscribe");
-	m_dataHandler->subscribe(ip, port, filter, result);
-	logger.info("%s", m_dataHandler->toString().c_str());
-	return (true);
-//	return (m_dataHandler->subscribe(ip, port, filter, result));
+	return (m_dataHandler->subscribe(ip, port, filter, result));
 }
 
 bool EbusHandler::unsubscribe(const string& ip, long port, const string& filter, ostringstream& result)
 {
-	Logger logger = Logger("EbusHandler::unsubscribe");
-	m_dataHandler->unsubscribe(ip, port, filter, result);
-	logger.info("%s", m_dataHandler->toString().c_str());
-	return (true);
-//	return (m_dataHandler->unsubscribe(ip, port, filter, result));
+	return (m_dataHandler->unsubscribe(ip, port, filter, result));
 }
 
 void EbusHandler::run()
