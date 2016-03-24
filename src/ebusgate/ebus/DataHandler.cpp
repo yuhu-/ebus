@@ -26,6 +26,7 @@ using std::ostringstream;
 using std::endl;
 
 DataHandler::DataHandler()
+	: Notify()
 {
 }
 
