@@ -41,7 +41,11 @@ public:
 	{
 		unique_lock<mutex> lock(m_mutex);
 		while (m_notify == false)
+		{
 			m_cond.wait(lock);
+			m_notify = false;
+			break;
+		}
 	}
 
 	void notify()
