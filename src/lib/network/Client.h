@@ -28,7 +28,7 @@ class Client
 {
 
 public:
-	Socket* newSocket(const string& address, const int& port, const bool& udp = false);
+	Socket* newSocket(const string& address, const int port, const bool udp = false);
 
 	const struct sockaddr_in* getSock();
 

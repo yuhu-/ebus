@@ -63,15 +63,15 @@ public:
 
 	void addText(const string& text);
 
-	void addBool(const string& name, const string& shortname, const bool& value, const string& description);
+	void addBool(const string& name, const string& shortname, const bool value, const string& description);
 
-	void addHex(const string& name, const string& shortname, const int& value, const string& description);
+	void addHex(const string& name, const string& shortname, const int value, const string& description);
 
-	void addInt(const string& name, const string& shortname, const int& value, const string& description);
+	void addInt(const string& name, const string& shortname, const int value, const string& description);
 
-	void addLong(const string& name, const string& shortname, const long& value, const string& description);
+	void addLong(const string& name, const string& shortname, const long value, const string& description);
 
-	void addFloat(const string& name, const string& shortname, const float& value, const string& description);
+	void addFloat(const string& name, const string& shortname, const float value, const string& description);
 
 	void addString(const string& name, const string& shortname, const string& value, const string& description);
 
@@ -79,7 +79,7 @@ public:
 
 	int numArgs() const;
 
-	string getArg(const int& num) const;
+	string getArg(const int num) const;
 
 	string getCommand() const;
 
@@ -129,11 +129,11 @@ private:
 	string m_command;
 	vector<string> m_arguments;
 
-	void add(const string& name, const string& shortname, const string& description, const Type& type);
+	void add(const string& name, const string& shortname, const string& description, const Type type);
 
-	int find(const string& name, const bool& shortname);
+	int find(const string& name, const bool shortname);
 
-	void save(const int& index, const string& value);
+	void save(const int index, const string& value);
 };
 
 #endif // LIBUTILS_OPTION_H

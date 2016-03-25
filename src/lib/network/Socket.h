@@ -34,8 +34,8 @@ class Socket
 public:
 	~Socket();
 
-	ssize_t send(const char* buffer, size_t len, const struct sockaddr_in* address, const socklen_t addrlen);
-	ssize_t recv(char* buffer, size_t len, struct sockaddr_in* address, socklen_t* addrlen);
+	ssize_t send(const char* buffer, const size_t len, const struct sockaddr_in* address, const socklen_t addrlen);
+	ssize_t recv(char* buffer, const size_t len, struct sockaddr_in* address, socklen_t* addrlen);
 
 	string getIP() const;
 
@@ -52,7 +52,7 @@ private:
 
 	long m_port;
 
-	Socket(int sfd, struct sockaddr_in* address);
+	Socket(const int sfd, const struct sockaddr_in* address);
 
 };
 

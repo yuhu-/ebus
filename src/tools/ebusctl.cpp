@@ -52,7 +52,7 @@ void define_args()
 	options.addBool("udp", "u", false, "connect via udp");
 }
 
-void connect(const string& host, const int& port, const bool& udp)
+void connect(const string& host, const int port, const bool udp)
 {
 	Options& options = Options::getOption();
 

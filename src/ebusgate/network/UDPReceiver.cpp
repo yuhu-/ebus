@@ -26,7 +26,7 @@
 #include <arpa/inet.h>
 #include <poll.h>
 
-UDPReceiver::UDPReceiver(const bool& local, const int& port, NQueue<NetMessage*>* netMsgQueue)
+UDPReceiver::UDPReceiver(const bool local, const int port, NQueue<NetMessage*>* netMsgQueue)
 	: m_netMsgQueue(netMsgQueue), m_running(false)
 {
 	if (local == true)

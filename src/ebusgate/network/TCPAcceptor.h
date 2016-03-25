@@ -34,7 +34,7 @@ class TCPAcceptor
 {
 
 public:
-	TCPAcceptor(const bool& local, const int& port, NQueue<NetMessage*>* netMsgQueue);
+	TCPAcceptor(const bool local, const int port, NQueue<NetMessage*>* netMsgQueue);
 	~TCPAcceptor();
 
 	void start();

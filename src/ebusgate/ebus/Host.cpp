@@ -26,7 +26,7 @@ using std::endl;
 
 int Host::uniqueID = 1;
 
-Host::Host(const string& ip, const long& port, const bool& filter)
+Host::Host(const string& ip, const long port, const bool filter)
 	: m_id(uniqueID++), m_filter(filter)
 {
 	m_socket = m_client.newSocket(ip, port, true);
@@ -52,7 +52,7 @@ long Host::getPort() const
 	return (m_socket->getPort());
 }
 
-void Host::setFilter(const bool& filter)
+void Host::setFilter(const bool filter)
 {
 	m_filter = filter;
 }
@@ -62,7 +62,7 @@ bool Host::hasFilter() const
 	return (m_filter);
 }
 
-bool Host::equal(const string& ip, const long& port) const
+bool Host::equal(const string& ip, const long port) const
 {
 	return ((m_socket->getIP() == ip && m_socket->getPort() == port) ? true : false);
 }

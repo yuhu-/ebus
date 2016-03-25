@@ -37,7 +37,7 @@ class LogMessage
 {
 
 public:
-	LogMessage(const string function, const Level level, const string text);
+	LogMessage(const string& function, const Level level, const string& text);
 
 	string getFunction() const;
 	Level getLevel() const;

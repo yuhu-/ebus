@@ -28,11 +28,11 @@ Socket::~Socket()
 	close(m_sfd);
 }
 
-ssize_t Socket::send(const char* buffer, size_t len, const struct sockaddr_in* address, const socklen_t addrlen)
+ssize_t Socket::send(const char* buffer, const size_t len, const struct sockaddr_in* address, const socklen_t addrlen)
 {
 	return (sendto(m_sfd, buffer, len, MSG_NOSIGNAL, (const struct sockaddr*) address, addrlen));
 }
-ssize_t Socket::recv(char* buffer, size_t len, struct sockaddr_in* address, socklen_t* addrlen)
+ssize_t Socket::recv(char* buffer, const size_t len, struct sockaddr_in* address, socklen_t* addrlen)
 {
 	return (recvfrom(m_sfd, buffer, len, 0, (struct sockaddr*) address, addrlen));
 }
@@ -60,11 +60,11 @@ bool Socket::isValid()
 		return (true);
 }
 
-Socket::Socket(int sfd, struct sockaddr_in* address)
+Socket::Socket(const int sfd, const struct sockaddr_in* address)
 	: m_sfd(sfd)
 {
 	char ip[INET_ADDRSTRLEN];
-	m_ip = inet_ntop(AF_INET, (struct in_addr*) &(address->sin_addr.s_addr), ip, INET_ADDRSTRLEN);
+	m_ip = inet_ntop(AF_INET, (const struct in_addr*) &(address->sin_addr.s_addr), ip, INET_ADDRSTRLEN);
 	m_port = ntohs(address->sin_port);
 }
 

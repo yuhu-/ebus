@@ -53,7 +53,7 @@ Sequence::Sequence(const Sequence& seq, const size_t index, size_t len)
 	m_extended = seq.m_extended;
 }
 
-void Sequence::push_back(const unsigned char& byte, const bool isExtended)
+void Sequence::push_back(const unsigned char byte, const bool isExtended)
 {
 	m_seq.push_back(byte);
 	m_extended = isExtended;
@@ -169,7 +169,7 @@ const vector<unsigned char> Sequence::getSequence() const
 	return (m_seq);
 }
 
-size_t Sequence::find(const Sequence& seq, size_t pos) const noexcept
+size_t Sequence::find(const Sequence& seq, const size_t pos) const noexcept
 {
 	for (size_t i = pos; i + seq.size() <= m_seq.size(); i++)
 		if (equal(m_seq.begin() + i, m_seq.begin() + i + seq.size(), seq.m_seq.begin()) == true) return (i);
@@ -188,12 +188,12 @@ int Sequence::compare(const Sequence& seq) const noexcept
 	return (-1);
 }
 
-const string Sequence::toString(const vector<unsigned char>& sequence)
+const string Sequence::toString(const vector<unsigned char>& seq)
 {
 	ostringstream ostr;
 
-	for (size_t i = 0; i < sequence.size(); i++)
-		ostr << nouppercase << hex << setw(2) << setfill('0') << static_cast<unsigned>(sequence[i]);
+	for (size_t i = 0; i < seq.size(); i++)
+		ostr << nouppercase << hex << setw(2) << setfill('0') << static_cast<unsigned>(seq[i]);
 
 	return (ostr.str());
 }

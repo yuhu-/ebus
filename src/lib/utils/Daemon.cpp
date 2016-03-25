@@ -36,7 +36,7 @@ Daemon& Daemon::getDaemon()
 	return (daemon);
 }
 
-void Daemon::start(const string pidfile)
+void Daemon::start(const string& pidfile)
 {
 	m_pidfile = pidfile;
 

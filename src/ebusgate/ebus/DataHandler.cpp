@@ -498,7 +498,7 @@ void DataHandler::clrFilter()
 	m_filter.shrink_to_fit();
 }
 
-const Relation* DataHandler::getRelation(int hostID, int filterID) const
+const Relation* DataHandler::getRelation(const int hostID, const int filterID) const
 {
 	for (size_t index = 0; index < m_relation.size(); index++)
 		if (m_relation[index]->equal(hostID, filterID) == true) return (m_relation[index]);
@@ -506,7 +506,7 @@ const Relation* DataHandler::getRelation(int hostID, int filterID) const
 	return (nullptr);
 }
 
-const Relation* DataHandler::addRelation(int hostID, int filterID)
+const Relation* DataHandler::addRelation(const int hostID, const int filterID)
 {
 	size_t index;
 
@@ -518,7 +518,7 @@ const Relation* DataHandler::addRelation(int hostID, int filterID)
 	return (m_relation[index]);
 }
 
-void DataHandler::delRelationByHost(int hostID)
+void DataHandler::delRelationByHost(const int hostID)
 {
 	auto it = m_relation.begin();
 
@@ -539,7 +539,7 @@ void DataHandler::delRelationByHost(int hostID)
 	m_relation.shrink_to_fit();
 }
 
-void DataHandler::delRelationByFilter(int filterID)
+void DataHandler::delRelationByFilter(const int filterID)
 {
 	auto it = m_relation.begin();
 

@@ -27,7 +27,7 @@
 
 using std::ostringstream;
 
-Server::Server(const string& address, const int& port, const bool& udp)
+Server::Server(const string& address, const int port, const bool udp)
 	: m_address(address), m_port(port), m_udp(udp)
 {
 }

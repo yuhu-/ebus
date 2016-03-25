@@ -79,10 +79,10 @@ private:
 	int delFilter(const string& filter);
 	void clrFilter();
 
-	const Relation* getRelation(int hostID, int filterID) const;
-	const Relation* addRelation(int hostID, int filterID);
-	void delRelationByHost(int hostID);
-	void delRelationByFilter(int filterID);
+	const Relation* getRelation(const int hostID, const int filterID) const;
+	const Relation* addRelation(const int hostID, const int filterID);
+	void delRelationByHost(const int hostID);
+	void delRelationByFilter(const int filterID);
 };
 
 #endif // EBUS_DATAHANDLER_H

@@ -36,7 +36,7 @@ void Logger::stop()
 	m_logHandler.stop();
 }
 
-void Logger::setLevel(const Level& level)
+void Logger::setLevel(const Level level)
 {
 	m_logHandler.setLevel(level);
 }
@@ -56,7 +56,7 @@ void Logger::addFile(const string& file)
 	m_logHandler.addFile(file);
 }
 
-void Logger::log(const Level& level, const string data, ...)
+void Logger::log(const Level level, const string data, ...)
 {
 	if (m_logHandler.getLevel() != l_off)
 	{

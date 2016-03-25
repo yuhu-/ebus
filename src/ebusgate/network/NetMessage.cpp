@@ -19,7 +19,7 @@
 
 #include "NetMessage.h"
 
-NetMessage::NetMessage(const string& data, const string& ip, const long& port)
+NetMessage::NetMessage(const string& data, const string& ip, const long port)
 	: Notify(), m_data(data), m_ip(ip), m_port(port)
 {
 }

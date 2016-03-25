@@ -26,7 +26,7 @@ class Server
 {
 
 public:
-	Server(const string& address, const int& port, const bool& udp = false);
+	Server(const string& address, const int port, const bool udp = false);
 	~Server();
 
 	int start();

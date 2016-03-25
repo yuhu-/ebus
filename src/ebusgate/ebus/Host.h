@@ -30,7 +30,7 @@ class Host
 {
 
 public:
-	Host(const string& ip, const long& port, const bool& filter);
+	Host(const string& ip, const long port, const bool filter);
 	~Host();
 
 	int getID() const;
@@ -38,10 +38,10 @@ public:
 	string getIP() const;
 	long getPort() const;
 
-	void setFilter(const bool& filter);
+	void setFilter(const bool filter);
 	bool hasFilter() const;
 
-	bool equal(const string& ip, const long& port) const;
+	bool equal(const string& ip, const long port) const;
 
 	void send(const string& message);
 

@@ -31,7 +31,7 @@ public:
 	void start();
 	void stop();
 
-	void setLevel(const Level& level);
+	void setLevel(const Level level);
 	void setLevel(const string& level);
 
 	void addConsole();
@@ -71,7 +71,7 @@ private:
 	LogHandler& m_logHandler;
 	const char* m_function;
 
-	void log(const Level& level, const string data, ...);
+	void log(const Level level, const string data, ...);
 
 };
 

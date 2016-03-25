@@ -23,7 +23,7 @@
 
 #include <arpa/inet.h>
 
-Socket* Client::newSocket(const string& address, const int& port, const bool& udp)
+Socket* Client::newSocket(const string& address, const int port, const bool udp)
 {
 	int ret;
 	struct addrinfo hints, *servinfo;

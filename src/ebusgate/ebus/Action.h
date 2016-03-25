@@ -36,7 +36,7 @@ class Action
 {
 
 public:
-	Action(const string& search, ActionType type, const string& message);
+	Action(const string& search, const ActionType type, const string& message);
 
 	ActionType getType() const;
 	string getMessage() const;

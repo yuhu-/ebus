@@ -32,7 +32,7 @@ class Daemon
 public:
 	static Daemon& getDaemon();
 
-	void start(const string pidfile);
+	void start(const string& pidfile);
 
 	void stop();
 

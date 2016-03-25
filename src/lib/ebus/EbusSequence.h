@@ -49,8 +49,8 @@ public:
 	EbusSequence();
 	explicit EbusSequence(Sequence& seq);
 
-	void createMaster(const unsigned char& source, const unsigned char& target, const string& str);
-	void createMaster(const unsigned char& source, const string& str);
+	void createMaster(const unsigned char source, const unsigned char target, const string& str);
+	void createMaster(const unsigned char source, const string& str);
 	void createMaster(const string& str);
 	void createMaster(Sequence& seq);
 
@@ -67,16 +67,16 @@ public:
 	unsigned char getMasterCRC() const;
 	int getMasterState() const;
 
-	void setMasterACK(const unsigned char& byte);
+	void setMasterACK(const unsigned char byte);
 
 	Sequence getSlave() const;
 	size_t getSlaveNN() const;
 	unsigned char getSlaveCRC() const;
 	int getSlaveState() const;
 
-	void setSlaveACK(const unsigned char& byte);
+	void setSlaveACK(const unsigned char byte);
 
-	void setType(const unsigned char& byte);
+	void setType(const unsigned char byte);
 	int getType() const;
 
 	bool isValid() const;

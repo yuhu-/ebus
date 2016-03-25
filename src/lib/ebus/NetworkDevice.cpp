@@ -31,7 +31,7 @@ NetworkDevice::~NetworkDevice()
 	closeDevice();
 }
 
-int NetworkDevice::openDevice(const string device, const bool noDeviceCheck)
+int NetworkDevice::openDevice(const string& device, const bool noDeviceCheck)
 {
 	m_noDeviceCheck = noDeviceCheck;
 	m_open = false;

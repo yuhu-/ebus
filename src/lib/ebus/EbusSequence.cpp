@@ -98,7 +98,7 @@ EbusSequence::EbusSequence(Sequence& seq)
 	}
 }
 
-void EbusSequence::createMaster(const unsigned char& source, const unsigned char& target, const string& str)
+void EbusSequence::createMaster(const unsigned char source, const unsigned char target, const string& str)
 {
 	ostringstream ostr;
 	ostr << nouppercase << hex << setw(2) << setfill('0') << static_cast<unsigned>(source);
@@ -107,7 +107,7 @@ void EbusSequence::createMaster(const unsigned char& source, const unsigned char
 	createMaster(ostr.str());
 }
 
-void EbusSequence::createMaster(const unsigned char& source, const string& str)
+void EbusSequence::createMaster(const unsigned char source, const string& str)
 {
 	ostringstream ostr;
 	ostr << nouppercase << hex << setw(2) << setfill('0') << static_cast<unsigned>(source);
@@ -279,7 +279,7 @@ int EbusSequence::getMasterState() const
 	return (m_masterState);
 }
 
-void EbusSequence::setMasterACK(const unsigned char& byte)
+void EbusSequence::setMasterACK(const unsigned char byte)
 {
 	m_masterACK = byte;
 }
@@ -304,12 +304,12 @@ int EbusSequence::getSlaveState() const
 	return (m_slaveState);
 }
 
-void EbusSequence::setSlaveACK(const unsigned char& byte)
+void EbusSequence::setSlaveACK(const unsigned char byte)
 {
 	m_slaveACK = byte;
 }
 
-void EbusSequence::setType(const unsigned char& byte)
+void EbusSequence::setType(const unsigned char byte)
 {
 	if (byte == BROADCAST)
 		m_type = EBUS_TYPE_BC;

@@ -68,7 +68,7 @@ void Options::addText(const string& text)
 	m_options.push_back(option);
 }
 
-void Options::addBool(const string& name, const string& shortname, const bool& value, const string& description)
+void Options::addBool(const string& name, const string& shortname, const bool value, const string& description)
 {
 	if (name.size() != 0)
 	{
@@ -78,7 +78,7 @@ void Options::addBool(const string& name, const string& shortname, const bool& v
 
 }
 
-void Options::addHex(const string& name, const string& shortname, const int& value, const string& description)
+void Options::addHex(const string& name, const string& shortname, const int value, const string& description)
 {
 	if (name.size() != 0)
 	{
@@ -88,7 +88,7 @@ void Options::addHex(const string& name, const string& shortname, const int& val
 
 }
 
-void Options::addInt(const string& name, const string& shortname, const int& value, const string& description)
+void Options::addInt(const string& name, const string& shortname, const int value, const string& description)
 {
 	if (name.size() != 0)
 	{
@@ -98,7 +98,7 @@ void Options::addInt(const string& name, const string& shortname, const int& val
 
 }
 
-void Options::addLong(const string& name, const string& shortname, const long& value, const string& description)
+void Options::addLong(const string& name, const string& shortname, const long value, const string& description)
 {
 	if (name.size() != 0)
 	{
@@ -108,7 +108,7 @@ void Options::addLong(const string& name, const string& shortname, const long& v
 
 }
 
-void Options::addFloat(const string& name, const string& shortname, const float& value, const string& description)
+void Options::addFloat(const string& name, const string& shortname, const float value, const string& description)
 {
 	if (name.size() != 0)
 	{
@@ -276,7 +276,7 @@ int Options::numArgs() const
 	return (m_arguments.size());
 }
 
-string Options::getArg(const int& num) const
+string Options::getArg(const int num) const
 {
 	return (m_arguments[num]);
 }
@@ -448,7 +448,7 @@ Options::Options(const string& command, const string& argument)
 {
 }
 
-void Options::add(const string& name, const string& shortname, const string& description, const Type& type)
+void Options::add(const string& name, const string& shortname, const string& description, const Type type)
 {
 	Option option;
 
@@ -460,7 +460,7 @@ void Options::add(const string& name, const string& shortname, const string& des
 	m_options.push_back(option);
 }
 
-int Options::find(const string& name, const bool& shortname)
+int Options::find(const string& name, const bool shortname)
 {
 	for (size_t i = 0; i < m_options.size(); i++)
 	{
@@ -480,7 +480,7 @@ int Options::find(const string& name, const bool& shortname)
 	return (-1);
 }
 
-void Options::save(const int& index, const string& value)
+void Options::save(const int index, const string& value)
 {
 	switch (m_options[index].type)
 	{

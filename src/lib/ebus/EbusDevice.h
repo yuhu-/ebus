@@ -33,7 +33,7 @@ class EbusDevice
 {
 
 public:
-	EbusDevice(const string device, const bool noDeviceCheck);
+	EbusDevice(const string& device, const bool noDeviceCheck);
 	~EbusDevice();
 
 	int open();

@@ -31,7 +31,7 @@ public:
 
 	EbusSequence& getEbusSequence();
 
-	void setResult(const string result);
+	void setResult(const string& result);
 	const string getResult();
 
 private:

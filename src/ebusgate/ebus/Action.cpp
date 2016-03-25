@@ -19,7 +19,7 @@
 
 #include "Action.h"
 
-Action::Action(const string& search, ActionType type, const string& message)
+Action::Action(const string& search, const ActionType type, const string& message)
 	: m_search(Sequence(search)), m_type(type), m_message(message)
 {
 }

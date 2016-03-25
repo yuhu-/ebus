@@ -29,7 +29,7 @@ SerialDevice::~SerialDevice()
 	closeDevice();
 }
 
-int SerialDevice::openDevice(const string device, const bool noDeviceCheck)
+int SerialDevice::openDevice(const string& device, const bool noDeviceCheck)
 {
 	m_noDeviceCheck = noDeviceCheck;
 	struct termios newSettings;

@@ -33,7 +33,7 @@ EbusSequence& EbusMessage::getEbusSequence()
 	return (m_ebusSequence);
 }
 
-void EbusMessage::setResult(const string result)
+void EbusMessage::setResult(const string& result)
 {
 	m_result = result;
 }

@@ -42,7 +42,7 @@ public:
 	explicit Sequence(const string& str);
 	Sequence(const Sequence& seq, const size_t index, size_t len = 0);
 
-	void push_back(const unsigned char& byte, const bool isExtended = true);
+	void push_back(const unsigned char byte, const bool isExtended = true);
 
 	const unsigned char& operator[](const size_t index) const;
 
@@ -60,11 +60,11 @@ public:
 	const string toString();
 	const vector<unsigned char> getSequence() const;
 
-	size_t find(const Sequence& seq, size_t pos = 0) const noexcept;
+	size_t find(const Sequence& seq, const size_t pos = 0) const noexcept;
 
 	int compare(const Sequence& seq) const noexcept;
 
-	static const string toString(const vector<unsigned char>& sequence);
+	static const string toString(const vector<unsigned char>& seq);
 
 private:
 	vector<unsigned char> m_seq;

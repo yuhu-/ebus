@@ -33,7 +33,7 @@ class UDPReceiver
 {
 
 public:
-	UDPReceiver(const bool& local, const int& port, NQueue<NetMessage*>* netMsgQueue);
+	UDPReceiver(const bool local, const int port, NQueue<NetMessage*>* netMsgQueue);
 	~UDPReceiver();
 
 	void start();

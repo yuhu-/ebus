@@ -30,7 +30,7 @@ class NetMessage : public Notify
 {
 
 public:
-	explicit NetMessage(const string& data, const string& ip, const long& port);
+	explicit NetMessage(const string& data, const string& ip, const long port);
 
 	string getData() const;
 

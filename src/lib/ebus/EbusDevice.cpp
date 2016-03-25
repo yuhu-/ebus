@@ -40,7 +40,7 @@ map<int, string> DeviceErrors =
 { DEV_ERR_SEND, "Error occurred during data sending" },
 { DEV_ERR_POLL, "Error occurred at ppoll waiting" } };
 
-EbusDevice::EbusDevice(const string deviceName, const bool noDeviceCheck)
+EbusDevice::EbusDevice(const string& deviceName, const bool noDeviceCheck)
 	: m_deviceName(deviceName), m_noDeviceCheck(noDeviceCheck)
 {
 	m_device = nullptr;

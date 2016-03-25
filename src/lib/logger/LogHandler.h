@@ -44,7 +44,7 @@ public:
 	void stop();
 
 	Level getLevel() const;
-	void setLevel(const Level& level);
+	void setLevel(const Level level);
 	void setLevel(const string& level);
 
 	void addConsole();

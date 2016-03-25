@@ -25,7 +25,7 @@
 
 #include <poll.h>
 
-TCPAcceptor::TCPAcceptor(const bool& local, const int& port, NQueue<NetMessage*>* netMsgQueue)
+TCPAcceptor::TCPAcceptor(const bool local, const int port, NQueue<NetMessage*>* netMsgQueue)
 	: m_netMsgQueue(netMsgQueue), m_running(false)
 {
 	if (local == true)

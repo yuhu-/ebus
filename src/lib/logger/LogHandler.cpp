@@ -66,7 +66,7 @@ Level LogHandler::getLevel() const
 	return (m_level);
 }
 
-void LogHandler::setLevel(const Level& level)
+void LogHandler::setLevel(const Level level)
 {
 	m_level = level;
 }
