@@ -17,27 +17,40 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
+#ifndef EBUS_REACTION_H
+#define EBUS_REACTION_H
+
+#include "State.h"
 #include "Action.h"
 
-Action::Action(const string& search, ActionType type, const string& message)
-	: m_search(Sequence(search)), m_type(type), m_message(message)
+class Reaction : public State
 {
-}
 
-ActionType Action::getType() const
-{
-	return (m_type);
-}
+public:
+	static Reaction* getReaction()
+	{
+		return (&m_reaction);
+	}
 
-string Action::getMessage() const
-{
-	return (m_message);
-}
+	int run(EbusHandler* h);
+	const string toString() const;
 
-bool Action::match(const Sequence& seq)
-{
-	if (seq.find(m_search) != Sequence::npos) return (true);
+private:
+	Reaction();
+	static Reaction m_reaction;
 
-	return (false);
-}
+	vector<Action> m_action =
+	{
+	{ Action("0700", at_doNothing, "") },
+	{ Action("0704", at_response, "0a7a454741544501010101") },
+	{ Action("07fe", at_send_BC, "07ff00") },
+	{ Action("b505", at_doNothing, "") },
+	{ Action("b516", at_doNothing, "") } };
 
+	int findAction(const EbusSequence& eSeq);
+	bool createResponse(EbusSequence& eSeq);
+	bool createMessage(const unsigned char source, const unsigned char target, EbusSequence& eSeq);
+
+};
+
+#endif // EBUS_REACTION_H

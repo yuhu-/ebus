@@ -45,7 +45,7 @@ class EbusHandler : public Notify
 	friend class Listen;
 	friend class LockBus;
 	friend class FreeBus;
-	friend class Action;
+	friend class Reaction;
 	friend class SendMessage;
 	friend class RecvResponse;
 	friend class RecvMessage;

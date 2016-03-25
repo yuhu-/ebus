@@ -18,8 +18,9 @@
  */
 
 #include "RecvMessage.h"
+
 #include "Listen.h"
-#include "Action.h"
+#include "Reaction.h"
 #include "Logger.h"
 
 RecvMessage RecvMessage::m_recvMessage;
@@ -111,7 +112,7 @@ int RecvMessage::run(EbusHandler* h)
 
 		if (h->m_active == true)
 		{
-			h->changeState(Action::getAction());
+			h->changeState(Reaction::getReaction());
 			return (DEV_OK);
 		}
 	}

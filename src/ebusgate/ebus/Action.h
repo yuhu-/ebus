@@ -20,28 +20,35 @@
 #ifndef EBUS_ACTION_H
 #define EBUS_ACTION_H
 
-#include "State.h"
+#include "Sequence.h"
 
-class Action : public State
+enum ActionType
+{
+	at_notDefined,	// not defined
+	at_doNothing,	// do nothing
+	at_response,	// prepare slave part and send response
+	at_send_BC,	// create and send broadcast message
+	at_send_MM,	// create and send master master message
+	at_send_MS	// create and send master slave message
+};
+
+class Action
 {
 
 public:
-	static Action* getAction()
-	{
-		return (&m_action);
-	}
+	Action(const string& search, ActionType type, const string& message);
 
-	int run(EbusHandler* h);
-	const string toString() const;
+	ActionType getType() const;
+	string getMessage() const;
+
+	bool match(const Sequence& seq);
 
 private:
-	Action();
-	static Action m_action;
-
-	static int findAction(const EbusSequence& eSeq);
-	static bool createResponse(EbusSequence& eSeq);
-	static bool createMessage(const unsigned char source, const unsigned char target, EbusSequence& eSeq);
+	Sequence m_search;
+	ActionType m_type;
+	string m_message;
 
 };
 
 #endif // EBUS_ACTION_H
+
