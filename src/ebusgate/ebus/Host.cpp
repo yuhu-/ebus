@@ -71,8 +71,8 @@ void Host::send(const string& message)
 {
 	if (m_socket->isValid() == true)
 	{
-		ostringstream ostr(message);
-		ostr << endl;
+		ostringstream ostr;
+		ostr << message << endl;
 		m_socket->send(ostr.str().c_str(), ostr.str().size(), m_client.getSock(), sizeof(struct sockaddr_in));
 	}
 }

@@ -330,14 +330,14 @@ void DataHandler::send(EbusSequence* eSeq) const
 	for (const auto& host : m_host)
 		if (host->hasFilter() == false)
 		{
-			logger.debug("send to: %s:%d", host->getIP().c_str(), host->getPort());
+			logger.info("to: %s:%d", host->getIP().c_str(), host->getPort());
 			host->send(eSeq->toString());
 		}
 
 	for (const auto& filter : m_filter)
 		if (filter->match(eSeq->getMaster()) == true)
 		{
-			logger.trace("%s match in %s", filter->getFilter().toString().c_str(),
+			logger.debug("%s match in %s", filter->getFilter().toString().c_str(),
 				eSeq->getMaster().toString().c_str());
 
 			for (const auto& relation : m_relation)
@@ -346,7 +346,7 @@ void DataHandler::send(EbusSequence* eSeq) const
 					for (const auto& host : m_host)
 						if (host->hasFilter() == true && host->getID() == relation->getHostID())
 						{
-							logger.debug("to %s:%d sent", host->getIP().c_str(),
+							logger.info("to %s:%d", host->getIP().c_str(),
 								host->getPort());
 							host->send(eSeq->toString());
 						}
