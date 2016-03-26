@@ -32,7 +32,7 @@ Reaction Reaction::m_reaction;
 
 int Reaction::run(EbusHandler* h)
 {
-	Logger logger = Logger("Action::run");
+	Logger logger = Logger("Reaction::run");
 
 	EbusSequence eSeq;
 	eSeq.createMaster(m_sequence);
@@ -103,7 +103,7 @@ Reaction::Reaction()
 
 const string Reaction::toString() const
 {
-	return ("Action");
+	return ("Reaction");
 }
 
 int Reaction::findAction(const EbusSequence& eSeq)
