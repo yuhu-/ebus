@@ -30,7 +30,7 @@ using std::ostringstream;
 
 enum Command
 {
-	c_invalid, c_open, c_close, c_send, c_subscribe, c_unsubscribe, c_active, c_dump, c_loglevel, c_lograw, c_help
+	c_invalid, c_open, c_close, c_send, c_forward, c_active, c_dump, c_loglevel, c_lograw, c_help
 };
 
 class BaseLoop
@@ -64,8 +64,7 @@ private:
 
 	static bool isNum(const string& str, ostringstream& result);
 
-	void handleSubscribe(const vector<string>& args, const string& srcIP, long srcPort, bool subscribe,
-		ostringstream& result);
+	void handleForward(const vector<string>& args, const string& srcIP, long srcPort, ostringstream& result);
 
 	static const string formatHelp();
 

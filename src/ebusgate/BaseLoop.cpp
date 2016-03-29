@@ -37,8 +37,7 @@ map<Command, string> CommandNames =
 { c_open, "OPEN" },
 { c_close, "CLOSE" },
 { c_send, "SEND" },
-{ c_subscribe, "SUBSCRIBE" },
-{ c_unsubscribe, "UNSUBSCRIBE" },
+{ c_forward, "FORWARD" },
 { c_active, "ACTIVE" },
 { c_loglevel, "LOGLEVEL" },
 { c_lograw, "LOGRAW" },
@@ -222,27 +221,15 @@ string BaseLoop::decodeMessage(const string& data, const string& ip, long port)
 
 		break;
 	}
-	case c_subscribe:
+	case c_forward:
 	{
-		if (args.size() > argPos + 5)
+		if (args.size() > argPos + 6)
 		{
-			result << "usage: 'sub [-s server] [-p port] [filter]'";
+			result << "usage: 'forward [-d] [-s server] [-p port] [filter]'";
 			break;
 		}
 
-		handleSubscribe(args, ip, port, true, result);
-
-		break;
-	}
-	case c_unsubscribe:
-	{
-		if (args.size() > argPos + 5)
-		{
-			result << "usage: 'unsub [-s server] [-p port] [filter]'";
-			break;
-		}
-
-		handleSubscribe(args, ip, port, false, result);
+		handleForward(args, ip, port, result);
 
 		break;
 	}
@@ -342,9 +329,9 @@ bool BaseLoop::isNum(const string& str, ostringstream& result)
 	return (true);
 }
 
-void BaseLoop::handleSubscribe(const vector<string>& args, const string& srcIP, long srcPort, bool subscribe,
-	ostringstream& result)
+void BaseLoop::handleForward(const vector<string>& args, const string& srcIP, long srcPort, ostringstream& result)
 {
+	bool remove = false;
 	string dstIP;
 	long dstPort = -1;
 	string filter;
@@ -353,7 +340,11 @@ void BaseLoop::handleSubscribe(const vector<string>& args, const string& srcIP, 
 
 	while (argPos < args.size())
 	{
-		if (args[argPos] == "-s")
+		if (args[argPos] == "-d")
+		{
+			remove = true;
+		}
+		else if (args[argPos] == "-s")
 		{
 			if (argPos + 1 < args.size())
 			{
@@ -425,36 +416,31 @@ void BaseLoop::handleSubscribe(const vector<string>& args, const string& srcIP, 
 
 	if (dstPort < 0) dstPort = srcPort;
 
-	if (subscribe == true)
-		m_ebusHandler->subscribe(dstIP, dstPort, filter, result);
-	else
-		m_ebusHandler->unsubscribe(dstIP, dstPort, filter, result);
+	m_ebusHandler->forward(remove, dstIP, dstPort, filter, result);
 }
 
 const string BaseLoop::formatHelp()
 {
 	ostringstream ostr;
 	ostr << "commands:" << endl;
-	ostr << " open         - open ebus connection" << endl;
-	ostr << " close        - close ebus connection" << endl << endl;
+	ostr << " open      - open ebus connection" << endl;
+	ostr << " close     - close ebus connection" << endl << endl;
 
-	ostr << " send         - write message onto ebus 'send ZZPBSBNNDx'" << endl << endl;
+	ostr << " send      - write message onto ebus 'send ZZPBSBNNDx'" << endl << endl;
 
-	ostr << " subscribe    - start forwarding ebus messages 'subscribe [-s server] [-p port] [filter]'" << endl;
-	ostr << " unsubscribe  - stop forwarding ebus messages 'unsubscribe [-s server] [-p port] [filter]'" << endl
-		<< endl;
+	ostr << " forward   - forward ebus messages 'forward [-d] [-s server] [-p port] [filter]'" << endl << endl;
 
-	ostr << " active       - enable/disable active ebus mode" << endl << endl;
+	ostr << " active    - enable/disable active ebus mode" << endl << endl;
 
-	ostr << " dump         - enable/disable raw data dumping" << endl << endl;
+	ostr << " dump      - enable/disable raw data dumping" << endl << endl;
 
-	ostr << " loglevel     - change logging level 'loglevel level'" << endl;
-	ostr << " lograw       - enable/disable raw data logging" << endl << endl;
+	ostr << " loglevel  - change logging level 'loglevel level'" << endl;
+	ostr << " lograw    - enable/disable raw data logging" << endl << endl;
 
-	ostr << " stop         - stop running daemon and exit" << endl;
-	ostr << " quit         - close tcp connection" << endl << endl;
+	ostr << " stop      - stop running daemon and exit" << endl;
+	ostr << " quit      - close tcp connection" << endl << endl;
 
-	ostr << " help         - print this page";
+	ostr << " help      - print this page";
 
 	return (ostr.str());
 }

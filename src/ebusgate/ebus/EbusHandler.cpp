@@ -147,14 +147,12 @@ void EbusHandler::enqueue(EbusMessage* message)
 	m_ebusMsgQueue.enqueue(message);
 }
 
-bool EbusHandler::subscribe(const string& ip, long port, const string& filter, ostringstream& result)
+bool EbusHandler::forward(bool remove, const string& ip, long port, const string& filter, ostringstream& result)
 {
-	return (m_dataHandler->subscribe(ip, port, filter, result));
-}
-
-bool EbusHandler::unsubscribe(const string& ip, long port, const string& filter, ostringstream& result)
-{
-	return (m_dataHandler->unsubscribe(ip, port, filter, result));
+	if (remove == true)
+		return (m_dataHandler->unsubscribe(ip, port, filter, result));
+	else
+		return (m_dataHandler->subscribe(ip, port, filter, result));
 }
 
 void EbusHandler::run()
@@ -182,5 +180,4 @@ void EbusHandler::changeState(State* state)
 		logger.trace("%s", m_state->toString().c_str());
 	}
 }
-
 

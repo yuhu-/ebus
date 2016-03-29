@@ -76,8 +76,7 @@ public:
 
 	void enqueue(EbusMessage* message);
 
-	bool subscribe(const string& ip, long port, const string& filter, ostringstream& result);
-	bool unsubscribe(const string& ip, long port, const string& filter, ostringstream& result);
+	bool forward(bool remove, const string& ip, long port, const string& filter, ostringstream& result);
 
 private:
 	thread m_thread;
