@@ -35,10 +35,10 @@ using std::back_inserter;
 
 EbusHandler::EbusHandler(const unsigned char address, const string device, const bool noDeviceCheck,
 	const long reopenTime, const long arbitrationTime, const long receiveTimeout, const int lockCounter,
-	const int lockRetries, const bool active, const bool dumpRaw, const string dumpRawFile,
-	const long dumpRawFileMaxSize, const bool logRaw)
+	const int lockRetries, const bool dumpRaw, const string dumpRawFile, const long dumpRawFileMaxSize,
+	const bool logRaw)
 	: m_address(address), m_reopenTime(reopenTime), m_arbitrationTime(arbitrationTime), m_receiveTimeout(
-		receiveTimeout), m_lockCounter(lockCounter), m_lockRetries(lockRetries), m_active(active), m_lastResult(
+		receiveTimeout), m_lockCounter(lockCounter), m_lockRetries(lockRetries), m_lastResult(
 	DEV_OK), m_dumpRawFile(dumpRawFile), m_dumpRawFileMaxSize(dumpRawFileMaxSize), m_logRaw(logRaw)
 {
 	m_dataHandler = new DataHandler();
@@ -48,14 +48,6 @@ EbusHandler::EbusHandler(const unsigned char address, const string device, const
 	changeState(Connect::getConnect());
 
 	setDumpRaw(dumpRaw);
-
-	if (m_active == true)
-	{
-		EbusSequence eSeq;
-		eSeq.createMaster(m_address, BROADCAST, "07040a7a454741544501010101");
-
-		if (eSeq.getMasterState() == EBUS_OK) enqueue(new EbusMessage(eSeq));
-	}
 }
 
 EbusHandler::~EbusHandler()
@@ -67,6 +59,13 @@ EbusHandler::~EbusHandler()
 	}
 
 	m_dumpRawStream.close();
+
+	while (m_action.size() > 0)
+	{
+		Action* action = m_action.back();
+		m_action.pop_back();
+		delete action;
+	}
 
 	if (m_dataHandler != nullptr)
 	{
@@ -98,16 +97,6 @@ void EbusHandler::open()
 void EbusHandler::close()
 {
 	m_forceState = Idle::getIdle();
-}
-
-bool EbusHandler::getActive()
-{
-	return (m_active);
-}
-
-void EbusHandler::setActive(bool active)
-{
-	m_active = active;
 }
 
 bool EbusHandler::getDumpRaw() const
@@ -150,9 +139,18 @@ void EbusHandler::enqueue(EbusMessage* message)
 bool EbusHandler::forward(bool remove, const string& ip, long port, const string& filter, ostringstream& result)
 {
 	if (remove == true)
-		return (m_dataHandler->unsubscribe(ip, port, filter, result));
+		return (m_dataHandler->remove(ip, port, filter, result));
 	else
-		return (m_dataHandler->subscribe(ip, port, filter, result));
+		return (m_dataHandler->append(ip, port, filter, result));
+}
+
+bool EbusHandler::process(bool remove, const string& filter, const string& type, const string& message,
+	ostringstream& result)
+{
+	if (remove == true)
+		return (this->remove(filter, type, message, result));
+	else
+		return (this->append(filter, type, message, result));
 }
 
 void EbusHandler::run()
@@ -179,5 +177,107 @@ void EbusHandler::changeState(State* state)
 		m_state = state;
 		logger.trace("%s", m_state->toString().c_str());
 	}
+}
+
+bool EbusHandler::append(const string& filter, const string& action, const string& message, ostringstream& result)
+{
+	ActionType type = findType(action);
+	if (type == at_undefined)
+	{
+		result << "action " << action << " not defined";
+		return (false);
+	}
+
+	return (true);
+}
+
+bool EbusHandler::remove(const string& filter, const string& action, const string& message, ostringstream& result)
+{
+	ActionType type = findType(action);
+	if (type == at_undefined)
+	{
+		result << "action " << action << " not defined";
+		return (false);
+	}
+
+	return (true);
+}
+
+const Action* EbusHandler::getAction(const string& filter) const
+{
+	Sequence seq(filter);
+
+	for (size_t index = 0; index < m_action.size(); index++)
+		if (m_action[index]->equal(seq) == true) return (m_action[index]);
+
+	return (nullptr);
+}
+
+const Action* EbusHandler::addAction(const string& filter, ActionType type, const string& message)
+{
+	Sequence seq(filter);
+	size_t index;
+
+	for (index = 0; index < m_action.size(); index++)
+		if (m_action[index]->equal(seq) == true) break;
+
+	if (index == m_action.size()) m_action.push_back(new Action(seq, type, message));
+
+	return (m_action[index]);
+}
+
+bool EbusHandler::delAction(const string& filter)
+{
+	Sequence seq(filter);
+
+	for (size_t index = 0; index < m_action.size(); index++)
+		if (m_action[index]->equal(seq) == true)
+		{
+			Action* _action = m_action[index];
+
+			m_action.erase(m_action.begin() + index);
+			m_action.shrink_to_fit();
+
+			delete _action;
+			return (true);
+		}
+
+	return (false);
+}
+
+ActionType EbusHandler::getType(const EbusSequence& eSeq) const
+{
+	for (const auto& action : m_action)
+		if (action->match(eSeq.getMaster()) == true) return (action->getType());
+
+	return (at_undefined);
+}
+
+bool EbusHandler::createResponse(EbusSequence& eSeq)
+{
+	for (const auto& action : m_action)
+		if (action->match(eSeq.getMaster()) == true)
+		{
+			Sequence seq(action->getMessage());
+			eSeq.createSlave(seq);
+			if (eSeq.getSlaveState() == EBUS_OK) return (true);
+			break;
+		}
+
+	return (false);
+}
+
+bool EbusHandler::createMessage(const unsigned char target, EbusSequence& eSeq)
+{
+	for (const auto& action : m_action)
+		if (action->match(eSeq.getMaster()) == true)
+		{
+			eSeq.clear();
+			eSeq.createMaster(m_address, target, action->getMessage());
+			if (eSeq.getMasterState() == EBUS_OK) return (true);
+			break;
+		}
+
+	return (false);
 }
 

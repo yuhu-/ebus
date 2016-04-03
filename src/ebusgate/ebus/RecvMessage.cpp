@@ -18,9 +18,8 @@
  */
 
 #include "RecvMessage.h"
-
+#include "Evaluate.h"
 #include "Listen.h"
-#include "Reaction.h"
 #include "Logger.h"
 
 RecvMessage RecvMessage::m_recvMessage;
@@ -110,9 +109,9 @@ int RecvMessage::run(EbusHandler* h)
 			h->m_dataHandler->enqueue(eSeq);
 		}
 
-		if (h->m_active == true)
+		if (h->m_action.empty() == false)
 		{
-			h->changeState(Reaction::getReaction());
+			h->changeState(Evaluate::getEvaluate());
 			return (DEV_OK);
 		}
 	}

@@ -30,7 +30,7 @@ using std::ostringstream;
 
 enum Command
 {
-	c_invalid, c_open, c_close, c_send, c_forward, c_active, c_dump, c_loglevel, c_lograw, c_help
+	c_invalid, c_open, c_close, c_send, c_forward, c_process, c_dump, c_loglevel, c_lograw, c_help
 };
 
 class BaseLoop
@@ -56,7 +56,7 @@ private:
 	UDPReceiver* m_udpReceiver = nullptr;
 	NQueue<NetMessage*> m_netMsgQueue;
 
-	static Command getCase(const string& item);
+	static Command findCommand(const string& item);
 
 	string decodeMessage(const string& data, const string& ip, long port);
 
@@ -65,6 +65,8 @@ private:
 	static bool isNum(const string& str, ostringstream& result);
 
 	void handleForward(const vector<string>& args, const string& srcIP, long srcPort, ostringstream& result);
+
+	void handleProcess(const vector<string>& args, ostringstream& result);
 
 	static const string formatHelp();
 

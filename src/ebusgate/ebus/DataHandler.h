@@ -42,8 +42,8 @@ public:
 	void start();
 	void stop();
 
-	bool subscribe(const string& ip, long port, const string& filter, ostringstream& result);
-	bool unsubscribe(const string& ip, long port, const string& filter, ostringstream& result);
+	bool append(const string& ip, long port, const string& filter, ostringstream& result);
+	bool remove(const string& ip, long port, const string& filter, ostringstream& result);
 
 	void enqueue(const EbusSequence& eSeq);
 

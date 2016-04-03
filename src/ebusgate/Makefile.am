@@ -45,8 +45,8 @@ ebusgate_SOURCES = network/NetMessage.cpp \
 		   ebus/LockBus.h \
 		   ebus/FreeBus.cpp \
 		   ebus/FreeBus.h \
-		   ebus/Reaction.cpp \
-		   ebus/Reaction.h \
+		   ebus/Evaluate.cpp \
+		   ebus/Evaluate.h \
 		   ebus/SendMessage.cpp \
 		   ebus/SendMessage.h \
 		   ebus/RecvMessage.cpp \

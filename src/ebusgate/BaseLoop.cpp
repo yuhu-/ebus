@@ -38,7 +38,7 @@ map<Command, string> CommandNames =
 { c_close, "CLOSE" },
 { c_send, "SEND" },
 { c_forward, "FORWARD" },
-{ c_active, "ACTIVE" },
+{ c_process, "PROCESS" },
 { c_loglevel, "LOGLEVEL" },
 { c_lograw, "LOGRAW" },
 { c_dump, "DUMP" },
@@ -53,8 +53,8 @@ BaseLoop::BaseLoop()
 	m_ebusHandler = new EbusHandler(options.getInt("address") & 0xff, options.getString("device"),
 		options.getBool("nodevicecheck"), options.getLong("reopentime"), options.getLong("arbitrationtime"),
 		options.getLong("receivetimeout"), options.getInt("lockcounter"), options.getInt("lockretries"),
-		options.getBool("active"), options.getBool("dump"), options.getString("dumpfile"),
-		options.getLong("dumpsize"), options.getBool("lograw"));
+		options.getBool("dump"), options.getString("dumpfile"), options.getLong("dumpsize"),
+		options.getBool("lograw"));
 
 	m_ebusHandler->start();
 
@@ -134,7 +134,7 @@ void BaseLoop::enqueue(NetMessage* message)
 	m_netMsgQueue.enqueue(message);
 }
 
-Command BaseLoop::getCase(const string& command)
+Command BaseLoop::findCommand(const string& command)
 {
 	for (const auto& cmd : CommandNames)
 		if (strcasecmp(cmd.second.c_str(), command.c_str()) == 0) return (cmd.first);
@@ -156,7 +156,7 @@ string BaseLoop::decodeMessage(const string& data, const string& ip, long port)
 
 	size_t argPos = 1;
 
-	switch (getCase(args[0]))
+	switch (findCommand(args[0]))
 	{
 	case c_invalid:
 	{
@@ -201,7 +201,7 @@ string BaseLoop::decodeMessage(const string& data, const string& ip, long port)
 			eSeq.createMaster(m_ownAddress, args[argPos]);
 
 			// send message
-			if (eSeq.isValid() == true)
+			if (eSeq.getMasterState() == EBUS_OK)
 			{
 				logger.debug("enqueue: %s", eSeq.toStringMaster().c_str());
 				EbusMessage* ebusMessage = new EbusMessage(eSeq);
@@ -233,17 +233,16 @@ string BaseLoop::decodeMessage(const string& data, const string& ip, long port)
 
 		break;
 	}
-	case c_active:
+	case c_process:
 	{
-		if (args.size() != argPos)
+		if (args.size() > argPos + 4)
 		{
-			result << "usage: 'active'";
+			result << "usage: 'process [-d] filter type [PBSBNNDx]'  type: I,R,BC,MM,MS";
 			break;
 		}
 
-		bool enabled = !m_ebusHandler->getActive();
-		m_ebusHandler->setActive(enabled);
-		result << (enabled ? "active mode enabled" : "active mode disabled");
+		handleProcess(args, result);
+
 		break;
 	}
 	case c_dump:
@@ -419,6 +418,49 @@ void BaseLoop::handleForward(const vector<string>& args, const string& srcIP, lo
 	m_ebusHandler->forward(remove, dstIP, dstPort, filter, result);
 }
 
+void BaseLoop::handleProcess(const vector<string>& args, ostringstream& result)
+{
+	bool remove = false;
+	string filter;
+	string type;
+	string message;
+
+	size_t argPos = 1;
+
+	while (argPos < args.size())
+	{
+		if (args[argPos] == "-d")
+		{
+			remove = true;
+		}
+		else if (filter.empty() == true)
+		{
+			filter = args[argPos];
+			if (isHex(filter, result, 1) == false)
+			{
+				result << " in filter " << args[argPos];
+				return;
+			}
+
+			argPos++;
+			type = args[argPos];
+		}
+		else
+		{
+			message = args[argPos];
+			if (isHex(message, result, 1) == false)
+			{
+				result << " in message " << args[argPos];
+				return;
+			}
+		}
+
+		argPos++;
+	}
+
+	m_ebusHandler->process(remove, filter, type, message, result);
+}
+
 const string BaseLoop::formatHelp()
 {
 	ostringstream ostr;
@@ -430,7 +472,8 @@ const string BaseLoop::formatHelp()
 
 	ostr << " forward   - forward ebus messages 'forward [-d] [-s server] [-p port] [filter]'" << endl << endl;
 
-	ostr << " active    - enable/disable active ebus mode" << endl << endl;
+	ostr << " process   - process ebus messages 'process [-d] filter type [PBSBNNDx]'  type: I,R,BC,MM,MS" << endl
+		<< endl;
 
 	ostr << " dump      - enable/disable raw data dumping" << endl << endl;
 

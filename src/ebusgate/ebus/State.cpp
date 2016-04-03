@@ -53,8 +53,8 @@ map<int, string> StateErros =
 { STATE_ERR_ACK_WRONG, "received ACK byte is wrong" },
 { STATE_ERR_NN_WRONG, "received NN byte is wrong" },
 { STATE_ERR_RECV_RESP, "received response is invalid -> failed" },
-{ STATE_ERR_CREA_MSG, "creating the message failed" },
-{ STATE_ERR_SEND_FAIL, "sending the response message failed" } };
+{ STATE_ERR_CREA_MSG, "creating message failed" },
+{ STATE_ERR_SEND_FAIL, "sending response message failed" } };
 
 State::~State()
 {
@@ -135,11 +135,10 @@ void State::reset(EbusHandler* h)
 	{
 		m_activeMessage->notify();
 
-		if (h->m_activeDone == false)
+		if (m_activeMessage->isIntern() == true)
 		{
 			EbusMessage* ebusMessage = m_activeMessage;
 			delete ebusMessage;
-			h->m_activeDone = true;
 		}
 
 		m_activeMessage = nullptr;

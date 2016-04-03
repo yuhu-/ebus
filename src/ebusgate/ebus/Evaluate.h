@@ -17,40 +17,27 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef EBUS_REACTION_H
-#define EBUS_REACTION_H
+#ifndef EBUS_EVALUATE_H
+#define EBUS_EVALUATE_H
 
 #include "State.h"
-#include "Action.h"
 
-class Reaction : public State
+class Evaluate : public State
 {
 
 public:
-	static Reaction* getReaction()
+	static Evaluate* getEvaluate()
 	{
-		return (&m_reaction);
+		return (&m_evaluate);
 	}
 
 	int run(EbusHandler* h);
 	const string toString() const;
 
 private:
-	Reaction();
-	static Reaction m_reaction;
-
-	vector<Action> m_action =
-	{
-	{ Action("0700", at_doNothing, "") },
-	{ Action("0704", at_response, "0a7a454741544501010101") },
-	{ Action("07fe", at_send_BC, "07ff00") },
-	{ Action("b505", at_doNothing, "") },
-	{ Action("b516", at_doNothing, "") } };
-
-	int findAction(const EbusSequence& eSeq);
-	bool createResponse(EbusSequence& eSeq);
-	bool createMessage(const unsigned char source, const unsigned char target, EbusSequence& eSeq);
+	Evaluate();
+	static Evaluate m_evaluate;
 
 };
 
-#endif // EBUS_REACTION_H
+#endif // EBUS_EVALUATE_H

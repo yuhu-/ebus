@@ -23,6 +23,7 @@
 #include "EbusMessage.h"
 #include "EbusDevice.h"
 #include "DataHandler.h"
+#include "Action.h"
 #include "NQueue.h"
 #include "Notify.h"
 
@@ -45,7 +46,7 @@ class EbusHandler : public Notify
 	friend class Listen;
 	friend class LockBus;
 	friend class FreeBus;
-	friend class Reaction;
+	friend class Evaluate;
 	friend class SendMessage;
 	friend class RecvResponse;
 	friend class RecvMessage;
@@ -54,8 +55,7 @@ class EbusHandler : public Notify
 public:
 	EbusHandler(const unsigned char address, const string device, const bool noDeviceCheck, const long reopenTime,
 		const long arbitrationTime, const long receiveTimeout, const int lockCounter, const int lockRetries,
-		const bool active, const bool dumpRaw, const string dumpRawFile, const long dumpRawFileMaxSize,
-		const bool logRaw);
+		const bool dumpRaw, const string dumpRawFile, const long dumpRawFileMaxSize, const bool logRaw);
 
 	~EbusHandler();
 
@@ -64,9 +64,6 @@ public:
 
 	void open();
 	void close();
-
-	bool getActive();
-	void setActive(bool active);
 
 	bool getDumpRaw() const;
 	void setDumpRaw(bool dumpRaw);
@@ -77,6 +74,9 @@ public:
 	void enqueue(EbusMessage* message);
 
 	bool forward(bool remove, const string& ip, long port, const string& filter, ostringstream& result);
+
+	bool process(bool remove, const string& filter, const string& type, const string& message,
+		ostringstream& result);
 
 private:
 	thread m_thread;
@@ -97,9 +97,6 @@ private:
 	int m_lockCounter;
 	int m_lockRetries;
 
-	bool m_active;
-	bool m_activeDone = false;
-
 	int m_lastResult;
 
 	EbusDevice* m_device;
@@ -114,9 +111,28 @@ private:
 
 	NQueue<EbusMessage*> m_ebusMsgQueue;
 
+	vector<Action*> m_action =
+	{
+	{ new Action(Sequence("0700"), at_ignore, "") },
+	{ new Action(Sequence("0704"), at_response, "0a7a454741544501010101") },
+	{ new Action(Sequence("07fe"), at_send_BC, "07ff00") },
+	{ new Action(Sequence("b505"), at_ignore, "") },
+	{ new Action(Sequence("b516"), at_ignore, "") } };
+
 	void run();
 
 	void changeState(State* state);
+
+	bool append(const string& filter, const string& type, const string& message, ostringstream& result);
+	bool remove(const string& filter, const string& type, const string& message, ostringstream& result);
+
+	const Action* getAction(const string& filter) const;
+	const Action* addAction(const string& filter, ActionType type, const string& message);
+	bool delAction(const string& filter);
+
+	ActionType getType(const EbusSequence& eSeq) const;
+	bool createResponse(EbusSequence& eSeq);
+	bool createMessage(const unsigned char target, EbusSequence& eSeq);
 
 };
 

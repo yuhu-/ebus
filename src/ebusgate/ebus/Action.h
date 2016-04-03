@@ -24,27 +24,30 @@
 
 enum ActionType
 {
-	at_notDefined,	// not defined
-	at_doNothing,	// do nothing
+	at_undefined,	// undefined
+	at_ignore,	// ignore
 	at_response,	// prepare slave part and send response
 	at_send_BC,	// create and send broadcast message
 	at_send_MM,	// create and send master master message
 	at_send_MS	// create and send master slave message
 };
 
+ActionType findType(const string& item);
+
 class Action
 {
 
 public:
-	Action(const string& search, const ActionType type, const string& message);
+	Action(const Sequence& seq, ActionType type, const string& message);
 
 	ActionType getType() const;
 	string getMessage() const;
 
+	bool equal(const Sequence& seq);
 	bool match(const Sequence& seq);
 
 private:
-	Sequence m_search;
+	Sequence m_seq;
 	ActionType m_type;
 	string m_message;
 

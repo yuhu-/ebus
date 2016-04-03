@@ -72,9 +72,9 @@ void DataHandler::stop()
 	}
 }
 
-bool DataHandler::subscribe(const string& ip, long port, const string& filter, ostringstream& result)
+bool DataHandler::append(const string& ip, long port, const string& filter, ostringstream& result)
 {
-	Logger logger = Logger("DataHandler::subscribe");
+	Logger logger = Logger("DataHandler::append");
 
 	Host* host = getHost(ip, port);
 
@@ -174,9 +174,9 @@ bool DataHandler::subscribe(const string& ip, long port, const string& filter, o
 	return (true);
 }
 
-bool DataHandler::unsubscribe(const string& ip, long port, const string& filter, ostringstream& result)
+bool DataHandler::remove(const string& ip, long port, const string& filter, ostringstream& result)
 {
-	Logger logger = Logger("DataHandler::unsubscribe");
+	Logger logger = Logger("DataHandler::remove");
 
 	Host* host = getHost(ip, port);
 

@@ -27,15 +27,17 @@ class EbusMessage : public Notify
 {
 
 public:
-	explicit EbusMessage(EbusSequence& eSeq);
+	explicit EbusMessage(EbusSequence& eSeq, bool intern = false);
 
 	EbusSequence& getEbusSequence();
+	bool isIntern() const;
 
 	void setResult(const string& result);
 	const string getResult();
 
 private:
 	EbusSequence m_ebusSequence;
+	bool m_intern;
 
 	string m_result;
 
