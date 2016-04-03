@@ -237,7 +237,7 @@ string BaseLoop::decodeMessage(const string& data, const string& ip, long port)
 	{
 		if (args.size() > argPos + 4)
 		{
-			result << "usage: 'process [-d] filter type [PBSBNNDx]'  type: I,R,BC,MM,MS";
+			result << "usage: 'process [-d] filter rule [PBSBNNDx]'  rule: I,R,BC,MM,MS";
 			break;
 		}
 
@@ -472,7 +472,7 @@ const string BaseLoop::formatHelp()
 
 	ostr << " forward   - forward ebus messages 'forward [-d] [-s server] [-p port] [filter]'" << endl << endl;
 
-	ostr << " process   - process ebus messages 'process [-d] filter type [PBSBNNDx]'  type: I,R,BC,MM,MS" << endl
+	ostr << " process   - process ebus messages 'process [-d] filter rule [PBSBNNDx]'  rule: I,R,BC,MM,MS" << endl
 		<< endl;
 
 	ostr << " dump      - enable/disable raw data dumping" << endl << endl;

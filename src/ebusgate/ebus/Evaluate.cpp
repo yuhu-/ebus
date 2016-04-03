@@ -32,20 +32,20 @@ int Evaluate::run(EbusHandler* h)
 	EbusSequence eSeq;
 	eSeq.createMaster(m_sequence);
 
-	ActionType action = h->getType(eSeq);
+	RuleType type = h->getType(eSeq);
 	unsigned char target = 0;
 
-	logger.debug("action type %d", action);
+	logger.debug("rule type %d", type);
 
-	switch (action)
+	switch (type)
 	{
-	case at_undefined:
+	case rt_undefined:
 		logger.warn("%s", errorText(STATE_WRN_NOT_DEF).c_str());
 		break;
-	case at_ignore:
+	case rt_ignore:
 		logger.debug("ignore");
 		break;
-	case at_response:
+	case rt_response:
 		eSeq.setSlaveACK(ACK);
 
 		if (h->createResponse(eSeq) == true)
@@ -61,20 +61,20 @@ int Evaluate::run(EbusHandler* h)
 		}
 
 		break;
-	case at_send_BC:
+	case rt_send_BC:
 		target = BROADCAST;
 		break;
-	case at_send_MM:
+	case rt_send_MM:
 		target = eSeq.getMasterQQ();
 		break;
-	case at_send_MS:
+	case rt_send_MS:
 		target = slaveAddress(eSeq.getMasterQQ());
 		break;
 	default:
 		break;
 	}
 
-	if (action > at_response)
+	if (type > rt_response)
 	{
 		if (h->createMessage(target, eSeq) == true)
 		{

@@ -17,30 +17,30 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef EBUS_ACTION_H
-#define EBUS_ACTION_H
+#ifndef EBUS_RULE_H
+#define EBUS_RULE_H
 
 #include "Sequence.h"
 
-enum ActionType
+enum RuleType
 {
-	at_undefined,	// undefined
-	at_ignore,	// ignore
-	at_response,	// prepare slave part and send response
-	at_send_BC,	// create and send broadcast message
-	at_send_MM,	// create and send master master message
-	at_send_MS	// create and send master slave message
+	rt_undefined,	// undefined
+	rt_ignore,	// ignore
+	rt_response,	// prepare slave part and send response
+	rt_send_BC,	// create and send broadcast message
+	rt_send_MM,	// create and send master master message
+	rt_send_MS	// create and send master slave message
 };
 
-ActionType findType(const string& item);
+RuleType findType(const string& item);
 
-class Action
+class Rule
 {
 
 public:
-	Action(const Sequence& seq, ActionType type, const string& message);
+	Rule(const Sequence& seq, RuleType type, const string& message);
 
-	ActionType getType() const;
+	RuleType getType() const;
 	string getMessage() const;
 
 	bool equal(const Sequence& seq);
@@ -48,10 +48,10 @@ public:
 
 private:
 	Sequence m_seq;
-	ActionType m_type;
+	RuleType m_type;
 	string m_message;
 
 };
 
-#endif // EBUS_ACTION_H
+#endif // EBUS_RULE_H
 

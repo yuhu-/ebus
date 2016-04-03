@@ -109,7 +109,7 @@ int RecvMessage::run(EbusHandler* h)
 			h->m_dataHandler->enqueue(eSeq);
 		}
 
-		if (h->m_action.empty() == false)
+		if (h->m_rules.empty() == false)
 		{
 			h->changeState(Evaluate::getEvaluate());
 			return (DEV_OK);

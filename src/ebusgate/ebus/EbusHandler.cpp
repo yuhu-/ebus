@@ -60,11 +60,11 @@ EbusHandler::~EbusHandler()
 
 	m_dumpRawStream.close();
 
-	while (m_action.size() > 0)
+	while (m_rules.size() > 0)
 	{
-		Action* action = m_action.back();
-		m_action.pop_back();
-		delete action;
+		Rule* rule = m_rules.back();
+		m_rules.pop_back();
+		delete rule;
 	}
 
 	if (m_dataHandler != nullptr)
@@ -144,13 +144,13 @@ bool EbusHandler::forward(bool remove, const string& ip, long port, const string
 		return (m_dataHandler->append(ip, port, filter, result));
 }
 
-bool EbusHandler::process(bool remove, const string& filter, const string& type, const string& message,
+bool EbusHandler::process(bool remove, const string& filter, const string& rule, const string& message,
 	ostringstream& result)
 {
 	if (remove == true)
-		return (this->remove(filter, type, message, result));
+		return (this->remove(filter, rule, message, result));
 	else
-		return (this->append(filter, type, message, result));
+		return (this->append(filter, rule, message, result));
 }
 
 void EbusHandler::run()
@@ -179,86 +179,102 @@ void EbusHandler::changeState(State* state)
 	}
 }
 
-bool EbusHandler::append(const string& filter, const string& action, const string& message, ostringstream& result)
+bool EbusHandler::append(const string& filter, const string& rule, const string& message, ostringstream& result)
 {
-	ActionType type = findType(action);
-	if (type == at_undefined)
+	Logger logger = Logger("EbusHandler::append");
+
+	RuleType type = findType(rule);
+	if (type == rt_undefined)
 	{
-		result << "action " << action << " not defined";
+		result << "rule " << rule << " not defined";
+		return (false);
+	}
+
+//	Rule* rule = getRule(filter);
+//
+//	if (rule == nullptr)
+//	{
+//
+//	}
+//	else
+//	{
+//		logger.debug("rule with filter updated");
+//		result << "filter already exist";
+//	}
+
+	return (true);
+}
+
+bool EbusHandler::remove(const string& filter, const string& rule, const string& message, ostringstream& result)
+{
+	Logger logger = Logger("EbusHandler::remove");
+
+	RuleType type = findType(rule);
+	if (type == rt_undefined)
+	{
+		result << "rule " << rule << " not defined";
 		return (false);
 	}
 
 	return (true);
 }
 
-bool EbusHandler::remove(const string& filter, const string& action, const string& message, ostringstream& result)
-{
-	ActionType type = findType(action);
-	if (type == at_undefined)
-	{
-		result << "action " << action << " not defined";
-		return (false);
-	}
-
-	return (true);
-}
-
-const Action* EbusHandler::getAction(const string& filter) const
+const Rule* EbusHandler::getRule(const string& filter) const
 {
 	Sequence seq(filter);
 
-	for (size_t index = 0; index < m_action.size(); index++)
-		if (m_action[index]->equal(seq) == true) return (m_action[index]);
+	for (size_t index = 0; index < m_rules.size(); index++)
+		if (m_rules[index]->equal(seq) == true) return (m_rules[index]);
 
 	return (nullptr);
 }
 
-const Action* EbusHandler::addAction(const string& filter, ActionType type, const string& message)
+const Rule* EbusHandler::addRule(const string& filter, RuleType type, const string& message)
 {
 	Sequence seq(filter);
 	size_t index;
 
-	for (index = 0; index < m_action.size(); index++)
-		if (m_action[index]->equal(seq) == true) break;
+	for (index = 0; index < m_rules.size(); index++)
+		if (m_rules[index]->equal(seq) == true) break;
 
-	if (index == m_action.size()) m_action.push_back(new Action(seq, type, message));
+	if (index == m_rules.size()) m_rules.push_back(new Rule(seq, type, message));
 
-	return (m_action[index]);
+	return (m_rules[index]);
 }
 
-bool EbusHandler::delAction(const string& filter)
+bool EbusHandler::delRule(const string& filter)
 {
 	Sequence seq(filter);
 
-	for (size_t index = 0; index < m_action.size(); index++)
-		if (m_action[index]->equal(seq) == true)
+	for (size_t index = 0; index < m_rules.size(); index++)
+		if (m_rules[index]->equal(seq) == true)
 		{
-			Action* _action = m_action[index];
+			Rule* rule = m_rules[index];
 
-			m_action.erase(m_action.begin() + index);
-			m_action.shrink_to_fit();
+			m_rules.erase(m_rules.begin() + index);
+			m_rules.shrink_to_fit();
 
-			delete _action;
+			delete rule;
 			return (true);
 		}
 
 	return (false);
 }
 
-ActionType EbusHandler::getType(const EbusSequence& eSeq) const
+RuleType EbusHandler::getType(const EbusSequence& eSeq) const
 {
-	for (const auto& action : m_action)
-		if (action->match(eSeq.getMaster()) == true) return (action->getType());
+	for (const auto& rule : m_rules)
+		if (rule->match(eSeq.getMaster()) == true) return (rule->getType());
 
-	return (at_undefined);
+	return (rt_undefined);
 }
 
 bool EbusHandler::createResponse(EbusSequence& eSeq)
 {
-	for (const auto& action : m_action)
-		if (action->match(eSeq.getMaster()) == true)
+	for (const auto& rule : m_rules)
+		if (rule->match(eSeq.getMaster()) == true)
 		{
-			Sequence seq(action->getMessage());
+			Sequence seq(rule->getMessage());
 			eSeq.createSlave(seq);
 			if (eSeq.getSlaveState() == EBUS_OK) return (true);
 			break;
@@ -269,11 +285,11 @@ bool EbusHandler::createResponse(EbusSequence& eSeq)
 
 bool EbusHandler::createMessage(const unsigned char target, EbusSequence& eSeq)
 {
-	for (const auto& action : m_action)
-		if (action->match(eSeq.getMaster()) == true)
+	for (const auto& rule : m_rules)
+		if (rule->match(eSeq.getMaster()) == true)
 		{
 			eSeq.clear();
-			eSeq.createMaster(m_address, target, action->getMessage());
+			eSeq.createMaster(m_address, target, rule->getMessage());
 			if (eSeq.getMasterState() == EBUS_OK) return (true);
 			break;
 		}

@@ -23,7 +23,7 @@
 #include "EbusMessage.h"
 #include "EbusDevice.h"
 #include "DataHandler.h"
-#include "Action.h"
+#include "Rule.h"
 #include "NQueue.h"
 #include "Notify.h"
 
@@ -75,7 +75,7 @@ public:
 
 	bool forward(bool remove, const string& ip, long port, const string& filter, ostringstream& result);
 
-	bool process(bool remove, const string& filter, const string& type, const string& message,
+	bool process(bool remove, const string& filter, const string& rule, const string& message,
 		ostringstream& result);
 
 private:
@@ -111,26 +111,26 @@ private:
 
 	NQueue<EbusMessage*> m_ebusMsgQueue;
 
-	vector<Action*> m_action =
+	vector<Rule*> m_rules =
 	{
-	{ new Action(Sequence("0700"), at_ignore, "") },
-	{ new Action(Sequence("0704"), at_response, "0a7a454741544501010101") },
-	{ new Action(Sequence("07fe"), at_send_BC, "07ff00") },
-	{ new Action(Sequence("b505"), at_ignore, "") },
-	{ new Action(Sequence("b516"), at_ignore, "") } };
+	{ new Rule(Sequence("0700"), rt_ignore, "") },
+	{ new Rule(Sequence("0704"), rt_response, "0a7a454741544501010101") },
+	{ new Rule(Sequence("07fe"), rt_send_BC, "07ff00") },
+	{ new Rule(Sequence("b505"), rt_ignore, "") },
+	{ new Rule(Sequence("b516"), rt_ignore, "") } };
 
 	void run();
 
 	void changeState(State* state);
 
-	bool append(const string& filter, const string& type, const string& message, ostringstream& result);
-	bool remove(const string& filter, const string& type, const string& message, ostringstream& result);
+	bool append(const string& filter, const string& rule, const string& message, ostringstream& result);
+	bool remove(const string& filter, const string& rule, const string& message, ostringstream& result);
 
-	const Action* getAction(const string& filter) const;
-	const Action* addAction(const string& filter, ActionType type, const string& message);
-	bool delAction(const string& filter);
+	const Rule* getRule(const string& filter) const;
+	const Rule* addRule(const string& filter, RuleType type, const string& message);
+	bool delRule(const string& filter);
 
-	ActionType getType(const EbusSequence& eSeq) const;
+	RuleType getType(const EbusSequence& eSeq) const;
 	bool createResponse(EbusSequence& eSeq);
 	bool createMessage(const unsigned char target, EbusSequence& eSeq);
 
