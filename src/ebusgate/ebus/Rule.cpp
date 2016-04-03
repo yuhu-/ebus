@@ -21,7 +21,9 @@
 
 #include <cstring>
 #include <map>
+#include <iomanip>
 
+using std::ostringstream;
 using std::map;
 
 map<RuleType, string> RuleTypeNames =
@@ -40,9 +42,16 @@ RuleType findType(const string& item)
 	return (rt_undefined);
 }
 
+int Rule::uniqueID = 1;
+
 Rule::Rule(const Sequence& seq, RuleType type, const string& message)
-	: m_seq(seq), m_type(type), m_message(message)
+	: m_id(uniqueID++), m_seq(seq), m_type(type), m_message(message)
 {
+}
+
+int Rule::getID() const
+{
+	return (m_id);
 }
 
 RuleType Rule::getType() const
@@ -67,5 +76,15 @@ bool Rule::match(const Sequence& seq)
 	if (seq.find(m_seq) != Sequence::npos) return (true);
 
 	return (false);
+}
+
+const string Rule::toString()
+{
+	ostringstream ostr;
+
+	ostr << "id: " << m_id << " filter: " << m_seq.toString() << " rule: " << RuleTypeNames[m_type] << " message: "
+		<< m_message;
+
+	return (ostr.str());
 }
 

@@ -443,6 +443,12 @@ void BaseLoop::handleProcess(const vector<string>& args, ostringstream& result)
 			}
 
 			argPos++;
+			if (argPos == args.size())
+			{
+				result << "type is missing";
+				return;
+			}
+
 			type = args[argPos];
 		}
 		else
@@ -456,6 +462,12 @@ void BaseLoop::handleProcess(const vector<string>& args, ostringstream& result)
 		}
 
 		argPos++;
+	}
+
+	if (filter.empty() == true)
+	{
+		result << "filter is missing";
+		return;
 	}
 
 	m_ebusHandler->process(remove, filter, type, message, result);

@@ -40,13 +40,20 @@ class Rule
 public:
 	Rule(const Sequence& seq, RuleType type, const string& message);
 
+	int getID() const;
 	RuleType getType() const;
+
 	string getMessage() const;
 
 	bool equal(const Sequence& seq);
 	bool match(const Sequence& seq);
 
+	const string toString();
+
 private:
+	static int uniqueID;
+
+	int m_id;
 	Sequence m_seq;
 	RuleType m_type;
 	string m_message;

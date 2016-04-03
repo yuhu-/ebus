@@ -115,16 +115,16 @@ private:
 	{
 	{ new Rule(Sequence("0700"), rt_ignore, "") },
 	{ new Rule(Sequence("0704"), rt_response, "0a7a454741544501010101") },
-	{ new Rule(Sequence("07fe"), rt_send_BC, "07ff00") },
-	{ new Rule(Sequence("b505"), rt_ignore, "") },
-	{ new Rule(Sequence("b516"), rt_ignore, "") } };
+	{ new Rule(Sequence("07fe"), rt_send_BC, "07ff00") } };
+//	{ new Rule(Sequence("b505"), rt_ignore, "") },
+//	{ new Rule(Sequence("b516"), rt_ignore, "") } };
 
 	void run();
 
 	void changeState(State* state);
 
 	bool append(const string& filter, const string& rule, const string& message, ostringstream& result);
-	bool remove(const string& filter, const string& rule, const string& message, ostringstream& result);
+	bool remove(const string& filter, ostringstream& result);
 
 	const Rule* getRule(const string& filter) const;
 	const Rule* addRule(const string& filter, RuleType type, const string& message);

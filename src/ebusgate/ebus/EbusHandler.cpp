@@ -148,7 +148,7 @@ bool EbusHandler::process(bool remove, const string& filter, const string& rule,
 	ostringstream& result)
 {
 	if (remove == true)
-		return (this->remove(filter, rule, message, result));
+		return (this->remove(filter, result));
 	else
 		return (this->append(filter, rule, message, result));
 }
@@ -186,37 +186,59 @@ bool EbusHandler::append(const string& filter, const string& rule, const string&
 	RuleType type = findType(rule);
 	if (type == rt_undefined)
 	{
-		result << "rule " << rule << " not defined";
+		result << "type " << rule << " is not defined";
+		logger.warn("%s", result.str().c_str());
 		return (false);
 	}
 
-//	Rule* rule = getRule(filter);
-//
-//	if (rule == nullptr)
-//	{
-//
-//	}
-//	else
-//	{
-//		logger.debug("rule with filter updated");
-//		result << "filter already exist";
-//	}
+	if (type > rt_ignore && message.empty() == true)
+	{
+		result << "message is missing";
+		logger.info("%s", result.str().c_str());
+		return (false);
+	}
 
+	if (getRule(filter) == nullptr)
+	{
+		addRule(filter, type, message);
+		result << "rule for " << filter << " added";
+	}
+	else
+	{
+		if (delRule(filter) == true)
+		{
+			addRule(filter, type, message);
+			result << "rule for " << filter << " updated";
+		}
+		else
+		{
+			result << "update rule for " << filter << " failed";
+			logger.warn("%s", result.str().c_str());
+			return (false);
+		}
+
+	}
+
+	logger.info("%s", result.str().c_str());
 	return (true);
 }
 
-bool EbusHandler::remove(const string& filter, const string& rule, const string& message, ostringstream& result)
+bool EbusHandler::remove(const string& filter, ostringstream& result)
 {
 	Logger logger = Logger("EbusHandler::remove");
 
-	RuleType type = findType(rule);
-	if (type == rt_undefined)
+	if (delRule(filter) == true)
 	{
-		result << "rule " << rule << " not defined";
+		result << "rule for " << filter << " removed";
+		return (true);
+	}
+	else
+	{
+		result << "remove rule for " << filter << " failed";
+		logger.warn("%s", result.str().c_str());
 		return (false);
 	}
 
-	return (true);
 }
 
 const Rule* EbusHandler::getRule(const string& filter) const
