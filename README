@@ -19,8 +19,6 @@ Options:
    | --lockcounter	number of characters after a successful ebus access [5] (max: 25)
    | --lockretries	number of retries to lock ebus [2]
 
-   | --active		handle broadcast and at me addressed messages
-
    | --dump		enable/disable raw data dumping
    | --dumpfile		dump file name [/tmp/ebus_dump.bin]
    | --dumpsize		max size for dump file in 'kB' [100]

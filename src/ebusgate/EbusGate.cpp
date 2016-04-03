@@ -57,8 +57,6 @@ void define_args()
 
 	options.addInt("lockretries", "", 2, "number of retries to lock ebus [2]\n");
 
-	options.addBool("active", "", false, "\thandle broadcast and at me addressed messages\n");
-
 	options.addBool("dump", "", false, "\tenable/disable raw data dumping");
 
 	options.addString("dumpfile", "", "/tmp/ebus_dump.bin", "\tdump file name [/tmp/ebus_dump.bin]");

@@ -23,25 +23,25 @@ Options:
 $ ebusctl help
 
 commands:
- open         - open ebus connection
- close        - close ebus connection
+ open      - open ebus connection
+ close     - close ebus connection
 
- send         - write message onto ebus 'send ZZPBSBNNDx'
+ send      - write message onto ebus 'send ZZPBSBNNDx'
 
- subscribe    - start forwarding ebus messages 'subscribe [-s server] [-p port] [filter]'
- unsubscribe  - stop forwarding ebus messages 'unsubscribe [-s server] [-p port] [filter]'
+ forward   - forward ebus messages 'forward [-d] [-s server] [-p port] [filter]'
 
- active       - enable/disable active ebus mode
+ process   - process ebus messages 'process [-d] filter rule [PBSBNNDx]'  rule: I,R,BC,MM,MS
 
- dump         - enable/disable raw data dumping
+ dump      - enable/disable raw data dumping
 
- loglevel     - change logging level 'loglevel level'
- lograw       - enable/disable raw data logging
+ loglevel  - change logging level 'loglevel level'
+ lograw    - enable/disable raw data logging
 
- stop         - stop running daemon and exit
- quit         - close tcp connection
+ stop      - stop running daemon and exit
+ quit      - close tcp connection
 
- help         - print this page
+ help      - print this page
+
 
 
 
@@ -55,11 +55,15 @@ Description:
  'ebusfeed' sends hex values from dump file to a pseudo terminal device (pty)
 
   Example: 1. 'socat -d -d pty,raw,echo=0 pty,raw,echo=0'
+	      2016/03/19 11:36:58 socat[2347] N PTY is /dev/pts/2
+	      2016/03/19 11:36:58 socat[2347] N PTY is /dev/pts/3
+	      2016/03/19 11:36:58 socat[2347] N starting data transfer loop with FDs [5,5] and [7,7]
+
            2. create symbol links to appropriate devices
-              for example: 'ln -s /dev/pts/5 /dev/ttyUSB5'
-                           'ln -s /dev/pts/6 /dev/ttyUSB6'
-           3. start ebusgate: 'ebusgate -f -n -d /dev/ttyUSB5'
-           4. start ebusfeed: 'ebusfeed -d /dev/ttyUSB6 /path/to/ebus_dump.bin'
+              for example: 'ln -s /dev/pts/2 /dev/ttyUSB2'
+                           'ln -s /dev/pts/3 /dev/ttyUSB3'
+           3. start ebusgate: 'ebusgate -f -n -d /dev/ttyUSB2'
+           4. start ebusfeed: 'ebusfeed -d /dev/ttyUSB3 /path/to/ebus_dump.bin'
 
 Options:
 
