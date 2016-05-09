@@ -17,23 +17,31 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef LIBLOGGER_LOGSINK_H
-#define LIBLOGGER_LOGSINK_H
+#ifndef FORWARD_RELATION_H
+#define FORWARD_RELATION_H
 
 #include <string>
 
 using std::string;
 
-class LogSink
+class Relation
 {
 
 public:
-	virtual ~LogSink()
-	{
-	}
+	Relation(int hostID, int filterID);
 
-	virtual void write(const string& message) const = 0;
+	int getHostID() const;
+	int getFilterID() const;
+
+	bool equal(int hostID, int filterID);
+
+	const string toString();
+
+private:
+	int m_hostID;
+	int m_filterID;
 
 };
 
-#endif // LIBLOGGER_LOGSINK_H
+#endif // FORWARD_RELATION_H
+

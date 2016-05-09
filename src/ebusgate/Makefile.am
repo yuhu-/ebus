@@ -3,6 +3,8 @@ AM_CXXFLAGS = -fpic \
 	      -Wextra \
 	      -std=c++14 \
 	      -isystem$(top_srcdir)/src/ebusgate/network \
+	      -isystem$(top_srcdir)/src/ebusgate/forward \
+	      -isystem$(top_srcdir)/src/ebusgate/process \
 	      -isystem$(top_srcdir)/src/ebusgate/ebus \
 	      -isystem$(top_srcdir)/src/lib/utils \
 	      -isystem$(top_srcdir)/src/lib/logger \
@@ -19,16 +21,20 @@ ebusgate_SOURCES = network/NetMessage.cpp \
 		   network/TCPAcceptor.h \
 		   network/UDPReceiver.cpp \
 		   network/UDPReceiver.h \
-		   ebus/Rule.cpp \
-		   ebus/Rule.h \
-		   ebus/Relation.cpp \
-		   ebus/Relation.h \
-		   ebus/Filter.cpp \
-		   ebus/Filter.h \
-		   ebus/Host.cpp \
-		   ebus/Host.h \
-		   ebus/DataHandler.cpp \
-		   ebus/DataHandler.h \
+		   forward/Relation.cpp \
+		   forward/Relation.h \
+		   forward/Filter.cpp \
+		   forward/Filter.h \
+		   forward/Host.cpp \
+		   forward/Host.h \
+		   forward/Forward.h \
+		   forward/MultiForward.cpp \
+		   forward/MultiForward.h \
+		   process/ProcessBase.cpp \
+		   process/ProcessBase.h \
+		   process/Process.h \
+		   process/DummyProcess.cpp \
+		   process/DummyProcess.h \
 		   ebus/EbusMessage.cpp \
 		   ebus/EbusMessage.h \
 		   ebus/State.cpp \

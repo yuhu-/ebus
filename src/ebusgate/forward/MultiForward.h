@@ -17,27 +17,27 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef EBUS_DATAHANDLER_H
-#define EBUS_DATAHANDLER_H
+#ifndef FORWARD_MULTIFORWARD_H
+#define FORWARD_MULTIFORWARD_H
 
-#include "EbusSequence.h"
-#include "Host.h"
-#include "Filter.h"
-#include "Relation.h"
+#include "Forward.h"
 #include "NQueue.h"
 #include "Notify.h"
+#include "Filter.h"
+#include "Host.h"
+#include "Relation.h"
 
 #include <thread>
 
 using std::thread;
 using std::ostringstream;
 
-class DataHandler : public Notify
+class MultiForward : public Forward, public Notify
 {
 
 public:
-	DataHandler();
-	~DataHandler();
+	MultiForward();
+	~MultiForward();
 
 	void start();
 	void stop();
@@ -85,4 +85,4 @@ private:
 	void delRelationByFilter(const int filterID);
 };
 
-#endif // EBUS_DATAHANDLER_H
+#endif // FORWARD_MULTIFORWARD_H

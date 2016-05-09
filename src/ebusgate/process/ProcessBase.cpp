@@ -17,45 +17,37 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef EBUS_HOST_H
-#define EBUS_HOST_H
+#include "ProcessBase.h"
 
-#include "Client.h"
+#include <map>
+#include <cstring>
 
-#include <string>
+using std::map;
 
-using std::string;
-
-class Host
+map<ProcessType, string> ProcessTypeNames =
 {
+{ pt_undefined, "U" },
+{ pt_ignore, "I" },
+{ pt_response, "R" },
+{ pt_send, "S" } };
 
-public:
-	Host(const string& ip, const long port, const bool filter);
-	~Host();
+ProcessType findType(const string& str)
+{
+	for (const auto& rule : ProcessTypeNames)
+		if (strcasecmp(rule.second.c_str(), str.c_str()) == 0) return (rule.first);
 
-	int getID() const;
+	return (pt_undefined);
+}
 
-	string getIP() const;
-	long getPort() const;
+const string getTypeName(ProcessType type)
+{
+	return (ProcessTypeNames[type]);
+}
 
-	void setFilter(const bool filter);
-	bool hasFilter() const;
+bool find(const Sequence& seq, const string& str)
+{
+	if (seq.find(Sequence(str)) != Sequence::npos) return (true);
 
-	bool equal(const string& ip, const long port) const;
-
-	void send(const string& message);
-
-	const string toString();
-
-private:
-	static int uniqueID;
-
-	int m_id;
-	bool m_filter;
-
-	Client m_client;
-	Socket* m_socket;
-};
-
-#endif // EBUS_HOST_H
+	return (false);
+}
 

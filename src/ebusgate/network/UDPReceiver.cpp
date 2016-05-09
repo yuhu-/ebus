@@ -65,7 +65,7 @@ void UDPReceiver::stop()
 void UDPReceiver::run()
 {
 	Logger logger = Logger("UDPReceiver::run");
-	logger.info("listening started on %s", m_udpServer->toString().c_str());
+	logger.info("started listening on %s", m_udpServer->toString().c_str());
 
 	struct timespec tdiff;
 
@@ -153,6 +153,6 @@ void UDPReceiver::run()
 		m_socket = nullptr;
 	}
 
-	logger.info("listening stopped");
+	logger.info("stopped listening");
 }
 

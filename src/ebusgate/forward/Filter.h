@@ -17,49 +17,32 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
-#include "Filter.h"
+#ifndef FORWARD_FILTER_H
+#define FORWARD_FILTER_H
 
-#include <iomanip>
+#include "Sequence.h"
 
-using std::ostringstream;
-
-int Filter::uniqueID = 1;
-
-Filter::Filter(const Sequence& seq)
-	: m_id(uniqueID++), m_seq(seq)
+class Filter
 {
-}
 
-int Filter::getID() const
-{
-	return (m_id);
-}
+public:
+	explicit Filter(const Sequence& seq);
 
-Sequence Filter::getFilter() const
-{
-	return (m_seq);
-}
+	int getID() const;
+	Sequence getFilter() const;
 
-bool Filter::equal(const Sequence& seq)
-{
-	if (m_seq.compare(seq) == 0) return (true);
+	bool equal(const Sequence& seq);
+	bool match(const Sequence& seq);
 
-	return (false);
-}
+	const string toString();
 
-bool Filter::match(const Sequence& seq)
-{
-	if (seq.find(m_seq) != Sequence::npos) return (true);
+private:
+	static int uniqueID;
 
-	return (false);
-}
+	int m_id;
+	Sequence m_seq;
 
-const string Filter::toString()
-{
-	ostringstream ostr;
+};
 
-	ostr << "id: " << m_id << " filter: " << m_seq.toString();
-
-	return (ostr.str());
-}
+#endif // FORWARD_FILTER_H
 

@@ -74,7 +74,7 @@ void connect(const string& host, const int port, const bool udp)
 		{
 			struct sockaddr_in sock;
 			socklen_t socklen = sizeof(struct sockaddr_in);
-			char data[1024];
+			char data[2048];
 			ssize_t datalen = socket->recv(data, sizeof(data) - 1, &sock, &socklen);
 			data[datalen] = '\0';
 			cout << data;

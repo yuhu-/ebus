@@ -17,23 +17,23 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef LIBLOGGER_LOGSINK_H
-#define LIBLOGGER_LOGSINK_H
+#ifndef PROCESS_PROCESS_H
+#define PROCESS_PROCESS_H
 
-#include <string>
+#include "ProcessBase.h"
+#include "EbusSequence.h"
 
-using std::string;
-
-class LogSink
+class Process
 {
 
 public:
-	virtual ~LogSink()
+	virtual ~Process()
 	{
 	}
 
-	virtual void write(const string& message) const = 0;
+	virtual ProcessType process(EbusSequence& eSeq) = 0;
 
 };
 
-#endif // LIBLOGGER_LOGSINK_H
+#endif // PROCESS_PROCESS_H
+

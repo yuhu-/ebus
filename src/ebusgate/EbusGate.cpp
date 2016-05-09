@@ -81,7 +81,7 @@ void define_args()
 
 void shutdown()
 {
-	Logger logger = Logger("shutdown");
+	Logger logger = Logger("EbusGate::shutdown");
 
 	// stop threads
 	if (baseloop != nullptr)
@@ -99,7 +99,7 @@ void shutdown()
 	if (Daemon::getDaemon().status() == true) Daemon::getDaemon().stop();
 
 	// stop logger
-	logger.info("ebusgate stopped");
+	logger.info("stopped");
 
 	logger.stop();
 	exit(EXIT_SUCCESS);
@@ -108,7 +108,7 @@ void shutdown()
 
 void signal_handler(int sig)
 {
-	Logger logger = Logger("signal_handler");
+	Logger logger = Logger("EbusGate::signal_handler");
 
 	switch (sig)
 	{
@@ -138,7 +138,7 @@ int main(int argc, char* argv[])
 	Options& options = Options::getOption();
 	if (options.parse(argc, argv) == false) return (EXIT_SUCCESS);
 
-	Logger logger = Logger("main");
+	Logger logger = Logger("EbusGate::main");
 
 	if (options.getBool("foreground") == true)
 	{
@@ -160,7 +160,7 @@ int main(int argc, char* argv[])
 	logger.setLevel(options.getString("loglevel"));
 	logger.start();
 
-	logger.info("ebusgate started");
+	logger.info("started");
 
 	// create baseloop
 	baseloop = new BaseLoop();

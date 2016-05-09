@@ -17,23 +17,45 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef LIBLOGGER_LOGSINK_H
-#define LIBLOGGER_LOGSINK_H
+#ifndef FORWARD_HOST_H
+#define FORWARD_HOST_H
+
+#include "Client.h"
 
 #include <string>
 
 using std::string;
 
-class LogSink
+class Host
 {
 
 public:
-	virtual ~LogSink()
-	{
-	}
+	Host(const string& ip, const long port, const bool filter);
+	~Host();
 
-	virtual void write(const string& message) const = 0;
+	int getID() const;
 
+	string getIP() const;
+	long getPort() const;
+
+	void setFilter(const bool filter);
+	bool hasFilter() const;
+
+	bool equal(const string& ip, const long port) const;
+
+	void send(const string& message);
+
+	const string toString();
+
+private:
+	static int uniqueID;
+
+	int m_id;
+	bool m_filter;
+
+	Client m_client;
+	Socket* m_socket;
 };
 
-#endif // LIBLOGGER_LOGSINK_H
+#endif // FORWARD_HOST_H
+

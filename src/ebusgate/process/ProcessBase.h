@@ -17,48 +17,22 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef EBUS_RULE_H
-#define EBUS_RULE_H
+#ifndef PROCESS_PROCESSBASE_H
+#define PROCESS_PROCESSBASE_H
 
 #include "Sequence.h"
 
-enum RuleType
+enum ProcessType
 {
-	rt_undefined,	// undefined
-	rt_ignore,	// ignore
-	rt_response,	// prepare slave part and send response
-	rt_send_BC,	// create and send broadcast message
-	rt_send_MM,	// create and send master master message
-	rt_send_MS	// create and send master slave message
+	pt_undefined,	// undefined
+	pt_ignore,	// ignore
+	pt_response,	// prepare slave part and send response
+	pt_send		// create message and send
 };
 
-RuleType findType(const string& item);
+ProcessType findType(const string& str);
+const string getTypeName(ProcessType type);
 
-class Rule
-{
+bool find(const Sequence& seq, const string& str);
 
-public:
-	Rule(const Sequence& seq, RuleType type, const string& message);
-
-	int getID() const;
-	RuleType getType() const;
-
-	string getMessage() const;
-
-	bool equal(const Sequence& seq);
-	bool match(const Sequence& seq);
-
-	const string toString();
-
-private:
-	static int uniqueID;
-
-	int m_id;
-	Sequence m_seq;
-	RuleType m_type;
-	string m_message;
-
-};
-
-#endif // EBUS_RULE_H
-
+#endif // PROCESS_PROCESSBASE_H

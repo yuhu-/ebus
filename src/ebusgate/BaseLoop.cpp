@@ -38,7 +38,6 @@ map<Command, string> CommandNames =
 { c_close, "CLOSE" },
 { c_send, "SEND" },
 { c_forward, "FORWARD" },
-{ c_process, "PROCESS" },
 { c_loglevel, "LOGLEVEL" },
 { c_lograw, "LOGRAW" },
 { c_dump, "DUMP" },
@@ -50,11 +49,17 @@ BaseLoop::BaseLoop()
 
 	m_ownAddress = options.getInt("address") & 0xff;
 
+	m_multiForward = new MultiForward();
+	m_multiForward->start();
+
+	m_dummyProcess = new DummyProcess(options.getInt("address") & 0xff);
+	m_dummyProcess->start();
+
 	m_ebusHandler = new EbusHandler(options.getInt("address") & 0xff, options.getString("device"),
 		options.getBool("nodevicecheck"), options.getLong("reopentime"), options.getLong("arbitrationtime"),
 		options.getLong("receivetimeout"), options.getInt("lockcounter"), options.getInt("lockretries"),
 		options.getBool("dump"), options.getString("dumpfile"), options.getLong("dumpsize"),
-		options.getBool("lograw"));
+		options.getBool("lograw"), m_multiForward, m_dummyProcess);
 
 	m_ebusHandler->start();
 
@@ -86,6 +91,20 @@ BaseLoop::~BaseLoop()
 		m_ebusHandler->stop();
 		delete m_ebusHandler;
 		m_ebusHandler = nullptr;
+	}
+
+	if (m_dummyProcess != nullptr)
+	{
+		m_dummyProcess->stop();
+		delete m_dummyProcess;
+		m_dummyProcess = nullptr;
+	}
+
+	if (m_multiForward != nullptr)
+	{
+		m_multiForward->stop();
+		delete m_multiForward;
+		m_multiForward = nullptr;
 	}
 
 	while (m_netMsgQueue.size() > 0)
@@ -230,18 +249,6 @@ string BaseLoop::decodeMessage(const string& data, const string& ip, long port)
 		}
 
 		handleForward(args, ip, port, result);
-
-		break;
-	}
-	case c_process:
-	{
-		if (args.size() > argPos + 4)
-		{
-			result << "usage: 'process [-d] filter rule [PBSBNNDx]'  rule: I,R,BC,MM,MS";
-			break;
-		}
-
-		handleProcess(args, result);
 
 		break;
 	}
@@ -415,62 +422,11 @@ void BaseLoop::handleForward(const vector<string>& args, const string& srcIP, lo
 
 	if (dstPort < 0) dstPort = srcPort;
 
-	m_ebusHandler->forward(remove, dstIP, dstPort, filter, result);
-}
+	if (remove == true)
+		m_multiForward->remove(dstIP, dstPort, filter, result);
+	else
+		m_multiForward->append(dstIP, dstPort, filter, result);
 
-void BaseLoop::handleProcess(const vector<string>& args, ostringstream& result)
-{
-	bool remove = false;
-	string filter;
-	string type;
-	string message;
-
-	size_t argPos = 1;
-
-	while (argPos < args.size())
-	{
-		if (args[argPos] == "-d")
-		{
-			remove = true;
-		}
-		else if (filter.empty() == true)
-		{
-			filter = args[argPos];
-			if (isHex(filter, result, 1) == false)
-			{
-				result << " in filter " << args[argPos];
-				return;
-			}
-
-			argPos++;
-			if (argPos == args.size())
-			{
-				result << "type is missing";
-				return;
-			}
-
-			type = args[argPos];
-		}
-		else
-		{
-			message = args[argPos];
-			if (isHex(message, result, 1) == false)
-			{
-				result << " in message " << args[argPos];
-				return;
-			}
-		}
-
-		argPos++;
-	}
-
-	if (filter.empty() == true)
-	{
-		result << "filter is missing";
-		return;
-	}
-
-	m_ebusHandler->process(remove, filter, type, message, result);
 }
 
 const string BaseLoop::formatHelp()
@@ -482,17 +438,17 @@ const string BaseLoop::formatHelp()
 
 	ostr << " send      - write message onto ebus 'send ZZPBSBNNDx'" << endl << endl;
 
-	ostr << " forward   - forward ebus messages 'forward [-d] [-s server] [-p port] [filter]'" << endl << endl;
-
-	ostr << " process   - process ebus messages 'process [-d] filter rule [PBSBNNDx]'  rule: I,R,BC,MM,MS" << endl
-		<< endl;
+	ostr << " forward   - forward ebus messages 'forward [-d] [-s server] [-p port] [filter]'" << endl;
+	ostr << "               filter: ebus sequence; no filter forward all" << endl;
+	ostr << "               server: either ip address or hostname" << endl;
+	ostr << "               port:   target udp port number" << endl << endl;
 
 	ostr << " dump      - enable/disable raw data dumping" << endl << endl;
 
 	ostr << " loglevel  - change logging level 'loglevel level'" << endl;
 	ostr << " lograw    - enable/disable raw data logging" << endl << endl;
 
-	ostr << " stop      - stop running daemon and exit" << endl;
+	ostr << " stop      - shutdown daemon" << endl;
 	ostr << " quit      - close tcp connection" << endl << endl;
 
 	ostr << " help      - print this page";

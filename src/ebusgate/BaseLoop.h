@@ -23,14 +23,15 @@
 #include "EbusHandler.h"
 #include "TCPAcceptor.h"
 #include "UDPReceiver.h"
-
+#include "MultiForward.h"
+#include "DummyProcess.h"
 #include <cstring>
 
 using std::ostringstream;
 
 enum Command
 {
-	c_invalid, c_open, c_close, c_send, c_forward, c_process, c_dump, c_loglevel, c_lograw, c_help
+	c_invalid, c_open, c_close, c_send, c_forward, c_dump, c_loglevel, c_lograw, c_help
 };
 
 class BaseLoop
@@ -52,6 +53,8 @@ private:
 
 	unsigned char m_ownAddress = 0;
 	EbusHandler* m_ebusHandler = nullptr;
+	MultiForward* m_multiForward = nullptr;
+	DummyProcess* m_dummyProcess = nullptr;
 	TCPAcceptor* m_tcpAcceptor = nullptr;
 	UDPReceiver* m_udpReceiver = nullptr;
 	NQueue<NetMessage*> m_netMsgQueue;
@@ -66,7 +69,8 @@ private:
 
 	void handleForward(const vector<string>& args, const string& srcIP, long srcPort, ostringstream& result);
 
-	void handleProcess(const vector<string>& args, ostringstream& result);
+	void handleProcess(bool remove, const string& filter, const string& rule, const string& message,
+		ostringstream& result);
 
 	static const string formatHelp();
 

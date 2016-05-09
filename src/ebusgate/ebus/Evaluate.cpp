@@ -32,23 +32,22 @@ int Evaluate::run(EbusHandler* h)
 	EbusSequence eSeq;
 	eSeq.createMaster(m_sequence);
 
-	RuleType type = h->getType(eSeq);
-	unsigned char target = 0;
+	ProcessType type = h->m_process->process(eSeq);
 
-	logger.debug("rule type %d", type);
+	logger.debug("process type: %s", getTypeName(type).c_str());
 
 	switch (type)
 	{
-	case rt_undefined:
+	case pt_undefined:
 		logger.warn("%s", errorText(STATE_WRN_NOT_DEF).c_str());
 		break;
-	case rt_ignore:
+	case pt_ignore:
 		logger.debug("ignore");
 		break;
-	case rt_response:
+	case pt_response:
 		eSeq.setSlaveACK(ACK);
 
-		if (h->createResponse(eSeq) == true)
+		if (eSeq.getSlaveState() == EBUS_OK)
 		{
 			logger.debug("response: %s", eSeq.toStringSlave().c_str());
 			m_passiveMessage = new EbusMessage(eSeq);
@@ -61,22 +60,8 @@ int Evaluate::run(EbusHandler* h)
 		}
 
 		break;
-	case rt_send_BC:
-		target = BROADCAST;
-		break;
-	case rt_send_MM:
-		target = eSeq.getMasterQQ();
-		break;
-	case rt_send_MS:
-		target = slaveAddress(eSeq.getMasterQQ());
-		break;
-	default:
-		break;
-	}
-
-	if (type > rt_response)
-	{
-		if (h->createMessage(target, eSeq) == true)
+	case pt_send:
+		if (eSeq.getMasterState() == EBUS_OK)
 		{
 			logger.debug("enqueue: %s", eSeq.toStringMaster().c_str());
 			h->enqueue(new EbusMessage(eSeq, true));
@@ -85,6 +70,10 @@ int Evaluate::run(EbusHandler* h)
 		{
 			logger.warn("%s", errorText(STATE_ERR_CREA_MSG).c_str());
 		}
+
+		break;
+	default:
+		break;
 	}
 
 	m_sequence.clear();

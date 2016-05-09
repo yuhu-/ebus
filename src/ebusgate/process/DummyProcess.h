@@ -17,31 +17,36 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef EBUS_RELATION_H
-#define EBUS_RELATION_H
+#ifndef PROCESS_DUMMYPROCESS_H
+#define PROCESS_DUMMYPROCESS_H
 
-#include <string>
+#include "Process.h"
+#include "Notify.h"
 
-using std::string;
+#include <thread>
 
-class Relation
+using std::thread;
+
+class DummyProcess : public Process, public Notify
 {
 
 public:
-	Relation(int hostID, int filterID);
+	explicit DummyProcess(const unsigned char address);
 
-	int getHostID() const;
-	int getFilterID() const;
+	void start();
+	void stop();
 
-	bool equal(int hostID, int filterID);
-
-	const string toString();
+	ProcessType process(EbusSequence& eSeq);
 
 private:
-	int m_hostID;
-	int m_filterID;
+	thread m_thread;
+
+	bool m_running = true;
+
+	const unsigned char m_address;
+
+	void run();
 
 };
 
-#endif // EBUS_RELATION_H
-
+#endif // PROCESS_DUMMYPROCESS_H

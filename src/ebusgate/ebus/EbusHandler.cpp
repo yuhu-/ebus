@@ -36,15 +36,13 @@ using std::back_inserter;
 EbusHandler::EbusHandler(const unsigned char address, const string device, const bool noDeviceCheck,
 	const long reopenTime, const long arbitrationTime, const long receiveTimeout, const int lockCounter,
 	const int lockRetries, const bool dumpRaw, const string dumpRawFile, const long dumpRawFileMaxSize,
-	const bool logRaw)
-	: m_address(address), m_reopenTime(reopenTime), m_arbitrationTime(arbitrationTime), m_receiveTimeout(
+	const bool logRaw, Forward* forward, Process* process)
+	: Notify(), m_address(address), m_reopenTime(reopenTime), m_arbitrationTime(arbitrationTime), m_receiveTimeout(
 		receiveTimeout), m_lockCounter(lockCounter), m_lockRetries(lockRetries), m_lastResult(
-	DEV_OK), m_dumpRawFile(dumpRawFile), m_dumpRawFileMaxSize(dumpRawFileMaxSize), m_logRaw(logRaw)
+	DEV_OK), m_dumpRawFile(dumpRawFile), m_dumpRawFileMaxSize(dumpRawFileMaxSize), m_logRaw(logRaw), m_forward(
+		forward), m_process(process)
 {
-	m_dataHandler = new DataHandler();
-	m_dataHandler->start();
-
-	m_device = new EbusDevice(device, noDeviceCheck);
+	m_ebusDevice = new EbusDevice(device, noDeviceCheck);
 	changeState(Connect::getConnect());
 
 	setDumpRaw(dumpRaw);
@@ -52,27 +50,13 @@ EbusHandler::EbusHandler(const unsigned char address, const string device, const
 
 EbusHandler::~EbusHandler()
 {
-	if (m_device != nullptr)
+	if (m_ebusDevice != nullptr)
 	{
-		delete m_device;
-		m_device = nullptr;
+		delete m_ebusDevice;
+		m_ebusDevice = nullptr;
 	}
 
 	m_dumpRawStream.close();
-
-	while (m_rules.size() > 0)
-	{
-		Rule* rule = m_rules.back();
-		m_rules.pop_back();
-		delete rule;
-	}
-
-	if (m_dataHandler != nullptr)
-	{
-		m_dataHandler->stop();
-		delete m_dataHandler;
-		m_dataHandler = nullptr;
-	}
 }
 
 void EbusHandler::start()
@@ -136,25 +120,11 @@ void EbusHandler::enqueue(EbusMessage* message)
 	m_ebusMsgQueue.enqueue(message);
 }
 
-bool EbusHandler::forward(bool remove, const string& ip, long port, const string& filter, ostringstream& result)
-{
-	if (remove == true)
-		return (m_dataHandler->remove(ip, port, filter, result));
-	else
-		return (m_dataHandler->append(ip, port, filter, result));
-}
-
-bool EbusHandler::process(bool remove, const string& filter, const string& rule, const string& message,
-	ostringstream& result)
-{
-	if (remove == true)
-		return (this->remove(filter, result));
-	else
-		return (this->append(filter, rule, message, result));
-}
-
 void EbusHandler::run()
 {
+	Logger logger = Logger("EbusHandler::run");
+	logger.info("started");
+
 	while (m_running == true)
 	{
 		m_lastResult = m_state->run(this);
@@ -166,6 +136,8 @@ void EbusHandler::run()
 			m_forceState = nullptr;
 		}
 	}
+
+	logger.info("stopped");
 }
 
 void EbusHandler::changeState(State* state)
@@ -177,145 +149,5 @@ void EbusHandler::changeState(State* state)
 		m_state = state;
 		logger.trace("%s", m_state->toString().c_str());
 	}
-}
-
-bool EbusHandler::append(const string& filter, const string& rule, const string& message, ostringstream& result)
-{
-	Logger logger = Logger("EbusHandler::append");
-
-	RuleType type = findType(rule);
-	if (type == rt_undefined)
-	{
-		result << "type " << rule << " is not defined";
-		logger.warn("%s", result.str().c_str());
-		return (false);
-	}
-
-	if (type > rt_ignore && message.empty() == true)
-	{
-		result << "message is missing";
-		logger.info("%s", result.str().c_str());
-		return (false);
-	}
-
-	if (getRule(filter) == nullptr)
-	{
-		addRule(filter, type, message);
-		result << "rule for " << filter << " added";
-	}
-	else
-	{
-		if (delRule(filter) == true)
-		{
-			addRule(filter, type, message);
-			result << "rule for " << filter << " updated";
-		}
-		else
-		{
-			result << "update rule for " << filter << " failed";
-			logger.warn("%s", result.str().c_str());
-			return (false);
-		}
-
-	}
-
-	logger.info("%s", result.str().c_str());
-	return (true);
-}
-
-bool EbusHandler::remove(const string& filter, ostringstream& result)
-{
-	Logger logger = Logger("EbusHandler::remove");
-
-	if (delRule(filter) == true)
-	{
-		result << "rule for " << filter << " removed";
-		return (true);
-	}
-	else
-	{
-		result << "remove rule for " << filter << " failed";
-		logger.warn("%s", result.str().c_str());
-		return (false);
-	}
-
-}
-
-const Rule* EbusHandler::getRule(const string& filter) const
-{
-	Sequence seq(filter);
-
-	for (size_t index = 0; index < m_rules.size(); index++)
-		if (m_rules[index]->equal(seq) == true) return (m_rules[index]);
-
-	return (nullptr);
-}
-
-const Rule* EbusHandler::addRule(const string& filter, RuleType type, const string& message)
-{
-	Sequence seq(filter);
-	size_t index;
-
-	for (index = 0; index < m_rules.size(); index++)
-		if (m_rules[index]->equal(seq) == true) break;
-
-	if (index == m_rules.size()) m_rules.push_back(new Rule(seq, type, message));
-
-	return (m_rules[index]);
-}
-
-bool EbusHandler::delRule(const string& filter)
-{
-	Sequence seq(filter);
-
-	for (size_t index = 0; index < m_rules.size(); index++)
-		if (m_rules[index]->equal(seq) == true)
-		{
-			Rule* rule = m_rules[index];
-
-			m_rules.erase(m_rules.begin() + index);
-			m_rules.shrink_to_fit();
-
-			delete rule;
-			return (true);
-		}
-
-	return (false);
-}
-
-RuleType EbusHandler::getType(const EbusSequence& eSeq) const
-{
-	for (const auto& rule : m_rules)
-		if (rule->match(eSeq.getMaster()) == true) return (rule->getType());
-
-	return (rt_undefined);
-}
-
-bool EbusHandler::createResponse(EbusSequence& eSeq)
-{
-	for (const auto& rule : m_rules)
-		if (rule->match(eSeq.getMaster()) == true)
-		{
-			Sequence seq(rule->getMessage());
-			eSeq.createSlave(seq);
-			if (eSeq.getSlaveState() == EBUS_OK) return (true);
-			break;
-		}
-
-	return (false);
-}
-
-bool EbusHandler::createMessage(const unsigned char target, EbusSequence& eSeq)
-{
-	for (const auto& rule : m_rules)
-		if (rule->match(eSeq.getMaster()) == true)
-		{
-			eSeq.clear();
-			eSeq.createMaster(m_address, target, rule->getMessage());
-			if (eSeq.getMasterState() == EBUS_OK) return (true);
-			break;
-		}
-
-	return (false);
 }
 

@@ -106,7 +106,7 @@ int RecvMessage::run(EbusHandler* h)
 
 			logger.info("%s", eSeq.toStringLog().c_str());
 
-			h->m_dataHandler->enqueue(eSeq);
+			if (h->m_forceState != nullptr) h->m_forward->enqueue(eSeq);
 		}
 
 		h->changeState(Evaluate::getEvaluate());

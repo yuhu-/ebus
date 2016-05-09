@@ -22,8 +22,8 @@
 
 #include "EbusMessage.h"
 #include "EbusDevice.h"
-#include "DataHandler.h"
-#include "Rule.h"
+#include "Forward.h"
+#include "Process.h"
 #include "NQueue.h"
 #include "Notify.h"
 
@@ -55,7 +55,8 @@ class EbusHandler : public Notify
 public:
 	EbusHandler(const unsigned char address, const string device, const bool noDeviceCheck, const long reopenTime,
 		const long arbitrationTime, const long receiveTimeout, const int lockCounter, const int lockRetries,
-		const bool dumpRaw, const string dumpRawFile, const long dumpRawFileMaxSize, const bool logRaw);
+		const bool dumpRaw, const string dumpRawFile, const long dumpRawFileMaxSize, const bool logRaw,
+		Forward* forward, Process* process);
 
 	~EbusHandler();
 
@@ -73,17 +74,10 @@ public:
 
 	void enqueue(EbusMessage* message);
 
-	bool forward(bool remove, const string& ip, long port, const string& filter, ostringstream& result);
-
-	bool process(bool remove, const string& filter, const string& rule, const string& message,
-		ostringstream& result);
-
 private:
 	thread m_thread;
 
 	bool m_running = true;
-
-	DataHandler* m_dataHandler = nullptr;
 
 	State* m_state = nullptr;
 	State* m_forceState = nullptr;
@@ -99,7 +93,7 @@ private:
 
 	int m_lastResult;
 
-	EbusDevice* m_device;
+	EbusDevice* m_ebusDevice;
 
 	bool m_dumpRaw = false;
 	string m_dumpRawFile;
@@ -109,30 +103,14 @@ private:
 
 	bool m_logRaw = false;
 
-	NQueue<EbusMessage*> m_ebusMsgQueue;
+	Forward* m_forward = nullptr;
+	Process* m_process = nullptr;
 
-	vector<Rule*> m_rules =
-	{
-	{ new Rule(Sequence("0700"), rt_ignore, "") },
-	{ new Rule(Sequence("0704"), rt_response, "0a7a454741544501010101") },
-	{ new Rule(Sequence("07fe"), rt_send_BC, "07ff00") } };
-//	{ new Rule(Sequence("b505"), rt_ignore, "") },
-//	{ new Rule(Sequence("b516"), rt_ignore, "") } };
+	NQueue<EbusMessage*> m_ebusMsgQueue;
 
 	void run();
 
 	void changeState(State* state);
-
-	bool append(const string& filter, const string& rule, const string& message, ostringstream& result);
-	bool remove(const string& filter, ostringstream& result);
-
-	const Rule* getRule(const string& filter) const;
-	const Rule* addRule(const string& filter, RuleType type, const string& message);
-	bool delRule(const string& filter);
-
-	RuleType getType(const EbusSequence& eSeq) const;
-	bool createResponse(EbusSequence& eSeq);
-	bool createMessage(const unsigned char target, EbusSequence& eSeq);
 
 };
 

@@ -69,7 +69,7 @@ int State::read(EbusHandler* h, unsigned char& byte, const long sec, const long 
 {
 	Logger logger = Logger("State::read");
 
-	int result = h->m_device->recv(byte, sec, nsec);
+	int result = h->m_ebusDevice->recv(byte, sec, nsec);
 
 	if (h->m_logRaw == true && result == DEV_OK) logger.info("<%02x", byte);
 
@@ -100,7 +100,7 @@ int State::write(EbusHandler* h, const unsigned char& byte)
 {
 	Logger logger = Logger("State::write");
 
-	int result = h->m_device->send(byte);
+	int result = h->m_ebusDevice->send(byte);
 
 	if (h->m_logRaw == true && result == DEV_OK) logger.info(">%02x", byte);
 

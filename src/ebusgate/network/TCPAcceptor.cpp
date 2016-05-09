@@ -70,7 +70,7 @@ void TCPAcceptor::run()
 	if (m_running == false) return;
 
 	Logger logger = Logger("TCPAcceptor::run");
-	logger.info("listening started on %s", m_tcpServer->toString().c_str());
+	logger.info("started listening on %s", m_tcpServer->toString().c_str());
 
 	struct timespec tdiff;
 
@@ -119,7 +119,7 @@ void TCPAcceptor::run()
 
 	}
 
-	logger.info("listening stopped");
+	logger.info("stopped listening");
 }
 
 void TCPAcceptor::cleanConnections()
