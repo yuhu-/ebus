@@ -439,7 +439,7 @@ const string BaseLoop::formatHelp()
 	ostr << " send      - write message onto ebus 'send ZZPBSBNNDx'" << endl << endl;
 
 	ostr << " forward   - forward ebus messages 'forward [-d] [-s server] [-p port] [filter]'" << endl;
-	ostr << "               filter: ebus sequence; no filter forward all" << endl;
+	ostr << "               filter: ebus sequence; without filter all messages will passed" << endl;
 	ostr << "               server: either ip address or hostname" << endl;
 	ostr << "               port:   target udp port number" << endl << endl;
 

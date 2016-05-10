@@ -29,18 +29,21 @@ commands:
  send      - write message onto ebus 'send ZZPBSBNNDx'
 
  forward   - forward ebus messages 'forward [-d] [-s server] [-p port] [filter]'
-
- process   - process ebus messages 'process [-d] filter rule [PBSBNNDx]'  rule: I,R,BC,MM,MS
+               filter: ebus sequence; without filter all messages will passed
+               server: either ip address or hostname
+               port:   target udp port number
 
  dump      - enable/disable raw data dumping
 
  loglevel  - change logging level 'loglevel level'
  lograw    - enable/disable raw data logging
 
- stop      - stop running daemon and exit
+ stop      - shutdown daemon
  quit      - close tcp connection
 
  help      - print this page
+
+
 
 
 
