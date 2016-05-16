@@ -37,13 +37,9 @@ inline bool istty(const ostream& ostr)
 	FILE* file = nullptr;
 
 	if (&ostr == &cout)
-	{
 		file = stdout;
-	}
 	else if (&ostr == &cerr || &ostr == &clog)
-	{
 		file = stderr;
-	}
 
 	if (isatty(fileno(file))) return (true);
 	return (false);
