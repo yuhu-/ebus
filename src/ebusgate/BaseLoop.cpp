@@ -49,19 +49,11 @@ BaseLoop::BaseLoop()
 
 	m_ownAddress = options.getInt("address") & 0xff;
 
-	m_multiForward = new MultiForward();
-	m_multiForward->start();
-
-	m_dummyProcess = new DummyProcess(options.getInt("address") & 0xff);
-	m_dummyProcess->start();
-
 	m_ebusHandler = new EbusHandler(options.getInt("address") & 0xff, options.getString("device"),
 		options.getBool("nodevicecheck"), options.getLong("reopentime"), options.getLong("arbitrationtime"),
 		options.getLong("receivetimeout"), options.getInt("lockcounter"), options.getInt("lockretries"),
 		options.getBool("dump"), options.getString("dumpfile"), options.getLong("dumpsize"),
-		options.getBool("lograw"), m_multiForward, m_dummyProcess);
-
-	m_ebusHandler->start();
+		options.getBool("lograw"));
 
 	m_tcpAcceptor = new TCPAcceptor(options.getBool("local"), options.getInt("port"), &m_netMsgQueue);
 	m_tcpAcceptor->start();
@@ -88,23 +80,9 @@ BaseLoop::~BaseLoop()
 
 	if (m_ebusHandler != nullptr)
 	{
-		m_ebusHandler->stop();
+//		m_ebusHandler->stop();
 		delete m_ebusHandler;
 		m_ebusHandler = nullptr;
-	}
-
-	if (m_dummyProcess != nullptr)
-	{
-		m_dummyProcess->stop();
-		delete m_dummyProcess;
-		m_dummyProcess = nullptr;
-	}
-
-	if (m_multiForward != nullptr)
-	{
-		m_multiForward->stop();
-		delete m_multiForward;
-		m_multiForward = nullptr;
 	}
 
 	while (m_netMsgQueue.size() > 0)
@@ -422,11 +400,7 @@ void BaseLoop::handleForward(const vector<string>& args, const string& srcIP, lo
 
 	if (dstPort < 0) dstPort = srcPort;
 
-	if (remove == true)
-		m_multiForward->remove(dstIP, dstPort, filter, result);
-	else
-		m_multiForward->append(dstIP, dstPort, filter, result);
-
+	m_ebusHandler->forward(remove, dstIP, dstPort, filter, result);
 }
 
 const string BaseLoop::formatHelp()

@@ -3,8 +3,9 @@ AM_CXXFLAGS = -fpic \
 	      -Wextra \
 	      -std=c++14 \
 	      -isystem$(top_srcdir)/src/ebusgate/network \
-	      -isystem$(top_srcdir)/src/ebusgate/forward \
-	      -isystem$(top_srcdir)/src/ebusgate/process \
+	      -isystem$(top_srcdir)/src/ebusgate/ebus/forward \
+	      -isystem$(top_srcdir)/src/ebusgate/ebus/process \
+	      -isystem$(top_srcdir)/src/ebusgate/ebus/fsm \
 	      -isystem$(top_srcdir)/src/ebusgate/ebus \
 	      -isystem$(top_srcdir)/src/lib/utils \
 	      -isystem$(top_srcdir)/src/lib/logger \
@@ -21,46 +22,48 @@ ebusgate_SOURCES = network/NetMessage.cpp \
 		   network/TCPAcceptor.h \
 		   network/UDPReceiver.cpp \
 		   network/UDPReceiver.h \
-		   forward/Relation.cpp \
-		   forward/Relation.h \
-		   forward/Filter.cpp \
-		   forward/Filter.h \
-		   forward/Host.cpp \
-		   forward/Host.h \
-		   forward/Forward.h \
-		   forward/MultiForward.cpp \
-		   forward/MultiForward.h \
-		   process/ProcessBase.cpp \
-		   process/ProcessBase.h \
-		   process/Process.h \
-		   process/DummyProcess.cpp \
-		   process/DummyProcess.h \
-		   ebus/EbusMessage.cpp \
-		   ebus/EbusMessage.h \
-		   ebus/State.cpp \
-		   ebus/State.h \
-		   ebus/OnError.cpp \
-		   ebus/OnError.h \
-		   ebus/Idle.cpp \
-		   ebus/Idle.h \
-		   ebus/Connect.cpp \
-		   ebus/Connect.h \
-		   ebus/Listen.cpp \
-		   ebus/Listen.h \
-		   ebus/LockBus.cpp \
-		   ebus/LockBus.h \
-		   ebus/FreeBus.cpp \
-		   ebus/FreeBus.h \
-		   ebus/Evaluate.cpp \
-		   ebus/Evaluate.h \
-		   ebus/SendMessage.cpp \
-		   ebus/SendMessage.h \
-		   ebus/RecvMessage.cpp \
-		   ebus/RecvMessage.h \
-		   ebus/SendResponse.cpp \
-		   ebus/SendResponse.h \
-		   ebus/RecvResponse.cpp \
-		   ebus/RecvResponse.h \
+		   ebus/forward/Relation.cpp \
+		   ebus/forward/Relation.h \
+		   ebus/forward/Filter.cpp \
+		   ebus/forward/Filter.h \
+		   ebus/forward/Host.cpp \
+		   ebus/forward/Host.h \
+		   ebus/forward/Forward.h \
+		   ebus/forward/MultiForward.cpp \
+		   ebus/forward/MultiForward.h \
+		   ebus/process/ProcessBase.cpp \
+		   ebus/process/ProcessBase.h \
+		   ebus/process/Process.h \
+		   ebus/process/DummyProcess.cpp \
+		   ebus/process/DummyProcess.h \
+		   ebus/fsm/EbusMessage.cpp \
+		   ebus/fsm/EbusMessage.h \
+		   ebus/fsm/State.cpp \
+		   ebus/fsm/State.h \
+		   ebus/fsm/OnError.cpp \
+		   ebus/fsm/OnError.h \
+		   ebus/fsm/Idle.cpp \
+		   ebus/fsm/Idle.h \
+		   ebus/fsm/Connect.cpp \
+		   ebus/fsm/Connect.h \
+		   ebus/fsm/Listen.cpp \
+		   ebus/fsm/Listen.h \
+		   ebus/fsm/LockBus.cpp \
+		   ebus/fsm/LockBus.h \
+		   ebus/fsm/FreeBus.cpp \
+		   ebus/fsm/FreeBus.h \
+		   ebus/fsm/Evaluate.cpp \
+		   ebus/fsm/Evaluate.h \
+		   ebus/fsm/SendMessage.cpp \
+		   ebus/fsm/SendMessage.h \
+		   ebus/fsm/RecvMessage.cpp \
+		   ebus/fsm/RecvMessage.h \
+		   ebus/fsm/SendResponse.cpp \
+		   ebus/fsm/SendResponse.h \
+		   ebus/fsm/RecvResponse.cpp \
+		   ebus/fsm/RecvResponse.h \
+		   ebus/fsm/EbusFSM.cpp \
+		   ebus/fsm/EbusFSM.h \
 		   ebus/EbusHandler.cpp \
 		   ebus/EbusHandler.h \
 		   BaseLoop.cpp \

@@ -18,136 +18,90 @@
  */
 
 #include "EbusHandler.h"
-#include "State.h"
-#include "Idle.h"
-#include "Connect.h"
-#include "OnError.h"
-#include "Logger.h"
-
-#include <sstream>
-#include <algorithm>
-
-using std::ios;
-using std::pair;
-using std::ostringstream;
-using std::copy_n;
-using std::back_inserter;
 
 EbusHandler::EbusHandler(const unsigned char address, const string device, const bool noDeviceCheck,
 	const long reopenTime, const long arbitrationTime, const long receiveTimeout, const int lockCounter,
 	const int lockRetries, const bool dumpRaw, const string dumpRawFile, const long dumpRawFileMaxSize,
-	const bool logRaw, Forward* forward, Process* process)
-	: Notify(), m_address(address), m_reopenTime(reopenTime), m_arbitrationTime(arbitrationTime), m_receiveTimeout(
-		receiveTimeout), m_lockCounter(lockCounter), m_lockRetries(lockRetries), m_lastResult(
-	DEV_OK), m_dumpRawFile(dumpRawFile), m_dumpRawFileMaxSize(dumpRawFileMaxSize), m_logRaw(logRaw), m_forward(
-		forward), m_process(process)
+	const bool logRaw)
 {
-	m_ebusDevice = new EbusDevice(device, noDeviceCheck);
-	changeState(Connect::getConnect());
+	m_multiForward = new MultiForward();
+	m_multiForward->start();
 
-	setDumpRaw(dumpRaw);
+	m_dummyProcess = new DummyProcess(address);
+	m_dummyProcess->start();
+
+	m_ebusFSM = new EbusFSM(address, device, noDeviceCheck, reopenTime, arbitrationTime, receiveTimeout,
+		lockCounter, lockRetries, dumpRaw, dumpRawFile, dumpRawFileMaxSize, logRaw, m_multiForward,
+		m_dummyProcess);
+
+	m_ebusFSM->start();
 }
 
 EbusHandler::~EbusHandler()
 {
-	if (m_ebusDevice != nullptr)
+	if (m_ebusFSM != nullptr)
 	{
-		delete m_ebusDevice;
-		m_ebusDevice = nullptr;
+		m_ebusFSM->stop();
+		delete m_ebusFSM;
+		m_ebusFSM = nullptr;
 	}
 
-	m_dumpRawStream.close();
-}
+	if (m_dummyProcess != nullptr)
+	{
+		m_dummyProcess->stop();
+		delete m_dummyProcess;
+		m_dummyProcess = nullptr;
+	}
 
-void EbusHandler::start()
-{
-	m_thread = thread(&EbusHandler::run, this);
-}
-
-void EbusHandler::stop()
-{
-	m_forceState = Idle::getIdle();
-	notify();
-	m_running = false;
-	m_thread.join();
+	if (m_multiForward != nullptr)
+	{
+		m_multiForward->stop();
+		delete m_multiForward;
+		m_multiForward = nullptr;
+	}
 }
 
 void EbusHandler::open()
 {
-	m_forceState = Connect::getConnect();
-	notify();
+	m_ebusFSM->open();
 }
 
 void EbusHandler::close()
 {
-	m_forceState = Idle::getIdle();
+	m_ebusFSM->close();
 }
 
 bool EbusHandler::getDumpRaw() const
 {
-	return (m_dumpRaw);
+	return (m_ebusFSM->getDumpRaw());
 }
 
 void EbusHandler::setDumpRaw(bool dumpRaw)
 {
-	if (dumpRaw == m_dumpRaw) return;
-
-	m_dumpRaw = dumpRaw;
-
-	if (dumpRaw == false)
-	{
-		m_dumpRawStream.close();
-	}
-	else
-	{
-		m_dumpRawStream.open(m_dumpRawFile.c_str(), ios::binary | ios::app);
-		m_dumpRawFileSize = 0;
-	}
+	m_ebusFSM->setDumpRaw(dumpRaw);
 }
 
 bool EbusHandler::getLogRaw()
 {
-	return (m_logRaw);
+	return (m_ebusFSM->getLogRaw());
 }
 
 void EbusHandler::setLogRaw(bool logRaw)
 {
-	m_logRaw = logRaw;
+	m_ebusFSM->setLogRaw(logRaw);
 }
 
 void EbusHandler::enqueue(EbusMessage* message)
 {
-	m_ebusMsgQueue.enqueue(message);
+	m_ebusFSM->enqueue(message);
 }
 
-void EbusHandler::run()
+void EbusHandler::forward(bool remove, const string& ip, long port, const string& filter, ostringstream& result)
 {
-	Logger logger = Logger("EbusHandler::run");
-	logger.info("started");
-
-	while (m_running == true)
-	{
-		m_lastResult = m_state->run(this);
-		if (m_lastResult != DEV_OK) changeState(OnError::getOnError());
-
-		if (m_forceState != nullptr)
-		{
-			changeState(m_forceState);
-			m_forceState = nullptr;
-		}
-	}
-
-	logger.info("stopped");
+	if (remove == true)
+		m_multiForward->remove(ip, port, filter, result);
+	else
+		m_multiForward->append(ip, port, filter, result);
 }
 
-void EbusHandler::changeState(State* state)
-{
-	Logger logger = Logger("EbusHandler::changeState");
-
-	if (m_state != state)
-	{
-		m_state = state;
-		logger.trace("%s", m_state->toString().c_str());
-	}
-}
 

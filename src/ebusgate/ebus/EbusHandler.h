@@ -20,48 +20,19 @@
 #ifndef EBUS_EBUSHANDLER_H
 #define EBUS_EBUSHANDLER_H
 
-#include "EbusMessage.h"
-#include "EbusDevice.h"
-#include "Forward.h"
-#include "Process.h"
-#include "NQueue.h"
-#include "Notify.h"
+#include "EbusFSM.h"
+#include "MultiForward.h"
+#include "DummyProcess.h"
 
-#include <fstream>
-#include <thread>
-#include <map>
-
-using std::ofstream;
-using std::thread;
-using std::map;
-
-class State;
-
-class EbusHandler : public Notify
+class EbusHandler
 {
-	friend class State;
-	friend class OnError;
-	friend class Idle;
-	friend class Connect;
-	friend class Listen;
-	friend class LockBus;
-	friend class FreeBus;
-	friend class Evaluate;
-	friend class SendMessage;
-	friend class RecvResponse;
-	friend class RecvMessage;
-	friend class SendResponse;
 
 public:
 	EbusHandler(const unsigned char address, const string device, const bool noDeviceCheck, const long reopenTime,
 		const long arbitrationTime, const long receiveTimeout, const int lockCounter, const int lockRetries,
-		const bool dumpRaw, const string dumpRawFile, const long dumpRawFileMaxSize, const bool logRaw,
-		Forward* forward, Process* process);
+		const bool dumpRaw, const string dumpRawFile, const long dumpRawFileMaxSize, const bool logRaw);
 
 	~EbusHandler();
-
-	void start();
-	void stop();
 
 	void open();
 	void close();
@@ -74,43 +45,12 @@ public:
 
 	void enqueue(EbusMessage* message);
 
+	void forward(bool remove, const string& ip, long port, const string& filter, ostringstream& result);
+
 private:
-	thread m_thread;
-
-	bool m_running = true;
-
-	State* m_state = nullptr;
-	State* m_forceState = nullptr;
-
-	const unsigned char m_address;
-	long m_reopenTime;
-
-	long m_arbitrationTime;
-	long m_receiveTimeout;
-
-	int m_lockCounter;
-	int m_lockRetries;
-
-	int m_lastResult;
-
-	EbusDevice* m_ebusDevice;
-
-	bool m_dumpRaw = false;
-	string m_dumpRawFile;
-	long m_dumpRawFileMaxSize;
-	long m_dumpRawFileSize = 0;
-	ofstream m_dumpRawStream;
-
-	bool m_logRaw = false;
-
-	Forward* m_forward = nullptr;
-	Process* m_process = nullptr;
-
-	NQueue<EbusMessage*> m_ebusMsgQueue;
-
-	void run();
-
-	void changeState(State* state);
+	EbusFSM* m_ebusFSM = nullptr;
+	MultiForward* m_multiForward = nullptr;
+	DummyProcess* m_dummyProcess = nullptr;
 
 };
 

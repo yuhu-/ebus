@@ -1,0 +1,153 @@
+/*
+ * Copyright (C) Roland Jax 2012-2016 <roland.jax@liwest.at>
+ *
+ * This file is part of ebusgate.
+ *
+ * ebusgate is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * ebusgate is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with ebusgate. If not, see http://www.gnu.org/licenses/.
+ */
+
+#include "EbusFSM.h"
+#include "State.h"
+#include "Idle.h"
+#include "Connect.h"
+#include "OnError.h"
+#include "Logger.h"
+
+#include <sstream>
+#include <algorithm>
+
+using std::ios;
+using std::pair;
+using std::ostringstream;
+using std::copy_n;
+using std::back_inserter;
+
+EbusFSM::EbusFSM(const unsigned char address, const string device, const bool noDeviceCheck,
+	const long reopenTime, const long arbitrationTime, const long receiveTimeout, const int lockCounter,
+	const int lockRetries, const bool dumpRaw, const string dumpRawFile, const long dumpRawFileMaxSize,
+	const bool logRaw, Forward* forward, Process* process)
+	: Notify(), m_address(address), m_reopenTime(reopenTime), m_arbitrationTime(arbitrationTime), m_receiveTimeout(
+		receiveTimeout), m_lockCounter(lockCounter), m_lockRetries(lockRetries), m_lastResult(
+	DEV_OK), m_dumpRawFile(dumpRawFile), m_dumpRawFileMaxSize(dumpRawFileMaxSize), m_logRaw(logRaw), m_forward(
+		forward), m_process(process)
+{
+	m_ebusDevice = new EbusDevice(device, noDeviceCheck);
+	changeState(Connect::getConnect());
+
+	setDumpRaw(dumpRaw);
+}
+
+EbusFSM::~EbusFSM()
+{
+	if (m_ebusDevice != nullptr)
+	{
+		delete m_ebusDevice;
+		m_ebusDevice = nullptr;
+	}
+
+	m_dumpRawStream.close();
+}
+
+void EbusFSM::start()
+{
+	m_thread = thread(&EbusFSM::run, this);
+}
+
+void EbusFSM::stop()
+{
+	m_forceState = Idle::getIdle();
+	notify();
+	m_running = false;
+	m_thread.join();
+}
+
+void EbusFSM::open()
+{
+	m_forceState = Connect::getConnect();
+	notify();
+}
+
+void EbusFSM::close()
+{
+	m_forceState = Idle::getIdle();
+}
+
+bool EbusFSM::getDumpRaw() const
+{
+	return (m_dumpRaw);
+}
+
+void EbusFSM::setDumpRaw(bool dumpRaw)
+{
+	if (dumpRaw == m_dumpRaw) return;
+
+	m_dumpRaw = dumpRaw;
+
+	if (dumpRaw == false)
+	{
+		m_dumpRawStream.close();
+	}
+	else
+	{
+		m_dumpRawStream.open(m_dumpRawFile.c_str(), ios::binary | ios::app);
+		m_dumpRawFileSize = 0;
+	}
+}
+
+bool EbusFSM::getLogRaw()
+{
+	return (m_logRaw);
+}
+
+void EbusFSM::setLogRaw(bool logRaw)
+{
+	m_logRaw = logRaw;
+}
+
+void EbusFSM::enqueue(EbusMessage* message)
+{
+	m_ebusMsgQueue.enqueue(message);
+}
+
+void EbusFSM::run()
+{
+	Logger logger = Logger("EbusFSM::run");
+	logger.info("started");
+
+	while (m_running == true)
+	{
+		m_lastResult = m_state->run(this);
+		if (m_lastResult != DEV_OK) changeState(OnError::getOnError());
+
+		if (m_forceState != nullptr)
+		{
+			changeState(m_forceState);
+			m_forceState = nullptr;
+		}
+	}
+
+	logger.info("stopped");
+}
+
+void EbusFSM::changeState(State* state)
+{
+	Logger logger = Logger("EbusFSM::changeState");
+
+	if (m_state != state)
+	{
+		m_state = state;
+		logger.trace("%s", m_state->toString().c_str());
+	}
+}
+
