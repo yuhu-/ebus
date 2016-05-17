@@ -55,32 +55,20 @@ BaseLoop::BaseLoop()
 		options.getBool("dump"), options.getString("dumpfile"), options.getLong("dumpsize"),
 		options.getBool("lograw"));
 
-	m_tcpAcceptor = new TCPAcceptor(options.getBool("local"), options.getInt("port"), &m_netMsgQueue);
-	m_tcpAcceptor->start();
+	m_networkHandler = new NetworkHandler(options.getBool("local"), options.getInt("port"), &m_netMsgQueue);
 
-	m_udpReceiver = new UDPReceiver(options.getBool("local"), options.getInt("port"), &m_netMsgQueue);
-	m_udpReceiver->start();
 }
 
 BaseLoop::~BaseLoop()
 {
-	if (m_udpReceiver != nullptr)
+	if (m_networkHandler != nullptr)
 	{
-		m_udpReceiver->stop();
-		delete m_udpReceiver;
-		m_udpReceiver = nullptr;
-	}
-
-	if (m_tcpAcceptor != nullptr)
-	{
-		m_tcpAcceptor->stop();
-		delete m_tcpAcceptor;
-		m_tcpAcceptor = nullptr;
+		delete m_networkHandler;
+		m_networkHandler = nullptr;
 	}
 
 	if (m_ebusHandler != nullptr)
 	{
-//		m_ebusHandler->stop();
 		delete m_ebusHandler;
 		m_ebusHandler = nullptr;
 	}

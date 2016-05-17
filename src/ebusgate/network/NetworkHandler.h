@@ -17,30 +17,23 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef EBUS_FSM_EBUSMESSAGE_H
-#define EBUS_FSM_EBUSMESSAGE_H
+#ifndef NETWORK_NETWORKHANDLER_H
+#define NETWORK_NETWORKHANDLER_H
 
-#include "EbusSequence.h"
-#include "Notify.h"
+#include "TCPAcceptor.h"
+#include "UDPReceiver.h"
 
-class EbusMessage : public Notify
+class NetworkHandler
 {
 
 public:
-	explicit EbusMessage(EbusSequence& eSeq, bool intern = false);
-
-	EbusSequence& getEbusSequence();
-	bool isIntern() const;
-
-	void setResult(const string& result);
-	const string getResult();
+	NetworkHandler(const bool local, const int port, NQueue<NetMessage*>* netMsgQueue);
+	~NetworkHandler();
 
 private:
-	EbusSequence m_ebusSequence;
-	bool m_intern;
-
-	string m_result;
+	TCPAcceptor* m_tcpAcceptor = nullptr;
+	UDPReceiver* m_udpReceiver = nullptr;
 
 };
 
-#endif // EBUS_FSM_EBUSMESSAGE_H
+#endif // NETWORK_NETWORKHANDLER_H

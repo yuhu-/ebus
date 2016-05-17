@@ -22,6 +22,8 @@ ebusgate_SOURCES = network/NetMessage.cpp \
 		   network/TCPAcceptor.h \
 		   network/UDPReceiver.cpp \
 		   network/UDPReceiver.h \
+		   network/NetworkHandler.cpp \
+		   network/NetworkHandler.h \
 		   ebus/forward/Relation.cpp \
 		   ebus/forward/Relation.h \
 		   ebus/forward/Filter.cpp \
@@ -36,8 +38,6 @@ ebusgate_SOURCES = network/NetMessage.cpp \
 		   ebus/process/Process.h \
 		   ebus/process/DummyProcess.cpp \
 		   ebus/process/DummyProcess.h \
-		   ebus/fsm/EbusMessage.cpp \
-		   ebus/fsm/EbusMessage.h \
 		   ebus/fsm/State.cpp \
 		   ebus/fsm/State.h \
 		   ebus/fsm/OnError.cpp \
@@ -64,6 +64,8 @@ ebusgate_SOURCES = network/NetMessage.cpp \
 		   ebus/fsm/RecvResponse.h \
 		   ebus/fsm/EbusFSM.cpp \
 		   ebus/fsm/EbusFSM.h \
+		   ebus/EbusMessage.cpp \
+		   ebus/EbusMessage.h \
 		   ebus/EbusHandler.cpp \
 		   ebus/EbusHandler.h \
 		   BaseLoop.cpp \

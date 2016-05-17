@@ -21,8 +21,7 @@
 #define BASELOOP_H
 
 #include "EbusHandler.h"
-#include "TCPAcceptor.h"
-#include "UDPReceiver.h"
+#include "NetworkHandler.h"
 #include <cstring>
 
 using std::ostringstream;
@@ -51,8 +50,7 @@ private:
 
 	unsigned char m_ownAddress = 0;
 	EbusHandler* m_ebusHandler = nullptr;
-	TCPAcceptor* m_tcpAcceptor = nullptr;
-	UDPReceiver* m_udpReceiver = nullptr;
+	NetworkHandler* m_networkHandler = nullptr;
 	NQueue<NetMessage*> m_netMsgQueue;
 
 	static Command findCommand(const string& item);
