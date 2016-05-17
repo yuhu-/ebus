@@ -27,12 +27,15 @@ class NetworkHandler
 {
 
 public:
-	NetworkHandler(const bool local, const int port, NQueue<NetMessage*>* netMsgQueue);
+	NetworkHandler(const bool local, const int port);
 	~NetworkHandler();
+
+	NetMessage* dequeue();
 
 private:
 	TCPAcceptor* m_tcpAcceptor = nullptr;
 	UDPReceiver* m_udpReceiver = nullptr;
+	NQueue<NetMessage*> m_netMsgQueue;
 
 };
 

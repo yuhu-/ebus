@@ -55,7 +55,7 @@ BaseLoop::BaseLoop()
 		options.getBool("dump"), options.getString("dumpfile"), options.getLong("dumpsize"),
 		options.getBool("lograw"));
 
-	m_networkHandler = new NetworkHandler(options.getBool("local"), options.getInt("port"), &m_netMsgQueue);
+	m_networkHandler = new NetworkHandler(options.getBool("local"), options.getInt("port"));
 
 }
 
@@ -72,22 +72,18 @@ BaseLoop::~BaseLoop()
 		delete m_ebusHandler;
 		m_ebusHandler = nullptr;
 	}
-
-	while (m_netMsgQueue.size() > 0)
-		delete m_netMsgQueue.dequeue();
-
 }
 
-void BaseLoop::start()
+void BaseLoop::run()
 {
-	Logger logger = Logger("BaseLoop::start");
+	Logger logger = Logger("BaseLoop::run");
 
 	while (true)
 	{
 		string result;
 
 		// recv new message from client
-		NetMessage* message = m_netMsgQueue.dequeue();
+		NetMessage* message = m_networkHandler->dequeue();
 		string data = message->getData();
 
 		string::size_type pos = 0;
@@ -112,11 +108,6 @@ void BaseLoop::start()
 		// stop daemon
 		if (strcasecmp(data.c_str(), "STOP") == 0) break;
 	}
-}
-
-void BaseLoop::enqueue(NetMessage* message)
-{
-	m_netMsgQueue.enqueue(message);
 }
 
 Command BaseLoop::findCommand(const string& command)

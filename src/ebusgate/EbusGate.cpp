@@ -164,7 +164,7 @@ int main(int argc, char* argv[])
 
 	// create baseloop
 	baseloop = new BaseLoop();
-	baseloop->start();
+	baseloop->run();
 
 	// shutdown and exit
 	shutdown();

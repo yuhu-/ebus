@@ -19,12 +19,12 @@
 
 #include "NetworkHandler.h"
 
-NetworkHandler::NetworkHandler(const bool local, const int port, NQueue<NetMessage*>* netMsgQueue)
+NetworkHandler::NetworkHandler(const bool local, const int port)
 {
-	m_tcpAcceptor = new TCPAcceptor(local, port, netMsgQueue);
+	m_tcpAcceptor = new TCPAcceptor(local, port, &m_netMsgQueue);
 	m_tcpAcceptor->start();
 
-	m_udpReceiver = new UDPReceiver(local, port, netMsgQueue);
+	m_udpReceiver = new UDPReceiver(local, port, &m_netMsgQueue);
 	m_udpReceiver->start();
 }
 
@@ -43,6 +43,14 @@ NetworkHandler::~NetworkHandler()
 		delete m_tcpAcceptor;
 		m_tcpAcceptor = nullptr;
 	}
+
+	while (m_netMsgQueue.size() > 0)
+		delete m_netMsgQueue.dequeue();
+}
+
+NetMessage* NetworkHandler::dequeue()
+{
+	return (m_netMsgQueue.dequeue());
 }
 
 

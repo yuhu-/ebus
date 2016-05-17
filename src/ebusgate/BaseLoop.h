@@ -38,9 +38,7 @@ public:
 	BaseLoop();
 	~BaseLoop();
 
-	void start();
-
-	void enqueue(NetMessage* message);
+	void run();
 
 private:
 	BaseLoop(const BaseLoop&);
@@ -51,7 +49,6 @@ private:
 	unsigned char m_ownAddress = 0;
 	EbusHandler* m_ebusHandler = nullptr;
 	NetworkHandler* m_networkHandler = nullptr;
-	NQueue<NetMessage*> m_netMsgQueue;
 
 	static Command findCommand(const string& item);
 
