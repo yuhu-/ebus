@@ -48,6 +48,9 @@ public:
 	void forward(bool remove, const string& ip, long port, const string& filter, ostringstream& result);
 
 private:
+	EbusHandler(const EbusHandler&);
+	EbusHandler& operator=(const EbusHandler&);
+
 	EbusFSM* m_ebusFSM = nullptr;
 	MultiForward* m_multiForward = nullptr;
 	DummyProcess* m_dummyProcess = nullptr;

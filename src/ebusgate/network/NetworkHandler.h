@@ -33,6 +33,9 @@ public:
 	NetMessage* dequeue();
 
 private:
+	NetworkHandler(const NetworkHandler&);
+	NetworkHandler& operator=(const NetworkHandler&);
+
 	TCPAcceptor* m_tcpAcceptor = nullptr;
 	UDPReceiver* m_udpReceiver = nullptr;
 	NQueue<NetMessage*> m_netMsgQueue;
