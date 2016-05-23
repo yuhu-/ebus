@@ -94,7 +94,7 @@ void BaseLoop::run()
 
 		// decode message
 		if (strcasecmp(data.c_str(), "STOP") != 0)
-			result = decodeMessage(data, message->getIP(), message->getPort());
+			result = decodeMessage(data);
 		else
 			result = "stopped";
 
@@ -118,7 +118,7 @@ Command BaseLoop::findCommand(const string& command)
 	return (c_invalid);
 }
 
-string BaseLoop::decodeMessage(const string& data, const string& ip, long port)
+string BaseLoop::decodeMessage(const string& data)
 {
 	Logger logger = Logger("BaseLoop::decodeMessage");
 
@@ -199,13 +199,13 @@ string BaseLoop::decodeMessage(const string& data, const string& ip, long port)
 	}
 	case c_forward:
 	{
-		if (args.size() > argPos + 6)
+		if (args.size() < argPos + 1 || args.size() > argPos + 3)
 		{
-			result << "usage: 'forward [-d] [-s server] [-p port] [filter]'";
+			result << "usage: 'forward [-d] server:port [filter]'";
 			break;
 		}
 
-		handleForward(args, ip, port, result);
+		handleForward(args, result);
 
 		break;
 	}
@@ -292,12 +292,12 @@ bool BaseLoop::isNum(const string& str, ostringstream& result)
 	return (true);
 }
 
-void BaseLoop::handleForward(const vector<string>& args, const string& srcIP, long srcPort, ostringstream& result)
+void BaseLoop::handleForward(const vector<string>& args, ostringstream& result)
 {
 	bool remove = false;
-	string dstIP;
+	string dstIP = "";
 	long dstPort = -1;
-	string filter;
+	string filter = "";
 
 	size_t argPos = 1;
 
@@ -307,58 +307,37 @@ void BaseLoop::handleForward(const vector<string>& args, const string& srcIP, lo
 		{
 			remove = true;
 		}
-		else if (args[argPos] == "-s")
+		else if (args[argPos].find(':') != string::npos)
 		{
-			if (argPos + 1 < args.size())
+			dstIP = args[argPos].substr(0, args[argPos].find(':'));
+
+			struct addrinfo hints, *servinfo;
+			memset(&hints, 0, sizeof hints);
+
+			hints.ai_family = AF_INET;
+			hints.ai_socktype = SOCK_DGRAM;
+
+			if (getaddrinfo(dstIP.c_str(), nullptr, &hints, &servinfo) < 0)
 			{
-				argPos++;
-				dstIP = args[argPos];
-
-				struct addrinfo hints, *servinfo;
-				memset(&hints, 0, sizeof hints);
-
-				hints.ai_family = AF_INET;
-				hints.ai_socktype = SOCK_DGRAM;
-
-				if (getaddrinfo(dstIP.c_str(), nullptr, &hints, &servinfo) < 0)
-				{
-					result << "server '" << dstIP << "' is invalid";
-					return;
-				}
-
-				char ip[INET_ADDRSTRLEN];
-				struct sockaddr_in* address = (struct sockaddr_in*) servinfo->ai_addr;
-
-				dstIP = inet_ntop(AF_INET, (struct in_addr*) &(address->sin_addr.s_addr), ip,
-				INET_ADDRSTRLEN);
-
-				freeaddrinfo(servinfo);
-			}
-			else
-			{
-				result << "server is missing";
+				result << "server '" << dstIP << "' is invalid";
 				return;
 			}
-		}
-		else if (args[argPos] == "-p")
-		{
-			if (argPos + 1 < args.size())
+
+			char ip[INET_ADDRSTRLEN];
+			struct sockaddr_in* address = (struct sockaddr_in*) servinfo->ai_addr;
+
+			dstIP = inet_ntop(AF_INET, (struct in_addr*) &(address->sin_addr.s_addr), ip,
+			INET_ADDRSTRLEN);
+
+			freeaddrinfo(servinfo);
+
+			if (isNum(args[argPos].substr(args[argPos].find(':') + 1), result) == false) return;
+
+			dstPort = strtol(args[argPos].substr(args[argPos].find(':') + 1).c_str(), nullptr, 10);
+
+			if (dstPort < 0 || dstPort > 65535)
 			{
-				argPos++;
-
-				if (isNum(args[argPos], result) == false) return;
-
-				dstPort = strtol(args[argPos].c_str(), nullptr, 10);
-
-				if (dstPort < 0 || dstPort > 65535)
-				{
-					result << "port '" << dstPort << "' is invalid (0-65535)";
-					return;
-				}
-			}
-			else
-			{
-				result << "port is missing";
+				result << "port '" << dstPort << "' is invalid (0-65535)";
 				return;
 			}
 		}
@@ -375,9 +354,11 @@ void BaseLoop::handleForward(const vector<string>& args, const string& srcIP, lo
 		argPos++;
 	}
 
-	if (dstIP.empty() == true) dstIP = srcIP;
-
-	if (dstPort < 0) dstPort = srcPort;
+	if (dstIP.empty() == true || dstPort == -1)
+	{
+		result << "server:port is missing";
+		return;
+	}
 
 	m_ebusHandler->forward(remove, dstIP, dstPort, filter, result);
 }
@@ -391,7 +372,7 @@ const string BaseLoop::formatHelp()
 
 	ostr << " send      - write message onto ebus 'send ZZPBSBNNDx'" << endl << endl;
 
-	ostr << " forward   - forward ebus messages 'forward [-d] [-s server] [-p port] [filter]'" << endl;
+	ostr << " forward   - forward ebus messages 'forward [-d] server:port [filter]'" << endl;
 	ostr << "               filter: ebus sequence; without filter all messages will passed" << endl;
 	ostr << "               server: either ip address or hostname" << endl;
 	ostr << "               port:   target udp port number" << endl << endl;

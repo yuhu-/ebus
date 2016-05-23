@@ -41,8 +41,8 @@ int NetworkDevice::openDevice(const string& device, const bool noDeviceCheck)
 	struct sockaddr_in address;
 	memset((char*) &address, 0, sizeof(address));
 
-	const string host = device.substr(0, device.find(":"));
-	const string port = device.substr(device.find(":") + 1);
+	const string host = device.substr(0, device.find(':'));
+	const string port = device.substr(device.find(':') + 1);
 
 	struct addrinfo hints, *servinfo;
 	memset(&hints, 0, sizeof hints);

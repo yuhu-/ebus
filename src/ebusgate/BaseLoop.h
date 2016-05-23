@@ -52,13 +52,13 @@ private:
 
 	static Command findCommand(const string& item);
 
-	string decodeMessage(const string& data, const string& ip, long port);
+	string decodeMessage(const string& data);
 
 	static bool isHex(const string& str, ostringstream& result, int nibbles);
 
 	static bool isNum(const string& str, ostringstream& result);
 
-	void handleForward(const vector<string>& args, const string& srcIP, long srcPort, ostringstream& result);
+	void handleForward(const vector<string>& args, ostringstream& result);
 
 	static const string formatHelp();
 

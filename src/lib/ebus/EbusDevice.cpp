@@ -45,7 +45,7 @@ EbusDevice::EbusDevice(const string& deviceName, const bool noDeviceCheck)
 {
 	m_device = nullptr;
 
-	if (strchr(deviceName.c_str(), '/') == nullptr && strchr(deviceName.c_str(), ':') != nullptr)
+	if (deviceName.find('/') == string::npos && deviceName.find(':') != string::npos)
 	{
 		setType(dt_network);
 		m_noDeviceCheck = true;
