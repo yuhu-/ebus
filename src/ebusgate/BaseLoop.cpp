@@ -130,8 +130,6 @@ string BaseLoop::decodeMessage(const string& data)
 
 	if (args.size() == 0) return ("command missing");
 
-	size_t argPos = 1;
-
 	switch (findCommand(args[0]))
 	{
 	case c_invalid:
@@ -171,10 +169,10 @@ string BaseLoop::decodeMessage(const string& data)
 			break;
 		}
 
-		if (isHex(args[argPos], result, 2) == true)
+		if (isHex(args[1], result, 2) == true)
 		{
 			EbusSequence eSeq;
-			eSeq.createMaster(m_ownAddress, args[argPos]);
+			eSeq.createMaster(m_ownAddress, args[1]);
 
 			// send message
 			if (eSeq.getMasterState() == EBUS_OK)
@@ -217,7 +215,7 @@ string BaseLoop::decodeMessage(const string& data)
 			break;
 		}
 
-		logger.setLevel(calcLevel(args[argPos]));
+		logger.setLevel(calcLevel(args[1]));
 		result << "changed";
 		break;
 
@@ -232,13 +230,25 @@ string BaseLoop::decodeMessage(const string& data)
 
 		if (args.size() == 1)
 		{
-			result << "raw output is " << (m_ebusHandler->getRaw() == true ? "enabled" : "disabled");
+			result << "raw is " << (m_ebusHandler->getRaw() == true ? "enabled" : "disabled");
 			break;
 		}
 
-		bool enabled = !m_ebusHandler->getRaw();
-		m_ebusHandler->setRaw(enabled);
-		result << (enabled ? "raw output enabled" : "raw output disabled");
+		if (strcasecmp(args[1].c_str(), "ON") == 0)
+		{
+			if (m_ebusHandler->getRaw() == false) m_ebusHandler->setRaw(true);
+			result << "raw enabled";
+			break;
+		}
+
+		if (strcasecmp(args[1].c_str(), "OFF") == 0)
+		{
+			if (m_ebusHandler->getRaw() == true) m_ebusHandler->setRaw(false);
+			result << "raw disabled";
+			break;
+		}
+
+		result << "usage: 'raw [on|off]'";
 		break;
 	}
 	case c_dump:
@@ -251,13 +261,25 @@ string BaseLoop::decodeMessage(const string& data)
 
 		if (args.size() == 1)
 		{
-			result << "dump output is " << (m_ebusHandler->getDump() == true ? "enabled" : "disabled");
+			result << "dump is " << (m_ebusHandler->getDump() == true ? "enabled" : "disabled");
 			break;
 		}
 
-		bool enabled = !m_ebusHandler->getDump();
-		m_ebusHandler->setDump(enabled);
-		result << (enabled ? "raw dump enabled" : "raw dump disabled");
+		if (strcasecmp(args[1].c_str(), "ON") == 0)
+		{
+			if (m_ebusHandler->getDump() == false) m_ebusHandler->setDump(true);
+			result << "dump enabled";
+			break;
+		}
+
+		if (strcasecmp(args[1].c_str(), "OFF") == 0)
+		{
+			if (m_ebusHandler->getDump() == true) m_ebusHandler->setDump(false);
+			result << "dump disabled";
+			break;
+		}
+
+		result << "usage: 'dump [on|off]'";
 		break;
 	}
 	case c_help:
