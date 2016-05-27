@@ -29,49 +29,56 @@ int Evaluate::run(EbusFSM* fsm)
 {
 	Logger logger = Logger("Evaluate::run");
 
-	EbusSequence eSeq;
-	eSeq.createMaster(m_sequence);
-
-	ProcessType type = fsm->m_process->process(eSeq);
-
-	switch (type)
+	if (fsm->m_process != nullptr)
 	{
-	case pt_undefined:
-		logger.warn("%s", errorText(STATE_WRN_NOT_DEF).c_str());
-		break;
-	case pt_ignore:
-		logger.debug("ignore");
-		break;
-	case pt_response:
-		eSeq.setSlaveACK(ACK);
+		EbusSequence eSeq;
+		eSeq.createMaster(m_sequence);
 
-		if (eSeq.getSlaveState() == EBUS_OK)
-		{
-			logger.debug("response: %s", eSeq.toStringSlave().c_str());
-			m_passiveMessage = new EbusMessage(eSeq);
-			fsm->changeState(SendResponse::getSendResponse());
-			return (DEV_OK);
-		}
-		else
-		{
-			logger.warn("%s", errorText(STATE_ERR_CREA_MSG).c_str());
-		}
+		ProcessType type = fsm->m_process->process(eSeq);
 
-		break;
-	case pt_send:
-		if (eSeq.getMasterState() == EBUS_OK)
+		switch (type)
 		{
-			logger.debug("enqueue: %s", eSeq.toStringMaster().c_str());
-			fsm->enqueue(new EbusMessage(eSeq, true));
-		}
-		else
-		{
-			logger.warn("%s", errorText(STATE_ERR_CREA_MSG).c_str());
-		}
+		case pt_undefined:
+			logger.warn("%s", errorText(STATE_WRN_NOT_DEF).c_str());
+			break;
+		case pt_ignore:
+			logger.debug("ignore");
+			break;
+		case pt_response:
+			eSeq.setSlaveACK(ACK);
 
-		break;
-	default:
-		break;
+			if (eSeq.getSlaveState() == EBUS_OK)
+			{
+				logger.debug("response: %s", eSeq.toStringSlave().c_str());
+				m_passiveMessage = new EbusMessage(eSeq);
+				fsm->changeState(SendResponse::getSendResponse());
+				return (DEV_OK);
+			}
+			else
+			{
+				logger.warn("%s", errorText(STATE_ERR_CREA_MSG).c_str());
+			}
+
+			break;
+		case pt_send:
+			if (eSeq.getMasterState() == EBUS_OK)
+			{
+				logger.debug("enqueue: %s", eSeq.toStringMaster().c_str());
+				fsm->enqueue(new EbusMessage(eSeq, true));
+			}
+			else
+			{
+				logger.warn("%s", errorText(STATE_ERR_CREA_MSG).c_str());
+			}
+
+			break;
+		default:
+			break;
+		}
+	}
+	else
+	{
+		logger.warn("process not implemented");
 	}
 
 	m_sequence.clear();

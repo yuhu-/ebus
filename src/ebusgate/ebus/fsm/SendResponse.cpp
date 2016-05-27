@@ -74,7 +74,7 @@ int SendResponse::run(EbusFSM* fsm)
 	eSeq.setMasterACK(byte);
 	logger.info("%s", eSeq.toStringLog().c_str());
 
-	if (fsm->m_forceState != nullptr) fsm->m_forward->enqueue(eSeq);
+	if (fsm->m_forward != nullptr) fsm->m_forward->enqueue(eSeq);
 
 	reset(fsm);
 	fsm->changeState(Listen::getListen());

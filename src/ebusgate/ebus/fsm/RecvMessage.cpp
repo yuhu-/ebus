@@ -106,7 +106,7 @@ int RecvMessage::run(EbusFSM* fsm)
 
 			logger.info("%s", eSeq.toStringLog().c_str());
 
-			if (fsm->m_forceState != nullptr) fsm->m_forward->enqueue(eSeq);
+			if (fsm->m_forward != nullptr) fsm->m_forward->enqueue(eSeq);
 		}
 
 		fsm->changeState(Evaluate::getEvaluate());
