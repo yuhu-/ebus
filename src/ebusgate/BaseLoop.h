@@ -28,7 +28,7 @@ using std::ostringstream;
 
 enum Command
 {
-	c_invalid, c_open, c_close, c_send, c_forward, c_dump, c_loglevel, c_lograw, c_help
+	c_invalid, c_open, c_close, c_send, c_forward, c_dump, c_log, c_raw, c_help
 };
 
 class BaseLoop

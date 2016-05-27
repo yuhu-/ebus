@@ -38,8 +38,8 @@ map<Command, string> CommandNames =
 { c_close, "CLOSE" },
 { c_send, "SEND" },
 { c_forward, "FORWARD" },
-{ c_loglevel, "LOGLEVEL" },
-{ c_lograw, "LOGRAW" },
+{ c_log, "LOG" },
+{ c_raw, "RAW" },
 { c_dump, "DUMP" },
 { c_help, "HELP" } };
 
@@ -141,7 +141,7 @@ string BaseLoop::decodeMessage(const string& data)
 	}
 	case c_open:
 	{
-		if (args.size() != argPos)
+		if (args.size() != 1)
 		{
 			result << "usage: 'open'";
 			break;
@@ -153,7 +153,7 @@ string BaseLoop::decodeMessage(const string& data)
 	}
 	case c_close:
 	{
-		if (args.size() != argPos)
+		if (args.size() != 1)
 		{
 			result << "usage: 'close'";
 			break;
@@ -165,7 +165,7 @@ string BaseLoop::decodeMessage(const string& data)
 	}
 	case c_send:
 	{
-		if (args.size() != argPos + 1)
+		if (args.size() != 2)
 		{
 			result << "usage: 'send ZZPBSBNNDx'";
 			break;
@@ -199,7 +199,7 @@ string BaseLoop::decodeMessage(const string& data)
 	}
 	case c_forward:
 	{
-		if (args.size() < argPos + 1 || args.size() > argPos + 3)
+		if (args.size() < 2 || args.size() > 4)
 		{
 			result << "usage: 'forward [-d] server:port [filter]'";
 			break;
@@ -209,24 +209,11 @@ string BaseLoop::decodeMessage(const string& data)
 
 		break;
 	}
-	case c_dump:
+	case c_log:
 	{
-		if (args.size() != argPos)
+		if (args.size() != 2)
 		{
-			result << "usage: 'dump'";
-			break;
-		}
-
-		bool enabled = !m_ebusHandler->getDumpRaw();
-		m_ebusHandler->setDumpRaw(enabled);
-		result << (enabled ? "raw dump enabled" : "raw dump disabled");
-		break;
-	}
-	case c_loglevel:
-	{
-		if (args.size() != argPos + 1)
-		{
-			result << "usage: 'loglevel level' (level: off|error|warn|info|debug|trace)";
+			result << "usage: 'log level' (level: off|error|warn|info|debug|trace)";
 			break;
 		}
 
@@ -235,17 +222,42 @@ string BaseLoop::decodeMessage(const string& data)
 		break;
 
 	}
-	case c_lograw:
+	case c_raw:
 	{
-		if (args.size() != argPos)
+		if (args.size() > 2)
 		{
-			result << "usage: 'lograw'";
+			result << "usage: 'raw [on|off]'";
 			break;
 		}
 
-		bool enabled = !m_ebusHandler->getLogRaw();
-		m_ebusHandler->setLogRaw(enabled);
+		if (args.size() == 1)
+		{
+			result << "raw output is " << (m_ebusHandler->getRaw() == true ? "enabled" : "disabled");
+			break;
+		}
+
+		bool enabled = !m_ebusHandler->getRaw();
+		m_ebusHandler->setRaw(enabled);
 		result << (enabled ? "raw output enabled" : "raw output disabled");
+		break;
+	}
+	case c_dump:
+	{
+		if (args.size() > 2)
+		{
+			result << "usage: 'dump [on|off]'";
+			break;
+		}
+
+		if (args.size() == 1)
+		{
+			result << "dump output is " << (m_ebusHandler->getDump() == true ? "enabled" : "disabled");
+			break;
+		}
+
+		bool enabled = !m_ebusHandler->getDump();
+		m_ebusHandler->setDump(enabled);
+		result << (enabled ? "raw dump enabled" : "raw dump disabled");
 		break;
 	}
 	case c_help:
@@ -367,25 +379,25 @@ const string BaseLoop::formatHelp()
 {
 	ostringstream ostr;
 	ostr << "commands:" << endl;
-	ostr << " open      - open ebus connection" << endl;
-	ostr << " close     - close ebus connection" << endl << endl;
+	ostr << " open     - open ebus connection" << endl;
+	ostr << " close    - close ebus connection" << endl << endl;
 
-	ostr << " send      - write message onto ebus 'send ZZPBSBNNDx'" << endl << endl;
+	ostr << " send     - write message onto ebus 'send ZZPBSBNNDx'" << endl << endl;
 
-	ostr << " forward   - forward ebus messages 'forward [-d] server:port [filter]'" << endl;
+	ostr << " forward  - forward ebus messages 'forward [-d] server:port [filter]'" << endl;
 	ostr << "               filter: ebus sequence; without filter all messages will passed" << endl;
 	ostr << "               server: either ip address or hostname" << endl;
 	ostr << "               port:   target udp port number" << endl << endl;
 
-	ostr << " dump      - enable/disable raw data dumping" << endl << endl;
+	ostr << " log      - change logging level 'log level'" << endl;
+	ostr << " raw      - enable/disable raw data logging 'raw [on|off]'" << endl << endl;
 
-	ostr << " loglevel  - change logging level 'loglevel level'" << endl;
-	ostr << " lograw    - enable/disable raw data logging" << endl << endl;
+	ostr << " dump     - enable/disable raw data dumping 'dump [on|off]'" << endl << endl;
 
-	ostr << " stop      - shutdown daemon" << endl;
-	ostr << " quit      - close tcp connection" << endl << endl;
+	ostr << " stop     - shutdown daemon" << endl;
+	ostr << " quit     - close tcp connection" << endl << endl;
 
-	ostr << " help      - print this page";
+	ostr << " help     - print this page";
 
 	return (ostr.str());
 }

@@ -71,24 +71,24 @@ int State::read(EbusFSM* fsm, unsigned char& byte, const long sec, const long ns
 
 	int result = fsm->m_ebusDevice->recv(byte, sec, nsec);
 
-	if (fsm->m_logRaw == true && result == DEV_OK) logger.info("<%02x", byte);
+	if (fsm->m_raw == true && result == DEV_OK) logger.info("<%02x", byte);
 
-	if (fsm->m_dumpRaw == true && result == DEV_OK && fsm->m_dumpRawStream.is_open() == true)
+	if (fsm->m_dump == true && result == DEV_OK && fsm->m_dumpRawStream.is_open() == true)
 	{
 		fsm->m_dumpRawStream.write((char*) &byte, 1);
-		fsm->m_dumpRawFileSize++;
+		fsm->m_dumpFileSize++;
 
-		if ((fsm->m_dumpRawFileSize % 8) == 0) fsm->m_dumpRawStream.flush();
+		if ((fsm->m_dumpFileSize % 8) == 0) fsm->m_dumpRawStream.flush();
 
-		if (fsm->m_dumpRawFileSize >= fsm->m_dumpRawFileMaxSize * 1024)
+		if (fsm->m_dumpFileSize >= fsm->m_dumpFileMaxSize * 1024)
 		{
-			string oldfile = fsm->m_dumpRawFile + ".old";
+			string oldfile = fsm->m_dumpFile + ".old";
 
-			if (rename(fsm->m_dumpRawFile.c_str(), oldfile.c_str()) == 0)
+			if (rename(fsm->m_dumpFile.c_str(), oldfile.c_str()) == 0)
 			{
 				fsm->m_dumpRawStream.close();
-				fsm->m_dumpRawStream.open(fsm->m_dumpRawFile.c_str(), ios::binary | ios::app);
-				fsm->m_dumpRawFileSize = 0;
+				fsm->m_dumpRawStream.open(fsm->m_dumpFile.c_str(), ios::binary | ios::app);
+				fsm->m_dumpFileSize = 0;
 			}
 		}
 	}
@@ -102,7 +102,7 @@ int State::write(EbusFSM* fsm, const unsigned char& byte)
 
 	int result = fsm->m_ebusDevice->send(byte);
 
-	if (fsm->m_logRaw == true && result == DEV_OK) logger.info(">%02x", byte);
+	if (fsm->m_raw == true && result == DEV_OK) logger.info(">%02x", byte);
 
 	return (result);
 }

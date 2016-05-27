@@ -66,11 +66,11 @@ public:
 	void open();
 	void close();
 
-	bool getDumpRaw() const;
-	void setDumpRaw(bool dumpRaw);
+	bool getDump() const;
+	void setDump(bool dumpRaw);
 
-	bool getLogRaw();
-	void setLogRaw(bool logRaw);
+	bool getRaw();
+	void setRaw(bool logRaw);
 
 	void enqueue(EbusMessage* message);
 
@@ -95,13 +95,13 @@ private:
 
 	EbusDevice* m_ebusDevice;
 
-	bool m_dumpRaw = false;
-	string m_dumpRawFile;
-	long m_dumpRawFileMaxSize;
-	long m_dumpRawFileSize = 0;
+	bool m_dump = false;
+	string m_dumpFile;
+	long m_dumpFileMaxSize;
+	long m_dumpFileSize = 0;
 	ofstream m_dumpRawStream;
 
-	bool m_logRaw = false;
+	bool m_raw = false;
 
 	Forward* m_forward = nullptr;
 	Process* m_process = nullptr;

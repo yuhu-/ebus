@@ -30,18 +30,18 @@ class EbusHandler
 public:
 	EbusHandler(const unsigned char address, const string device, const bool noDeviceCheck, const long reopenTime,
 		const long arbitrationTime, const long receiveTimeout, const int lockCounter, const int lockRetries,
-		const bool dumpRaw, const string dumpRawFile, const long dumpRawFileMaxSize, const bool logRaw);
+		const bool dump, const string dumpFile, const long dumpFileMaxSize, const bool raw);
 
 	~EbusHandler();
 
 	void open();
 	void close();
 
-	bool getDumpRaw() const;
-	void setDumpRaw(bool dumpRaw);
+	bool getDump() const;
+	void setDump(bool dump);
 
-	bool getLogRaw();
-	void setLogRaw(bool logRaw);
+	bool getRaw();
+	void setRaw(bool raw);
 
 	void enqueue(EbusMessage* message);
 

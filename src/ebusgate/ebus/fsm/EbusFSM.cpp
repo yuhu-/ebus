@@ -33,19 +33,19 @@ using std::ostringstream;
 using std::copy_n;
 using std::back_inserter;
 
-EbusFSM::EbusFSM(const unsigned char address, const string device, const bool noDeviceCheck,
-	const long reopenTime, const long arbitrationTime, const long receiveTimeout, const int lockCounter,
-	const int lockRetries, const bool dumpRaw, const string dumpRawFile, const long dumpRawFileMaxSize,
-	const bool logRaw, Forward* forward, Process* process)
+EbusFSM::EbusFSM(const unsigned char address, const string device, const bool noDeviceCheck, const long reopenTime,
+	const long arbitrationTime, const long receiveTimeout, const int lockCounter, const int lockRetries,
+	const bool dump, const string dumpFile, const long dumpFileMaxSize, const bool raw, Forward* forward,
+	Process* process)
 	: Notify(), m_address(address), m_reopenTime(reopenTime), m_arbitrationTime(arbitrationTime), m_receiveTimeout(
 		receiveTimeout), m_lockCounter(lockCounter), m_lockRetries(lockRetries), m_lastResult(
-	DEV_OK), m_dumpRawFile(dumpRawFile), m_dumpRawFileMaxSize(dumpRawFileMaxSize), m_logRaw(logRaw), m_forward(
-		forward), m_process(process)
+	DEV_OK), m_dumpFile(dumpFile), m_dumpFileMaxSize(dumpFileMaxSize), m_raw(raw), m_forward(forward), m_process(
+		process)
 {
 	m_ebusDevice = new EbusDevice(device, noDeviceCheck);
 	changeState(Connect::getConnect());
 
-	setDumpRaw(dumpRaw);
+	setDump(dump);
 }
 
 EbusFSM::~EbusFSM()
@@ -83,36 +83,36 @@ void EbusFSM::close()
 	m_forceState = Idle::getIdle();
 }
 
-bool EbusFSM::getDumpRaw() const
+bool EbusFSM::getDump() const
 {
-	return (m_dumpRaw);
+	return (m_dump);
 }
 
-void EbusFSM::setDumpRaw(bool dumpRaw)
+void EbusFSM::setDump(bool dump)
 {
-	if (dumpRaw == m_dumpRaw) return;
+	if (dump == m_dump) return;
 
-	m_dumpRaw = dumpRaw;
+	m_dump = dump;
 
-	if (dumpRaw == false)
+	if (dump == false)
 	{
 		m_dumpRawStream.close();
 	}
 	else
 	{
-		m_dumpRawStream.open(m_dumpRawFile.c_str(), ios::binary | ios::app);
-		m_dumpRawFileSize = 0;
+		m_dumpRawStream.open(m_dumpFile.c_str(), ios::binary | ios::app);
+		m_dumpFileSize = 0;
 	}
 }
 
-bool EbusFSM::getLogRaw()
+bool EbusFSM::getRaw()
 {
-	return (m_logRaw);
+	return (m_raw);
 }
 
-void EbusFSM::setLogRaw(bool logRaw)
+void EbusFSM::setRaw(bool raw)
 {
-	m_logRaw = logRaw;
+	m_raw = raw;
 }
 
 void EbusFSM::enqueue(EbusMessage* message)
