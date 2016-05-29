@@ -33,7 +33,6 @@ ebusgate_SOURCES = network/NetMessage.cpp \
 		   ebus/forward/Forward.h \
 		   ebus/forward/MultiForward.cpp \
 		   ebus/forward/MultiForward.h \
-		   ebus/process/ProcessBase.cpp \
 		   ebus/process/ProcessBase.h \
 		   ebus/process/Process.h \
 		   ebus/process/DummyProcess.cpp \

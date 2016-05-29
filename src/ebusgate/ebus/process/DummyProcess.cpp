@@ -50,30 +50,30 @@ ProcessType DummyProcess::process(EbusSequence& eSeq)
 	Logger logger = Logger("DummyProcess::process");
 	logger.info("search %s", eSeq.toStringLog().c_str());
 
-	if (find(eSeq.getMaster(), "0700") == true)
+	if (eSeq.getMaster().contains("0700") == true)
 	{
 		return (pt_ignore);
 	}
 
-	if(find(eSeq.getMaster(), "0704") == true)
+	if(eSeq.getMaster().contains("0704") == true)
 	{
 		eSeq.createSlave("0a7a454741544501010101");
 		return (pt_response);
 	}
 
-	if(find(eSeq.getMaster(), "07fe") == true)
+	if(eSeq.getMaster().contains("07fe") == true)
 	{
 		eSeq.clear();
 		eSeq.createMaster(m_address, BROADCAST, "07ff00");
 		return (pt_send);
 	}
 
-	if(find(eSeq.getMaster(), "b505") == true)
+	if(eSeq.getMaster().contains("b505") == true)
 	{
 		return (pt_ignore);
 	}
 
-	if(find(eSeq.getMaster(), "b516") == true)
+	if(eSeq.getMaster().contains("b516") == true)
 	{
 		return (pt_ignore);
 	}

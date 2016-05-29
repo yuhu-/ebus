@@ -64,6 +64,8 @@ public:
 
 	int compare(const Sequence& seq) const noexcept;
 
+	bool contains(const string& str) const noexcept;
+
 	static const string toString(const vector<unsigned char>& seq);
 
 private:

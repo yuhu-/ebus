@@ -188,6 +188,13 @@ int Sequence::compare(const Sequence& seq) const noexcept
 	return (-1);
 }
 
+bool Sequence::contains(const string& str) const noexcept
+{
+	if (find(Sequence(str)) != npos) return (true);
+
+	return (false);
+}
+
 const string Sequence::toString(const vector<unsigned char>& seq)
 {
 	ostringstream ostr;

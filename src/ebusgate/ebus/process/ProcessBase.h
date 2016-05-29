@@ -30,6 +30,4 @@ enum ProcessType
 	pt_send		// create message and send
 };
 
-bool find(const Sequence& seq, const string& str);
-
 #endif // EBUS_PROCESS_PROCESSBASE_H
