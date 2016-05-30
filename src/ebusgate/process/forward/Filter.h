@@ -17,21 +17,32 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef EBUS_FORWARD_FORWARD_H
-#define EBUS_FORWARD_FORWARD_H
+#ifndef PROCESS_FORWARD_FILTER_H
+#define PROCESS_FORWARD_FILTER_H
 
-#include "EbusSequence.h"
+#include "Sequence.h"
 
-class Forward
+class Filter
 {
 
 public:
-	virtual ~Forward()
-	{
-	}
+	explicit Filter(const Sequence& seq);
 
-	virtual void enqueue(const EbusSequence& eSeq) = 0;
+	int getID() const;
+	Sequence getFilter() const;
+
+	bool equal(const Sequence& seq);
+	bool match(const Sequence& seq);
+
+	const string toString();
+
+private:
+	static int uniqueID;
+
+	int m_id;
+	Sequence m_seq;
 
 };
 
-#endif // EBUS_FORWARD_FORWARD_H
+#endif // PROCESS_FORWARD_FILTER_H
+

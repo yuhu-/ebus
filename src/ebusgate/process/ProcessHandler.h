@@ -17,26 +17,32 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef EBUS_PROCESS_DUMMYPROCESS_H
-#define EBUS_PROCESS_DUMMYPROCESS_H
+#ifndef PROCESS_PROCESSHANDLER_H
+#define PROCESS_PROCESSHANDLER_H
 
 #include "Process.h"
+#include "ForwardHandler.h"
 #include "Notify.h"
 
 #include <thread>
 
 using std::thread;
 
-class DummyProcess : public Process, public Notify
+class ProcessHandler : public Process, public Notify
 {
 
 public:
-	explicit DummyProcess(const unsigned char address);
+	explicit ProcessHandler(const unsigned char address);
+	~ProcessHandler();
 
 	void start();
 	void stop();
 
-	ProcessType process(EbusSequence& eSeq);
+	ProcessType active(EbusSequence& eSeq);
+
+	void passive(EbusSequence& eSeq);
+
+	void forward(bool remove, const string& ip, long port, const string& filter, ostringstream& result);
 
 private:
 	thread m_thread;
@@ -45,8 +51,10 @@ private:
 
 	const unsigned char m_address;
 
+	ForwardHandler* m_forwardHandler = nullptr;
+
 	void run();
 
 };
 
-#endif // EBUS_PROCESS_DUMMYPROCESS_H
+#endif // PROCESS_PROCESSHANDLER_H

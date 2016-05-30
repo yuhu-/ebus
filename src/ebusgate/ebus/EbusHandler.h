@@ -21,8 +21,6 @@
 #define EBUS_EBUSHANDLER_H
 
 #include "EbusFSM.h"
-#include "MultiForward.h"
-#include "DummyProcess.h"
 
 class EbusHandler
 {
@@ -30,7 +28,7 @@ class EbusHandler
 public:
 	EbusHandler(const unsigned char address, const string device, const bool noDeviceCheck, const long reopenTime,
 		const long arbitrationTime, const long receiveTimeout, const int lockCounter, const int lockRetries,
-		const bool dump, const string dumpFile, const long dumpFileMaxSize, const bool raw);
+		const bool raw, const bool dump, const string dumpFile, const long dumpFileMaxSize, Process* process);
 
 	~EbusHandler();
 
@@ -45,15 +43,11 @@ public:
 
 	void enqueue(EbusMessage* message);
 
-	void forward(bool remove, const string& ip, long port, const string& filter, ostringstream& result);
-
 private:
 	EbusHandler(const EbusHandler&);
 	EbusHandler& operator=(const EbusHandler&);
 
 	EbusFSM* m_ebusFSM = nullptr;
-	MultiForward* m_multiForward = nullptr;
-	DummyProcess* m_dummyProcess = nullptr;
 
 };
 

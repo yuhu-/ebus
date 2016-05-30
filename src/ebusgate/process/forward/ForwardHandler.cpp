@@ -17,7 +17,8 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
-#include "MultiForward.h"
+#include "ForwardHandler.h"
+
 #include "Logger.h"
 
 #include <iomanip>
@@ -25,12 +26,12 @@
 using std::ostringstream;
 using std::endl;
 
-MultiForward::MultiForward()
+ForwardHandler::ForwardHandler()
 	: Notify()
 {
 }
 
-MultiForward::~MultiForward()
+ForwardHandler::~ForwardHandler()
 {
 	while (m_ebusDataQueue.size() > 0)
 		delete m_ebusDataQueue.dequeue();
@@ -57,12 +58,12 @@ MultiForward::~MultiForward()
 	}
 }
 
-void MultiForward::start()
+void ForwardHandler::start()
 {
-	m_thread = thread(&MultiForward::run, this);
+	m_thread = thread(&ForwardHandler::run, this);
 }
 
-void MultiForward::stop()
+void ForwardHandler::stop()
 {
 	if (m_thread.joinable())
 	{
@@ -72,9 +73,9 @@ void MultiForward::stop()
 	}
 }
 
-void MultiForward::append(const string& ip, long port, const string& filter, ostringstream& result)
+void ForwardHandler::append(const string& ip, long port, const string& filter, ostringstream& result)
 {
-	Logger logger = Logger("MultiForward::append");
+	Logger logger = Logger("ForwardHandler::append");
 
 	Host* host = getHost(ip, port);
 
@@ -173,9 +174,9 @@ void MultiForward::append(const string& ip, long port, const string& filter, ost
 	logger.info("%s", result.str().c_str());
 }
 
-void MultiForward::remove(const string& ip, long port, const string& filter, ostringstream& result)
+void ForwardHandler::remove(const string& ip, long port, const string& filter, ostringstream& result)
 {
-	Logger logger = Logger("MultiForward::remove");
+	Logger logger = Logger("ForwardHandler::remove");
 
 	Host* host = getHost(ip, port);
 
@@ -250,7 +251,7 @@ void MultiForward::remove(const string& ip, long port, const string& filter, ost
 	logger.info("%s", result.str().c_str());
 }
 
-void MultiForward::enqueue(const EbusSequence& eSeq)
+void ForwardHandler::enqueue(const EbusSequence& eSeq)
 {
 	if (m_host.empty() == false)
 	{
@@ -259,7 +260,7 @@ void MultiForward::enqueue(const EbusSequence& eSeq)
 	}
 }
 
-const string MultiForward::toString()
+const string ForwardHandler::toString()
 {
 	ostringstream ostr;
 
@@ -274,7 +275,7 @@ const string MultiForward::toString()
 	return (ostr.str());
 }
 
-const string MultiForward::toStringHost()
+const string ForwardHandler::toStringHost()
 {
 	ostringstream ostr;
 
@@ -284,7 +285,7 @@ const string MultiForward::toStringHost()
 	return (ostr.str());
 }
 
-const string MultiForward::toStringFilter()
+const string ForwardHandler::toStringFilter()
 {
 	ostringstream ostr;
 
@@ -294,7 +295,7 @@ const string MultiForward::toStringFilter()
 	return (ostr.str());
 }
 
-const string MultiForward::toStringRelation()
+const string ForwardHandler::toStringRelation()
 {
 	ostringstream ostr;
 
@@ -304,9 +305,9 @@ const string MultiForward::toStringRelation()
 	return (ostr.str());
 }
 
-void MultiForward::run()
+void ForwardHandler::run()
 {
-	Logger logger = Logger("MultiForward::run");
+	Logger logger = Logger("ForwardHandler::run");
 	logger.info("started");
 
 	while (m_running == true)
@@ -324,9 +325,9 @@ void MultiForward::run()
 	logger.info("stopped");
 }
 
-void MultiForward::send(EbusSequence* eSeq) const
+void ForwardHandler::send(EbusSequence* eSeq) const
 {
-	Logger logger = Logger("MultiForward::send");
+	Logger logger = Logger("Forward::send");
 
 	for (const auto& host : m_host)
 		if (host->hasFilter() == false)
@@ -354,7 +355,7 @@ void MultiForward::send(EbusSequence* eSeq) const
 		}
 }
 
-Host* MultiForward::getHost(const string& ip, long port) const
+Host* ForwardHandler::getHost(const string& ip, long port) const
 {
 	for (size_t index = 0; index < m_host.size(); index++)
 		if (m_host[index]->equal(ip, port) == true) return (m_host[index]);
@@ -362,7 +363,7 @@ Host* MultiForward::getHost(const string& ip, long port) const
 	return (nullptr);
 }
 
-Host* MultiForward::addHost(const string& ip, long port, bool filter)
+Host* ForwardHandler::addHost(const string& ip, long port, bool filter)
 {
 	size_t index;
 
@@ -377,7 +378,7 @@ Host* MultiForward::addHost(const string& ip, long port, bool filter)
 	return (m_host[index]);
 }
 
-int MultiForward::delHost(const string& ip, long port)
+int ForwardHandler::delHost(const string& ip, long port)
 {
 	for (size_t index = 0; index < m_host.size(); index++)
 		if (m_host[index]->equal(ip, port) == true)
@@ -395,7 +396,7 @@ int MultiForward::delHost(const string& ip, long port)
 	return (0);
 }
 
-void MultiForward::clrHost()
+void ForwardHandler::clrHost()
 {
 	auto it = m_host.begin();
 
@@ -425,7 +426,7 @@ void MultiForward::clrHost()
 	m_host.shrink_to_fit();
 }
 
-const Filter* MultiForward::getFilter(const string& filter) const
+const Filter* ForwardHandler::getFilter(const string& filter) const
 {
 	Sequence seq(filter);
 
@@ -435,7 +436,7 @@ const Filter* MultiForward::getFilter(const string& filter) const
 	return (nullptr);
 }
 
-const Filter* MultiForward::addFilter(const string& filter)
+const Filter* ForwardHandler::addFilter(const string& filter)
 {
 	Sequence seq(filter);
 	size_t index;
@@ -448,7 +449,7 @@ const Filter* MultiForward::addFilter(const string& filter)
 	return (m_filter[index]);
 }
 
-int MultiForward::delFilter(const string& filter)
+int ForwardHandler::delFilter(const string& filter)
 {
 	Sequence seq(filter);
 
@@ -468,7 +469,7 @@ int MultiForward::delFilter(const string& filter)
 	return (0);
 }
 
-void MultiForward::clrFilter()
+void ForwardHandler::clrFilter()
 {
 	auto it = m_filter.begin();
 
@@ -498,7 +499,7 @@ void MultiForward::clrFilter()
 	m_filter.shrink_to_fit();
 }
 
-const Relation* MultiForward::getRelation(const int hostID, const int filterID) const
+const Relation* ForwardHandler::getRelation(const int hostID, const int filterID) const
 {
 	for (size_t index = 0; index < m_relation.size(); index++)
 		if (m_relation[index]->equal(hostID, filterID) == true) return (m_relation[index]);
@@ -506,7 +507,7 @@ const Relation* MultiForward::getRelation(const int hostID, const int filterID) 
 	return (nullptr);
 }
 
-const Relation* MultiForward::addRelation(const int hostID, const int filterID)
+const Relation* ForwardHandler::addRelation(const int hostID, const int filterID)
 {
 	size_t index;
 
@@ -518,7 +519,7 @@ const Relation* MultiForward::addRelation(const int hostID, const int filterID)
 	return (m_relation[index]);
 }
 
-void MultiForward::delRelationByHost(const int hostID)
+void ForwardHandler::delRelationByHost(const int hostID)
 {
 	auto it = m_relation.begin();
 
@@ -539,7 +540,7 @@ void MultiForward::delRelationByHost(const int hostID)
 	m_relation.shrink_to_fit();
 }
 
-void MultiForward::delRelationByFilter(const int filterID)
+void ForwardHandler::delRelationByFilter(const int filterID)
 {
 	auto it = m_relation.begin();
 

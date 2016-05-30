@@ -17,7 +17,8 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
-#include "DummyProcess.h"
+#include "ProcessHandler.h"
+
 #include "Logger.h"
 
 #include <iomanip>
@@ -25,17 +26,29 @@
 using std::ostringstream;
 using std::endl;
 
-DummyProcess::DummyProcess(const unsigned char address)
+ProcessHandler::ProcessHandler(const unsigned char address)
 	: Notify(), m_address(address)
 {
+	m_forwardHandler = new ForwardHandler();
+	m_forwardHandler->start();
 }
 
-void DummyProcess::start()
+ProcessHandler::~ProcessHandler()
 {
-	m_thread = thread(&DummyProcess::run, this);
+	if (m_forwardHandler != nullptr)
+	{
+		m_forwardHandler->stop();
+		delete m_forwardHandler;
+		m_forwardHandler = nullptr;
+	}
 }
 
-void DummyProcess::stop()
+void ProcessHandler::start()
+{
+	m_thread = thread(&ProcessHandler::run, this);
+}
+
+void ProcessHandler::stop()
 {
 	if (m_thread.joinable())
 	{
@@ -45,9 +58,9 @@ void DummyProcess::stop()
 	}
 }
 
-ProcessType DummyProcess::process(EbusSequence& eSeq)
+ProcessType ProcessHandler::active(EbusSequence& eSeq)
 {
-	Logger logger = Logger("DummyProcess::process");
+	Logger logger = Logger("ProcessHandler::active");
 	logger.info("search %s", eSeq.toStringLog().c_str());
 
 	if (eSeq.getMaster().contains("0700") == true)
@@ -55,25 +68,25 @@ ProcessType DummyProcess::process(EbusSequence& eSeq)
 		return (pt_ignore);
 	}
 
-	if(eSeq.getMaster().contains("0704") == true)
+	if (eSeq.getMaster().contains("0704") == true)
 	{
 		eSeq.createSlave("0a7a454741544501010101");
 		return (pt_response);
 	}
 
-	if(eSeq.getMaster().contains("07fe") == true)
+	if (eSeq.getMaster().contains("07fe") == true)
 	{
 		eSeq.clear();
 		eSeq.createMaster(m_address, BROADCAST, "07ff00");
 		return (pt_send);
 	}
 
-	if(eSeq.getMaster().contains("b505") == true)
+	if (eSeq.getMaster().contains("b505") == true)
 	{
 		return (pt_ignore);
 	}
 
-	if(eSeq.getMaster().contains("b516") == true)
+	if (eSeq.getMaster().contains("b516") == true)
 	{
 		return (pt_ignore);
 	}
@@ -81,9 +94,28 @@ ProcessType DummyProcess::process(EbusSequence& eSeq)
 	return (pt_undefined);
 }
 
-void DummyProcess::run()
+void ProcessHandler::passive(EbusSequence& eSeq)
 {
-	Logger logger = Logger("DummyProcess::run");
+	Logger logger = Logger("ProcessHandler::passive");
+	logger.info("forward %s", eSeq.toStringLog().c_str());
+
+	m_forwardHandler->enqueue(eSeq);
+
+	// TODO handle passive message
+
+}
+
+void ProcessHandler::forward(bool remove, const string& ip, long port, const string& filter, ostringstream& result)
+{
+	if (remove == true)
+		m_forwardHandler->remove(ip, port, filter, result);
+	else
+		m_forwardHandler->append(ip, port, filter, result);
+}
+
+void ProcessHandler::run()
+{
+	Logger logger = Logger("ProcessHandler::run");
 	logger.info("started");
 
 	while (m_running == true)

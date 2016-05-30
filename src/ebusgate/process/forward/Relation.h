@@ -17,45 +17,31 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef EBUS_FORWARD_HOST_H
-#define EBUS_FORWARD_HOST_H
-
-#include "Client.h"
+#ifndef PROCESS_FORWARD_RELATION_H
+#define PROCESS_FORWARD_RELATION_H
 
 #include <string>
 
 using std::string;
 
-class Host
+class Relation
 {
 
 public:
-	Host(const string& ip, const long port, const bool filter);
-	~Host();
+	Relation(int hostID, int filterID);
 
-	int getID() const;
+	int getHostID() const;
+	int getFilterID() const;
 
-	string getIP() const;
-	long getPort() const;
-
-	void setFilter(const bool filter);
-	bool hasFilter() const;
-
-	bool equal(const string& ip, const long port) const;
-
-	void send(const string& message);
+	bool equal(int hostID, int filterID);
 
 	const string toString();
 
 private:
-	static int uniqueID;
+	int m_hostID;
+	int m_filterID;
 
-	int m_id;
-	bool m_filter;
-
-	Client m_client;
-	Socket* m_socket;
 };
 
-#endif // EBUS_FORWARD_HOST_H
+#endif // PROCESS_FORWARD_RELATION_H
 

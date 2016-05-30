@@ -22,7 +22,6 @@
 
 #include "EbusMessage.h"
 #include "EbusDevice.h"
-#include "Forward.h"
 #include "Process.h"
 #include "NQueue.h"
 #include "Notify.h"
@@ -55,8 +54,7 @@ class EbusFSM : public Notify
 public:
 	EbusFSM(const unsigned char address, const string device, const bool noDeviceCheck, const long reopenTime,
 		const long arbitrationTime, const long receiveTimeout, const int lockCounter, const int lockRetries,
-		const bool dumpRaw, const string dumpRawFile, const long dumpRawFileMaxSize, const bool logRaw,
-		Forward* forward, Process* process);
+		const bool raw, const bool dump, const string dumpFile, const long dumpFileMaxSize, Process* process);
 
 	~EbusFSM();
 
@@ -67,10 +65,10 @@ public:
 	void close();
 
 	bool getDump() const;
-	void setDump(bool dumpRaw);
+	void setDump(bool dump);
 
 	bool getRaw();
-	void setRaw(bool logRaw);
+	void setRaw(bool raw);
 
 	void enqueue(EbusMessage* message);
 
@@ -95,15 +93,14 @@ private:
 
 	EbusDevice* m_ebusDevice;
 
+	bool m_raw = false;
+
 	bool m_dump = false;
 	string m_dumpFile;
 	long m_dumpFileMaxSize;
 	long m_dumpFileSize = 0;
 	ofstream m_dumpRawStream;
 
-	bool m_raw = false;
-
-	Forward* m_forward = nullptr;
 	Process* m_process = nullptr;
 
 	NQueue<EbusMessage*> m_ebusMsgQueue;

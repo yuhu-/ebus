@@ -17,31 +17,32 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef EBUS_FORWARD_RELATION_H
-#define EBUS_FORWARD_RELATION_H
+#ifndef PROCESS_PROCESS_H
+#define PROCESS_PROCESS_H
 
-#include <string>
+#include "EbusSequence.h"
 
-using std::string;
+enum ProcessType
+{
+	pt_undefined,	// undefined
+	pt_ignore,	// ignore
+	pt_response,	// send response
+	pt_send		// send message
+};
 
-class Relation
+class Process
 {
 
 public:
-	Relation(int hostID, int filterID);
+	virtual ~Process()
+	{
+	}
 
-	int getHostID() const;
-	int getFilterID() const;
+	virtual ProcessType active(EbusSequence& eSeq) = 0;
 
-	bool equal(int hostID, int filterID);
-
-	const string toString();
-
-private:
-	int m_hostID;
-	int m_filterID;
+	virtual void passive(EbusSequence& eSeq) = 0;
 
 };
 
-#endif // EBUS_FORWARD_RELATION_H
+#endif // PROCESS_PROCESS_H
 

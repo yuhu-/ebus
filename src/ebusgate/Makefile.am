@@ -3,10 +3,10 @@ AM_CXXFLAGS = -fpic \
 	      -Wextra \
 	      -std=c++14 \
 	      -isystem$(top_srcdir)/src/ebusgate/network \
-	      -isystem$(top_srcdir)/src/ebusgate/ebus/forward \
-	      -isystem$(top_srcdir)/src/ebusgate/ebus/process \
 	      -isystem$(top_srcdir)/src/ebusgate/ebus/fsm \
 	      -isystem$(top_srcdir)/src/ebusgate/ebus \
+	      -isystem$(top_srcdir)/src/ebusgate/process/forward \
+	      -isystem$(top_srcdir)/src/ebusgate/process \
 	      -isystem$(top_srcdir)/src/lib/utils \
 	      -isystem$(top_srcdir)/src/lib/logger \
 	      -isystem$(top_srcdir)/src/lib/network \
@@ -24,19 +24,6 @@ ebusgate_SOURCES = network/NetMessage.cpp \
 		   network/UDPReceiver.h \
 		   network/NetworkHandler.cpp \
 		   network/NetworkHandler.h \
-		   ebus/forward/Relation.cpp \
-		   ebus/forward/Relation.h \
-		   ebus/forward/Filter.cpp \
-		   ebus/forward/Filter.h \
-		   ebus/forward/Host.cpp \
-		   ebus/forward/Host.h \
-		   ebus/forward/Forward.h \
-		   ebus/forward/MultiForward.cpp \
-		   ebus/forward/MultiForward.h \
-		   ebus/process/ProcessBase.h \
-		   ebus/process/Process.h \
-		   ebus/process/DummyProcess.cpp \
-		   ebus/process/DummyProcess.h \
 		   ebus/fsm/State.cpp \
 		   ebus/fsm/State.h \
 		   ebus/fsm/OnError.cpp \
@@ -67,6 +54,17 @@ ebusgate_SOURCES = network/NetMessage.cpp \
 		   ebus/EbusMessage.h \
 		   ebus/EbusHandler.cpp \
 		   ebus/EbusHandler.h \
+		   process/forward/Relation.cpp \
+		   process/forward/Relation.h \
+		   process/forward/Filter.cpp \
+		   process/forward/Filter.h \
+		   process/forward/Host.cpp \
+		   process/forward/Host.h \
+		   process/forward/ForwardHandler.cpp \
+		   process/forward/ForwardHandler.h \
+		   process/Process.h \
+		   process/ProcessHandler.cpp \
+		   process/ProcessHandler.h \
 		   BaseLoop.cpp \
 		   BaseLoop.h \
 		   EbusGate.cpp

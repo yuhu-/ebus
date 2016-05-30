@@ -34,7 +34,7 @@ int Evaluate::run(EbusFSM* fsm)
 		EbusSequence eSeq;
 		eSeq.createMaster(m_sequence);
 
-		ProcessType type = fsm->m_process->process(eSeq);
+		ProcessType type = fsm->m_process->active(eSeq);
 
 		switch (type)
 		{

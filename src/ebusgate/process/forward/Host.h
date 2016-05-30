@@ -17,17 +17,45 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef EBUS_PROCESS_PROCESSBASE_H
-#define EBUS_PROCESS_PROCESSBASE_H
+#ifndef PROCESS_FORWARD_HOST_H
+#define PROCESS_FORWARD_HOST_H
 
-#include "Sequence.h"
+#include "Client.h"
 
-enum ProcessType
+#include <string>
+
+using std::string;
+
+class Host
 {
-	pt_undefined,	// undefined
-	pt_ignore,	// ignore
-	pt_response,	// prepare slave part and send response
-	pt_send		// create message and send
+
+public:
+	Host(const string& ip, const long port, const bool filter);
+	~Host();
+
+	int getID() const;
+
+	string getIP() const;
+	long getPort() const;
+
+	void setFilter(const bool filter);
+	bool hasFilter() const;
+
+	bool equal(const string& ip, const long port) const;
+
+	void send(const string& message);
+
+	const string toString();
+
+private:
+	static int uniqueID;
+
+	int m_id;
+	bool m_filter;
+
+	Client m_client;
+	Socket* m_socket;
 };
 
-#endif // EBUS_PROCESS_PROCESSBASE_H
+#endif // PROCESS_FORWARD_HOST_H
+

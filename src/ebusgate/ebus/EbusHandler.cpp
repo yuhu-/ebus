@@ -21,16 +21,11 @@
 
 EbusHandler::EbusHandler(const unsigned char address, const string device, const bool noDeviceCheck,
 	const long reopenTime, const long arbitrationTime, const long receiveTimeout, const int lockCounter,
-	const int lockRetries, const bool dump, const string dumpFile, const long dumpFileMaxSize, const bool raw)
+	const int lockRetries, const bool raw, const bool dump, const string dumpFile, const long dumpFileMaxSize,
+	Process* process)
 {
-	m_multiForward = new MultiForward();
-	m_multiForward->start();
-
-	m_dummyProcess = new DummyProcess(address);
-	m_dummyProcess->start();
-
 	m_ebusFSM = new EbusFSM(address, device, noDeviceCheck, reopenTime, arbitrationTime, receiveTimeout,
-		lockCounter, lockRetries, dump, dumpFile, dumpFileMaxSize, raw, m_multiForward, m_dummyProcess);
+		lockCounter, lockRetries, raw, dump, dumpFile, dumpFileMaxSize, process);
 
 	m_ebusFSM->start();
 }
@@ -42,20 +37,6 @@ EbusHandler::~EbusHandler()
 		m_ebusFSM->stop();
 		delete m_ebusFSM;
 		m_ebusFSM = nullptr;
-	}
-
-	if (m_dummyProcess != nullptr)
-	{
-		m_dummyProcess->stop();
-		delete m_dummyProcess;
-		m_dummyProcess = nullptr;
-	}
-
-	if (m_multiForward != nullptr)
-	{
-		m_multiForward->stop();
-		delete m_multiForward;
-		m_multiForward = nullptr;
 	}
 }
 
@@ -92,13 +73,5 @@ void EbusHandler::setRaw(bool raw)
 void EbusHandler::enqueue(EbusMessage* message)
 {
 	m_ebusFSM->enqueue(message);
-}
-
-void EbusHandler::forward(bool remove, const string& ip, long port, const string& filter, ostringstream& result)
-{
-	if (remove == true)
-		m_multiForward->remove(ip, port, filter, result);
-	else
-		m_multiForward->append(ip, port, filter, result);
 }
 
