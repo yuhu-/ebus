@@ -17,8 +17,7 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
-#include "ForwardHandler.h"
-
+#include "Forward.h"
 #include "Logger.h"
 
 #include <iomanip>
@@ -26,12 +25,12 @@
 using std::ostringstream;
 using std::endl;
 
-ForwardHandler::ForwardHandler()
+Forward::Forward()
 	: Notify()
 {
 }
 
-ForwardHandler::~ForwardHandler()
+Forward::~Forward()
 {
 	while (m_ebusDataQueue.size() > 0)
 		delete m_ebusDataQueue.dequeue();
@@ -58,12 +57,12 @@ ForwardHandler::~ForwardHandler()
 	}
 }
 
-void ForwardHandler::start()
+void Forward::start()
 {
-	m_thread = thread(&ForwardHandler::run, this);
+	m_thread = thread(&Forward::run, this);
 }
 
-void ForwardHandler::stop()
+void Forward::stop()
 {
 	if (m_thread.joinable())
 	{
@@ -73,7 +72,7 @@ void ForwardHandler::stop()
 	}
 }
 
-void ForwardHandler::append(const string& ip, long port, const string& filter, ostringstream& result)
+void Forward::append(const string& ip, long port, const string& filter, ostringstream& result)
 {
 	Logger logger = Logger("ForwardHandler::append");
 
@@ -174,7 +173,7 @@ void ForwardHandler::append(const string& ip, long port, const string& filter, o
 	logger.info("%s", result.str().c_str());
 }
 
-void ForwardHandler::remove(const string& ip, long port, const string& filter, ostringstream& result)
+void Forward::remove(const string& ip, long port, const string& filter, ostringstream& result)
 {
 	Logger logger = Logger("ForwardHandler::remove");
 
@@ -251,7 +250,7 @@ void ForwardHandler::remove(const string& ip, long port, const string& filter, o
 	logger.info("%s", result.str().c_str());
 }
 
-void ForwardHandler::enqueue(const EbusSequence& eSeq)
+void Forward::enqueue(const EbusSequence& eSeq)
 {
 	if (m_host.empty() == false)
 	{
@@ -260,7 +259,7 @@ void ForwardHandler::enqueue(const EbusSequence& eSeq)
 	}
 }
 
-const string ForwardHandler::toString()
+const string Forward::toString()
 {
 	ostringstream ostr;
 
@@ -275,7 +274,7 @@ const string ForwardHandler::toString()
 	return (ostr.str());
 }
 
-const string ForwardHandler::toStringHost()
+const string Forward::toStringHost()
 {
 	ostringstream ostr;
 
@@ -285,7 +284,7 @@ const string ForwardHandler::toStringHost()
 	return (ostr.str());
 }
 
-const string ForwardHandler::toStringFilter()
+const string Forward::toStringFilter()
 {
 	ostringstream ostr;
 
@@ -295,7 +294,7 @@ const string ForwardHandler::toStringFilter()
 	return (ostr.str());
 }
 
-const string ForwardHandler::toStringRelation()
+const string Forward::toStringRelation()
 {
 	ostringstream ostr;
 
@@ -305,7 +304,7 @@ const string ForwardHandler::toStringRelation()
 	return (ostr.str());
 }
 
-void ForwardHandler::run()
+void Forward::run()
 {
 	Logger logger = Logger("ForwardHandler::run");
 	logger.info("started");
@@ -325,7 +324,7 @@ void ForwardHandler::run()
 	logger.info("stopped");
 }
 
-void ForwardHandler::send(EbusSequence* eSeq) const
+void Forward::send(EbusSequence* eSeq) const
 {
 	Logger logger = Logger("Forward::send");
 
@@ -355,7 +354,7 @@ void ForwardHandler::send(EbusSequence* eSeq) const
 		}
 }
 
-Host* ForwardHandler::getHost(const string& ip, long port) const
+Host* Forward::getHost(const string& ip, long port) const
 {
 	for (size_t index = 0; index < m_host.size(); index++)
 		if (m_host[index]->equal(ip, port) == true) return (m_host[index]);
@@ -363,7 +362,7 @@ Host* ForwardHandler::getHost(const string& ip, long port) const
 	return (nullptr);
 }
 
-Host* ForwardHandler::addHost(const string& ip, long port, bool filter)
+Host* Forward::addHost(const string& ip, long port, bool filter)
 {
 	size_t index;
 
@@ -378,7 +377,7 @@ Host* ForwardHandler::addHost(const string& ip, long port, bool filter)
 	return (m_host[index]);
 }
 
-int ForwardHandler::delHost(const string& ip, long port)
+int Forward::delHost(const string& ip, long port)
 {
 	for (size_t index = 0; index < m_host.size(); index++)
 		if (m_host[index]->equal(ip, port) == true)
@@ -396,7 +395,7 @@ int ForwardHandler::delHost(const string& ip, long port)
 	return (0);
 }
 
-void ForwardHandler::clrHost()
+void Forward::clrHost()
 {
 	auto it = m_host.begin();
 
@@ -426,7 +425,7 @@ void ForwardHandler::clrHost()
 	m_host.shrink_to_fit();
 }
 
-const Filter* ForwardHandler::getFilter(const string& filter) const
+const Filter* Forward::getFilter(const string& filter) const
 {
 	Sequence seq(filter);
 
@@ -436,7 +435,7 @@ const Filter* ForwardHandler::getFilter(const string& filter) const
 	return (nullptr);
 }
 
-const Filter* ForwardHandler::addFilter(const string& filter)
+const Filter* Forward::addFilter(const string& filter)
 {
 	Sequence seq(filter);
 	size_t index;
@@ -449,7 +448,7 @@ const Filter* ForwardHandler::addFilter(const string& filter)
 	return (m_filter[index]);
 }
 
-int ForwardHandler::delFilter(const string& filter)
+int Forward::delFilter(const string& filter)
 {
 	Sequence seq(filter);
 
@@ -469,7 +468,7 @@ int ForwardHandler::delFilter(const string& filter)
 	return (0);
 }
 
-void ForwardHandler::clrFilter()
+void Forward::clrFilter()
 {
 	auto it = m_filter.begin();
 
@@ -499,7 +498,7 @@ void ForwardHandler::clrFilter()
 	m_filter.shrink_to_fit();
 }
 
-const Relation* ForwardHandler::getRelation(const int hostID, const int filterID) const
+const Relation* Forward::getRelation(const int hostID, const int filterID) const
 {
 	for (size_t index = 0; index < m_relation.size(); index++)
 		if (m_relation[index]->equal(hostID, filterID) == true) return (m_relation[index]);
@@ -507,7 +506,7 @@ const Relation* ForwardHandler::getRelation(const int hostID, const int filterID
 	return (nullptr);
 }
 
-const Relation* ForwardHandler::addRelation(const int hostID, const int filterID)
+const Relation* Forward::addRelation(const int hostID, const int filterID)
 {
 	size_t index;
 
@@ -519,7 +518,7 @@ const Relation* ForwardHandler::addRelation(const int hostID, const int filterID
 	return (m_relation[index]);
 }
 
-void ForwardHandler::delRelationByHost(const int hostID)
+void Forward::delRelationByHost(const int hostID)
 {
 	auto it = m_relation.begin();
 
@@ -540,7 +539,7 @@ void ForwardHandler::delRelationByHost(const int hostID)
 	m_relation.shrink_to_fit();
 }
 
-void ForwardHandler::delRelationByFilter(const int filterID)
+void Forward::delRelationByFilter(const int filterID)
 {
 	auto it = m_relation.begin();
 

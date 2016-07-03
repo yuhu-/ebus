@@ -60,8 +60,8 @@ ebusgate_SOURCES = network/NetMessage.cpp \
 		   process/forward/Filter.h \
 		   process/forward/Host.cpp \
 		   process/forward/Host.h \
-		   process/forward/ForwardHandler.cpp \
-		   process/forward/ForwardHandler.h \
+		   process/forward/Forward.cpp \
+		   process/forward/Forward.h \
 		   process/Process.h \
 		   process/ProcessHandler.cpp \
 		   process/ProcessHandler.h \

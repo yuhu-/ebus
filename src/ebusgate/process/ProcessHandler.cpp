@@ -29,17 +29,17 @@ using std::endl;
 ProcessHandler::ProcessHandler(const unsigned char address)
 	: Notify(), m_address(address)
 {
-	m_forwardHandler = new ForwardHandler();
-	m_forwardHandler->start();
+	m_forward = new Forward();
+	m_forward->start();
 }
 
 ProcessHandler::~ProcessHandler()
 {
-	if (m_forwardHandler != nullptr)
+	if (m_forward != nullptr)
 	{
-		m_forwardHandler->stop();
-		delete m_forwardHandler;
-		m_forwardHandler = nullptr;
+		m_forward->stop();
+		delete m_forward;
+		m_forward = nullptr;
 	}
 }
 
@@ -99,7 +99,7 @@ void ProcessHandler::passive(EbusSequence& eSeq)
 	Logger logger = Logger("ProcessHandler::passive");
 	logger.info("forward %s", eSeq.toStringLog().c_str());
 
-	m_forwardHandler->enqueue(eSeq);
+	m_forward->enqueue(eSeq);
 
 	// TODO handle passive message
 
@@ -108,9 +108,9 @@ void ProcessHandler::passive(EbusSequence& eSeq)
 void ProcessHandler::forward(bool remove, const string& ip, long port, const string& filter, ostringstream& result)
 {
 	if (remove == true)
-		m_forwardHandler->remove(ip, port, filter, result);
+		m_forward->remove(ip, port, filter, result);
 	else
-		m_forwardHandler->append(ip, port, filter, result);
+		m_forward->append(ip, port, filter, result);
 }
 
 void ProcessHandler::run()

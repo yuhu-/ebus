@@ -17,8 +17,8 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef PROCESS_FORWARD_FORWARDHANDLER_H
-#define PROCESS_FORWARD_FORWARDHANDLER_H
+#ifndef PROCESS_FORWARD_FORWARD_H
+#define PROCESS_FORWARD_FORWARD_H
 
 #include "NQueue.h"
 #include "Notify.h"
@@ -32,12 +32,12 @@
 using std::thread;
 using std::ostringstream;
 
-class ForwardHandler : public Notify
+class Forward : public Notify
 {
 
 public:
-	ForwardHandler();
-	~ForwardHandler();
+	Forward();
+	~Forward();
 
 	void start();
 	void stop();
@@ -85,4 +85,4 @@ private:
 	void delRelationByFilter(const int filterID);
 };
 
-#endif // PROCESS_FORWARD_FORWARDHANDLER_H
+#endif // PROCESS_FORWARD_FORWARD_H

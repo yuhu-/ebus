@@ -21,7 +21,7 @@
 #define PROCESS_PROCESSHANDLER_H
 
 #include "Process.h"
-#include "ForwardHandler.h"
+#include "Forward.h"
 #include "Notify.h"
 
 #include <thread>
@@ -51,7 +51,7 @@ private:
 
 	const unsigned char m_address;
 
-	ForwardHandler* m_forwardHandler = nullptr;
+	Forward* m_forward = nullptr;
 
 	void run();
 
