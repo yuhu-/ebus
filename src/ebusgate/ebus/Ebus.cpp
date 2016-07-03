@@ -17,12 +17,11 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
-#include "EbusHandler.h"
+#include "Ebus.h"
 
-EbusHandler::EbusHandler(const unsigned char address, const string device, const bool noDeviceCheck,
-	const long reopenTime, const long arbitrationTime, const long receiveTimeout, const int lockCounter,
-	const int lockRetries, const bool raw, const bool dump, const string dumpFile, const long dumpFileMaxSize,
-	Process* process)
+Ebus::Ebus(const unsigned char address, const string device, const bool noDeviceCheck, const long reopenTime,
+	const long arbitrationTime, const long receiveTimeout, const int lockCounter, const int lockRetries,
+	const bool raw, const bool dump, const string dumpFile, const long dumpFileMaxSize, Process* process)
 {
 	m_ebusFSM = new EbusFSM(address, device, noDeviceCheck, reopenTime, arbitrationTime, receiveTimeout,
 		lockCounter, lockRetries, raw, dump, dumpFile, dumpFileMaxSize, process);
@@ -30,7 +29,7 @@ EbusHandler::EbusHandler(const unsigned char address, const string device, const
 	m_ebusFSM->start();
 }
 
-EbusHandler::~EbusHandler()
+Ebus::~Ebus()
 {
 	if (m_ebusFSM != nullptr)
 	{
@@ -40,37 +39,37 @@ EbusHandler::~EbusHandler()
 	}
 }
 
-void EbusHandler::open()
+void Ebus::open()
 {
 	m_ebusFSM->open();
 }
 
-void EbusHandler::close()
+void Ebus::close()
 {
 	m_ebusFSM->close();
 }
 
-bool EbusHandler::getDump() const
+bool Ebus::getDump() const
 {
 	return (m_ebusFSM->getDump());
 }
 
-void EbusHandler::setDump(bool dump)
+void Ebus::setDump(bool dump)
 {
 	m_ebusFSM->setDump(dump);
 }
 
-bool EbusHandler::getRaw()
+bool Ebus::getRaw()
 {
 	return (m_ebusFSM->getRaw());
 }
 
-void EbusHandler::setRaw(bool raw)
+void Ebus::setRaw(bool raw)
 {
 	m_ebusFSM->setRaw(raw);
 }
 
-void EbusHandler::enqueue(EbusMessage* message)
+void Ebus::enqueue(EbusMessage* message)
 {
 	m_ebusFSM->enqueue(message);
 }

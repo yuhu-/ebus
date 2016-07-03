@@ -17,20 +17,20 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef EBUS_EBUSHANDLER_H
-#define EBUS_EBUSHANDLER_H
+#ifndef EBUS_EBUS_H
+#define EBUS_EBUS_H
 
 #include "EbusFSM.h"
 
-class EbusHandler
+class Ebus
 {
 
 public:
-	EbusHandler(const unsigned char address, const string device, const bool noDeviceCheck, const long reopenTime,
+	Ebus(const unsigned char address, const string device, const bool noDeviceCheck, const long reopenTime,
 		const long arbitrationTime, const long receiveTimeout, const int lockCounter, const int lockRetries,
 		const bool raw, const bool dump, const string dumpFile, const long dumpFileMaxSize, Process* process);
 
-	~EbusHandler();
+	~Ebus();
 
 	void open();
 	void close();
@@ -44,11 +44,11 @@ public:
 	void enqueue(EbusMessage* message);
 
 private:
-	EbusHandler(const EbusHandler&);
-	EbusHandler& operator=(const EbusHandler&);
+	Ebus(const Ebus&);
+	Ebus& operator=(const Ebus&);
 
 	EbusFSM* m_ebusFSM = nullptr;
 
 };
 
-#endif // EBUS_EBUSHANDLER_H
+#endif // EBUS_EBUS_H

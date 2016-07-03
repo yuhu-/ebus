@@ -52,8 +52,8 @@ ebusgate_SOURCES = network/NetMessage.cpp \
 		   ebus/fsm/EbusFSM.h \
 		   ebus/EbusMessage.cpp \
 		   ebus/EbusMessage.h \
-		   ebus/EbusHandler.cpp \
-		   ebus/EbusHandler.h \
+		   ebus/Ebus.cpp \
+		   ebus/Ebus.h \
 		   process/forward/Relation.cpp \
 		   process/forward/Relation.h \
 		   process/forward/Filter.cpp \

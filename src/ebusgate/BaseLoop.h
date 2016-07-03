@@ -20,7 +20,7 @@
 #ifndef BASELOOP_H
 #define BASELOOP_H
 
-#include "EbusHandler.h"
+#include "Ebus.h"
 #include "ProcessHandler.h"
 #include "Network.h"
 
@@ -49,7 +49,7 @@ private:
 	bool m_running = true;
 
 	unsigned char m_ownAddress = 0;
-	EbusHandler* m_ebusHandler = nullptr;
+	Ebus* m_ebus = nullptr;
 	ProcessHandler* m_processHandler = nullptr;
 	Network* m_network = nullptr;
 

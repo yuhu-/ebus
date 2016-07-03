@@ -52,7 +52,7 @@ BaseLoop::BaseLoop()
 	m_processHandler = new ProcessHandler(m_ownAddress);
 	m_processHandler->start();
 
-	m_ebusHandler = new EbusHandler(options.getInt("address") & 0xff, options.getString("device"),
+	m_ebus = new Ebus(options.getInt("address") & 0xff, options.getString("device"),
 		options.getBool("nodevicecheck"), options.getLong("reopentime"), options.getLong("arbitrationtime"),
 		options.getLong("receivetimeout"), options.getInt("lockcounter"), options.getInt("lockretries"),
 		options.getBool("lograw"), options.getBool("dump"), options.getString("dumpfile"),
@@ -70,10 +70,10 @@ BaseLoop::~BaseLoop()
 		m_network = nullptr;
 	}
 
-	if (m_ebusHandler != nullptr)
+	if (m_ebus != nullptr)
 	{
-		delete m_ebusHandler;
-		m_ebusHandler = nullptr;
+		delete m_ebus;
+		m_ebus = nullptr;
 	}
 
 	if (m_processHandler != nullptr)
@@ -155,7 +155,7 @@ string BaseLoop::decodeMessage(const string& data)
 			break;
 		}
 
-		m_ebusHandler->open();
+		m_ebus->open();
 		result << "connected";
 		break;
 	}
@@ -167,7 +167,7 @@ string BaseLoop::decodeMessage(const string& data)
 			break;
 		}
 
-		m_ebusHandler->close();
+		m_ebus->close();
 		result << "disconnected";
 		break;
 	}
@@ -189,7 +189,7 @@ string BaseLoop::decodeMessage(const string& data)
 			{
 				logger.debug("enqueue: %s", eSeq.toStringMaster().c_str());
 				EbusMessage* ebusMessage = new EbusMessage(eSeq);
-				m_ebusHandler->enqueue(ebusMessage);
+				m_ebus->enqueue(ebusMessage);
 				ebusMessage->waitNotify();
 				result << ebusMessage->getResult();
 				delete ebusMessage;
@@ -240,20 +240,20 @@ string BaseLoop::decodeMessage(const string& data)
 
 		if (args.size() == 1)
 		{
-			result << "raw is " << (m_ebusHandler->getRaw() == true ? "enabled" : "disabled");
+			result << "raw is " << (m_ebus->getRaw() == true ? "enabled" : "disabled");
 			break;
 		}
 
 		if (strcasecmp(args[1].c_str(), "ON") == 0)
 		{
-			if (m_ebusHandler->getRaw() == false) m_ebusHandler->setRaw(true);
+			if (m_ebus->getRaw() == false) m_ebus->setRaw(true);
 			result << "raw enabled";
 			break;
 		}
 
 		if (strcasecmp(args[1].c_str(), "OFF") == 0)
 		{
-			if (m_ebusHandler->getRaw() == true) m_ebusHandler->setRaw(false);
+			if (m_ebus->getRaw() == true) m_ebus->setRaw(false);
 			result << "raw disabled";
 			break;
 		}
@@ -271,20 +271,20 @@ string BaseLoop::decodeMessage(const string& data)
 
 		if (args.size() == 1)
 		{
-			result << "dump is " << (m_ebusHandler->getDump() == true ? "enabled" : "disabled");
+			result << "dump is " << (m_ebus->getDump() == true ? "enabled" : "disabled");
 			break;
 		}
 
 		if (strcasecmp(args[1].c_str(), "ON") == 0)
 		{
-			if (m_ebusHandler->getDump() == false) m_ebusHandler->setDump(true);
+			if (m_ebus->getDump() == false) m_ebus->setDump(true);
 			result << "dump enabled";
 			break;
 		}
 
 		if (strcasecmp(args[1].c_str(), "OFF") == 0)
 		{
-			if (m_ebusHandler->getDump() == true) m_ebusHandler->setDump(false);
+			if (m_ebus->getDump() == true) m_ebus->setDump(false);
 			result << "dump disabled";
 			break;
 		}
