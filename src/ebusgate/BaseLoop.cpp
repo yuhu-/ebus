@@ -58,16 +58,16 @@ BaseLoop::BaseLoop()
 		options.getBool("lograw"), options.getBool("dump"), options.getString("dumpfile"),
 		options.getLong("dumpsize"), m_processHandler);
 
-	m_networkHandler = new NetworkHandler(options.getBool("local"), options.getInt("port"));
+	m_network = new Network(options.getBool("local"), options.getInt("port"));
 
 }
 
 BaseLoop::~BaseLoop()
 {
-	if (m_networkHandler != nullptr)
+	if (m_network != nullptr)
 	{
-		delete m_networkHandler;
-		m_networkHandler = nullptr;
+		delete m_network;
+		m_network = nullptr;
 	}
 
 	if (m_ebusHandler != nullptr)
@@ -93,7 +93,7 @@ void BaseLoop::run()
 		string result;
 
 		// recv new message from client
-		NetMessage* message = m_networkHandler->dequeue();
+		NetMessage* message = m_network->dequeue();
 		string data = message->getData();
 
 		string::size_type pos = 0;

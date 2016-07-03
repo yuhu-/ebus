@@ -22,8 +22,8 @@ ebusgate_SOURCES = network/NetMessage.cpp \
 		   network/TCPAcceptor.h \
 		   network/UDPReceiver.cpp \
 		   network/UDPReceiver.h \
-		   network/NetworkHandler.cpp \
-		   network/NetworkHandler.h \
+		   network/Network.cpp \
+		   network/Network.h \
 		   ebus/fsm/State.cpp \
 		   ebus/fsm/State.h \
 		   ebus/fsm/OnError.cpp \

@@ -17,29 +17,41 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef NETWORK_NETWORKHANDLER_H
-#define NETWORK_NETWORKHANDLER_H
+#include "Network.h"
 
-#include "TCPAcceptor.h"
-#include "UDPReceiver.h"
-
-class NetworkHandler
+Network::Network(const bool local, const int port)
 {
+	m_tcpAcceptor = new TCPAcceptor(local, port, &m_netMsgQueue);
+	m_tcpAcceptor->start();
 
-public:
-	NetworkHandler(const bool local, const int port);
-	~NetworkHandler();
+	m_udpReceiver = new UDPReceiver(local, port, &m_netMsgQueue);
+	m_udpReceiver->start();
+}
 
-	NetMessage* dequeue();
+Network::~Network()
+{
+	if (m_udpReceiver != nullptr)
+	{
+		m_udpReceiver->stop();
+		delete m_udpReceiver;
+		m_udpReceiver = nullptr;
+	}
 
-private:
-	NetworkHandler(const NetworkHandler&);
-	NetworkHandler& operator=(const NetworkHandler&);
+	if (m_tcpAcceptor != nullptr)
+	{
+		m_tcpAcceptor->stop();
+		delete m_tcpAcceptor;
+		m_tcpAcceptor = nullptr;
+	}
 
-	TCPAcceptor* m_tcpAcceptor = nullptr;
-	UDPReceiver* m_udpReceiver = nullptr;
-	NQueue<NetMessage*> m_netMsgQueue;
+	while (m_netMsgQueue.size() > 0)
+		delete m_netMsgQueue.dequeue();
+}
 
-};
+NetMessage* Network::dequeue()
+{
+	return (m_netMsgQueue.dequeue());
+}
 
-#endif // NETWORK_NETWORKHANDLER_H
+
+

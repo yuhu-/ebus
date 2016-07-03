@@ -22,7 +22,8 @@
 
 #include "EbusHandler.h"
 #include "ProcessHandler.h"
-#include "NetworkHandler.h"
+#include "Network.h"
+
 #include <cstring>
 
 using std::ostringstream;
@@ -50,7 +51,7 @@ private:
 	unsigned char m_ownAddress = 0;
 	EbusHandler* m_ebusHandler = nullptr;
 	ProcessHandler* m_processHandler = nullptr;
-	NetworkHandler* m_networkHandler = nullptr;
+	Network* m_network = nullptr;
 
 	static Command findCommand(const string& item);
 
