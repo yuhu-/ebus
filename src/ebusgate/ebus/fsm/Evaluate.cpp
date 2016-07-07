@@ -34,17 +34,17 @@ int Evaluate::run(EbusFSM* fsm)
 		EbusSequence eSeq;
 		eSeq.createMaster(m_sequence);
 
-		ProcessType type = fsm->m_process->active(eSeq);
+		ActionType type = fsm->m_process->active(eSeq);
 
 		switch (type)
 		{
-		case pt_undefined:
+		case at_undefined:
 			logger.warn("%s", errorText(STATE_WRN_NOT_DEF).c_str());
 			break;
-		case pt_ignore:
+		case at_ignore:
 			logger.debug("ignore");
 			break;
-		case pt_response:
+		case at_response:
 			eSeq.setSlaveACK(ACK);
 
 			if (eSeq.getSlaveState() == EBUS_OK)
@@ -60,7 +60,7 @@ int Evaluate::run(EbusFSM* fsm)
 			}
 
 			break;
-		case pt_send:
+		case at_send:
 			if (eSeq.getMasterState() == EBUS_OK)
 			{
 				logger.debug("enqueue: %s", eSeq.toStringMaster().c_str());

@@ -17,44 +17,33 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef PROCESS_PROCESSHANDLER_H
-#define PROCESS_PROCESSHANDLER_H
+#ifndef PROCESS_EBUSPROCESS_H
+#define PROCESS_EBUSPROCESS_H
 
 #include "Process.h"
-#include "Forward.h"
-#include "Notify.h"
 
-#include <thread>
+enum ProcessType
+{
+	pt_gateway
+};
 
-using std::thread;
-
-class ProcessHandler : public Process, public Notify
+class EbusProcess
 {
 
 public:
-	explicit ProcessHandler(const unsigned char address);
-	~ProcessHandler();
-
-	void start();
-	void stop();
-
-	ProcessType active(EbusSequence& eSeq);
-
-	void passive(EbusSequence& eSeq);
+	EbusProcess(const ProcessType type, const unsigned char address, const bool forward);
+	~EbusProcess();
 
 	void forward(bool remove, const string& ip, long port, const string& filter, ostringstream& result);
 
+	Process* getProcess();
+
 private:
-	thread m_thread;
+	EbusProcess(const EbusProcess&);
+	EbusProcess& operator=(const EbusProcess&);
 
-	bool m_running = true;
-
-	const unsigned char m_address;
-
-	Forward* m_forward = nullptr;
-
-	void run();
+	Process* m_process = nullptr;
 
 };
 
-#endif // PROCESS_PROCESSHANDLER_H
+#endif // PROCESS_EBUSPROCESS_H

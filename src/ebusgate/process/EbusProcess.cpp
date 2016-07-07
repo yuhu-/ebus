@@ -17,45 +17,35 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef PROCESS_PROCESS_H
-#define PROCESS_PROCESS_H
+#include "EbusProcess.h"
 
-#include "IProcess.h"
-#include "Notify.h"
-#include "Forward.h"
+#include "Gateway.h"
+#include "Logger.h"
 
-#include <thread>
-
-using std::thread;
-
-class Process : public IProcess, public Notify
+EbusProcess::EbusProcess(const ProcessType type, const unsigned char address, const bool forward)
 {
+	if (type == pt_gateway) m_process = new Gateway(address, forward);
 
-public:
-	Process(const unsigned char address, const bool forward);
-	virtual ~Process();
+	if (m_process != nullptr) m_process->start();
+}
 
-	void start();
-	void stop();
+EbusProcess::~EbusProcess()
+{
+	if (m_process != nullptr)
+	{
+		m_process->stop();
+		delete m_process;
+		m_process = nullptr;
+	}
+}
 
-	virtual ActionType active(EbusSequence& eSeq) = 0;
+void EbusProcess::forward(bool remove, const string& ip, long port, const string& filter, ostringstream& result)
+{
+	m_process->forward(remove, ip, port, filter, result);
+}
 
-	virtual void passive(EbusSequence& eSeq) = 0;
+Process* EbusProcess::getProcess()
+{
+	return (m_process);
+}
 
-	void forward(bool remove, const string& ip, long port, const string& filter, ostringstream& result);
-
-protected:
-	bool m_running = true;
-
-	Forward* m_forward = nullptr;
-
-	const unsigned char m_address;
-
-private:
-	thread m_thread;
-
-	virtual void run() = 0;
-
-};
-
-#endif // PROCESS_PROCESS_H

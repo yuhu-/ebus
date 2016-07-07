@@ -17,45 +17,24 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef PROCESS_PROCESS_H
-#define PROCESS_PROCESS_H
+#ifndef PROCESS_GATEWAY_H
+#define PROCESS_GATEWAY_H
 
-#include "IProcess.h"
-#include "Notify.h"
-#include "Forward.h"
+#include "Process.h"
 
-#include <thread>
-
-using std::thread;
-
-class Process : public IProcess, public Notify
+class Gateway : public Process
 {
 
 public:
-	Process(const unsigned char address, const bool forward);
-	virtual ~Process();
+	Gateway(const unsigned char address, const bool forward);
 
-	void start();
-	void stop();
+	ActionType active(EbusSequence& eSeq);
 
-	virtual ActionType active(EbusSequence& eSeq) = 0;
-
-	virtual void passive(EbusSequence& eSeq) = 0;
-
-	void forward(bool remove, const string& ip, long port, const string& filter, ostringstream& result);
-
-protected:
-	bool m_running = true;
-
-	Forward* m_forward = nullptr;
-
-	const unsigned char m_address;
+	void passive(EbusSequence& eSeq);
 
 private:
-	thread m_thread;
-
-	virtual void run() = 0;
+	void run();
 
 };
 
-#endif // PROCESS_PROCESS_H
+#endif // PROCESS_GATEWAY_H

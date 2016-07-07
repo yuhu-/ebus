@@ -22,7 +22,7 @@
 
 #include "EbusMessage.h"
 #include "EbusDevice.h"
-#include "Process.h"
+#include "IProcess.h"
 #include "NQueue.h"
 #include "Notify.h"
 
@@ -54,7 +54,7 @@ class EbusFSM : public Notify
 public:
 	EbusFSM(const unsigned char address, const string device, const bool noDeviceCheck, const long reopenTime,
 		const long arbitrationTime, const long receiveTimeout, const int lockCounter, const int lockRetries,
-		const bool raw, const bool dump, const string dumpFile, const long dumpFileMaxSize, Process* process);
+		const bool raw, const bool dump, const string dumpFile, const long dumpFileMaxSize, IProcess* process);
 
 	~EbusFSM();
 
@@ -101,7 +101,7 @@ private:
 	long m_dumpFileSize = 0;
 	ofstream m_dumpRawStream;
 
-	Process* m_process = nullptr;
+	IProcess* m_process = nullptr;
 
 	NQueue<EbusMessage*> m_ebusMsgQueue;
 

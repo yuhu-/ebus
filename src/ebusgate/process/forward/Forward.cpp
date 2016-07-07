@@ -74,7 +74,7 @@ void Forward::stop()
 
 void Forward::append(const string& ip, long port, const string& filter, ostringstream& result)
 {
-	Logger logger = Logger("ForwardHandler::append");
+	Logger logger = Logger("Forward::append");
 
 	Host* host = getHost(ip, port);
 
@@ -175,7 +175,7 @@ void Forward::append(const string& ip, long port, const string& filter, ostrings
 
 void Forward::remove(const string& ip, long port, const string& filter, ostringstream& result)
 {
-	Logger logger = Logger("ForwardHandler::remove");
+	Logger logger = Logger("Forward::remove");
 
 	Host* host = getHost(ip, port);
 
@@ -306,7 +306,7 @@ const string Forward::toStringRelation()
 
 void Forward::run()
 {
-	Logger logger = Logger("ForwardHandler::run");
+	Logger logger = Logger("Forward::run");
 	logger.info("started");
 
 	while (m_running == true)

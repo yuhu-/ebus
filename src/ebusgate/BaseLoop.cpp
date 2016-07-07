@@ -49,14 +49,13 @@ BaseLoop::BaseLoop()
 
 	m_ownAddress = options.getInt("address") & 0xff;
 
-	m_processHandler = new ProcessHandler(m_ownAddress);
-	m_processHandler->start();
+	m_ebusProcess = new EbusProcess(pt_gateway, m_ownAddress, true);
 
 	m_ebus = new Ebus(options.getInt("address") & 0xff, options.getString("device"),
 		options.getBool("nodevicecheck"), options.getLong("reopentime"), options.getLong("arbitrationtime"),
 		options.getLong("receivetimeout"), options.getInt("lockcounter"), options.getInt("lockretries"),
 		options.getBool("lograw"), options.getBool("dump"), options.getString("dumpfile"),
-		options.getLong("dumpsize"), m_processHandler);
+		options.getLong("dumpsize"), m_ebusProcess->getProcess());
 
 	m_network = new Network(options.getBool("local"), options.getInt("port"));
 
@@ -76,11 +75,10 @@ BaseLoop::~BaseLoop()
 		m_ebus = nullptr;
 	}
 
-	if (m_processHandler != nullptr)
+	if (m_ebusProcess != nullptr)
 	{
-		m_processHandler->stop();
-		delete m_processHandler;
-		m_processHandler = nullptr;
+		delete m_ebusProcess;
+		m_ebusProcess = nullptr;
 	}
 }
 
@@ -404,7 +402,7 @@ void BaseLoop::handleForward(const vector<string>& args, ostringstream& result)
 		return;
 	}
 
-	m_processHandler->forward(remove, dstIP, dstPort, filter, result);
+	m_ebusProcess->forward(remove, dstIP, dstPort, filter, result);
 }
 
 const string BaseLoop::formatHelp()
