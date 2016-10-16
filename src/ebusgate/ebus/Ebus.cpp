@@ -59,7 +59,7 @@ void Ebus::setDump(bool dump)
 	m_ebusFSM->setDump(dump);
 }
 
-bool Ebus::getRaw()
+bool Ebus::getRaw() const
 {
 	return (m_ebusFSM->getRaw());
 }

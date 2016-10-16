@@ -38,7 +38,7 @@ public:
 	bool getDump() const;
 	void setDump(bool dump);
 
-	bool getRaw();
+	bool getRaw() const;
 	void setRaw(bool raw);
 
 	void enqueue(EbusMessage* message);
