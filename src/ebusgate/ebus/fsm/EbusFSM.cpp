@@ -103,7 +103,7 @@ void EbusFSM::setDump(bool dump)
 	}
 }
 
-bool EbusFSM::getRaw()
+bool EbusFSM::getRaw() const
 {
 	return (m_raw);
 }
