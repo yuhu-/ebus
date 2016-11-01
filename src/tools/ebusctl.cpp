@@ -23,7 +23,6 @@
 
 #include "Options.h"
 #include "Client.h"
-#include "Server.h"
 
 #include <iostream>
 #include <sstream>
