@@ -27,9 +27,6 @@
 #include <iostream>
 #include <sstream>
 
-#include <unistd.h>
-#include <poll.h>
-
 using std::ostringstream;
 using std::cin;
 using std::cout;
