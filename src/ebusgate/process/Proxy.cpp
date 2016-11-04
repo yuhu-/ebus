@@ -17,15 +17,27 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
-#include "Gateway.h"
+#include "Proxy.h"
 #include "Logger.h"
 
-Gateway::Gateway(const unsigned char address, const bool forward)
-	: Process(address, forward)
+Proxy::Proxy(const unsigned char address)
+	: Process(address)
 {
+	m_forward = new Forward();
+	m_forward->start();
 }
 
-ActionType Gateway::active(EbusSequence& eSeq)
+Proxy::~Proxy()
+{
+	if (m_forward != nullptr)
+	{
+		m_forward->stop();
+		delete m_forward;
+		m_forward = nullptr;
+	}
+}
+
+ActionType Proxy::active(EbusSequence& eSeq)
 {
 	Logger logger = Logger("Gateway::active");
 	logger.info("search %s", eSeq.toStringLog().c_str());
@@ -37,7 +49,7 @@ ActionType Gateway::active(EbusSequence& eSeq)
 
 	if (eSeq.getMaster().contains("0704") == true)
 	{
-		eSeq.createSlave("0a7a454741544501010101");
+		eSeq.createSlave("0a7a50524f585901010101");
 		return (at_response);
 	}
 
@@ -61,7 +73,7 @@ ActionType Gateway::active(EbusSequence& eSeq)
 	return (at_undefined);
 }
 
-void Gateway::passive(EbusSequence& eSeq)
+void Proxy::passive(EbusSequence& eSeq)
 {
 	Logger logger = Logger("Gateway::passive");
 	logger.info("forward %s", eSeq.toStringLog().c_str());
@@ -72,7 +84,15 @@ void Gateway::passive(EbusSequence& eSeq)
 
 }
 
-void Gateway::run()
+void Proxy::forward(bool remove, const string& ip, long port, const string& filter, ostringstream& result)
+{
+	if (remove == true)
+		m_forward->remove(ip, port, filter, result);
+	else
+		m_forward->append(ip, port, filter, result);
+}
+
+void Proxy::run()
 {
 	Logger logger = Logger("Gateway::run");
 	logger.info("started");

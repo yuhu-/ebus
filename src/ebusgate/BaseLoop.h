@@ -21,7 +21,7 @@
 #define BASELOOP_H
 
 #include "Ebus.h"
-#include "EbusProcess.h"
+#include "Proxy.h"
 #include "Network.h"
 
 #include <cstring>
@@ -50,7 +50,7 @@ private:
 
 	unsigned char m_ownAddress = 0;
 	Ebus* m_ebus = nullptr;
-	EbusProcess* m_ebusProcess = nullptr;
+	Proxy* m_proxy = nullptr;
 	Network* m_network = nullptr;
 
 	static Command findCommand(const string& item);

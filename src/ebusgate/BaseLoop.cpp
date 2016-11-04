@@ -49,13 +49,13 @@ BaseLoop::BaseLoop()
 
 	m_ownAddress = options.getInt("address") & 0xff;
 
-	m_ebusProcess = new EbusProcess(pt_gateway, m_ownAddress, true);
+	m_proxy = new Proxy(m_ownAddress);
 
 	m_ebus = new Ebus(options.getInt("address") & 0xff, options.getString("device"),
 		options.getBool("nodevicecheck"), options.getLong("reopentime"), options.getLong("arbitrationtime"),
 		options.getLong("receivetimeout"), options.getInt("lockcounter"), options.getInt("lockretries"),
 		options.getBool("lograw"), options.getBool("dump"), options.getString("dumpfile"),
-		options.getLong("dumpsize"), m_ebusProcess->getProcess());
+		options.getLong("dumpsize"), m_proxy);
 
 	m_network = new Network(options.getBool("local"), options.getInt("port"));
 
@@ -75,10 +75,10 @@ BaseLoop::~BaseLoop()
 		m_ebus = nullptr;
 	}
 
-	if (m_ebusProcess != nullptr)
+	if (m_proxy != nullptr)
 	{
-		delete m_ebusProcess;
-		m_ebusProcess = nullptr;
+		delete m_proxy;
+		m_proxy = nullptr;
 	}
 }
 
@@ -402,7 +402,7 @@ void BaseLoop::handleForward(const vector<string>& args, ostringstream& result)
 		return;
 	}
 
-	m_ebusProcess->forward(remove, dstIP, dstPort, filter, result);
+	m_proxy->forward(remove, dstIP, dstPort, filter, result);
 }
 
 const string BaseLoop::formatHelp()

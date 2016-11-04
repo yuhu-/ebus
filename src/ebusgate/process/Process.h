@@ -32,7 +32,7 @@ class Process : public IProcess, public Notify
 {
 
 public:
-	Process(const unsigned char address, const bool forward);
+	explicit Process(const unsigned char address);
 	virtual ~Process();
 
 	void start();
@@ -46,8 +46,6 @@ public:
 
 protected:
 	bool m_running = true;
-
-	Forward* m_forward = nullptr;
 
 	const unsigned char m_address;
 

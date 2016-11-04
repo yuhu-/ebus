@@ -65,10 +65,8 @@ ebusgate_SOURCES = network/NetMessage.cpp \
 		   process/IProcess.h \
 		   process/Process.cpp \
 		   process/Process.h \
-		   process/Gateway.cpp \
-		   process/Gateway.h \
-		   process/EbusProcess.cpp \
-		   process/EbusProcess.h \
+		   process/Proxy.cpp \
+		   process/Proxy.h \
 		   BaseLoop.cpp \
 		   BaseLoop.h \
 		   EbusGate.cpp

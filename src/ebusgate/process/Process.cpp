@@ -25,24 +25,13 @@
 using std::ostringstream;
 using std::endl;
 
-Process::Process(const unsigned char address, const bool forward)
+Process::Process(const unsigned char address)
 	: Notify(), m_address(address)
 {
-	if (forward == true)
-	{
-		m_forward = new Forward();
-		m_forward->start();
-	}
 }
 
 Process::~Process()
 {
-	if (m_forward != nullptr)
-	{
-		m_forward->stop();
-		delete m_forward;
-		m_forward = nullptr;
-	}
 }
 
 void Process::start()
@@ -59,13 +48,4 @@ void Process::stop()
 		m_thread.join();
 	}
 }
-
-void Process::forward(bool remove, const string& ip, long port, const string& filter, ostringstream& result)
-{
-	if (remove == true)
-		m_forward->remove(ip, port, filter, result);
-	else
-		m_forward->append(ip, port, filter, result);
-}
-
 

@@ -17,33 +17,29 @@
  * along with ebusgate. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef PROCESS_EBUSPROCESS_H
-#define PROCESS_EBUSPROCESS_H
+#ifndef PROCESS_PROXY_H
+#define PROCESS_PROXY_H
 
 #include "Process.h"
 
-enum ProcessType
-{
-	pt_gateway
-};
-
-class EbusProcess
+class Proxy : public Process
 {
 
 public:
-	EbusProcess(const ProcessType type, const unsigned char address, const bool forward);
-	~EbusProcess();
+	explicit Proxy(const unsigned char address);
+	~Proxy();
+
+	ActionType active(EbusSequence& eSeq);
+
+	void passive(EbusSequence& eSeq);
 
 	void forward(bool remove, const string& ip, long port, const string& filter, ostringstream& result);
 
-	Process* getProcess();
-
 private:
-	EbusProcess(const EbusProcess&);
-	EbusProcess& operator=(const EbusProcess&);
+	Forward* m_forward = nullptr;
 
-	Process* m_process = nullptr;
+	void run();
 
 };
 
-#endif // PROCESS_EBUSPROCESS_H
+#endif // PROCESS_PROXY_H
