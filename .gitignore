@@ -12,7 +12,7 @@ Makefile.in
 *.o
 *.a
 *.dirstamp
-/src/ebuscpp/ebuscpp
+/src/ebuscpp/ebusproxy
 /src/tools/ebusctl
 /src/tools/ebusfeed
 /src/lib/ebus/test/test_ebusdevice
