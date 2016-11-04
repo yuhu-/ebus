@@ -1,4 +1,0 @@
-# /etc/conf.d/ebusgate: config file for /etc/init.d/ebusgate
-
-# Options to pass to the ebusgate.
-# EBUSGATE_ARGS="-d /dev/ttyUSB0"

@@ -1,36 +1,36 @@
 #!/bin/sh
 
 ### BEGIN INIT INFO
-# Provides:        ebusgate
+# Provides:        ebusproxy
 # Required-Start:  $network $remote_fs $syslog
 # Required-Stop:   $network $remote_fs $syslog
 # Default-Start:   2 3 4 5
 # Default-Stop:
-# Short-Description: Start ebusgate
+# Short-Description: Start ebusproxy
 ### END INIT INFO
 
 PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/bin
 
-if test -f /etc/default/ebusgate; then
-    . /etc/default/ebusgate
+if test -f /etc/default/ebusproxy; then
+    . /etc/default/ebusproxy
 fi
 
 . /lib/lsb/init-functions
 
-DAEMON=/usr/bin/ebusgate
-PIDFILE=/var/run/ebusgate.pid
+DAEMON=/usr/bin/ebusproxy
+PIDFILE=/var/run/ebusproxy.pid
 
 test -x $DAEMON || exit 5
 
 case $1 in
 	start)
-		log_daemon_msg "Starting ebusgate" "ebusgate"
-		start-stop-daemon --start --quiet --oknodo --pidfile $PIDFILE --exec $DAEMON -- $EBUSGATE_OPTS
+		log_daemon_msg "Starting ebusproxy" "ebusproxy"
+		start-stop-daemon --start --quiet --oknodo --pidfile $PIDFILE --exec $DAEMON -- $EBUSPROXY_OPTS
 		status=$?
 		log_end_msg $status
   		;;
 	stop)
-		log_daemon_msg "Stopping ebusgate" "ebusgate"
+		log_daemon_msg "Stopping ebusproxy" "ebusproxy"
   		start-stop-daemon --stop --quiet --oknodo --pidfile $PIDFILE
 		log_end_msg $?
 		rm -f $PIDFILE
@@ -39,7 +39,7 @@ case $1 in
 		$0 stop && sleep 2 && $0 start
   		;;
 	status)
-		status_of_proc $DAEMON "ebusgate"
+		status_of_proc $DAEMON "ebusproxy"
 		;;
 	*)
 		echo "Usage: $0 {start|stop|restart|force-reload|status}"

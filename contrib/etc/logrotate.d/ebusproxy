@@ -1,4 +1,4 @@
-/var/log/ebusgate.log {
+/var/log/ebusproxy.log {
 	rotate 7
 	size 1M
 	copytruncate

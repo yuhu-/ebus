@@ -1,12 +1,12 @@
 ebusctl
------------
+-------
 
 Usage:
  ebusctl [Options] Command [Arguments]
 
 Description:
- 'ebusctl' is a tcp/udp socket client for ebusgate.
-  hint: try 'help' for available ebusgate commands.
+ 'ebusctl' is a tcp/udp socket client for ebusproxy.
+  hint: try 'help' for available ebusproxy commands.
 
 Options:
 
@@ -45,11 +45,8 @@ commands:
 
 
 
-
-
-
 ebusfeed
-------------
+--------
 
 Usage:
  ebusfeed [Options] /path/dumpfile
@@ -65,7 +62,7 @@ Description:
            2. create symbol links to appropriate devices
               for example: 'ln -s /dev/pts/2 /dev/ttyUSB2'
                            'ln -s /dev/pts/3 /dev/ttyUSB3'
-           3. start ebusgate: 'ebusgate -f -n -d /dev/ttyUSB2'
+           3. start ebusproxy: 'ebusproxy -f -n -d /dev/ttyUSB2'
            4. start ebusfeed: 'ebusfeed -d /dev/ttyUSB3 /path/to/ebus_dump.bin'
 
 Options:

@@ -1,0 +1,4 @@
+# /etc/conf.d/ebusproxy: config file for /etc/init.d/ebusproxy
+
+# Options to pass to the ebusproxy.
+# EBUSPROXY_ARGS="-d /dev/ttyUSB0"

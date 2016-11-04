@@ -23,7 +23,7 @@
 
 #include "Daemon.h"
 #include "Options.h"
-#include "../ebuscpp/BaseLoop.h"
+#include "BaseLoop.h"
 #include "Logger.h"
 
 #include <csignal>

@@ -3,10 +3,10 @@
 # Distributed under the terms of the GNU General Public License v2
 # $Header: $
 
-command="/usr/bin/ebusgate"
-command_args="${EBUSGATE_ARGS}"
+command="/usr/bin/ebusproxy"
+command_args="${EBUSPROXY_ARGS}"
 start_stop_daemon_args="--quiet"
-description="ebus gateway daemon"
+description="ebus proxy daemon"
 
 depend() {
 	need localmount
