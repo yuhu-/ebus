@@ -3,7 +3,7 @@ SUBDIRS = src/lib/utils \
 	  src/lib/network \
 	  src/lib/ebus \
 	  src/lib/ebus/test \
-	  src/ebusgate \
+	  src/ebuscpp \
 	  src/tools
 
 distclean-local:

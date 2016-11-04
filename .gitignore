@@ -6,13 +6,13 @@ Makefile.in
 /autom4te.cache/
 /config.*
 /configure
-/ebusgate*.tar.*
+/ebuscpp*.tar.*
 /stamp-h?
 .deps/
 *.o
 *.a
 *.dirstamp
-/src/ebusgate/ebusgate
+/src/ebuscpp/ebuscpp
 /src/tools/ebusctl
 /src/tools/ebusfeed
 /src/lib/ebus/test/test_ebusdevice
