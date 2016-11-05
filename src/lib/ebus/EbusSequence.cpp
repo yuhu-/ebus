@@ -430,7 +430,7 @@ const string EbusSequence::toStringSlaveACK()
 	return (ostr.str());
 }
 
-const string EbusSequence::errorText(const int error)
+const string EbusSequence::errorText(const int error) const
 {
 	ostringstream errStr;
 

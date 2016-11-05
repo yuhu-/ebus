@@ -110,7 +110,7 @@ private:
 	unsigned char m_slaveACK = 0;
 	int m_slaveState = EBUS_EMPTY;
 
-	static const string errorText(const int error);
+	const string errorText(const int error) const;
 };
 
 #endif // LIBEBUS_EBUSSEQUENCE_H
