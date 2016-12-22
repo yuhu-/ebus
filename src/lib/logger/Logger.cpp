@@ -36,11 +36,6 @@ void Logger::stop()
 	m_logHandler.stop();
 }
 
-void Logger::setLevel(const Level level)
-{
-	m_logHandler.setLevel(level);
-}
-
 void Logger::setLevel(const string& level)
 {
 	m_logHandler.setLevel(level);
@@ -58,7 +53,7 @@ void Logger::addFile(const string& file)
 
 void Logger::log(const Level level, const string data, ...)
 {
-	if (m_logHandler.getLevel() != l_off)
+	if (m_logHandler.getLevel() >= level)
 	{
 		char* tmp;
 		va_list ap;
@@ -67,7 +62,7 @@ void Logger::log(const Level level, const string data, ...)
 		if (vasprintf(&tmp, data.c_str(), ap) != -1)
 		{
 			string buffer(tmp);
-			m_logHandler.log(new LogMessage(m_function, level, buffer));
+			m_logHandler.log(new LogMessage(m_function, m_logHandler.getLevelName(level), buffer));
 		}
 
 		va_end(ap);

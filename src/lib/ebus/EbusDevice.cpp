@@ -47,12 +47,12 @@ EbusDevice::EbusDevice(const string& deviceName, const bool noDeviceCheck)
 
 	if (deviceName.find('/') == string::npos && deviceName.find(':') != string::npos)
 	{
-		setType(dt_network);
+		setType(Type::network);
 		m_noDeviceCheck = true;
 	}
 	else
 	{
-		setType(dt_serial);
+		setType(Type::serial);
 	}
 }
 
@@ -101,16 +101,16 @@ const string EbusDevice::errorText(const int error) const
 	return (ostr.str());
 }
 
-void EbusDevice::setType(const DeviceType type)
+void EbusDevice::setType(const Type type)
 {
 	if (m_device != nullptr) delete m_device;
 
 	switch (type)
 	{
-	case dt_serial:
+	case Type::serial:
 		m_device = new SerialDevice();
 		break;
-	case dt_network:
+	case Type::network:
 		m_device = new NetworkDevice();
 		break;
 	};

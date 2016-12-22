@@ -62,7 +62,7 @@ void Options::addText(const string& text)
 
 	option.name = "__text_only__";
 	option.shortname = "";
-	option.type = t_text;
+	option.type = Type::t_text;
 	option.description = text;
 
 	m_options.push_back(option);
@@ -73,7 +73,7 @@ void Options::addBool(const string& name, const string& shortname, const bool va
 	if (name.size() != 0)
 	{
 		m_bools[name] = value;
-		add(name, shortname, description, t_bool);
+		add(name, shortname, description, Type::t_bool);
 	}
 
 }
@@ -83,7 +83,7 @@ void Options::addHex(const string& name, const string& shortname, const int valu
 	if (name.size() != 0)
 	{
 		m_ints[name] = value;
-		add(name, shortname, description, t_hex);
+		add(name, shortname, description, Type::t_hex);
 	}
 
 }
@@ -93,7 +93,7 @@ void Options::addInt(const string& name, const string& shortname, const int valu
 	if (name.size() != 0)
 	{
 		m_ints[name] = value;
-		add(name, shortname, description, t_int);
+		add(name, shortname, description, Type::t_int);
 	}
 
 }
@@ -103,7 +103,7 @@ void Options::addLong(const string& name, const string& shortname, const long va
 	if (name.size() != 0)
 	{
 		m_longs[name] = value;
-		add(name, shortname, description, t_long);
+		add(name, shortname, description, Type::t_long);
 	}
 
 }
@@ -113,7 +113,7 @@ void Options::addFloat(const string& name, const string& shortname, const float 
 	if (name.size() != 0)
 	{
 		m_floats[name] = value;
-		add(name, shortname, description, t_float);
+		add(name, shortname, description, Type::t_float);
 	}
 
 }
@@ -123,7 +123,7 @@ void Options::addString(const string& name, const string& shortname, const strin
 	if (name.size() != 0)
 	{
 		m_strings[name] = value;
-		add(name, shortname, description, t_string);
+		add(name, shortname, description, Type::t_string);
 	}
 
 }
@@ -162,7 +162,7 @@ bool Options::parse(int argc, char* argv[])
 			index = find(_argv[i].substr(2), false);
 			if (index >= 0)
 			{
-				if (m_options[index].type == t_bool)
+				if (m_options[index].type == Type::t_bool)
 					save(index, "");
 				else
 					saveIndexLong = index;
@@ -189,7 +189,7 @@ bool Options::parse(int argc, char* argv[])
 				index = find(_argv[i].substr(j, 1), true);
 				if (index >= 0)
 				{
-					if (m_options[index].type == t_bool)
+					if (m_options[index].type == Type::t_bool)
 					{
 						save(index, "");
 					}
@@ -409,30 +409,30 @@ bool Options::toStringValues()
 		const string c = (option.shortname.size() == 1) ? option.shortname.c_str() : " ";
 		cerr << ((c == " ") ? " " : "-") << c << " | --" << option.name << " = ";
 
-		if (option.type == t_bool)
+		if (option.type == Type::t_bool)
 		{
 			if (getBool(option.name) == true)
 				cerr << "yes" << endl;
 			else
 				cerr << "no" << endl;
 		}
-		else if (option.type == t_hex)
+		else if (option.type == Type::t_hex)
 		{
 			cerr << "0x" << hex << setw(2) << setfill('0') << getInt(option.name) << dec << endl;
 		}
-		else if (option.type == t_int)
+		else if (option.type == Type::t_int)
 		{
 			cerr << getInt(option.name) << endl;
 		}
-		else if (option.type == t_long)
+		else if (option.type == Type::t_long)
 		{
 			cerr << getLong(option.name) << endl;
 		}
-		else if (option.type == t_float)
+		else if (option.type == Type::t_float)
 		{
 			cerr << getFloat(option.name) << endl;
 		}
-		else if (option.type == t_string)
+		else if (option.type == Type::t_string)
 		{
 			cerr << getString(option.name) << endl;
 		}
@@ -464,7 +464,7 @@ int Options::find(const string& name, const bool shortname)
 {
 	for (size_t i = 0; i < m_options.size(); i++)
 	{
-		if (m_options[i].type != t_text)
+		if (m_options[i].type != Type::t_text)
 		{
 			if (shortname == true)
 			{
@@ -484,22 +484,22 @@ void Options::save(const int index, const string& value)
 {
 	switch (m_options[index].type)
 	{
-	case t_bool:
+	case Type::t_bool:
 		m_bools[m_options[index].name] = (m_bools[m_options[index].name] == true ? false : true);
 		break;
-	case t_hex:
+	case Type::t_hex:
 		m_ints[m_options[index].name] = strtol(value.c_str(), nullptr, 16);
 		break;
-	case t_int:
+	case Type::t_int:
 		m_ints[m_options[index].name] = strtol(value.c_str(), nullptr, 10);
 		break;
-	case t_long:
+	case Type::t_long:
 		m_longs[m_options[index].name] = strtol(value.c_str(), nullptr, 10);
 		break;
-	case t_float:
+	case Type::t_float:
 		m_floats[m_options[index].name] = static_cast<float>(strtod(value.c_str(), nullptr));
 		break;
-	case t_string:
+	case Type::t_string:
 		m_strings[m_options[index].name] = value;
 		break;
 	default:

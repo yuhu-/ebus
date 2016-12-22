@@ -31,29 +31,12 @@
 //using std::setw;
 //using std::setfill;
 
-map<Level, string> LevelNames =
-{
-{ l_off, "OFF" },
-{ l_error, "ERROR" },
-{ l_warn, "WARN" },
-{ l_info, "INFO" },
-{ l_debug, "DEBUG" },
-{ l_trace, "TRACE" } };
-
-Level calcLevel(const string& level)
-{
-	for (const auto& lvl : LevelNames)
-		if (strcasecmp(lvl.second.c_str(), level.c_str()) == 0) return (lvl.first);
-
-	return (l_info);
-}
-
 string LogMessage::getFunction() const
 {
 	return (m_function);
 }
 
-Level LogMessage::getLevel() const
+string LogMessage::getLevel() const
 {
 	return (m_level);
 }
@@ -68,7 +51,7 @@ string LogMessage::getTime() const
 	return (m_time);
 }
 
-LogMessage::LogMessage(const string& function, const Level level, const string& text)
+LogMessage::LogMessage(const string& function, const string& level, const string& text)
 	: m_function(function), m_level(level), m_text(text)
 {
 	char time[24];

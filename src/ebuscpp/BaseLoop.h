@@ -28,13 +28,24 @@
 
 using std::ostringstream;
 
-enum Command
-{
-	c_invalid, c_open, c_close, c_send, c_forward, c_dump, c_log, c_raw, c_help
-};
-
 class BaseLoop
 {
+
+	enum class Command
+	{
+		invalid, open, close, send, forward, dump, log, raw, help
+	};
+
+	map<Command, string> CommandNames =
+	{
+	{ Command::open, "OPEN" },
+	{ Command::close, "CLOSE" },
+	{ Command::send, "SEND" },
+	{ Command::forward, "FORWARD" },
+	{ Command::log, "LOG" },
+	{ Command::raw, "RAW" },
+	{ Command::dump, "DUMP" },
+	{ Command::help, "HELP" } };
 
 public:
 	BaseLoop();
@@ -53,7 +64,7 @@ private:
 	Proxy* m_proxy = nullptr;
 	Network* m_network = nullptr;
 
-	static Command findCommand(const string& item);
+	Command findCommand(const string& item);
 
 	string decodeMessage(const string& data);
 

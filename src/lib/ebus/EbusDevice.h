@@ -24,13 +24,13 @@
 
 #include <queue>
 
-enum DeviceType
-{
-	dt_serial, dt_network
-};
-
 class EbusDevice
 {
+
+	enum class Type
+	{
+		serial, network
+	};
 
 public:
 	EbusDevice(const string& device, const bool noDeviceCheck);
@@ -53,7 +53,7 @@ private:
 
 	bool m_noDeviceCheck;
 
-	void setType(const DeviceType type);
+	void setType(const Type type);
 
 };
 

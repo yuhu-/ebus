@@ -32,17 +32,6 @@ using std::istream_iterator;
 using std::endl;
 using std::to_string;
 
-map<Command, string> CommandNames =
-{
-{ c_open, "OPEN" },
-{ c_close, "CLOSE" },
-{ c_send, "SEND" },
-{ c_forward, "FORWARD" },
-{ c_log, "LOG" },
-{ c_raw, "RAW" },
-{ c_dump, "DUMP" },
-{ c_help, "HELP" } };
-
 BaseLoop::BaseLoop()
 {
 	Options& options = Options::getOption();
@@ -118,12 +107,12 @@ void BaseLoop::run()
 	}
 }
 
-Command BaseLoop::findCommand(const string& command)
+BaseLoop::Command BaseLoop::findCommand(const string& command)
 {
 	for (const auto& cmd : CommandNames)
 		if (strcasecmp(cmd.second.c_str(), command.c_str()) == 0) return (cmd.first);
 
-	return (c_invalid);
+	return (Command::invalid);
 }
 
 string BaseLoop::decodeMessage(const string& data)
@@ -140,12 +129,12 @@ string BaseLoop::decodeMessage(const string& data)
 
 	switch (findCommand(args[0]))
 	{
-	case c_invalid:
+	case Command::invalid:
 	{
 		result << "command not found";
 		break;
 	}
-	case c_open:
+	case Command::open:
 	{
 		if (args.size() != 1)
 		{
@@ -157,7 +146,7 @@ string BaseLoop::decodeMessage(const string& data)
 		result << "connected";
 		break;
 	}
-	case c_close:
+	case Command::close:
 	{
 		if (args.size() != 1)
 		{
@@ -169,7 +158,7 @@ string BaseLoop::decodeMessage(const string& data)
 		result << "disconnected";
 		break;
 	}
-	case c_send:
+	case Command::send:
 	{
 		if (args.size() != 2)
 		{
@@ -203,7 +192,7 @@ string BaseLoop::decodeMessage(const string& data)
 
 		break;
 	}
-	case c_forward:
+	case Command::forward:
 	{
 		if (args.size() < 2 || args.size() > 4)
 		{
@@ -215,7 +204,7 @@ string BaseLoop::decodeMessage(const string& data)
 
 		break;
 	}
-	case c_log:
+	case Command::log:
 	{
 		if (args.size() != 2)
 		{
@@ -223,12 +212,12 @@ string BaseLoop::decodeMessage(const string& data)
 			break;
 		}
 
-		logger.setLevel(calcLevel(args[1]));
+		logger.setLevel(args[1]);
 		result << "changed";
 		break;
 
 	}
-	case c_raw:
+	case Command::raw:
 	{
 		if (args.size() > 2)
 		{
@@ -259,7 +248,7 @@ string BaseLoop::decodeMessage(const string& data)
 		result << "usage: 'raw [on|off]'";
 		break;
 	}
-	case c_dump:
+	case Command::dump:
 	{
 		if (args.size() > 2)
 		{
@@ -290,7 +279,7 @@ string BaseLoop::decodeMessage(const string& data)
 		result << "usage: 'dump [on|off]'";
 		break;
 	}
-	case c_help:
+	case Command::help:
 	{
 		result << formatHelp();
 		break;

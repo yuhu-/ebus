@@ -32,7 +32,7 @@ using std::map;
 class Options
 {
 
-	enum Type
+	enum class Type
 	{
 		t_none,    // not defined
 		t_text,    // default for __text_only__

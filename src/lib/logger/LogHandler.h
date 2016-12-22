@@ -17,24 +17,39 @@
  * along with ebuscpp. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef LIBLOGGER_LOGBASE_H
-#define LIBLOGGER_LOGBASE_H
+#ifndef LIBLOGGER_LOGHANDLER_H
+#define LIBLOGGER_LOGHANDLER_H
 
 #include "LogMessage.h"
 #include "LogSink.h"
 #include "NQueue.h"
 
+#include <map>
 #include <string>
 #include <vector>
-#include <map>
 #include <thread>
 
+using std::map;
 using std::string;
 using std::vector;
 using std::thread;
 
+enum class Level
+{
+	off = 0x00, error = 0x01, warn = 0x02, info = 0x04, debug = 0x08, trace = 0x10
+};
+
 class LogHandler
 {
+
+	map<Level, string> LevelNames =
+	{
+	{ Level::off, "OFF" },
+	{ Level::error, "ERROR" },
+	{ Level::warn, "WARN" },
+	{ Level::info, "INFO" },
+	{ Level::debug, "DEBUG" },
+	{ Level::trace, "TRACE" } };
 
 public:
 	static LogHandler& getLogHandler();
@@ -44,7 +59,7 @@ public:
 	void stop();
 
 	Level getLevel() const;
-	void setLevel(const Level level);
+	string getLevelName(Level level);
 	void setLevel(const string& level);
 
 	void addConsole();
@@ -63,12 +78,14 @@ private:
 
 	NQueue<const LogMessage*> m_logMessages;
 
-	Level m_level = l_info;
+	Level m_level = Level::info;
 
 	void run();
+
+	Level findLevel(const string& level);
 
 	void addSink(LogSink* sink);
 	void delSink(const LogSink* sink);
 };
 
-#endif // LIBLOGGER_LOGBASE_H
+#endif // LIBLOGGER_LOGHANDLER_H

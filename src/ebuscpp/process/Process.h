@@ -39,7 +39,7 @@ public:
 	void start();
 	void stop();
 
-	virtual ActionType active(EbusSequence& eSeq) = 0;
+	virtual Action active(EbusSequence& eSeq) = 0;
 
 	virtual void passive(EbusSequence& eSeq) = 0;
 

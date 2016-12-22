@@ -21,33 +21,23 @@
 #define LIBLOGGER_LOGMESSAGE_H
 
 #include <string>
-#include <map>
 
 using std::string;
-using std::map;
-
-enum Level
-{
-	l_off = 0x00, l_error = 0x01, l_warn = 0x02, l_info = 0x04, l_debug = 0x08, l_trace = 0x10
-};
-
-Level calcLevel(const string& level);
 
 class LogMessage
 {
 
 public:
-	LogMessage(const string& function, const Level level, const string& text);
+	LogMessage(const string& function, const string& level, const string& text);
 
 	string getFunction() const;
-	Level getLevel() const;
+	string getLevel() const;
 	string getText() const;
 	string getTime() const;
 
 private:
 	string m_function;
-	Level m_level;
-
+	string m_level;
 	string m_text;
 	string m_time;
 

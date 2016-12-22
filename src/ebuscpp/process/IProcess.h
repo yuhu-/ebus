@@ -22,12 +22,12 @@
 
 #include "EbusSequence.h"
 
-enum ActionType
+enum class Action
 {
-	at_undefined,	// undefined
-	at_ignore,	// ignore
-	at_response,	// send response
-	at_send		// send message
+	undefined,	// undefined
+	ignore,		// ignore
+	response,	// send response
+	send		// send message
 };
 
 class IProcess
@@ -38,7 +38,7 @@ public:
 	{
 	}
 
-	virtual ActionType active(EbusSequence& eSeq) = 0;
+	virtual Action active(EbusSequence& eSeq) = 0;
 
 	virtual void passive(EbusSequence& eSeq) = 0;
 

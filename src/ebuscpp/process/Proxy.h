@@ -29,7 +29,7 @@ public:
 	explicit Proxy(const unsigned char address);
 	~Proxy();
 
-	ActionType active(EbusSequence& eSeq);
+	Action active(EbusSequence& eSeq);
 
 	void passive(EbusSequence& eSeq);
 

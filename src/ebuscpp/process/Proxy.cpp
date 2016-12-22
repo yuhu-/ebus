@@ -37,40 +37,40 @@ Proxy::~Proxy()
 	}
 }
 
-ActionType Proxy::active(EbusSequence& eSeq)
+Action Proxy::active(EbusSequence& eSeq)
 {
 	Logger logger = Logger("Gateway::active");
 	logger.info("search %s", eSeq.toStringLog().c_str());
 
 	if (eSeq.getMaster().contains("0700") == true)
 	{
-		return (at_ignore);
+		return (Action::ignore);
 	}
 
 	if (eSeq.getMaster().contains("0704") == true)
 	{
 		eSeq.createSlave("0a7a50524f585901010101");
-		return (at_response);
+		return (Action::response);
 	}
 
 	if (eSeq.getMaster().contains("07fe") == true)
 	{
 		eSeq.clear();
 		eSeq.createMaster(m_address, BROADCAST, "07ff00");
-		return (at_send);
+		return (Action::send);
 	}
 
 	if (eSeq.getMaster().contains("b505") == true)
 	{
-		return (at_ignore);
+		return (Action::ignore);
 	}
 
 	if (eSeq.getMaster().contains("b516") == true)
 	{
-		return (at_ignore);
+		return (Action::ignore);
 	}
 
-	return (at_undefined);
+	return (Action::undefined);
 }
 
 void Proxy::passive(EbusSequence& eSeq)

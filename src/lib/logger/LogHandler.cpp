@@ -25,6 +25,7 @@
 #include <iomanip>
 #include <algorithm>
 #include <sstream>
+#include <cstring>
 
 using std::istringstream;
 using std::ostringstream;
@@ -32,8 +33,6 @@ using std::endl;
 using std::setw;
 using std::setfill;
 using std::left;
-
-extern map<Level, string> LevelNames;
 
 LogHandler& LogHandler::getLogHandler()
 {
@@ -63,17 +62,17 @@ void LogHandler::stop()
 
 Level LogHandler::getLevel() const
 {
-	return (m_level);
+       return (m_level);
 }
 
-void LogHandler::setLevel(const Level level)
+string LogHandler::getLevelName(Level level)
 {
-	m_level = level;
+	return (LevelNames[level]);
 }
 
 void LogHandler::setLevel(const string& level)
 {
-	m_level = calcLevel(level);
+	m_level = findLevel(level);
 }
 
 void LogHandler::addConsole()
@@ -102,20 +101,24 @@ void LogHandler::run()
 		const LogMessage* message = m_logMessages.dequeue();
 		if (message == nullptr) break;
 
-		if (m_level >= message->getLevel())
-		{
-			ostringstream ostr;
+		ostringstream ostr;
 
-			ostr << "[" << message->getTime() << "] " << setw(5) << setfill(' ') << left
-				<< LevelNames[(Level) message->getLevel()] << " " << message->getFunction() << " "
-				<< message->getText() << endl;
+		ostr << "[" << message->getTime() << "] " << setw(5) << setfill(' ') << left << message->getLevel()
+			<< " " << message->getFunction() << " " << message->getText() << endl;
 
-			for (const auto& sink : m_sinks)
-				sink->write(ostr.str());
-		}
+		for (const auto& sink : m_sinks)
+			sink->write(ostr.str());
 
 		delete message;
 	}
+}
+
+Level LogHandler::findLevel(const string& level)
+{
+	for (const auto& lvl : LevelNames)
+		if (strcasecmp(lvl.second.c_str(), level.c_str()) == 0) return (lvl.first);
+
+	return (Level::info);
 }
 
 void LogHandler::addSink(LogSink* sink)
