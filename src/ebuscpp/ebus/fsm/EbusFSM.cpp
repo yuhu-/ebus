@@ -121,8 +121,7 @@ void EbusFSM::enqueue(EbusMessage* message)
 
 void EbusFSM::run()
 {
-	Logger logger = Logger("EbusFSM::run");
-	logger.info("started");
+	LOG_INFO("started")
 
 	while (m_running == true)
 	{
@@ -136,17 +135,15 @@ void EbusFSM::run()
 		}
 	}
 
-	logger.info("stopped");
+	LOG_INFO("stopped")
 }
 
 void EbusFSM::changeState(State* state)
 {
-	Logger logger = Logger("EbusFSM::changeState");
-
 	if (m_state != state)
 	{
 		m_state = state;
-		logger.trace("%s", m_state->toString().c_str());
+		LOG_TRACE("%s", m_state->toString().c_str())
 	}
 }
 

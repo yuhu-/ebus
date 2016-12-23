@@ -24,13 +24,11 @@ Idle Idle::m_idle;
 
 int Idle::run(EbusFSM* fsm)
 {
-	Logger logger = Logger("Idle::run");
-
 	if (fsm->m_ebusDevice->isOpen() == true)
 	{
 		fsm->m_ebusDevice->close();
 
-		if (fsm->m_ebusDevice->isOpen() == false) logger.info("ebus disconnected");
+		if (fsm->m_ebusDevice->isOpen() == false) LOG_INFO("ebus disconnected")
 	}
 
 	reset(fsm);

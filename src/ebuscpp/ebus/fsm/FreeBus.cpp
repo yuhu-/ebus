@@ -25,14 +25,12 @@ FreeBus FreeBus::m_freeBus;
 
 int FreeBus::run(EbusFSM* fsm)
 {
-	Logger logger = Logger("FreeBus::run");
-
 	unsigned char byte = SYN;
 
 	int result = writeRead(fsm, byte, 0);
 	if (result != DEV_OK) return (result);
 
-	logger.debug("ebus freed");
+	LOG_DEBUG("ebus freed")
 
 	reset(fsm);
 	fsm->changeState(Listen::getListen());

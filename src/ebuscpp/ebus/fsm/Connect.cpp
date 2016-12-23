@@ -32,8 +32,6 @@ Connect Connect::m_connect;
 
 int Connect::run(EbusFSM* fsm)
 {
-	Logger logger = Logger("Connect::run");
-
 	int result = DEV_OK;
 
 	if (fsm->m_ebusDevice->isOpen() == false)
@@ -42,11 +40,11 @@ int Connect::run(EbusFSM* fsm)
 
 		if (fsm->m_ebusDevice->isOpen() == true && result == DEV_OK)
 		{
-			logger.info("ebus connected");
+			LOG_INFO("ebus connected")
 		}
 		else
 		{
-			logger.error("%s", fsm->m_ebusDevice->errorText(fsm->m_lastResult).c_str());
+			LOG_ERROR("%s", fsm->m_ebusDevice->errorText(fsm->m_lastResult).c_str())
 			sleep(1);
 			m_reopenTime++;
 

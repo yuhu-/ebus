@@ -81,8 +81,6 @@ void define_args()
 
 void shutdown()
 {
-	Logger logger = Logger("EbusCPP::shutdown");
-
 	// stop threads
 	if (baseloop != nullptr)
 	{
@@ -99,32 +97,30 @@ void shutdown()
 	if (Daemon::getDaemon().status() == true) Daemon::getDaemon().stop();
 
 	// stop logger
-	logger.info("stopped");
+	LOG_INFO("stopped")
 
-	logger.stop();
+	LOG_STOP()
 	exit(EXIT_SUCCESS);
 
 }
 
 void signal_handler(int sig)
 {
-	Logger logger = Logger("EbusProxy::signal_handler");
-
 	switch (sig)
 	{
 	case SIGHUP:
-		logger.info("SIGHUP received");
+		LOG_INFO("SIGHUP received")
 		break;
 	case SIGINT:
-		logger.info("SIGINT received");
+		LOG_INFO("SIGINT received")
 		shutdown();
 		break;
 	case SIGTERM:
-		logger.info("SIGTERM received");
+		LOG_INFO("SIGTERM received")
 		shutdown();
 		break;
 	default:
-		logger.info("undefined signal %s", strsignal(sig));
+		LOG_INFO("undefined signal %s", strsignal(sig))
 		break;
 	}
 }
@@ -138,17 +134,15 @@ int main(int argc, char* argv[])
 	Options& options = Options::getOption();
 	if (options.parse(argc, argv) == false) return (EXIT_SUCCESS);
 
-	Logger logger = Logger("EbusProxy::main");
-
 	if (options.getBool("foreground") == true)
 	{
-		logger.addConsole();
+		LOG_CONSOLE()
 	}
 	else
 	{
 		// make me daemon
 		Daemon::getDaemon().start(options.getString("pidfile"));
-		logger.addFile(options.getString("logfile"));
+		LOG_FILE(options.getString("logfile"))
 	}
 
 	// trap signals that we expect to receive
@@ -157,10 +151,10 @@ int main(int argc, char* argv[])
 	signal(SIGTERM, signal_handler);
 
 	// start logger
-	logger.setLevel(options.getString("loglevel"));
-	logger.start();
+	LOG_LEVEL(options.getString("loglevel"))
+	LOG_START()
 
-	logger.info("started");
+	LOG_INFO("started")
 
 	// create baseloop
 	baseloop = new BaseLoop();

@@ -54,8 +54,7 @@ bool TCPConnection::isClosed() const
 
 void TCPConnection::run()
 {
-	Logger logger = Logger("TCPConnection::run");
-	logger.info("[%05d] %s opened", m_id, m_socket->getIP().c_str());
+	LOG_INFO("[%05d] %s opened", m_id, m_socket->getIP().c_str())
 
 	struct timespec tdiff;
 
@@ -127,6 +126,6 @@ void TCPConnection::run()
 	}
 
 	m_closed = true;
-	logger.info("[%05d] connection closed", m_id);
+	LOG_INFO("[%05d] connection closed", m_id)
 }
 

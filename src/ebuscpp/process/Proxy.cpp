@@ -39,8 +39,7 @@ Proxy::~Proxy()
 
 Action Proxy::active(EbusSequence& eSeq)
 {
-	Logger logger = Logger("Gateway::active");
-	logger.info("search %s", eSeq.toStringLog().c_str());
+	LOG_INFO("search %s", eSeq.toStringLog().c_str())
 
 	if (eSeq.getMaster().contains("0700") == true)
 	{
@@ -75,8 +74,7 @@ Action Proxy::active(EbusSequence& eSeq)
 
 void Proxy::passive(EbusSequence& eSeq)
 {
-	Logger logger = Logger("Gateway::passive");
-	logger.info("forward %s", eSeq.toStringLog().c_str());
+	LOG_INFO("forward %s", eSeq.toStringLog().c_str())
 
 	m_forward->enqueue(eSeq);
 
@@ -94,8 +92,7 @@ void Proxy::forward(bool remove, const string& ip, long port, const string& filt
 
 void Proxy::run()
 {
-	Logger logger = Logger("Gateway::run");
-	logger.info("started");
+	LOG_INFO("started")
 
 	while (m_running == true)
 	{
@@ -103,6 +100,6 @@ void Proxy::run()
 		// TODO implement business logic
 	}
 
-	logger.info("stopped");
+	LOG_INFO("stopped")
 }
 

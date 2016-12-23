@@ -73,8 +73,6 @@ BaseLoop::~BaseLoop()
 
 void BaseLoop::run()
 {
-	Logger logger = Logger("BaseLoop::run");
-
 	while (true)
 	{
 		string result;
@@ -87,7 +85,7 @@ void BaseLoop::run()
 		while ((pos = data.find("\r\n", pos)) != string::npos)
 			data.erase(pos, 2);
 
-		logger.info(">>> %s", data.c_str());
+		LOG_INFO(">>> %s", data.c_str())
 
 		// decode message
 		if (strcasecmp(data.c_str(), "STOP") != 0)
@@ -95,7 +93,7 @@ void BaseLoop::run()
 		else
 			result = "stopped";
 
-		logger.info("<<< %s", result.c_str());
+		LOG_INFO("<<< %s", result.c_str())
 		result += "\n\n";
 
 		// send result to client
@@ -117,8 +115,6 @@ BaseLoop::Command BaseLoop::findCommand(const string& command)
 
 string BaseLoop::decodeMessage(const string& data)
 {
-	Logger logger = Logger("BaseLoop::decodeMessage");
-
 	ostringstream result;
 
 	// prepare data
@@ -174,7 +170,7 @@ string BaseLoop::decodeMessage(const string& data)
 			// send message
 			if (eSeq.getMasterState() == EBUS_OK)
 			{
-				logger.debug("enqueue: %s", eSeq.toStringMaster().c_str());
+				LOG_DEBUG("enqueue: %s", eSeq.toStringMaster().c_str())
 				EbusMessage* ebusMessage = new EbusMessage(eSeq);
 				m_ebus->enqueue(ebusMessage);
 				ebusMessage->waitNotify();
@@ -188,7 +184,7 @@ string BaseLoop::decodeMessage(const string& data)
 			}
 		}
 
-		logger.debug("error: %s", result.str().c_str());
+		LOG_DEBUG("error: %s", result.str().c_str())
 
 		break;
 	}
@@ -212,7 +208,7 @@ string BaseLoop::decodeMessage(const string& data)
 			break;
 		}
 
-		logger.setLevel(args[1]);
+		LOG_LEVEL(args[1])
 		result << "changed";
 		break;
 

@@ -25,8 +25,6 @@ SendResponse SendResponse::m_sendResponse;
 
 int SendResponse::run(EbusFSM* fsm)
 {
-	Logger logger = Logger("SendResponse::run");
-
 	EbusSequence& eSeq = m_passiveMessage->getEbusSequence();
 	int result;
 	unsigned char byte;
@@ -50,7 +48,7 @@ int SendResponse::run(EbusFSM* fsm)
 
 		if (byte != ACK && byte != NAK)
 		{
-			logger.info("%s", errorText(STATE_ERR_ACK_WRONG).c_str());
+			LOG_INFO("%s", errorText(STATE_ERR_ACK_WRONG).c_str())
 			break;
 		}
 		else if (byte == ACK)
@@ -61,18 +59,18 @@ int SendResponse::run(EbusFSM* fsm)
 		{
 			if (retry == 1)
 			{
-				logger.info("%s", errorText(STATE_WRN_ACK_NEG).c_str());
+				LOG_INFO("%s", errorText(STATE_WRN_ACK_NEG).c_str())
 			}
 			else
 			{
-				logger.info("%s", errorText(STATE_ERR_ACK_NEG).c_str());
-				logger.info("%s", errorText(STATE_ERR_SEND_FAIL).c_str());
+				LOG_INFO("%s", errorText(STATE_ERR_ACK_NEG).c_str())
+				LOG_INFO("%s", errorText(STATE_ERR_SEND_FAIL).c_str())
 			}
 		}
 	}
 
 	eSeq.setMasterACK(byte);
-	logger.info("%s", eSeq.toStringLog().c_str());
+	LOG_INFO("%s", eSeq.toStringLog().c_str())
 
 	if (fsm->m_process != nullptr) fsm->m_process->passive(eSeq);
 

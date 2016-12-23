@@ -27,8 +27,6 @@ Evaluate Evaluate::m_evaluate;
 
 int Evaluate::run(EbusFSM* fsm)
 {
-	Logger logger = Logger("Evaluate::run");
-
 	if (fsm->m_process != nullptr)
 	{
 		EbusSequence eSeq;
@@ -39,36 +37,36 @@ int Evaluate::run(EbusFSM* fsm)
 		switch (action)
 		{
 		case Action::undefined:
-			logger.warn("%s", errorText(STATE_WRN_NOT_DEF).c_str());
+			LOG_WARN("%s", errorText(STATE_WRN_NOT_DEF).c_str())
 			break;
 		case Action::ignore:
-			logger.debug("ignore");
+			LOG_DEBUG("ignore")
 			break;
 		case Action::response:
 			eSeq.setSlaveACK(ACK);
 
 			if (eSeq.getSlaveState() == EBUS_OK)
 			{
-				logger.debug("response: %s", eSeq.toStringSlave().c_str());
+				LOG_DEBUG("response: %s", eSeq.toStringSlave().c_str())
 				m_passiveMessage = new EbusMessage(eSeq);
 				fsm->changeState(SendResponse::getSendResponse());
 				return (DEV_OK);
 			}
 			else
 			{
-				logger.warn("%s", errorText(STATE_ERR_CREA_MSG).c_str());
+				LOG_WARN("%s", errorText(STATE_ERR_CREA_MSG).c_str())
 			}
 
 			break;
 		case Action::send:
 			if (eSeq.getMasterState() == EBUS_OK)
 			{
-				logger.debug("enqueue: %s", eSeq.toStringMaster().c_str());
+				LOG_DEBUG("enqueue: %s", eSeq.toStringMaster().c_str())
 				fsm->enqueue(new EbusMessage(eSeq, true));
 			}
 			else
 			{
-				logger.warn("%s", errorText(STATE_ERR_CREA_MSG).c_str());
+				LOG_WARN("%s", errorText(STATE_ERR_CREA_MSG).c_str())
 			}
 
 			break;
@@ -78,7 +76,7 @@ int Evaluate::run(EbusFSM* fsm)
 	}
 	else
 	{
-		logger.warn("process not implemented");
+		LOG_WARN("process not implemented")
 	}
 
 	m_sequence.clear();

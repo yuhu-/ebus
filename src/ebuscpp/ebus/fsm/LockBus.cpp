@@ -28,12 +28,10 @@ LockBus LockBus::m_lockBus;
 
 int LockBus::run(EbusFSM* fsm)
 {
-	Logger logger = Logger("LockBus::run");
-
 	EbusSequence& eSeq = m_activeMessage->getEbusSequence();
 	if (eSeq.getMasterState() != EBUS_OK)
 	{
-		logger.debug("%s", eSeq.toStringMaster().c_str());
+		LOG_DEBUG("%s", eSeq.toStringMaster().c_str())
 		m_activeMessage->setResult(eSeq.toStringMaster());
 
 		reset(fsm);
@@ -55,7 +53,7 @@ int LockBus::run(EbusFSM* fsm)
 
 	if (byte != eSeq.getMaster()[0])
 	{
-		logger.debug("%s", errorText(STATE_WRN_ARB_LOST).c_str());
+		LOG_DEBUG("%s", errorText(STATE_WRN_ARB_LOST).c_str())
 
 		if (m_lockRetries < fsm->m_lockRetries)
 		{
@@ -64,17 +62,17 @@ int LockBus::run(EbusFSM* fsm)
 			if ((byte & 0x0f) != (eSeq.getMaster()[0] & 0x0f))
 			{
 				m_lockCounter = fsm->m_lockCounter;
-				logger.debug("%s", errorText(STATE_WRN_PRI_LOST).c_str());
+				LOG_DEBUG("%s", errorText(STATE_WRN_PRI_LOST).c_str())
 			}
 			else
 			{
 				m_lockCounter = 1;
-				logger.debug("%s", errorText(STATE_INF_PRI_FIT).c_str());
+				LOG_DEBUG("%s", errorText(STATE_INF_PRI_FIT).c_str())
 			}
 		}
 		else
 		{
-			logger.warn("%s", errorText(STATE_ERR_LOCK_FAIL).c_str());
+			LOG_WARN("%s", errorText(STATE_ERR_LOCK_FAIL).c_str())
 			m_activeMessage->setResult(errorText(STATE_ERR_LOCK_FAIL));
 
 			reset(fsm);
@@ -84,7 +82,7 @@ int LockBus::run(EbusFSM* fsm)
 	}
 	else
 	{
-		logger.debug("ebus locked");
+		LOG_DEBUG("ebus locked")
 		fsm->changeState(SendMessage::getSendMessage());
 	}
 

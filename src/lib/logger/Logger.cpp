@@ -21,7 +21,7 @@
 
 #include <cstdarg>
 
-Logger::Logger(const char* function)
+Logger::Logger(const string& function)
 	: m_logHandler(LogHandler::getLogHandler()), m_function(function)
 {
 }

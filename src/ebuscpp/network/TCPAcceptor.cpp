@@ -69,8 +69,7 @@ void TCPAcceptor::run()
 {
 	if (m_running == false) return;
 
-	Logger logger = Logger("TCPAcceptor::run");
-	logger.info("started listening on %s", m_tcpServer->toString().c_str());
+	LOG_INFO("started listening on %s", m_tcpServer->toString().c_str())
 
 	struct timespec tdiff;
 
@@ -119,13 +118,11 @@ void TCPAcceptor::run()
 
 	}
 
-	logger.info("stopped listening");
+	LOG_INFO("stopped listening")
 }
 
 void TCPAcceptor::cleanConnections()
 {
-	Logger logger = Logger("TCPAcceptor::cleanConnections");
-
 	for (auto c_it = m_connections.begin(); c_it != m_connections.end(); c_it++)
 	{
 		if ((*c_it)->isClosed() == true)
@@ -134,7 +131,7 @@ void TCPAcceptor::cleanConnections()
 			c_it = m_connections.erase(c_it);
 			connection->stop();
 			delete connection;
-			logger.trace("dead connection removed - %d", m_connections.size());
+			LOG_TRACE("dead connection removed - %d", m_connections.size())
 		}
 	}
 }

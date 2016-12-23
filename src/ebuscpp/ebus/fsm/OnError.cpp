@@ -26,12 +26,10 @@ OnError OnError::m_onError;
 
 int OnError::run(EbusFSM* fsm)
 {
-	Logger logger = Logger("OnError::run");
-
 	if (fsm->m_lastResult > DEV_OK)
-		logger.warn("%s", fsm->m_ebusDevice->errorText(fsm->m_lastResult).c_str());
+		LOG_WARN("%s", fsm->m_ebusDevice->errorText(fsm->m_lastResult).c_str())
 	else
-		logger.error("%s", fsm->m_ebusDevice->errorText(fsm->m_lastResult).c_str());
+		LOG_ERROR("%s", fsm->m_ebusDevice->errorText(fsm->m_lastResult).c_str())
 
 	if (m_activeMessage != nullptr) m_activeMessage->setResult(fsm->m_ebusDevice->errorText(fsm->m_lastResult));
 
@@ -41,7 +39,7 @@ int OnError::run(EbusFSM* fsm)
 	{
 		fsm->m_ebusDevice->close();
 
-		if (fsm->m_ebusDevice->isOpen() == false) logger.info("ebus disconnected");
+		if (fsm->m_ebusDevice->isOpen() == false) LOG_INFO("ebus disconnected")
 
 		fsm->changeState(Connect::getConnect());
 	}

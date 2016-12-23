@@ -26,7 +26,7 @@ class Logger
 {
 
 public:
-	explicit Logger(const char* function);
+	explicit Logger(const string& function);
 
 	void start();
 	void stop();
@@ -68,10 +68,34 @@ public:
 
 private:
 	LogHandler& m_logHandler;
-	const char* m_function;
+	const string m_function;
 
 	void log(const Level level, const string data, ...);
 
 };
+
+#define LOG_START() { Logger(__CLASS_METHOD__).start(); }
+#define LOG_STOP() { Logger(__CLASS_METHOD__).stop(); }
+
+#define LOG_LEVEL(level) { Logger(__CLASS_METHOD__).setLevel(level); }
+
+#define LOG_CONSOLE() { Logger(__CLASS_METHOD__).addConsole(); }
+#define LOG_FILE(file) { Logger(__CLASS_METHOD__).addFile(file); }
+
+inline const string getClassMethode(const string& prettyFunction)
+{
+	size_t end = prettyFunction.find("(");
+	size_t begin = prettyFunction.substr(0, end).rfind(" ") + 1;
+
+	return (prettyFunction.substr(begin, end - begin));
+}
+
+#define __CLASS_METHOD__ getClassMethode(__PRETTY_FUNCTION__)
+
+#define LOG_ERROR(data, ...) { Logger(__CLASS_METHOD__).error(data, ##__VA_ARGS__); }
+#define LOG_WARN(data, ...) { Logger(__CLASS_METHOD__).warn(data, ##__VA_ARGS__); }
+#define LOG_INFO(data, ...) { Logger(__CLASS_METHOD__).info(data, ##__VA_ARGS__); }
+#define LOG_DEBUG(data, ...) { Logger(__CLASS_METHOD__).debug(data, ##__VA_ARGS__); }
+#define LOG_TRACE(data, ...) { Logger(__CLASS_METHOD__).trace(data, ##__VA_ARGS__); }
 
 #endif // LIBLOGGER_LOGGER_H

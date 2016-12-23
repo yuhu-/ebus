@@ -74,15 +74,13 @@ void Forward::stop()
 
 void Forward::append(const string& ip, long port, const string& filter, ostringstream& result)
 {
-	Logger logger = Logger("Forward::append");
-
 	Host* host = getHost(ip, port);
 
 	// new host
 	if (host == nullptr)
 	{
 		host = addHost(ip, port, (not filter.empty()));
-		logger.debug("host %d added", host->getID());
+		LOG_DEBUG("host %d added", host->getID())
 
 		// host with filter
 		if (host->hasFilter() == true)
@@ -93,11 +91,11 @@ void Forward::append(const string& ip, long port, const string& filter, ostrings
 			if (filt == nullptr)
 			{
 				filt = addFilter(filter);
-				logger.debug("filter %d added", filt->getID());
+				LOG_DEBUG("filter %d added", filt->getID())
 			}
 
 			addRelation(host->getID(), filt->getID());
-			logger.debug("relation [%d:%d] added", host->getID(), filt->getID());
+			LOG_DEBUG("relation [%d:%d] added", host->getID(), filt->getID())
 
 			result << "host with filter subscribed";
 		}
@@ -119,7 +117,7 @@ void Forward::append(const string& ip, long port, const string& filter, ostrings
 			if (filter.empty() == true)
 			{
 				host->setFilter(false);
-				logger.debug("host %d filter updated", host->getID());
+				LOG_DEBUG("host %d filter updated", host->getID())
 
 				delRelationByHost(host->getID());
 				clrFilter();
@@ -136,14 +134,14 @@ void Forward::append(const string& ip, long port, const string& filter, ostrings
 				if (filt == nullptr)
 				{
 					filt = addFilter(filter);
-					logger.debug("filter %d added", filt->getID());
+					LOG_DEBUG("filter %d added", filt->getID())
 				}
 
 				// new relation
 				if (getRelation(host->getID(), filt->getID()) == nullptr)
 				{
 					addRelation(host->getID(), filt->getID());
-					logger.debug("relation [%d:%d] added", host->getID(), filt->getID());
+					LOG_DEBUG("relation [%d:%d] added", host->getID(), filt->getID())
 
 					result << "filter to existing host added";
 				}
@@ -170,13 +168,11 @@ void Forward::append(const string& ip, long port, const string& filter, ostrings
 		}
 	}
 
-	logger.info("%s", result.str().c_str());
+	LOG_INFO("%s", result.str().c_str())
 }
 
 void Forward::remove(const string& ip, long port, const string& filter, ostringstream& result)
 {
-	Logger logger = Logger("Forward::remove");
-
 	Host* host = getHost(ip, port);
 
 	// host not found
@@ -195,7 +191,7 @@ void Forward::remove(const string& ip, long port, const string& filter, ostrings
 			if (filter.empty() == true)
 			{
 				int hostID = delHost(ip, port);
-				logger.debug("host %d removed", hostID);
+				LOG_DEBUG("host %d removed", hostID)
 
 				delRelationByHost(hostID);
 				clrFilter();
@@ -216,7 +212,7 @@ void Forward::remove(const string& ip, long port, const string& filter, ostrings
 				else
 				{
 					int filtID = delFilter(filter);
-					logger.debug("filter %d removed", filtID);
+					LOG_DEBUG("filter %d removed", filtID)
 
 					delRelationByFilter(filtID);
 					clrHost();
@@ -234,7 +230,7 @@ void Forward::remove(const string& ip, long port, const string& filter, ostrings
 			if (filter.empty() == true)
 			{
 				int hostID = delHost(ip, port);
-				logger.debug("host %d removed", hostID);
+				LOG_DEBUG("host %d removed", hostID)
 
 				result << "host " << hostID << " removed";
 			}
@@ -247,7 +243,7 @@ void Forward::remove(const string& ip, long port, const string& filter, ostrings
 		}
 	}
 
-	logger.info("%s", result.str().c_str());
+	LOG_INFO("%s", result.str().c_str())
 }
 
 void Forward::enqueue(const EbusSequence& eSeq)
@@ -306,8 +302,7 @@ const string Forward::toStringRelation()
 
 void Forward::run()
 {
-	Logger logger = Logger("Forward::run");
-	logger.info("started");
+	LOG_INFO("started")
 
 	while (m_running == true)
 	{
@@ -315,30 +310,28 @@ void Forward::run()
 		if (m_ebusDataQueue.size() > 0)
 		{
 			EbusSequence* eSeq = m_ebusDataQueue.dequeue();
-			logger.trace("%s", eSeq->toString().c_str());
+			LOG_TRACE("%s", eSeq->toString().c_str())
 			send(eSeq);
 			delete eSeq;
 		}
 	}
 
-	logger.info("stopped");
+	LOG_INFO("stopped")
 }
 
 void Forward::send(EbusSequence* eSeq) const
 {
-	Logger logger = Logger("Forward::send");
-
 	for (const auto& host : m_host)
 		if (host->hasFilter() == false)
 		{
-			logger.info("to: %s:%d", host->getIP().c_str(), host->getPort());
+			LOG_INFO("to: %s:%d", host->getIP().c_str(), host->getPort())
 			host->send(eSeq->toString());
 		}
 
 	for (const auto& filter : m_filter)
 		if (filter->match(eSeq->getMaster()) == true)
 		{
-			logger.debug("%s match in %s", filter->getFilter().toString().c_str(),
+			LOG_DEBUG("%s match in %s", filter->getFilter().toString().c_str(),
 				eSeq->getMaster().toString().c_str());
 
 			for (const auto& relation : m_relation)
@@ -347,7 +340,7 @@ void Forward::send(EbusSequence* eSeq) const
 					for (const auto& host : m_host)
 						if (host->hasFilter() == true && host->getID() == relation->getHostID())
 						{
-							logger.info("to %s:%d", host->getIP().c_str(), host->getPort());
+							LOG_INFO("to %s:%d", host->getIP().c_str(), host->getPort())
 							host->send(eSeq->toString());
 						}
 				}

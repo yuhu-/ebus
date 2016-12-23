@@ -18,7 +18,6 @@
  */
 
 #include "Process.h"
-#include "Logger.h"
 
 #include <iomanip>
 
