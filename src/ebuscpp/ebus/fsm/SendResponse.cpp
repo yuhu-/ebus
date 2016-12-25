@@ -48,7 +48,7 @@ int SendResponse::run(EbusFSM* fsm)
 
 		if (byte != ACK && byte != NAK)
 		{
-			LOG_INFO("%s", errorText(STATE_ERR_ACK_WRONG).c_str())
+			LIBLOGGER_INFO("%s", errorText(STATE_ERR_ACK_WRONG).c_str())
 			break;
 		}
 		else if (byte == ACK)
@@ -59,18 +59,18 @@ int SendResponse::run(EbusFSM* fsm)
 		{
 			if (retry == 1)
 			{
-				LOG_INFO("%s", errorText(STATE_WRN_ACK_NEG).c_str())
+				LIBLOGGER_INFO("%s", errorText(STATE_WRN_ACK_NEG).c_str())
 			}
 			else
 			{
-				LOG_INFO("%s", errorText(STATE_ERR_ACK_NEG).c_str())
-				LOG_INFO("%s", errorText(STATE_ERR_SEND_FAIL).c_str())
+				LIBLOGGER_INFO("%s", errorText(STATE_ERR_ACK_NEG).c_str())
+				LIBLOGGER_INFO("%s", errorText(STATE_ERR_SEND_FAIL).c_str())
 			}
 		}
 	}
 
 	eSeq.setMasterACK(byte);
-	LOG_INFO("%s", eSeq.toStringLog().c_str())
+	LIBLOGGER_INFO("%s", eSeq.toStringLog().c_str())
 
 	if (fsm->m_process != nullptr) fsm->m_process->passive(eSeq);
 

@@ -74,14 +74,6 @@ private:
 
 };
 
-#define LOG_START() { Logger(__CLASS_METHOD__).start(); }
-#define LOG_STOP() { Logger(__CLASS_METHOD__).stop(); }
-
-#define LOG_LEVEL(level) { Logger(__CLASS_METHOD__).setLevel(level); }
-
-#define LOG_CONSOLE() { Logger(__CLASS_METHOD__).addConsole(); }
-#define LOG_FILE(file) { Logger(__CLASS_METHOD__).addFile(file); }
-
 inline const string getClassMethode(const string& prettyFunction)
 {
 	size_t end = prettyFunction.find("(");
@@ -92,10 +84,18 @@ inline const string getClassMethode(const string& prettyFunction)
 
 #define __CLASS_METHOD__ getClassMethode(__PRETTY_FUNCTION__)
 
-#define LOG_ERROR(data, ...) { Logger(__CLASS_METHOD__).error(data, ##__VA_ARGS__); }
-#define LOG_WARN(data, ...) { Logger(__CLASS_METHOD__).warn(data, ##__VA_ARGS__); }
-#define LOG_INFO(data, ...) { Logger(__CLASS_METHOD__).info(data, ##__VA_ARGS__); }
-#define LOG_DEBUG(data, ...) { Logger(__CLASS_METHOD__).debug(data, ##__VA_ARGS__); }
-#define LOG_TRACE(data, ...) { Logger(__CLASS_METHOD__).trace(data, ##__VA_ARGS__); }
+#define LIBLOGGER_START() { Logger(__CLASS_METHOD__).start(); }
+#define LIBLOGGER_STOP() { Logger(__CLASS_METHOD__).stop(); }
+
+#define LIBLOGGER_LEVEL(level) { Logger(__CLASS_METHOD__).setLevel(level); }
+
+#define LIBLOGGER_CONSOLE() { Logger(__CLASS_METHOD__).addConsole(); }
+#define LIBLOGGER_FILE(file) { Logger(__CLASS_METHOD__).addFile(file); }
+
+#define LIBLOGGER_ERROR(data, ...) { Logger(__CLASS_METHOD__).error(data, ##__VA_ARGS__); }
+#define LIBLOGGER_WARN(data, ...) { Logger(__CLASS_METHOD__).warn(data, ##__VA_ARGS__); }
+#define LIBLOGGER_INFO(data, ...) { Logger(__CLASS_METHOD__).info(data, ##__VA_ARGS__); }
+#define LIBLOGGER_DEBUG(data, ...) { Logger(__CLASS_METHOD__).debug(data, ##__VA_ARGS__); }
+#define LIBLOGGER_TRACE(data, ...) { Logger(__CLASS_METHOD__).trace(data, ##__VA_ARGS__); }
 
 #endif // LIBLOGGER_LOGGER_H
