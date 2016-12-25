@@ -24,6 +24,7 @@ ebusproxy_SOURCES = network/NetMessage.cpp \
 		    network/UDPReceiver.h \
 		    network/Network.cpp \
 		    network/Network.h \
+		    ebus/fsm/IProcess.h \
 		    ebus/fsm/State.cpp \
 		    ebus/fsm/State.h \
 		    ebus/fsm/OnError.cpp \
@@ -62,7 +63,6 @@ ebusproxy_SOURCES = network/NetMessage.cpp \
 		    process/forward/Host.h \
 		    process/forward/Forward.cpp \
 		    process/forward/Forward.h \
-		    process/IProcess.h \
 		    process/Process.cpp \
 		    process/Process.h \
 		    process/Proxy.cpp \
