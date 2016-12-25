@@ -30,6 +30,9 @@ using std::lock_guard;
 using std::unique_lock;
 using std::condition_variable;
 
+namespace libutils
+{
+
 template<typename T>
 class NQueue
 {
@@ -70,5 +73,7 @@ private:
 	condition_variable m_cond;
 
 };
+
+} // namespace libutils
 
 #endif // LIBUTILS_NQUEUE_H

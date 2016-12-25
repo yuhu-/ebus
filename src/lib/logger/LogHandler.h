@@ -29,6 +29,7 @@
 #include <vector>
 #include <thread>
 
+using libutils::NQueue;
 using std::map;
 using std::string;
 using std::vector;

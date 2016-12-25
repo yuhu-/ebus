@@ -23,6 +23,9 @@
 #include <unistd.h>
 #include <fcntl.h>
 
+namespace libutils
+{
+
 class PipeNotify
 {
 
@@ -63,6 +66,8 @@ private:
 	int m_sendfd;
 
 };
+
+} // namespace libutils
 
 #endif // LIBUTILS_PIPENOTIFY_H
 

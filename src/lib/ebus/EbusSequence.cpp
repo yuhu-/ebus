@@ -26,6 +26,8 @@
 #include <cstdlib>
 #include <map>
 
+using namespace libutils;
+
 using std::ostringstream;
 using std::nouppercase;
 using std::hex;

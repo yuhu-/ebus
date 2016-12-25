@@ -24,6 +24,7 @@
 
 #include <string>
 
+using libutils::Notify;
 using std::string;
 
 class NetMessage : public Notify

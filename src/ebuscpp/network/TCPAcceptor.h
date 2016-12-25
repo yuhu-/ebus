@@ -27,6 +27,7 @@
 #include <thread>
 #include <list>
 
+using libutils::NQueue;
 using std::list;
 using std::thread;
 

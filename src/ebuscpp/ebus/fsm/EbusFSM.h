@@ -29,6 +29,7 @@
 #include <thread>
 #include <map>
 
+using libutils::NQueue;
 using std::ofstream;
 using std::thread;
 using std::map;

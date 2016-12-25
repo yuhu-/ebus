@@ -27,6 +27,8 @@
 
 #include <thread>
 
+using libutils::NQueue;
+using libutils::PipeNotify;
 using std::thread;
 
 class TCPConnection

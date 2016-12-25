@@ -27,6 +27,7 @@
 #include <iostream>
 #include <sstream>
 
+using libutils::Options;
 using std::ostringstream;
 using std::cin;
 using std::cout;

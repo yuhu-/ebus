@@ -29,6 +29,8 @@ using std::cout;
 using std::cerr;
 using std::clog;
 
+namespace libutils
+{
 namespace color
 {
 
@@ -109,5 +111,6 @@ inline ostream& white(ostream& ostr)
 }
 
 } // namespace color
+} // namespace libutils
 
 #endif // LIBUTILS_COLOR_H

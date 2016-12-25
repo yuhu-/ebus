@@ -29,6 +29,8 @@
 
 #include <thread>
 
+using libutils::Notify;
+using libutils::NQueue;
 using std::thread;
 using std::ostringstream;
 

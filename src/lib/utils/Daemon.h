@@ -26,6 +26,9 @@
 
 using std::string;
 
+namespace libutils
+{
+
 class Daemon
 {
 
@@ -49,5 +52,7 @@ private:
 	FILE* m_pidfd = nullptr;
 
 };
+
+} // namespace libutils
 
 #endif // LIBUTILS_DAEMON_H

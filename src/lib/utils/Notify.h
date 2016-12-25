@@ -28,6 +28,9 @@ using std::lock_guard;
 using std::unique_lock;
 using std::condition_variable;
 
+namespace libutils
+{
+
 class Notify
 {
 
@@ -62,5 +65,7 @@ private:
 	bool m_notify;
 
 };
+
+} // namespace libutils
 
 #endif // LIBUTILS_NOTIFY_H

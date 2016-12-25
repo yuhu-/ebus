@@ -26,6 +26,8 @@
 #include <sstream>
 #include <map>
 
+using namespace libutils;
+
 using std::ostringstream;
 using std::map;
 

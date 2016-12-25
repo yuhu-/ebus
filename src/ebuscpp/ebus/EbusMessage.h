@@ -23,6 +23,8 @@
 #include "EbusSequence.h"
 #include "Notify.h"
 
+using libutils::Notify;
+
 class EbusMessage : public Notify
 {
 

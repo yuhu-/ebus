@@ -27,6 +27,7 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 
+using libutils::Options;
 using std::istringstream;
 using std::istream_iterator;
 using std::endl;

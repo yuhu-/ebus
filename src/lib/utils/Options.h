@@ -29,6 +29,9 @@ using std::string;
 using std::vector;
 using std::map;
 
+namespace libutils
+{
+
 class Options
 {
 
@@ -135,5 +138,7 @@ private:
 
 	void save(const int index, const string& value);
 };
+
+} // namespace libutils
 
 #endif // LIBUTILS_OPTION_H

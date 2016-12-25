@@ -27,6 +27,8 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
+using namespace libutils;
+
 using std::cerr;
 using std::endl;
 

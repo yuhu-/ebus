@@ -31,6 +31,9 @@
 
 #include <dirent.h>
 
+using libutils::Options;
+using libutils::Daemon;
+
 BaseLoop* baseloop = nullptr;
 
 void define_args()

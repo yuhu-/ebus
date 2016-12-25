@@ -23,6 +23,8 @@
 #include <iomanip>
 #include <cstdlib>
 
+using namespace libutils;
+
 using std::cerr;
 using std::endl;
 using std::hex;

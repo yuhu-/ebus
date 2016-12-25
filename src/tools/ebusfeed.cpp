@@ -30,6 +30,7 @@
 
 #include <unistd.h>
 
+using libutils::Options;
 using std::fstream;
 using std::ios;
 using std::cout;
