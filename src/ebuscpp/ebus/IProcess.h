@@ -17,8 +17,8 @@
  * along with ebuscpp. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef EBUS_FSM_IPROCESS_H
-#define EBUS_FSM_IPROCESS_H
+#ifndef EBUS_IPROCESS_H
+#define EBUS_IPROCESS_H
 
 #include "EbusSequence.h"
 
@@ -44,4 +44,4 @@ public:
 
 };
 
-#endif // EBUS_FSM_IPROCESS_H
+#endif // EBUS_IPROCESS_H
