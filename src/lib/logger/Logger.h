@@ -74,7 +74,7 @@ private:
 
 };
 
-inline const string getClassMethode(const string& prettyFunction)
+inline const string getClassMethod(const string& prettyFunction)
 {
 	size_t end = prettyFunction.find("(");
 	size_t begin = prettyFunction.substr(0, end).rfind(" ") + 1;
@@ -82,7 +82,7 @@ inline const string getClassMethode(const string& prettyFunction)
 	return (prettyFunction.substr(begin, end - begin));
 }
 
-#define __CLASS_METHOD__ getClassMethode(__PRETTY_FUNCTION__)
+#define __CLASS_METHOD__ getClassMethod(__PRETTY_FUNCTION__)
 
 #define LIBLOGGER_START() { Logger(__CLASS_METHOD__).start(); }
 #define LIBLOGGER_STOP() { Logger(__CLASS_METHOD__).stop(); }
