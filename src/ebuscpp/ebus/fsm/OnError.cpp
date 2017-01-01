@@ -27,9 +27,13 @@ OnError OnError::m_onError;
 int OnError::run(EbusFSM* fsm)
 {
 	if (fsm->m_lastResult > DEV_OK)
+	{
 		LIBLOGGER_WARN("%s", fsm->m_ebusDevice->errorText(fsm->m_lastResult).c_str())
+	}
 	else
+	{
 		LIBLOGGER_ERROR("%s", fsm->m_ebusDevice->errorText(fsm->m_lastResult).c_str())
+	}
 
 	if (m_activeMessage != nullptr) m_activeMessage->setResult(fsm->m_ebusDevice->errorText(fsm->m_lastResult));
 
