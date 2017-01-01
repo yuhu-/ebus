@@ -1,5 +1,5 @@
 /*
- * Copyright (C) Roland Jax 2012-2016 <roland.jax@liwest.at>
+ * Copyright (C) Roland Jax 2012-2017 <roland.jax@liwest.at>
  *
  * This file is part of ebuscpp.
  *
