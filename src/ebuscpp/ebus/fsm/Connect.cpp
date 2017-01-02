@@ -40,11 +40,11 @@ int Connect::run(EbusFSM* fsm)
 
 		if (fsm->m_ebusDevice->isOpen() == true && result == DEV_OK)
 		{
-			LIBLOGGER_INFO("ebus connected")
+			LIBLOGGER_INFO("ebus connected");
 		}
 		else
 		{
-			LIBLOGGER_ERROR("%s", fsm->m_ebusDevice->errorText(fsm->m_lastResult).c_str())
+			LIBLOGGER_ERROR("%s", fsm->m_ebusDevice->errorText(fsm->m_lastResult).c_str());
 			sleep(1);
 			m_reopenTime++;
 

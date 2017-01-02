@@ -86,7 +86,7 @@ void BaseLoop::run()
 		while ((pos = data.find("\r\n", pos)) != string::npos)
 			data.erase(pos, 2);
 
-		LIBLOGGER_INFO(">>> %s", data.c_str())
+		LIBLOGGER_INFO(">>> %s", data.c_str());
 
 		// decode message
 		if (strcasecmp(data.c_str(), "STOP") != 0)
@@ -94,7 +94,7 @@ void BaseLoop::run()
 		else
 			result = "stopped";
 
-		LIBLOGGER_INFO("<<< %s", result.c_str())
+		LIBLOGGER_INFO("<<< %s", result.c_str());
 		result += "\n\n";
 
 		// send result to client
@@ -171,7 +171,7 @@ string BaseLoop::decodeMessage(const string& data)
 			// send message
 			if (eSeq.getMasterState() == EBUS_OK)
 			{
-				LIBLOGGER_DEBUG("enqueue: %s", eSeq.toStringMaster().c_str())
+				LIBLOGGER_DEBUG("enqueue: %s", eSeq.toStringMaster().c_str());
 				EbusMessage* ebusMessage = new EbusMessage(eSeq);
 				m_ebus->enqueue(ebusMessage);
 				ebusMessage->waitNotify();
@@ -185,7 +185,7 @@ string BaseLoop::decodeMessage(const string& data)
 			}
 		}
 
-		LIBLOGGER_DEBUG("error: %s", result.str().c_str())
+		LIBLOGGER_DEBUG("error: %s", result.str().c_str());
 
 		break;
 	}
@@ -209,7 +209,7 @@ string BaseLoop::decodeMessage(const string& data)
 			break;
 		}
 
-		LIBLOGGER_LEVEL(args[1])
+		LIBLOGGER_LEVEL(args[1]);
 		result << "changed";
 		break;
 

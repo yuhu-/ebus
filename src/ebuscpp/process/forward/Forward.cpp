@@ -80,7 +80,7 @@ void Forward::append(const string& ip, long port, const string& filter, ostrings
 	if (host == nullptr)
 	{
 		host = addHost(ip, port, (not filter.empty()));
-		LIBLOGGER_DEBUG("host %d added", host->getID())
+		LIBLOGGER_DEBUG("host %d added", host->getID());
 
 		// host with filter
 		if (host->hasFilter() == true)
@@ -91,11 +91,11 @@ void Forward::append(const string& ip, long port, const string& filter, ostrings
 			if (filt == nullptr)
 			{
 				filt = addFilter(filter);
-				LIBLOGGER_DEBUG("filter %d added", filt->getID())
+				LIBLOGGER_DEBUG("filter %d added", filt->getID());
 			}
 
 			addRelation(host->getID(), filt->getID());
-			LIBLOGGER_DEBUG("relation [%d:%d] added", host->getID(), filt->getID())
+			LIBLOGGER_DEBUG("relation [%d:%d] added", host->getID(), filt->getID());
 
 			result << "host with filter subscribed";
 		}
@@ -117,7 +117,7 @@ void Forward::append(const string& ip, long port, const string& filter, ostrings
 			if (filter.empty() == true)
 			{
 				host->setFilter(false);
-				LIBLOGGER_DEBUG("host %d filter updated", host->getID())
+				LIBLOGGER_DEBUG("host %d filter updated", host->getID());
 
 				delRelationByHost(host->getID());
 				clrFilter();
@@ -134,14 +134,14 @@ void Forward::append(const string& ip, long port, const string& filter, ostrings
 				if (filt == nullptr)
 				{
 					filt = addFilter(filter);
-					LIBLOGGER_DEBUG("filter %d added", filt->getID())
+					LIBLOGGER_DEBUG("filter %d added", filt->getID());
 				}
 
 				// new relation
 				if (getRelation(host->getID(), filt->getID()) == nullptr)
 				{
 					addRelation(host->getID(), filt->getID());
-					LIBLOGGER_DEBUG("relation [%d:%d] added", host->getID(), filt->getID())
+					LIBLOGGER_DEBUG("relation [%d:%d] added", host->getID(), filt->getID());
 
 					result << "filter to existing host added";
 				}
@@ -168,7 +168,7 @@ void Forward::append(const string& ip, long port, const string& filter, ostrings
 		}
 	}
 
-	LIBLOGGER_INFO("%s", result.str().c_str())
+	LIBLOGGER_INFO("%s", result.str().c_str());
 }
 
 void Forward::remove(const string& ip, long port, const string& filter, ostringstream& result)
@@ -191,7 +191,7 @@ void Forward::remove(const string& ip, long port, const string& filter, ostrings
 			if (filter.empty() == true)
 			{
 				int hostID = delHost(ip, port);
-				LIBLOGGER_DEBUG("host %d removed", hostID)
+				LIBLOGGER_DEBUG("host %d removed", hostID);
 
 				delRelationByHost(hostID);
 				clrFilter();
@@ -212,7 +212,7 @@ void Forward::remove(const string& ip, long port, const string& filter, ostrings
 				else
 				{
 					int filtID = delFilter(filter);
-					LIBLOGGER_DEBUG("filter %d removed", filtID)
+					LIBLOGGER_DEBUG("filter %d removed", filtID);
 
 					delRelationByFilter(filtID);
 					clrHost();
@@ -230,7 +230,7 @@ void Forward::remove(const string& ip, long port, const string& filter, ostrings
 			if (filter.empty() == true)
 			{
 				int hostID = delHost(ip, port);
-				LIBLOGGER_DEBUG("host %d removed", hostID)
+				LIBLOGGER_DEBUG("host %d removed", hostID);
 
 				result << "host " << hostID << " removed";
 			}
@@ -243,7 +243,7 @@ void Forward::remove(const string& ip, long port, const string& filter, ostrings
 		}
 	}
 
-	LIBLOGGER_INFO("%s", result.str().c_str())
+	LIBLOGGER_INFO("%s", result.str().c_str());
 }
 
 void Forward::enqueue(const EbusSequence& eSeq)
@@ -302,7 +302,7 @@ const string Forward::toStringRelation()
 
 void Forward::run()
 {
-	LIBLOGGER_INFO("started")
+	LIBLOGGER_INFO("started");
 
 	while (m_running == true)
 	{
@@ -310,13 +310,13 @@ void Forward::run()
 		if (m_ebusDataQueue.size() > 0)
 		{
 			EbusSequence* eSeq = m_ebusDataQueue.dequeue();
-			LIBLOGGER_TRACE("%s", eSeq->toString().c_str())
+			LIBLOGGER_TRACE("%s", eSeq->toString().c_str());
 			send(eSeq);
 			delete eSeq;
 		}
 	}
 
-	LIBLOGGER_INFO("stopped")
+	LIBLOGGER_INFO("stopped");
 }
 
 void Forward::send(EbusSequence* eSeq) const
@@ -324,7 +324,7 @@ void Forward::send(EbusSequence* eSeq) const
 	for (const auto& host : m_host)
 		if (host->hasFilter() == false)
 		{
-			LIBLOGGER_INFO("to: %s:%d", host->getIP().c_str(), host->getPort())
+			LIBLOGGER_INFO("to: %s:%d", host->getIP().c_str(), host->getPort());
 			host->send(eSeq->toString());
 		}
 
@@ -340,7 +340,7 @@ void Forward::send(EbusSequence* eSeq) const
 					for (const auto& host : m_host)
 						if (host->hasFilter() == true && host->getID() == relation->getHostID())
 						{
-							LIBLOGGER_INFO("to %s:%d", host->getIP().c_str(), host->getPort())
+							LIBLOGGER_INFO("to %s:%d", host->getIP().c_str(), host->getPort());
 							host->send(eSeq->toString());
 						}
 				}

@@ -37,16 +37,16 @@ int Listen::run(EbusFSM* fsm)
 		if (m_lockCounter != 0)
 		{
 			m_lockCounter--;
-			LIBLOGGER_TRACE("lockCounter: %d", m_lockCounter)
+			LIBLOGGER_TRACE("lockCounter: %d", m_lockCounter);
 		}
 
 		// decode EbusSequence
 		if (m_sequence.size() != 0)
 		{
-			LIBLOGGER_DEBUG("%s", m_sequence.toString().c_str())
+			LIBLOGGER_DEBUG("%s", m_sequence.toString().c_str());
 
 			EbusSequence eSeq(m_sequence);
-			LIBLOGGER_INFO("%s", eSeq.toStringLog().c_str())
+			LIBLOGGER_INFO("%s", eSeq.toStringLog().c_str());
 
 			if (eSeq.isValid() == true && fsm->m_process != nullptr) fsm->m_process->passive(eSeq);
 
@@ -59,7 +59,7 @@ int Listen::run(EbusFSM* fsm)
 		// check for new EbusMessage
 		if (m_activeMessage == nullptr && fsm->m_ebusMsgQueue.size() != 0)
 		{
-			LIBLOGGER_TRACE("pending ebus messages: %d", fsm->m_ebusMsgQueue.size())
+			LIBLOGGER_TRACE("pending ebus messages: %d", fsm->m_ebusMsgQueue.size());
 			m_activeMessage = fsm->m_ebusMsgQueue.dequeue();
 		}
 

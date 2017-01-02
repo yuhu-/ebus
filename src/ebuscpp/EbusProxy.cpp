@@ -100,9 +100,9 @@ void shutdown()
 	if (Daemon::getDaemon().status() == true) Daemon::getDaemon().stop();
 
 	// stop logger
-	LIBLOGGER_INFO("stopped")
+	LIBLOGGER_INFO("stopped");
 
-	LIBLOGGER_STOP()
+	LIBLOGGER_STOP();
 	exit(EXIT_SUCCESS);
 
 }
@@ -112,18 +112,18 @@ void signal_handler(int sig)
 	switch (sig)
 	{
 	case SIGHUP:
-		LIBLOGGER_INFO("SIGHUP received")
+		LIBLOGGER_INFO("SIGHUP received");
 		break;
 	case SIGINT:
-		LIBLOGGER_INFO("SIGINT received")
+		LIBLOGGER_INFO("SIGINT received");
 		shutdown();
 		break;
 	case SIGTERM:
-		LIBLOGGER_INFO("SIGTERM received")
+		LIBLOGGER_INFO("SIGTERM received");
 		shutdown();
 		break;
 	default:
-		LIBLOGGER_INFO("undefined signal %s", strsignal(sig))
+		LIBLOGGER_INFO("undefined signal %s", strsignal(sig));
 		break;
 	}
 }
@@ -139,13 +139,13 @@ int main(int argc, char* argv[])
 
 	if (options.getBool("foreground") == true)
 	{
-		LIBLOGGER_CONSOLE()
+		LIBLOGGER_CONSOLE();
 	}
 	else
 	{
 		// make me daemon
 		Daemon::getDaemon().start(options.getString("pidfile"));
-		LIBLOGGER_FILE(options.getString("logfile"))
+		LIBLOGGER_FILE(options.getString("logfile"));
 	}
 
 	// trap signals that we expect to receive
@@ -154,10 +154,10 @@ int main(int argc, char* argv[])
 	signal(SIGTERM, signal_handler);
 
 	// start logger
-	LIBLOGGER_LEVEL(options.getString("loglevel"))
-	LIBLOGGER_START()
+	LIBLOGGER_LEVEL(options.getString("loglevel"));
+	LIBLOGGER_START();
 
-	LIBLOGGER_INFO("started")
+	LIBLOGGER_INFO("started");
 
 	// create baseloop
 	baseloop = new BaseLoop();

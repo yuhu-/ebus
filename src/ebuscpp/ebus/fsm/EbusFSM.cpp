@@ -121,7 +121,7 @@ void EbusFSM::enqueue(EbusMessage* message)
 
 void EbusFSM::run()
 {
-	LIBLOGGER_INFO("started")
+	LIBLOGGER_INFO("started");
 
 	while (m_running == true)
 	{
@@ -135,7 +135,7 @@ void EbusFSM::run()
 		}
 	}
 
-	LIBLOGGER_INFO("stopped")
+	LIBLOGGER_INFO("stopped");
 }
 
 void EbusFSM::changeState(State* state)
@@ -143,7 +143,7 @@ void EbusFSM::changeState(State* state)
 	if (m_state != state)
 	{
 		m_state = state;
-		LIBLOGGER_TRACE("%s", m_state->toString().c_str())
+		LIBLOGGER_TRACE("%s", m_state->toString().c_str());
 	}
 }
 
