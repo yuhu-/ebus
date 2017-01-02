@@ -17,39 +17,25 @@
  * along with ebuscpp. If not, see http://www.gnu.org/licenses/.
  */
 
-#include "Proxy.h"
+#include "Dummy.h"
 #include "Logger.h"
 
-Proxy::Proxy(const unsigned char address)
+Dummy::Dummy(const unsigned char address)
 	: Process(address)
 {
-	m_forward = new Forward();
-	m_forward->start();
 }
 
-Proxy::~Proxy()
+Dummy::~Dummy()
 {
-	if (m_forward != nullptr)
-	{
-		m_forward->stop();
-		delete m_forward;
-		m_forward = nullptr;
-	}
 }
 
-Action Proxy::active(EbusSequence& eSeq)
+Action Dummy::active(EbusSequence& eSeq)
 {
-	LIBLOGGER_INFO("search %s", eSeq.toStringLog().c_str());
+	LIBLOGGER_INFO("handle active %s", eSeq.toStringLog().c_str());
 
 	if (eSeq.getMaster().contains("0700") == true)
 	{
 		return (Action::ignore);
-	}
-
-	if (eSeq.getMaster().contains("0704") == true)
-	{
-		eSeq.createSlave("0a7a50524f585901010101");
-		return (Action::response);
 	}
 
 	if (eSeq.getMaster().contains("07fe") == true)
@@ -59,41 +45,26 @@ Action Proxy::active(EbusSequence& eSeq)
 		return (Action::send);
 	}
 
-	if (eSeq.getMaster().contains("b505") == true)
-	{
-		return (Action::ignore);
-	}
-
-	if (eSeq.getMaster().contains("b516") == true)
-	{
-		return (Action::ignore);
-	}
+	// TODO implement active message handler
 
 	return (Action::undefined);
 }
 
-void Proxy::passive(EbusSequence& eSeq)
+void Dummy::passive(EbusSequence& eSeq)
 {
-	LIBLOGGER_INFO("forward %s", eSeq.toStringLog().c_str());
+	LIBLOGGER_INFO("handle passive %s", eSeq.toStringLog().c_str());
 
-	m_forward->enqueue(eSeq);
+	// TODO implement passive message handler
 }
 
-void Proxy::forward(bool remove, const string& ip, long port, const string& filter, ostringstream& result)
-{
-	if (remove == true)
-		m_forward->remove(ip, port, filter, result);
-	else
-		m_forward->append(ip, port, filter, result);
-}
-
-void Proxy::run()
+void Dummy::run()
 {
 	LIBLOGGER_INFO("started");
 
 	while (m_running == true)
 	{
 		waitNotify();
+		// TODO implement business logic
 	}
 
 	LIBLOGGER_INFO("stopped");

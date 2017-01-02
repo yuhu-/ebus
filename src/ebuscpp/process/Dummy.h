@@ -17,42 +17,25 @@
  * along with ebuscpp. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef PROCESS_PROCESS_H
-#define PROCESS_PROCESS_H
+#ifndef PROCESS_DUMMY_H
+#define PROCESS_DUMMY_H
 
-#include "Forward.h"
-#include "IProcess.h"
-#include "Notify.h"
+#include "Process.h"
 
-#include <thread>
-
-
-using std::thread;
-
-class Process : public IProcess, public Notify
+class Dummy : public Process
 {
 
 public:
-	explicit Process(const unsigned char address);
-	virtual ~Process();
+	explicit Dummy(const unsigned char address);
+	~Dummy();
 
-	void start();
-	void stop();
+	Action active(EbusSequence& eSeq);
 
-	virtual Action active(EbusSequence& eSeq) = 0;
-
-	virtual void passive(EbusSequence& eSeq) = 0;
-
-protected:
-	bool m_running = true;
-
-	const unsigned char m_address;
+	void passive(EbusSequence& eSeq);
 
 private:
-	thread m_thread;
-
-	virtual void run() = 0;
+	void run();
 
 };
 
-#endif // PROCESS_PROCESS_H
+#endif // PROCESS_DUMMY_H

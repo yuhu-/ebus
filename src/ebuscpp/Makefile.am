@@ -67,6 +67,8 @@ ebusproxy_SOURCES = network/NetMessage.cpp \
 		    process/Process.h \
 		    process/Proxy.cpp \
 		    process/Proxy.h \
+		    process/Dummy.cpp \
+		    process/Dummy.h \
 		    BaseLoop.cpp \
 		    BaseLoop.h \
 		    EbusProxy.cpp
