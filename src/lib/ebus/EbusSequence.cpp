@@ -56,6 +56,7 @@ EbusSequence::EbusSequence()
 EbusSequence::EbusSequence(Sequence& seq)
 {
 	seq.reduce();
+	int offset = 0;
 
 	// sequence to short
 	if (seq.size() < 5)
@@ -83,20 +84,46 @@ EbusSequence::EbusSequence(Sequence& seq)
 		m_slaveACK = seq[5 + m_masterNN + 1];
 		if (m_slaveACK != ACK && m_slaveACK != NAK) m_slaveState =
 		EBUS_ERR_ACK;
-	}
 
-	// TODO handle NAK from slave
+		// handle NAK from slave
+		if (m_slaveACK == NAK)
+		{
+			offset = master.size() + 2;
+			m_master.clear();
+
+			Sequence tmp(seq, offset, 5 + seq[offset + 4]);
+			createMaster(tmp);
+
+			if (m_masterState != EBUS_OK) return;
+
+			m_slaveACK = seq[offset + 5 + m_masterNN + 1];
+			if (m_slaveACK != ACK && m_slaveACK != NAK) m_slaveState =
+			EBUS_ERR_ACK;
+		}
+	}
 
 	if (m_type == EBUS_TYPE_MS)
 	{
-		Sequence slave(seq, 5 + m_masterNN + 2, 1 + seq[5 + m_masterNN + 2] + 1);
+		Sequence slave(seq, offset + 5 + m_masterNN + 2, 1 + seq[offset + 5 + m_masterNN + 2] + 1);
 		createSlave(slave);
 
-		m_masterACK = seq[(5 + m_masterNN + 3 + m_slaveNN + 1)];
+		m_masterACK = seq[(offset + 5 + m_masterNN + 3 + m_slaveNN + 1)];
 		if (m_masterACK != ACK && m_masterACK != NAK) m_masterState =
 		EBUS_ERR_ACK;
 
-		// TODO handle NAK from master
+		// handle NAK from master
+		if (m_masterACK == NAK)
+		{
+			offset += slave.size() + 2;
+			m_slave.clear();
+
+			Sequence tmp(seq, offset + 5 + m_masterNN + 2, 1 + seq[offset + 5 + m_masterNN + 2] + 1);
+			createSlave(tmp);
+
+			m_masterACK = seq[(offset + 5 + m_masterNN + 3 + m_slaveNN + 1)];
+			if (m_masterACK != ACK && m_masterACK != NAK) m_masterState =
+			EBUS_ERR_ACK;
+		}
 	}
 }
 
