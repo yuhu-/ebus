@@ -24,8 +24,6 @@
 
 #include <sstream>
 
-#include <unistd.h>
-
 using std::ostringstream;
 
 Connect Connect::m_connect;
@@ -44,10 +42,7 @@ int Connect::run(EbusFSM* fsm)
 		}
 		else
 		{
-			LIBLOGGER_ERROR("%s", fsm->m_ebusDevice->errorText(fsm->m_lastResult).c_str());
-			sleep(1);
 			m_reopenTime++;
-
 			if (m_reopenTime > fsm->m_reopenTime) fsm->changeState(Idle::getIdle());
 
 			return (result);

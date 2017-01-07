@@ -22,6 +22,8 @@
 #include "Listen.h"
 #include "Logger.h"
 
+#include <unistd.h>
+
 OnError OnError::m_onError;
 
 int OnError::run(EbusFSM* fsm)
@@ -41,6 +43,7 @@ int OnError::run(EbusFSM* fsm)
 
 		if (fsm->m_ebusDevice->isOpen() == false) LIBLOGGER_INFO("ebus disconnected");
 
+		sleep(1);
 		fsm->changeState(Connect::getConnect());
 	}
 	else
