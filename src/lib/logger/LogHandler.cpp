@@ -27,6 +27,8 @@
 #include <sstream>
 #include <cstring>
 
+using namespace liblogger;
+
 using std::istringstream;
 using std::ostringstream;
 using std::endl;

@@ -21,6 +21,8 @@
 
 #include <cstdarg>
 
+using namespace liblogger;
+
 Logger::Logger(const string& function)
 	: m_logHandler(LogHandler::getLogHandler()), m_function(function)
 {

@@ -24,6 +24,9 @@
 
 using std::string;
 
+namespace liblogger
+{
+
 class LogMessage
 {
 
@@ -42,5 +45,7 @@ private:
 	string m_time;
 
 };
+
+} // namespace liblogger
 
 #endif // LIBLOGGER_LOGMESSAGE_H

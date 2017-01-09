@@ -24,6 +24,9 @@
 
 using std::string;
 
+namespace liblogger
+{
+
 class LogSink
 {
 
@@ -35,5 +38,7 @@ public:
 	virtual void write(const string& message) const = 0;
 
 };
+
+} // namespace liblogger
 
 #endif // LIBLOGGER_LOGSINK_H

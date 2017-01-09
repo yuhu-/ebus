@@ -35,6 +35,9 @@ using std::string;
 using std::vector;
 using std::thread;
 
+namespace liblogger
+{
+
 enum class Level
 {
 	off = 0x00, error = 0x01, warn = 0x02, info = 0x04, debug = 0x08, trace = 0x10
@@ -88,5 +91,7 @@ private:
 	void addSink(LogSink* sink);
 	void delSink(const LogSink* sink);
 };
+
+} // namespace liblogger
 
 #endif // LIBLOGGER_LOGHANDLER_H

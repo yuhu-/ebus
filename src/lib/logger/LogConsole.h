@@ -22,6 +22,9 @@
 
 #include "LogSink.h"
 
+namespace liblogger
+{
+
 class LogConsole : public LogSink
 {
 
@@ -29,5 +32,7 @@ public:
 	virtual void write(const string& message) const;
 
 };
+
+} // namespace liblogger
 
 #endif // LIBLOGGER_LOGCONSOLE_H

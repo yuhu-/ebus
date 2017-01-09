@@ -27,6 +27,8 @@
 
 #include <sys/time.h>
 
+using namespace liblogger;
+
 //using std::ostringstream;
 //using std::setw;
 //using std::setfill;

@@ -20,6 +20,8 @@
 
 #include <iostream>
 
+using namespace liblogger;
+
 using std::cout;
 using std::endl;
 

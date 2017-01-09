@@ -21,6 +21,8 @@
 
 #include <fstream>
 
+using namespace liblogger;
+
 using std::ios;
 using std::ofstream;
 

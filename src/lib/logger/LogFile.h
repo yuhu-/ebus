@@ -22,6 +22,9 @@
 
 #include "LogSink.h"
 
+namespace liblogger
+{
+
 class LogFile : public LogSink
 {
 
@@ -34,5 +37,7 @@ private:
 	const string m_file;
 
 };
+
+} // namespace liblogger
 
 #endif // LIBLOGGER_LOGFILE_H
