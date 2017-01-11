@@ -43,7 +43,7 @@ int RecvMessage::run(EbusFSM* fsm)
 	// check against max. possible size
 	if (m_sequence[4] > 16)
 	{
-		LIBLOGGER_WARN("%s", errorText(STATE_ERR_NN_WRONG).c_str());
+		LIBLOGGER_WARN("%s", stateMessage(STATE_ERR_NN_WRONG).c_str());
 		reset(fsm);
 		fsm->changeState(Listen::getListen());
 		return (DEV_OK);
@@ -88,7 +88,7 @@ int RecvMessage::run(EbusFSM* fsm)
 		else
 		{
 			byte = NAK;
-			LIBLOGGER_INFO("%s", errorText(STATE_WRN_RECV_MSG).c_str());
+			LIBLOGGER_INFO("%s", stateMessage(STATE_WRN_RECV_MSG).c_str());
 		}
 
 		// send ACK

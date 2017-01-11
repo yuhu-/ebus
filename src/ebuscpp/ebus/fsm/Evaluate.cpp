@@ -37,7 +37,7 @@ int Evaluate::run(EbusFSM* fsm)
 		switch (action)
 		{
 		case Action::undefined:
-			LIBLOGGER_WARN("%s", errorText(STATE_WRN_NOT_DEF).c_str());
+			LIBLOGGER_WARN("%s", stateMessage(STATE_WRN_NOT_DEF).c_str());
 			break;
 		case Action::ignore:
 			LIBLOGGER_DEBUG("ignore");
@@ -54,7 +54,7 @@ int Evaluate::run(EbusFSM* fsm)
 			}
 			else
 			{
-				LIBLOGGER_WARN("%s", errorText(STATE_ERR_CREA_MSG).c_str());
+				LIBLOGGER_WARN("%s", stateMessage(STATE_ERR_CREA_MSG).c_str());
 			}
 
 			break;
@@ -66,7 +66,7 @@ int Evaluate::run(EbusFSM* fsm)
 			}
 			else
 			{
-				LIBLOGGER_WARN("%s", errorText(STATE_ERR_CREA_MSG).c_str());
+				LIBLOGGER_WARN("%s", stateMessage(STATE_ERR_CREA_MSG).c_str());
 			}
 
 			break;
@@ -76,7 +76,7 @@ int Evaluate::run(EbusFSM* fsm)
 	}
 	else
 	{
-		LIBLOGGER_WARN("process not implemented");
+		LIBLOGGER_WARN("%s", stateMessage(STATE_WRN_NO_PROCESS).c_str());
 	}
 
 	m_sequence.clear();

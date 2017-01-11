@@ -38,17 +38,22 @@ Sequence State::m_sequence;
 EbusMessage* State::m_activeMessage = nullptr;
 EbusMessage* State::m_passiveMessage = nullptr;
 
-map<int, string> StateErros =
+map<int, string> StateMessages =
 {
-{ STATE_INF_PRI_FIT, "priority class fit -> retry" },
+{ STATE_INF_EBUS_ON, "ebus connected" },
+{ STATE_INF_EBUS_OFF, "ebus disconnected" },
+{ STATE_INF_EBUS_LOCK, "ebus locked" },
+{ STATE_INF_EBUS_FREE, "ebus freed" },
 
 { STATE_WRN_BYTE_DIF, "written/read byte difference" },
 { STATE_WRN_ARB_LOST, "arbitration lost" },
+{ STATE_WRN_PRI_FIT, "priority class fit -> retry" },
 { STATE_WRN_PRI_LOST, "priority class lost" },
 { STATE_WRN_ACK_NEG, "received ACK is negative -> retry" },
 { STATE_WRN_RECV_RESP, "received response is invalid -> retry" },
 { STATE_WRN_RECV_MSG, "at me addressed message is invalid" },
 { STATE_WRN_NOT_DEF, "at me addressed message is not defined" },
+{ STATE_WRN_NO_PROCESS, "process not implemented" },
 
 { STATE_ERR_LOCK_FAIL, "lock ebus failed" },
 { STATE_ERR_ACK_NEG, "received ACK is negative -> failed" },
@@ -114,7 +119,7 @@ int State::writeRead(EbusFSM* fsm, const unsigned char& byte, const long timeout
 		unsigned char readByte;
 		result = State::read(fsm, readByte, 0, timeout);
 
-		if (readByte != byte) LIBLOGGER_TRACE("%s", errorText(STATE_WRN_BYTE_DIF).c_str());
+		if (readByte != byte) LIBLOGGER_TRACE("%s", stateMessage(STATE_WRN_BYTE_DIF).c_str());
 	}
 
 	return (result);
@@ -148,19 +153,19 @@ void State::reset(EbusFSM* fsm)
 	}
 }
 
-const string State::errorText(const int error)
+const string State::stateMessage(const int state)
 {
-	ostringstream errStr;
+	ostringstream ostr;
 
-	if (error == 0)
-		errStr << color::green << StateErros[error];
-	else if (error > 0)
-		errStr << color::yellow << StateErros[error];
+	if (state < 11)
+		ostr << color::green << StateMessages[state];
+	else if (state < 21)
+		ostr << color::yellow << StateMessages[state];
 	else
-		errStr << color::red << StateErros[error];
+		ostr << color::red << StateMessages[state];
 
-	errStr << color::reset;
+	ostr << color::reset;
 
-	return (errStr.str());
+	return (ostr.str());
 }
 

@@ -22,23 +22,28 @@
 
 #include "EbusFSM.h"
 
-#define STATE_INF_PRI_FIT     0 // priority class fit -> retry
+#define STATE_INF_EBUS_ON      1 // ebus connected
+#define STATE_INF_EBUS_OFF     2 // ebus disconnected
+#define STATE_INF_EBUS_LOCK    3 // ebus locked
+#define STATE_INF_EBUS_FREE    4 // ebus freed
 
-#define STATE_WRN_BYTE_DIF    1 // written/read byte difference
-#define STATE_WRN_ARB_LOST    2 // arbitration lost
-#define STATE_WRN_PRI_LOST    3 // priority class lost
-#define STATE_WRN_ACK_NEG     4 // received ACK is negative -> retry
-#define STATE_WRN_RECV_RESP   5 // received response is invalid -> retry
-#define STATE_WRN_RECV_MSG    6 // at me addressed message is invalid
-#define STATE_WRN_NOT_DEF     7 // at me addressed message is not defined
+#define STATE_WRN_BYTE_DIF    11 // written/read byte difference
+#define STATE_WRN_ARB_LOST    12 // arbitration lost
+#define STATE_WRN_PRI_FIT     13 // priority class fit -> retry
+#define STATE_WRN_PRI_LOST    14 // priority class lost
+#define STATE_WRN_ACK_NEG     15 // received ACK is negative -> retry
+#define STATE_WRN_RECV_RESP   16 // received response is invalid -> retry
+#define STATE_WRN_RECV_MSG    17 // at me addressed message is invalid
+#define STATE_WRN_NOT_DEF     18 // at me addressed message is not defined
+#define STATE_WRN_NO_PROCESS  19 // process not implemented
 
-#define STATE_ERR_LOCK_FAIL  -1 // lock ebus failed
-#define STATE_ERR_ACK_NEG    -2 // received ACK is negative -> failed
-#define STATE_ERR_ACK_WRONG  -3 // received ACK byte is wrong
-#define STATE_ERR_NN_WRONG   -4 // received NN byte is wrong
-#define STATE_ERR_RECV_RESP  -5 // received response is invalid -> failed
-#define STATE_ERR_CREA_MSG   -6 // creating the message failed
-#define STATE_ERR_SEND_FAIL  -7 // sending the response message failed
+#define STATE_ERR_LOCK_FAIL   21 // lock ebus failed
+#define STATE_ERR_ACK_NEG     22 // received ACK is negative -> failed
+#define STATE_ERR_ACK_WRONG   23 // received ACK byte is wrong
+#define STATE_ERR_NN_WRONG    24 // received NN byte is wrong
+#define STATE_ERR_RECV_RESP   25 // received response is invalid -> failed
+#define STATE_ERR_CREA_MSG    26 // creating the message failed
+#define STATE_ERR_SEND_FAIL   27 // sending the response message failed
 
 class State
 {
@@ -64,7 +69,7 @@ protected:
 
 	static void reset(EbusFSM* fsm);
 
-	static const string errorText(const int error);
+	static const string stateMessage(const int state);
 };
 
 #endif // EBUS_FSM_STATE_H

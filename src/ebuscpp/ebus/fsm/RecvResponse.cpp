@@ -40,7 +40,7 @@ int RecvResponse::run(EbusFSM* fsm)
 		// check against max. possible size
 		if (byte > 0x10)
 		{
-			LIBLOGGER_WARN("%s", errorText(STATE_ERR_NN_WRONG).c_str());
+			LIBLOGGER_WARN("%s", stateMessage(STATE_ERR_NN_WRONG).c_str());
 			reset(fsm);
 			fsm->changeState(Listen::getListen());
 			return (DEV_OK);
@@ -84,12 +84,12 @@ int RecvResponse::run(EbusFSM* fsm)
 		if (retry == 1)
 		{
 			seq.clear();
-			LIBLOGGER_DEBUG("%s", errorText(STATE_WRN_RECV_RESP).c_str());
+			LIBLOGGER_DEBUG("%s", stateMessage(STATE_WRN_RECV_RESP).c_str());
 		}
 		else
 		{
-			LIBLOGGER_WARN("%s", errorText(STATE_ERR_RECV_RESP).c_str());
-			m_activeMessage->setResult(errorText(STATE_ERR_RECV_RESP));
+			LIBLOGGER_WARN("%s", stateMessage(STATE_ERR_RECV_RESP).c_str());
+			m_activeMessage->setResult(stateMessage(STATE_ERR_RECV_RESP));
 		}
 	}
 

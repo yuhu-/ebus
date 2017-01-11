@@ -28,7 +28,7 @@ int Idle::run(EbusFSM* fsm)
 	{
 		fsm->m_ebusDevice->close();
 
-		if (fsm->m_ebusDevice->isOpen() == false) LIBLOGGER_INFO("ebus disconnected");
+		if (fsm->m_ebusDevice->isOpen() == false) LIBLOGGER_INFO("%s", stateMessage(STATE_INF_EBUS_OFF).c_str());
 	}
 
 	reset(fsm);

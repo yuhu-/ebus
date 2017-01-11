@@ -30,7 +30,7 @@ int FreeBus::run(EbusFSM* fsm)
 	int result = writeRead(fsm, byte, 0);
 	if (result != DEV_OK) return (result);
 
-	LIBLOGGER_DEBUG("ebus freed");
+	LIBLOGGER_DEBUG("%s", stateMessage(STATE_INF_EBUS_FREE).c_str());
 
 	reset(fsm);
 	fsm->changeState(Listen::getListen());

@@ -59,8 +59,8 @@ int SendMessage::run(EbusFSM* fsm)
 
 		if (byte != ACK && byte != NAK)
 		{
-			LIBLOGGER_WARN("%s", errorText(STATE_ERR_ACK_WRONG).c_str());
-			m_activeMessage->setResult(errorText(STATE_ERR_ACK_WRONG));
+			LIBLOGGER_WARN("%s", stateMessage(STATE_ERR_ACK_WRONG).c_str());
+			m_activeMessage->setResult(stateMessage(STATE_ERR_ACK_WRONG));
 
 			fsm->changeState(FreeBus::getFreeBus());
 			break;
@@ -84,12 +84,12 @@ int SendMessage::run(EbusFSM* fsm)
 		{
 			if (retry == 1)
 			{
-				LIBLOGGER_DEBUG("%s", errorText(STATE_WRN_ACK_NEG).c_str());
+				LIBLOGGER_DEBUG("%s", stateMessage(STATE_WRN_ACK_NEG).c_str());
 			}
 			else
 			{
-				LIBLOGGER_WARN("%s", errorText(STATE_ERR_ACK_NEG).c_str());
-				m_activeMessage->setResult(errorText(STATE_ERR_ACK_NEG));
+				LIBLOGGER_WARN("%s", stateMessage(STATE_ERR_ACK_NEG).c_str());
+				m_activeMessage->setResult(stateMessage(STATE_ERR_ACK_NEG));
 
 				fsm->changeState(FreeBus::getFreeBus());
 			}

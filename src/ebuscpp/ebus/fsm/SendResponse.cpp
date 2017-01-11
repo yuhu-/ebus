@@ -48,7 +48,7 @@ int SendResponse::run(EbusFSM* fsm)
 
 		if (byte != ACK && byte != NAK)
 		{
-			LIBLOGGER_INFO("%s", errorText(STATE_ERR_ACK_WRONG).c_str());
+			LIBLOGGER_INFO("%s", stateMessage(STATE_ERR_ACK_WRONG).c_str());
 			break;
 		}
 		else if (byte == ACK)
@@ -59,12 +59,12 @@ int SendResponse::run(EbusFSM* fsm)
 		{
 			if (retry == 1)
 			{
-				LIBLOGGER_INFO("%s", errorText(STATE_WRN_ACK_NEG).c_str());
+				LIBLOGGER_INFO("%s", stateMessage(STATE_WRN_ACK_NEG).c_str());
 			}
 			else
 			{
-				LIBLOGGER_INFO("%s", errorText(STATE_ERR_ACK_NEG).c_str());
-				LIBLOGGER_INFO("%s", errorText(STATE_ERR_SEND_FAIL).c_str());
+				LIBLOGGER_INFO("%s", stateMessage(STATE_ERR_ACK_NEG).c_str());
+				LIBLOGGER_INFO("%s", stateMessage(STATE_ERR_SEND_FAIL).c_str());
 			}
 		}
 	}

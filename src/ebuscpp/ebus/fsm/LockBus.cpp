@@ -53,7 +53,7 @@ int LockBus::run(EbusFSM* fsm)
 
 	if (byte != eSeq.getMaster()[0])
 	{
-		LIBLOGGER_DEBUG("%s", errorText(STATE_WRN_ARB_LOST).c_str());
+		LIBLOGGER_DEBUG("%s", stateMessage(STATE_WRN_ARB_LOST).c_str());
 
 		if (m_lockRetries < fsm->m_lockRetries)
 		{
@@ -62,18 +62,18 @@ int LockBus::run(EbusFSM* fsm)
 			if ((byte & 0x0f) != (eSeq.getMaster()[0] & 0x0f))
 			{
 				m_lockCounter = fsm->m_lockCounter;
-				LIBLOGGER_DEBUG("%s", errorText(STATE_WRN_PRI_LOST).c_str());
+				LIBLOGGER_DEBUG("%s", stateMessage(STATE_WRN_PRI_LOST).c_str());
 			}
 			else
 			{
 				m_lockCounter = 1;
-				LIBLOGGER_DEBUG("%s", errorText(STATE_INF_PRI_FIT).c_str());
+				LIBLOGGER_DEBUG("%s", stateMessage(STATE_WRN_PRI_FIT).c_str());
 			}
 		}
 		else
 		{
-			LIBLOGGER_WARN("%s", errorText(STATE_ERR_LOCK_FAIL).c_str());
-			m_activeMessage->setResult(errorText(STATE_ERR_LOCK_FAIL));
+			LIBLOGGER_WARN("%s", stateMessage(STATE_ERR_LOCK_FAIL).c_str());
+			m_activeMessage->setResult(stateMessage(STATE_ERR_LOCK_FAIL));
 
 			reset(fsm);
 		}
@@ -82,7 +82,7 @@ int LockBus::run(EbusFSM* fsm)
 	}
 	else
 	{
-		LIBLOGGER_DEBUG("ebus locked");
+		LIBLOGGER_DEBUG("%s", stateMessage(STATE_INF_EBUS_LOCK).c_str());
 		fsm->changeState(SendMessage::getSendMessage());
 	}
 
