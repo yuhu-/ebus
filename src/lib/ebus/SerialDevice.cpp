@@ -24,14 +24,12 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-using namespace libebus;
-
-SerialDevice::~SerialDevice()
+libebus::SerialDevice::~SerialDevice()
 {
 	closeDevice();
 }
 
-int SerialDevice::openDevice(const string& device, const bool noDeviceCheck)
+int libebus::SerialDevice::openDevice(const string& device, const bool noDeviceCheck)
 {
 	m_noDeviceCheck = noDeviceCheck;
 	struct termios newSettings;
@@ -70,7 +68,7 @@ int SerialDevice::openDevice(const string& device, const bool noDeviceCheck)
 	return (DEV_OK);
 }
 
-void SerialDevice::closeDevice()
+void libebus::SerialDevice::closeDevice()
 {
 	if (m_open == true)
 	{

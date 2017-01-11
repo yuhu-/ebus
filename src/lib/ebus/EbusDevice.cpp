@@ -26,9 +26,9 @@
 #include <sstream>
 #include <map>
 
-using namespace libebus;
-using namespace libutils;
-
+using libutils::color::yellow;
+using libutils::color::red;
+using libutils::color::reset;
 using std::ostringstream;
 using std::map;
 
@@ -43,7 +43,7 @@ map<int, string> DeviceErrors =
 { DEV_ERR_SEND, "Error occurred during data sending" },
 { DEV_ERR_POLL, "Error occurred at ppoll waiting" } };
 
-EbusDevice::EbusDevice(const string& deviceName, const bool noDeviceCheck)
+libebus::EbusDevice::EbusDevice(const string& deviceName, const bool noDeviceCheck)
 	: m_deviceName(deviceName), m_noDeviceCheck(noDeviceCheck)
 {
 	m_device = nullptr;
@@ -59,52 +59,52 @@ EbusDevice::EbusDevice(const string& deviceName, const bool noDeviceCheck)
 	}
 }
 
-EbusDevice::~EbusDevice()
+libebus::EbusDevice::~EbusDevice()
 {
 	delete m_device;
 }
 
-int EbusDevice::open()
+int libebus::EbusDevice::open()
 {
 	return (m_device->openDevice(m_deviceName, m_noDeviceCheck));
 }
 
-void EbusDevice::close()
+void libebus::EbusDevice::close()
 {
 	m_device->closeDevice();
 }
 
-bool EbusDevice::isOpen()
+bool libebus::EbusDevice::isOpen()
 {
 	return (m_device->isOpen());
 }
 
-ssize_t EbusDevice::send(const unsigned char value)
+ssize_t libebus::EbusDevice::send(const unsigned char value)
 {
 	return (m_device->send(value));
 }
 
-ssize_t EbusDevice::recv(unsigned char& value, const long sec, const long nsec)
+ssize_t libebus::EbusDevice::recv(unsigned char& value, const long sec, const long nsec)
 {
 	return (m_device->recv(value, sec, nsec));
 }
 
-const string EbusDevice::errorText(const int error) const
+const string libebus::EbusDevice::errorText(const int error) const
 {
 	ostringstream ostr;
 
-	(error > DEV_OK) ? ostr << color::yellow : ostr << color::red;
+	(error > DEV_OK) ? ostr << yellow : ostr << red;
 
 	ostr << DeviceErrors[error];
 
 	if (error == DEV_ERR_OPEN) ostr << m_deviceName;
 
-	ostr << color::reset;
+	ostr << reset;
 
 	return (ostr.str());
 }
 
-void EbusDevice::setType(const Type type)
+void libebus::EbusDevice::setType(const Type type)
 {
 	if (m_device != nullptr) delete m_device;
 

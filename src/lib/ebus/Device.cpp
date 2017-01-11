@@ -25,22 +25,20 @@
 #include <sys/ioctl.h>
 #include <poll.h>
 
-using namespace libebus;
-
 using std::ostringstream;
 
-Device::~Device()
+libebus::Device::~Device()
 {
 }
 
-bool Device::isOpen()
+bool libebus::Device::isOpen()
 {
 	if (isValid() == false) m_open = false;
 
 	return (m_open);
 }
 
-bool Device::isValid()
+bool libebus::Device::isValid()
 {
 	if (m_noDeviceCheck == false)
 	{
@@ -57,7 +55,7 @@ bool Device::isValid()
 	return (true);
 }
 
-ssize_t Device::send(const unsigned char value)
+ssize_t libebus::Device::send(const unsigned char value)
 {
 	if (isValid() == false) return (DEV_ERR_VALID);
 
@@ -65,7 +63,7 @@ ssize_t Device::send(const unsigned char value)
 	return (write(m_fd, &value, 1) == 1 ? DEV_OK : DEV_ERR_SEND);
 }
 
-ssize_t Device::recv(unsigned char& value, const long sec, const long nsec)
+ssize_t libebus::Device::recv(unsigned char& value, const long sec, const long nsec)
 {
 	if (isValid() == false) return (DEV_ERR_VALID);
 

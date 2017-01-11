@@ -26,14 +26,12 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 
-using namespace libebus;
-
-NetworkDevice::~NetworkDevice()
+libebus::NetworkDevice::~NetworkDevice()
 {
 	closeDevice();
 }
 
-int NetworkDevice::openDevice(const string& device, const bool noDeviceCheck)
+int libebus::NetworkDevice::openDevice(const string& device, const bool noDeviceCheck)
 {
 	m_noDeviceCheck = noDeviceCheck;
 	m_open = false;
@@ -72,7 +70,7 @@ int NetworkDevice::openDevice(const string& device, const bool noDeviceCheck)
 	return (DEV_OK);
 }
 
-void NetworkDevice::closeDevice()
+void libebus::NetworkDevice::closeDevice()
 {
 	if (m_open == true)
 	{

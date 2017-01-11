@@ -23,8 +23,6 @@
 #include <sstream>
 #include <iomanip>
 
-using namespace libebus;
-
 using std::ostringstream;
 using std::nouppercase;
 using std::hex;
@@ -32,11 +30,11 @@ using std::setw;
 using std::setfill;
 using std::equal;
 
-Sequence::Sequence()
+libebus::Sequence::Sequence()
 {
 }
 
-Sequence::Sequence(const string& str)
+libebus::Sequence::Sequence(const string& str)
 {
 	for (size_t i = 0; i + 1 < str.size(); i += 2)
 	{
@@ -45,7 +43,7 @@ Sequence::Sequence(const string& str)
 	}
 }
 
-Sequence::Sequence(const Sequence& seq, const size_t index, size_t len)
+libebus::Sequence::Sequence(const Sequence& seq, const size_t index, size_t len)
 {
 	if (len == 0) len = seq.size() - index;
 
@@ -55,29 +53,29 @@ Sequence::Sequence(const Sequence& seq, const size_t index, size_t len)
 	m_extended = seq.m_extended;
 }
 
-void Sequence::push_back(const unsigned char byte, const bool isExtended)
+void libebus::Sequence::push_back(const unsigned char byte, const bool isExtended)
 {
 	m_seq.push_back(byte);
 	m_extended = isExtended;
 }
 
-const unsigned char& Sequence::operator[](const size_t index) const
+const unsigned char& libebus::Sequence::operator[](const size_t index) const
 {
 	return (m_seq[index]);
 }
 
-size_t Sequence::size() const
+size_t libebus::Sequence::size() const
 {
 	return (m_seq.size());
 }
 
-void Sequence::clear()
+void libebus::Sequence::clear()
 {
 	m_seq.clear();
 	m_extended = false;
 }
 
-unsigned char Sequence::getCRC()
+unsigned char libebus::Sequence::getCRC()
 {
 	if (m_extended == false) extend();
 
@@ -91,7 +89,7 @@ unsigned char Sequence::getCRC()
 	return (crc);
 }
 
-void Sequence::extend()
+void libebus::Sequence::extend()
 {
 	if (m_extended == true) return;
 
@@ -119,7 +117,7 @@ void Sequence::extend()
 	m_extended = true;
 }
 
-void Sequence::reduce()
+void libebus::Sequence::reduce()
 {
 	if (m_extended == false) return;
 
@@ -151,12 +149,12 @@ void Sequence::reduce()
 	m_extended = false;
 }
 
-bool Sequence::isExtended() const
+bool libebus::Sequence::isExtended() const
 {
 	return (m_extended);
 }
 
-const string Sequence::toString()
+const string libebus::Sequence::toString()
 {
 	ostringstream ostr;
 
@@ -166,12 +164,12 @@ const string Sequence::toString()
 	return (ostr.str());
 }
 
-const vector<unsigned char> Sequence::getSequence() const
+const vector<unsigned char> libebus::Sequence::getSequence() const
 {
 	return (m_seq);
 }
 
-size_t Sequence::find(const Sequence& seq, const size_t pos) const noexcept
+size_t libebus::Sequence::find(const Sequence& seq, const size_t pos) const noexcept
 {
 	for (size_t i = pos; i + seq.size() <= m_seq.size(); i++)
 		if (equal(m_seq.begin() + i, m_seq.begin() + i + seq.size(), seq.m_seq.begin()) == true) return (i);
@@ -179,7 +177,7 @@ size_t Sequence::find(const Sequence& seq, const size_t pos) const noexcept
 	return (npos);
 }
 
-int Sequence::compare(const Sequence& seq) const noexcept
+int libebus::Sequence::compare(const Sequence& seq) const noexcept
 {
 	if (m_seq.size() < seq.size())
 		return (-1);
@@ -190,14 +188,14 @@ int Sequence::compare(const Sequence& seq) const noexcept
 	return (-1);
 }
 
-bool Sequence::contains(const string& str) const noexcept
+bool libebus::Sequence::contains(const string& str) const noexcept
 {
 	if (find(Sequence(str)) != npos) return (true);
 
 	return (false);
 }
 
-const string Sequence::toString(const vector<unsigned char>& seq)
+const string libebus::Sequence::toString(const vector<unsigned char>& seq)
 {
 	ostringstream ostr;
 
