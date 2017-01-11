@@ -27,18 +27,16 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-using namespace libutils;
-
 using std::cerr;
 using std::endl;
 
-Daemon& Daemon::getDaemon()
+libutils::Daemon& libutils::Daemon::getDaemon()
 {
 	static Daemon daemon;
 	return (daemon);
 }
 
-void Daemon::start(const string& pidfile)
+void libutils::Daemon::start(const string& pidfile)
 {
 	m_pidfile = pidfile;
 
@@ -110,7 +108,7 @@ void Daemon::start(const string& pidfile)
 	m_status = true;
 }
 
-void Daemon::stop()
+void libutils::Daemon::stop()
 {
 	if (m_pidfd != nullptr)
 	{
@@ -119,11 +117,11 @@ void Daemon::stop()
 	}
 }
 
-bool Daemon::status() const
+bool libutils::Daemon::status() const
 {
 	return (m_status);
 }
 
-Daemon::Daemon()
+libutils::Daemon::Daemon()
 {
 }

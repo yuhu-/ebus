@@ -23,8 +23,6 @@
 #include <iomanip>
 #include <cstdlib>
 
-using namespace libutils;
-
 using std::cerr;
 using std::endl;
 using std::hex;
@@ -32,13 +30,13 @@ using std::setw;
 using std::setfill;
 using std::dec;
 
-Options& Options::getOption(const string& command, const string& argument)
+libutils::Options& libutils::Options::getOption(const string& command, const string& argument)
 {
 	static Options option(command, argument);
 	return (option);
 }
 
-Options::~Options()
+libutils::Options::~Options()
 {
 	m_options.clear();
 	m_bools.clear();
@@ -48,17 +46,17 @@ Options::~Options()
 	m_strings.clear();
 }
 
-void Options::setVersion(const string& version)
+void libutils::Options::setVersion(const string& version)
 {
 	m_version = version;
 }
 
-void Options::addDescription(const string& description)
+void libutils::Options::addDescription(const string& description)
 {
 	m_description = description;
 }
 
-void Options::addText(const string& text)
+void libutils::Options::addText(const string& text)
 {
 	Option option;
 
@@ -70,7 +68,7 @@ void Options::addText(const string& text)
 	m_options.push_back(option);
 }
 
-void Options::addBool(const string& name, const string& shortname, const bool value, const string& description)
+void libutils::Options::addBool(const string& name, const string& shortname, const bool value, const string& description)
 {
 	if (name.size() != 0)
 	{
@@ -80,7 +78,7 @@ void Options::addBool(const string& name, const string& shortname, const bool va
 
 }
 
-void Options::addHex(const string& name, const string& shortname, const int value, const string& description)
+void libutils::Options::addHex(const string& name, const string& shortname, const int value, const string& description)
 {
 	if (name.size() != 0)
 	{
@@ -90,7 +88,7 @@ void Options::addHex(const string& name, const string& shortname, const int valu
 
 }
 
-void Options::addInt(const string& name, const string& shortname, const int value, const string& description)
+void libutils::Options::addInt(const string& name, const string& shortname, const int value, const string& description)
 {
 	if (name.size() != 0)
 	{
@@ -100,7 +98,7 @@ void Options::addInt(const string& name, const string& shortname, const int valu
 
 }
 
-void Options::addLong(const string& name, const string& shortname, const long value, const string& description)
+void libutils::Options::addLong(const string& name, const string& shortname, const long value, const string& description)
 {
 	if (name.size() != 0)
 	{
@@ -110,7 +108,7 @@ void Options::addLong(const string& name, const string& shortname, const long va
 
 }
 
-void Options::addFloat(const string& name, const string& shortname, const float value, const string& description)
+void libutils::Options::addFloat(const string& name, const string& shortname, const float value, const string& description)
 {
 	if (name.size() != 0)
 	{
@@ -120,7 +118,7 @@ void Options::addFloat(const string& name, const string& shortname, const float 
 
 }
 
-void Options::addString(const string& name, const string& shortname, const string& value, const string& description)
+void libutils::Options::addString(const string& name, const string& shortname, const string& value, const string& description)
 {
 	if (name.size() != 0)
 	{
@@ -130,7 +128,7 @@ void Options::addString(const string& name, const string& shortname, const strin
 
 }
 
-bool Options::parse(int argc, char* argv[])
+bool libutils::Options::parse(int argc, char* argv[])
 {
 	vector<string> _argv(argv, argv + argc);
 	m_argv = _argv;
@@ -273,59 +271,59 @@ bool Options::parse(int argc, char* argv[])
 	return (true);
 }
 
-int Options::numArgs() const
+int libutils::Options::numArgs() const
 {
 	return (m_arguments.size());
 }
 
-string Options::getArg(const int num) const
+string libutils::Options::getArg(const int num) const
 {
 	return (m_arguments[num]);
 }
 
-string Options::getCommand() const
+string libutils::Options::getCommand() const
 {
 	return (m_command);
 }
 
-bool Options::missingCommand() const
+bool libutils::Options::missingCommand() const
 {
 	return (m_command.empty());
 }
 
-bool Options::getBool(const string& name)
+bool libutils::Options::getBool(const string& name)
 {
 	return (m_bools.find(name)->second);
 }
 
-int Options::getInt(const string& name)
+int libutils::Options::getInt(const string& name)
 {
 	return (m_ints.find(name)->second);
 }
 
-long Options::getLong(const string& name)
+long libutils::Options::getLong(const string& name)
 {
 	return (m_longs.find(name)->second);
 }
 
-float Options::getFloat(const string& name)
+float libutils::Options::getFloat(const string& name)
 {
 	return (m_floats.find(name)->second);
 }
 
-string Options::getString(const string& name)
+string libutils::Options::getString(const string& name)
 {
 	return (m_strings.find(name)->second);
 }
 
-bool Options::toStringVersion() const
+bool libutils::Options::toStringVersion() const
 {
 	cerr << endl << m_version << endl << endl;
 
 	return (false);
 }
 
-bool Options::toStringHelp()
+bool libutils::Options::toStringHelp()
 {
 	toStringUsage();
 	if (m_description.empty() == false) toStringDescription();
@@ -334,7 +332,7 @@ bool Options::toStringHelp()
 	return (false);
 }
 
-bool Options::toStringUsage()
+bool libutils::Options::toStringUsage()
 {
 	cerr << endl << "Usage:" << endl << " " << m_argv[0].substr(m_argv[0].find_last_of("/\\") + 1) << " [Options]";
 
@@ -351,14 +349,14 @@ bool Options::toStringUsage()
 	return (false);
 }
 
-bool Options::toStringDescription() const
+bool libutils::Options::toStringDescription() const
 {
 	cerr << "Description:" << endl << m_description << endl << endl;
 
 	return (false);
 }
 
-bool Options::toStringOptions()
+bool libutils::Options::toStringOptions()
 {
 	cerr << "Options:" << endl;
 
@@ -385,7 +383,7 @@ bool Options::toStringOptions()
 	return (false);
 }
 
-bool Options::toStringValues()
+bool libutils::Options::toStringValues()
 {
 	if (m_withCommand.empty() == false)
 	{
@@ -445,12 +443,12 @@ bool Options::toStringValues()
 	return (false);
 }
 
-Options::Options(const string& command, const string& argument)
+libutils::Options::Options(const string& command, const string& argument)
 	: m_withCommand(command), m_withArguments(argument)
 {
 }
 
-void Options::add(const string& name, const string& shortname, const string& description, const Type type)
+void libutils::Options::add(const string& name, const string& shortname, const string& description, const Type type)
 {
 	Option option;
 
@@ -462,7 +460,7 @@ void Options::add(const string& name, const string& shortname, const string& des
 	m_options.push_back(option);
 }
 
-int Options::find(const string& name, const bool shortname)
+int libutils::Options::find(const string& name, const bool shortname)
 {
 	for (size_t i = 0; i < m_options.size(); i++)
 	{
@@ -482,7 +480,7 @@ int Options::find(const string& name, const bool shortname)
 	return (-1);
 }
 
-void Options::save(const int index, const string& value)
+void libutils::Options::save(const int index, const string& value)
 {
 	switch (m_options[index].type)
 	{
