@@ -21,14 +21,12 @@
 
 #include <cstdarg>
 
-using namespace liblogger;
-
-Logger::Logger(const string& function)
+liblogger::Logger::Logger(const string& function)
 	: m_logHandler(LogHandler::getLogHandler()), m_function(function)
 {
 }
 
-void Logger::start(const string& level, const string& file)
+void liblogger::Logger::start(const string& level, const string& file)
 {
 	setLevel(level);
 
@@ -40,22 +38,22 @@ void Logger::start(const string& level, const string& file)
 	m_logHandler.start();
 }
 
-void Logger::setLevel(const string& level)
+void liblogger::Logger::setLevel(const string& level)
 {
 	m_logHandler.setLevel(level);
 }
 
-void Logger::addConsole()
+void liblogger::Logger::addConsole()
 {
 	m_logHandler.addConsole();
 }
 
-void Logger::addFile(const string& file)
+void liblogger::Logger::addFile(const string& file)
 {
 	m_logHandler.addFile(file);
 }
 
-void Logger::log(const Level level, const string data, ...)
+void liblogger::Logger::log(const Level level, const string data, ...)
 {
 	if (m_logHandler.getLevel() >= level)
 	{

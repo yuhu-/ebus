@@ -27,8 +27,6 @@
 #include <sstream>
 #include <cstring>
 
-using namespace liblogger;
-
 using std::istringstream;
 using std::ostringstream;
 using std::endl;
@@ -36,13 +34,13 @@ using std::setw;
 using std::setfill;
 using std::left;
 
-LogHandler& LogHandler::getLogHandler()
+liblogger::LogHandler& liblogger::LogHandler::getLogHandler()
 {
 	static LogHandler logHandler;
 	return (logHandler);
 }
 
-LogHandler::~LogHandler()
+liblogger::LogHandler::~LogHandler()
 {
 	while (m_sinks.size() > 0)
 		delSink(*(m_sinks.begin()));
@@ -54,46 +52,46 @@ LogHandler::~LogHandler()
 	}
 }
 
-void LogHandler::start()
+void liblogger::LogHandler::start()
 {
 	m_thread = thread(&LogHandler::run, this);
 }
 
-Level LogHandler::getLevel() const
+liblogger::Level liblogger::LogHandler::getLevel() const
 {
        return (m_level);
 }
 
-string LogHandler::getLevelName(Level level)
+string liblogger::LogHandler::getLevelName(Level level)
 {
 	return (LevelNames[level]);
 }
 
-void LogHandler::setLevel(const string& level)
+void liblogger::LogHandler::setLevel(const string& level)
 {
 	m_level = findLevel(level);
 }
 
-void LogHandler::addConsole()
+void liblogger::LogHandler::addConsole()
 {
 	addSink(new LogConsole());
 }
 
-void LogHandler::addFile(const string& file)
+void liblogger::LogHandler::addFile(const string& file)
 {
 	addSink(new LogFile(file));
 }
 
-void LogHandler::log(const LogMessage* logMessage)
+void liblogger::LogHandler::log(const LogMessage* logMessage)
 {
 	m_logMessages.enqueue(logMessage);
 }
 
-LogHandler::LogHandler()
+liblogger::LogHandler::LogHandler()
 {
 }
 
-void LogHandler::run()
+void liblogger::LogHandler::run()
 {
 	while (true)
 	{
@@ -112,7 +110,7 @@ void LogHandler::run()
 	}
 }
 
-Level LogHandler::findLevel(const string& level)
+liblogger::Level liblogger::LogHandler::findLevel(const string& level)
 {
 	for (const auto& lvl : LevelNames)
 		if (strcasecmp(lvl.second.c_str(), level.c_str()) == 0) return (lvl.first);
@@ -120,7 +118,7 @@ Level LogHandler::findLevel(const string& level)
 	return (Level::info);
 }
 
-void LogHandler::addSink(LogSink* sink)
+void liblogger::LogHandler::addSink(LogSink* sink)
 {
 	vector<LogSink*>::iterator it = find(m_sinks.begin(), m_sinks.end(), sink);
 
@@ -128,7 +126,7 @@ void LogHandler::addSink(LogSink* sink)
 
 }
 
-void LogHandler::delSink(const LogSink* sink)
+void liblogger::LogHandler::delSink(const LogSink* sink)
 {
 	vector<LogSink*>::iterator it = find(m_sinks.begin(), m_sinks.end(), sink);
 

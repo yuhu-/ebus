@@ -27,33 +27,31 @@
 
 #include <sys/time.h>
 
-using namespace liblogger;
-
 //using std::ostringstream;
 //using std::setw;
 //using std::setfill;
 
-string LogMessage::getFunction() const
+string liblogger::LogMessage::getFunction() const
 {
 	return (m_function);
 }
 
-string LogMessage::getLevel() const
+string liblogger::LogMessage::getLevel() const
 {
 	return (m_level);
 }
 
-string LogMessage::getText() const
+string liblogger::LogMessage::getText() const
 {
 	return (m_text);
 }
 
-string LogMessage::getTime() const
+string liblogger::LogMessage::getTime() const
 {
 	return (m_time);
 }
 
-LogMessage::LogMessage(const string& function, const string& level, const string& text)
+liblogger::LogMessage::LogMessage(const string& function, const string& level, const string& text)
 	: m_function(function), m_level(level), m_text(text)
 {
 	char time[24];
@@ -70,7 +68,7 @@ LogMessage::LogMessage(const string& function, const string& level, const string
 	m_time = string(time);
 }
 
-//LogMessage::LogMessage(const Level level, const string text)
+//liblogger::LogMessage::LogMessage(const Level level, const string text)
 //	: m_level(level), m_text(text)
 //{
 //	auto now = std::chrono::system_clock::now();

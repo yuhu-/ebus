@@ -20,12 +20,10 @@
 
 #include <iostream>
 
-using namespace liblogger;
-
 using std::cout;
 using std::endl;
 
-void LogConsole::write(const string& message) const
+void liblogger::LogConsole::write(const string& message) const
 {
 	cout << message;
 }

@@ -21,17 +21,15 @@
 
 #include <fstream>
 
-using namespace liblogger;
-
 using std::ios;
 using std::ofstream;
 
-LogFile::LogFile(const string& file)
+liblogger::LogFile::LogFile(const string& file)
 	: m_file(file)
 {
 }
 
-void LogFile::write(const string& message) const
+void liblogger::LogFile::write(const string& message) const
 {
 	ofstream ofs(m_file.c_str(), ios::app);
 
