@@ -37,7 +37,7 @@ int Listen::run(EbusFSM* fsm)
 		if (m_lockCounter != 0)
 		{
 			m_lockCounter--;
-			LIBLOGGER_TRACE("lockCounter: %d", m_lockCounter);
+			LIBLOGGER_DEBUG("lockCounter: %d", m_lockCounter);
 		}
 
 		// decode EbusSequence
@@ -59,7 +59,7 @@ int Listen::run(EbusFSM* fsm)
 		// check for new EbusMessage
 		if (m_activeMessage == nullptr && fsm->m_ebusMsgQueue.size() != 0)
 		{
-			LIBLOGGER_TRACE("pending ebus messages: %d", fsm->m_ebusMsgQueue.size());
+			LIBLOGGER_DEBUG("pending ebus messages: %d", fsm->m_ebusMsgQueue.size());
 			m_activeMessage = fsm->m_ebusMsgQueue.dequeue();
 		}
 

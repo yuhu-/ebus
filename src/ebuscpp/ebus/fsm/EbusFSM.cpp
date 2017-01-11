@@ -36,10 +36,10 @@ using std::back_inserter;
 
 EbusFSM::EbusFSM(const unsigned char address, const string device, const bool noDeviceCheck, const long reopenTime,
 	const long arbitrationTime, const long receiveTimeout, const int lockCounter, const int lockRetries,
-	const bool raw, const bool dump, const string dumpFile, const long dumpFileMaxSize, IProcess* process)
+	const bool dump, const string dumpFile, const long dumpFileMaxSize, IProcess* process)
 	: Notify(), m_address(address), m_reopenTime(reopenTime), m_arbitrationTime(arbitrationTime), m_receiveTimeout(
 		receiveTimeout), m_lockCounter(lockCounter), m_lockRetries(lockRetries), m_lastResult(
-	DEV_OK), m_raw(raw), m_dumpFile(dumpFile), m_dumpFileMaxSize(dumpFileMaxSize), m_process(process)
+	DEV_OK), m_dumpFile(dumpFile), m_dumpFileMaxSize(dumpFileMaxSize), m_process(process)
 {
 	m_ebusDevice = new EbusDevice(device, noDeviceCheck);
 	changeState(Connect::getConnect());
@@ -104,16 +104,6 @@ void EbusFSM::setDump(bool dump)
 	}
 }
 
-bool EbusFSM::getRaw() const
-{
-	return (m_raw);
-}
-
-void EbusFSM::setRaw(bool raw)
-{
-	m_raw = raw;
-}
-
 void EbusFSM::enqueue(EbusMessage* message)
 {
 	m_ebusMsgQueue.enqueue(message);
@@ -143,7 +133,7 @@ void EbusFSM::changeState(State* state)
 	if (m_state != state)
 	{
 		m_state = state;
-		LIBLOGGER_TRACE("%s", m_state->toString().c_str());
+		LIBLOGGER_DEBUG("%s", m_state->toString().c_str());
 	}
 }
 

@@ -44,8 +44,7 @@ BaseLoop::BaseLoop()
 	m_ebus = new Ebus(options.getInt("address") & 0xff, options.getString("device"),
 		options.getBool("nodevicecheck"), options.getLong("reopentime"), options.getLong("arbitrationtime"),
 		options.getLong("receivetimeout"), options.getInt("lockcounter"), options.getInt("lockretries"),
-		options.getBool("lograw"), options.getBool("dump"), options.getString("dumpfile"),
-		options.getLong("dumpsize"), m_proxy);
+		options.getBool("dump"), options.getString("dumpfile"), options.getLong("dumpsize"), m_proxy);
 
 	m_network = new Network(options.getBool("local"), options.getInt("port"));
 
@@ -214,37 +213,6 @@ string BaseLoop::decodeMessage(const string& data)
 		break;
 
 	}
-	case Command::raw:
-	{
-		if (args.size() > 2)
-		{
-			result << "usage: 'raw [on|off]'";
-			break;
-		}
-
-		if (args.size() == 1)
-		{
-			result << "raw is " << (m_ebus->getRaw() == true ? "enabled" : "disabled");
-			break;
-		}
-
-		if (strcasecmp(args[1].c_str(), "ON") == 0)
-		{
-			if (m_ebus->getRaw() == false) m_ebus->setRaw(true);
-			result << "raw enabled";
-			break;
-		}
-
-		if (strcasecmp(args[1].c_str(), "OFF") == 0)
-		{
-			if (m_ebus->getRaw() == true) m_ebus->setRaw(false);
-			result << "raw disabled";
-			break;
-		}
-
-		result << "usage: 'raw [on|off]'";
-		break;
-	}
 	case Command::dump:
 	{
 		if (args.size() > 2)
@@ -406,7 +374,6 @@ const string BaseLoop::formatHelp()
 	ostr << "               port:   target udp port number" << endl << endl;
 
 	ostr << " log      - change logging level 'log level'" << endl;
-	ostr << " raw      - enable/disable raw data logging 'raw [on|off]'" << endl << endl;
 
 	ostr << " dump     - enable/disable raw data dumping 'dump [on|off]'" << endl << endl;
 

@@ -21,10 +21,10 @@
 
 Ebus::Ebus(const unsigned char address, const string device, const bool noDeviceCheck, const long reopenTime,
 	const long arbitrationTime, const long receiveTimeout, const int lockCounter, const int lockRetries,
-	const bool raw, const bool dump, const string dumpFile, const long dumpFileMaxSize, IProcess* process)
+	const bool dump, const string dumpFile, const long dumpFileMaxSize, IProcess* process)
 {
 	m_ebusFSM = new EbusFSM(address, device, noDeviceCheck, reopenTime, arbitrationTime, receiveTimeout,
-		lockCounter, lockRetries, raw, dump, dumpFile, dumpFileMaxSize, process);
+		lockCounter, lockRetries, dump, dumpFile, dumpFileMaxSize, process);
 
 	m_ebusFSM->start();
 }
@@ -57,16 +57,6 @@ bool Ebus::getDump() const
 void Ebus::setDump(bool dump)
 {
 	m_ebusFSM->setDump(dump);
-}
-
-bool Ebus::getRaw() const
-{
-	return (m_ebusFSM->getRaw());
-}
-
-void Ebus::setRaw(bool raw)
-{
-	m_ebusFSM->setRaw(raw);
 }
 
 void Ebus::enqueue(EbusMessage* message)

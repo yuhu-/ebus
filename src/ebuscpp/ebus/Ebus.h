@@ -28,7 +28,7 @@ class Ebus
 public:
 	Ebus(const unsigned char address, const string device, const bool noDeviceCheck, const long reopenTime,
 		const long arbitrationTime, const long receiveTimeout, const int lockCounter, const int lockRetries,
-		const bool raw, const bool dump, const string dumpFile, const long dumpFileMaxSize, IProcess* process);
+		const bool dump, const string dumpFile, const long dumpFileMaxSize, IProcess* process);
 
 	~Ebus();
 
@@ -37,9 +37,6 @@ public:
 
 	bool getDump() const;
 	void setDump(bool dump);
-
-	bool getRaw() const;
-	void setRaw(bool raw);
 
 	void enqueue(EbusMessage* message);
 

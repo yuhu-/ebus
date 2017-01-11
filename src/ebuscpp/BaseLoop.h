@@ -33,7 +33,7 @@ class BaseLoop
 
 	enum class Command
 	{
-		invalid, open, close, send, forward, dump, log, raw, help
+		invalid, open, close, send, forward, dump, log, help
 	};
 
 	map<Command, string> CommandNames =
@@ -43,7 +43,6 @@ class BaseLoop
 	{ Command::send, "SEND" },
 	{ Command::forward, "FORWARD" },
 	{ Command::log, "LOG" },
-	{ Command::raw, "RAW" },
 	{ Command::dump, "DUMP" },
 	{ Command::help, "HELP" } };
 

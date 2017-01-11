@@ -76,7 +76,7 @@ int State::read(EbusFSM* fsm, unsigned char& byte, const long sec, const long ns
 {
 	int result = fsm->m_ebusDevice->recv(byte, sec, nsec);
 
-	if (fsm->m_raw == true && result == DEV_OK) LIBLOGGER_INFO("<%02x", byte);
+	if (result == DEV_OK) LIBLOGGER_TRACE("<%02x", byte);
 
 	if (fsm->m_dump == true && result == DEV_OK && fsm->m_dumpRawStream.is_open() == true)
 	{
@@ -105,7 +105,7 @@ int State::write(EbusFSM* fsm, const unsigned char& byte)
 {
 	int result = fsm->m_ebusDevice->send(byte);
 
-	if (fsm->m_raw == true && result == DEV_OK) LIBLOGGER_INFO(">%02x", byte);
+	if (result == DEV_OK) LIBLOGGER_TRACE(">%02x", byte);
 
 	return (result);
 }
@@ -119,7 +119,7 @@ int State::writeRead(EbusFSM* fsm, const unsigned char& byte, const long timeout
 		unsigned char readByte;
 		result = State::read(fsm, readByte, 0, timeout);
 
-		if (readByte != byte) LIBLOGGER_TRACE("%s", stateMessage(STATE_WRN_BYTE_DIF).c_str());
+		if (readByte != byte) LIBLOGGER_DEBUG("%s", stateMessage(STATE_WRN_BYTE_DIF).c_str());
 	}
 
 	return (result);

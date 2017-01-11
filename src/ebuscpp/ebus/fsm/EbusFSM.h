@@ -54,7 +54,7 @@ class EbusFSM : public Notify
 public:
 	EbusFSM(const unsigned char address, const string device, const bool noDeviceCheck, const long reopenTime,
 		const long arbitrationTime, const long receiveTimeout, const int lockCounter, const int lockRetries,
-		const bool raw, const bool dump, const string dumpFile, const long dumpFileMaxSize, IProcess* process);
+		const bool dump, const string dumpFile, const long dumpFileMaxSize, IProcess* process);
 
 	~EbusFSM();
 
@@ -66,9 +66,6 @@ public:
 
 	bool getDump() const;
 	void setDump(bool dump);
-
-	bool getRaw() const;
-	void setRaw(bool raw);
 
 	void enqueue(EbusMessage* message);
 
@@ -92,8 +89,6 @@ private:
 	int m_lastResult;
 
 	EbusDevice* m_ebusDevice;
-
-	bool m_raw = false;
 
 	bool m_dump = false;
 	string m_dumpFile;

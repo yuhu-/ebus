@@ -36,7 +36,6 @@ commands:
  dump      - enable/disable raw data dumping
 
  loglevel  - change logging level 'loglevel level'
- lograw    - enable/disable raw data logging
 
  stop      - shutdown daemon
  quit      - close tcp connection

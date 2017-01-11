@@ -32,7 +32,6 @@ Options:
 
    | --logfile		log file name [/var/log/ebusproxy.log]
    | --loglevel		set logging level - off|error|warn|info|debug|trace [info]
-   | --lograw		enable/disable raw data logging
 
    | --values
    | --version

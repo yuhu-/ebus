@@ -78,8 +78,6 @@ void define_args()
 
 	options.addString("loglevel", "", "info", "\tset logging level - off|error|warn|info|debug|trace [info]");
 
-	options.addBool("lograw", "", false, "\tenable/disable raw data logging");
-
 }
 
 void shutdown()
