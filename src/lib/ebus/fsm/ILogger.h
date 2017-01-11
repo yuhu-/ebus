@@ -17,12 +17,15 @@
  * along with ebuscpp. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef EBUS_FSM_ILOGGER_H
-#define EBUS_FSM_ILOGGER_H
+#ifndef LIBEBUS_FSM_ILOGGER_H
+#define LIBEBUS_FSM_ILOGGER_H
 
 #include <string>
 
 using std::string;
+
+namespace libebus
+{
 
 class ILogger
 {
@@ -40,4 +43,6 @@ public:
 
 };
 
-#endif // EBUS_FSM_ILOGGER_H
+} // namespace libebus
+
+#endif // LIBEBUS_FSM_ILOGGER_H

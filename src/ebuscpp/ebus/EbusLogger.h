@@ -22,6 +22,8 @@
 
 #include "ILogger.h"
 
+using libebus::ILogger;
+
 class EbusLogger : public ILogger
 {
 

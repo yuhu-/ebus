@@ -21,6 +21,8 @@
 
 #include <sstream>
 
+using namespace libebus;
+
 using std::ostringstream;
 
 EbusMessage::EbusMessage(EbusSequence& eSeq, bool intern)

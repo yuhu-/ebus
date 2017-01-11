@@ -17,10 +17,13 @@
  * along with ebuscpp. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef EBUS_FSM_STATE_H
-#define EBUS_FSM_STATE_H
+#ifndef LIBEBUS_FSM_STATE_H
+#define LIBEBUS_FSM_STATE_H
 
 #include "EbusFSM.h"
+
+namespace libebus
+{
 
 #define STATE_INF_EBUS_ON      1 // ebus connected
 #define STATE_INF_EBUS_OFF     2 // ebus disconnected
@@ -73,4 +76,6 @@ protected:
 	static const string stateMessage(const int state);
 };
 
-#endif // EBUS_FSM_STATE_H
+} // namespace libebus
+
+#endif // LIBEBUS_FSM_STATE_H

@@ -23,6 +23,8 @@
 #include <sstream>
 #include <iomanip>
 
+using namespace libebus;
+
 using std::ostringstream;
 using std::nouppercase;
 using std::hex;

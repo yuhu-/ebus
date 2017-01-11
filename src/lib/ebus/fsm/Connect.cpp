@@ -23,6 +23,8 @@
 
 #include <sstream>
 
+using namespace libebus;
+
 using std::ostringstream;
 
 Connect Connect::m_connect;

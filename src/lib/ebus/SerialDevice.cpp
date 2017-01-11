@@ -24,6 +24,8 @@
 #include <unistd.h>
 #include <fcntl.h>
 
+using namespace libebus;
+
 SerialDevice::~SerialDevice()
 {
 	closeDevice();

@@ -26,6 +26,9 @@
 using std::vector;
 using std::string;
 
+namespace libebus
+{
+
 #define SYN       0xaa  // synchronization byte
 #define SYNEXT    0x01  // extended synchronization byte
 #define EXT       0xa9  // extend byte
@@ -74,6 +77,8 @@ private:
 	bool m_extended = false;
 
 };
+
+} // namespace libebus
 
 #endif // LIBEBUS_SEQUENCE_H
 

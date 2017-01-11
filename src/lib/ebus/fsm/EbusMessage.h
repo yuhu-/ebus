@@ -17,13 +17,16 @@
  * along with ebuscpp. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef EBUS_EBUSMESSAGE_H
-#define EBUS_EBUSMESSAGE_H
+#ifndef LIBEBUS_FSM_EBUSMESSAGE_H
+#define LIBEBUS_FSM_EBUSMESSAGE_H
 
 #include "EbusSequence.h"
 #include "Notify.h"
 
 using libutils::Notify;
+
+namespace libebus
+{
 
 class EbusMessage : public Notify
 {
@@ -45,4 +48,6 @@ private:
 
 };
 
-#endif // EBUS_EBUSMESSAGE_H
+} // namespace libebus
+
+#endif // LIBEBUS_FSM_EBUSMESSAGE_H

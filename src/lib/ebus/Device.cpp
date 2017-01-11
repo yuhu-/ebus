@@ -25,6 +25,8 @@
 #include <sys/ioctl.h>
 #include <poll.h>
 
+using namespace libebus;
+
 using std::ostringstream;
 
 Device::~Device()

@@ -22,6 +22,9 @@
 
 #include "Sequence.h"
 
+namespace libebus
+{
+
 #define EBUS_EMPTY       1 // is empty
 
 #define EBUS_OK          0 // success
@@ -112,6 +115,8 @@ private:
 
 	const string errorText(const int error) const;
 };
+
+} // namespace libebus
 
 #endif // LIBEBUS_EBUSSEQUENCE_H
 

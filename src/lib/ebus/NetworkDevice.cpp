@@ -26,6 +26,8 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 
+using namespace libebus;
+
 NetworkDevice::~NetworkDevice()
 {
 	closeDevice();

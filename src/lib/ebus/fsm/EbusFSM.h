@@ -16,8 +16,8 @@
  * You should have received a copy of the GNU General Public License
  * along with ebuscpp. If not, see http://www.gnu.org/licenses/.
  */
-#ifndef EBUS_FSM_EBUSFSM_H
-#define EBUS_FSM_EBUSFSM_H
+#ifndef LIBEBUS_FSM_EBUSFSM_H
+#define LIBEBUS_FSM_EBUSFSM_H
 
 #include "IProcess.h"
 #include "ILogger.h"
@@ -34,6 +34,9 @@ using libutils::NQueue;
 using std::ofstream;
 using std::thread;
 using std::map;
+
+namespace libebus
+{
 
 class State;
 
@@ -108,4 +111,6 @@ private:
 
 };
 
-#endif // EBUS_FSM_EBUSFSM_H
+} // namespace libebus
+
+#endif // LIBEBUS_FSM_EBUSFSM_H

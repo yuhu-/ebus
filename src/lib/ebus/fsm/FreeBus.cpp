@@ -20,6 +20,8 @@
 #include "FreeBus.h"
 #include "Listen.h"
 
+using namespace libebus;
+
 FreeBus FreeBus::m_freeBus;
 
 int FreeBus::run(EbusFSM* fsm)

@@ -26,7 +26,9 @@
 
 #include <thread>
 
-
+using libebus::IProcess;
+using libebus::Action;
+using libebus::EbusSequence;
 using std::thread;
 
 class Process : public IProcess, public Notify

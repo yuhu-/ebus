@@ -23,6 +23,8 @@
 
 #include <unistd.h>
 
+using namespace libebus;
+
 LockBus LockBus::m_lockBus;
 
 int LockBus::run(EbusFSM* fsm)

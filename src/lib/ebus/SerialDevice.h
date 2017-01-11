@@ -24,6 +24,9 @@
 
 #include <termios.h>
 
+namespace libebus
+{
+
 class SerialDevice : public Device
 {
 
@@ -37,5 +40,7 @@ private:
 	termios m_oldSettings;
 
 };
+
+} // namespace libebus
 
 #endif // LIBEBUS_SERIALDEVICE_H

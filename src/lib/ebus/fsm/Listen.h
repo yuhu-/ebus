@@ -17,10 +17,13 @@
  * along with ebuscpp. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef EBUS_FSM_LISTEN_H
-#define EBUS_FSM_LISTEN_H
+#ifndef LIBEBUS_FSM_LISTEN_H
+#define LIBEBUS_FSM_LISTEN_H
 
 #include "State.h"
+
+namespace libebus
+{
 
 class Listen : public State
 {
@@ -39,4 +42,6 @@ private:
 
 };
 
-#endif // EBUS_FSM_LISTEN_H
+} // namespace libebus
+
+#endif // LIBEBUS_FSM_LISTEN_H

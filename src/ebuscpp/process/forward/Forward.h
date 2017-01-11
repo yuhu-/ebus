@@ -29,6 +29,7 @@
 
 #include <thread>
 
+using libebus::EbusSequence;
 using libutils::Notify;
 using libutils::NQueue;
 using std::thread;

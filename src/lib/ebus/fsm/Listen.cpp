@@ -24,6 +24,8 @@
 
 #include <string>
 
+using namespace libebus;
+
 using std::to_string;
 
 Listen Listen::m_listen;

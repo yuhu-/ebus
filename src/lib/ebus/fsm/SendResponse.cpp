@@ -20,6 +20,8 @@
 #include "SendResponse.h"
 #include "Listen.h"
 
+using namespace libebus;
+
 SendResponse SendResponse::m_sendResponse;
 
 int SendResponse::run(EbusFSM* fsm)

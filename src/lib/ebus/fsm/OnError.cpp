@@ -23,6 +23,8 @@
 
 #include <unistd.h>
 
+using namespace libebus;
+
 OnError OnError::m_onError;
 
 int OnError::run(EbusFSM* fsm)

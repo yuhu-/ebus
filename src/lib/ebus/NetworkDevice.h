@@ -22,6 +22,9 @@
 
 #include "Device.h"
 
+namespace libebus
+{
+
 class NetworkDevice : public Device
 {
 
@@ -34,5 +37,7 @@ public:
 private:
 
 };
+
+} // namespace libebus
 
 #endif // LIBEBUS_NETWORKDEVICE_H

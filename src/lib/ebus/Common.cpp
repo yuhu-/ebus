@@ -37,12 +37,12 @@ static const unsigned char crcTable[] =
 	0x88, 0x7f, 0xe4, 0xd2, 0x49, 0x95, 0x0e, 0x38, 0xa3, 0x54, 0xcf, 0xf9, 0x62, 0x8c, 0x17, 0x21, 0xba, 0x4d,
 	0xd6, 0xe0, 0x7b };
 
-unsigned char calcCRC(const unsigned char byte, const unsigned char init)
+unsigned char libebus::calcCRC(const unsigned char byte, const unsigned char init)
 {
 	return ((unsigned char) (crcTable[init] ^ byte));
 }
 
-bool isMaster(const unsigned char byte)
+bool libebus::isMaster(const unsigned char byte)
 {
 	unsigned char hi = (byte & 0xf0) >> 4;
 	unsigned char lo = (byte & 0x0f);
@@ -51,17 +51,17 @@ bool isMaster(const unsigned char byte)
 		&& ((lo == 0x0) || (lo == 0x1) || (lo == 0x3) || (lo == 0x7) || (lo == 0xf)));
 }
 
-bool isSlave(const unsigned char byte)
+bool libebus::isSlave(const unsigned char byte)
 {
-	return (isMaster(byte) == false && byte != 0xaa && byte != 0xa9);
+	return (libebus::isMaster(byte) == false && byte != 0xaa && byte != 0xa9);
 }
 
-bool isValidAddress(const unsigned char byte)
+bool libebus::isValidAddress(const unsigned char byte)
 {
 	return (byte != 0xaa && byte != 0xa9);
 }
 
-unsigned char slaveAddress(const unsigned char masterAddress)
+unsigned char libebus::slaveAddress(const unsigned char masterAddress)
 {
 
 	return ((masterAddress + 0x05) & 0xff);

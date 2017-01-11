@@ -26,6 +26,7 @@
 #include <cstdlib>
 #include <map>
 
+using namespace libebus;
 using namespace libutils;
 
 using std::ostringstream;

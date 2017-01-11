@@ -22,6 +22,8 @@
 
 #include "Sequence.h"
 
+using libebus::Sequence;
+
 class Filter
 {
 

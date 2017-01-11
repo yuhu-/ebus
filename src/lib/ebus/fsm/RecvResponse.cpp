@@ -21,6 +21,8 @@
 #include "FreeBus.h"
 #include "Listen.h"
 
+using namespace libebus;
+
 RecvResponse RecvResponse::m_recvResponse;
 
 int RecvResponse::run(EbusFSM* fsm)

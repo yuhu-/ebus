@@ -30,6 +30,7 @@
 
 #include <unistd.h>
 
+using libebus::EbusDevice;
 using libutils::Options;
 using std::fstream;
 using std::ios;

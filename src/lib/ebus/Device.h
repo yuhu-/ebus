@@ -24,6 +24,9 @@
 
 using std::string;
 
+namespace libebus
+{
+
 #define DEV_WRN_EOF      2  // 0 bytes received
 #define DEV_WRN_TIMEOUT  1  // timeout during receive
 
@@ -60,5 +63,7 @@ private:
 	bool isValid();
 
 };
+
+} // namespace libebus
 
 #endif // LIBEBUS_DEVICE_H

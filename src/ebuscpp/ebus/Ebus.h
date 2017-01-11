@@ -23,6 +23,10 @@
 #include "EbusFSM.h"
 #include "EbusLogger.h"
 
+using libebus::IProcess;
+using libebus::EbusMessage;
+using libebus::EbusFSM;
+
 class Ebus
 {
 

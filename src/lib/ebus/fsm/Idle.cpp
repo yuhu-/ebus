@@ -19,6 +19,8 @@
 
 #include "Idle.h"
 
+using namespace libebus;
+
 Idle Idle::m_idle;
 
 int Idle::run(EbusFSM* fsm)

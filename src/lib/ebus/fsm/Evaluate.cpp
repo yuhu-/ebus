@@ -22,6 +22,8 @@
 #include "SendResponse.h"
 #include "Common.h"
 
+using namespace libebus;
+
 Evaluate Evaluate::m_evaluate;
 
 int Evaluate::run(EbusFSM* fsm)

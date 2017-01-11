@@ -24,6 +24,7 @@
 #include <iomanip>
 #include <map>
 
+using namespace libebus;
 using namespace libutils;
 
 using std::ios;

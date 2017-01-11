@@ -22,6 +22,7 @@
 #include <iostream>
 #include <iomanip>
 
+using libebus::EbusDevice;
 using std::cout;
 using std::endl;
 using std::hex;

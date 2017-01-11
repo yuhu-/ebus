@@ -27,6 +27,7 @@
 #include <sstream>
 #include <algorithm>
 
+using namespace libebus;
 using namespace libutils;
 
 using std::ios;

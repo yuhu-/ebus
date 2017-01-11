@@ -22,6 +22,8 @@
 #include <iostream>
 #include <iomanip>
 
+using libebus::Sequence;
+using libebus::EbusSequence;
 using std::cout;
 using std::endl;
 

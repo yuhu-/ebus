@@ -24,6 +24,9 @@
 
 #include <queue>
 
+namespace libebus
+{
+
 class EbusDevice
 {
 
@@ -56,5 +59,7 @@ private:
 	void setType(const Type type);
 
 };
+
+} // namespace libebus
 
 #endif // LIBEBUS_EBUSDEVICE_H

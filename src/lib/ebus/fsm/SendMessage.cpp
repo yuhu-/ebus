@@ -22,6 +22,8 @@
 #include "Listen.h"
 #include "RecvResponse.h"
 
+using namespace libebus;
+
 SendMessage SendMessage::m_sendMessage;
 
 int SendMessage::run(EbusFSM* fsm)

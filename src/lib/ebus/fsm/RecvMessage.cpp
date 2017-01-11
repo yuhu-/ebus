@@ -21,6 +21,8 @@
 #include "Evaluate.h"
 #include "Listen.h"
 
+using namespace libebus;
+
 RecvMessage RecvMessage::m_recvMessage;
 
 int RecvMessage::run(EbusFSM* fsm)

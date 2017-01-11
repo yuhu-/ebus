@@ -17,10 +17,13 @@
  * along with ebuscpp. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef EBUS_FSM_LOCKBUS_H
-#define EBUS_FSM_LOCKBUS_H
+#ifndef LIBEBUS_FSM_LOCKBUS_H
+#define LIBEBUS_FSM_LOCKBUS_H
 
 #include "State.h"
+
+namespace libebus
+{
 
 class LockBus : public State
 {
@@ -39,4 +42,6 @@ private:
 
 };
 
-#endif // EBUS_FSM_LOCKBUS_H
+} // namespace libebus
+
+#endif // LIBEBUS_FSM_LOCKBUS_H

@@ -17,10 +17,13 @@
  * along with ebuscpp. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef EBUS_FSM_IPROCESS_H
-#define EBUS_FSM_IPROCESS_H
+#ifndef LIBEBUS_FSM_IPROCESS_H
+#define LIBEBUS_FSM_IPROCESS_H
 
 #include "EbusSequence.h"
+
+namespace libebus
+{
 
 enum class Action
 {
@@ -44,4 +47,6 @@ public:
 
 };
 
-#endif // EBUS_FSM_IPROCESS_H
+} // namespace libebus
+
+#endif // LIBEBUS_FSM_IPROCESS_H
