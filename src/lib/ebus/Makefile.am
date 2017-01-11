@@ -19,7 +19,37 @@ libebus_a_SOURCES = Device.cpp \
 		    Sequence.cpp \
 		    Sequence.h \
 		    EbusSequence.cpp \
-		    EbusSequence.h
+		    EbusSequence.h \
+		    fsm/EbusMessage.cpp \
+		    fsm/EbusMessage.h \
+		    fsm/State.cpp \
+		    fsm/State.h \
+		    fsm/OnError.cpp \
+		    fsm/OnError.h \
+		    fsm/Idle.cpp \
+		    fsm/Idle.h \
+		    fsm/Connect.cpp \
+		    fsm/Connect.h \
+		    fsm/Listen.cpp \
+		    fsm/Listen.h \
+		    fsm/LockBus.cpp \
+		    fsm/LockBus.h \
+		    fsm/FreeBus.cpp \
+		    fsm/FreeBus.h \
+		    fsm/Evaluate.cpp \
+		    fsm/Evaluate.h \
+		    fsm/SendMessage.cpp \
+		    fsm/SendMessage.h \
+		    fsm/RecvMessage.cpp \
+		    fsm/RecvMessage.h \
+		    fsm/SendResponse.cpp \
+		    fsm/SendResponse.h \
+		    fsm/RecvResponse.cpp \
+		    fsm/RecvResponse.h \
+		    fsm/ILogger.h \
+		    fsm/IProcess.h \
+		    fsm/EbusFSM.cpp \
+		    fsm/EbusFSM.h
 
 distclean-local:
 	-rm -f Makefile.in

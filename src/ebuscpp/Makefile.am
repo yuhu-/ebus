@@ -3,13 +3,13 @@ AM_CXXFLAGS = -fpic \
 	      -Wextra \
 	      -std=c++14 \
 	      -isystem$(top_srcdir)/src/ebuscpp/network \
-	      -isystem$(top_srcdir)/src/ebuscpp/ebus/fsm \
 	      -isystem$(top_srcdir)/src/ebuscpp/ebus \
 	      -isystem$(top_srcdir)/src/ebuscpp/process/forward \
 	      -isystem$(top_srcdir)/src/ebuscpp/process \
 	      -isystem$(top_srcdir)/src/lib/utils \
 	      -isystem$(top_srcdir)/src/lib/logger \
 	      -isystem$(top_srcdir)/src/lib/network \
+	      -isystem$(top_srcdir)/src/lib/ebus/fsm \
 	      -isystem$(top_srcdir)/src/lib/ebus
 
 bin_PROGRAMS = ebusproxy
@@ -24,36 +24,6 @@ ebusproxy_SOURCES = network/NetMessage.cpp \
 		    network/UDPReceiver.h \
 		    network/Network.cpp \
 		    network/Network.h \
-		    ebus/fsm/EbusMessage.cpp \
-		    ebus/fsm/EbusMessage.h \
-		    ebus/fsm/State.cpp \
-		    ebus/fsm/State.h \
-		    ebus/fsm/OnError.cpp \
-		    ebus/fsm/OnError.h \
-		    ebus/fsm/Idle.cpp \
-		    ebus/fsm/Idle.h \
-		    ebus/fsm/Connect.cpp \
-		    ebus/fsm/Connect.h \
-		    ebus/fsm/Listen.cpp \
-		    ebus/fsm/Listen.h \
-		    ebus/fsm/LockBus.cpp \
-		    ebus/fsm/LockBus.h \
-		    ebus/fsm/FreeBus.cpp \
-		    ebus/fsm/FreeBus.h \
-		    ebus/fsm/Evaluate.cpp \
-		    ebus/fsm/Evaluate.h \
-		    ebus/fsm/SendMessage.cpp \
-		    ebus/fsm/SendMessage.h \
-		    ebus/fsm/RecvMessage.cpp \
-		    ebus/fsm/RecvMessage.h \
-		    ebus/fsm/SendResponse.cpp \
-		    ebus/fsm/SendResponse.h \
-		    ebus/fsm/RecvResponse.cpp \
-		    ebus/fsm/RecvResponse.h \
-		    ebus/fsm/ILogger.h \
-		    ebus/fsm/IProcess.h \
-		    ebus/fsm/EbusFSM.cpp \
-		    ebus/fsm/EbusFSM.h \
 		    ebus/EbusLogger.cpp \
 		    ebus/EbusLogger.h \
 		    ebus/Ebus.cpp \
