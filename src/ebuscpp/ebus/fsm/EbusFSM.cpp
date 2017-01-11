@@ -22,9 +22,12 @@
 #include "Idle.h"
 #include "OnError.h"
 #include "State.h"
+#include "Color.h"
 
 #include <sstream>
 #include <algorithm>
+
+using namespace libutils;
 
 using std::ios;
 using std::pair;
@@ -109,7 +112,7 @@ void EbusFSM::enqueue(EbusMessage* message)
 
 void EbusFSM::run()
 {
-	m_logger->info("started");
+	m_logger->info("FSM started");
 
 	while (m_running == true)
 	{
@@ -123,7 +126,7 @@ void EbusFSM::run()
 		}
 	}
 
-	m_logger->info("stopped");
+	m_logger->info("FSM stopped");
 }
 
 void EbusFSM::changeState(State* state)
@@ -131,7 +134,9 @@ void EbusFSM::changeState(State* state)
 	if (m_state != state)
 	{
 		m_state = state;
-		m_logger->debug(m_state->toString());
+		ostringstream ostr;
+		ostr << color::cyan << m_state->toString() << color::reset;
+		m_logger->debug(ostr.str());
 	}
 }
 

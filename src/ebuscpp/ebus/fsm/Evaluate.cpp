@@ -39,7 +39,7 @@ int Evaluate::run(EbusFSM* fsm)
 			fsm->m_logger->warn(stateMessage(STATE_WRN_NOT_DEF));
 			break;
 		case Action::ignore:
-			fsm->m_logger->debug("ignore");
+			fsm->m_logger->debug(stateMessage(STATE_INF_MSG_INGORE));
 			break;
 		case Action::response:
 			eSeq.setSlaveACK(ACK);

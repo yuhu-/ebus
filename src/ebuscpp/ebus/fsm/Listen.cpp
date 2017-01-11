@@ -22,6 +22,10 @@
 #include "RecvMessage.h"
 #include "Common.h"
 
+#include <string>
+
+using std::to_string;
+
 Listen Listen::m_listen;
 
 int Listen::run(EbusFSM* fsm)
@@ -36,7 +40,7 @@ int Listen::run(EbusFSM* fsm)
 		if (m_lockCounter != 0)
 		{
 			m_lockCounter--;
-			fsm->m_logger->debug("lockCounter: " + m_lockCounter);
+			fsm->m_logger->debug("lockCounter: " + to_string(m_lockCounter));
 		}
 
 		// decode EbusSequence
@@ -58,7 +62,7 @@ int Listen::run(EbusFSM* fsm)
 		// check for new EbusMessage
 		if (m_activeMessage == nullptr && fsm->m_ebusMsgQueue.size() != 0)
 		{
-			fsm->m_logger->debug("pending ebus messages: " + fsm->m_ebusMsgQueue.size());
+			fsm->m_logger->debug("pending ebus messages: " + to_string(fsm->m_ebusMsgQueue.size()));
 			m_activeMessage = fsm->m_ebusMsgQueue.dequeue();
 		}
 

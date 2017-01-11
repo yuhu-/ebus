@@ -47,6 +47,7 @@ map<int, string> StateMessages =
 { STATE_INF_EBUS_OFF, "ebus disconnected" },
 { STATE_INF_EBUS_LOCK, "ebus locked" },
 { STATE_INF_EBUS_FREE, "ebus freed" },
+{ STATE_INF_MSG_INGORE, "message ignored" },
 
 { STATE_WRN_BYTE_DIF, "written/read byte difference" },
 { STATE_WRN_ARB_LOST, "arbitration lost" },
@@ -84,7 +85,7 @@ int State::read(EbusFSM* fsm, unsigned char& byte, const long sec, const long ns
 		ostringstream ostr;
 		ostr << nouppercase << hex << setw(2) << setfill('0') << static_cast<unsigned>(byte) << nouppercase
 			<< setw(0);
-		fsm->m_logger->trace("<" + ostr.str() + "x");
+		fsm->m_logger->trace("<" + ostr.str());
 	}
 
 	if (fsm->m_dump == true && result == DEV_OK && fsm->m_dumpRawStream.is_open() == true)
@@ -119,7 +120,7 @@ int State::write(EbusFSM* fsm, const unsigned char& byte)
 		ostringstream ostr;
 		ostr << nouppercase << hex << setw(2) << setfill('0') << static_cast<unsigned>(byte) << nouppercase
 			<< setw(0);
-		fsm->m_logger->trace(">" + ostr.str() + "x");
+		fsm->m_logger->trace(">" + ostr.str());
 	}
 	return (result);
 }
