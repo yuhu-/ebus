@@ -24,13 +24,11 @@
 
 #include <string>
 
-using namespace libebus;
-
 using std::to_string;
 
-Listen Listen::m_listen;
+libebus::Listen libebus::Listen::m_listen;
 
-int Listen::run(EbusFSM* fsm)
+int libebus::Listen::run(EbusFSM* fsm)
 {
 	unsigned char byte = 0;
 
@@ -86,7 +84,7 @@ int Listen::run(EbusFSM* fsm)
 	return (result);
 }
 
-const string Listen::toString() const
+const string libebus::Listen::toString() const
 {
 	return ("Listen");
 }

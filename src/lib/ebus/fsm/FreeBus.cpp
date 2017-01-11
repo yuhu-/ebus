@@ -20,11 +20,9 @@
 #include "FreeBus.h"
 #include "Listen.h"
 
-using namespace libebus;
+libebus::FreeBus libebus::FreeBus::m_freeBus;
 
-FreeBus FreeBus::m_freeBus;
-
-int FreeBus::run(EbusFSM* fsm)
+int libebus::FreeBus::run(EbusFSM* fsm)
 {
 	unsigned char byte = SYN;
 
@@ -39,7 +37,7 @@ int FreeBus::run(EbusFSM* fsm)
 	return (result);
 }
 
-const string FreeBus::toString() const
+const string libebus::FreeBus::toString() const
 {
 	return ("FreeBus");
 }

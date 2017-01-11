@@ -23,11 +23,9 @@
 
 #include <unistd.h>
 
-using namespace libebus;
+libebus::LockBus libebus::LockBus::m_lockBus;
 
-LockBus LockBus::m_lockBus;
-
-int LockBus::run(EbusFSM* fsm)
+int libebus::LockBus::run(EbusFSM* fsm)
 {
 	EbusSequence& eSeq = m_activeMessage->getEbusSequence();
 	if (eSeq.getMasterState() != EBUS_OK)
@@ -90,7 +88,7 @@ int LockBus::run(EbusFSM* fsm)
 	return (result);
 }
 
-const string LockBus::toString() const
+const string libebus::LockBus::toString() const
 {
 	return ("LockBus");
 }

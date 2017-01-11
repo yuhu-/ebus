@@ -23,11 +23,9 @@
 
 #include <unistd.h>
 
-using namespace libebus;
+libebus::OnError libebus::OnError::m_onError;
 
-OnError OnError::m_onError;
-
-int OnError::run(EbusFSM* fsm)
+int libebus::OnError::run(EbusFSM* fsm)
 {
 	if (fsm->m_lastResult > DEV_OK)
 		fsm->m_logger->warn(fsm->m_ebusDevice->errorText(fsm->m_lastResult));
@@ -53,7 +51,7 @@ int OnError::run(EbusFSM* fsm)
 	return (DEV_OK);
 }
 
-const string OnError::toString() const
+const string libebus::OnError::toString() const
 {
 	return ("OnError");
 }

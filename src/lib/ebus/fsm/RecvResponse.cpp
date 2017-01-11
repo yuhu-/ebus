@@ -21,11 +21,9 @@
 #include "FreeBus.h"
 #include "Listen.h"
 
-using namespace libebus;
+libebus::RecvResponse libebus::RecvResponse::m_recvResponse;
 
-RecvResponse RecvResponse::m_recvResponse;
-
-int RecvResponse::run(EbusFSM* fsm)
+int libebus::RecvResponse::run(EbusFSM* fsm)
 {
 	EbusSequence& eSeq = m_activeMessage->getEbusSequence();
 	unsigned char byte;
@@ -99,7 +97,7 @@ int RecvResponse::run(EbusFSM* fsm)
 	return (result);
 }
 
-const string RecvResponse::toString() const
+const string libebus::RecvResponse::toString() const
 {
 	return ("RecvResponse");
 }

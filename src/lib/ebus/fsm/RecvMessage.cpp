@@ -21,11 +21,9 @@
 #include "Evaluate.h"
 #include "Listen.h"
 
-using namespace libebus;
+libebus::RecvMessage libebus::RecvMessage::m_recvMessage;
 
-RecvMessage RecvMessage::m_recvMessage;
-
-int RecvMessage::run(EbusFSM* fsm)
+int libebus::RecvMessage::run(EbusFSM* fsm)
 {
 	int result;
 	unsigned char byte;
@@ -117,7 +115,7 @@ int RecvMessage::run(EbusFSM* fsm)
 	return (DEV_OK);
 }
 
-const string RecvMessage::toString() const
+const string libebus::RecvMessage::toString() const
 {
 	return ("RecvMessage");
 }

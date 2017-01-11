@@ -21,31 +21,29 @@
 
 #include <sstream>
 
-using namespace libebus;
-
 using std::ostringstream;
 
-EbusMessage::EbusMessage(EbusSequence& eSeq, bool intern)
+libebus::EbusMessage::EbusMessage(EbusSequence& eSeq, bool intern)
 	: Notify(), m_ebusSequence(eSeq), m_intern(intern)
 {
 }
 
-EbusSequence& EbusMessage::getEbusSequence()
+libebus::EbusSequence& libebus::EbusMessage::getEbusSequence()
 {
 	return (m_ebusSequence);
 }
 
-bool EbusMessage::isIntern() const
+bool libebus::EbusMessage::isIntern() const
 {
 	return (m_intern);
 }
 
-void EbusMessage::setResult(const string& result)
+void libebus::EbusMessage::setResult(const string& result)
 {
 	m_result = result;
 }
 
-const string EbusMessage::getResult()
+const string libebus::EbusMessage::getResult()
 {
 	ostringstream ostr;
 

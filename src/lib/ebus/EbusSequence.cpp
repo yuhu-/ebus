@@ -31,7 +31,7 @@ using libutils::color::blue;
 using libutils::color::cyan;
 using libutils::color::magenta;
 using libutils::color::red;
-using libutils::color::reset;
+using libutils::color::blank;
 using std::ostringstream;
 using std::nouppercase;
 using std::hex;
@@ -384,11 +384,11 @@ const string libebus::EbusSequence::toStringLog()
 	if (m_masterState != EBUS_OK) return (toStringMaster());
 
 	if (m_type == EBUS_TYPE_BC)
-		ostr << blue << "BC" << reset << " " << toStringMaster();
+		ostr << blue << "BC" << blank << " " << toStringMaster();
 	else if (m_type == EBUS_TYPE_MM)
-		ostr << cyan << "MM" << reset << " " << toStringMaster();
+		ostr << cyan << "MM" << blank << " " << toStringMaster();
 	else
-		ostr << magenta << "MS" << reset << " " << toStringMaster();
+		ostr << magenta << "MS" << blank << " " << toStringMaster();
 
 	if (m_type == EBUS_TYPE_MM) ostr << " " << toStringMasterACK();
 
@@ -401,7 +401,7 @@ const string libebus::EbusSequence::toStringMaster()
 {
 	ostringstream ostr;
 	if (m_masterState != EBUS_OK)
-		ostr << red << m_master.toString() << " Master " << errorText(m_masterState) << reset;
+		ostr << red << m_master.toString() << " Master " << errorText(m_masterState) << blank;
 	else
 		ostr << m_master.toString();
 
@@ -412,7 +412,7 @@ const string libebus::EbusSequence::toStringMasterCRC()
 {
 	ostringstream ostr;
 	if (m_masterState != EBUS_OK)
-		ostr << red << m_master.toString() << " Master " << errorText(m_masterState) << reset;
+		ostr << red << m_master.toString() << " Master " << errorText(m_masterState) << blank;
 	else
 		ostr << nouppercase << hex << setw(2) << setfill('0') << static_cast<unsigned>(m_masterCRC);
 
@@ -423,7 +423,7 @@ const string libebus::EbusSequence::toStringMasterACK()
 {
 	ostringstream ostr;
 	if (m_masterState != EBUS_OK)
-		ostr << red << m_master.toString() << " Master " << errorText(m_masterState) << reset;
+		ostr << red << m_master.toString() << " Master " << errorText(m_masterState) << blank;
 	else
 		ostr << nouppercase << hex << setw(2) << setfill('0') << static_cast<unsigned>(m_masterACK);
 
@@ -434,7 +434,7 @@ const string libebus::EbusSequence::toStringSlave()
 {
 	ostringstream ostr;
 	if (m_slaveState != EBUS_OK)
-		ostr << red << m_slave.toString() << " Slave " << errorText(m_slaveState) << reset;
+		ostr << red << m_slave.toString() << " Slave " << errorText(m_slaveState) << blank;
 	else
 		ostr << m_slave.toString();
 
@@ -445,7 +445,7 @@ const string libebus::EbusSequence::toStringSlaveCRC()
 {
 	ostringstream ostr;
 	if (m_slaveState != EBUS_OK)
-		ostr << red << m_slave.toString() << " Slave " << errorText(m_slaveState) << reset;
+		ostr << red << m_slave.toString() << " Slave " << errorText(m_slaveState) << blank;
 	else
 		ostr << nouppercase << hex << setw(2) << setfill('0') << static_cast<unsigned>(m_slaveCRC);
 
@@ -456,7 +456,7 @@ const string libebus::EbusSequence::toStringSlaveACK()
 {
 	ostringstream ostr;
 	if (m_slaveState != EBUS_OK)
-		ostr << red << m_slave.toString() << " Slave " << errorText(m_slaveState) << reset;
+		ostr << red << m_slave.toString() << " Slave " << errorText(m_slaveState) << blank;
 	else
 		ostr << nouppercase << hex << setw(2) << setfill('0') << static_cast<unsigned>(m_slaveACK);
 

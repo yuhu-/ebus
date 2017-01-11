@@ -47,7 +47,7 @@ inline bool istty(const ostream& ostr)
 	return (false);
 }
 
-inline ostream& reset(ostream& ostr)
+inline ostream& blank(ostream& ostr)
 {
 	if (ostr) ostr << ("\033[0m");
 

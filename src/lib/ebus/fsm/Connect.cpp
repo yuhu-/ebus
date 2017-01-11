@@ -23,13 +23,11 @@
 
 #include <sstream>
 
-using namespace libebus;
-
 using std::ostringstream;
 
-Connect Connect::m_connect;
+libebus::Connect libebus::Connect::m_connect;
 
-int Connect::run(EbusFSM* fsm)
+int libebus::Connect::run(EbusFSM* fsm)
 {
 	int result = DEV_OK;
 
@@ -56,7 +54,7 @@ int Connect::run(EbusFSM* fsm)
 	return (result);
 }
 
-const string Connect::toString() const
+const string libebus::Connect::toString() const
 {
 	return ("Connect");
 }

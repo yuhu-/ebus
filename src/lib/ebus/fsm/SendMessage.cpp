@@ -22,11 +22,9 @@
 #include "Listen.h"
 #include "RecvResponse.h"
 
-using namespace libebus;
+libebus::SendMessage libebus::SendMessage::m_sendMessage;
 
-SendMessage SendMessage::m_sendMessage;
-
-int SendMessage::run(EbusFSM* fsm)
+int libebus::SendMessage::run(EbusFSM* fsm)
 {
 	EbusSequence& eSeq = m_activeMessage->getEbusSequence();
 	int result;
@@ -100,7 +98,7 @@ int SendMessage::run(EbusFSM* fsm)
 	return (result);
 }
 
-const string SendMessage::toString() const
+const string libebus::SendMessage::toString() const
 {
 	return ("SendMessage");
 }

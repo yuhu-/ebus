@@ -27,18 +27,18 @@
 #include <sstream>
 #include <algorithm>
 
-using namespace libebus;
-using namespace libutils;
-
+using libutils::color::cyan;
+using libutils::color::blank;
 using std::ios;
 using std::pair;
 using std::ostringstream;
 using std::copy_n;
 using std::back_inserter;
 
-EbusFSM::EbusFSM(const unsigned char address, const string device, const bool noDeviceCheck, const long reopenTime,
-	const long arbitrationTime, const long receiveTimeout, const int lockCounter, const int lockRetries,
-	const bool dump, const string dumpFile, const long dumpFileMaxSize, IProcess* process, ILogger* logger)
+libebus::EbusFSM::EbusFSM(const unsigned char address, const string device, const bool noDeviceCheck,
+	const long reopenTime, const long arbitrationTime, const long receiveTimeout, const int lockCounter,
+	const int lockRetries, const bool dump, const string dumpFile, const long dumpFileMaxSize, IProcess* process,
+	ILogger* logger)
 	: Notify(), m_address(address), m_reopenTime(reopenTime), m_arbitrationTime(arbitrationTime), m_receiveTimeout(
 		receiveTimeout), m_lockCounter(lockCounter), m_lockRetries(lockRetries), m_lastResult(
 	DEV_OK), m_dumpFile(dumpFile), m_dumpFileMaxSize(dumpFileMaxSize), m_process(process), m_logger(logger)
@@ -49,7 +49,7 @@ EbusFSM::EbusFSM(const unsigned char address, const string device, const bool no
 	setDump(dump);
 }
 
-EbusFSM::~EbusFSM()
+libebus::EbusFSM::~EbusFSM()
 {
 	if (m_ebusDevice != nullptr)
 	{
@@ -60,12 +60,12 @@ EbusFSM::~EbusFSM()
 	m_dumpRawStream.close();
 }
 
-void EbusFSM::start()
+void libebus::EbusFSM::start()
 {
 	m_thread = thread(&EbusFSM::run, this);
 }
 
-void EbusFSM::stop()
+void libebus::EbusFSM::stop()
 {
 	m_forceState = Idle::getIdle();
 	notify();
@@ -73,23 +73,23 @@ void EbusFSM::stop()
 	m_thread.join();
 }
 
-void EbusFSM::open()
+void libebus::EbusFSM::open()
 {
 	m_forceState = Connect::getConnect();
 	notify();
 }
 
-void EbusFSM::close()
+void libebus::EbusFSM::close()
 {
 	m_forceState = Idle::getIdle();
 }
 
-bool EbusFSM::getDump() const
+bool libebus::EbusFSM::getDump() const
 {
 	return (m_dump);
 }
 
-void EbusFSM::setDump(bool dump)
+void libebus::EbusFSM::setDump(bool dump)
 {
 	if (dump == m_dump) return;
 
@@ -106,12 +106,12 @@ void EbusFSM::setDump(bool dump)
 	}
 }
 
-void EbusFSM::enqueue(EbusMessage* message)
+void libebus::EbusFSM::enqueue(EbusMessage* message)
 {
 	m_ebusMsgQueue.enqueue(message);
 }
 
-void EbusFSM::run()
+void libebus::EbusFSM::run()
 {
 	m_logger->info("FSM started");
 
@@ -130,13 +130,13 @@ void EbusFSM::run()
 	m_logger->info("FSM stopped");
 }
 
-void EbusFSM::changeState(State* state)
+void libebus::EbusFSM::changeState(State* state)
 {
 	if (m_state != state)
 	{
 		m_state = state;
 		ostringstream ostr;
-		ostr << color::cyan << m_state->toString() << color::reset;
+		ostr << cyan << m_state->toString() << blank;
 		m_logger->debug(ostr.str());
 	}
 }

@@ -24,9 +24,10 @@
 #include <iomanip>
 #include <map>
 
-using namespace libebus;
-using namespace libutils;
-
+using libutils::color::green;
+using libutils::color::yellow;
+using libutils::color::red;
+using libutils::color::blank;
 using std::ios;
 using std::map;
 using std::ostringstream;
@@ -35,12 +36,12 @@ using std::hex;
 using std::setw;
 using std::setfill;
 
-long State::m_reopenTime = 0;
-int State::m_lockCounter = 0;
-int State::m_lockRetries = 0;
-Sequence State::m_sequence;
-EbusMessage* State::m_activeMessage = nullptr;
-EbusMessage* State::m_passiveMessage = nullptr;
+long libebus::State::m_reopenTime = 0;
+int libebus::State::m_lockCounter = 0;
+int libebus::State::m_lockRetries = 0;
+libebus::Sequence libebus::State::m_sequence;
+libebus::EbusMessage* libebus::State::m_activeMessage = nullptr;
+libebus::EbusMessage* libebus::State::m_passiveMessage = nullptr;
 
 map<int, string> StateMessages =
 {
@@ -68,16 +69,16 @@ map<int, string> StateMessages =
 { STATE_ERR_CREA_MSG, "creating message failed" },
 { STATE_ERR_SEND_FAIL, "sending response message failed" } };
 
-State::~State()
+libebus::State::~State()
 {
 }
 
-void State::changeState(EbusFSM* fsm, State* state)
+void libebus::State::changeState(EbusFSM* fsm, State* state)
 {
 	fsm->changeState(state);
 }
 
-int State::read(EbusFSM* fsm, unsigned char& byte, const long sec, const long nsec)
+int libebus::State::read(EbusFSM* fsm, unsigned char& byte, const long sec, const long nsec)
 {
 	int result = fsm->m_ebusDevice->recv(byte, sec, nsec);
 
@@ -112,7 +113,7 @@ int State::read(EbusFSM* fsm, unsigned char& byte, const long sec, const long ns
 	return (result);
 }
 
-int State::write(EbusFSM* fsm, const unsigned char& byte)
+int libebus::State::write(EbusFSM* fsm, const unsigned char& byte)
 {
 	int result = fsm->m_ebusDevice->send(byte);
 
@@ -126,7 +127,7 @@ int State::write(EbusFSM* fsm, const unsigned char& byte)
 	return (result);
 }
 
-int State::writeRead(EbusFSM* fsm, const unsigned char& byte, const long timeout)
+int libebus::State::writeRead(EbusFSM* fsm, const unsigned char& byte, const long timeout)
 {
 	int result = State::write(fsm, byte);
 
@@ -141,7 +142,7 @@ int State::writeRead(EbusFSM* fsm, const unsigned char& byte, const long timeout
 	return (result);
 }
 
-void State::reset(EbusFSM* fsm)
+void libebus::State::reset(EbusFSM* fsm)
 {
 	m_reopenTime = 0;
 	m_lockCounter = fsm->m_lockCounter;
@@ -169,18 +170,18 @@ void State::reset(EbusFSM* fsm)
 	}
 }
 
-const string State::stateMessage(const int state)
+const string libebus::State::stateMessage(const int state)
 {
 	ostringstream ostr;
 
 	if (state < 11)
-		ostr << color::green << StateMessages[state];
+		ostr << green << StateMessages[state];
 	else if (state < 21)
-		ostr << color::yellow << StateMessages[state];
+		ostr << yellow << StateMessages[state];
 	else
-		ostr << color::red << StateMessages[state];
+		ostr << red << StateMessages[state];
 
-	ostr << color::reset;
+	ostr << blank;
 
 	return (ostr.str());
 }

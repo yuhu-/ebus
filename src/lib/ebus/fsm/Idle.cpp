@@ -19,11 +19,9 @@
 
 #include "Idle.h"
 
-using namespace libebus;
+libebus::Idle libebus::Idle::m_idle;
 
-Idle Idle::m_idle;
-
-int Idle::run(EbusFSM* fsm)
+int libebus::Idle::run(EbusFSM* fsm)
 {
 	if (fsm->m_ebusDevice->isOpen() == true)
 	{
@@ -39,7 +37,7 @@ int Idle::run(EbusFSM* fsm)
 	return (DEV_OK);
 }
 
-const string Idle::toString() const
+const string libebus::Idle::toString() const
 {
 	return ("Idle");
 }

@@ -22,11 +22,9 @@
 #include "SendResponse.h"
 #include "Common.h"
 
-using namespace libebus;
+libebus::Evaluate libebus::Evaluate::m_evaluate;
 
-Evaluate Evaluate::m_evaluate;
-
-int Evaluate::run(EbusFSM* fsm)
+int libebus::Evaluate::run(EbusFSM* fsm)
 {
 	if (fsm->m_process != nullptr)
 	{
@@ -85,7 +83,7 @@ int Evaluate::run(EbusFSM* fsm)
 	return (DEV_OK);
 }
 
-const string Evaluate::toString() const
+const string libebus::Evaluate::toString() const
 {
 	return ("Evaluate");
 }
