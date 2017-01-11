@@ -102,7 +102,6 @@ void shutdown()
 	// stop logger
 	LIBLOGGER_INFO("stopped");
 
-	LIBLOGGER_STOP();
 	exit(EXIT_SUCCESS);
 
 }
@@ -139,25 +138,21 @@ int main(int argc, char* argv[])
 
 	if (options.getBool("foreground") == true)
 	{
-		LIBLOGGER_CONSOLE();
+		LIBLOGGER_CONSOLE(options.getString("loglevel"));
 	}
 	else
 	{
 		// make me daemon
 		Daemon::getDaemon().start(options.getString("pidfile"));
-		LIBLOGGER_FILE(options.getString("logfile"));
+		LIBLOGGER_FILE(options.getString("loglevel"), options.getString("logfile"));
 	}
+
+	LIBLOGGER_INFO("started");
 
 	// trap signals that we expect to receive
 	signal(SIGHUP, signal_handler);
 	signal(SIGINT, signal_handler);
 	signal(SIGTERM, signal_handler);
-
-	// start logger
-	LIBLOGGER_LEVEL(options.getString("loglevel"));
-	LIBLOGGER_START();
-
-	LIBLOGGER_INFO("started");
 
 	// create baseloop
 	baseloop = new BaseLoop();

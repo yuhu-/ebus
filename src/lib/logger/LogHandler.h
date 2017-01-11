@@ -60,7 +60,6 @@ public:
 	~LogHandler();
 
 	void start();
-	void stop();
 
 	Level getLevel() const;
 	string getLevelName(Level level);

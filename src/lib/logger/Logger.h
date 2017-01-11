@@ -31,13 +31,9 @@ class Logger
 public:
 	explicit Logger(const string& function);
 
-	void start();
-	void stop();
+	void start(const string& level, const string& file = "");
 
 	void setLevel(const string& level);
-
-	void addConsole();
-	void addFile(const string& file);
 
 	template<typename Data, typename ... Args>
 	void error(Data data, Args ... args)
@@ -73,6 +69,9 @@ private:
 	LogHandler& m_logHandler;
 	const string m_function;
 
+	void addConsole();
+	void addFile(const string& file);
+
 	void log(const Level level, const string data, ...);
 
 };
@@ -89,13 +88,10 @@ inline const string getClassMethod(const string& prettyFunction)
 
 #define __CLASS_METHOD__ getClassMethod(__PRETTY_FUNCTION__)
 
-#define LIBLOGGER_START() liblogger::Logger(__CLASS_METHOD__).start()
-#define LIBLOGGER_STOP() liblogger::Logger(__CLASS_METHOD__).stop()
+#define LIBLOGGER_CONSOLE(level) liblogger::Logger(__CLASS_METHOD__).start(level)
+#define LIBLOGGER_FILE(level, file) liblogger::Logger(__CLASS_METHOD__).start(level, file)
 
 #define LIBLOGGER_LEVEL(level) liblogger::Logger(__CLASS_METHOD__).setLevel(level)
-
-#define LIBLOGGER_CONSOLE() liblogger::Logger(__CLASS_METHOD__).addConsole()
-#define LIBLOGGER_FILE(file) liblogger::Logger(__CLASS_METHOD__).addFile(file)
 
 #define LIBLOGGER_ERROR(data, ...) liblogger::Logger(__CLASS_METHOD__).error(data, ##__VA_ARGS__)
 #define LIBLOGGER_WARN(data, ...) liblogger::Logger(__CLASS_METHOD__).warn(data, ##__VA_ARGS__)

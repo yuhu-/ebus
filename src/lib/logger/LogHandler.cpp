@@ -46,20 +46,17 @@ LogHandler::~LogHandler()
 {
 	while (m_sinks.size() > 0)
 		delSink(*(m_sinks.begin()));
-}
 
-void LogHandler::start()
-{
-	m_thread = thread(&LogHandler::run, this);
-}
-
-void LogHandler::stop()
-{
 	if (m_thread.joinable())
 	{
 		m_logMessages.enqueue(nullptr);
 		m_thread.join();
 	}
+}
+
+void LogHandler::start()
+{
+	m_thread = thread(&LogHandler::run, this);
 }
 
 Level LogHandler::getLevel() const

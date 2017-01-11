@@ -28,14 +28,16 @@ Logger::Logger(const string& function)
 {
 }
 
-void Logger::start()
+void Logger::start(const string& level, const string& file)
 {
-	m_logHandler.start();
-}
+	setLevel(level);
 
-void Logger::stop()
-{
-	m_logHandler.stop();
+	if (file.empty() == true)
+		m_logHandler.addConsole();
+	else
+		m_logHandler.addFile(file);
+
+	m_logHandler.start();
 }
 
 void Logger::setLevel(const string& level)
