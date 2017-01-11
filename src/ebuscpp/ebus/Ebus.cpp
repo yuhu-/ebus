@@ -24,7 +24,7 @@ Ebus::Ebus(const unsigned char address, const string device, const bool noDevice
 	const bool dump, const string dumpFile, const long dumpFileMaxSize, IProcess* process)
 {
 	m_ebusFSM = new EbusFSM(address, device, noDeviceCheck, reopenTime, arbitrationTime, receiveTimeout,
-		lockCounter, lockRetries, dump, dumpFile, dumpFileMaxSize, process);
+		lockCounter, lockRetries, dump, dumpFile, dumpFileMaxSize, process, &m_logger);
 
 	m_ebusFSM->start();
 }

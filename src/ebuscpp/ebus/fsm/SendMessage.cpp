@@ -21,7 +21,6 @@
 #include "FreeBus.h"
 #include "Listen.h"
 #include "RecvResponse.h"
-#include "Logger.h"
 
 SendMessage SendMessage::m_sendMessage;
 
@@ -46,7 +45,7 @@ int SendMessage::run(EbusFSM* fsm)
 		// Broadcast ends here
 		if (eSeq.getType() == EBUS_TYPE_BC)
 		{
-			LIBLOGGER_INFO("%s done", eSeq.toStringLog().c_str());
+			fsm->m_logger->info(eSeq.toStringLog() + " done");
 			fsm->changeState(FreeBus::getFreeBus());
 			break;
 		}
@@ -59,7 +58,7 @@ int SendMessage::run(EbusFSM* fsm)
 
 		if (byte != ACK && byte != NAK)
 		{
-			LIBLOGGER_WARN("%s", stateMessage(STATE_ERR_ACK_WRONG).c_str());
+			fsm->m_logger->warn(stateMessage(STATE_ERR_ACK_WRONG));
 			m_activeMessage->setResult(stateMessage(STATE_ERR_ACK_WRONG));
 
 			fsm->changeState(FreeBus::getFreeBus());
@@ -70,7 +69,7 @@ int SendMessage::run(EbusFSM* fsm)
 			// Master Master ends here
 			if (eSeq.getType() == EBUS_TYPE_MM)
 			{
-				LIBLOGGER_INFO("%s done", eSeq.toStringLog().c_str());
+				fsm->m_logger->info(eSeq.toStringLog() + " done");
 				fsm->changeState(FreeBus::getFreeBus());
 			}
 			else
@@ -84,11 +83,11 @@ int SendMessage::run(EbusFSM* fsm)
 		{
 			if (retry == 1)
 			{
-				LIBLOGGER_DEBUG("%s", stateMessage(STATE_WRN_ACK_NEG).c_str());
+				fsm->m_logger->debug(stateMessage(STATE_WRN_ACK_NEG));
 			}
 			else
 			{
-				LIBLOGGER_WARN("%s", stateMessage(STATE_ERR_ACK_NEG).c_str());
+				fsm->m_logger->warn(stateMessage(STATE_ERR_ACK_NEG));
 				m_activeMessage->setResult(stateMessage(STATE_ERR_ACK_NEG));
 
 				fsm->changeState(FreeBus::getFreeBus());

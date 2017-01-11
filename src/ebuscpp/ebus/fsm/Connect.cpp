@@ -20,7 +20,6 @@
 #include "Connect.h"
 #include "Idle.h"
 #include "Listen.h"
-#include "Logger.h"
 
 #include <sstream>
 
@@ -38,7 +37,7 @@ int Connect::run(EbusFSM* fsm)
 
 		if (fsm->m_ebusDevice->isOpen() == true && result == DEV_OK)
 		{
-			LIBLOGGER_INFO("%s", stateMessage(STATE_INF_EBUS_ON).c_str());
+			fsm->m_logger->info(stateMessage(STATE_INF_EBUS_ON));
 		}
 		else
 		{

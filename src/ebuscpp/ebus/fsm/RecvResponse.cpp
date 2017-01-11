@@ -20,7 +20,6 @@
 #include "RecvResponse.h"
 #include "FreeBus.h"
 #include "Listen.h"
-#include "Logger.h"
 
 RecvResponse RecvResponse::m_recvResponse;
 
@@ -40,7 +39,7 @@ int RecvResponse::run(EbusFSM* fsm)
 		// check against max. possible size
 		if (byte > 0x10)
 		{
-			LIBLOGGER_WARN("%s", stateMessage(STATE_ERR_NN_WRONG).c_str());
+			fsm->m_logger->warn(stateMessage(STATE_ERR_NN_WRONG));
 			reset(fsm);
 			fsm->changeState(Listen::getListen());
 			return (DEV_OK);
@@ -77,18 +76,18 @@ int RecvResponse::run(EbusFSM* fsm)
 
 		if (eSeq.getSlaveState() == EBUS_OK)
 		{
-			LIBLOGGER_INFO("%s done", eSeq.toStringLog().c_str());
+			fsm->m_logger->info(eSeq.toStringLog() + " done");
 			break;
 		}
 
 		if (retry == 1)
 		{
 			seq.clear();
-			LIBLOGGER_DEBUG("%s", stateMessage(STATE_WRN_RECV_RESP).c_str());
+			fsm->m_logger->debug(stateMessage(STATE_WRN_RECV_RESP));
 		}
 		else
 		{
-			LIBLOGGER_WARN("%s", stateMessage(STATE_ERR_RECV_RESP).c_str());
+			fsm->m_logger->warn(stateMessage(STATE_ERR_RECV_RESP));
 			m_activeMessage->setResult(stateMessage(STATE_ERR_RECV_RESP));
 		}
 	}

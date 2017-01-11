@@ -17,37 +17,27 @@
  * along with ebuscpp. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef EBUS_EBUS_H
-#define EBUS_EBUS_H
+#ifndef EBUS_FSM_ILOGGER_H
+#define EBUS_FSM_ILOGGER_H
 
-#include "EbusFSM.h"
-#include "EbusLogger.h"
+#include <string>
 
-class Ebus
+using std::string;
+
+class ILogger
 {
 
 public:
-	Ebus(const unsigned char address, const string device, const bool noDeviceCheck, const long reopenTime,
-		const long arbitrationTime, const long receiveTimeout, const int lockCounter, const int lockRetries,
-		const bool dump, const string dumpFile, const long dumpFileMaxSize, IProcess* process);
+	virtual ~ILogger()
+	{
+	}
 
-	~Ebus();
-
-	void open();
-	void close();
-
-	bool getDump() const;
-	void setDump(bool dump);
-
-	void enqueue(EbusMessage* message);
-
-private:
-	Ebus(const Ebus&);
-	Ebus& operator=(const Ebus&);
-
-	EbusLogger m_logger;
-	EbusFSM* m_ebusFSM = nullptr;
+	virtual void error(const string& message) = 0;
+	virtual void warn(const string& message) = 0;
+	virtual void info(const string& message) = 0;
+	virtual void debug(const string& message) = 0;
+	virtual void trace(const string& message) = 0;
 
 };
 
-#endif // EBUS_EBUS_H
+#endif // EBUS_FSM_ILOGGER_H

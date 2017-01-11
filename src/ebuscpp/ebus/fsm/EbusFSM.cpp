@@ -22,11 +22,9 @@
 #include "Idle.h"
 #include "OnError.h"
 #include "State.h"
-#include "Logger.h"
 
 #include <sstream>
 #include <algorithm>
-
 
 using std::ios;
 using std::pair;
@@ -36,10 +34,10 @@ using std::back_inserter;
 
 EbusFSM::EbusFSM(const unsigned char address, const string device, const bool noDeviceCheck, const long reopenTime,
 	const long arbitrationTime, const long receiveTimeout, const int lockCounter, const int lockRetries,
-	const bool dump, const string dumpFile, const long dumpFileMaxSize, IProcess* process)
+	const bool dump, const string dumpFile, const long dumpFileMaxSize, IProcess* process, ILogger* logger)
 	: Notify(), m_address(address), m_reopenTime(reopenTime), m_arbitrationTime(arbitrationTime), m_receiveTimeout(
 		receiveTimeout), m_lockCounter(lockCounter), m_lockRetries(lockRetries), m_lastResult(
-	DEV_OK), m_dumpFile(dumpFile), m_dumpFileMaxSize(dumpFileMaxSize), m_process(process)
+	DEV_OK), m_dumpFile(dumpFile), m_dumpFileMaxSize(dumpFileMaxSize), m_process(process), m_logger(logger)
 {
 	m_ebusDevice = new EbusDevice(device, noDeviceCheck);
 	changeState(Connect::getConnect());
@@ -111,7 +109,7 @@ void EbusFSM::enqueue(EbusMessage* message)
 
 void EbusFSM::run()
 {
-	LIBLOGGER_INFO("started");
+	m_logger->info("started");
 
 	while (m_running == true)
 	{
@@ -125,7 +123,7 @@ void EbusFSM::run()
 		}
 	}
 
-	LIBLOGGER_INFO("stopped");
+	m_logger->info("stopped");
 }
 
 void EbusFSM::changeState(State* state)
@@ -133,7 +131,7 @@ void EbusFSM::changeState(State* state)
 	if (m_state != state)
 	{
 		m_state = state;
-		LIBLOGGER_DEBUG("%s", m_state->toString().c_str());
+		m_logger->debug(m_state->toString());
 	}
 }
 

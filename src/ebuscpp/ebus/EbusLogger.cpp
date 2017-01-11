@@ -17,37 +17,32 @@
  * along with ebuscpp. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef EBUS_EBUS_H
-#define EBUS_EBUS_H
-
-#include "EbusFSM.h"
 #include "EbusLogger.h"
+#include "Logger.h"
 
-class Ebus
+void EbusLogger::error(const string& message)
 {
+	LIBLOGGER_ERROR(message);
+}
 
-public:
-	Ebus(const unsigned char address, const string device, const bool noDeviceCheck, const long reopenTime,
-		const long arbitrationTime, const long receiveTimeout, const int lockCounter, const int lockRetries,
-		const bool dump, const string dumpFile, const long dumpFileMaxSize, IProcess* process);
+void EbusLogger::warn(const string& message)
+{
+	LIBLOGGER_WARN(message);
+}
 
-	~Ebus();
+void EbusLogger::info(const string& message)
+{
+	LIBLOGGER_INFO(message);
+}
 
-	void open();
-	void close();
+void EbusLogger::debug(const string& message)
+{
+	LIBLOGGER_DEBUG(message);
+}
 
-	bool getDump() const;
-	void setDump(bool dump);
+void EbusLogger::trace(const string& message)
+{
+	LIBLOGGER_TRACE(message);
+}
 
-	void enqueue(EbusMessage* message);
 
-private:
-	Ebus(const Ebus&);
-	Ebus& operator=(const Ebus&);
-
-	EbusLogger m_logger;
-	EbusFSM* m_ebusFSM = nullptr;
-
-};
-
-#endif // EBUS_EBUS_H

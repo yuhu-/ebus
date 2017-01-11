@@ -18,7 +18,6 @@
  */
 
 #include "Idle.h"
-#include "Logger.h"
 
 Idle Idle::m_idle;
 
@@ -28,7 +27,7 @@ int Idle::run(EbusFSM* fsm)
 	{
 		fsm->m_ebusDevice->close();
 
-		if (fsm->m_ebusDevice->isOpen() == false) LIBLOGGER_INFO("%s", stateMessage(STATE_INF_EBUS_OFF).c_str());
+		if (fsm->m_ebusDevice->isOpen() == false) fsm->m_logger->info(stateMessage(STATE_INF_EBUS_OFF));
 	}
 
 	reset(fsm);

@@ -19,8 +19,8 @@
 #ifndef EBUS_FSM_EBUSFSM_H
 #define EBUS_FSM_EBUSFSM_H
 
-#include "EbusMessage.h"
 #include "IProcess.h"
+#include "ILogger.h"
 #include "EbusDevice.h"
 #include "NQueue.h"
 #include "Notify.h"
@@ -28,6 +28,7 @@
 #include <fstream>
 #include <thread>
 #include <map>
+#include "EbusMessage.h"
 
 using libutils::NQueue;
 using std::ofstream;
@@ -54,7 +55,7 @@ class EbusFSM : public Notify
 public:
 	EbusFSM(const unsigned char address, const string device, const bool noDeviceCheck, const long reopenTime,
 		const long arbitrationTime, const long receiveTimeout, const int lockCounter, const int lockRetries,
-		const bool dump, const string dumpFile, const long dumpFileMaxSize, IProcess* process);
+		const bool dump, const string dumpFile, const long dumpFileMaxSize, IProcess* process, ILogger* logger);
 
 	~EbusFSM();
 
@@ -97,6 +98,7 @@ private:
 	ofstream m_dumpRawStream;
 
 	IProcess* m_process = nullptr;
+	ILogger* m_logger = nullptr;
 
 	NQueue<EbusMessage*> m_ebusMsgQueue;
 

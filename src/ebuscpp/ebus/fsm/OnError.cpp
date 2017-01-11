@@ -20,7 +20,6 @@
 #include "OnError.h"
 #include "Connect.h"
 #include "Listen.h"
-#include "Logger.h"
 
 #include <unistd.h>
 
@@ -29,9 +28,9 @@ OnError OnError::m_onError;
 int OnError::run(EbusFSM* fsm)
 {
 	if (fsm->m_lastResult > DEV_OK)
-		LIBLOGGER_WARN("%s", fsm->m_ebusDevice->errorText(fsm->m_lastResult).c_str());
+		fsm->m_logger->warn(fsm->m_ebusDevice->errorText(fsm->m_lastResult));
 	else
-		LIBLOGGER_ERROR("%s", fsm->m_ebusDevice->errorText(fsm->m_lastResult).c_str());
+		fsm->m_logger->error(fsm->m_ebusDevice->errorText(fsm->m_lastResult));
 
 	if (m_activeMessage != nullptr) m_activeMessage->setResult(fsm->m_ebusDevice->errorText(fsm->m_lastResult));
 
@@ -41,7 +40,7 @@ int OnError::run(EbusFSM* fsm)
 	{
 		fsm->m_ebusDevice->close();
 
-		if (fsm->m_ebusDevice->isOpen() == false) LIBLOGGER_INFO("%s", stateMessage(STATE_INF_EBUS_OFF).c_str());
+		if (fsm->m_ebusDevice->isOpen() == false) fsm->m_logger->info(stateMessage(STATE_INF_EBUS_OFF));
 
 		sleep(1);
 		fsm->changeState(Connect::getConnect());

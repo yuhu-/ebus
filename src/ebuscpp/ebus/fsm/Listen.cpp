@@ -21,7 +21,6 @@
 #include "LockBus.h"
 #include "RecvMessage.h"
 #include "Common.h"
-#include "Logger.h"
 
 Listen Listen::m_listen;
 
@@ -37,16 +36,16 @@ int Listen::run(EbusFSM* fsm)
 		if (m_lockCounter != 0)
 		{
 			m_lockCounter--;
-			LIBLOGGER_DEBUG("lockCounter: %d", m_lockCounter);
+			fsm->m_logger->debug("lockCounter: " + m_lockCounter);
 		}
 
 		// decode EbusSequence
 		if (m_sequence.size() != 0)
 		{
-			LIBLOGGER_DEBUG("%s", m_sequence.toString().c_str());
+			fsm->m_logger->debug(m_sequence.toString());
 
 			EbusSequence eSeq(m_sequence);
-			LIBLOGGER_INFO("%s", eSeq.toStringLog().c_str());
+			fsm->m_logger->info(eSeq.toStringLog());
 
 			if (eSeq.isValid() == true && fsm->m_process != nullptr) fsm->m_process->passive(eSeq);
 
@@ -59,7 +58,7 @@ int Listen::run(EbusFSM* fsm)
 		// check for new EbusMessage
 		if (m_activeMessage == nullptr && fsm->m_ebusMsgQueue.size() != 0)
 		{
-			LIBLOGGER_DEBUG("pending ebus messages: %d", fsm->m_ebusMsgQueue.size());
+			fsm->m_logger->debug("pending ebus messages: " + fsm->m_ebusMsgQueue.size());
 			m_activeMessage = fsm->m_ebusMsgQueue.dequeue();
 		}
 

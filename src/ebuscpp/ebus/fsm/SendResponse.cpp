@@ -19,7 +19,6 @@
 
 #include "SendResponse.h"
 #include "Listen.h"
-#include "Logger.h"
 
 SendResponse SendResponse::m_sendResponse;
 
@@ -48,7 +47,7 @@ int SendResponse::run(EbusFSM* fsm)
 
 		if (byte != ACK && byte != NAK)
 		{
-			LIBLOGGER_INFO("%s", stateMessage(STATE_ERR_ACK_WRONG).c_str());
+			fsm->m_logger->info(stateMessage(STATE_ERR_ACK_WRONG));
 			break;
 		}
 		else if (byte == ACK)
@@ -59,18 +58,18 @@ int SendResponse::run(EbusFSM* fsm)
 		{
 			if (retry == 1)
 			{
-				LIBLOGGER_INFO("%s", stateMessage(STATE_WRN_ACK_NEG).c_str());
+				fsm->m_logger->info(stateMessage(STATE_WRN_ACK_NEG));
 			}
 			else
 			{
-				LIBLOGGER_INFO("%s", stateMessage(STATE_ERR_ACK_NEG).c_str());
-				LIBLOGGER_INFO("%s", stateMessage(STATE_ERR_SEND_FAIL).c_str());
+				fsm->m_logger->info(stateMessage(STATE_ERR_ACK_NEG));
+				fsm->m_logger->info(stateMessage(STATE_ERR_SEND_FAIL));
 			}
 		}
 	}
 
 	eSeq.setMasterACK(byte);
-	LIBLOGGER_INFO("%s", eSeq.toStringLog().c_str());
+	fsm->m_logger->info(eSeq.toStringLog());
 
 	if (fsm->m_process != nullptr) fsm->m_process->passive(eSeq);
 

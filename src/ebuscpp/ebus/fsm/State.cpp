@@ -20,7 +20,6 @@
 #include "State.h"
 #include "EbusFSM.h"
 #include "Color.h"
-#include "Logger.h"
 
 #include <iomanip>
 #include <map>
@@ -30,6 +29,10 @@ using namespace libutils;
 using std::ios;
 using std::map;
 using std::ostringstream;
+using std::nouppercase;
+using std::hex;
+using std::setw;
+using std::setfill;
 
 long State::m_reopenTime = 0;
 int State::m_lockCounter = 0;
@@ -76,7 +79,13 @@ int State::read(EbusFSM* fsm, unsigned char& byte, const long sec, const long ns
 {
 	int result = fsm->m_ebusDevice->recv(byte, sec, nsec);
 
-	if (result == DEV_OK) LIBLOGGER_TRACE("<%02x", byte);
+	if (result == DEV_OK)
+	{
+		ostringstream ostr;
+		ostr << nouppercase << hex << setw(2) << setfill('0') << static_cast<unsigned>(byte) << nouppercase
+			<< setw(0);
+		fsm->m_logger->trace("<" + ostr.str() + "x");
+	}
 
 	if (fsm->m_dump == true && result == DEV_OK && fsm->m_dumpRawStream.is_open() == true)
 	{
@@ -105,8 +114,13 @@ int State::write(EbusFSM* fsm, const unsigned char& byte)
 {
 	int result = fsm->m_ebusDevice->send(byte);
 
-	if (result == DEV_OK) LIBLOGGER_TRACE(">%02x", byte);
-
+	if (result == DEV_OK)
+	{
+		ostringstream ostr;
+		ostr << nouppercase << hex << setw(2) << setfill('0') << static_cast<unsigned>(byte) << nouppercase
+			<< setw(0);
+		fsm->m_logger->trace(">" + ostr.str() + "x");
+	}
 	return (result);
 }
 
@@ -119,7 +133,7 @@ int State::writeRead(EbusFSM* fsm, const unsigned char& byte, const long timeout
 		unsigned char readByte;
 		result = State::read(fsm, readByte, 0, timeout);
 
-		if (readByte != byte) LIBLOGGER_DEBUG("%s", stateMessage(STATE_WRN_BYTE_DIF).c_str());
+		if (readByte != byte) fsm->m_logger->debug(stateMessage(STATE_WRN_BYTE_DIF));
 	}
 
 	return (result);

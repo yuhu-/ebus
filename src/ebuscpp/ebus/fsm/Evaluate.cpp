@@ -21,7 +21,6 @@
 #include "Listen.h"
 #include "SendResponse.h"
 #include "Common.h"
-#include "Logger.h"
 
 Evaluate Evaluate::m_evaluate;
 
@@ -37,36 +36,36 @@ int Evaluate::run(EbusFSM* fsm)
 		switch (action)
 		{
 		case Action::undefined:
-			LIBLOGGER_WARN("%s", stateMessage(STATE_WRN_NOT_DEF).c_str());
+			fsm->m_logger->warn(stateMessage(STATE_WRN_NOT_DEF));
 			break;
 		case Action::ignore:
-			LIBLOGGER_DEBUG("ignore");
+			fsm->m_logger->debug("ignore");
 			break;
 		case Action::response:
 			eSeq.setSlaveACK(ACK);
 
 			if (eSeq.getSlaveState() == EBUS_OK)
 			{
-				LIBLOGGER_DEBUG("response: %s", eSeq.toStringSlave().c_str());
+				fsm->m_logger->debug("response: " + eSeq.toStringSlave());
 				m_passiveMessage = new EbusMessage(eSeq);
 				fsm->changeState(SendResponse::getSendResponse());
 				return (DEV_OK);
 			}
 			else
 			{
-				LIBLOGGER_WARN("%s", stateMessage(STATE_ERR_CREA_MSG).c_str());
+				fsm->m_logger->warn(stateMessage(STATE_ERR_CREA_MSG));
 			}
 
 			break;
 		case Action::send:
 			if (eSeq.getMasterState() == EBUS_OK)
 			{
-				LIBLOGGER_DEBUG("enqueue: %s", eSeq.toStringMaster().c_str());
+				fsm->m_logger->debug("enqueue: " + eSeq.toStringMaster());
 				fsm->enqueue(new EbusMessage(eSeq, true));
 			}
 			else
 			{
-				LIBLOGGER_WARN("%s", stateMessage(STATE_ERR_CREA_MSG).c_str());
+				fsm->m_logger->warn(stateMessage(STATE_ERR_CREA_MSG));
 			}
 
 			break;
@@ -76,7 +75,7 @@ int Evaluate::run(EbusFSM* fsm)
 	}
 	else
 	{
-		LIBLOGGER_WARN("%s", stateMessage(STATE_WRN_NO_PROCESS).c_str());
+		fsm->m_logger->warn(stateMessage(STATE_WRN_NO_PROCESS));
 	}
 
 	m_sequence.clear();

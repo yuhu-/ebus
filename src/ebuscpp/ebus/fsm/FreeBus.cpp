@@ -19,7 +19,6 @@
 
 #include "FreeBus.h"
 #include "Listen.h"
-#include "Logger.h"
 
 FreeBus FreeBus::m_freeBus;
 
@@ -30,7 +29,7 @@ int FreeBus::run(EbusFSM* fsm)
 	int result = writeRead(fsm, byte, 0);
 	if (result != DEV_OK) return (result);
 
-	LIBLOGGER_DEBUG("%s", stateMessage(STATE_INF_EBUS_FREE).c_str());
+	fsm->m_logger->debug(stateMessage(STATE_INF_EBUS_FREE));
 
 	reset(fsm);
 	fsm->changeState(Listen::getListen());
