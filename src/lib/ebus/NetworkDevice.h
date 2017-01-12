@@ -31,7 +31,7 @@ class NetworkDevice : public Device
 public:
 	~NetworkDevice();
 
-	int openDevice(const string& device, const bool noDeviceCheck);
+	int openDevice(const string& device, const bool devicecheck);
 	void closeDevice();
 
 private:

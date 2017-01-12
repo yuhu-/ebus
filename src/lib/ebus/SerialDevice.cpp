@@ -29,9 +29,9 @@ libebus::SerialDevice::~SerialDevice()
 	closeDevice();
 }
 
-int libebus::SerialDevice::openDevice(const string& device, const bool noDeviceCheck)
+int libebus::SerialDevice::openDevice(const string& device, const bool devicecheck)
 {
-	m_noDeviceCheck = noDeviceCheck;
+	m_deviceCheck = devicecheck;
 	struct termios newSettings;
 	m_open = false;
 

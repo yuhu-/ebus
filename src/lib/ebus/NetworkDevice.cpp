@@ -31,9 +31,9 @@ libebus::NetworkDevice::~NetworkDevice()
 	closeDevice();
 }
 
-int libebus::NetworkDevice::openDevice(const string& device, const bool noDeviceCheck)
+int libebus::NetworkDevice::openDevice(const string& device, const bool devicecheck)
 {
-	m_noDeviceCheck = noDeviceCheck;
+	m_deviceCheck = devicecheck;
 	m_open = false;
 
 	int ret;

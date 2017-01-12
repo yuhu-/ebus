@@ -42,7 +42,7 @@ BaseLoop::BaseLoop()
 	m_proxy = new Proxy(m_ownAddress);
 
 	m_ebus = new Ebus(options.getInt("address") & 0xff, options.getString("device"),
-		options.getBool("nodevicecheck"), options.getLong("reopentime"), options.getLong("arbitrationtime"),
+		options.getBool("devicecheck"), options.getLong("reopentime"), options.getLong("arbitrationtime"),
 		options.getLong("receivetimeout"), options.getInt("lockcounter"), options.getInt("lockretries"),
 		options.getBool("dump"), options.getString("dumpfile"), options.getLong("dumpsize"), m_proxy);
 

@@ -44,7 +44,7 @@ class Device
 public:
 	virtual ~Device();
 
-	virtual int openDevice(const string& device, const bool noDeviceCheck) = 0;
+	virtual int openDevice(const string& device, const bool deviceCheck) = 0;
 	virtual void closeDevice() = 0;
 
 	bool isOpen();
@@ -57,7 +57,7 @@ protected:
 
 	bool m_open = false;
 
-	bool m_noDeviceCheck = false;
+	bool m_deviceCheck = true;
 
 private:
 	bool isValid();

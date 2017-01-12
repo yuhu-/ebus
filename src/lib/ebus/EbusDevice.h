@@ -36,7 +36,7 @@ class EbusDevice
 	};
 
 public:
-	EbusDevice(const string& device, const bool noDeviceCheck);
+	EbusDevice(const string& device, const bool deviceCheck);
 	~EbusDevice();
 
 	int open();
@@ -54,7 +54,7 @@ private:
 
 	Device* m_device;
 
-	bool m_noDeviceCheck;
+	bool m_deviceCheck;
 
 	void setType(const Type type);
 

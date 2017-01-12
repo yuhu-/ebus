@@ -40,7 +40,7 @@ bool libebus::Device::isOpen()
 
 bool libebus::Device::isValid()
 {
-	if (m_noDeviceCheck == false)
+	if (m_deviceCheck == true)
 	{
 		int port;
 

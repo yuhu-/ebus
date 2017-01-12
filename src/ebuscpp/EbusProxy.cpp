@@ -48,7 +48,7 @@ void define_args()
 
 	options.addString("device", "d", "/dev/ttyUSB0", "\tebus device (serial or network) [/dev/ttyUSB0]");
 
-	options.addBool("nodevicecheck", "n", false, "disable test of local ebus device");
+	options.addBool("devicecheck", "c", true, "sanity check of serial ebus device");
 
 	options.addLong("reopentime", "", 60, "max. time to open ebus device in 'sec' [60]\n");
 

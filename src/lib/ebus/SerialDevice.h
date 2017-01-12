@@ -33,7 +33,7 @@ class SerialDevice : public Device
 public:
 	~SerialDevice();
 
-	int openDevice(const string& device, const bool noDeviceCheck);
+	int openDevice(const string& device, const bool devicecheck);
 	void closeDevice();
 
 private:

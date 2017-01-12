@@ -31,7 +31,7 @@ class Ebus
 {
 
 public:
-	Ebus(const unsigned char address, const string device, const bool noDeviceCheck, const long reopenTime,
+	Ebus(const unsigned char address, const string device, const bool devicecheck, const long reopenTime,
 		const long arbitrationTime, const long receiveTimeout, const int lockCounter, const int lockRetries,
 		const bool dump, const string dumpFile, const long dumpFileMaxSize, IProcess* process);
 

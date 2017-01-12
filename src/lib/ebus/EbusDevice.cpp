@@ -40,15 +40,15 @@ map<int, string> DeviceErrors =
 { DEV_ERR_SEND, "Error occurred during data sending" },
 { DEV_ERR_POLL, "Error occurred at ppoll waiting" } };
 
-libebus::EbusDevice::EbusDevice(const string& deviceName, const bool noDeviceCheck)
-	: m_deviceName(deviceName), m_noDeviceCheck(noDeviceCheck)
+libebus::EbusDevice::EbusDevice(const string& deviceName, const bool deviceCheck)
+	: m_deviceName(deviceName), m_deviceCheck(deviceCheck)
 {
 	m_device = nullptr;
 
 	if (deviceName.find('/') == string::npos && deviceName.find(':') != string::npos)
 	{
 		setType(Type::network);
-		m_noDeviceCheck = true;
+		m_deviceCheck = false;
 	}
 	else
 	{
@@ -63,7 +63,7 @@ libebus::EbusDevice::~EbusDevice()
 
 int libebus::EbusDevice::open()
 {
-	return (m_device->openDevice(m_deviceName, m_noDeviceCheck));
+	return (m_device->openDevice(m_deviceName, m_deviceCheck));
 }
 
 void libebus::EbusDevice::close()

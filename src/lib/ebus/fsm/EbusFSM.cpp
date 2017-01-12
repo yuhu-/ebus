@@ -33,7 +33,7 @@ using std::ostringstream;
 using std::copy_n;
 using std::back_inserter;
 
-libebus::EbusFSM::EbusFSM(const unsigned char address, const string device, const bool noDeviceCheck,
+libebus::EbusFSM::EbusFSM(const unsigned char address, const string device, const bool deviceCheck,
 	const long reopenTime, const long arbitrationTime, const long receiveTimeout, const int lockCounter,
 	const int lockRetries, const bool dump, const string dumpFile, const long dumpFileMaxSize, IProcess* process,
 	ILogger* logger)
@@ -41,7 +41,7 @@ libebus::EbusFSM::EbusFSM(const unsigned char address, const string device, cons
 		receiveTimeout), m_lockCounter(lockCounter), m_lockRetries(lockRetries), m_lastResult(
 	DEV_OK), m_dumpFile(dumpFile), m_dumpFileMaxSize(dumpFileMaxSize), m_process(process), m_logger(logger)
 {
-	m_ebusDevice = new EbusDevice(device, noDeviceCheck);
+	m_ebusDevice = new EbusDevice(device, deviceCheck);
 	changeState(Connect::getConnect());
 
 	setDump(dump);

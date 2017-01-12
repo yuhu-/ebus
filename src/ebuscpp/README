@@ -11,7 +11,7 @@ Options:
 
 -a | --address		ebus device address [FF]
 -d | --device		ebus device (serial or network) [/dev/ttyUSB0]
--n | --nodevicecheck	disable test of local ebus device
+-c | --devicecheck	sanity check of serial ebus device
    | --reopentime	max. time to open ebus device in 'sec' [60]
 
    | --arbitrationtime	waiting time for arbitration test 'us' [4400]
