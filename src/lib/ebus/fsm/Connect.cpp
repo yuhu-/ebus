@@ -37,7 +37,7 @@ int libebus::Connect::run(EbusFSM* fsm)
 
 		if (fsm->m_ebusDevice->isOpen() == true && result == DEV_OK)
 		{
-			fsm->m_logger->info(stateMessage(STATE_INF_EBUS_ON));
+			fsm->logInfo(stateMessage(STATE_INF_EBUS_ON));
 		}
 		else
 		{

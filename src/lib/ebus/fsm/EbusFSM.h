@@ -109,6 +109,15 @@ private:
 
 	void changeState(State* state);
 
+	Action active(EbusSequence& eSeq);
+	void passive(EbusSequence& eSeq);
+
+	void logError(const string& message);
+	void logWarn(const string& message);
+	void logInfo(const string& message);
+	void logDebug(const string& message);
+	void logTrace(const string& message);
+
 };
 
 } // namespace libebus

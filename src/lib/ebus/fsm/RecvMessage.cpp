@@ -42,7 +42,7 @@ int libebus::RecvMessage::run(EbusFSM* fsm)
 	// check against max. possible size
 	if (m_sequence[4] > 16)
 	{
-		fsm->m_logger->warn(stateMessage(STATE_ERR_NN_WRONG));
+		fsm->logWarn(stateMessage(STATE_ERR_NN_WRONG));
 		reset(fsm);
 		fsm->changeState(Listen::getListen());
 		return (DEV_OK);
@@ -73,7 +73,7 @@ int libebus::RecvMessage::run(EbusFSM* fsm)
 		if (byte == SYN || byte == EXT) bytes++;
 	}
 
-	fsm->m_logger->debug(m_sequence.toString());
+	fsm->logDebug(m_sequence.toString());
 
 	EbusSequence eSeq;
 	eSeq.createMaster(m_sequence);
@@ -87,7 +87,7 @@ int libebus::RecvMessage::run(EbusFSM* fsm)
 		else
 		{
 			byte = NAK;
-			fsm->m_logger->info(stateMessage(STATE_WRN_RECV_MSG));
+			fsm->logInfo(stateMessage(STATE_WRN_RECV_MSG));
 		}
 
 		// send ACK
@@ -101,9 +101,8 @@ int libebus::RecvMessage::run(EbusFSM* fsm)
 		{
 			if (eSeq.getType() == EBUS_TYPE_MM) eSeq.setSlaveACK(byte);
 
-			fsm->m_logger->info(eSeq.toStringLog());
-
-			if (fsm->m_process != nullptr) fsm->m_process->passive(eSeq);
+			fsm->logInfo(eSeq.toStringLog());
+			fsm->passive(eSeq);
 		}
 
 		fsm->changeState(Evaluate::getEvaluate());

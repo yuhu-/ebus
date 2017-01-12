@@ -39,7 +39,7 @@ int libebus::RecvResponse::run(EbusFSM* fsm)
 		// check against max. possible size
 		if (byte > 0x10)
 		{
-			fsm->m_logger->warn(stateMessage(STATE_ERR_NN_WRONG));
+			fsm->logWarn(stateMessage(STATE_ERR_NN_WRONG));
 			reset(fsm);
 			fsm->changeState(Listen::getListen());
 			return (DEV_OK);
@@ -76,18 +76,18 @@ int libebus::RecvResponse::run(EbusFSM* fsm)
 
 		if (eSeq.getSlaveState() == EBUS_OK)
 		{
-			fsm->m_logger->info(eSeq.toStringLog() + " done");
+			fsm->logInfo(eSeq.toStringLog() + " done");
 			break;
 		}
 
 		if (retry == 1)
 		{
 			seq.clear();
-			fsm->m_logger->debug(stateMessage(STATE_WRN_RECV_RESP));
+			fsm->logDebug(stateMessage(STATE_WRN_RECV_RESP));
 		}
 		else
 		{
-			fsm->m_logger->warn(stateMessage(STATE_ERR_RECV_RESP));
+			fsm->logWarn(stateMessage(STATE_ERR_RECV_RESP));
 			m_activeMessage->setResult(stateMessage(STATE_ERR_RECV_RESP));
 		}
 	}

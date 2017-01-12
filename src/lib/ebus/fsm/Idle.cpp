@@ -27,7 +27,7 @@ int libebus::Idle::run(EbusFSM* fsm)
 	{
 		fsm->m_ebusDevice->close();
 
-		if (fsm->m_ebusDevice->isOpen() == false) fsm->m_logger->info(stateMessage(STATE_INF_EBUS_OFF));
+		if (fsm->m_ebusDevice->isOpen() == false) fsm->logInfo(stateMessage(STATE_INF_EBUS_OFF));
 	}
 
 	reset(fsm);

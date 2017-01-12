@@ -47,7 +47,7 @@ int libebus::SendResponse::run(EbusFSM* fsm)
 
 		if (byte != ACK && byte != NAK)
 		{
-			fsm->m_logger->info(stateMessage(STATE_ERR_ACK_WRONG));
+			fsm->logInfo(stateMessage(STATE_ERR_ACK_WRONG));
 			break;
 		}
 		else if (byte == ACK)
@@ -58,20 +58,20 @@ int libebus::SendResponse::run(EbusFSM* fsm)
 		{
 			if (retry == 1)
 			{
-				fsm->m_logger->info(stateMessage(STATE_WRN_ACK_NEG));
+				fsm->logInfo(stateMessage(STATE_WRN_ACK_NEG));
 			}
 			else
 			{
-				fsm->m_logger->info(stateMessage(STATE_ERR_ACK_NEG));
-				fsm->m_logger->info(stateMessage(STATE_ERR_SEND_FAIL));
+				fsm->logInfo(stateMessage(STATE_ERR_ACK_NEG));
+				fsm->logInfo(stateMessage(STATE_ERR_SEND_FAIL));
 			}
 		}
 	}
 
 	eSeq.setMasterACK(byte);
-	fsm->m_logger->info(eSeq.toStringLog());
 
-	if (fsm->m_process != nullptr) fsm->m_process->passive(eSeq);
+	fsm->logInfo(eSeq.toStringLog());
+	fsm->passive(eSeq);
 
 	reset(fsm);
 	fsm->changeState(Listen::getListen());

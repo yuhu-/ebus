@@ -27,6 +27,7 @@ namespace libebus
 
 enum class Action
 {
+	noprocess,      // no process
 	undefined,	// undefined
 	ignore,		// ignore
 	response,	// send response

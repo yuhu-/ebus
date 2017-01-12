@@ -83,7 +83,7 @@ int libebus::State::read(EbusFSM* fsm, unsigned char& byte, const long sec, cons
 		ostringstream ostr;
 		ostr << nouppercase << hex << setw(2) << setfill('0') << static_cast<unsigned>(byte) << nouppercase
 			<< setw(0);
-		fsm->m_logger->trace("<" + ostr.str());
+		fsm->logTrace("<" + ostr.str());
 	}
 
 	if (fsm->m_dump == true && result == DEV_OK && fsm->m_dumpRawStream.is_open() == true)
@@ -118,7 +118,7 @@ int libebus::State::write(EbusFSM* fsm, const unsigned char& byte)
 		ostringstream ostr;
 		ostr << nouppercase << hex << setw(2) << setfill('0') << static_cast<unsigned>(byte) << nouppercase
 			<< setw(0);
-		fsm->m_logger->trace(">" + ostr.str());
+		fsm->logTrace(">" + ostr.str());
 	}
 	return (result);
 }
@@ -132,7 +132,7 @@ int libebus::State::writeRead(EbusFSM* fsm, const unsigned char& byte, const lon
 		unsigned char readByte;
 		result = State::read(fsm, readByte, 0, timeout);
 
-		if (readByte != byte) fsm->m_logger->debug(stateMessage(STATE_WRN_BYTE_DIF));
+		if (readByte != byte) fsm->logDebug(stateMessage(STATE_WRN_BYTE_DIF));
 	}
 
 	return (result);

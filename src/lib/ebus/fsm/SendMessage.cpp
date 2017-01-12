@@ -45,7 +45,7 @@ int libebus::SendMessage::run(EbusFSM* fsm)
 		// Broadcast ends here
 		if (eSeq.getType() == EBUS_TYPE_BC)
 		{
-			fsm->m_logger->info(eSeq.toStringLog() + " done");
+			fsm->logInfo(eSeq.toStringLog() + " done");
 			fsm->changeState(FreeBus::getFreeBus());
 			break;
 		}
@@ -58,7 +58,7 @@ int libebus::SendMessage::run(EbusFSM* fsm)
 
 		if (byte != ACK && byte != NAK)
 		{
-			fsm->m_logger->warn(stateMessage(STATE_ERR_ACK_WRONG));
+			fsm->logWarn(stateMessage(STATE_ERR_ACK_WRONG));
 			m_activeMessage->setResult(stateMessage(STATE_ERR_ACK_WRONG));
 
 			fsm->changeState(FreeBus::getFreeBus());
@@ -69,7 +69,7 @@ int libebus::SendMessage::run(EbusFSM* fsm)
 			// Master Master ends here
 			if (eSeq.getType() == EBUS_TYPE_MM)
 			{
-				fsm->m_logger->info(eSeq.toStringLog() + " done");
+				fsm->logInfo(eSeq.toStringLog() + " done");
 				fsm->changeState(FreeBus::getFreeBus());
 			}
 			else
@@ -83,11 +83,11 @@ int libebus::SendMessage::run(EbusFSM* fsm)
 		{
 			if (retry == 1)
 			{
-				fsm->m_logger->debug(stateMessage(STATE_WRN_ACK_NEG));
+				fsm->logDebug(stateMessage(STATE_WRN_ACK_NEG));
 			}
 			else
 			{
-				fsm->m_logger->warn(stateMessage(STATE_ERR_ACK_NEG));
+				fsm->logWarn(stateMessage(STATE_ERR_ACK_NEG));
 				m_activeMessage->setResult(stateMessage(STATE_ERR_ACK_NEG));
 
 				fsm->changeState(FreeBus::getFreeBus());

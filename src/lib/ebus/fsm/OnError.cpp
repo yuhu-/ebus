@@ -28,9 +28,9 @@ libebus::OnError libebus::OnError::m_onError;
 int libebus::OnError::run(EbusFSM* fsm)
 {
 	if (fsm->m_lastResult > DEV_OK)
-		fsm->m_logger->warn(fsm->m_ebusDevice->errorText(fsm->m_lastResult));
+		fsm->logWarn(fsm->m_ebusDevice->errorText(fsm->m_lastResult));
 	else
-		fsm->m_logger->error(fsm->m_ebusDevice->errorText(fsm->m_lastResult));
+		fsm->logError(fsm->m_ebusDevice->errorText(fsm->m_lastResult));
 
 	if (m_activeMessage != nullptr) m_activeMessage->setResult(fsm->m_ebusDevice->errorText(fsm->m_lastResult));
 
@@ -40,7 +40,7 @@ int libebus::OnError::run(EbusFSM* fsm)
 	{
 		fsm->m_ebusDevice->close();
 
-		if (fsm->m_ebusDevice->isOpen() == false) fsm->m_logger->info(stateMessage(STATE_INF_EBUS_OFF));
+		if (fsm->m_ebusDevice->isOpen() == false) fsm->logInfo(stateMessage(STATE_INF_EBUS_OFF));
 
 		sleep(1);
 		fsm->changeState(Connect::getConnect());

@@ -111,7 +111,7 @@ void libebus::EbusFSM::enqueue(EbusMessage* message)
 
 void libebus::EbusFSM::run()
 {
-	m_logger->info("FSM started");
+	logInfo("FSM started");
 
 	while (m_running == true)
 	{
@@ -125,7 +125,7 @@ void libebus::EbusFSM::run()
 		}
 	}
 
-	m_logger->info("FSM stopped");
+	logInfo("FSM stopped");
 }
 
 void libebus::EbusFSM::changeState(State* state)
@@ -133,9 +133,48 @@ void libebus::EbusFSM::changeState(State* state)
 	if (m_state != state)
 	{
 		m_state = state;
+
 		ostringstream ostr;
 		ostr << libutils::color::cyan << m_state->toString() << libutils::color::reset;
-		m_logger->debug(ostr.str());
+		logDebug(ostr.str());
 	}
+}
+
+libebus::Action libebus::EbusFSM::active(EbusSequence& eSeq)
+{
+	if (m_process != nullptr)
+		return (m_process->active(eSeq));
+	else
+		return (Action::noprocess);
+}
+
+void libebus::EbusFSM::passive(EbusSequence& eSeq)
+{
+	if (m_process != nullptr) m_process->passive(eSeq);
+}
+
+void libebus::EbusFSM::logError(const string& message)
+{
+	if (m_logger != nullptr) m_logger->error(message);
+}
+
+void libebus::EbusFSM::logWarn(const string& message)
+{
+	if (m_logger != nullptr) m_logger->warn(message);
+}
+
+void libebus::EbusFSM::logInfo(const string& message)
+{
+	if (m_logger != nullptr) m_logger->info(message);
+}
+
+void libebus::EbusFSM::logDebug(const string& message)
+{
+	if (m_logger != nullptr) m_logger->debug(message);
+}
+
+void libebus::EbusFSM::logTrace(const string& message)
+{
+	if (m_logger != nullptr) m_logger->trace(message);
 }
 

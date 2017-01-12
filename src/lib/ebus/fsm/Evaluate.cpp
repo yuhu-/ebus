@@ -26,56 +26,52 @@ libebus::Evaluate libebus::Evaluate::m_evaluate;
 
 int libebus::Evaluate::run(EbusFSM* fsm)
 {
-	if (fsm->m_process != nullptr)
+	EbusSequence eSeq;
+	eSeq.createMaster(m_sequence);
+
+	Action action = fsm->active(eSeq);
+
+	switch (action)
 	{
-		EbusSequence eSeq;
-		eSeq.createMaster(m_sequence);
+	case Action::noprocess:
+		fsm->logWarn(stateMessage(STATE_WRN_NO_PROCESS));
+		break;
+	case Action::undefined:
+		fsm->logWarn(stateMessage(STATE_WRN_NOT_DEF));
+		break;
+	case Action::ignore:
+		fsm->logDebug(stateMessage(STATE_INF_MSG_INGORE));
+		break;
+	case Action::response:
+		eSeq.setSlaveACK(ACK);
 
-		Action action = fsm->m_process->active(eSeq);
-
-		switch (action)
+		if (eSeq.getSlaveState() == EBUS_OK)
 		{
-		case Action::undefined:
-			fsm->m_logger->warn(stateMessage(STATE_WRN_NOT_DEF));
-			break;
-		case Action::ignore:
-			fsm->m_logger->debug(stateMessage(STATE_INF_MSG_INGORE));
-			break;
-		case Action::response:
-			eSeq.setSlaveACK(ACK);
-
-			if (eSeq.getSlaveState() == EBUS_OK)
-			{
-				fsm->m_logger->debug("response: " + eSeq.toStringSlave());
-				m_passiveMessage = new EbusMessage(eSeq);
-				fsm->changeState(SendResponse::getSendResponse());
-				return (DEV_OK);
-			}
-			else
-			{
-				fsm->m_logger->warn(stateMessage(STATE_ERR_CREA_MSG));
-			}
-
-			break;
-		case Action::send:
-			if (eSeq.getMasterState() == EBUS_OK)
-			{
-				fsm->m_logger->debug("enqueue: " + eSeq.toStringMaster());
-				fsm->enqueue(new EbusMessage(eSeq, true));
-			}
-			else
-			{
-				fsm->m_logger->warn(stateMessage(STATE_ERR_CREA_MSG));
-			}
-
-			break;
-		default:
-			break;
+			fsm->logDebug("response: " + eSeq.toStringSlave());
+			m_passiveMessage = new EbusMessage(eSeq);
+			fsm->changeState(SendResponse::getSendResponse());
+			return (DEV_OK);
 		}
-	}
-	else
-	{
-		fsm->m_logger->warn(stateMessage(STATE_WRN_NO_PROCESS));
+		else
+		{
+			fsm->logWarn(stateMessage(STATE_ERR_CREA_MSG));
+		}
+
+		break;
+	case Action::send:
+		if (eSeq.getMasterState() == EBUS_OK)
+		{
+			fsm->logDebug("enqueue: " + eSeq.toStringMaster());
+			fsm->enqueue(new EbusMessage(eSeq, true));
+		}
+		else
+		{
+			fsm->logWarn(stateMessage(STATE_ERR_CREA_MSG));
+		}
+
+		break;
+	default:
+		break;
 	}
 
 	m_sequence.clear();
