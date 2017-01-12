@@ -28,6 +28,7 @@
 #include <list>
 
 using libutils::NQueue;
+using libnetwork::Server;
 using std::list;
 using std::thread;
 

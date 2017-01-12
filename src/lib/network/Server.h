@@ -22,6 +22,9 @@
 
 #include "Socket.h"
 
+namespace libnetwork
+{
+
 class Server
 {
 
@@ -49,6 +52,8 @@ private:
 	bool m_ready = false;
 
 };
+
+} // namespace libnetwork
 
 #endif // LIBNETWORK_SERVER_H
 

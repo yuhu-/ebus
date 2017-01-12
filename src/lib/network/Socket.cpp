@@ -23,36 +23,36 @@
 #include <fcntl.h>
 #include <arpa/inet.h>
 
-Socket::~Socket()
+libnetwork::Socket::~Socket()
 {
 	close(m_sfd);
 }
 
-ssize_t Socket::send(const char* buffer, const size_t len, const struct sockaddr_in* address, const socklen_t addrlen)
+ssize_t libnetwork::Socket::send(const char* buffer, const size_t len, const struct sockaddr_in* address, const socklen_t addrlen)
 {
 	return (sendto(m_sfd, buffer, len, MSG_NOSIGNAL, (const struct sockaddr*) address, addrlen));
 }
-ssize_t Socket::recv(char* buffer, const size_t len, struct sockaddr_in* address, socklen_t* addrlen)
+ssize_t libnetwork::Socket::recv(char* buffer, const size_t len, struct sockaddr_in* address, socklen_t* addrlen)
 {
 	return (recvfrom(m_sfd, buffer, len, 0, (struct sockaddr*) address, addrlen));
 }
 
-string Socket::getIP() const
+string libnetwork::Socket::getIP() const
 {
 	return (m_ip);
 }
 
-long Socket::getPort() const
+long libnetwork::Socket::getPort() const
 {
 	return (m_port);
 }
 
-int Socket::getFD() const
+int libnetwork::Socket::getFD() const
 {
 	return (m_sfd);
 }
 
-bool Socket::isValid()
+bool libnetwork::Socket::isValid()
 {
 	if (fcntl(m_sfd, F_GETFL) == -1)
 		return (false);
@@ -60,7 +60,7 @@ bool Socket::isValid()
 		return (true);
 }
 
-Socket::Socket(const int sfd, const struct sockaddr_in* address)
+libnetwork::Socket::Socket(const int sfd, const struct sockaddr_in* address)
 	: m_sfd(sfd)
 {
 	char ip[INET_ADDRSTRLEN];

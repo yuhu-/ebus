@@ -22,9 +22,12 @@
 
 #include <string>
 
-#include <sys/socket.h>
+#include <netinet/in.h>
 
 using std::string;
+
+namespace libnetwork
+{
 
 class Socket
 {
@@ -55,6 +58,8 @@ private:
 	Socket(const int sfd, const struct sockaddr_in* address);
 
 };
+
+} // namespace libnetwork
 
 #endif // LIBNETWORK_SOCKET_H
 

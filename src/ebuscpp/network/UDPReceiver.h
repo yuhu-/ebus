@@ -29,6 +29,8 @@
 
 using libutils::NQueue;
 using libutils::PipeNotify;
+using libnetwork::Server;
+using libnetwork::Socket;
 using std::thread;
 
 class UDPReceiver

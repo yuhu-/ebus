@@ -23,7 +23,7 @@
 
 #include <arpa/inet.h>
 
-Socket* Client::newSocket(const string& address, const int port, const bool udp)
+libnetwork::Socket* libnetwork::Client::newSocket(const string& address, const int port, const bool udp)
 {
 	int ret;
 	struct addrinfo hints, *servinfo;
@@ -66,7 +66,7 @@ Socket* Client::newSocket(const string& address, const int port, const bool udp)
 	return (new Socket(sfd, &m_client));
 }
 
-const struct sockaddr_in* Client::getSock()
+const struct sockaddr_in* libnetwork::Client::getSock()
 {
 	return (&m_client);
 }

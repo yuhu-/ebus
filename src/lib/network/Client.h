@@ -24,6 +24,9 @@
 
 #include <netdb.h>
 
+namespace libnetwork
+{
+
 class Client
 {
 
@@ -36,6 +39,8 @@ private:
 	struct sockaddr_in m_client;
 
 };
+
+} // namespace libnetwork
 
 #endif // LIBNETWORK_CLIENT_H
 

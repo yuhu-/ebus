@@ -27,17 +27,17 @@
 
 using std::ostringstream;
 
-Server::Server(const string& address, const int port, const bool udp)
+libnetwork::Server::Server(const string& address, const int port, const bool udp)
 	: m_address(address), m_port(port), m_udp(udp)
 {
 }
 
-Server::~Server()
+libnetwork::Server::~Server()
 {
 	if (m_sfd > 0) close(m_sfd);
 }
 
-int Server::start()
+int libnetwork::Server::start()
 {
 	if (m_ready == true) return (0);
 
@@ -75,7 +75,7 @@ int Server::start()
 	return (result);
 }
 
-Socket* Server::newSocket()
+libnetwork::Socket* libnetwork::Server::newSocket()
 {
 
 	if (m_ready == false) return (nullptr);
@@ -98,12 +98,12 @@ Socket* Server::newSocket()
 	}
 }
 
-int Server::getFD() const
+int libnetwork::Server::getFD() const
 {
 	return (m_sfd);
 }
 
-string Server::toString() const
+string libnetwork::Server::toString() const
 {
 	ostringstream ostr;
 

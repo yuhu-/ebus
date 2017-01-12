@@ -24,6 +24,8 @@
 
 #include <string>
 
+using libnetwork::Client;
+using libnetwork::Socket;
 using std::string;
 
 class Host

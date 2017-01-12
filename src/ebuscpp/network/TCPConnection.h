@@ -29,6 +29,7 @@
 
 using libutils::NQueue;
 using libutils::PipeNotify;
+using libnetwork::Socket;
 using std::thread;
 
 class TCPConnection

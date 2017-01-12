@@ -28,6 +28,8 @@
 #include <sstream>
 
 using libutils::Options;
+using libnetwork::Client;
+using libnetwork::Socket;
 using std::ostringstream;
 using std::cin;
 using std::cout;
