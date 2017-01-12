@@ -56,9 +56,15 @@ class EbusFSM : public Notify
 	friend class SendResponse;
 
 public:
-	EbusFSM(const unsigned char address, const string device, const bool deviceCheck, const long reopenTime,
-		const long arbitrationTime, const long receiveTimeout, const int lockCounter, const int lockRetries,
-		const bool dump, const string dumpFile, const long dumpFileMaxSize, IProcess* process, ILogger* logger);
+	EbusFSM(const unsigned char address, const string device, const bool deviceCheck, IProcess* process);
+
+	EbusFSM(const unsigned char address, const string device, const bool deviceCheck, IProcess* process,
+		ILogger* logger);
+
+	EbusFSM(const unsigned char address, const string device, const bool deviceCheck, IProcess* process,
+		ILogger* logger, const long reopenTime, const long arbitrationTime, const long receiveTimeout,
+		const int lockCounter, const int lockRetries, const bool dump, const string dumpFile,
+		const long dumpFileMaxSize);
 
 	~EbusFSM();
 
@@ -82,6 +88,10 @@ private:
 	State* m_forceState = nullptr;
 
 	const unsigned char m_address;
+
+	IProcess* m_process = nullptr;
+	ILogger* m_logger = nullptr;
+
 	long m_reopenTime;
 
 	long m_arbitrationTime;
@@ -99,9 +109,6 @@ private:
 	long m_dumpFileMaxSize;
 	long m_dumpFileSize = 0;
 	ofstream m_dumpRawStream;
-
-	IProcess* m_process = nullptr;
-	ILogger* m_logger = nullptr;
 
 	NQueue<EbusMessage*> m_ebusMsgQueue;
 

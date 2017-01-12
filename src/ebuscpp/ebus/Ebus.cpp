@@ -19,12 +19,12 @@
 
 #include "Ebus.h"
 
-Ebus::Ebus(const unsigned char address, const string device, const bool devicecheck, const long reopenTime,
-	const long arbitrationTime, const long receiveTimeout, const int lockCounter, const int lockRetries,
-	const bool dump, const string dumpFile, const long dumpFileMaxSize, IProcess* process)
+Ebus::Ebus(const unsigned char address, const string device, const bool devicecheck, IProcess* process,
+	const long reopenTime, const long arbitrationTime, const long receiveTimeout, const int lockCounter,
+	const int lockRetries, const bool dump, const string dumpFile, const long dumpFileMaxSize)
 {
-	m_ebusFSM = new EbusFSM(address, device, devicecheck, reopenTime, arbitrationTime, receiveTimeout,
-		lockCounter, lockRetries, dump, dumpFile, dumpFileMaxSize, process, &m_logger);
+	m_ebusFSM = new EbusFSM(address, device, devicecheck, process, &m_logger, reopenTime, arbitrationTime,
+		receiveTimeout, lockCounter, lockRetries, dump, dumpFile, dumpFileMaxSize);
 
 	m_ebusFSM->start();
 }
