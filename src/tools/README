@@ -35,7 +35,7 @@ commands:
 
  dump      - enable/disable raw data dumping
 
- loglevel  - change logging level 'loglevel level'
+ log       - change logging level 'log level'
 
  stop      - shutdown daemon
  quit      - close tcp connection
