@@ -33,18 +33,12 @@ using std::ostringstream;
 using std::copy_n;
 using std::back_inserter;
 
-libebus::EbusFSM::EbusFSM(const unsigned char address, const string device, const bool deviceCheck,
-	const long reopenTime, const long arbitrationTime, const long receiveTimeout, const int lockCounter,
-	const int lockRetries, const bool dump, const string dumpFile, const long dumpFileMaxSize, IProcess* process,
+libebus::EbusFSM::EbusFSM(const unsigned char address, const string device, const bool deviceCheck, IProcess* process,
 	ILogger* logger)
-	: Notify(), m_address(address), m_reopenTime(reopenTime), m_arbitrationTime(arbitrationTime), m_receiveTimeout(
-		receiveTimeout), m_lockCounter(lockCounter), m_lockRetries(lockRetries), m_lastResult(
-	DEV_OK), m_dumpFile(dumpFile), m_dumpFileMaxSize(dumpFileMaxSize), m_process(process), m_logger(logger)
+	: Notify(), m_address(address), m_process(process), m_logger(logger)
 {
 	m_ebusDevice = new EbusDevice(device, deviceCheck);
 	changeState(Connect::getConnect());
-
-	setDump(dump);
 }
 
 libebus::EbusFSM::~EbusFSM()
@@ -82,12 +76,62 @@ void libebus::EbusFSM::close()
 	m_forceState = Idle::getIdle();
 }
 
+long libebus::EbusFSM::getReopenTime() const
+{
+	return (m_reopenTime);
+}
+
+void libebus::EbusFSM::setReopenTime(const long& reopenTime)
+{
+	m_reopenTime = reopenTime;
+}
+
+long libebus::EbusFSM::getArbitrationTime() const
+{
+	return (m_arbitrationTime);
+}
+
+void libebus::EbusFSM::setArbitrationTime(const long& arbitrationTime)
+{
+	m_arbitrationTime = arbitrationTime;
+}
+
+long libebus::EbusFSM::getReceiveTimeout() const
+{
+	return (m_receiveTimeout);
+}
+
+void libebus::EbusFSM::setReceiveTimeout(const long& receiveTimeout)
+{
+	m_receiveTimeout = receiveTimeout;
+}
+
+int libebus::EbusFSM::getLockCounter() const
+{
+	return (m_lockCounter);
+}
+
+void libebus::EbusFSM::setLockCounter(const int& lockCounter)
+{
+	m_lockCounter = lockCounter;
+}
+
+int libebus::EbusFSM::getLockRetries() const
+{
+	return (m_lockRetries);
+}
+
+void libebus::EbusFSM::setLockRetries(const int& lockRetries)
+{
+	m_lockRetries = lockRetries;
+}
+
 bool libebus::EbusFSM::getDump() const
 {
 	return (m_dump);
 }
 
-void libebus::EbusFSM::setDump(bool dump)
+void libebus::EbusFSM::setDump(const bool& dump)
 {
 	if (dump == m_dump) return;
 
@@ -102,6 +146,29 @@ void libebus::EbusFSM::setDump(bool dump)
 		m_dumpRawStream.open(m_dumpFile.c_str(), ios::binary | ios::app);
 		m_dumpFileSize = 0;
 	}
+}
+
+string libebus::EbusFSM::getDumpFile() const
+{
+	return (m_dumpFile);
+}
+
+void libebus::EbusFSM::setDumpFile(const string& dumpFile)
+{
+	bool dump = m_dump;
+	if (dump == true) setDump(false);
+	m_dumpFile = dumpFile;
+	m_dump = dump;
+}
+
+long libebus::EbusFSM::getDumpFileMaxSize() const
+{
+	return (m_dumpFileMaxSize);
+}
+
+void libebus::EbusFSM::setDumpFileMaxSize(const long& dumpFileMaxSize)
+{
+	m_dumpFileMaxSize = dumpFileMaxSize;
 }
 
 void libebus::EbusFSM::enqueue(EbusMessage* message)

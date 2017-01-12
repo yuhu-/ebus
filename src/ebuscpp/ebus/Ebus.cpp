@@ -23,8 +23,16 @@ Ebus::Ebus(const unsigned char address, const string device, const bool devicech
 	const long arbitrationTime, const long receiveTimeout, const int lockCounter, const int lockRetries,
 	const bool dump, const string dumpFile, const long dumpFileMaxSize, IProcess* process)
 {
-	m_ebusFSM = new EbusFSM(address, device, devicecheck, reopenTime, arbitrationTime, receiveTimeout,
-		lockCounter, lockRetries, dump, dumpFile, dumpFileMaxSize, process, &m_logger);
+	m_ebusFSM = new EbusFSM(address, device, devicecheck, process, &m_logger);
+
+	m_ebusFSM->setReopenTime(reopenTime);
+	m_ebusFSM->setArbitrationTime(arbitrationTime);
+	m_ebusFSM->setReceiveTimeout(receiveTimeout);
+	m_ebusFSM->setLockCounter(lockCounter);
+	m_ebusFSM->setLockRetries(lockRetries);
+	m_ebusFSM->setDump(dump);
+	m_ebusFSM->setDumpFile(dumpFile);
+	m_ebusFSM->setDumpFileMaxSize(dumpFileMaxSize);
 
 	m_ebusFSM->start();
 }

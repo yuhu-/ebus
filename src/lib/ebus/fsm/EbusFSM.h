@@ -56,9 +56,8 @@ class EbusFSM : public Notify
 	friend class SendResponse;
 
 public:
-	EbusFSM(const unsigned char address, const string device, const bool deviceCheck, const long reopenTime,
-		const long arbitrationTime, const long receiveTimeout, const int lockCounter, const int lockRetries,
-		const bool dump, const string dumpFile, const long dumpFileMaxSize, IProcess* process, ILogger* logger);
+	EbusFSM(const unsigned char address, const string device, const bool deviceCheck, IProcess* process,
+		ILogger* logger);
 
 	~EbusFSM();
 
@@ -68,8 +67,29 @@ public:
 	void open();
 	void close();
 
+	long getReopenTime() const;
+	void setReopenTime(const long& reopenTime);
+
+	long getArbitrationTime() const;
+	void setArbitrationTime(const long& arbitrationTime);
+
+	long getReceiveTimeout() const;
+	void setReceiveTimeout(const long& receiveTimeout);
+
+	int getLockCounter() const;
+	void setLockCounter(const int& lockCounter);
+
+	int getLockRetries() const;
+	void setLockRetries(const int& lockRetries);
+
 	bool getDump() const;
-	void setDump(bool dump);
+	void setDump(const bool& dump);
+
+	string getDumpFile() const;
+	void setDumpFile(const string& dumpFile);
+
+	long getDumpFileMaxSize() const;
+	void setDumpFileMaxSize(const long& dumpFileMaxSize);
 
 	void enqueue(EbusMessage* message);
 
@@ -81,25 +101,23 @@ private:
 	State* m_state = nullptr;
 	State* m_forceState = nullptr;
 
-	const unsigned char m_address;
-	long m_reopenTime;
+	int m_lastResult = DEV_OK;
 
-	long m_arbitrationTime;
-	long m_receiveTimeout;
+	const unsigned char m_address;              // own ebus address >> must be set
 
-	int m_lockCounter;
-	int m_lockRetries;
+	long m_reopenTime = 60;                     // max. time to open ebus device [s]
+	long m_arbitrationTime = 4400;              // waiting time for arbitration test [us]
+	long m_receiveTimeout = 4700;               // max. time for receiving of one sequence sign [us]
+	int m_lockCounter = 5;                      // number of characters after a successful ebus access (max: 25)
+	int m_lockRetries = 2;                      // number of retries to lock ebus
 
-	int m_lastResult;
-
-	EbusDevice* m_ebusDevice;
-
-	bool m_dump = false;
-	string m_dumpFile;
-	long m_dumpFileMaxSize;
-	long m_dumpFileSize = 0;
+	bool m_dump = false;                        // enable/disable raw data dumping
+	string m_dumpFile = "/tmp/ebus_dump.bin";   // dump file name
+	long m_dumpFileMaxSize = 100;               // max size for dump file [kB]
+	long m_dumpFileSize = 0;                    // current size of dump file
 	ofstream m_dumpRawStream;
 
+	EbusDevice* m_ebusDevice = nullptr;
 	IProcess* m_process = nullptr;
 	ILogger* m_logger = nullptr;
 
