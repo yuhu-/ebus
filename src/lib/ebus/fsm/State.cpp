@@ -24,10 +24,6 @@
 #include <iomanip>
 #include <map>
 
-using libutils::color::green;
-using libutils::color::yellow;
-using libutils::color::red;
-using libutils::color::blank;
 using std::ios;
 using std::map;
 using std::ostringstream;
@@ -175,13 +171,13 @@ const string libebus::State::stateMessage(const int state)
 	ostringstream ostr;
 
 	if (state < 11)
-		ostr << green << StateMessages[state];
+		ostr << libutils::color::green << StateMessages[state];
 	else if (state < 21)
-		ostr << yellow << StateMessages[state];
+		ostr << libutils::color::yellow << StateMessages[state];
 	else
-		ostr << red << StateMessages[state];
+		ostr << libutils::color::red << StateMessages[state];
 
-	ostr << blank;
+	ostr << libutils::color::reset;
 
 	return (ostr.str());
 }

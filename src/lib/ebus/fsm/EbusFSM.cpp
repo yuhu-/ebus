@@ -27,8 +27,6 @@
 #include <sstream>
 #include <algorithm>
 
-using libutils::color::cyan;
-using libutils::color::blank;
 using std::ios;
 using std::pair;
 using std::ostringstream;
@@ -136,7 +134,7 @@ void libebus::EbusFSM::changeState(State* state)
 	{
 		m_state = state;
 		ostringstream ostr;
-		ostr << cyan << m_state->toString() << blank;
+		ostr << libutils::color::cyan << m_state->toString() << libutils::color::reset;
 		m_logger->debug(ostr.str());
 	}
 }

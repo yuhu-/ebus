@@ -26,9 +26,6 @@
 #include <sstream>
 #include <map>
 
-using libutils::color::yellow;
-using libutils::color::red;
-using libutils::color::blank;
 using std::ostringstream;
 using std::map;
 
@@ -93,13 +90,13 @@ const string libebus::EbusDevice::errorText(const int error) const
 {
 	ostringstream ostr;
 
-	(error > DEV_OK) ? ostr << yellow : ostr << red;
+	(error > DEV_OK) ? ostr << libutils::color::yellow : ostr << libutils::color::red;
 
 	ostr << DeviceErrors[error];
 
 	if (error == DEV_ERR_OPEN) ostr << m_deviceName;
 
-	ostr << blank;
+	ostr << libutils::color::reset;
 
 	return (ostr.str());
 }
