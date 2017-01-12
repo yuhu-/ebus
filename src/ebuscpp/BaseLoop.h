@@ -20,12 +20,14 @@
 #ifndef BASELOOP_H
 #define BASELOOP_H
 
-#include "Ebus.h"
-#include "Network.h"
 #include "Proxy.h"
+#include "EbusLogger.h"
+#include "EbusFSM.h"
+#include "Network.h"
 
 #include <cstring>
 
+using libebus::EbusFSM;
 using std::ostringstream;
 
 class BaseLoop
@@ -59,15 +61,16 @@ private:
 	bool m_running = true;
 
 	unsigned char m_ownAddress = 0;
-	Ebus* m_ebus = nullptr;
 	Proxy* m_proxy = nullptr;
+	EbusLogger m_logger;
+	EbusFSM* m_ebusFSM = nullptr;
 	Network* m_network = nullptr;
 
 	Command findCommand(const string& item);
 
 	string decodeMessage(const string& data);
 
-	static bool isHex(const string& str, ostringstream& result, int nibbles);
+	static bool isHex(const string& str, ostringstream& result, const int& nibbles);
 
 	static bool isNum(const string& str, ostringstream& result);
 

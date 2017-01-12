@@ -20,6 +20,7 @@
 #include "BaseLoop.h"
 #include "Options.h"
 #include "Logger.h"
+#include "EbusMessage.h"
 
 #include <iomanip>
 #include <iterator>
@@ -28,6 +29,7 @@
 #include <arpa/inet.h>
 
 using libutils::Options;
+using libebus::EbusMessage;
 using std::istringstream;
 using std::istream_iterator;
 using std::endl;
@@ -41,10 +43,19 @@ BaseLoop::BaseLoop()
 
 	m_proxy = new Proxy(m_ownAddress);
 
-	m_ebus = new Ebus(options.getInt("address") & 0xff, options.getString("device"),
-		options.getBool("devicecheck"), options.getLong("reopentime"), options.getLong("arbitrationtime"),
-		options.getLong("receivetimeout"), options.getInt("lockcounter"), options.getInt("lockretries"),
-		options.getBool("dump"), options.getString("dumpfile"), options.getLong("dumpsize"), m_proxy);
+	m_ebusFSM = new EbusFSM(m_ownAddress, options.getString("device"), options.getBool("devicecheck"), m_proxy,
+		&m_logger);
+
+	m_ebusFSM->setReopenTime(options.getLong("reopentime"));
+	m_ebusFSM->setArbitrationTime(options.getLong("arbitrationtime"));
+	m_ebusFSM->setReceiveTimeout(options.getLong("receivetimeout"));
+	m_ebusFSM->setLockCounter(options.getInt("lockcounter"));
+	m_ebusFSM->setLockRetries(options.getInt("lockretries"));
+	m_ebusFSM->setDump(options.getBool("dump"));
+	m_ebusFSM->setDumpFile(options.getString("dumpfile"));
+	m_ebusFSM->setDumpFileMaxSize(options.getLong("dumpsize"));
+
+	m_ebusFSM->start();
 
 	m_network = new Network(options.getBool("local"), options.getInt("port"));
 
@@ -58,14 +69,16 @@ BaseLoop::~BaseLoop()
 		m_network = nullptr;
 	}
 
-	if (m_ebus != nullptr)
+	if (m_ebusFSM != nullptr)
 	{
-		delete m_ebus;
-		m_ebus = nullptr;
+		m_ebusFSM->stop();
+		delete m_ebusFSM;
+		m_ebusFSM = nullptr;
 	}
 
 	if (m_proxy != nullptr)
 	{
+		m_proxy->stop();
 		delete m_proxy;
 		m_proxy = nullptr;
 	}
@@ -138,7 +151,7 @@ string BaseLoop::decodeMessage(const string& data)
 			break;
 		}
 
-		m_ebus->open();
+		m_ebusFSM->open();
 		result << "connected";
 		break;
 	}
@@ -150,7 +163,7 @@ string BaseLoop::decodeMessage(const string& data)
 			break;
 		}
 
-		m_ebus->close();
+		m_ebusFSM->close();
 		result << "disconnected";
 		break;
 	}
@@ -172,7 +185,7 @@ string BaseLoop::decodeMessage(const string& data)
 			{
 				LIBLOGGER_DEBUG("enqueue: %s", eSeq.toStringMaster().c_str());
 				EbusMessage* ebusMessage = new EbusMessage(eSeq);
-				m_ebus->enqueue(ebusMessage);
+				m_ebusFSM->enqueue(ebusMessage);
 				ebusMessage->waitNotify();
 				result << ebusMessage->getResult();
 				delete ebusMessage;
@@ -223,20 +236,20 @@ string BaseLoop::decodeMessage(const string& data)
 
 		if (args.size() == 1)
 		{
-			result << "dump is " << (m_ebus->getDump() == true ? "enabled" : "disabled");
+			result << "dump is " << (m_ebusFSM->getDump() == true ? "enabled" : "disabled");
 			break;
 		}
 
 		if (strcasecmp(args[1].c_str(), "ON") == 0)
 		{
-			if (m_ebus->getDump() == false) m_ebus->setDump(true);
+			if (m_ebusFSM->getDump() == false) m_ebusFSM->setDump(true);
 			result << "dump enabled";
 			break;
 		}
 
 		if (strcasecmp(args[1].c_str(), "OFF") == 0)
 		{
-			if (m_ebus->getDump() == true) m_ebus->setDump(false);
+			if (m_ebusFSM->getDump() == true) m_ebusFSM->setDump(false);
 			result << "dump disabled";
 			break;
 		}
@@ -254,7 +267,7 @@ string BaseLoop::decodeMessage(const string& data)
 	return (result.str());
 }
 
-bool BaseLoop::isHex(const string& str, ostringstream& result, int nibbles)
+bool BaseLoop::isHex(const string& str, ostringstream& result, const int& nibbles)
 {
 	if ((str.length() % nibbles) != 0)
 	{
