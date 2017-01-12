@@ -31,6 +31,8 @@ public:
 
 	Action active(EbusSequence& eSeq);
 
+	void activeSent(EbusSequence& eSeq);
+
 	void passive(EbusSequence& eSeq);
 
 private:

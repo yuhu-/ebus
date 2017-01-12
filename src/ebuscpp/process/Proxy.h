@@ -31,6 +31,8 @@ public:
 
 	Action active(EbusSequence& eSeq);
 
+	void activeSent(EbusSequence& eSeq);
+
 	void passive(EbusSequence& eSeq);
 
 	void forward(bool remove, const string& ip, long port, const string& filter, ostringstream& result);

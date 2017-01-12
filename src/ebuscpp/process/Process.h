@@ -43,6 +43,8 @@ public:
 
 	virtual Action active(EbusSequence& eSeq) = 0;
 
+	virtual void activeSent(EbusSequence& eSeq) = 0;
+
 	virtual void passive(EbusSequence& eSeq) = 0;
 
 protected:

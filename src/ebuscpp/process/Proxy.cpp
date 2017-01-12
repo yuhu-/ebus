@@ -72,6 +72,13 @@ Action Proxy::active(EbusSequence& eSeq)
 	return (Action::undefined);
 }
 
+void Proxy::activeSent(EbusSequence& eSeq)
+{
+	LIBLOGGER_INFO("forward %s", eSeq.toStringLog().c_str());
+
+	m_forward->enqueue(eSeq);
+}
+
 void Proxy::passive(EbusSequence& eSeq)
 {
 	LIBLOGGER_INFO("forward %s", eSeq.toStringLog().c_str());

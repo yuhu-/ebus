@@ -215,6 +215,11 @@ libebus::Action libebus::EbusFSM::active(EbusSequence& eSeq)
 		return (Action::noprocess);
 }
 
+void libebus::EbusFSM::activeSent(EbusSequence& eSeq)
+{
+	if (m_process != nullptr) m_process->activeSent(eSeq);
+}
+
 void libebus::EbusFSM::passive(EbusSequence& eSeq)
 {
 	if (m_process != nullptr) m_process->passive(eSeq);
