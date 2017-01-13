@@ -28,7 +28,6 @@
 #include <fstream>
 #include <thread>
 #include <map>
-#include "EbusMessage.h"
 
 using libutils::NQueue;
 using std::ofstream;
