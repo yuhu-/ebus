@@ -39,12 +39,12 @@ BaseLoop::BaseLoop()
 {
 	Options& options = Options::getOption();
 
-	m_ownAddress = options.getInt("address") & 0xff;
+	m_address = options.getInt("address") & 0xff;
 
-	m_proxy = new Proxy(m_ownAddress);
+	m_proxy = new Proxy(m_address);
 	m_proxy->start();
 
-	m_ebusFSM = new EbusFSM(m_ownAddress, options.getString("device"), options.getBool("devicecheck"), m_proxy,
+	m_ebusFSM = new EbusFSM(m_address, options.getString("device"), options.getBool("devicecheck"), m_proxy,
 		&m_logger);
 
 	m_ebusFSM->setReopenTime(options.getLong("reopentime"));
@@ -179,7 +179,7 @@ string BaseLoop::decodeMessage(const string& data)
 		if (isHex(args[1], result, 2) == true)
 		{
 			EbusSequence eSeq;
-			eSeq.createMaster(m_ownAddress, args[1]);
+			eSeq.createMaster(m_address, args[1]);
 
 			// send message
 			if (eSeq.getMasterState() == EBUS_OK)

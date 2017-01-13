@@ -60,7 +60,7 @@ private:
 
 	bool m_running = true;
 
-	unsigned char m_ownAddress = 0;
+	unsigned char m_address = 0;
 	Proxy* m_proxy = nullptr;
 	EbusLogger m_logger;
 	EbusFSM* m_ebusFSM = nullptr;
