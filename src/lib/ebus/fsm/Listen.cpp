@@ -59,12 +59,19 @@ int libebus::Listen::run(EbusFSM* fsm)
 			m_sequence.clear();
 		}
 
-		// check for new EbusMessage
+		// check for new process EbusMessage
+		if (m_activeMessage == nullptr && fsm->m_process->size() != 0) m_activeMessage =
+			fsm->m_process->dequeue();
+
+		if (fsm->m_process->size() != 0)
+			fsm->logDebug("pending ebus process messages: " + to_string(fsm->m_process->size()));
+
+		// check for new manually EbusMessage
 		if (m_activeMessage == nullptr && fsm->m_ebusMsgQueue.size() != 0)
-		{
-			fsm->logDebug("pending ebus messages: " + to_string(fsm->m_ebusMsgQueue.size()));
 			m_activeMessage = fsm->m_ebusMsgQueue.dequeue();
-		}
+
+		if (fsm->m_ebusMsgQueue.size() != 0)
+			fsm->logDebug("pending ebus manually messages: " + to_string(fsm->m_ebusMsgQueue.size()));
 
 		// handle EbusMessage
 		if (m_activeMessage != nullptr && m_lockCounter == 0) fsm->changeState(LockBus::getLockBus());

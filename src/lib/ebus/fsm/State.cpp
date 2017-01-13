@@ -147,13 +147,15 @@ void libebus::State::reset(EbusFSM* fsm)
 
 	if (m_activeMessage != nullptr)
 	{
-		m_activeMessage->notify();
-
 		if (m_activeMessage->isIntern() == true)
 		{
 			fsm->activeSent(m_activeMessage->getEbusSequence());
 			EbusMessage* ebusMessage = m_activeMessage;
 			delete ebusMessage;
+		}
+		else
+		{
+			m_activeMessage->notify();
 		}
 
 		m_activeMessage = nullptr;

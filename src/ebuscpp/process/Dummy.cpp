@@ -46,6 +46,7 @@ Action Dummy::active(EbusSequence& eSeq)
 	}
 
 	// TODO implement active message handler
+	// notify();
 
 	return (Action::undefined);
 }
@@ -55,6 +56,7 @@ void Dummy::activeSent(EbusSequence& eSeq)
 	LIBLOGGER_INFO("handle activeSent %s", eSeq.toStringLog().c_str());
 
 	// TODO implement activeSent message handler
+	// notify();
 }
 
 void Dummy::passive(EbusSequence& eSeq)
@@ -62,6 +64,7 @@ void Dummy::passive(EbusSequence& eSeq)
 	LIBLOGGER_INFO("handle passive %s", eSeq.toStringLog().c_str());
 
 	// TODO implement passive message handler
+	// notify();
 }
 
 void Dummy::run()
@@ -71,6 +74,8 @@ void Dummy::run()
 	while (m_running == true)
 	{
 		waitNotify();
+		LIBLOGGER_INFO("notified");
+
 		// TODO implement business logic
 	}
 

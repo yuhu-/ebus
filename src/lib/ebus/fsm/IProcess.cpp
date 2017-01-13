@@ -17,50 +17,26 @@
  * along with ebuscpp. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef LIBEBUS_FSM_IPROCESS_H
-#define LIBEBUS_FSM_IPROCESS_H
+#include "IProcess.h"
 
-#include "EbusSequence.h"
-#include "EbusMessage.h"
-#include "NQueue.h"
-
-using libutils::NQueue;
-
-namespace libebus
+libebus::IProcess::~IProcess()
 {
+	while (m_ebusMsgQueue.size() > 0)
+		delete m_ebusMsgQueue.dequeue();
+}
 
-enum class Action
+void libebus::IProcess::enqueue(EbusMessage* message)
 {
-	noprocess,      // no process
-	undefined,	// undefined
-	ignore,		// ignore
-	response,	// send response
-	send		// send message
-};
+	m_ebusMsgQueue.enqueue(message);
+}
 
-class IProcess
+libebus::EbusMessage* libebus::IProcess::dequeue()
 {
+	return (m_ebusMsgQueue.dequeue());
+}
 
-public:
-	virtual ~IProcess();
+size_t libebus::IProcess::size()
+{
+	return (m_ebusMsgQueue.size());
+}
 
-	virtual Action active(EbusSequence& eSeq) = 0;
-
-	virtual void activeSent(EbusSequence& eSeq) = 0;
-
-	virtual void passive(EbusSequence& eSeq) = 0;
-
-	void enqueue(EbusMessage* message);
-
-	EbusMessage* dequeue();
-
-	size_t size();
-
-private:
-	NQueue<EbusMessage*> m_ebusMsgQueue;
-
-};
-
-} // namespace libebus
-
-#endif // LIBEBUS_FSM_IPROCESS_H

@@ -46,8 +46,9 @@ libebus_a_SOURCES = Device.cpp \
 		    fsm/SendResponse.h \
 		    fsm/RecvResponse.cpp \
 		    fsm/RecvResponse.h \
-		    fsm/ILogger.h \
+		    fsm/IProcess.cpp \
 		    fsm/IProcess.h \
+		    fsm/ILogger.h \
 		    fsm/EbusFSM.cpp \
 		    fsm/EbusFSM.h
 

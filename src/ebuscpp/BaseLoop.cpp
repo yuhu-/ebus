@@ -42,6 +42,7 @@ BaseLoop::BaseLoop()
 	m_ownAddress = options.getInt("address") & 0xff;
 
 	m_proxy = new Proxy(m_ownAddress);
+	m_proxy->start();
 
 	m_ebusFSM = new EbusFSM(m_ownAddress, options.getString("device"), options.getBool("devicecheck"), m_proxy,
 		&m_logger);
