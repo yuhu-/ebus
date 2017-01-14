@@ -29,9 +29,9 @@ Dummy::~Dummy()
 {
 }
 
-Action Dummy::handleActive(EbusSequence& eSeq)
+Action Dummy::handleActiveMessage(EbusSequence& eSeq)
 {
-	LIBLOGGER_INFO("handle active %s", eSeq.toStringLog().c_str());
+	LIBLOGGER_INFO("%s", eSeq.toStringLog().c_str());
 
 	if (eSeq.getMaster().contains("0700") == true)
 	{
@@ -51,19 +51,19 @@ Action Dummy::handleActive(EbusSequence& eSeq)
 	return (Action::undefined);
 }
 
-void Dummy::activeSent(EbusSequence& eSeq)
+void Dummy::handlePassiveMessage(EbusSequence& eSeq)
 {
-	LIBLOGGER_INFO("handle activeSent %s", eSeq.toStringLog().c_str());
+	LIBLOGGER_INFO("%s", eSeq.toStringLog().c_str());
 
-	// TODO implement activeSent message handler
+	// TODO implement passive message handler
 	// notify();
 }
 
-void Dummy::handlePassive(EbusSequence& eSeq)
+void Dummy::handleProcessMessage(EbusSequence& eSeq)
 {
-	LIBLOGGER_INFO("handle passive %s", eSeq.toStringLog().c_str());
+	LIBLOGGER_INFO("%s", eSeq.toStringLog().c_str());
 
-	// TODO implement passive message handler
+	// TODO implement process message handler
 	// notify();
 }
 

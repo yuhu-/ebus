@@ -44,13 +44,11 @@ class IProcess
 public:
 	virtual ~IProcess();
 
-	virtual Action handleActive(EbusSequence& eSeq) = 0;
+	virtual Action handleActiveMessage(EbusSequence& eSeq) = 0;
 
-	virtual void handleActiveDone(EbusSequence& eSeq) = 0;
+	virtual void handlePassiveMessage(EbusSequence& eSeq) = 0;
 
-	virtual void handlePassive(EbusSequence& eSeq) = 0;
-
-	void enqueueMessage(EbusMessage* message);
+	virtual void handleProcessMessage(EbusSequence& eSeq) = 0;
 
 	EbusMessage* dequeueMessage();
 
@@ -59,6 +57,7 @@ public:
 private:
 	NQueue<EbusMessage*> m_ebusMsgQueue;
 
+	void enqueueMessage(EbusMessage* message);
 };
 
 } // namespace libebus

@@ -25,11 +25,6 @@ libebus::IProcess::~IProcess()
 		delete m_ebusMsgQueue.dequeue();
 }
 
-void libebus::IProcess::enqueueMessage(EbusMessage* message)
-{
-	m_ebusMsgQueue.enqueue(message);
-}
-
 libebus::EbusMessage* libebus::IProcess::dequeueMessage()
 {
 	return (m_ebusMsgQueue.dequeue());
@@ -40,3 +35,7 @@ size_t libebus::IProcess::getQueueSize()
 	return (m_ebusMsgQueue.size());
 }
 
+void libebus::IProcess::enqueueMessage(EbusMessage* message)
+{
+	m_ebusMsgQueue.enqueue(message);
+}

@@ -207,22 +207,22 @@ void libebus::EbusFSM::changeState(State* state)
 	}
 }
 
-libebus::Action libebus::EbusFSM::active(EbusSequence& eSeq)
+libebus::Action libebus::EbusFSM::handleActiveMessage(EbusSequence& eSeq)
 {
 	if (m_process != nullptr)
-		return (m_process->handleActive(eSeq));
+		return (m_process->handleActiveMessage(eSeq));
 	else
 		return (Action::noprocess);
 }
 
-void libebus::EbusFSM::activeSent(EbusSequence& eSeq)
+void libebus::EbusFSM::handlePassiveMessage(EbusSequence& eSeq)
 {
-	if (m_process != nullptr) m_process->activeSent(eSeq);
+	if (m_process != nullptr) m_process->handlePassiveMessage(eSeq);
 }
 
-void libebus::EbusFSM::passive(EbusSequence& eSeq)
+void libebus::EbusFSM::handleProcessMessage(EbusSequence& eSeq)
 {
-	if (m_process != nullptr) m_process->recvPassive(eSeq);
+	if (m_process != nullptr) m_process->handleProcessMessage(eSeq);
 }
 
 void libebus::EbusFSM::logError(const string& message)

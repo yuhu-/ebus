@@ -41,11 +41,11 @@ public:
 	void start();
 	void stop();
 
-	virtual Action handleActive(EbusSequence& eSeq) = 0;
+	virtual Action handleActiveMessage(EbusSequence& eSeq) = 0;
 
-	virtual void activeSent(EbusSequence& eSeq) = 0;
+	virtual void handlePassiveMessage(EbusSequence& eSeq) = 0;
 
-	virtual void handlePassive(EbusSequence& eSeq) = 0;
+	virtual void handleProcessMessage(EbusSequence& eSeq) = 0;
 
 protected:
 	bool m_running = true;
