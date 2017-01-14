@@ -103,6 +103,7 @@ private:
 	int m_lastResult = DEV_OK;
 
 	const unsigned char m_address;              // own ebus address >> must be set
+	const unsigned char m_slaveAddress;         // own ebus slave address
 
 	long m_reopenTime = 60;                     // max. time to open ebus device [s]
 	long m_arbitrationTime = 4400;              // waiting time for arbitration test [us]

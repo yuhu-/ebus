@@ -61,9 +61,11 @@ bool libebus::isValidAddress(const unsigned char byte)
 	return (byte != 0xaa && byte != 0xa9);
 }
 
-unsigned char libebus::slaveAddress(const unsigned char masterAddress)
+unsigned char libebus::slaveAddress(const unsigned char address)
 {
+	if (isSlave(address) == true)
+		return (address);
 
-	return ((masterAddress + 0x05) & 0xff);
+	return ((address + 0x05) & 0xff);
 }
 

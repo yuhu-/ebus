@@ -18,14 +18,20 @@
  */
 
 #include "Process.h"
+#include "Common.h"
 
 #include <iomanip>
 
+using libebus::slaveAddress;
 using std::ostringstream;
 using std::endl;
 
+// TODO handle slave address as address
+// -> only passive ebus member
+// -> block enqueueMessage
+
 Process::Process(const unsigned char address)
-	: Notify(), m_address(address)
+	: Notify(), m_address(address), m_slaveAddress(slaveAddress(address))
 {
 }
 

@@ -23,6 +23,7 @@
 #include "OnError.h"
 #include "State.h"
 #include "Color.h"
+#include "Common.h"
 
 #include <sstream>
 #include <algorithm>
@@ -33,9 +34,13 @@ using std::ostringstream;
 using std::copy_n;
 using std::back_inserter;
 
+// TODO handle slave address as address
+// -> only passive ebus member
+// -> block enqueueMessage
+
 libebus::EbusFSM::EbusFSM(const unsigned char address, const string device, const bool deviceCheck, IProcess* process,
 	ILogger* logger)
-	: Notify(), m_address(address), m_process(process), m_logger(logger)
+	: Notify(), m_address(address), m_slaveAddress(slaveAddress(address)), m_process(process), m_logger(logger)
 {
 	m_ebusDevice = new EbusDevice(device, deviceCheck);
 	changeState(Connect::getConnect());

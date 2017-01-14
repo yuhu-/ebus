@@ -51,6 +51,7 @@ protected:
 	bool m_running = true;
 
 	const unsigned char m_address;
+	const unsigned char m_slaveAddress;
 
 private:
 	thread m_thread;
