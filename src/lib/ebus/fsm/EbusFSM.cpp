@@ -171,7 +171,7 @@ void libebus::EbusFSM::setDumpFileMaxSize(const long& dumpFileMaxSize)
 	m_dumpFileMaxSize = dumpFileMaxSize;
 }
 
-void libebus::EbusFSM::enqueue(EbusMessage* message)
+void libebus::EbusFSM::enqueueMessage(EbusMessage* message)
 {
 	m_ebusMsgQueue.enqueue(message);
 }
@@ -210,7 +210,7 @@ void libebus::EbusFSM::changeState(State* state)
 libebus::Action libebus::EbusFSM::active(EbusSequence& eSeq)
 {
 	if (m_process != nullptr)
-		return (m_process->active(eSeq));
+		return (m_process->handleActive(eSeq));
 	else
 		return (Action::noprocess);
 }
@@ -222,7 +222,7 @@ void libebus::EbusFSM::activeSent(EbusSequence& eSeq)
 
 void libebus::EbusFSM::passive(EbusSequence& eSeq)
 {
-	if (m_process != nullptr) m_process->passive(eSeq);
+	if (m_process != nullptr) m_process->recvPassive(eSeq);
 }
 
 void libebus::EbusFSM::logError(const string& message)

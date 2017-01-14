@@ -37,7 +37,7 @@ Proxy::~Proxy()
 	}
 }
 
-Action Proxy::active(EbusSequence& eSeq)
+Action Proxy::handleActive(EbusSequence& eSeq)
 {
 	LIBLOGGER_INFO("search %s", eSeq.toStringLog().c_str());
 
@@ -79,7 +79,7 @@ void Proxy::activeSent(EbusSequence& eSeq)
 	m_forward->enqueue(eSeq);
 }
 
-void Proxy::passive(EbusSequence& eSeq)
+void Proxy::handlePassive(EbusSequence& eSeq)
 {
 	LIBLOGGER_INFO("forward %s", eSeq.toStringLog().c_str());
 

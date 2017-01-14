@@ -186,7 +186,7 @@ string BaseLoop::decodeMessage(const string& data)
 			{
 				LIBLOGGER_DEBUG("enqueue: %s", eSeq.toStringMaster().c_str());
 				EbusMessage* ebusMessage = new EbusMessage(eSeq);
-				m_ebusFSM->enqueue(ebusMessage);
+				m_ebusFSM->enqueueMessage(ebusMessage);
 				ebusMessage->waitNotify();
 				result << ebusMessage->getResult();
 				delete ebusMessage;

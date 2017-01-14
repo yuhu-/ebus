@@ -29,11 +29,11 @@ public:
 	explicit Dummy(const unsigned char address);
 	~Dummy();
 
-	Action active(EbusSequence& eSeq);
+	Action handleActive(EbusSequence& eSeq);
 
 	void activeSent(EbusSequence& eSeq);
 
-	void passive(EbusSequence& eSeq);
+	void handlePassive(EbusSequence& eSeq);
 
 private:
 	void run();

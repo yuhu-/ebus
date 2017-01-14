@@ -90,7 +90,7 @@ public:
 	long getDumpFileMaxSize() const;
 	void setDumpFileMaxSize(const long& dumpFileMaxSize);
 
-	void enqueue(EbusMessage* message);
+	void enqueueMessage(EbusMessage* message);
 
 private:
 	thread m_thread;

@@ -29,7 +29,7 @@ Dummy::~Dummy()
 {
 }
 
-Action Dummy::active(EbusSequence& eSeq)
+Action Dummy::handleActive(EbusSequence& eSeq)
 {
 	LIBLOGGER_INFO("handle active %s", eSeq.toStringLog().c_str());
 
@@ -59,7 +59,7 @@ void Dummy::activeSent(EbusSequence& eSeq)
 	// notify();
 }
 
-void Dummy::passive(EbusSequence& eSeq)
+void Dummy::handlePassive(EbusSequence& eSeq)
 {
 	LIBLOGGER_INFO("handle passive %s", eSeq.toStringLog().c_str());
 

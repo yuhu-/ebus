@@ -62,7 +62,7 @@ int libebus::Evaluate::run(EbusFSM* fsm)
 		if (eSeq.getMasterState() == EBUS_OK)
 		{
 			fsm->logDebug("enqueue: " + eSeq.toStringMaster());
-			fsm->enqueue(new EbusMessage(eSeq, true));
+			fsm->enqueueMessage(new EbusMessage(eSeq, true));
 		}
 		else
 		{

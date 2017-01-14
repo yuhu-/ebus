@@ -29,11 +29,11 @@ public:
 	explicit Proxy(const unsigned char address);
 	~Proxy();
 
-	Action active(EbusSequence& eSeq);
+	Action handleActive(EbusSequence& eSeq);
 
 	void activeSent(EbusSequence& eSeq);
 
-	void passive(EbusSequence& eSeq);
+	void handlePassive(EbusSequence& eSeq);
 
 	void forward(bool remove, const string& ip, long port, const string& filter, ostringstream& result);
 
