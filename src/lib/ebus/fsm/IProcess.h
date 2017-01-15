@@ -34,8 +34,7 @@ enum class Action
 	noprocess,      // no process
 	undefined,	// undefined
 	ignore,		// ignore
-	response,	// send response
-	send		// send message
+	response	// send response
 };
 
 class IProcess
@@ -44,20 +43,18 @@ class IProcess
 public:
 	virtual ~IProcess();
 
-	virtual Action handleActiveMessage(EbusSequence& eSeq) = 0;
-
-	virtual void handlePassiveMessage(EbusSequence& eSeq) = 0;
-
-	virtual void handleProcessMessage(EbusSequence& eSeq) = 0;
+	virtual Action activeMessage(EbusSequence& eSeq) = 0;
+	virtual void passiveMessage(EbusSequence& eSeq) = 0;
 
 	EbusMessage* dequeueMessage();
-
 	size_t getQueueSize();
+
+protected:
+	void enqueueMessage(EbusMessage* message);
 
 private:
 	NQueue<EbusMessage*> m_ebusMsgQueue;
 
-	void enqueueMessage(EbusMessage* message);
 };
 
 } // namespace libebus

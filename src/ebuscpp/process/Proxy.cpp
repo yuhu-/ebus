@@ -20,6 +20,8 @@
 #include "Proxy.h"
 #include "Logger.h"
 
+#include <unistd.h>
+
 Proxy::Proxy(const unsigned char address)
 	: Process(address)
 {
@@ -37,7 +39,28 @@ Proxy::~Proxy()
 	}
 }
 
-Action Proxy::handleActiveMessage(EbusSequence& eSeq)
+void Proxy::run()
+{
+	LIBLOGGER_INFO("started");
+
+	while (m_running == true)
+	{
+		//waitNotify();
+
+		sleep(1);
+		LIBLOGGER_INFO("notified");
+		if (pendingMessages() != 0)
+		{
+			EbusMessage* ebusMessage = processMessage();
+			LIBLOGGER_INFO(ebusMessage->getResult());
+			delete ebusMessage;
+		}
+	}
+
+	LIBLOGGER_INFO("stopped");
+}
+
+Action Proxy::activeMessage(EbusSequence& eSeq)
 {
 	LIBLOGGER_INFO("search %s", eSeq.toStringLog().c_str());
 
@@ -56,7 +79,8 @@ Action Proxy::handleActiveMessage(EbusSequence& eSeq)
 	{
 		eSeq.clear();
 		eSeq.createMaster(m_address, BROADCAST, "07ff00");
-		return (Action::send);
+		createMessage(eSeq);
+		return (Action::ignore);
 	}
 
 	if (eSeq.getMaster().contains("b505") == true)
@@ -72,14 +96,7 @@ Action Proxy::handleActiveMessage(EbusSequence& eSeq)
 	return (Action::undefined);
 }
 
-void Proxy::handlePassiveMessage(EbusSequence& eSeq)
-{
-	LIBLOGGER_INFO("forward %s", eSeq.toStringLog().c_str());
-
-	m_forward->enqueue(eSeq);
-}
-
-void Proxy::handleProcessMessage(EbusSequence& eSeq)
+void Proxy::passiveMessage(EbusSequence& eSeq)
 {
 	LIBLOGGER_INFO("forward %s", eSeq.toStringLog().c_str());
 
@@ -92,17 +109,5 @@ void Proxy::forward(bool remove, const string& ip, long port, const string& filt
 		m_forward->remove(ip, port, filter, result);
 	else
 		m_forward->append(ip, port, filter, result);
-}
-
-void Proxy::run()
-{
-	LIBLOGGER_INFO("started");
-
-	while (m_running == true)
-	{
-		waitNotify();
-	}
-
-	LIBLOGGER_INFO("stopped");
 }
 

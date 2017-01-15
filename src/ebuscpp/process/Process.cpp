@@ -26,10 +26,6 @@ using libebus::slaveAddress;
 using std::ostringstream;
 using std::endl;
 
-// TODO handle slave address as address
-// -> only passive ebus member
-// -> block enqueueMessage
-
 Process::Process(const unsigned char address)
 	: Notify(), m_address(address), m_slaveAddress(slaveAddress(address))
 {
@@ -54,3 +50,20 @@ void Process::stop()
 	}
 }
 
+void Process::createMessage(EbusSequence& eSeq)
+{
+	if (eSeq.getMasterState() == EBUS_OK) m_ebusMsgProcessQueue.enqueue(new EbusMessage(eSeq));
+}
+
+EbusMessage* Process::processMessage()
+{
+	EbusMessage* ebusMessage = m_ebusMsgProcessQueue.dequeue();
+	enqueueMessage(ebusMessage);
+	ebusMessage->waitNotify();
+	return (ebusMessage);
+}
+
+size_t Process::pendingMessages()
+{
+	return (m_ebusMsgProcessQueue.size());
+}

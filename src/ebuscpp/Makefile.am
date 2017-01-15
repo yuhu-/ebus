@@ -35,8 +35,6 @@ ebusproxy_SOURCES = network/NetMessage.cpp \
 		    process/Process.h \
 		    process/Proxy.cpp \
 		    process/Proxy.h \
-		    process/Dummy.cpp \
-		    process/Dummy.h \
 		    EbusLogger.cpp \
 		    EbusLogger.h \
 		    BaseLoop.cpp \

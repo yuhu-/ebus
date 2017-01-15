@@ -29,6 +29,7 @@
 using libebus::IProcess;
 using libebus::Action;
 using libebus::EbusSequence;
+using libebus::EbusMessage;
 using std::thread;
 
 class Process : public IProcess, public Notify
@@ -41,20 +42,23 @@ public:
 	void start();
 	void stop();
 
-	virtual Action handleActiveMessage(EbusSequence& eSeq) = 0;
-
-	virtual void handlePassiveMessage(EbusSequence& eSeq) = 0;
-
-	virtual void handleProcessMessage(EbusSequence& eSeq) = 0;
-
 protected:
 	bool m_running = true;
 
 	const unsigned char m_address;
 	const unsigned char m_slaveAddress;
 
+	virtual Action activeMessage(EbusSequence& eSeq) = 0;
+	virtual void passiveMessage(EbusSequence& eSeq) = 0;
+
+	void createMessage(EbusSequence& eSeq);
+	EbusMessage* processMessage();
+	size_t pendingMessages();
+
 private:
 	thread m_thread;
+
+	NQueue<EbusMessage*> m_ebusMsgProcessQueue;
 
 	virtual void run() = 0;
 

@@ -23,19 +23,14 @@
 
 using std::ostringstream;
 
-libebus::EbusMessage::EbusMessage(EbusSequence& eSeq, bool intern)
-	: Notify(), m_ebusSequence(eSeq), m_intern(intern)
+libebus::EbusMessage::EbusMessage(EbusSequence& eSeq)
+	: Notify(), m_ebusSequence(eSeq)
 {
 }
 
 libebus::EbusSequence& libebus::EbusMessage::getEbusSequence()
 {
 	return (m_ebusSequence);
-}
-
-bool libebus::EbusMessage::isIntern() const
-{
-	return (m_intern);
 }
 
 void libebus::EbusMessage::setResult(const string& result)

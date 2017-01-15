@@ -34,10 +34,6 @@ using std::ostringstream;
 using std::copy_n;
 using std::back_inserter;
 
-// TODO handle slave address as address
-// -> only passive ebus member
-// -> block enqueueMessage
-
 libebus::EbusFSM::EbusFSM(const unsigned char address, const string device, const bool deviceCheck, IProcess* process,
 	ILogger* logger)
 	: Notify(), m_address(address), m_slaveAddress(slaveAddress(address)), m_process(process), m_logger(logger)
@@ -215,19 +211,14 @@ void libebus::EbusFSM::changeState(State* state)
 libebus::Action libebus::EbusFSM::handleActiveMessage(EbusSequence& eSeq)
 {
 	if (m_process != nullptr)
-		return (m_process->handleActiveMessage(eSeq));
+		return (m_process->activeMessage(eSeq));
 	else
 		return (Action::noprocess);
 }
 
 void libebus::EbusFSM::handlePassiveMessage(EbusSequence& eSeq)
 {
-	if (m_process != nullptr) m_process->handlePassiveMessage(eSeq);
-}
-
-void libebus::EbusFSM::handleProcessMessage(EbusSequence& eSeq)
-{
-	if (m_process != nullptr) m_process->handleProcessMessage(eSeq);
+	if (m_process != nullptr) m_process->passiveMessage(eSeq);
 }
 
 void libebus::EbusFSM::logError(const string& message)

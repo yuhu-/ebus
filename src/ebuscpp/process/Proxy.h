@@ -29,18 +29,15 @@ public:
 	explicit Proxy(const unsigned char address);
 	~Proxy();
 
-	Action handleActiveMessage(EbusSequence& eSeq);
-
-	void handlePassiveMessage(EbusSequence& eSeq);
-
-	void handleProcessMessage(EbusSequence& eSeq);
-
 	void forward(bool remove, const string& ip, long port, const string& filter, ostringstream& result);
 
 private:
 	Forward* m_forward = nullptr;
 
 	void run();
+
+	Action activeMessage(EbusSequence& eSeq);
+	void passiveMessage(EbusSequence& eSeq);
 
 };
 

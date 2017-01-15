@@ -40,7 +40,7 @@ int libebus::Evaluate::run(EbusFSM* fsm)
 		fsm->logWarn(stateMessage(STATE_WRN_NOT_DEF));
 		break;
 	case Action::ignore:
-		fsm->logDebug(stateMessage(STATE_INF_MSG_INGORE));
+		fsm->logTrace(stateMessage(STATE_INF_MSG_INGORE));
 		break;
 	case Action::response:
 		eSeq.setSlaveACK(ACK);
@@ -51,18 +51,6 @@ int libebus::Evaluate::run(EbusFSM* fsm)
 			m_passiveMessage = new EbusMessage(eSeq);
 			fsm->changeState(SendResponse::getSendResponse());
 			return (DEV_OK);
-		}
-		else
-		{
-			fsm->logWarn(stateMessage(STATE_ERR_CREA_MSG));
-		}
-
-		break;
-	case Action::send:
-		if (eSeq.getMasterState() == EBUS_OK)
-		{
-			fsm->logDebug("enqueue: " + eSeq.toStringMaster());
-			fsm->enqueueMessage(new EbusMessage(eSeq, true));
 		}
 		else
 		{
