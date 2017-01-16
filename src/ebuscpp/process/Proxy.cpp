@@ -60,7 +60,7 @@ void Proxy::run()
 	LIBLOGGER_INFO("stopped");
 }
 
-Action Proxy::activeMessage(EbusSequence& eSeq)
+Action Proxy::getAction(EbusSequence& eSeq)
 {
 	LIBLOGGER_INFO("search %s", eSeq.toStringLog().c_str());
 
@@ -94,6 +94,13 @@ Action Proxy::activeMessage(EbusSequence& eSeq)
 	}
 
 	return (Action::undefined);
+}
+
+void Proxy::activeMessage(EbusSequence& eSeq)
+{
+	LIBLOGGER_INFO("forward %s", eSeq.toStringLog().c_str());
+
+	m_forward->enqueue(eSeq);
 }
 
 void Proxy::passiveMessage(EbusSequence& eSeq)

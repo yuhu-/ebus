@@ -208,15 +208,20 @@ void libebus::EbusFSM::changeState(State* state)
 	}
 }
 
-libebus::Action libebus::EbusFSM::handleActiveMessage(EbusSequence& eSeq)
+libebus::Action libebus::EbusFSM::getAction(EbusSequence& eSeq)
 {
 	if (m_process != nullptr)
-		return (m_process->activeMessage(eSeq));
+		return (m_process->getAction(eSeq));
 	else
 		return (Action::noprocess);
 }
 
-void libebus::EbusFSM::handlePassiveMessage(EbusSequence& eSeq)
+void libebus::EbusFSM::activeMessage(EbusSequence& eSeq)
+{
+	if (m_process != nullptr) m_process->activeMessage(eSeq);
+}
+
+void libebus::EbusFSM::passiveMessage(EbusSequence& eSeq)
 {
 	if (m_process != nullptr) m_process->passiveMessage(eSeq);
 }

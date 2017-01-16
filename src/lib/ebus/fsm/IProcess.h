@@ -43,7 +43,8 @@ class IProcess
 public:
 	virtual ~IProcess();
 
-	virtual Action activeMessage(EbusSequence& eSeq) = 0;
+	virtual Action getAction(EbusSequence& eSeq) = 0;
+	virtual void activeMessage(EbusSequence& eSeq) = 0;
 	virtual void passiveMessage(EbusSequence& eSeq) = 0;
 
 	EbusMessage* dequeueMessage();

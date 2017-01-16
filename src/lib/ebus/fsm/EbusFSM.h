@@ -127,8 +127,9 @@ private:
 
 	void changeState(State* state);
 
-	Action handleActiveMessage(EbusSequence& eSeq);
-	void handlePassiveMessage(EbusSequence& eSeq);
+	Action getAction(EbusSequence& eSeq);
+	void activeMessage(EbusSequence& eSeq);
+	void passiveMessage(EbusSequence& eSeq);
 
 	void logError(const string& message);
 	void logWarn(const string& message);
