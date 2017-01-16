@@ -33,6 +33,8 @@ Process::Process(const unsigned char address)
 
 Process::~Process()
 {
+	while (m_ebusMsgProcessQueue.size() > 0)
+		delete m_ebusMsgProcessQueue.dequeue();
 }
 
 void Process::start()
