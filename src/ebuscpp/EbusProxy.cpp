@@ -48,7 +48,7 @@ void define_args()
 
 	options.addString("device", "d", "/dev/ttyUSB0", "\tebus device (serial or network) [/dev/ttyUSB0]");
 
-	options.addBool("devicecheck", "c", true, "sanity check of serial ebus device");
+	options.addBool("devicecheck", "c", true, "sanity check of serial ebus device [yes]");
 
 	options.addLong("reopentime", "", 60, "max. time to open ebus device in 'sec' [60]\n");
 
@@ -60,7 +60,7 @@ void define_args()
 
 	options.addInt("lockretries", "", 2, "number of retries to lock ebus [2]\n");
 
-	options.addBool("dump", "", false, "\tenable/disable raw data dumping");
+	options.addBool("dump", "", false, "\tenable/disable raw data dumping [no]");
 
 	options.addString("dumpfile", "", "/tmp/ebus_dump.bin", "\tdump file name [/tmp/ebus_dump.bin]");
 
@@ -68,15 +68,17 @@ void define_args()
 
 	options.addInt("port", "p", 8888, "\tlisten port [8888]");
 
-	options.addBool("local", "", false, "\tlisten only on localhost\n");
+	options.addBool("local", "", false, "\tlisten only on localhost [no]\n");
 
-	options.addBool("foreground", "f", false, "run in foreground\n");
+	options.addBool("foreground", "f", false, "run in foreground [no]\n");
 
 	options.addString("pidfile", "", "/var/run/ebusproxy.pid", "\tpid file name [/var/run/ebusproxy.pid]\n");
 
 	options.addString("logfile", "", "/var/log/ebusproxy.log", "\tlog file name [/var/log/ebusproxy.log]");
 
 	options.addString("loglevel", "", "info", "\tset logging level - off|error|warn|info|debug|trace [info]");
+
+	options.addBool("showfunction", "", false, "show function names in logging [no]");
 
 }
 
@@ -136,14 +138,18 @@ int main(int argc, char* argv[])
 
 	if (options.getBool("foreground") == true)
 	{
-		LIBLOGGER_CONSOLE(options.getString("loglevel"), 22);
+		LIBLOGGER_CONSOLE();
 	}
 	else
 	{
 		// make me daemon
 		Daemon::getDaemon().start(options.getString("pidfile"));
-		LIBLOGGER_FILE(options.getString("loglevel"), 22, options.getString("logfile"));
+		LIBLOGGER_FILE(options.getString("logfile"));
 	}
+
+	LIBLOGGER_LEVEL(options.getString("loglevel"));
+	LIBLOGGER_SHOWFUNCTION(options.getBool("showfunction"));
+	LIBLOGGER_FUNCTIONLENGTH(22);
 
 	LIBLOGGER_INFO("started");
 

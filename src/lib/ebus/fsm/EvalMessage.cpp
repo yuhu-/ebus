@@ -40,7 +40,7 @@ int libebus::EvalMessage::run(EbusFSM* fsm)
 		fsm->logWarn(stateMessage(STATE_WRN_NOT_DEF));
 		break;
 	case Action::ignore:
-		fsm->logTrace(stateMessage(STATE_INF_MSG_INGORE));
+		fsm->logDebug(stateMessage(STATE_INF_MSG_INGORE));
 		break;
 	case Action::response:
 		eSeq.setSlaveACK(ACK);

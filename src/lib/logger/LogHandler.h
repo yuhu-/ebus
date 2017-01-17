@@ -65,7 +65,8 @@ public:
 	string getLevelName(Level level);
 	void setLevel(const string& level);
 
-	void setLength(const size_t& length);
+	void setShowFunction(const bool hide);
+	void setFunctionLength(const size_t length);
 
 	void addConsole();
 	void addFile(const string& file);
@@ -85,7 +86,8 @@ private:
 
 	Level m_level = Level::info;
 
-	size_t m_length = 0;
+	bool m_showFunction = false;
+	size_t m_functionLength = 0;
 
 	void run();
 
