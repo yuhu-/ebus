@@ -17,14 +17,14 @@
  * along with ebuscpp. If not, see http://www.gnu.org/licenses/.
  */
 
-#include "Evaluate.h"
+#include "EvalMessage.h"
 #include "Listen.h"
 #include "SendResponse.h"
 #include "Common.h"
 
-libebus::Evaluate libebus::Evaluate::m_evaluate;
+libebus::EvalMessage libebus::EvalMessage::m_evalMessage;
 
-int libebus::Evaluate::run(EbusFSM* fsm)
+int libebus::EvalMessage::run(EbusFSM* fsm)
 {
 	EbusSequence eSeq;
 	eSeq.createMaster(m_sequence);
@@ -67,8 +67,8 @@ int libebus::Evaluate::run(EbusFSM* fsm)
 	return (DEV_OK);
 }
 
-const string libebus::Evaluate::toString() const
+const string libebus::EvalMessage::toString() const
 {
-	return ("Evaluate");
+	return ("EvalMessage");
 }
 

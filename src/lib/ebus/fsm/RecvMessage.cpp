@@ -18,7 +18,7 @@
  */
 
 #include "RecvMessage.h"
-#include "Evaluate.h"
+#include "EvalMessage.h"
 #include "Listen.h"
 
 libebus::RecvMessage libebus::RecvMessage::m_recvMessage;
@@ -105,7 +105,7 @@ int libebus::RecvMessage::run(EbusFSM* fsm)
 			fsm->passiveMessage(eSeq);
 		}
 
-		fsm->changeState(Evaluate::getEvaluate());
+		fsm->changeState(EvalMessage::getEvaluate());
 		return (DEV_OK);
 	}
 

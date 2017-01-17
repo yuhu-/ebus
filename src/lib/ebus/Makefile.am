@@ -36,8 +36,8 @@ libebus_a_SOURCES = Device.cpp \
 		    fsm/LockBus.h \
 		    fsm/FreeBus.cpp \
 		    fsm/FreeBus.h \
-		    fsm/Evaluate.cpp \
-		    fsm/Evaluate.h \
+		    fsm/EvalMessage.cpp \
+		    fsm/EvalMessage.h \
 		    fsm/SendMessage.cpp \
 		    fsm/SendMessage.h \
 		    fsm/RecvMessage.cpp \

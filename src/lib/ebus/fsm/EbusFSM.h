@@ -48,7 +48,7 @@ class EbusFSM : public Notify
 	friend class Listen;
 	friend class LockBus;
 	friend class FreeBus;
-	friend class Evaluate;
+	friend class EvalMessage;
 	friend class SendMessage;
 	friend class RecvResponse;
 	friend class RecvMessage;

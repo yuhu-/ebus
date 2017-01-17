@@ -46,7 +46,9 @@ int libebus::OnError::run(EbusFSM* fsm)
 		fsm->changeState(Connect::getConnect());
 	}
 	else
+	{
 		fsm->changeState(Listen::getListen());
+	}
 
 	return (DEV_OK);
 }
