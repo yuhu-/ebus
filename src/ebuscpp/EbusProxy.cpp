@@ -40,13 +40,13 @@ void define_args()
 {
 	Options& options = Options::getOption();
 
-	options.setVersion("" PACKAGE_STRING"");
+	options.setVersion("ebusproxy is part of " "" PACKAGE_STRING"");
 
 	options.addDescription(" ebusproxy provides a communication interface too ebus equipped systems.");
 
-	options.addHex("address", "a", 0xff, "\tebus device address [FF]");
+	options.addHex("address", "a", 0xff, "ebus device address [FF]");
 
-	options.addString("device", "d", "/dev/ttyUSB0", "\tebus device (serial or network) [/dev/ttyUSB0]");
+	options.addString("device", "d", "/dev/ttyUSB0", "ebus device (serial or network) [/dev/ttyUSB0]");
 
 	options.addBool("devicecheck", "c", true, "sanity check of serial ebus device [yes]");
 
@@ -56,27 +56,27 @@ void define_args()
 
 	options.addLong("receivetimeout", "", 4700, "max. time for receiving of one sequence sign 'us' [4700]");
 
-	options.addInt("lockcounter", "", 5, "number of characters after a successful ebus access [5] (max: 25)");
+	options.addInt("lockcounter", "", 5, "number of characters after a successful ebus access (max: 25) [5]");
 
 	options.addInt("lockretries", "", 2, "number of retries to lock ebus [2]\n");
 
-	options.addBool("dump", "", false, "\tenable/disable raw data dumping [no]");
+	options.addBool("dump", "", false, "enable/disable raw data dumping [no]");
 
-	options.addString("dumpfile", "", "/tmp/ebus_dump.bin", "\tdump file name [/tmp/ebus_dump.bin]");
+	options.addString("dumpfile", "", "/tmp/ebus_dump.bin", "dump file name [/tmp/ebus_dump.bin]");
 
-	options.addLong("dumpsize", "", 100, "\tmax size for dump file in 'kB' [100]\n");
+	options.addLong("dumpsize", "", 100, "max size for dump file in 'kB' [100]\n");
 
-	options.addInt("port", "p", 8888, "\tlisten port [8888]");
+	options.addInt("port", "p", 8888, "listen port [8888]");
 
-	options.addBool("local", "", false, "\tlisten only on localhost [no]\n");
+	options.addBool("local", "", false, "listen only on localhost [no]\n");
 
 	options.addBool("foreground", "f", false, "run in foreground [no]\n");
 
-	options.addString("pidfile", "", "/var/run/ebusproxy.pid", "\tpid file name [/var/run/ebusproxy.pid]\n");
+	options.addString("pidfile", "", "/var/run/ebusproxy.pid", "pid file name [/var/run/ebusproxy.pid]\n");
 
-	options.addString("logfile", "", "/var/log/ebusproxy.log", "\tlog file name [/var/log/ebusproxy.log]");
+	options.addString("logfile", "", "/var/log/ebusproxy.log", "log file name [/var/log/ebusproxy.log]");
 
-	options.addString("loglevel", "", "info", "\tset logging level - off|error|warn|info|debug|trace [info]");
+	options.addString("loglevel", "", "info", "set logging level - off|error|warn|info|debug|trace [info]");
 
 	options.addBool("showfunction", "", false, "show function names in logging [no]");
 

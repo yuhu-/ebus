@@ -28,7 +28,10 @@ using std::endl;
 using std::hex;
 using std::setw;
 using std::setfill;
+using std::left;
 using std::dec;
+
+size_t libutils::Options::m_maxNameLength = 0;
 
 libutils::Options& libutils::Options::getOption(const string& command, const string& argument)
 {
@@ -66,9 +69,12 @@ void libutils::Options::addText(const string& text)
 	option.description = text;
 
 	m_options.push_back(option);
+
+	if (option.name.length() > m_maxNameLength) m_maxNameLength = option.name.length();
 }
 
-void libutils::Options::addBool(const string& name, const string& shortname, const bool value, const string& description)
+void libutils::Options::addBool(const string& name, const string& shortname, const bool value,
+	const string& description)
 {
 	if (name.size() != 0)
 	{
@@ -98,7 +104,8 @@ void libutils::Options::addInt(const string& name, const string& shortname, cons
 
 }
 
-void libutils::Options::addLong(const string& name, const string& shortname, const long value, const string& description)
+void libutils::Options::addLong(const string& name, const string& shortname, const long value,
+	const string& description)
 {
 	if (name.size() != 0)
 	{
@@ -108,7 +115,8 @@ void libutils::Options::addLong(const string& name, const string& shortname, con
 
 }
 
-void libutils::Options::addFloat(const string& name, const string& shortname, const float value, const string& description)
+void libutils::Options::addFloat(const string& name, const string& shortname, const float value,
+	const string& description)
 {
 	if (name.size() != 0)
 	{
@@ -118,7 +126,8 @@ void libutils::Options::addFloat(const string& name, const string& shortname, co
 
 }
 
-void libutils::Options::addString(const string& name, const string& shortname, const string& value, const string& description)
+void libutils::Options::addString(const string& name, const string& shortname, const string& value,
+	const string& description)
 {
 	if (name.size() != 0)
 	{
@@ -371,8 +380,8 @@ bool libutils::Options::toStringOptions()
 		else
 		{
 			const string c = (option.shortname.size() == 1) ? option.shortname.c_str() : " ";
-			cerr << ((c == " ") ? " " : "-") << c << " | --" << option.name << "\t" << option.description
-				<< endl;
+			cerr << ((c == " ") ? " " : "-") << c << " | --" << setw(m_maxNameLength) << setfill(' ') << left
+				<< option.name << "\t" << setw(0) << option.description << endl;
 		}
 	}
 
@@ -458,6 +467,8 @@ void libutils::Options::add(const string& name, const string& shortname, const s
 	option.type = type;
 
 	m_options.push_back(option);
+
+	if (option.name.length() > m_maxNameLength) m_maxNameLength = option.name.length();
 }
 
 int libutils::Options::find(const string& name, const bool shortname)

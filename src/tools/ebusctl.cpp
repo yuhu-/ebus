@@ -44,11 +44,11 @@ void define_args()
 	options.addDescription(" 'ebusctl' is a tcp/udp socket client for ebusproxy.\n"
 		"  hint: try 'help' for available ebusproxy commands.");
 
-	options.addString("server", "s", "localhost", "name or ip (localhost)");
+	options.addString("server", "s", "localhost", "name or ip [localhost]");
 
-	options.addLong("port", "p", 8888, "port (8888)");
+	options.addLong("port", "p", 8888, "port [8888]");
 
-	options.addBool("udp", "u", false, "connect via udp");
+	options.addBool("udp", "u", false, "connect via udp [no]");
 }
 
 void connect(const string& host, const int port, const bool udp)

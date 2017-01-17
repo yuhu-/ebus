@@ -9,29 +9,30 @@ Description:
 
 Options:
 
--a | --address		ebus device address [FF]
--d | --device		ebus device (serial or network) [/dev/ttyUSB0]
--c | --devicecheck	sanity check of serial ebus device
-   | --reopentime	max. time to open ebus device in 'sec' [60]
+-a | --address        	ebus device address [FF]
+-d | --device         	ebus device (serial or network) [/dev/ttyUSB0]
+-c | --devicecheck    	sanity check of serial ebus device [yes]
+   | --reopentime     	max. time to open ebus device in 'sec' [60]
 
    | --arbitrationtime	waiting time for arbitration test 'us' [4400]
-   | --receivetimeout	max. time for receiving of one sequence sign 'us' [4700]
-   | --lockcounter	number of characters after a successful ebus access [5] (max: 25)
-   | --lockretries	number of retries to lock ebus [2]
+   | --receivetimeout 	max. time for receiving of one sequence sign 'us' [4700]
+   | --lockcounter    	number of characters after a successful ebus access [5] (max: 25)
+   | --lockretries    	number of retries to lock ebus [2]
 
-   | --dump		enable/disable raw data dumping
-   | --dumpfile		dump file name [/tmp/ebus_dump.bin]
-   | --dumpsize		max size for dump file in 'kB' [100]
+   | --dump           	enable/disable raw data dumping [no]
+   | --dumpfile       	dump file name [/tmp/ebus_dump.bin]
+   | --dumpsize       	max size for dump file in 'kB' [100]
 
--p | --port		listen port [8888]
-   | --local		listen only on localhost
+-p | --port           	listen port [8888]
+   | --local          	listen only on localhost [no]
 
--f | --foreground	run in foreground
+-f | --foreground     	run in foreground [no]
 
-   | --pidfile		pid file name [/var/run/ebusproxy.pid]
+   | --pidfile        	pid file name [/var/run/ebusproxy.pid]
 
-   | --logfile		log file name [/var/log/ebusproxy.log]
-   | --loglevel		set logging level - off|error|warn|info|debug|trace [info]
+   | --logfile        	log file name [/var/log/ebusproxy.log]
+   | --loglevel       	set logging level - off|error|warn|info|debug|trace [info]
+   | --showfunction   	show function names in logging [no]
 
    | --values
    | --version

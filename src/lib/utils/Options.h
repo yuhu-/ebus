@@ -132,11 +132,14 @@ private:
 	string m_command;
 	vector<string> m_arguments;
 
+	static size_t m_maxNameLength;
+
 	void add(const string& name, const string& shortname, const string& description, const Type type);
 
 	int find(const string& name, const bool shortname);
 
 	void save(const int index, const string& value);
+
 };
 
 } // namespace libutils

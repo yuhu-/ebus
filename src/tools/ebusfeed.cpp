@@ -48,15 +48,18 @@ void define_args()
 
 	options.addDescription(" 'ebusfeed' sends hex values from dump file to a pseudo terminal device (pty)\n\n"
 		"  Example: 1. 'socat -d -d pty,raw,echo=0 pty,raw,echo=0'\n"
+		"              2016/03/19 11:36:58 socat[2347] N PTY is /dev/pts/2\n"
+		"              2016/03/19 11:36:58 socat[2347] N PTY is /dev/pts/3\n"
+		"              2016/03/19 11:36:58 socat[2347] N starting data transfer loop with FDs [5,5] and [7,7]\n"
 		"           2. create symbol links to appropriate devices\n"
-		"              for example: 'ln -s /dev/pts/5 /dev/ttyUSB5'\n"
-		"                           'ln -s /dev/pts/6 /dev/ttyUSB6'\n"
-		"           3. start ebusproxy: 'ebusproxy -f -n -d /dev/ttyUSB5'\n"
-		"           4. start ebusfeed: 'ebusfeed -d /dev/ttyUSB6 /path/to/ebus_dump.bin'");
+		"              'ln -s /dev/pts/2 /dev/ttyUSB2'\n"
+		"              'ln -s /dev/pts/3 /dev/ttyUSB3'\n"
+		"           3. start ebusproxy: 'ebusproxy -f -n -d /dev/ttyUSB2'\n"
+		"           4. start ebusfeed: 'ebusfeed -d /dev/ttyUSB3 /path/to/ebus_dump.bin'");
 
-	options.addString("device", "d", "/dev/ttyUSB", "link on pseudo terminal device (/dev/ttyUSB)");
+	options.addString("device", "d", "", "link on pseudo terminal device []");
 
-	options.addLong("time", "t", 10000, "delay between 2 bytes in 'us' (10000)");
+	options.addLong("time", "t", 10000, "delay between 2 bytes in 'us' [10000]");
 
 }
 
