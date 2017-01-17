@@ -21,21 +21,21 @@
 
 libebus::IProcess::~IProcess()
 {
-	while (m_ebusMsgQueue.size() > 0)
-		delete m_ebusMsgQueue.dequeue();
+	while (m_ebusMsgProcessQueue.size() > 0)
+		delete m_ebusMsgProcessQueue.dequeue();
 }
 
-libebus::EbusMessage* libebus::IProcess::dequeueMessage()
+libebus::EbusMessage* libebus::IProcess::dequeueProcessMessage()
 {
-	return (m_ebusMsgQueue.dequeue());
+	return (m_ebusMsgProcessQueue.dequeue());
 }
 
-size_t libebus::IProcess::getQueueSize()
+size_t libebus::IProcess::getProcessQueueSize()
 {
-	return (m_ebusMsgQueue.size());
+	return (m_ebusMsgProcessQueue.size());
 }
 
-void libebus::IProcess::enqueueMessage(EbusMessage* message)
+void libebus::IProcess::enqueueProcessMessage(EbusMessage* message)
 {
-	m_ebusMsgQueue.enqueue(message);
+	m_ebusMsgProcessQueue.enqueue(message);
 }

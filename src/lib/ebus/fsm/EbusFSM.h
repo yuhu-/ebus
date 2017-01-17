@@ -127,9 +127,11 @@ private:
 
 	void changeState(State* state);
 
-	Action getAction(EbusSequence& eSeq);
-	void activeMessage(EbusSequence& eSeq);
-	void passiveMessage(EbusSequence& eSeq);
+	Action getEvaluatedAction(EbusSequence& eSeq);
+	void evalActiveMessage(EbusSequence& eSeq);
+	void evalPassiveMessage(EbusSequence& eSeq);
+	EbusMessage* dequeueProcessMessage();
+	size_t getProcessQueueSize();
 
 	void logError(const string& message);
 	void logWarn(const string& message);

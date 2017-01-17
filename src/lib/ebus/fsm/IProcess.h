@@ -43,18 +43,18 @@ class IProcess
 public:
 	virtual ~IProcess();
 
-	virtual Action getAction(EbusSequence& eSeq) = 0;
-	virtual void activeMessage(EbusSequence& eSeq) = 0;
-	virtual void passiveMessage(EbusSequence& eSeq) = 0;
+	virtual Action getEvaluatedAction(EbusSequence& eSeq) = 0;
+	virtual void evalActiveMessage(EbusSequence& eSeq) = 0;
+	virtual void evalPassiveMessage(EbusSequence& eSeq) = 0;
 
-	EbusMessage* dequeueMessage();
-	size_t getQueueSize();
+	EbusMessage* dequeueProcessMessage();
+	size_t getProcessQueueSize();
 
 protected:
-	void enqueueMessage(EbusMessage* message);
+	void enqueueProcessMessage(EbusMessage* message);
 
 private:
-	NQueue<EbusMessage*> m_ebusMsgQueue;
+	NQueue<EbusMessage*> m_ebusMsgProcessQueue;
 
 };
 

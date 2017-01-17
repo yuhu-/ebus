@@ -36,9 +36,9 @@ private:
 
 	void run();
 
-	Action getAction(EbusSequence& eSeq);
-	void activeMessage(EbusSequence& eSeq);
-	void passiveMessage(EbusSequence& eSeq);
+	Action getEvaluatedAction(EbusSequence& eSeq);
+	void evalActiveMessage(EbusSequence& eSeq);
+	void evalPassiveMessage(EbusSequence& eSeq);
 
 };
 

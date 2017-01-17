@@ -60,7 +60,7 @@ void Process::createMessage(EbusSequence& eSeq)
 EbusMessage* Process::processMessage()
 {
 	EbusMessage* ebusMessage = m_ebusMsgProcessQueue.dequeue();
-	enqueueMessage(ebusMessage);
+	enqueueProcessMessage(ebusMessage);
 	ebusMessage->waitNotify();
 	return (ebusMessage);
 }

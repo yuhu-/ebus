@@ -208,22 +208,38 @@ void libebus::EbusFSM::changeState(State* state)
 	}
 }
 
-libebus::Action libebus::EbusFSM::getAction(EbusSequence& eSeq)
+libebus::Action libebus::EbusFSM::getEvaluatedAction(EbusSequence& eSeq)
 {
 	if (m_process != nullptr)
-		return (m_process->getAction(eSeq));
+		return (m_process->getEvaluatedAction(eSeq));
 	else
 		return (Action::noprocess);
 }
 
-void libebus::EbusFSM::activeMessage(EbusSequence& eSeq)
+void libebus::EbusFSM::evalActiveMessage(EbusSequence& eSeq)
 {
-	if (m_process != nullptr) m_process->activeMessage(eSeq);
+	if (m_process != nullptr) m_process->evalActiveMessage(eSeq);
 }
 
-void libebus::EbusFSM::passiveMessage(EbusSequence& eSeq)
+void libebus::EbusFSM::evalPassiveMessage(EbusSequence& eSeq)
 {
-	if (m_process != nullptr) m_process->passiveMessage(eSeq);
+	if (m_process != nullptr) m_process->evalPassiveMessage(eSeq);
+}
+
+libebus::EbusMessage* libebus::EbusFSM::dequeueProcessMessage()
+{
+	if (m_process != nullptr)
+		return (m_process->dequeueProcessMessage());
+	else
+		return (nullptr);
+}
+
+size_t libebus::EbusFSM::getProcessQueueSize()
+{
+	if (m_process != nullptr)
+		return (m_process->getProcessQueueSize());
+	else
+		return (0);
 }
 
 void libebus::EbusFSM::logError(const string& message)
