@@ -65,6 +65,8 @@ public:
 	string getLevelName(Level level);
 	void setLevel(const string& level);
 
+	void setLength(const size_t& length);
+
 	void addConsole();
 	void addFile(const string& file);
 
@@ -82,6 +84,8 @@ private:
 	NQueue<const LogMessage*> m_logMessages;
 
 	Level m_level = Level::info;
+
+	size_t m_length = 0;
 
 	void run();
 

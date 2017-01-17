@@ -59,7 +59,7 @@ void liblogger::LogHandler::start()
 
 liblogger::Level liblogger::LogHandler::getLevel() const
 {
-       return (m_level);
+	return (m_level);
 }
 
 string liblogger::LogHandler::getLevelName(Level level)
@@ -70,6 +70,11 @@ string liblogger::LogHandler::getLevelName(Level level)
 void liblogger::LogHandler::setLevel(const string& level)
 {
 	m_level = findLevel(level);
+}
+
+void liblogger::LogHandler::setLength(const size_t& length)
+{
+	m_length = length;
 }
 
 void liblogger::LogHandler::addConsole()
@@ -101,7 +106,8 @@ void liblogger::LogHandler::run()
 		ostringstream ostr;
 
 		ostr << "[" << message->getTime() << "] " << setw(5) << setfill(' ') << left << message->getLevel()
-			<< " " << message->getFunction() << " " << message->getText() << endl;
+			<< " " << setw(m_length) << setfill(' ') << left << message->getFunction() << " "
+			<< message->getText() << endl;
 
 		for (const auto& sink : m_sinks)
 			sink->write(ostr.str());

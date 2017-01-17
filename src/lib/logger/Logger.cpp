@@ -26,9 +26,10 @@ liblogger::Logger::Logger(const string& function)
 {
 }
 
-void liblogger::Logger::start(const string& level, const string& file)
+void liblogger::Logger::start(const string& level, const size_t& length, const string& file)
 {
 	setLevel(level);
+	setLength(length);
 
 	if (file.empty() == true)
 		m_logHandler.addConsole();
@@ -41,6 +42,11 @@ void liblogger::Logger::start(const string& level, const string& file)
 void liblogger::Logger::setLevel(const string& level)
 {
 	m_logHandler.setLevel(level);
+}
+
+void liblogger::Logger::setLength(const size_t& length)
+{
+	m_logHandler.setLength(length);
 }
 
 void liblogger::Logger::addConsole()

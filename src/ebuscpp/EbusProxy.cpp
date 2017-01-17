@@ -136,13 +136,13 @@ int main(int argc, char* argv[])
 
 	if (options.getBool("foreground") == true)
 	{
-		LIBLOGGER_CONSOLE(options.getString("loglevel"));
+		LIBLOGGER_CONSOLE(options.getString("loglevel"), 22);
 	}
 	else
 	{
 		// make me daemon
 		Daemon::getDaemon().start(options.getString("pidfile"));
-		LIBLOGGER_FILE(options.getString("loglevel"), options.getString("logfile"));
+		LIBLOGGER_FILE(options.getString("loglevel"), 22, options.getString("logfile"));
 	}
 
 	LIBLOGGER_INFO("started");
