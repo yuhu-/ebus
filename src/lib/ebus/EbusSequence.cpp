@@ -45,7 +45,8 @@ map<int, string> SequenceErrors =
 { EBUS_ERR_BYTES, "sequence to much data bytes" },
 { EBUS_ERR_CRC, "sequence CRC error" },
 { EBUS_ERR_ACK, "sequence ACK error" },
-{ EBUS_ERR_MASTER, "wrong master address" } };
+{ EBUS_ERR_MASTER, "wrong master address" },
+{ EBUS_ERR_SLAVE, "wrong slave address" }, };
 
 libebus::EbusSequence::EbusSequence()
 {
@@ -178,6 +179,13 @@ void libebus::EbusSequence::createMaster(Sequence& seq)
 	if (isMaster(seq[0]) == false)
 	{
 		m_masterState = EBUS_ERR_MASTER;
+		return;
+	}
+
+	// wrong slave address
+	if (isValidAddress(seq[1]) == false)
+	{
+		m_masterState = EBUS_ERR_SLAVE;
 		return;
 	}
 
