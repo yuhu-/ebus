@@ -23,7 +23,7 @@
 #include <unistd.h>
 
 Proxy::Proxy(const unsigned char address)
-	: Process(address)
+	: EbusProcess(address)
 {
 	m_forward = new Forward();
 	m_forward->start();

@@ -20,9 +20,9 @@
 #ifndef PROCESS_PROXY_H
 #define PROCESS_PROXY_H
 
-#include "Process.h"
+#include "EbusProcess.h"
 
-class Proxy : public Process
+class Proxy : public EbusProcess
 {
 
 public:

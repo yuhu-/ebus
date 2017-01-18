@@ -17,7 +17,8 @@
  * along with ebuscpp. If not, see http://www.gnu.org/licenses/.
  */
 
-#include "Process.h"
+#include "EbusProcess.h"
+
 #include "Common.h"
 
 #include <iomanip>
@@ -26,23 +27,23 @@ using libebus::slaveAddress;
 using std::ostringstream;
 using std::endl;
 
-Process::Process(const unsigned char address)
+EbusProcess::EbusProcess(const unsigned char address)
 	: Notify(), m_address(address), m_slaveAddress(slaveAddress(address))
 {
 }
 
-Process::~Process()
+EbusProcess::~EbusProcess()
 {
 	while (m_ebusMsgProcessQueue.size() > 0)
 		delete m_ebusMsgProcessQueue.dequeue();
 }
 
-void Process::start()
+void EbusProcess::start()
 {
-	m_thread = thread(&Process::run, this);
+	m_thread = thread(&EbusProcess::run, this);
 }
 
-void Process::stop()
+void EbusProcess::stop()
 {
 	if (m_thread.joinable())
 	{
@@ -52,12 +53,12 @@ void Process::stop()
 	}
 }
 
-void Process::createMessage(EbusSequence& eSeq)
+void EbusProcess::createMessage(EbusSequence& eSeq)
 {
 	if (eSeq.getMasterState() == EBUS_OK) m_ebusMsgProcessQueue.enqueue(new EbusMessage(eSeq));
 }
 
-EbusMessage* Process::processMessage()
+EbusMessage* EbusProcess::processMessage()
 {
 	EbusMessage* ebusMessage = m_ebusMsgProcessQueue.dequeue();
 	enqueueProcessMessage(ebusMessage);
@@ -65,7 +66,7 @@ EbusMessage* Process::processMessage()
 	return (ebusMessage);
 }
 
-size_t Process::pendingMessages()
+size_t EbusProcess::pendingMessages()
 {
 	return (m_ebusMsgProcessQueue.size());
 }

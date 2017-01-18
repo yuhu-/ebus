@@ -17,8 +17,8 @@
  * along with ebuscpp. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef PROCESS_PROCESS_H
-#define PROCESS_PROCESS_H
+#ifndef PROCESS_EBUSPROCESS_H
+#define PROCESS_EBUSPROCESS_H
 
 #include "Forward.h"
 #include "IEbusProcess.h"
@@ -32,12 +32,12 @@ using libebus::EbusSequence;
 using libebus::EbusMessage;
 using std::thread;
 
-class Process : public IEbusProcess, public Notify
+class EbusProcess : public IEbusProcess, public Notify
 {
 
 public:
-	explicit Process(const unsigned char address);
-	virtual ~Process();
+	explicit EbusProcess(const unsigned char address);
+	virtual ~EbusProcess();
 
 	void start();
 	void stop();
@@ -65,4 +65,4 @@ private:
 
 };
 
-#endif // PROCESS_PROCESS_H
+#endif // PROCESS_EBUSPROCESS_H
