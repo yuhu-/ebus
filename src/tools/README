@@ -54,12 +54,12 @@ Description:
  'ebusfeed' sends hex values from dump file to a pseudo terminal device (pty)
 
   Example: 1. 'socat -d -d pty,raw,echo=0 pty,raw,echo=0'
-            2016/03/19 11:36:58 socat[2347] N PTY is /dev/pts/2
-            2016/03/19 11:36:58 socat[2347] N PTY is /dev/pts/3
-            2016/03/19 11:36:58 socat[2347] N starting data transfer loop with FDs [5,5] and [7,7]
+          2016/03/19 11:36:58 socat[2347] N PTY is /dev/pts/2
+          2016/03/19 11:36:58 socat[2347] N PTY is /dev/pts/3
+          2016/03/19 11:36:58 socat[2347] N starting data transfer loop with FDs [5,5] and [7,7]
            2. create symbol links to appropriate devices
-            'ln -s /dev/pts/2 /dev/ttyUSB2'
-            'ln -s /dev/pts/3 /dev/ttyUSB3'
+          'ln -s /dev/pts/2 /dev/ttyUSB2'
+          'ln -s /dev/pts/3 /dev/ttyUSB3'
            3. start ebusproxy: 'ebusproxy -f -n -d /dev/ttyUSB2'
            4. start ebusfeed: 'ebusfeed -d /dev/ttyUSB3 /path/to/ebus_dump.bin'
 
