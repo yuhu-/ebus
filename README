@@ -15,8 +15,8 @@ libraries:
 
               The main part of this library is a 'finite state machine' (FSM) which will be run
               as a seperate thread. Via ebus device the FSM handle all the communication to
-              other ebus participant. The 'IProcess' interface provides the ability to interact
-              with ebus as master (active) or slave (passive) member.
+              other ebus participant. The 'IEbusProcess' interface provides the ability to
+              interact with ebus as master (active) or slave (passive) member.
 
   API/Interface classes:
 
@@ -31,10 +31,10 @@ libraries:
   * EbusMessage:  An 'EbusMessage' contains a EbusSequence and a their answer.
                   (Only needed as master in active mode.)
 
-  * IProcess:     The process interface to couple FSM with the process thread for active/passive
+  * IEbusProcess: The process interface to couple FSM with the process thread for active/passive
                   ebus message handling.
 
-  * ILogger:      Is a simple logger interface for internal messages of FSM.
+  * IEbusLogger:  Is a simple logger interface for internal messages of FSM.
 
 
 Example applications which use all types of above described classes:
