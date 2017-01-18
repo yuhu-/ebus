@@ -1,6 +1,56 @@
 ebuscpp provides c++ classes and tools to communicate via ebus.
 
 
+libraries:
+
+ 'libutils' Some basic elements for queueing, notification, application daemonize and
+            options handling.
+
+ 'libnetwork' Contains some classes for socket handling as client and/or server.
+
+ 'liblogger' Is a small log to logging into stdout and log files.
+
+
+ 'libebus' Contains classes to interact with an ebus system. The classes with
+           'Ebus' prefix represent the high level API.
+
+  basic/interface classes:
+
+  * EbusSequence: All kind of ebus messages (telegrams) are sequences of
+                  individual hexadecimal characters. A 'EbusSequence' can hold
+                  only one (full) ebus message.
+
+  * EbusDevice: The 'EbusDevice' provides the hardware access for network or
+                serial ebus devices.
+
+
+  The main part of this library is a 'finite state machine' (FSM) which will be
+  run as a seperate thread. Via ebus device the FSM handle all the communication
+  to other ebus participant. The 'IProcess' interface provides the ability to
+  interact with ebus as master (active) or slave (passive) member.
+
+  * EbusFSM: Represents the FSM it selfs which can be act as passive or active
+             ebus participant.
+
+  * EbusMessage: An 'EbusMessage' contains a EbusSequence and a their answer.
+                 (Only needed as master in active mode.)
+
+  * IProcess: The process interface to couple FSM with the process thread for
+              active/passive ebus message handling.
+
+  * ILogger: Is a simple logger interface for internal messages of FSM.
+
+
+Example applications which use all types of above described classes:
+
+ 'ebusproxy' provides a communication interface too ebus equipped systems.
+
+ 'ebusctl' is a tcp/udp socket client for ebusproxy.
+
+ 'ebusfeed' sends hex values from dump file to a pseudo terminal device (pty).
+
+
+
 For bugs and missing features use github issue system.
 
 The author can be contacted at roland.jax@liwest.at.

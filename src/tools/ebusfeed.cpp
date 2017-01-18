@@ -46,7 +46,7 @@ void define_args()
 
 	options.setVersion("ebusfeed is part of " "" PACKAGE_STRING"");
 
-	options.addDescription(" 'ebusfeed' sends hex values from dump file to a pseudo terminal device (pty)\n\n"
+	options.addDescription(" 'ebusfeed' sends hex values from dump file to a pseudo terminal device (pty).\n\n"
 		"  Example: 1. 'socat -d -d pty,raw,echo=0 pty,raw,echo=0'\n"
 		"              2016/03/19 11:36:58 socat[2347] N PTY is /dev/pts/2\n"
 		"              2016/03/19 11:36:58 socat[2347] N PTY is /dev/pts/3\n"
