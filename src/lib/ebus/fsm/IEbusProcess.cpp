@@ -17,25 +17,25 @@
  * along with ebuscpp. If not, see http://www.gnu.org/licenses/.
  */
 
-#include "IProcess.h"
+#include "IEbusProcess.h"
 
-libebus::IProcess::~IProcess()
+libebus::IEbusProcess::~IEbusProcess()
 {
 	while (m_ebusMsgProcessQueue.size() > 0)
 		delete m_ebusMsgProcessQueue.dequeue();
 }
 
-libebus::EbusMessage* libebus::IProcess::dequeueProcessMessage()
+libebus::EbusMessage* libebus::IEbusProcess::dequeueProcessMessage()
 {
 	return (m_ebusMsgProcessQueue.dequeue());
 }
 
-size_t libebus::IProcess::getProcessQueueSize()
+size_t libebus::IEbusProcess::getProcessQueueSize()
 {
 	return (m_ebusMsgProcessQueue.size());
 }
 
-void libebus::IProcess::enqueueProcessMessage(EbusMessage* message)
+void libebus::IEbusProcess::enqueueProcessMessage(EbusMessage* message)
 {
 	m_ebusMsgProcessQueue.enqueue(message);
 }

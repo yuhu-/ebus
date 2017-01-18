@@ -21,18 +21,18 @@
 #define PROCESS_PROCESS_H
 
 #include "Forward.h"
-#include "IProcess.h"
+#include "IEbusProcess.h"
 #include "Notify.h"
 
 #include <thread>
 
-using libebus::IProcess;
+using libebus::IEbusProcess;
 using libebus::Action;
 using libebus::EbusSequence;
 using libebus::EbusMessage;
 using std::thread;
 
-class Process : public IProcess, public Notify
+class Process : public IEbusProcess, public Notify
 {
 
 public:

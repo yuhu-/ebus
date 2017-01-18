@@ -17,47 +17,32 @@
  * along with ebuscpp. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef LIBEBUS_FSM_IPROCESS_H
-#define LIBEBUS_FSM_IPROCESS_H
+#ifndef LIBEBUS_FSM_IEBUSLOGGER_H
+#define LIBEBUS_FSM_IEBUSLOGGER_H
 
-#include "EbusSequence.h"
-#include "EbusMessage.h"
-#include "NQueue.h"
+#include <string>
 
-using libutils::NQueue;
+using std::string;
 
 namespace libebus
 {
 
-enum class Action
-{
-	noprocess,      // no process
-	undefined,	// undefined
-	ignore,		// ignore
-	response	// send response
-};
-
-class IProcess
+class IEbusLogger
 {
 
 public:
-	virtual ~IProcess();
+	virtual ~IEbusLogger()
+	{
+	}
 
-	virtual Action getEvaluatedAction(EbusSequence& eSeq) = 0;
-	virtual void evalActiveMessage(EbusSequence& eSeq) = 0;
-	virtual void evalPassiveMessage(EbusSequence& eSeq) = 0;
-
-	EbusMessage* dequeueProcessMessage();
-	size_t getProcessQueueSize();
-
-protected:
-	void enqueueProcessMessage(EbusMessage* message);
-
-private:
-	NQueue<EbusMessage*> m_ebusMsgProcessQueue;
+	virtual void error(const string& message) = 0;
+	virtual void warn(const string& message) = 0;
+	virtual void info(const string& message) = 0;
+	virtual void debug(const string& message) = 0;
+	virtual void trace(const string& message) = 0;
 
 };
 
 } // namespace libebus
 
-#endif // LIBEBUS_FSM_IPROCESS_H
+#endif // LIBEBUS_FSM_IEBUSLOGGER_H

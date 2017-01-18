@@ -34,8 +34,8 @@ using std::ostringstream;
 using std::copy_n;
 using std::back_inserter;
 
-libebus::EbusFSM::EbusFSM(const unsigned char address, const string device, const bool deviceCheck, IProcess* process,
-	ILogger* logger)
+libebus::EbusFSM::EbusFSM(const unsigned char address, const string device, const bool deviceCheck,
+	IEbusProcess* process, IEbusLogger* logger)
 	: Notify(), m_address(address), m_slaveAddress(slaveAddress(address)), m_process(process), m_logger(logger)
 {
 	m_ebusDevice = new EbusDevice(device, deviceCheck);
@@ -170,11 +170,6 @@ long libebus::EbusFSM::getDumpFileMaxSize() const
 void libebus::EbusFSM::setDumpFileMaxSize(const long& dumpFileMaxSize)
 {
 	m_dumpFileMaxSize = dumpFileMaxSize;
-}
-
-void libebus::EbusFSM::enqueueMessage(EbusMessage* message)
-{
-	m_ebusMsgQueue.enqueue(message);
 }
 
 void libebus::EbusFSM::run()

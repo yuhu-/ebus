@@ -20,11 +20,11 @@
 #ifndef EBUS_EBUSLOGGER_H
 #define EBUS_EBUSLOGGER_H
 
-#include "ILogger.h"
+#include "IEbusLogger.h"
 
-using libebus::ILogger;
+using libebus::IEbusLogger;
 
-class EbusLogger : public ILogger
+class EbusLogger : public IEbusLogger
 {
 
 public:

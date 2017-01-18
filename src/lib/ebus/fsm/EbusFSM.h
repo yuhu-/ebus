@@ -19,11 +19,9 @@
 #ifndef LIBEBUS_FSM_EBUSFSM_H
 #define LIBEBUS_FSM_EBUSFSM_H
 
-#include "IProcess.h"
-#include "ILogger.h"
+#include "IEbusProcess.h"
+#include "IEbusLogger.h"
 #include "EbusDevice.h"
-#include "NQueue.h"
-#include "Notify.h"
 
 #include <fstream>
 #include <thread>
@@ -55,8 +53,8 @@ class EbusFSM : public Notify
 	friend class SendResponse;
 
 public:
-	EbusFSM(const unsigned char address, const string device, const bool deviceCheck, IProcess* process,
-		ILogger* logger);
+	EbusFSM(const unsigned char address, const string device, const bool deviceCheck, IEbusProcess* process,
+		IEbusLogger* logger);
 
 	~EbusFSM();
 
@@ -90,8 +88,6 @@ public:
 	long getDumpFileMaxSize() const;
 	void setDumpFileMaxSize(const long& dumpFileMaxSize);
 
-	void enqueueMessage(EbusMessage* message);
-
 private:
 	thread m_thread;
 
@@ -118,10 +114,8 @@ private:
 	ofstream m_dumpRawStream;
 
 	EbusDevice* m_ebusDevice = nullptr;
-	IProcess* m_process = nullptr;
-	ILogger* m_logger = nullptr;
-
-	NQueue<EbusMessage*> m_ebusMsgQueue;
+	IEbusProcess* m_process = nullptr;
+	IEbusLogger* m_logger = nullptr;
 
 	void run();
 
