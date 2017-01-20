@@ -34,8 +34,8 @@ EbusProcess::EbusProcess(const unsigned char address)
 
 EbusProcess::~EbusProcess()
 {
-	while (m_ebusMsgProcessQueue.size() > 0)
-		delete m_ebusMsgProcessQueue.dequeue();
+	while (m_ebusMsgQueue.size() > 0)
+		delete m_ebusMsgQueue.dequeue();
 }
 
 void EbusProcess::start()
@@ -53,20 +53,25 @@ void EbusProcess::stop()
 	}
 }
 
+void EbusProcess::enqueueMessage(EbusMessage* message)
+{
+	IEbusProcess::enqueueMessage(message);
+}
+
 void EbusProcess::createMessage(EbusSequence& eSeq)
 {
-	if (eSeq.getMasterState() == EBUS_OK) m_ebusMsgProcessQueue.enqueue(new EbusMessage(eSeq));
+	if (eSeq.getMasterState() == EBUS_OK) m_ebusMsgQueue.enqueue(new EbusMessage(eSeq));
 }
 
 EbusMessage* EbusProcess::processMessage()
 {
-	EbusMessage* ebusMessage = m_ebusMsgProcessQueue.dequeue();
-	enqueueProcessMessage(ebusMessage);
+	EbusMessage* ebusMessage = m_ebusMsgQueue.dequeue();
+	enqueueMessage(ebusMessage);
 	ebusMessage->waitNotify();
 	return (ebusMessage);
 }
 
 size_t EbusProcess::pendingMessages()
 {
-	return (m_ebusMsgProcessQueue.size());
+	return (m_ebusMsgQueue.size());
 }

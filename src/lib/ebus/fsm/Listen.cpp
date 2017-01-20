@@ -60,8 +60,7 @@ int libebus::Listen::run(EbusFSM* fsm)
 		}
 
 		// check for new EbusMessage
-		if (m_activeMessage == nullptr && fsm->getProcessQueueSize() != 0)
-			m_activeMessage = fsm->dequeueProcessMessage();
+		if (m_activeMessage == nullptr && fsm->getQueueSize() != 0) m_activeMessage = fsm->dequeueMessage();
 
 		// handle EbusMessage
 		if (m_activeMessage != nullptr && m_lockCounter == 0) fsm->changeState(LockBus::getLockBus());

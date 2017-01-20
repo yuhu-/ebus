@@ -47,11 +47,6 @@ void Proxy::forward(bool remove, const string& ip, long port, const string& filt
 		m_forward->append(ip, port, filter, result);
 }
 
-void Proxy::enqueueMessage(EbusMessage* message)
-{
-	enqueueProcessMessage(message);
-}
-
 void Proxy::run()
 {
 	LIBLOGGER_INFO("started");

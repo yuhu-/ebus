@@ -124,8 +124,8 @@ private:
 	Action getEvaluatedAction(EbusSequence& eSeq);
 	void evalActiveMessage(EbusSequence& eSeq);
 	void evalPassiveMessage(EbusSequence& eSeq);
-	EbusMessage* dequeueProcessMessage();
-	size_t getProcessQueueSize();
+	EbusMessage* dequeueMessage();
+	size_t getQueueSize();
 
 	void logError(const string& message);
 	void logWarn(const string& message);

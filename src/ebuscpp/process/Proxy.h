@@ -31,8 +31,6 @@ public:
 
 	void forward(bool remove, const string& ip, long port, const string& filter, ostringstream& result);
 
-	void enqueueMessage(EbusMessage* message);
-
 private:
 	Forward* m_forward = nullptr;
 

@@ -21,21 +21,21 @@
 
 libebus::IEbusProcess::~IEbusProcess()
 {
-	while (m_ebusMsgProcessQueue.size() > 0)
-		delete m_ebusMsgProcessQueue.dequeue();
+	while (m_ebusMsgQueue.size() > 0)
+		delete m_ebusMsgQueue.dequeue();
 }
 
-libebus::EbusMessage* libebus::IEbusProcess::dequeueProcessMessage()
+libebus::EbusMessage* libebus::IEbusProcess::dequeueMessage()
 {
-	return (m_ebusMsgProcessQueue.dequeue());
+	return (m_ebusMsgQueue.dequeue());
 }
 
-size_t libebus::IEbusProcess::getProcessQueueSize()
+size_t libebus::IEbusProcess::getQueueSize()
 {
-	return (m_ebusMsgProcessQueue.size());
+	return (m_ebusMsgQueue.size());
 }
 
-void libebus::IEbusProcess::enqueueProcessMessage(EbusMessage* message)
+void libebus::IEbusProcess::enqueueMessage(EbusMessage* message)
 {
-	m_ebusMsgProcessQueue.enqueue(message);
+	m_ebusMsgQueue.enqueue(message);
 }

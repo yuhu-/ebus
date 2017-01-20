@@ -42,6 +42,8 @@ public:
 	void start();
 	void stop();
 
+	virtual void enqueueMessage(EbusMessage* message) final;
+
 protected:
 	bool m_running = true;
 
@@ -52,14 +54,14 @@ protected:
 	virtual void evalActiveMessage(EbusSequence& eSeq) = 0;
 	virtual void evalPassiveMessage(EbusSequence& eSeq) = 0;
 
-	void createMessage(EbusSequence& eSeq);
-	EbusMessage* processMessage();
-	size_t pendingMessages();
+	virtual void createMessage(EbusSequence& eSeq) final;
+	virtual EbusMessage* processMessage() final;
+	virtual size_t pendingMessages() final;
 
 private:
 	thread m_thread;
 
-	NQueue<EbusMessage*> m_ebusMsgProcessQueue;
+	NQueue<EbusMessage*> m_ebusMsgQueue;
 
 	virtual void run() = 0;
 

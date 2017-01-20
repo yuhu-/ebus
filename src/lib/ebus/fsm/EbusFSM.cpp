@@ -221,18 +221,18 @@ void libebus::EbusFSM::evalPassiveMessage(EbusSequence& eSeq)
 	if (m_process != nullptr) m_process->evalPassiveMessage(eSeq);
 }
 
-libebus::EbusMessage* libebus::EbusFSM::dequeueProcessMessage()
+libebus::EbusMessage* libebus::EbusFSM::dequeueMessage()
 {
 	if (m_process != nullptr)
-		return (m_process->dequeueProcessMessage());
+		return (m_process->dequeueMessage());
 	else
 		return (nullptr);
 }
 
-size_t libebus::EbusFSM::getProcessQueueSize()
+size_t libebus::EbusFSM::getQueueSize()
 {
 	if (m_process != nullptr)
-		return (m_process->getProcessQueueSize());
+		return (m_process->getQueueSize());
 	else
 		return (0);
 }

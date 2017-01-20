@@ -47,14 +47,14 @@ public:
 	virtual void evalActiveMessage(EbusSequence& eSeq) = 0;
 	virtual void evalPassiveMessage(EbusSequence& eSeq) = 0;
 
-	EbusMessage* dequeueProcessMessage();
-	size_t getProcessQueueSize();
+	virtual EbusMessage* dequeueMessage() final;
+	virtual size_t getQueueSize() final;
 
 protected:
-	void enqueueProcessMessage(EbusMessage* message);
+	virtual void enqueueMessage(EbusMessage* message);
 
 private:
-	NQueue<EbusMessage*> m_ebusMsgProcessQueue;
+	NQueue<EbusMessage*> m_ebusMsgQueue;
 
 };
 
