@@ -255,6 +255,11 @@ void Forward::enqueue(const EbusSequence& eSeq)
 	}
 }
 
+bool Forward::isActive() const
+{
+	return (!m_host.empty());
+}
+
 const string Forward::toString()
 {
 	ostringstream ostr;

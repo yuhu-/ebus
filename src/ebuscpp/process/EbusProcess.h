@@ -20,7 +20,6 @@
 #ifndef PROCESS_EBUSPROCESS_H
 #define PROCESS_EBUSPROCESS_H
 
-#include "Forward.h"
 #include "IEbusProcess.h"
 #include "Notify.h"
 

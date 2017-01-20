@@ -106,14 +106,18 @@ Action Proxy::getEvaluatedAction(EbusSequence& eSeq)
 
 void Proxy::evalActiveMessage(EbusSequence& eSeq)
 {
-	LIBLOGGER_INFO("forward %s", eSeq.toStringLog().c_str());
-
-	m_forward->enqueue(eSeq);
+	if (m_forward->isActive())
+	{
+		LIBLOGGER_INFO("forward %s", eSeq.toStringLog().c_str());
+		m_forward->enqueue(eSeq);
+	}
 }
 
 void Proxy::evalPassiveMessage(EbusSequence& eSeq)
 {
-	LIBLOGGER_INFO("forward %s", eSeq.toStringLog().c_str());
-
-	m_forward->enqueue(eSeq);
+	if (m_forward->isActive())
+	{
+		LIBLOGGER_INFO("forward %s", eSeq.toStringLog().c_str());
+		m_forward->enqueue(eSeq);
+	}
 }

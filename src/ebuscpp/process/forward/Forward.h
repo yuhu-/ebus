@@ -50,6 +50,8 @@ public:
 
 	void enqueue(const EbusSequence& eSeq);
 
+	bool isActive() const;
+
 	const string toString();
 	const string toStringHost();
 	const string toStringFilter();

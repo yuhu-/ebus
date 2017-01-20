@@ -21,6 +21,7 @@
 #define PROCESS_PROXY_H
 
 #include "EbusProcess.h"
+#include "Forward.h"
 
 class Proxy : public EbusProcess
 {
