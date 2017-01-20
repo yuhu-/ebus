@@ -49,7 +49,7 @@ void Proxy::forward(bool remove, const string& ip, long port, const string& filt
 
 void Proxy::run()
 {
-	LIBLOGGER_INFO("started");
+	LIBLOGGER_INFO("Proxy started");
 
 	while (m_running == true)
 	{
@@ -65,7 +65,7 @@ void Proxy::run()
 		}
 	}
 
-	LIBLOGGER_INFO("stopped");
+	LIBLOGGER_INFO("Proxy stopped");
 }
 
 Action Proxy::getEvaluatedAction(EbusSequence& eSeq)

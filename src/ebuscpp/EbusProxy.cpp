@@ -100,7 +100,7 @@ void shutdown()
 	if (Daemon::getDaemon().status() == true) Daemon::getDaemon().stop();
 
 	// stop logger
-	LIBLOGGER_INFO("stopped");
+	LIBLOGGER_INFO("EbusProxy stopped");
 
 	exit(EXIT_SUCCESS);
 
@@ -151,7 +151,7 @@ int main(int argc, char* argv[])
 	LIBLOGGER_SHOWFUNCTION(options.getBool("showfunction"));
 	LIBLOGGER_FUNCTIONLENGTH(22);
 
-	LIBLOGGER_INFO("started");
+	LIBLOGGER_INFO("EbusProxy started");
 
 	// trap signals that we expect to receive
 	signal(SIGHUP, signal_handler);

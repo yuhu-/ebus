@@ -174,7 +174,7 @@ void libebus::EbusFSM::setDumpFileMaxSize(const long& dumpFileMaxSize)
 
 void libebus::EbusFSM::run()
 {
-	logInfo("FSM started");
+	logInfo("EbusFSM started");
 
 	while (m_running == true)
 	{
@@ -188,7 +188,7 @@ void libebus::EbusFSM::run()
 		}
 	}
 
-	logInfo("FSM stopped");
+	logInfo("EbusFSM stopped");
 }
 
 void libebus::EbusFSM::changeState(State* state)

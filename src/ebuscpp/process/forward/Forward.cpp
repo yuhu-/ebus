@@ -307,7 +307,7 @@ const string Forward::toStringRelation()
 
 void Forward::run()
 {
-	LIBLOGGER_INFO("started");
+	LIBLOGGER_INFO("Forward started");
 
 	while (m_running == true)
 	{
@@ -321,7 +321,7 @@ void Forward::run()
 		}
 	}
 
-	LIBLOGGER_INFO("stopped");
+	LIBLOGGER_INFO("Forward stopped");
 }
 
 void Forward::send(EbusSequence* eSeq) const
