@@ -54,7 +54,7 @@ bool TCPConnection::isClosed() const
 
 void TCPConnection::run()
 {
-	LIBLOGGER_INFO("[%05d] %s TCP opened", m_id, m_socket->getIP().c_str());
+	LIBLOGGER_INFO("[%05d] TCP connection opened from %s", m_id, m_socket->getIP().c_str());
 
 	struct timespec tdiff;
 
