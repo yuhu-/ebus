@@ -31,8 +31,6 @@ ebusproxy_SOURCES = network/NetMessage.cpp \
 		    process/forward/Host.h \
 		    process/forward/Forward.cpp \
 		    process/forward/Forward.h \
-		    process/EbusProcess.cpp \
-		    process/EbusProcess.h \
 		    process/Proxy.cpp \
 		    process/Proxy.h \
 		    EbusLogger.cpp \

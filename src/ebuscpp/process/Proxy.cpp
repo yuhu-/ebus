@@ -55,10 +55,10 @@ void Proxy::run()
 	{
 		//waitNotify();
 
-		sleep(1);
-		LIBLOGGER_INFO("notified");
+		usleep(10000);
 		if (pendingMessages() != 0)
 		{
+			LIBLOGGER_INFO("process message");
 			EbusMessage* ebusMessage = processMessage();
 			LIBLOGGER_INFO(ebusMessage->getResult());
 			delete ebusMessage;

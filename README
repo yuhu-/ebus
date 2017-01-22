@@ -31,8 +31,8 @@ libraries:
   * EbusMessage:  An 'EbusMessage' contains a EbusSequence and a their answer.
                   (Only needed as master in active mode.)
 
-  * IEbusProcess: The process interface to couple FSM with the process thread for active/passive
-                  ebus message handling.
+  * EbusProcess:  A base class for derivation as a process thread for the coupling of FSM to
+                  active / passive Ebus message handling
 
   * IEbusLogger:  Is a simple logger interface for internal messages of FSM.
 

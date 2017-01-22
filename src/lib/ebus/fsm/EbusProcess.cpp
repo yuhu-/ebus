@@ -18,7 +18,6 @@
  */
 
 #include "EbusProcess.h"
-
 #include "Common.h"
 
 #include <iomanip>

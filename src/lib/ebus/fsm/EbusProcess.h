@@ -17,8 +17,8 @@
  * along with ebuscpp. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef PROCESS_EBUSPROCESS_H
-#define PROCESS_EBUSPROCESS_H
+#ifndef LIBEBUS_FSM_EBUSPROCESS_H
+#define LIBEBUS_FSM_EBUSPROCESS_H
 
 #include "IEbusProcess.h"
 #include "Notify.h"
@@ -66,4 +66,4 @@ private:
 
 };
 
-#endif // PROCESS_EBUSPROCESS_H
+#endif // LIBEBUS_FSM_EBUSPROCESS_H

@@ -48,6 +48,8 @@ libebus_a_SOURCES = Device.cpp \
 		    fsm/RecvResponse.h \
 		    fsm/IEbusProcess.cpp \
 		    fsm/IEbusProcess.h \
+		    fsm/EbusProcess.cpp \
+		    fsm/EbusProcess.h \
 		    fsm/IEbusLogger.h \
 		    fsm/EbusFSM.cpp \
 		    fsm/EbusFSM.h
