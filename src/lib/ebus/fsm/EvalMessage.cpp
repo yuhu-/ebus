@@ -40,14 +40,14 @@ int libebus::EvalMessage::run(EbusFSM* fsm)
 		fsm->logWarn(stateMessage(STATE_WRN_NOT_DEF));
 		break;
 	case Action::ignore:
-		fsm->logDebug(stateMessage(STATE_INF_MSG_INGORE));
+		fsm->logInfo(stateMessage(STATE_INF_MSG_INGORE));
 		break;
 	case Action::response:
 		eSeq.setSlaveACK(ACK);
 
 		if (eSeq.getSlaveState() == EBUS_OK)
 		{
-			fsm->logDebug("response: " + eSeq.toStringSlave());
+			fsm->logInfo("response: " + eSeq.toStringSlave());
 			m_passiveMessage = new EbusMessage(eSeq);
 			fsm->changeState(SendResponse::getSendResponse());
 			return (DEV_OK);

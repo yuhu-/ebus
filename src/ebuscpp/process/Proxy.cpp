@@ -70,7 +70,7 @@ void Proxy::run()
 
 Action Proxy::getEvaluatedAction(EbusSequence& eSeq)
 {
-	LIBLOGGER_INFO("search %s", eSeq.toStringLog().c_str());
+	LIBLOGGER_DEBUG("evaluate %s", eSeq.toStringLog().c_str());
 
 	if (eSeq.getMaster().contains("0700") == true)
 	{
@@ -108,7 +108,7 @@ void Proxy::evalActiveMessage(EbusSequence& eSeq)
 {
 	if (m_forward->isActive())
 	{
-		LIBLOGGER_INFO("forward %s", eSeq.toStringLog().c_str());
+		LIBLOGGER_DEBUG("forward %s", eSeq.toStringLog().c_str());
 		m_forward->enqueue(eSeq);
 	}
 }
@@ -117,7 +117,7 @@ void Proxy::evalPassiveMessage(EbusSequence& eSeq)
 {
 	if (m_forward->isActive())
 	{
-		LIBLOGGER_INFO("forward %s", eSeq.toStringLog().c_str());
+		LIBLOGGER_DEBUG("forward %s", eSeq.toStringLog().c_str());
 		m_forward->enqueue(eSeq);
 	}
 }
