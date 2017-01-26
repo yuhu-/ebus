@@ -30,16 +30,13 @@ libebus::Connect libebus::Connect::m_connect;
 int libebus::Connect::run(EbusFSM* fsm)
 {
 	int result = DEV_OK;
+	unsigned char byte = 0;
 
 	if (fsm->m_ebusDevice->isOpen() == false)
 	{
 		result = fsm->m_ebusDevice->open();
 
-		if (fsm->m_ebusDevice->isOpen() == true && result == DEV_OK)
-		{
-			fsm->logInfo(stateMessage(STATE_INF_EBUS_ON));
-		}
-		else
+		if (fsm->m_ebusDevice->isOpen() == false || result != DEV_OK)
 		{
 			m_reopenTime++;
 			if (m_reopenTime > fsm->m_reopenTime) fsm->changeState(Idle::getIdle());
@@ -48,7 +45,17 @@ int libebus::Connect::run(EbusFSM* fsm)
 		}
 	}
 
+	fsm->logInfo(stateMessage(STATE_INF_EBUS_ON));
+
+	do
+	{
+		int result = read(fsm, byte, 1, 0);
+		if (result != DEV_OK) return (result);
+	} while (byte != SYN);
+
 	reset(fsm);
+
+	fsm->logInfo(stateMessage(STATE_INF_DEV_FLUSH));
 
 	fsm->changeState(Listen::getListen());
 	return (result);

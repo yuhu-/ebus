@@ -46,6 +46,7 @@ map<int, string> StateMessages =
 { STATE_INF_EBUS_LOCK, "ebus locked" },
 { STATE_INF_EBUS_FREE, "ebus freed" },
 { STATE_INF_MSG_INGORE, "message ignored" },
+{ STATE_INF_DEV_FLUSH, "device flushed" },
 
 { STATE_WRN_BYTE_DIF, "written/read byte difference" },
 { STATE_WRN_ARB_LOST, "arbitration lost" },

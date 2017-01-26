@@ -30,6 +30,7 @@ namespace libebus
 #define STATE_INF_EBUS_LOCK    3 // ebus locked
 #define STATE_INF_EBUS_FREE    4 // ebus freed
 #define STATE_INF_MSG_INGORE   5 // message ignored
+#define STATE_INF_DEV_FLUSH    6 // device flushed
 
 #define STATE_WRN_BYTE_DIF    11 // written/read byte difference
 #define STATE_WRN_ARB_LOST    12 // arbitration lost
