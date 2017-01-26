@@ -90,10 +90,12 @@ public:
 	const string toStringMaster();
 	const string toStringMasterCRC();
 	const string toStringMasterACK();
+	const string toStringMasterError();
 
 	const string toStringSlave();
 	const string toStringSlaveCRC();
 	const string toStringSlaveACK();
+	const string toStringSlaveError();
 
 private:
 	int m_type = -1;
