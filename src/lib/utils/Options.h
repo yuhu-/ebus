@@ -62,21 +62,22 @@ public:
 
 	void setVersion(const string& version);
 
-	void addDescription(const string& description);
+	void addDescription(const string& description, const int line = 0);
 
-	void addText(const string& text);
+	void addText(const string& text, const int line = 0);
 
-	void addBool(const string& name, const string& shortname, const bool value, const string& description);
+	void addBool(const string& name, const string& shortname, const bool value, const string& description, const int line = 0);
 
-	void addHex(const string& name, const string& shortname, const int value, const string& description);
+	void addHex(const string& name, const string& shortname, const int value, const string& description, const int line = 0);
 
-	void addInt(const string& name, const string& shortname, const int value, const string& description);
+	void addInt(const string& name, const string& shortname, const int value, const string& description, const int line = 0);
 
-	void addLong(const string& name, const string& shortname, const long value, const string& description);
+	void addLong(const string& name, const string& shortname, const long value, const string& description, const int line = 0);
 
-	void addFloat(const string& name, const string& shortname, const float value, const string& description);
+	void addFloat(const string& name, const string& shortname, const float value, const string& description, const int line = 0);
 
-	void addString(const string& name, const string& shortname, const string& value, const string& description);
+	void addString(const string& name, const string& shortname, const string& value, const string& description,
+		const int line = 0);
 
 	bool parse(int argc, char* argv[]);
 
@@ -134,7 +135,7 @@ private:
 
 	static size_t m_maxNameLength;
 
-	void add(const string& name, const string& shortname, const string& description, const Type type);
+	void add(const string& name, const string& shortname, const string& description, const int line, const Type type);
 
 	int find(const string& name, const bool shortname);
 

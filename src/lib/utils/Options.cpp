@@ -54,12 +54,14 @@ void libutils::Options::setVersion(const string& version)
 	m_version = version;
 }
 
-void libutils::Options::addDescription(const string& description)
+void libutils::Options::addDescription(const string& description, const int line)
 {
-	m_description = description;
+	m_description += description;
+	for (int i = 0; i < line + 1; i++)
+		m_description += '\n';
 }
 
-void libutils::Options::addText(const string& text)
+void libutils::Options::addText(const string& text, const int line)
 {
 	Option option;
 
@@ -67,72 +69,74 @@ void libutils::Options::addText(const string& text)
 	option.shortname = "";
 	option.type = Type::t_text;
 	option.description = text;
+	for (int i = 0; i < line + 1; i++)
+		option.description += '\n';
 
 	m_options.push_back(option);
 
 	if (option.name.length() > m_maxNameLength) m_maxNameLength = option.name.length();
 }
 
-void libutils::Options::addBool(const string& name, const string& shortname, const bool value,
-	const string& description)
+void libutils::Options::addBool(const string& name, const string& shortname, const bool value, const string& description,
+	const int line)
 {
 	if (name.size() != 0)
 	{
 		m_bools[name] = value;
-		add(name, shortname, description, Type::t_bool);
+		add(name, shortname, description, line, Type::t_bool);
 	}
 
 }
 
-void libutils::Options::addHex(const string& name, const string& shortname, const int value, const string& description)
+void libutils::Options::addHex(const string& name, const string& shortname, const int value, const string& description, const int line)
 {
 	if (name.size() != 0)
 	{
 		m_ints[name] = value;
-		add(name, shortname, description, Type::t_hex);
+		add(name, shortname, description, line, Type::t_hex);
 	}
 
 }
 
-void libutils::Options::addInt(const string& name, const string& shortname, const int value, const string& description)
+void libutils::Options::addInt(const string& name, const string& shortname, const int value, const string& description, const int line)
 {
 	if (name.size() != 0)
 	{
 		m_ints[name] = value;
-		add(name, shortname, description, Type::t_int);
+		add(name, shortname, description, line, Type::t_int);
 	}
 
 }
 
-void libutils::Options::addLong(const string& name, const string& shortname, const long value,
-	const string& description)
+void libutils::Options::addLong(const string& name, const string& shortname, const long value, const string& description,
+	const int line)
 {
 	if (name.size() != 0)
 	{
 		m_longs[name] = value;
-		add(name, shortname, description, Type::t_long);
+		add(name, shortname, description, line, Type::t_long);
 	}
 
 }
 
-void libutils::Options::addFloat(const string& name, const string& shortname, const float value,
-	const string& description)
+void libutils::Options::addFloat(const string& name, const string& shortname, const float value, const string& description,
+	const int line)
 {
 	if (name.size() != 0)
 	{
 		m_floats[name] = value;
-		add(name, shortname, description, Type::t_float);
+		add(name, shortname, description, line, Type::t_float);
 	}
 
 }
 
-void libutils::Options::addString(const string& name, const string& shortname, const string& value,
-	const string& description)
+void libutils::Options::addString(const string& name, const string& shortname, const string& value, const string& description,
+	const int line)
 {
 	if (name.size() != 0)
 	{
 		m_strings[name] = value;
-		add(name, shortname, description, Type::t_string);
+		add(name, shortname, description, line, Type::t_string);
 	}
 
 }
@@ -151,17 +155,15 @@ bool libutils::Options::parse(int argc, char* argv[])
 		// wrong prefix
 		if (_argv[i].rfind("---") != string::npos)
 		{
-			cerr << endl << " Error: '" << _argv[i]
-				<< "' Only single '-' or double '--' prefix are allowed." << endl << endl;
+			cerr << endl << " Error: '" << _argv[i] << "' Only single '-' or double '--' prefix are allowed." << endl
+				<< endl;
 			return (toStringOptions());
 		}
 
 		// missing option
-		else if ((_argv[i].rfind("--") == 0 && _argv[i].size() == 2)
-			|| (_argv[i].rfind("-") == 0 && _argv[i].size() == 1))
+		else if ((_argv[i].rfind("--") == 0 && _argv[i].size() == 2) || (_argv[i].rfind("-") == 0 && _argv[i].size() == 1))
 		{
-			cerr << endl << " Error: '" << _argv[i] << "' without an option is not allowed." << endl
-				<< endl;
+			cerr << endl << " Error: '" << _argv[i] << "' without an option is not allowed." << endl << endl;
 			return (toStringOptions());
 		}
 
@@ -210,10 +212,9 @@ bool libutils::Options::parse(int argc, char* argv[])
 						}
 						else
 						{
-							cerr << endl << " Error: '-" << _argv[i].substr(j, 1)
-								<< "' in '" << _argv[i]
-								<< "' is an option value and need to be in a single statement."
-								<< endl << endl;
+							cerr << endl << " Error: '-" << _argv[i].substr(j, 1) << "' in '" << _argv[i]
+								<< "' is an option value and need to be in a single statement." << endl
+								<< endl;
 							return (toStringOptions());
 						}
 					}
@@ -221,8 +222,8 @@ bool libutils::Options::parse(int argc, char* argv[])
 				else
 				{
 					if (strcmp(_argv[i].substr(j, 1).c_str(), "h") == 0) return (toStringHelp());
-					cerr << endl << " Error: Option '-" << _argv[i].substr(j, 1)
-						<< "' was not found." << endl << endl;
+					cerr << endl << " Error: Option '-" << _argv[i].substr(j, 1) << "' was not found." << endl
+						<< endl;
 					return (toStringOptions());
 				}
 			}
@@ -244,8 +245,7 @@ bool libutils::Options::parse(int argc, char* argv[])
 			}
 			else if (m_withCommand.empty() == true)
 			{
-				cerr << endl << " Error: The given string '" << _argv[i] << "' is not needed." << endl
-					<< endl;
+				cerr << endl << " Error: The given string '" << _argv[i] << "' is not needed." << endl << endl;
 				return (toStringUsage());
 			}
 			else
@@ -260,14 +260,12 @@ bool libutils::Options::parse(int argc, char* argv[])
 
 	if (saveIndexLong >= 0)
 	{
-		cerr << endl << " Error: Option '--" << m_options[saveIndexLong].name << "' needs a value." << endl
-			<< endl;
+		cerr << endl << " Error: Option '--" << m_options[saveIndexLong].name << "' needs a value." << endl << endl;
 		return (toStringOptions());
 	}
 	else if (saveIndexShort >= 0)
 	{
-		cerr << endl << " Error: Option '-" << m_options[saveIndexShort].shortname << "' needs a value." << endl
-			<< endl;
+		cerr << endl << " Error: Option '-" << m_options[saveIndexShort].shortname << "' needs a value." << endl << endl;
 		return (toStringOptions());
 	}
 
@@ -373,16 +371,14 @@ bool libutils::Options::toStringOptions()
 
 	for (Option option : m_options)
 	{
-		if (strcmp(option.name.c_str(), "__text_only__") == 0)
-		{
-			cerr << option.description << endl;
-		}
-		else
+		if (strcmp(option.name.c_str(), "__text_only__") != 0)
 		{
 			const string c = (option.shortname.size() == 1) ? option.shortname.c_str() : " ";
 			cerr << ((c == " ") ? " " : "-") << c << " | --" << setw(m_maxNameLength) << setfill(' ') << left
-				<< option.name << "\t" << setw(0) << option.description << endl;
+				<< option.name << "\t" << setw(0);
 		}
+
+		cerr << option.description;
 	}
 
 	cerr << endl << "   | --values";
@@ -457,13 +453,15 @@ libutils::Options::Options(const string& command, const string& argument)
 {
 }
 
-void libutils::Options::add(const string& name, const string& shortname, const string& description, const Type type)
+void libutils::Options::add(const string& name, const string& shortname, const string& description, const int line, const Type type)
 {
 	Option option;
 
 	option.name = name;
 	option.shortname = shortname;
 	option.description = description;
+	for (int i = 0; i < line + 1; i++)
+		option.description += '\n';
 	option.type = type;
 
 	m_options.push_back(option);

@@ -41,13 +41,11 @@ void define_args()
 
 	options.setVersion("ebusctl is part of " "" PACKAGE_STRING"");
 
-	options.addDescription(" 'ebusctl' is a tcp/udp socket client for ebusproxy.\n"
-		"  hint: try 'help' for available ebusproxy commands.");
+	options.addDescription(" 'ebusctl' is a tcp/udp socket client for ebusproxy.");
+	options.addDescription("  hint: try 'help' for available ebusproxy commands.");
 
 	options.addString("server", "s", "localhost", "name or ip [localhost]");
-
 	options.addLong("port", "p", 8888, "port [8888]");
-
 	options.addBool("udp", "u", false, "connect via udp [no]");
 }
 

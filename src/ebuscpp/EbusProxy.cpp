@@ -45,39 +45,28 @@ void define_args()
 	options.addDescription(" ebusproxy provides a communication interface too ebus equipped systems.");
 
 	options.addHex("address", "a", 0xff, "ebus device address [FF]");
-
 	options.addString("device", "d", "/dev/ttyUSB0", "ebus device (serial or network) [/dev/ttyUSB0]");
-
 	options.addBool("devicecheck", "c", true, "sanity check of serial ebus device [yes]");
-
-	options.addLong("reopentime", "", 60, "max. time to open ebus device in 'sec' [60]\n");
+	options.addLong("reopentime", "", 60, "max. time to open ebus device in 'sec' [60]", 1);
 
 	options.addLong("arbitrationtime", "", 4400, "waiting time for arbitration test 'us' [4400]");
-
 	options.addLong("receivetimeout", "", 4700, "max. time for receiving of one sequence sign 'us' [4700]");
-
 	options.addInt("lockcounter", "", 5, "number of characters after a successful ebus access (max: 25) [5]");
-
-	options.addInt("lockretries", "", 2, "number of retries to lock ebus [2]\n");
+	options.addInt("lockretries", "", 2, "number of retries to lock ebus [2]", 1);
 
 	options.addBool("dump", "", false, "enable/disable raw data dumping [no]");
-
 	options.addString("dumpfile", "", "/tmp/ebus_dump.bin", "dump file name [/tmp/ebus_dump.bin]");
-
-	options.addLong("dumpsize", "", 100, "max size for dump file in 'kB' [100]\n");
+	options.addLong("dumpsize", "", 100, "max size for dump file in 'kB' [100]", 1);
 
 	options.addInt("port", "p", 8888, "listen port [8888]");
+	options.addBool("local", "", false, "listen only on localhost [no]", 1);
 
-	options.addBool("local", "", false, "listen only on localhost [no]\n");
+	options.addBool("foreground", "f", false, "run in foreground [no]", 1);
 
-	options.addBool("foreground", "f", false, "run in foreground [no]\n");
-
-	options.addString("pidfile", "", "/var/run/ebusproxy.pid", "pid file name [/var/run/ebusproxy.pid]\n");
+	options.addString("pidfile", "", "/var/run/ebusproxy.pid", "pid file name [/var/run/ebusproxy.pid]", 1);
 
 	options.addString("logfile", "", "/var/log/ebusproxy.log", "log file name [/var/log/ebusproxy.log]");
-
 	options.addString("loglevel", "", "info", "set logging level - off|error|warn|info|debug|trace [info]");
-
 	options.addBool("showfunction", "", false, "show function names in logging [no]");
 
 }
