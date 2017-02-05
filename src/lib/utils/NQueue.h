@@ -39,7 +39,7 @@ class NQueue
 
 public:
 	NQueue()
-		: m_queue(), m_mutex(), m_cond()
+		: m_queue(), m_mutex(), m_condition()
 	{
 	}
 
@@ -47,14 +47,14 @@ public:
 	{
 		lock_guard<mutex> lock(m_mutex);
 		m_queue.push(item);
-		m_cond.notify_one();
+		m_condition.notify_one();
 	}
 
 	T dequeue()
 	{
 		unique_lock<mutex> lock(m_mutex);
 		while (m_queue.empty() == true)
-			m_cond.wait(lock);
+			m_condition.wait(lock);
 
 		T val = m_queue.front();
 		m_queue.pop();
@@ -70,7 +70,7 @@ public:
 private:
 	queue<T> m_queue;
 	mutex m_mutex;
-	condition_variable m_cond;
+	condition_variable m_condition;
 
 };
 

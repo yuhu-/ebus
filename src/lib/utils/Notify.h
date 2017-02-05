@@ -36,33 +36,25 @@ class Notify
 
 public:
 	Notify()
-		: m_notify(false), m_mutex(), m_cond()
+		: m_mutex(), m_condition()
 	{
 	}
 
 	void waitNotify()
 	{
 		unique_lock<mutex> lock(m_mutex);
-		while (m_notify == false)
-		{
-			m_cond.wait(lock);
-			m_notify = false;
-			break;
-		}
+		m_condition.wait(lock);
 	}
 
 	void notify()
 	{
 		lock_guard<mutex> lock(m_mutex);
-		m_notify = true;
-		m_cond.notify_one();
+		m_condition.notify_one();
 	}
 
 private:
 	mutex m_mutex;
-	condition_variable m_cond;
-
-	bool m_notify;
+	condition_variable m_condition;
 
 };
 
