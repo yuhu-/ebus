@@ -28,6 +28,7 @@
 
 using std::ostringstream;
 using std::map;
+using std::make_unique;
 
 map<int, string> DeviceErrors =
 {
@@ -43,8 +44,6 @@ map<int, string> DeviceErrors =
 libebus::EbusDevice::EbusDevice(const string& deviceName, const bool deviceCheck)
 	: m_deviceName(deviceName), m_deviceCheck(deviceCheck)
 {
-	m_device = nullptr;
-
 	if (deviceName.find('/') == string::npos && deviceName.find(':') != string::npos)
 	{
 		setType(Type::network);
@@ -54,11 +53,6 @@ libebus::EbusDevice::EbusDevice(const string& deviceName, const bool deviceCheck
 	{
 		setType(Type::serial);
 	}
-}
-
-libebus::EbusDevice::~EbusDevice()
-{
-	delete m_device;
 }
 
 int libebus::EbusDevice::open()
@@ -103,16 +97,12 @@ const string libebus::EbusDevice::errorText(const int error) const
 
 void libebus::EbusDevice::setType(const Type type)
 {
-	if (m_device != nullptr) delete m_device;
+	if (m_device != nullptr) m_device.reset();
 
-	switch (type)
-	{
-	case Type::serial:
-		m_device = new SerialDevice();
-		break;
-	case Type::network:
-		m_device = new NetworkDevice();
-		break;
-	};
+	if (type == Type::serial)
+		m_device = make_unique<SerialDevice>();
+	else
+		m_device = make_unique<NetworkDevice>();
+
 }
 

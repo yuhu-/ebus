@@ -23,6 +23,9 @@
 #include "Device.h"
 
 #include <queue>
+#include <memory>
+
+using std::unique_ptr;
 
 namespace libebus
 {
@@ -37,7 +40,6 @@ class EbusDevice
 
 public:
 	EbusDevice(const string& device, const bool deviceCheck);
-	~EbusDevice();
 
 	int open();
 	void close();
@@ -52,7 +54,7 @@ public:
 private:
 	const string m_deviceName;
 
-	Device* m_device;
+	unique_ptr<Device> m_device = nullptr;
 
 	bool m_deviceCheck;
 
