@@ -34,7 +34,7 @@
 using libutils::Options;
 using libutils::Daemon;
 
-BaseLoop* baseloop = nullptr;
+std::unique_ptr<BaseLoop> baseloop = nullptr;
 
 void define_args()
 {
@@ -74,11 +74,7 @@ void define_args()
 void shutdown()
 {
 	// stop threads
-	if (baseloop != nullptr)
-	{
-		delete baseloop;
-		baseloop = nullptr;
-	}
+	if (baseloop != nullptr) baseloop.reset();
 
 	// reset all signal handlers to default
 	signal(SIGHUP, SIG_DFL);
@@ -148,7 +144,7 @@ int main(int argc, char* argv[])
 	signal(SIGTERM, signal_handler);
 
 	// create baseloop
-	baseloop = new BaseLoop();
+	baseloop = std::make_unique<BaseLoop>();
 	baseloop->run();
 
 	// shutdown and exit

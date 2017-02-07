@@ -33,7 +33,7 @@ public:
 	void forward(bool remove, const string& ip, long port, const string& filter, ostringstream& result);
 
 private:
-	Forward* m_forward = nullptr;
+	std::unique_ptr<Forward> m_forward = nullptr;
 
 	void run();
 

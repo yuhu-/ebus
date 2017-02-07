@@ -25,18 +25,13 @@
 Proxy::Proxy(const unsigned char address)
 	: EbusProcess(address)
 {
-	m_forward = new Forward();
+	m_forward = std::make_unique<Forward>();
 	m_forward->start();
 }
 
 Proxy::~Proxy()
 {
-	if (m_forward != nullptr)
-	{
-		m_forward->stop();
-		delete m_forward;
-		m_forward = nullptr;
-	}
+	if (m_forward != nullptr) m_forward->stop();
 }
 
 void Proxy::forward(bool remove, const string& ip, long port, const string& filter, ostringstream& result)

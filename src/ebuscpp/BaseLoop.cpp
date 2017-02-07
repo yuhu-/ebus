@@ -41,11 +41,11 @@ BaseLoop::BaseLoop()
 
 	m_address = options.getInt("address") & 0xff;
 
-	m_proxy = new Proxy(m_address);
+	m_proxy = std::make_shared<Proxy>(m_address);
 	m_proxy->start();
 
-	m_ebusFSM = new EbusFSM(m_address, options.getString("device"), options.getBool("devicecheck"), m_proxy,
-		&m_logger);
+	m_ebusFSM = std::make_unique<EbusFSM>(m_address, options.getString("device"), options.getBool("devicecheck"), m_proxy,
+		m_logger);
 
 	m_ebusFSM->setReopenTime(options.getLong("reopentime"));
 	m_ebusFSM->setArbitrationTime(options.getLong("arbitrationtime"));
@@ -58,31 +58,15 @@ BaseLoop::BaseLoop()
 
 	m_ebusFSM->start();
 
-	m_network = new Network(options.getBool("local"), options.getInt("port"));
+	m_network = std::make_unique<Network>(options.getBool("local"), options.getInt("port"));
 
 }
 
 BaseLoop::~BaseLoop()
 {
-	if (m_network != nullptr)
-	{
-		delete m_network;
-		m_network = nullptr;
-	}
+	if (m_ebusFSM != nullptr) m_ebusFSM->stop();
 
-	if (m_ebusFSM != nullptr)
-	{
-		m_ebusFSM->stop();
-		delete m_ebusFSM;
-		m_ebusFSM = nullptr;
-	}
-
-	if (m_proxy != nullptr)
-	{
-		m_proxy->stop();
-		delete m_proxy;
-		m_proxy = nullptr;
-	}
+	if (m_proxy != nullptr) m_proxy->stop();
 }
 
 void BaseLoop::run()

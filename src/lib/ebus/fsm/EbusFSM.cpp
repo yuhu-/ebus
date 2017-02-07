@@ -35,21 +35,15 @@ using std::copy_n;
 using std::back_inserter;
 
 libebus::EbusFSM::EbusFSM(const unsigned char address, const string device, const bool deviceCheck,
-	IEbusProcess* process, IEbusLogger* logger)
+	std::shared_ptr<IEbusProcess> process, std::shared_ptr<IEbusLogger> logger)
 	: Notify(), m_address(address), m_slaveAddress(slaveAddress(address)), m_process(process), m_logger(logger)
 {
-	m_ebusDevice = new EbusDevice(device, deviceCheck);
+	m_ebusDevice = std::make_unique<EbusDevice>(device, deviceCheck);
 	changeState(Connect::getConnect());
 }
 
 libebus::EbusFSM::~EbusFSM()
 {
-	if (m_ebusDevice != nullptr)
-	{
-		delete m_ebusDevice;
-		m_ebusDevice = nullptr;
-	}
-
 	m_dumpRawStream.close();
 }
 

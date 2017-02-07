@@ -21,28 +21,18 @@
 
 Network::Network(const bool local, const int port)
 {
-	m_tcpAcceptor = new TCPAcceptor(local, port, &m_netMsgQueue);
+	m_tcpAcceptor = std::make_unique<TCPAcceptor>(local, port, &m_netMsgQueue);
 	m_tcpAcceptor->start();
 
-	m_udpReceiver = new UDPReceiver(local, port, &m_netMsgQueue);
+	m_udpReceiver = std::make_unique<UDPReceiver>(local, port, &m_netMsgQueue);
 	m_udpReceiver->start();
 }
 
 Network::~Network()
 {
-	if (m_udpReceiver != nullptr)
-	{
-		m_udpReceiver->stop();
-		delete m_udpReceiver;
-		m_udpReceiver = nullptr;
-	}
+	if (m_udpReceiver != nullptr) m_udpReceiver->stop();
 
-	if (m_tcpAcceptor != nullptr)
-	{
-		m_tcpAcceptor->stop();
-		delete m_tcpAcceptor;
-		m_tcpAcceptor = nullptr;
-	}
+	if (m_tcpAcceptor != nullptr) m_tcpAcceptor->stop();
 
 	while (m_netMsgQueue.size() > 0)
 		delete m_netMsgQueue.dequeue();
@@ -52,6 +42,4 @@ NetMessage* Network::dequeue()
 {
 	return (m_netMsgQueue.dequeue());
 }
-
-
 

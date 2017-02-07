@@ -37,7 +37,7 @@ namespace libebus
 
 class State;
 
-class EbusFSM : public Notify
+class EbusFSM: public Notify
 {
 	friend class State;
 	friend class OnError;
@@ -53,8 +53,8 @@ class EbusFSM : public Notify
 	friend class SendResponse;
 
 public:
-	EbusFSM(const unsigned char address, const string device, const bool deviceCheck, IEbusProcess* process,
-		IEbusLogger* logger);
+	EbusFSM(const unsigned char address, const string device, const bool deviceCheck, std::shared_ptr<IEbusProcess> process,
+		std::shared_ptr<IEbusLogger> logger);
 
 	~EbusFSM();
 
@@ -113,9 +113,9 @@ private:
 	long m_dumpFileSize = 0;                    // current size of dump file
 	ofstream m_dumpRawStream;
 
-	EbusDevice* m_ebusDevice = nullptr;
-	IEbusProcess* m_process = nullptr;
-	IEbusLogger* m_logger = nullptr;
+	std::unique_ptr<EbusDevice> m_ebusDevice = nullptr;
+	std::shared_ptr<IEbusProcess> m_process = nullptr;
+	std::shared_ptr<IEbusLogger> m_logger = nullptr;
 
 	void run();
 
