@@ -54,7 +54,7 @@ void connect(const string& host, const int port, const bool udp)
 	Options& options = Options::getOption();
 
 	Client* client = new Client();
-	Socket* socket = client->newSocket(host, port, udp);
+	std::unique_ptr<Socket> socket = client->newSocket(host, port, udp);
 
 	if (socket != nullptr)
 	{
@@ -77,7 +77,6 @@ void connect(const string& host, const int port, const bool udp)
 			cout << data;
 		}
 
-		delete socket;
 	}
 	else
 	{

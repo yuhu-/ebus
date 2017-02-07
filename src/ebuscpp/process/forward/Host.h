@@ -33,7 +33,6 @@ class Host
 
 public:
 	Host(const string& ip, const long port, const bool filter);
-	~Host();
 
 	int getID() const;
 
@@ -56,7 +55,7 @@ private:
 	bool m_filter;
 
 	Client m_client;
-	Socket* m_socket;
+	std::unique_ptr<Socket> m_socket = nullptr;
 };
 
 #endif // PROCESS_FORWARD_HOST_H

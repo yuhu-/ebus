@@ -23,7 +23,7 @@
 
 #include <arpa/inet.h>
 
-libnetwork::Socket* libnetwork::Client::newSocket(const string& address, const int port, const bool udp)
+std::unique_ptr<libnetwork::Socket> libnetwork::Client::newSocket(const string& address, const int port, const bool udp)
 {
 	int ret;
 	struct addrinfo hints, *servinfo;
@@ -63,7 +63,7 @@ libnetwork::Socket* libnetwork::Client::newSocket(const string& address, const i
 		if (ret < 0) return (nullptr);
 	}
 
-	return (new Socket(sfd, &m_client));
+	return (std::make_unique<Socket>(sfd, &m_client));
 }
 
 const struct sockaddr_in* libnetwork::Client::getSock()

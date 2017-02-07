@@ -32,11 +32,6 @@ Host::Host(const string& ip, const long port, const bool filter)
 	m_socket = m_client.newSocket(ip, port, true);
 }
 
-Host::~Host()
-{
-	delete m_socket;
-}
-
 int Host::getID() const
 {
 	return (m_id);

@@ -22,6 +22,8 @@
 
 #include "Socket.h"
 
+#include <memory>
+
 #include <netdb.h>
 
 namespace libnetwork
@@ -31,7 +33,7 @@ class Client
 {
 
 public:
-	Socket* newSocket(const string& address, const int port, const bool udp = false);
+	std::unique_ptr<Socket> newSocket(const string& address, const int port, const bool udp = false);
 
 	const struct sockaddr_in* getSock();
 
