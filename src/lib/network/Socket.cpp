@@ -23,6 +23,14 @@
 #include <fcntl.h>
 #include <arpa/inet.h>
 
+libnetwork::Socket::Socket(const int sfd, const struct sockaddr_in* address)
+	: m_sfd(sfd)
+{
+	char ip[INET_ADDRSTRLEN];
+	m_ip = inet_ntop(AF_INET, (const struct in_addr*) &(address->sin_addr.s_addr), ip, INET_ADDRSTRLEN);
+	m_port = ntohs(address->sin_port);
+}
+
 libnetwork::Socket::~Socket()
 {
 	close(m_sfd);
@@ -58,13 +66,5 @@ bool libnetwork::Socket::isValid()
 		return (false);
 	else
 		return (true);
-}
-
-libnetwork::Socket::Socket(const int sfd, const struct sockaddr_in* address)
-	: m_sfd(sfd)
-{
-	char ip[INET_ADDRSTRLEN];
-	m_ip = inet_ntop(AF_INET, (const struct in_addr*) &(address->sin_addr.s_addr), ip, INET_ADDRSTRLEN);
-	m_port = ntohs(address->sin_port);
 }
 

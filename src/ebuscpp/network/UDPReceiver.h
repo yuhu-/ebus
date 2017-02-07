@@ -53,7 +53,7 @@ private:
 
 	Server* m_udpServer = nullptr;
 
-	Socket* m_socket = nullptr;
+	std::unique_ptr<Socket> m_socket = nullptr;
 
 	PipeNotify m_notify;
 

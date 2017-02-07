@@ -146,11 +146,7 @@ void UDPReceiver::run()
 
 	}
 
-	if (m_socket != nullptr)
-	{
-		delete m_socket;
-		m_socket = nullptr;
-	}
+	if (m_socket != nullptr) m_socket.reset();
 
 	LIBLOGGER_INFO("UDP listening stopped");
 }

@@ -27,8 +27,8 @@
 
 int TCPConnection::m_ids = 0;
 
-TCPConnection::TCPConnection(Socket* socket, NQueue<NetMessage*>* netMsgQueue)
-	: m_socket(socket), m_netMsgQueue(netMsgQueue)
+TCPConnection::TCPConnection(std::unique_ptr<Socket> socket, NQueue<NetMessage*>* netMsgQueue)
+	: m_socket(std::move(socket)), m_netMsgQueue(netMsgQueue)
 {
 	m_id = ++m_ids;
 }
@@ -119,11 +119,7 @@ void TCPConnection::run()
 
 	}
 
-	if (m_socket != nullptr)
-	{
-		delete m_socket;
-		m_socket = nullptr;
-	}
+	if (m_socket != nullptr) m_socket.reset();
 
 	m_closed = true;
 	LIBLOGGER_INFO("[%05d] TCP connection closed", m_id);

@@ -36,7 +36,7 @@ class TCPConnection
 {
 
 public:
-	TCPConnection(Socket* socket, NQueue<NetMessage*>* netMsgQueue);
+	TCPConnection(std::unique_ptr<Socket> socket, NQueue<NetMessage*>* netMsgQueue);
 
 	void start();
 	void stop();
@@ -48,7 +48,7 @@ private:
 
 	bool m_closed = false;
 
-	Socket* m_socket = nullptr;
+	std::unique_ptr<Socket> m_socket = nullptr;
 
 	NQueue<NetMessage*>* m_netMsgQueue;
 

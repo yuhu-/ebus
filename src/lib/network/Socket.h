@@ -31,10 +31,9 @@ namespace libnetwork
 
 class Socket
 {
-	friend class Client;
-	friend class Server;
 
 public:
+	Socket(const int sfd, const struct sockaddr_in* address);
 	~Socket();
 
 	ssize_t send(const char* buffer, const size_t len, const struct sockaddr_in* address, const socklen_t addrlen);
@@ -54,8 +53,6 @@ private:
 	string m_ip;
 
 	long m_port;
-
-	Socket(const int sfd, const struct sockaddr_in* address);
 
 };
 

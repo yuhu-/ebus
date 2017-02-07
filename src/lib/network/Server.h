@@ -22,6 +22,8 @@
 
 #include "Socket.h"
 
+#include <memory>
+
 namespace libnetwork
 {
 
@@ -34,7 +36,7 @@ public:
 
 	int start();
 
-	Socket* newSocket();
+	std::unique_ptr<Socket> newSocket();
 
 	int getFD() const;
 

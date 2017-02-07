@@ -106,10 +106,10 @@ void TCPAcceptor::run()
 		// new data from socket
 		if (fds[1].revents & POLLIN)
 		{
-			Socket* socket = m_tcpServer->newSocket();
+			std::unique_ptr<Socket> socket = m_tcpServer->newSocket();
 			if (socket == nullptr) continue;
 
-			TCPConnection* connection = new TCPConnection(socket, m_netMsgQueue);
+			TCPConnection* connection = new TCPConnection(std::move(socket), m_netMsgQueue);
 			if (connection == nullptr) continue;
 
 			connection->start();

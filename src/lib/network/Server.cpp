@@ -75,7 +75,7 @@ int libnetwork::Server::start()
 	return (result);
 }
 
-libnetwork::Socket* libnetwork::Server::newSocket()
+std::unique_ptr<libnetwork::Socket> libnetwork::Server::newSocket()
 {
 
 	if (m_ready == false) return (nullptr);
@@ -87,14 +87,14 @@ libnetwork::Socket* libnetwork::Server::newSocket()
 
 	if (m_udp == true)
 	{
-		return (new Socket(m_sfd, &address));
+		return (std::make_unique<Socket>(m_sfd, &address));
 	}
 	else
 	{
 		int sfd = accept(m_sfd, (struct sockaddr*) &address, &len);
 		if (sfd < 0) return (nullptr);
 
-		return (new Socket(sfd, &address));
+		return (std::make_unique<Socket>(sfd, &address));
 	}
 }
 
