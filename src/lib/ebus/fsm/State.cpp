@@ -155,9 +155,9 @@ void libebus::State::reset(EbusFSM* fsm)
 
 	if (m_passiveMessage != nullptr)
 	{
-		EbusMessage* tmp = m_passiveMessage;
+		EbusMessage* message = m_passiveMessage;
 		m_passiveMessage = nullptr;
-		delete tmp;
+		delete message;
 	}
 }
 
