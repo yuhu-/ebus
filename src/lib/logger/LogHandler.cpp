@@ -43,7 +43,7 @@ liblogger::LogHandler& liblogger::LogHandler::getLogHandler()
 liblogger::LogHandler::~LogHandler()
 {
 	while (m_sinks.size() > 0)
-		delSink(*(m_sinks.begin()));
+		m_sinks.erase(m_sinks.begin());
 
 	if (m_thread.joinable())
 	{
@@ -84,12 +84,12 @@ void liblogger::LogHandler::setFunctionLength(const size_t len)
 
 void liblogger::LogHandler::addConsole()
 {
-	addSink(new LogConsole());
+	addSink(std::make_unique<LogConsole>());
 }
 
 void liblogger::LogHandler::addFile(const string& file)
 {
-	addSink(new LogFile(file));
+	addSink(std::make_unique<LogFile>(file));
 }
 
 void liblogger::LogHandler::log(const LogMessage* logMessage)
@@ -131,20 +131,9 @@ liblogger::Level liblogger::LogHandler::findLevel(const string& level)
 	return (Level::info);
 }
 
-void liblogger::LogHandler::addSink(LogSink* sink)
+void liblogger::LogHandler::addSink(std::unique_ptr<LogSink> sink)
 {
-	vector<LogSink*>::iterator it = find(m_sinks.begin(), m_sinks.end(), sink);
+	vector<std::unique_ptr<LogSink>>::iterator it = find(m_sinks.begin(), m_sinks.end(), sink);
 
-	if (it == m_sinks.end()) m_sinks.push_back(sink);
-
-}
-
-void liblogger::LogHandler::delSink(const LogSink* sink)
-{
-	vector<LogSink*>::iterator it = find(m_sinks.begin(), m_sinks.end(), sink);
-
-	if (it == m_sinks.end()) return;
-
-	m_sinks.erase(it);
-	delete sink;
+	if (it == m_sinks.end()) m_sinks.push_back(std::move(sink));
 }

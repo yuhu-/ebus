@@ -23,9 +23,8 @@
 #include <unistd.h>
 
 Proxy::Proxy(const unsigned char address)
-	: EbusProcess(address)
+	: EbusProcess(address), m_forward(std::make_unique<Forward>())
 {
-	m_forward = std::make_unique<Forward>();
 	m_forward->start();
 }
 

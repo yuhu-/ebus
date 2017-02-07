@@ -80,7 +80,7 @@ private:
 
 	thread m_thread;
 
-	vector<LogSink*> m_sinks;
+	vector<std::unique_ptr<LogSink>> m_sinks;
 
 	NQueue<const LogMessage*> m_logMessages;
 
@@ -93,8 +93,7 @@ private:
 
 	Level findLevel(const string& level);
 
-	void addSink(LogSink* sink);
-	void delSink(const LogSink* sink);
+	void addSink(std::unique_ptr<LogSink> sink);
 };
 
 } // namespace liblogger
