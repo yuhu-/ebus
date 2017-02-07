@@ -29,9 +29,9 @@ TCPAcceptor::TCPAcceptor(const bool local, const int port, NQueue<NetMessage*>* 
 	: m_netMsgQueue(netMsgQueue), m_running(false)
 {
 	if (local == true)
-		m_tcpServer = new Server("127.0.0.1", port);
+		m_tcpServer = std::make_unique<Server>("127.0.0.1", port);
 	else
-		m_tcpServer = new Server("0.0.0.0", port);
+		m_tcpServer = std::make_unique<Server>("0.0.0.0", port);
 
 	if (m_tcpServer != nullptr && m_tcpServer->start() == 0) m_running = true;
 
@@ -46,9 +46,6 @@ TCPAcceptor::~TCPAcceptor()
 		connection->stop();
 		delete connection;
 	}
-
-	delete m_tcpServer;
-	m_tcpServer = nullptr;
 }
 
 void TCPAcceptor::start()

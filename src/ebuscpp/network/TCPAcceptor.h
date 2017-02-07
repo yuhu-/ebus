@@ -52,7 +52,7 @@ private:
 
 	NQueue<NetMessage*>* m_netMsgQueue;
 
-	Server* m_tcpServer = nullptr;
+	std::unique_ptr<Server> m_tcpServer = nullptr;
 
 	PipeNotify m_notify;
 

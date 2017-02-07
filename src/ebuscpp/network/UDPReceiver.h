@@ -38,7 +38,6 @@ class UDPReceiver
 
 public:
 	UDPReceiver(const bool local, const int port, NQueue<NetMessage*>* netMsgQueue);
-	~UDPReceiver();
 
 	void start();
 	void stop();
@@ -51,7 +50,7 @@ private:
 
 	NQueue<NetMessage*>* m_netMsgQueue;
 
-	Server* m_udpServer = nullptr;
+	std::unique_ptr<Server> m_udpServer = nullptr;
 
 	std::unique_ptr<Socket> m_socket = nullptr;
 

@@ -53,7 +53,7 @@ void connect(const string& host, const int port, const bool udp)
 {
 	Options& options = Options::getOption();
 
-	Client* client = new Client();
+	std::unique_ptr<Client> client = std::make_unique<Client>();
 	std::unique_ptr<Socket> socket = client->newSocket(host, port, udp);
 
 	if (socket != nullptr)
@@ -82,8 +82,6 @@ void connect(const string& host, const int port, const bool udp)
 	{
 		cout << "error connecting to " << host << ":" << port << endl;
 	}
-
-	delete client;
 }
 
 int main(int argc, char* argv[])

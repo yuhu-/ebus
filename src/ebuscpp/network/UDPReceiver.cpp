@@ -30,9 +30,9 @@ UDPReceiver::UDPReceiver(const bool local, const int port, NQueue<NetMessage*>* 
 	: m_netMsgQueue(netMsgQueue), m_running(false)
 {
 	if (local == true)
-		m_udpServer = new Server("127.0.0.1", port, true);
+		m_udpServer = std::make_unique<Server>("127.0.0.1", port, true);
 	else
-		m_udpServer = new Server("0.0.0.0", port, true);
+		m_udpServer = std::make_unique<Server>("0.0.0.0", port, true);
 
 	if (m_udpServer != nullptr && m_udpServer->start() == 0)
 	{
@@ -40,12 +40,6 @@ UDPReceiver::UDPReceiver(const bool local, const int port, NQueue<NetMessage*>* 
 		if (m_socket != nullptr) m_running = true;
 	}
 
-}
-
-UDPReceiver::~UDPReceiver()
-{
-	delete m_udpServer;
-	m_udpServer = nullptr;
 }
 
 void UDPReceiver::start()
