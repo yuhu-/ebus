@@ -64,28 +64,28 @@ private:
 
 	NQueue<EbusSequence*> m_ebusDataQueue;
 
-	vector<Host*> m_host;
+	vector<std::shared_ptr<Host>> m_host;
 
-	vector<Filter*> m_filter;
+	vector<std::shared_ptr<Filter>> m_filter;
 
-	vector<Relation*> m_relation;
+	vector<std::shared_ptr<Relation>> m_relation;
 
 	void run();
 
 	void send(EbusSequence* eSeq) const;
 
-	Host* getHost(const string& ip, long port) const;
-	Host* addHost(const string& ip, long port, bool filter);
+	const std::shared_ptr<Host> getHost(const string& ip, long port) const;
+	const std::shared_ptr<Host> addHost(const string& ip, long port, bool filter);
 	int delHost(const string& ip, long port);
 	void clrHost();
 
-	const Filter* getFilter(const string& filter) const;
-	const Filter* addFilter(const string& filter);
+	const std::shared_ptr<Filter> getFilter(const string& filter) const;
+	const std::shared_ptr<Filter> addFilter(const string& filter);
 	int delFilter(const string& filter);
 	void clrFilter();
 
-	const Relation* getRelation(const int hostID, const int filterID) const;
-	const Relation* addRelation(const int hostID, const int filterID);
+	const std::shared_ptr<Relation> getRelation(const int hostID, const int filterID) const;
+	const std::shared_ptr<Relation> addRelation(const int hostID, const int filterID);
 	void delRelationByHost(const int hostID);
 	void delRelationByFilter(const int filterID);
 };

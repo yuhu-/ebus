@@ -37,23 +37,23 @@ Forward::~Forward()
 
 	while (m_host.size() > 0)
 	{
-		Host* host = m_host.back();
+		std::shared_ptr<Host> host = m_host.back();
 		m_host.pop_back();
-		delete host;
+		host.reset();
 	}
 
 	while (m_filter.size() > 0)
 	{
-		Filter* filter = m_filter.back();
+		std::shared_ptr<Filter> filter = m_filter.back();
 		m_filter.pop_back();
-		delete filter;
+		filter.reset();
 	}
 
 	while (m_relation.size() > 0)
 	{
-		Relation* relation = m_relation.back();
+		std::shared_ptr<Relation> relation = m_relation.back();
 		m_relation.pop_back();
-		delete relation;
+		relation.reset();
 	}
 }
 
@@ -74,7 +74,7 @@ void Forward::stop()
 
 void Forward::append(const string& ip, long port, const string& filter, ostringstream& result)
 {
-	Host* host = getHost(ip, port);
+	std::shared_ptr<Host> host = getHost(ip, port);
 
 	// new host
 	if (host == nullptr)
@@ -85,7 +85,7 @@ void Forward::append(const string& ip, long port, const string& filter, ostrings
 		// host with filter
 		if (host->hasFilter() == true)
 		{
-			const Filter* filt = getFilter(filter);
+			std::shared_ptr<Filter> filt = getFilter(filter);
 
 			// new filter
 			if (filt == nullptr)
@@ -128,7 +128,7 @@ void Forward::append(const string& ip, long port, const string& filter, ostrings
 			// new filter
 			else
 			{
-				const Filter* filt = getFilter(filter);
+				std::shared_ptr<Filter> filt = getFilter(filter);
 
 				// new filter
 				if (filt == nullptr)
@@ -173,7 +173,7 @@ void Forward::append(const string& ip, long port, const string& filter, ostrings
 
 void Forward::remove(const string& ip, long port, const string& filter, ostringstream& result)
 {
-	Host* host = getHost(ip, port);
+	std::shared_ptr<Host> host = getHost(ip, port);
 
 	// host not found
 	if (host == nullptr)
@@ -279,7 +279,7 @@ const string Forward::toStringHost()
 {
 	ostringstream ostr;
 
-	for (Host* host : m_host)
+	for (std::shared_ptr<Host> host : m_host)
 		ostr << host->toString() << endl;
 
 	return (ostr.str());
@@ -289,7 +289,7 @@ const string Forward::toStringFilter()
 {
 	ostringstream ostr;
 
-	for (Filter* filter : m_filter)
+	for (std::shared_ptr<Filter> filter : m_filter)
 		ostr << filter->toString() << endl;
 
 	return (ostr.str());
@@ -299,7 +299,7 @@ const string Forward::toStringRelation()
 {
 	ostringstream ostr;
 
-	for (Relation* relation : m_relation)
+	for (std::shared_ptr<Relation> relation : m_relation)
 		ostr << relation->toString() << endl;
 
 	return (ostr.str());
@@ -352,7 +352,7 @@ void Forward::send(EbusSequence* eSeq) const
 		}
 }
 
-Host* Forward::getHost(const string& ip, long port) const
+const std::shared_ptr<Host> Forward::getHost(const string& ip, long port) const
 {
 	for (size_t index = 0; index < m_host.size(); index++)
 		if (m_host[index]->equal(ip, port) == true) return (m_host[index]);
@@ -360,7 +360,7 @@ Host* Forward::getHost(const string& ip, long port) const
 	return (nullptr);
 }
 
-Host* Forward::addHost(const string& ip, long port, bool filter)
+const std::shared_ptr<Host> Forward::addHost(const string& ip, long port, bool filter)
 {
 	size_t index;
 
@@ -368,7 +368,7 @@ Host* Forward::addHost(const string& ip, long port, bool filter)
 		if (m_host[index]->equal(ip, port) == true) break;
 
 	if (index == m_host.size())
-		m_host.push_back(new Host(ip, port, filter));
+		m_host.push_back(std::make_shared<Host>(ip, port, filter));
 	else
 		m_host[index]->setFilter(filter);
 
@@ -380,13 +380,13 @@ int Forward::delHost(const string& ip, long port)
 	for (size_t index = 0; index < m_host.size(); index++)
 		if (m_host[index]->equal(ip, port) == true)
 		{
-			Host* host = m_host[index];
+			std::shared_ptr<Host> host = m_host[index];
 			int id = host->getID();
 
 			m_host.erase(m_host.begin() + index);
 			m_host.shrink_to_fit();
 
-			delete host;
+			host.reset();
 			return (id);
 		}
 
@@ -401,7 +401,7 @@ void Forward::clrHost()
 	{
 		bool notFound = true;
 
-		for (Relation* relation : m_relation)
+		for (std::shared_ptr<Relation> relation : m_relation)
 			if ((*it)->getID() == relation->getHostID())
 			{
 				notFound = false;
@@ -410,9 +410,9 @@ void Forward::clrHost()
 
 		if (notFound == true)
 		{
-			Host* host = *it;
+			std::shared_ptr<Host> host = *it;
 			it = m_host.erase(it);
-			delete host;
+			host.reset();
 		}
 		else
 		{
@@ -423,7 +423,7 @@ void Forward::clrHost()
 	m_host.shrink_to_fit();
 }
 
-const Filter* Forward::getFilter(const string& filter) const
+const std::shared_ptr<Filter> Forward::getFilter(const string& filter) const
 {
 	Sequence seq(filter);
 
@@ -433,7 +433,7 @@ const Filter* Forward::getFilter(const string& filter) const
 	return (nullptr);
 }
 
-const Filter* Forward::addFilter(const string& filter)
+const std::shared_ptr<Filter> Forward::addFilter(const string& filter)
 {
 	Sequence seq(filter);
 	size_t index;
@@ -441,7 +441,7 @@ const Filter* Forward::addFilter(const string& filter)
 	for (index = 0; index < m_filter.size(); index++)
 		if (m_filter[index]->equal(seq) == true) break;
 
-	if (index == m_filter.size()) m_filter.push_back(new Filter(seq));
+	if (index == m_filter.size()) m_filter.push_back(std::make_shared<Filter>(seq));
 
 	return (m_filter[index]);
 }
@@ -453,13 +453,13 @@ int Forward::delFilter(const string& filter)
 	for (size_t index = 0; index < m_filter.size(); index++)
 		if (m_filter[index]->equal(seq) == true)
 		{
-			Filter* _filter = m_filter[index];
+			std::shared_ptr<Filter> _filter = m_filter[index];
 			int id = _filter->getID();
 
 			m_filter.erase(m_filter.begin() + index);
 			m_filter.shrink_to_fit();
 
-			delete _filter;
+			_filter.reset();
 			return (id);
 		}
 
@@ -474,7 +474,7 @@ void Forward::clrFilter()
 	{
 		bool notFound = true;
 
-		for (Relation* relation : m_relation)
+		for (std::shared_ptr<Relation> relation : m_relation)
 			if ((*it)->getID() == relation->getFilterID())
 			{
 				notFound = false;
@@ -483,9 +483,9 @@ void Forward::clrFilter()
 
 		if (notFound == true)
 		{
-			Filter* filter = *it;
+			std::shared_ptr<Filter> filter = *it;
 			it = m_filter.erase(it);
-			delete filter;
+			filter.reset();
 		}
 		else
 		{
@@ -496,7 +496,7 @@ void Forward::clrFilter()
 	m_filter.shrink_to_fit();
 }
 
-const Relation* Forward::getRelation(const int hostID, const int filterID) const
+const std::shared_ptr<Relation> Forward::getRelation(const int hostID, const int filterID) const
 {
 	for (size_t index = 0; index < m_relation.size(); index++)
 		if (m_relation[index]->equal(hostID, filterID) == true) return (m_relation[index]);
@@ -504,14 +504,14 @@ const Relation* Forward::getRelation(const int hostID, const int filterID) const
 	return (nullptr);
 }
 
-const Relation* Forward::addRelation(const int hostID, const int filterID)
+const std::shared_ptr<Relation> Forward::addRelation(const int hostID, const int filterID)
 {
 	size_t index;
 
 	for (index = 0; index < m_relation.size(); index++)
 		if (m_relation[index]->equal(hostID, filterID) == true) break;
 
-	if (index == m_relation.size()) m_relation.push_back(new Relation(hostID, filterID));
+	if (index == m_relation.size()) m_relation.push_back(std::make_shared<Relation>(hostID, filterID));
 
 	return (m_relation[index]);
 }
@@ -524,9 +524,9 @@ void Forward::delRelationByHost(const int hostID)
 	{
 		if ((*it)->getHostID() == hostID)
 		{
-			Relation* relation = *it;
+			std::shared_ptr<Relation> relation = *it;
 			it = m_relation.erase(it);
-			delete relation;
+			relation.reset();
 		}
 		else
 		{
@@ -545,9 +545,9 @@ void Forward::delRelationByFilter(const int filterID)
 	{
 		if ((*it)->getFilterID() == filterID)
 		{
-			Relation* relation = *it;
+			std::shared_ptr<Relation> relation = *it;
 			it = m_relation.erase(it);
-			delete relation;
+			relation.reset();
 		}
 		else
 		{
