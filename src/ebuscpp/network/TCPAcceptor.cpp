@@ -41,10 +41,9 @@ TCPAcceptor::~TCPAcceptor()
 {
 	while (m_connections.size() > 0)
 	{
-		TCPConnection* connection = m_connections.back();
+		std::unique_ptr<TCPConnection> connection = std::move(m_connections.back());
 		m_connections.pop_back();
 		connection->stop();
-		delete connection;
 	}
 }
 
@@ -106,11 +105,11 @@ void TCPAcceptor::run()
 			std::unique_ptr<Socket> socket = m_tcpServer->newSocket();
 			if (socket == nullptr) continue;
 
-			TCPConnection* connection = new TCPConnection(std::move(socket), m_netMsgQueue);
+			std::unique_ptr<TCPConnection> connection = std::make_unique<TCPConnection>(std::move(socket), m_netMsgQueue);
 			if (connection == nullptr) continue;
 
 			connection->start();
-			m_connections.push_back(connection);
+			m_connections.push_back(std::move(connection));
 		}
 
 	}
@@ -124,10 +123,9 @@ void TCPAcceptor::cleanConnections()
 	{
 		if ((*c_it)->isClosed() == true)
 		{
-			TCPConnection* connection = *c_it;
+			std::unique_ptr<TCPConnection> connection = std::move(*c_it);
 			c_it = m_connections.erase(c_it);
 			connection->stop();
-			delete connection;
 			LIBLOGGER_DEBUG("TCP dead connection removed - still %d connections", m_connections.size());
 		}
 	}

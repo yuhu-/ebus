@@ -48,7 +48,7 @@ private:
 
 	thread m_thread;
 
-	list<TCPConnection*> m_connections;
+	list<std::unique_ptr<TCPConnection>> m_connections;
 
 	NQueue<NetMessage*>* m_netMsgQueue;
 
