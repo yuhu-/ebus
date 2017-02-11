@@ -36,8 +36,8 @@ private:
 	Network(const Network&);
 	Network& operator=(const Network&);
 
-	std::unique_ptr<TCPAcceptor> m_tcpAcceptor = nullptr;
-	std::unique_ptr<UDPReceiver> m_udpReceiver = nullptr;
+	unique_ptr<TCPAcceptor> m_tcpAcceptor = nullptr;
+	unique_ptr<UDPReceiver> m_udpReceiver = nullptr;
 	NQueue<NetMessage*> m_netMsgQueue;
 
 };

@@ -26,6 +26,7 @@
 #include <arpa/inet.h>
 
 using std::ostringstream;
+using std::make_unique;
 
 libnetwork::Server::Server(const string& address, const int port, const bool udp)
 	: m_address(address), m_port(port), m_udp(udp)
@@ -75,7 +76,7 @@ int libnetwork::Server::start()
 	return (result);
 }
 
-std::unique_ptr<libnetwork::Socket> libnetwork::Server::newSocket()
+unique_ptr<libnetwork::Socket> libnetwork::Server::newSocket()
 {
 
 	if (m_ready == false) return (nullptr);
@@ -87,14 +88,14 @@ std::unique_ptr<libnetwork::Socket> libnetwork::Server::newSocket()
 
 	if (m_udp == true)
 	{
-		return (std::make_unique<Socket>(m_sfd, &address));
+		return (make_unique<Socket>(m_sfd, &address));
 	}
 	else
 	{
 		int sfd = accept(m_sfd, (struct sockaddr*) &address, &len);
 		if (sfd < 0) return (nullptr);
 
-		return (std::make_unique<Socket>(sfd, &address));
+		return (make_unique<Socket>(sfd, &address));
 	}
 }
 

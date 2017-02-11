@@ -34,6 +34,7 @@ using std::istringstream;
 using std::istream_iterator;
 using std::endl;
 using std::to_string;
+using std::make_unique;
 
 BaseLoop::BaseLoop()
 {
@@ -41,10 +42,10 @@ BaseLoop::BaseLoop()
 
 	m_address = options.getInt("address") & 0xff;
 
-	m_proxy = std::make_shared<Proxy>(m_address);
+	m_proxy = make_shared<Proxy>(m_address);
 	m_proxy->start();
 
-	m_ebusFSM = std::make_unique<EbusFSM>(m_address, options.getString("device"), options.getBool("devicecheck"), m_proxy,
+	m_ebusFSM = make_unique<EbusFSM>(m_address, options.getString("device"), options.getBool("devicecheck"), m_proxy,
 		m_logger);
 
 	m_ebusFSM->setReopenTime(options.getLong("reopentime"));
@@ -58,7 +59,7 @@ BaseLoop::BaseLoop()
 
 	m_ebusFSM->start();
 
-	m_network = std::make_unique<Network>(options.getBool("local"), options.getInt("port"));
+	m_network = make_unique<Network>(options.getBool("local"), options.getInt("port"));
 
 }
 

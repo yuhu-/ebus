@@ -48,11 +48,11 @@ private:
 
 	thread m_thread;
 
-	list<std::unique_ptr<TCPConnection>> m_connections;
+	list<unique_ptr<TCPConnection>> m_connections;
 
 	NQueue<NetMessage*>* m_netMsgQueue;
 
-	std::unique_ptr<Server> m_tcpServer = nullptr;
+	unique_ptr<Server> m_tcpServer = nullptr;
 
 	PipeNotify m_notify;
 

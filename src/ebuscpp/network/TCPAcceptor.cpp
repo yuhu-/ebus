@@ -25,13 +25,16 @@
 
 #include <poll.h>
 
+using std::make_unique;
+using std::move;
+
 TCPAcceptor::TCPAcceptor(const bool local, const int port, NQueue<NetMessage*>* netMsgQueue)
 	: m_netMsgQueue(netMsgQueue), m_running(false)
 {
 	if (local == true)
-		m_tcpServer = std::make_unique<Server>("127.0.0.1", port);
+		m_tcpServer = make_unique<Server>("127.0.0.1", port);
 	else
-		m_tcpServer = std::make_unique<Server>("0.0.0.0", port);
+		m_tcpServer = make_unique<Server>("0.0.0.0", port);
 
 	if (m_tcpServer != nullptr && m_tcpServer->start() == 0) m_running = true;
 
@@ -41,7 +44,7 @@ TCPAcceptor::~TCPAcceptor()
 {
 	while (m_connections.size() > 0)
 	{
-		std::unique_ptr<TCPConnection> connection = std::move(m_connections.back());
+		unique_ptr<TCPConnection> connection = move(m_connections.back());
 		m_connections.pop_back();
 		connection->stop();
 	}
@@ -96,20 +99,20 @@ void TCPAcceptor::run()
 		}
 
 		// new data from notify
-		if ((fds[0].revents & (POLLIN | POLLERR | POLLHUP | POLLRDHUP))
-			|| (fds[1].revents & (POLLERR | POLLHUP | POLLRDHUP))) break;
+		if ((fds[0].revents & (POLLIN | POLLERR | POLLHUP | POLLRDHUP)) || (fds[1].revents & (POLLERR | POLLHUP | POLLRDHUP)))
+			break;
 
 		// new data from socket
 		if (fds[1].revents & POLLIN)
 		{
-			std::unique_ptr<Socket> socket = m_tcpServer->newSocket();
+			unique_ptr<Socket> socket = m_tcpServer->newSocket();
 			if (socket == nullptr) continue;
 
-			std::unique_ptr<TCPConnection> connection = std::make_unique<TCPConnection>(std::move(socket), m_netMsgQueue);
+			unique_ptr<TCPConnection> connection = make_unique<TCPConnection>(move(socket), m_netMsgQueue);
 			if (connection == nullptr) continue;
 
 			connection->start();
-			m_connections.push_back(std::move(connection));
+			m_connections.push_back(move(connection));
 		}
 
 	}
@@ -123,7 +126,7 @@ void TCPAcceptor::cleanConnections()
 	{
 		if ((*c_it)->isClosed() == true)
 		{
-			std::unique_ptr<TCPConnection> connection = std::move(*c_it);
+			unique_ptr<TCPConnection> connection = move(*c_it);
 			c_it = m_connections.erase(c_it);
 			connection->stop();
 			LIBLOGGER_DEBUG("TCP dead connection removed - still %d connections", m_connections.size());

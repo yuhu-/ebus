@@ -55,7 +55,7 @@ private:
 	bool m_filter;
 
 	Client m_client;
-	std::unique_ptr<Socket> m_socket = nullptr;
+	unique_ptr<Socket> m_socket = nullptr;
 };
 
 #endif // PROCESS_FORWARD_HOST_H

@@ -33,8 +33,9 @@
 
 using libutils::Options;
 using libutils::Daemon;
+using std::make_unique;
 
-std::unique_ptr<BaseLoop> baseloop = nullptr;
+unique_ptr<BaseLoop> baseloop = nullptr;
 
 void define_args()
 {
@@ -144,7 +145,7 @@ int main(int argc, char* argv[])
 	signal(SIGTERM, signal_handler);
 
 	// create baseloop
-	baseloop = std::make_unique<BaseLoop>();
+	baseloop = make_unique<BaseLoop>();
 	baseloop->run();
 
 	// shutdown and exit

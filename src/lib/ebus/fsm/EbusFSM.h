@@ -31,13 +31,14 @@ using libutils::NQueue;
 using std::ofstream;
 using std::thread;
 using std::map;
+using std::shared_ptr;
 
 namespace libebus
 {
 
 class State;
 
-class EbusFSM: public Notify
+class EbusFSM : public Notify
 {
 	friend class State;
 	friend class OnError;
@@ -53,8 +54,8 @@ class EbusFSM: public Notify
 	friend class SendResponse;
 
 public:
-	EbusFSM(const unsigned char address, const string device, const bool deviceCheck, std::shared_ptr<IEbusProcess> process,
-		std::shared_ptr<IEbusLogger> logger);
+	EbusFSM(const unsigned char address, const string device, const bool deviceCheck, shared_ptr<IEbusProcess> process,
+		shared_ptr<IEbusLogger> logger);
 
 	~EbusFSM();
 
@@ -113,9 +114,9 @@ private:
 	long m_dumpFileSize = 0;                    // current size of dump file
 	ofstream m_dumpRawStream;
 
-	std::unique_ptr<EbusDevice> m_ebusDevice = nullptr;
-	std::shared_ptr<IEbusProcess> m_process = nullptr;
-	std::shared_ptr<IEbusLogger> m_logger = nullptr;
+	unique_ptr<EbusDevice> m_ebusDevice = nullptr;
+	shared_ptr<IEbusProcess> m_process = nullptr;
+	shared_ptr<IEbusLogger> m_logger = nullptr;
 
 	void run();
 

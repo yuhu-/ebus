@@ -50,9 +50,9 @@ private:
 
 	NQueue<NetMessage*>* m_netMsgQueue;
 
-	std::unique_ptr<Server> m_udpServer = nullptr;
+	unique_ptr<Server> m_udpServer = nullptr;
 
-	std::unique_ptr<Socket> m_socket = nullptr;
+	unique_ptr<Socket> m_socket = nullptr;
 
 	PipeNotify m_notify;
 

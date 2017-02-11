@@ -34,6 +34,7 @@ using std::map;
 using std::string;
 using std::vector;
 using std::thread;
+using std::unique_ptr;
 
 namespace liblogger
 {
@@ -80,7 +81,7 @@ private:
 
 	thread m_thread;
 
-	vector<std::unique_ptr<LogSink>> m_sinks;
+	vector<unique_ptr<LogSink>> m_sinks;
 
 	NQueue<const LogMessage*> m_logMessages;
 
@@ -93,7 +94,7 @@ private:
 
 	Level findLevel(const string& level);
 
-	void addSink(std::unique_ptr<LogSink> sink);
+	void addSink(unique_ptr<LogSink> sink);
 };
 
 } // namespace liblogger

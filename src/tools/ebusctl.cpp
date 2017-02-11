@@ -34,6 +34,7 @@ using std::ostringstream;
 using std::cin;
 using std::cout;
 using std::endl;
+using std::make_unique;
 
 void define_args()
 {
@@ -53,8 +54,8 @@ void connect(const string& host, const int port, const bool udp)
 {
 	Options& options = Options::getOption();
 
-	std::unique_ptr<Client> client = std::make_unique<Client>();
-	std::unique_ptr<Socket> socket = client->newSocket(host, port, udp);
+	unique_ptr<Client> client = make_unique<Client>();
+	unique_ptr<Socket> socket = client->newSocket(host, port, udp);
 
 	if (socket != nullptr)
 	{

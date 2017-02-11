@@ -25,6 +25,8 @@
 #include <queue>
 #include <memory>
 
+using std::unique_ptr;
+
 namespace libebus
 {
 
@@ -52,7 +54,7 @@ public:
 private:
 	const string m_deviceName;
 
-	std::unique_ptr<Device> m_device = nullptr;
+	unique_ptr<Device> m_device = nullptr;
 
 	bool m_deviceCheck;
 

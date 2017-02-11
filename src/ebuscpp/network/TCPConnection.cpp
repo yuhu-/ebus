@@ -25,10 +25,12 @@
 
 #include <poll.h>
 
+using std::move;
+
 int TCPConnection::m_ids = 0;
 
-TCPConnection::TCPConnection(std::unique_ptr<Socket> socket, NQueue<NetMessage*>* netMsgQueue)
-	: m_socket(std::move(socket)), m_netMsgQueue(netMsgQueue)
+TCPConnection::TCPConnection(unique_ptr<Socket> socket, NQueue<NetMessage*>* netMsgQueue)
+	: m_socket(move(socket)), m_netMsgQueue(netMsgQueue)
 {
 	m_id = ++m_ids;
 }

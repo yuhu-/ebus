@@ -34,6 +34,7 @@ using libutils::Notify;
 using libutils::NQueue;
 using std::thread;
 using std::ostringstream;
+using std::shared_ptr;
 
 class Forward : public Notify
 {
@@ -64,28 +65,28 @@ private:
 
 	NQueue<EbusSequence*> m_ebusDataQueue;
 
-	vector<std::shared_ptr<Host>> m_host;
+	vector<shared_ptr<Host>> m_host;
 
-	vector<std::shared_ptr<Filter>> m_filter;
+	vector<shared_ptr<Filter>> m_filter;
 
-	vector<std::shared_ptr<Relation>> m_relation;
+	vector<shared_ptr<Relation>> m_relation;
 
 	void run();
 
 	void send(EbusSequence* eSeq) const;
 
-	const std::shared_ptr<Host> getHost(const string& ip, long port) const;
-	const std::shared_ptr<Host> addHost(const string& ip, long port, bool filter);
+	const shared_ptr<Host> getHost(const string& ip, long port) const;
+	const shared_ptr<Host> addHost(const string& ip, long port, bool filter);
 	int delHost(const string& ip, long port);
 	void clrHost();
 
-	const std::shared_ptr<Filter> getFilter(const string& filter) const;
-	const std::shared_ptr<Filter> addFilter(const string& filter);
+	const shared_ptr<Filter> getFilter(const string& filter) const;
+	const shared_ptr<Filter> addFilter(const string& filter);
 	int delFilter(const string& filter);
 	void clrFilter();
 
-	const std::shared_ptr<Relation> getRelation(const int hostID, const int filterID) const;
-	const std::shared_ptr<Relation> addRelation(const int hostID, const int filterID);
+	const shared_ptr<Relation> getRelation(const int hostID, const int filterID) const;
+	const shared_ptr<Relation> addRelation(const int hostID, const int filterID);
 	void delRelationByHost(const int hostID);
 	void delRelationByFilter(const int filterID);
 };

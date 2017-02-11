@@ -31,12 +31,13 @@ using libutils::NQueue;
 using libutils::PipeNotify;
 using libnetwork::Socket;
 using std::thread;
+using std::unique_ptr;
 
 class TCPConnection
 {
 
 public:
-	TCPConnection(std::unique_ptr<Socket> socket, NQueue<NetMessage*>* netMsgQueue);
+	TCPConnection(unique_ptr<Socket> socket, NQueue<NetMessage*>* netMsgQueue);
 
 	void start();
 	void stop();
@@ -48,7 +49,7 @@ private:
 
 	bool m_closed = false;
 
-	std::unique_ptr<Socket> m_socket = nullptr;
+	unique_ptr<Socket> m_socket = nullptr;
 
 	NQueue<NetMessage*>* m_netMsgQueue;
 

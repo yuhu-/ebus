@@ -19,12 +19,14 @@
 
 #include "Network.h"
 
+using std::make_unique;
+
 Network::Network(const bool local, const int port)
 {
-	m_tcpAcceptor = std::make_unique<TCPAcceptor>(local, port, &m_netMsgQueue);
+	m_tcpAcceptor = make_unique<TCPAcceptor>(local, port, &m_netMsgQueue);
 	m_tcpAcceptor->start();
 
-	m_udpReceiver = std::make_unique<UDPReceiver>(local, port, &m_netMsgQueue);
+	m_udpReceiver = make_unique<UDPReceiver>(local, port, &m_netMsgQueue);
 	m_udpReceiver->start();
 }
 

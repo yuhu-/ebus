@@ -33,6 +33,8 @@ using std::endl;
 using std::setw;
 using std::setfill;
 using std::left;
+using std::make_unique;
+using std::move;
 
 liblogger::LogHandler& liblogger::LogHandler::getLogHandler()
 {
@@ -84,12 +86,12 @@ void liblogger::LogHandler::setFunctionLength(const size_t len)
 
 void liblogger::LogHandler::addConsole()
 {
-	addSink(std::make_unique<LogConsole>());
+	addSink(make_unique<LogConsole>());
 }
 
 void liblogger::LogHandler::addFile(const string& file)
 {
-	addSink(std::make_unique<LogFile>(file));
+	addSink(make_unique<LogFile>(file));
 }
 
 void liblogger::LogHandler::log(const LogMessage* logMessage)
@@ -131,9 +133,9 @@ liblogger::Level liblogger::LogHandler::findLevel(const string& level)
 	return (Level::info);
 }
 
-void liblogger::LogHandler::addSink(std::unique_ptr<LogSink> sink)
+void liblogger::LogHandler::addSink(unique_ptr<LogSink> sink)
 {
-	vector<std::unique_ptr<LogSink>>::iterator it = find(m_sinks.begin(), m_sinks.end(), sink);
+	vector<unique_ptr<LogSink>>::iterator it = find(m_sinks.begin(), m_sinks.end(), sink);
 
-	if (it == m_sinks.end()) m_sinks.push_back(std::move(sink));
+	if (it == m_sinks.end()) m_sinks.push_back(move(sink));
 }

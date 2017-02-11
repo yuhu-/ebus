@@ -29,6 +29,7 @@
 
 using libebus::EbusFSM;
 using std::ostringstream;
+using std::make_shared;
 
 class BaseLoop
 {
@@ -61,10 +62,10 @@ private:
 	bool m_running = true;
 
 	unsigned char m_address = 0;
-	std::shared_ptr<Proxy> m_proxy = nullptr;
-	std::shared_ptr<EbusLogger> m_logger = std::make_shared<EbusLogger>();
-	std::unique_ptr<EbusFSM> m_ebusFSM = nullptr;
-	std::unique_ptr<Network> m_network = nullptr;
+	shared_ptr<Proxy> m_proxy = nullptr;
+	shared_ptr<EbusLogger> m_logger = make_shared<EbusLogger>();
+	unique_ptr<EbusFSM> m_ebusFSM = nullptr;
+	unique_ptr<Network> m_network = nullptr;
 
 	Command findCommand(const string& item);
 
