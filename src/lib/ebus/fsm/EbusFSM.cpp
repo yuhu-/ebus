@@ -18,12 +18,12 @@
  */
 
 #include "EbusFSM.h"
+#include "EbusCommon.h"
 #include "Connect.h"
 #include "Idle.h"
 #include "OnError.h"
 #include "State.h"
 #include "Color.h"
-#include "Common.h"
 
 #include <sstream>
 #include <algorithm>

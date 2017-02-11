@@ -18,7 +18,7 @@
  */
 
 #include "Sequence.h"
-#include "Common.h"
+#include "EbusCommon.h"
 
 #include <sstream>
 #include <iomanip>

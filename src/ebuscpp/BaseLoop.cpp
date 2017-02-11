@@ -20,7 +20,7 @@
 #include "BaseLoop.h"
 #include "Options.h"
 #include "Logger.h"
-#include "EbusMessage.h"
+#include "EbusCommon.h"
 
 #include <iomanip>
 #include <iterator>
@@ -29,7 +29,7 @@
 #include <arpa/inet.h>
 
 using libutils::Options;
-using libebus::EbusMessage;
+using libebus::isHex;
 using std::istringstream;
 using std::istream_iterator;
 using std::endl;
@@ -160,27 +160,7 @@ string BaseLoop::decodeMessage(const string& data)
 			break;
 		}
 
-		if (isHex(args[1], result, 2) == true)
-		{
-			EbusSequence eSeq;
-			eSeq.createMaster(m_address, args[1]);
-
-			// send message
-			if (eSeq.getMasterState() == EBUS_OK)
-			{
-				LIBLOGGER_DEBUG("enqueue: %s", eSeq.toStringMaster().c_str());
-				EbusMessage* ebusMessage = new EbusMessage(eSeq);
-				m_proxy->enqueueMessage(ebusMessage);
-				ebusMessage->waitNotify();
-				result << ebusMessage->getResult();
-				delete ebusMessage;
-				break;
-			}
-			else
-			{
-				result << eSeq.toStringMaster();
-			}
-		}
+		if (isHex(args[1], result, 2) == true) result << m_proxy->sendMessage(args[1]);
 
 		LIBLOGGER_DEBUG("error: %s", result.str().c_str());
 
@@ -250,26 +230,6 @@ string BaseLoop::decodeMessage(const string& data)
 	}
 
 	return (result.str());
-}
-
-bool BaseLoop::isHex(const string& str, ostringstream& result, const int& nibbles)
-{
-	if ((str.length() % nibbles) != 0)
-	{
-		result << "invalid hex string";
-		return (false);
-	}
-
-	for (size_t i = 0; i < str.size(); ++i)
-	{
-		if (isxdigit(str[i]) == false)
-		{
-			result << "invalid char '" << str[i] << "'";
-			return (false);
-		}
-	}
-
-	return (true);
 }
 
 bool BaseLoop::isNum(const string& str, ostringstream& result)

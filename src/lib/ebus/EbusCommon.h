@@ -17,8 +17,13 @@
  * along with ebuscpp. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef LIBEBUS_COMMON_H
-#define LIBEBUS_COMMON_H
+#ifndef LIBEBUS_EBUSCOMMON_H
+#define LIBEBUS_EBUSCOMMON_H
+
+#include <string>
+
+using std::string;
+using std::ostringstream;
 
 namespace libebus
 {
@@ -33,7 +38,9 @@ bool isValidAddress(const unsigned char byte);
 
 unsigned char slaveAddress(const unsigned char masterAddress);
 
+bool isHex(const string& str, ostringstream& result, const int& nibbles);
+
 } // namespace libebus
 
-#endif // LIBEBUS_COMMON_H
+#endif // LIBEBUS_EBUSCOMMON_H
 

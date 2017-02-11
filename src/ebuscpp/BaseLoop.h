@@ -70,8 +70,6 @@ private:
 
 	string decodeMessage(const string& data);
 
-	static bool isHex(const string& str, ostringstream& result, const int& nibbles);
-
 	static bool isNum(const string& str, ostringstream& result);
 
 	void handleForward(const vector<string>& args, ostringstream& result);

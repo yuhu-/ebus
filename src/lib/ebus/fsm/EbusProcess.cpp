@@ -18,7 +18,7 @@
  */
 
 #include "EbusProcess.h"
-#include "Common.h"
+#include "EbusCommon.h"
 
 #include <iomanip>
 
@@ -50,6 +50,28 @@ void EbusProcess::stop()
 		notify();
 		m_thread.join();
 	}
+}
+
+const string EbusProcess::sendMessage(const string& message)
+{
+	ostringstream result;
+	EbusSequence eSeq;
+	eSeq.createMaster(m_address, message);
+
+	if (eSeq.getMasterState() == EBUS_OK)
+	{
+		EbusMessage* ebusMessage = new EbusMessage(eSeq);
+		enqueueMessage(ebusMessage);
+		ebusMessage->waitNotify();
+		result << ebusMessage->getResult();
+		delete ebusMessage;
+	}
+	else
+	{
+		result << eSeq.toStringMaster();
+	}
+
+	return (result.str());
 }
 
 void EbusProcess::enqueueMessage(EbusMessage* message)

@@ -14,8 +14,8 @@ libebus_a_SOURCES = Device.cpp \
 		    NetworkDevice.h \
 		    EbusDevice.cpp \
 		    EbusDevice.h \
-		    Common.cpp \
-		    Common.h \
+		    EbusCommon.cpp \
+		    EbusCommon.h \
 		    Sequence.cpp \
 		    Sequence.h \
 		    EbusSequence.cpp \

@@ -41,7 +41,7 @@ public:
 	void start();
 	void stop();
 
-	virtual void enqueueMessage(EbusMessage* message) final;
+	virtual const string sendMessage(const string& message) final;
 
 protected:
 	bool m_running = true;
@@ -52,6 +52,8 @@ protected:
 	virtual Action getEvaluatedAction(EbusSequence& eSeq) = 0;
 	virtual void evalActiveMessage(EbusSequence& eSeq) = 0;
 	virtual void evalPassiveMessage(EbusSequence& eSeq) = 0;
+
+	virtual void enqueueMessage(EbusMessage* message) final;
 
 	virtual void createMessage(EbusSequence& eSeq) final;
 	virtual EbusMessage* processMessage() final;

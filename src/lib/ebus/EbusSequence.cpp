@@ -18,7 +18,7 @@
  */
 
 #include "EbusSequence.h"
-#include "Common.h"
+#include "EbusCommon.h"
 #include "Color.h"
 
 #include <iostream>

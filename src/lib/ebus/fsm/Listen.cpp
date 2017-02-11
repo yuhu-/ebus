@@ -20,7 +20,7 @@
 #include "Listen.h"
 #include "LockBus.h"
 #include "RecvMessage.h"
-#include "Common.h"
+#include "EbusCommon.h"
 
 #include <string>
 

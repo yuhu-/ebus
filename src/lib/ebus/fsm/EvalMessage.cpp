@@ -20,7 +20,7 @@
 #include "EvalMessage.h"
 #include "Listen.h"
 #include "SendResponse.h"
-#include "Common.h"
+#include "EbusCommon.h"
 
 libebus::EvalMessage libebus::EvalMessage::m_evalMessage;
 
