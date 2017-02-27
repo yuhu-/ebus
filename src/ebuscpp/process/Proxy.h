@@ -23,6 +23,9 @@
 #include "EbusProcess.h"
 #include "Forward.h"
 
+using libebus::EbusProcess;
+using libebus::Action;
+
 class Proxy : public EbusProcess
 {
 

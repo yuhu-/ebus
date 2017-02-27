@@ -26,23 +26,23 @@ using libebus::slaveAddress;
 using std::ostringstream;
 using std::endl;
 
-EbusProcess::EbusProcess(const unsigned char address)
+libebus::EbusProcess::EbusProcess(const unsigned char address)
 	: Notify(), m_address(address), m_slaveAddress(slaveAddress(address))
 {
 }
 
-EbusProcess::~EbusProcess()
+libebus::EbusProcess::~EbusProcess()
 {
 	while (m_ebusMsgQueue.size() > 0)
 		delete m_ebusMsgQueue.dequeue();
 }
 
-void EbusProcess::start()
+void libebus::EbusProcess::start()
 {
 	m_thread = thread(&EbusProcess::run, this);
 }
 
-void EbusProcess::stop()
+void libebus::EbusProcess::stop()
 {
 	if (m_thread.joinable())
 	{
@@ -52,7 +52,7 @@ void EbusProcess::stop()
 	}
 }
 
-const string EbusProcess::sendMessage(const string& message)
+const string libebus::EbusProcess::sendMessage(const string& message)
 {
 	ostringstream result;
 	EbusSequence eSeq;
@@ -74,17 +74,17 @@ const string EbusProcess::sendMessage(const string& message)
 	return (result.str());
 }
 
-void EbusProcess::enqueueMessage(EbusMessage* message)
+void libebus::EbusProcess::enqueueMessage(EbusMessage* message)
 {
 	IEbusProcess::enqueueMessage(message);
 }
 
-void EbusProcess::createMessage(EbusSequence& eSeq)
+void libebus::EbusProcess::createMessage(EbusSequence& eSeq)
 {
 	if (eSeq.getMasterState() == EBUS_OK) m_ebusMsgQueue.enqueue(new EbusMessage(eSeq));
 }
 
-EbusMessage* EbusProcess::processMessage()
+libebus::EbusMessage* libebus::EbusProcess::processMessage()
 {
 	EbusMessage* ebusMessage = m_ebusMsgQueue.dequeue();
 	enqueueMessage(ebusMessage);
@@ -92,7 +92,7 @@ EbusMessage* EbusProcess::processMessage()
 	return (ebusMessage);
 }
 
-size_t EbusProcess::pendingMessages()
+size_t libebus::EbusProcess::pendingMessages()
 {
 	return (m_ebusMsgQueue.size());
 }

@@ -25,11 +25,10 @@
 
 #include <thread>
 
-using libebus::IEbusProcess;
-using libebus::Action;
-using libebus::EbusSequence;
-using libebus::EbusMessage;
 using std::thread;
+
+namespace libebus
+{
 
 class EbusProcess : public IEbusProcess, public Notify
 {
@@ -67,5 +66,7 @@ private:
 	virtual void run() = 0;
 
 };
+
+} // namespace libebus
 
 #endif // LIBEBUS_FSM_EBUSPROCESS_H

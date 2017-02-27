@@ -22,6 +22,7 @@
 
 #include <unistd.h>
 
+using libebus::EbusMessage;
 using std::make_unique;
 
 Proxy::Proxy(const unsigned char address)
