@@ -41,17 +41,30 @@ class IEbusProcess
 {
 
 public:
-	virtual ~IEbusProcess();
+	virtual ~IEbusProcess()
+	{
+		while (m_ebusMsgQueue.size() > 0)
+			delete m_ebusMsgQueue.dequeue();
+	}
 
-	virtual Action getEvaluatedAction(EbusSequence& eSeq) = 0;
-	virtual void evalActiveMessage(EbusSequence& eSeq) = 0;
-	virtual void evalPassiveMessage(EbusSequence& eSeq) = 0;
+	virtual Action identifyAction(EbusSequence& eSeq) = 0;
+	virtual void handleActiveMessage(EbusSequence& eSeq) = 0;
+	virtual void handlePassiveMessage(EbusSequence& eSeq) = 0;
 
-	virtual EbusMessage* dequeueMessage() final;
-	virtual size_t getQueueSize() final;
+	virtual void enqueueMessage(EbusMessage* message) final
+	{
+		m_ebusMsgQueue.enqueue(message);
+	}
 
-protected:
-	virtual void enqueueMessage(EbusMessage* message);
+	virtual EbusMessage* dequeueMessage() final
+	{
+		return (m_ebusMsgQueue.dequeue());
+	}
+
+	virtual size_t queuedMessages() final
+	{
+		return (m_ebusMsgQueue.size());
+	}
 
 private:
 	NQueue<EbusMessage*> m_ebusMsgQueue;

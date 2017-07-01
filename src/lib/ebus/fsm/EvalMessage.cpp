@@ -29,7 +29,7 @@ int libebus::EvalMessage::run(EbusFSM* fsm)
 	EbusSequence eSeq;
 	eSeq.createMaster(m_sequence);
 
-	Action action = fsm->getEvaluatedAction(eSeq);
+	Action action = fsm->identifyAction(eSeq);
 
 	switch (action)
 	{

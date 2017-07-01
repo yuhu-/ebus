@@ -71,7 +71,7 @@ int libebus::SendResponse::run(EbusFSM* fsm)
 	eSeq.setMasterACK(byte);
 
 	fsm->logInfo(eSeq.toStringLog());
-	fsm->evalPassiveMessage(eSeq);
+	fsm->handlePassiveMessage(eSeq);
 
 	reset(fsm);
 	fsm->changeState(Listen::getListen());

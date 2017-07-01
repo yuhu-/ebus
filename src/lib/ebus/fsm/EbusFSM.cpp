@@ -198,22 +198,22 @@ void libebus::EbusFSM::changeState(State* state)
 	}
 }
 
-libebus::Action libebus::EbusFSM::getEvaluatedAction(EbusSequence& eSeq)
+libebus::Action libebus::EbusFSM::identifyAction(EbusSequence& eSeq)
 {
 	if (m_process != nullptr)
-		return (m_process->getEvaluatedAction(eSeq));
+		return (m_process->identifyAction(eSeq));
 	else
 		return (Action::noprocess);
 }
 
-void libebus::EbusFSM::evalActiveMessage(EbusSequence& eSeq)
+void libebus::EbusFSM::handleActiveMessage(EbusSequence& eSeq)
 {
-	if (m_process != nullptr) m_process->evalActiveMessage(eSeq);
+	if (m_process != nullptr) m_process->handleActiveMessage(eSeq);
 }
 
-void libebus::EbusFSM::evalPassiveMessage(EbusSequence& eSeq)
+void libebus::EbusFSM::handlePassiveMessage(EbusSequence& eSeq)
 {
-	if (m_process != nullptr) m_process->evalPassiveMessage(eSeq);
+	if (m_process != nullptr) m_process->handlePassiveMessage(eSeq);
 }
 
 libebus::EbusMessage* libebus::EbusFSM::dequeueMessage()
@@ -227,7 +227,7 @@ libebus::EbusMessage* libebus::EbusFSM::dequeueMessage()
 size_t libebus::EbusFSM::getQueueSize()
 {
 	if (m_process != nullptr)
-		return (m_process->getQueueSize());
+		return (m_process->queuedMessages());
 	else
 		return (0);
 }

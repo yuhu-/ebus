@@ -51,7 +51,7 @@ int libebus::Listen::run(EbusFSM* fsm)
 			EbusSequence eSeq(m_sequence);
 			fsm->logInfo(eSeq.toStringLog());
 
-			if (eSeq.isValid() == true) fsm->evalPassiveMessage(eSeq);
+			if (eSeq.isValid() == true) fsm->handlePassiveMessage(eSeq);
 
 			if (m_sequence.size() == 1 && m_lockCounter < 2) m_lockCounter = 2;
 

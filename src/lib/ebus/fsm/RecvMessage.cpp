@@ -102,10 +102,10 @@ int libebus::RecvMessage::run(EbusFSM* fsm)
 			if (eSeq.getType() == EBUS_TYPE_MM) eSeq.setSlaveACK(byte);
 
 			fsm->logInfo(eSeq.toStringLog());
-			fsm->evalPassiveMessage(eSeq);
+			fsm->handlePassiveMessage(eSeq);
 		}
 
-		fsm->changeState(EvalMessage::getEvaluate());
+		fsm->changeState(EvalMessage::getEvalMessage());
 		return (DEV_OK);
 	}
 

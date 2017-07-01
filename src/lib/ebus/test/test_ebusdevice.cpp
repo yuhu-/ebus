@@ -40,7 +40,7 @@ int main()
 
 	int count = 0;
 
-	while (true)
+	while (count < 100)
 	{
 		int ret;
 		unsigned char byte = 0;

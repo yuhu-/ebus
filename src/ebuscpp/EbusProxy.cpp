@@ -85,11 +85,7 @@ void shutdown()
 	// delete daemon pid file
 	if (Daemon::getDaemon().status() == true) Daemon::getDaemon().stop();
 
-	// stop logger
-	LIBLOGGER_INFO("EbusProxy stopped");
-
 	exit(EXIT_SUCCESS);
-
 }
 
 void signal_handler(int sig)
@@ -137,8 +133,6 @@ int main(int argc, char* argv[])
 	LIBLOGGER_SHOWFUNCTION(options.getBool("showfunction"));
 	LIBLOGGER_FUNCTIONLENGTH(22);
 
-	LIBLOGGER_INFO("EbusProxy started");
-
 	// trap signals that we expect to receive
 	signal(SIGHUP, signal_handler);
 	signal(SIGINT, signal_handler);
@@ -150,6 +144,5 @@ int main(int argc, char* argv[])
 
 	// shutdown and exit
 	shutdown();
-
 }
 

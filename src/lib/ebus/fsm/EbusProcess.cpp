@@ -33,8 +33,8 @@ libebus::EbusProcess::EbusProcess(const unsigned char address)
 
 libebus::EbusProcess::~EbusProcess()
 {
-	while (m_ebusMsgQueue.size() > 0)
-		delete m_ebusMsgQueue.dequeue();
+	while (queuedMessages() > 0)
+		delete dequeueMessage();
 }
 
 void libebus::EbusProcess::start()
@@ -74,25 +74,15 @@ const string libebus::EbusProcess::sendMessage(const string& message)
 	return (result.str());
 }
 
-void libebus::EbusProcess::enqueueMessage(EbusMessage* message)
-{
-	IEbusProcess::enqueueMessage(message);
-}
-
 void libebus::EbusProcess::createMessage(EbusSequence& eSeq)
 {
-	if (eSeq.getMasterState() == EBUS_OK) m_ebusMsgQueue.enqueue(new EbusMessage(eSeq));
+	if (eSeq.getMasterState() == EBUS_OK) enqueueMessage(new EbusMessage(eSeq));
 }
 
 libebus::EbusMessage* libebus::EbusProcess::processMessage()
 {
-	EbusMessage* ebusMessage = m_ebusMsgQueue.dequeue();
+	EbusMessage* ebusMessage = dequeueMessage();
 	enqueueMessage(ebusMessage);
 	ebusMessage->waitNotify();
 	return (ebusMessage);
-}
-
-size_t libebus::EbusProcess::pendingMessages()
-{
-	return (m_ebusMsgQueue.size());
 }

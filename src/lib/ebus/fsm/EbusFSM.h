@@ -122,9 +122,9 @@ private:
 
 	void changeState(State* state);
 
-	Action getEvaluatedAction(EbusSequence& eSeq);
-	void evalActiveMessage(EbusSequence& eSeq);
-	void evalPassiveMessage(EbusSequence& eSeq);
+	Action identifyAction(EbusSequence& eSeq);
+	void handleActiveMessage(EbusSequence& eSeq);
+	void handlePassiveMessage(EbusSequence& eSeq);
 	EbusMessage* dequeueMessage();
 	size_t getQueueSize();
 

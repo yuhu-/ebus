@@ -29,7 +29,7 @@ class EvalMessage : public State
 {
 
 public:
-	static EvalMessage* getEvaluate()
+	static EvalMessage* getEvalMessage()
 	{
 		return (&m_evalMessage);
 	}

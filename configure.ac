@@ -1,4 +1,4 @@
-AC_PREREQ([2.65])
+AC_PREREQ([2.68])
 AC_INIT([ebuscpp], [0.0.1], [roland.jax@liwest.at], [ebuscpp], [https://github.com/yuhu-/ebuscpp])
 
 case "$@" in
@@ -12,17 +12,6 @@ fi
 AC_PROG_CXX
 
 AC_CONFIG_AUX_DIR([build])
-
-AC_CHECK_HEADERS([arpa/inet.h \
-		  dirent.h \
-		  fcntl.h \
-		  netdb.h \
-		  poll.h \
-		  pthread.h \
-		  sys/ioctl.h \
-		  sys/time.h \
-		  sys/socket.h \
-		  termios.h])
 
 AC_CONFIG_SRCDIR([src/ebuscpp/EbusProxy.cpp])
 AC_CONFIG_HEADERS([config.h])

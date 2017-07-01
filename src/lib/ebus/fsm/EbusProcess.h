@@ -48,20 +48,15 @@ protected:
 	const unsigned char m_address;
 	const unsigned char m_slaveAddress;
 
-	virtual Action getEvaluatedAction(EbusSequence& eSeq) = 0;
-	virtual void evalActiveMessage(EbusSequence& eSeq) = 0;
-	virtual void evalPassiveMessage(EbusSequence& eSeq) = 0;
-
-	virtual void enqueueMessage(EbusMessage* message) final;
+	virtual Action identifyAction(EbusSequence& eSeq) = 0;
+	virtual void handleActiveMessage(EbusSequence& eSeq) = 0;
+	virtual void handlePassiveMessage(EbusSequence& eSeq) = 0;
 
 	virtual void createMessage(EbusSequence& eSeq) final;
 	virtual EbusMessage* processMessage() final;
-	virtual size_t pendingMessages() final;
 
 private:
 	thread m_thread;
-
-	NQueue<EbusMessage*> m_ebusMsgQueue;
 
 	virtual void run() = 0;
 

@@ -53,7 +53,7 @@ void Proxy::run()
 		//waitNotify();
 
 		usleep(10000);
-		if (pendingMessages() != 0)
+		if (queuedMessages() != 0)
 		{
 			LIBLOGGER_INFO("process message");
 			EbusMessage* ebusMessage = processMessage();
@@ -65,9 +65,9 @@ void Proxy::run()
 	LIBLOGGER_INFO("Proxy stopped");
 }
 
-Action Proxy::getEvaluatedAction(EbusSequence& eSeq)
+Action Proxy::identifyAction(EbusSequence& eSeq)
 {
-	LIBLOGGER_DEBUG("evaluate %s", eSeq.toStringLog().c_str());
+	LIBLOGGER_DEBUG("identify %s", eSeq.toStringLog().c_str());
 
 	if (eSeq.getMaster().contains("0700") == true)
 	{
@@ -101,7 +101,7 @@ Action Proxy::getEvaluatedAction(EbusSequence& eSeq)
 	return (Action::undefined);
 }
 
-void Proxy::evalActiveMessage(EbusSequence& eSeq)
+void Proxy::handleActiveMessage(EbusSequence& eSeq)
 {
 	if (m_forward->isActive())
 	{
@@ -110,7 +110,7 @@ void Proxy::evalActiveMessage(EbusSequence& eSeq)
 	}
 }
 
-void Proxy::evalPassiveMessage(EbusSequence& eSeq)
+void Proxy::handlePassiveMessage(EbusSequence& eSeq)
 {
 	if (m_forward->isActive())
 	{
