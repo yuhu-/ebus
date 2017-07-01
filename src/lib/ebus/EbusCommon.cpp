@@ -56,7 +56,7 @@ bool libebus::isSlave(const unsigned char byte)
 	return (libebus::isMaster(byte) == false && byte != 0xaa && byte != 0xa9);
 }
 
-bool libebus::isValidAddress(const unsigned char byte)
+bool libebus::isAddressValid(const unsigned char byte)
 {
 	return (byte != 0xaa && byte != 0xa9);
 }

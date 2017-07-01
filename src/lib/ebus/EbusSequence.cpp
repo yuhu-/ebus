@@ -183,7 +183,7 @@ void libebus::EbusSequence::createMaster(Sequence& seq)
 	}
 
 	// wrong slave address
-	if (isValidAddress(seq[1]) == false)
+	if (isAddressValid(seq[1]) == false)
 	{
 		m_masterState = EBUS_ERR_SLAVE;
 		return;
