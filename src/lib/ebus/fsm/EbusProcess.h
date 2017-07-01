@@ -48,10 +48,6 @@ protected:
 	const unsigned char m_address;
 	const unsigned char m_slaveAddress;
 
-	virtual Action identifyAction(EbusSequence& eSeq) = 0;
-	virtual void handleActiveMessage(EbusSequence& eSeq) = 0;
-	virtual void handlePassiveMessage(EbusSequence& eSeq) = 0;
-
 	virtual void createMessage(EbusSequence& eSeq) final;
 	virtual EbusMessage* processMessage() final;
 
