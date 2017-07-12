@@ -17,33 +17,31 @@
  * along with ebuscpp. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef PROCESS_PROXY_H
-#define PROCESS_PROXY_H
+#ifndef LIBEBUS_RECVMESSAGE_H
+#define LIBEBUS_RECVMESSAGE_H
 
-#include "EbusProcess.h"
-#include "Forward.h"
+#include "State.h"
 
-using libebus::EbusProcess;
-using libebus::Action;
+namespace libebus
+{
 
-class Proxy : public EbusProcess
+class RecvMessage : public State
 {
 
 public:
-	explicit Proxy(const unsigned char address);
-	~Proxy();
+	static RecvMessage* getRecvMessage()
+	{
+		return (&m_recvMessage);
+	}
 
-	void forward(bool remove, const string& ip, long port, const string& filter, ostringstream& result);
+	int run(EbusFSM* fsm);
+	const string toString() const;
 
 private:
-	unique_ptr<Forward> m_forward = nullptr;
-
-	void run();
-
-	Action identifyAction(EbusSequence& eSeq);
-	void handleActiveMessage(EbusSequence& eSeq);
-	void handlePassiveMessage(EbusSequence& eSeq);
+	static RecvMessage m_recvMessage;
 
 };
 
-#endif // PROCESS_PROXY_H
+} // namespace libebus
+
+#endif // LIBEBUS_RECVMESSAGE_H

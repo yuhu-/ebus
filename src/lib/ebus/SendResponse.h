@@ -17,31 +17,31 @@
  * along with ebuscpp. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef LIBEBUS_FSM_FREEBUS_H
-#define LIBEBUS_FSM_FREEBUS_H
+#ifndef LIBEBUS_SENDRESPONSE_H
+#define LIBEBUS_SENDRESPONSE_H
 
 #include "State.h"
 
 namespace libebus
 {
 
-class FreeBus : public State
+class SendResponse : public State
 {
 
 public:
-	static FreeBus* getFreeBus()
+	static SendResponse* getSendResponse()
 	{
-		return (&m_freeBus);
+		return (&m_sendResponse);
 	}
 
 	int run(EbusFSM* fsm);
 	const string toString() const;
 
 private:
-	static FreeBus m_freeBus;
+	static SendResponse m_sendResponse;
 
 };
 
 } // namespace libebus
 
-#endif // LIBEBUS_FSM_FREEBUS_H
+#endif // LIBEBUS_SENDRESPONSE_H

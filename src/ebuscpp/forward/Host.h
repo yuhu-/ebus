@@ -17,31 +17,46 @@
  * along with ebuscpp. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef LIBEBUS_FSM_RECVRESPONSE_H
-#define LIBEBUS_FSM_RECVRESPONSE_H
+#ifndef FORWARD_HOST_H
+#define FORWARD_HOST_H
 
-#include "State.h"
+#include "Client.h"
 
-namespace libebus
-{
+#include <string>
 
-class RecvResponse : public State
+using libnetwork::Client;
+using libnetwork::Socket;
+using std::string;
+
+class Host
 {
 
 public:
-	static RecvResponse* getRecvResponse()
-	{
-		return (&m_recvResponse);
-	}
+	Host(const string& ip, const long port, const bool filter);
 
-	int run(EbusFSM* fsm);
-	const string toString() const;
+	int getID() const;
+
+	string getIP() const;
+	long getPort() const;
+
+	void setFilter(const bool filter);
+	bool hasFilter() const;
+
+	bool equal(const string& ip, const long port) const;
+
+	void send(const string& message);
+
+	const string toString();
 
 private:
-	static RecvResponse m_recvResponse;
+	static int uniqueID;
 
+	int m_id;
+	bool m_filter;
+
+	Client m_client;
+	unique_ptr<Socket> m_socket = nullptr;
 };
 
-} // namespace libebus
+#endif // FORWARD_HOST_H
 
-#endif // LIBEBUS_FSM_RECVRESPONSE_H

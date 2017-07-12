@@ -17,31 +17,31 @@
  * along with ebuscpp. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef PROCESS_FORWARD_RELATION_H
-#define PROCESS_FORWARD_RELATION_H
+#ifndef LIBEBUS_LOCKBUS_H
+#define LIBEBUS_LOCKBUS_H
 
-#include <string>
+#include "State.h"
 
-using std::string;
+namespace libebus
+{
 
-class Relation
+class LockBus : public State
 {
 
 public:
-	Relation(int hostID, int filterID);
+	static LockBus* getLockBus()
+	{
+		return (&m_lockBus);
+	}
 
-	int getHostID() const;
-	int getFilterID() const;
-
-	bool equal(int hostID, int filterID);
-
-	const string toString();
+	int run(EbusFSM* fsm);
+	const string toString() const;
 
 private:
-	int m_hostID;
-	int m_filterID;
+	static LockBus m_lockBus;
 
 };
 
-#endif // PROCESS_FORWARD_RELATION_H
+} // namespace libebus
 
+#endif // LIBEBUS_LOCKBUS_H

@@ -17,8 +17,8 @@
  * along with ebuscpp. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef LIBEBUS_FSM_ONERROR_H
-#define LIBEBUS_FSM_ONERROR_H
+#ifndef LIBEBUS_ONERROR_H
+#define LIBEBUS_ONERROR_H
 
 #include "State.h"
 
@@ -44,4 +44,4 @@ private:
 
 } // namespace libebus
 
-#endif // LIBEBUS_FSM_ONERROR_H
+#endif // LIBEBUS_ONERROR_H

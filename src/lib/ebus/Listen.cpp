@@ -51,7 +51,7 @@ int libebus::Listen::run(EbusFSM* fsm)
 			EbusSequence eSeq(m_sequence);
 			fsm->logInfo(eSeq.toStringLog());
 
-			if (eSeq.isValid() == true) fsm->handlePassiveMessage(eSeq);
+			if (eSeq.isValid() == true) fsm->publishMessage(eSeq);
 
 			if (m_sequence.size() == 1 && m_lockCounter < 2) m_lockCounter = 2;
 
@@ -60,7 +60,7 @@ int libebus::Listen::run(EbusFSM* fsm)
 		}
 
 		// check for new EbusMessage
-		if (m_activeMessage == nullptr && fsm->getQueueSize() != 0) m_activeMessage = fsm->dequeueMessage();
+		if (m_activeMessage == nullptr && fsm->m_ebusMsgQueue.size() != 0) m_activeMessage = fsm->m_ebusMsgQueue.dequeue();
 
 		// handle EbusMessage
 		if (m_activeMessage != nullptr && m_lockCounter == 0) fsm->changeState(LockBus::getLockBus());

@@ -20,38 +20,35 @@ libebus_a_SOURCES = Device.cpp \
 		    Sequence.h \
 		    EbusSequence.cpp \
 		    EbusSequence.h \
-		    fsm/EbusMessage.cpp \
-		    fsm/EbusMessage.h \
-		    fsm/State.cpp \
-		    fsm/State.h \
-		    fsm/OnError.cpp \
-		    fsm/OnError.h \
-		    fsm/Idle.cpp \
-		    fsm/Idle.h \
-		    fsm/Connect.cpp \
-		    fsm/Connect.h \
-		    fsm/Listen.cpp \
-		    fsm/Listen.h \
-		    fsm/LockBus.cpp \
-		    fsm/LockBus.h \
-		    fsm/FreeBus.cpp \
-		    fsm/FreeBus.h \
-		    fsm/EvalMessage.cpp \
-		    fsm/EvalMessage.h \
-		    fsm/SendMessage.cpp \
-		    fsm/SendMessage.h \
-		    fsm/RecvMessage.cpp \
-		    fsm/RecvMessage.h \
-		    fsm/SendResponse.cpp \
-		    fsm/SendResponse.h \
-		    fsm/RecvResponse.cpp \
-		    fsm/RecvResponse.h \
-		    fsm/IEbusProcess.h \
-		    fsm/EbusProcess.cpp \
-		    fsm/EbusProcess.h \
-		    fsm/IEbusLogger.h \
-		    fsm/EbusFSM.cpp \
-		    fsm/EbusFSM.h
+		    EbusMessage.cpp \
+		    EbusMessage.h \
+		    State.cpp \
+		    State.h \
+		    OnError.cpp \
+		    OnError.h \
+		    Idle.cpp \
+		    Idle.h \
+		    Connect.cpp \
+		    Connect.h \
+		    Listen.cpp \
+		    Listen.h \
+		    LockBus.cpp \
+		    LockBus.h \
+		    FreeBus.cpp \
+		    FreeBus.h \
+		    EvalMessage.cpp \
+		    EvalMessage.h \
+		    SendMessage.cpp \
+		    SendMessage.h \
+		    RecvMessage.cpp \
+		    RecvMessage.h \
+		    SendResponse.cpp \
+		    SendResponse.h \
+		    RecvResponse.cpp \
+		    RecvResponse.h \
+		    IEbusLogger.h \
+		    EbusFSM.cpp \
+		    EbusFSM.h
 
 distclean-local:
 	-rm -f Makefile.in

@@ -17,32 +17,31 @@
  * along with ebuscpp. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef LIBEBUS_FSM_IEBUSLOGGER_H
-#define LIBEBUS_FSM_IEBUSLOGGER_H
+#ifndef LIBEBUS_RECVRESPONSE_H
+#define LIBEBUS_RECVRESPONSE_H
 
-#include <string>
-
-using std::string;
+#include "State.h"
 
 namespace libebus
 {
 
-class IEbusLogger
+class RecvResponse : public State
 {
 
 public:
-	virtual ~IEbusLogger()
+	static RecvResponse* getRecvResponse()
 	{
+		return (&m_recvResponse);
 	}
 
-	virtual void error(const string& message) = 0;
-	virtual void warn(const string& message) = 0;
-	virtual void info(const string& message) = 0;
-	virtual void debug(const string& message) = 0;
-	virtual void trace(const string& message) = 0;
+	int run(EbusFSM* fsm);
+	const string toString() const;
+
+private:
+	static RecvResponse m_recvResponse;
 
 };
 
 } // namespace libebus
 
-#endif // LIBEBUS_FSM_IEBUSLOGGER_H
+#endif // LIBEBUS_RECVRESPONSE_H

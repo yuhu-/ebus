@@ -17,8 +17,8 @@
  * along with ebuscpp. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef PROCESS_FORWARD_FORWARD_H
-#define PROCESS_FORWARD_FORWARD_H
+#ifndef FORWARD_FORWARD_H
+#define FORWARD_FORWARD_H
 
 #include "Filter.h"
 #include "Host.h"
@@ -91,4 +91,4 @@ private:
 	void delRelationByFilter(const int filterID);
 };
 
-#endif // PROCESS_FORWARD_FORWARD_H
+#endif // FORWARD_FORWARD_H

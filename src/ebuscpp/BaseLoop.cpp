@@ -21,6 +21,7 @@
 #include "Options.h"
 #include "Logger.h"
 #include "EbusCommon.h"
+#include "EbusMessage.h"
 
 #include <iomanip>
 #include <iterator>
@@ -30,11 +31,15 @@
 
 using libutils::Options;
 using libebus::isHex;
+using libebus::EbusMessage;
+using libebus::EbusSequence;
+using libebus::Action;
 using std::istringstream;
 using std::istream_iterator;
 using std::endl;
 using std::to_string;
 using std::make_unique;
+using std::bind;
 
 BaseLoop::BaseLoop()
 {
@@ -42,11 +47,9 @@ BaseLoop::BaseLoop()
 
 	m_address = options.getInt("address") & 0xff;
 
-	m_proxy = make_shared<Proxy>(m_address);
-	m_proxy->start();
-
-	m_ebusFSM = make_unique<EbusFSM>(m_address, options.getString("device"), options.getBool("devicecheck"), m_proxy,
-		m_logger);
+	m_ebusFSM = make_unique<EbusFSM>(m_address, options.getString("device"), options.getBool("devicecheck"), m_logger,
+		bind(&BaseLoop::identifyAction, this, std::placeholders::_1),
+		bind(&BaseLoop::publishMessage, this, std::placeholders::_1));
 
 	m_ebusFSM->setReopenTime(options.getLong("reopentime"));
 	m_ebusFSM->setArbitrationTime(options.getLong("arbitrationtime"));
@@ -66,8 +69,6 @@ BaseLoop::BaseLoop()
 BaseLoop::~BaseLoop()
 {
 	if (m_ebusFSM != nullptr) m_ebusFSM->stop();
-
-	if (m_proxy != nullptr) m_proxy->stop();
 }
 
 void BaseLoop::run()
@@ -161,7 +162,7 @@ string BaseLoop::decodeMessage(const string& data)
 			break;
 		}
 
-		if (isHex(args[1], result, 2) == true) result << m_proxy->sendMessage(args[1]);
+		if (isHex(args[1], result, 2) == true) result << m_ebusFSM->sendMessage(args[1]);
 
 		LIBLOGGER_DEBUG("error: %s", result.str().c_str());
 
@@ -315,7 +316,11 @@ void BaseLoop::handleForward(const vector<string>& args, ostringstream& result)
 		return;
 	}
 
-	m_proxy->forward(remove, dstIP, dstPort, filter, result);
+	if (remove == true)
+		m_forward->remove(dstIP, dstPort, filter, result);
+	else
+		m_forward->append(dstIP, dstPort, filter, result);
+
 }
 
 const string BaseLoop::formatHelp()
@@ -342,4 +347,50 @@ const string BaseLoop::formatHelp()
 	ostr << " help     - print this page";
 
 	return (ostr.str());
+}
+
+Action BaseLoop::identifyAction(EbusSequence& eSeq)
+{
+	LIBLOGGER_DEBUG("identify %s", eSeq.toStringLog().c_str());
+
+	if (eSeq.getMaster().contains("0700") == true)
+	{
+		return (Action::ignore);
+	}
+
+	if (eSeq.getMaster().contains("0704") == true)
+	{
+		eSeq.createSlave("0a7a50524f585901010101");
+		return (Action::response);
+	}
+
+	if (eSeq.getMaster().contains("07fe") == true)
+	{
+		eSeq.clear();
+		eSeq.createMaster(m_address, BROADCAST, "07ff00");
+		// ToDo set some flag in main loop
+//		if (eSeq.getMasterState() == EBUS_OK) enqueueMessage(new EbusMessage(eSeq));
+		return (Action::ignore);
+	}
+
+	if (eSeq.getMaster().contains("b505") == true)
+	{
+		return (Action::ignore);
+	}
+
+	if (eSeq.getMaster().contains("b516") == true)
+	{
+		return (Action::ignore);
+	}
+
+	return (Action::undefined);
+}
+
+void BaseLoop::publishMessage(EbusSequence& eSeq)
+{
+	if (m_forward->isActive())
+	{
+		LIBLOGGER_DEBUG("forward %s", eSeq.toStringLog().c_str());
+		m_forward->enqueue(eSeq);
+	}
 }

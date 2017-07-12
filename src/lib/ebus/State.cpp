@@ -148,7 +148,7 @@ void libebus::State::reset(EbusFSM* fsm)
 
 	if (m_activeMessage != nullptr)
 	{
-		fsm->handleActiveMessage(m_activeMessage->getEbusSequence());
+		fsm->publishMessage(m_activeMessage->getEbusSequence());
 		m_activeMessage->notify();
 		m_activeMessage = nullptr;
 	}

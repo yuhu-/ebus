@@ -17,31 +17,31 @@
  * along with ebuscpp. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef LIBEBUS_FSM_EVALMESSAGE_H
-#define LIBEBUS_FSM_EVALMESSAGE_H
+#ifndef LIBEBUS_LISTEN_H
+#define LIBEBUS_LISTEN_H
 
 #include "State.h"
 
 namespace libebus
 {
 
-class EvalMessage : public State
+class Listen : public State
 {
 
 public:
-	static EvalMessage* getEvalMessage()
+	static Listen* getListen()
 	{
-		return (&m_evalMessage);
+		return (&m_listen);
 	}
 
 	int run(EbusFSM* fsm);
 	const string toString() const;
 
 private:
-	static EvalMessage m_evalMessage;
+	static Listen m_listen;
 
 };
 
 } // namespace libebus
 
-#endif // LIBEBUS_FSM_EVALMESSAGE_H
+#endif // LIBEBUS_LISTEN_H

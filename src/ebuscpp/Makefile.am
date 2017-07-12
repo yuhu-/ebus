@@ -3,12 +3,10 @@ AM_CXXFLAGS = -fpic \
 	      -Wextra \
 	      -std=c++14 \
 	      -isystem$(top_srcdir)/src/ebuscpp/network \
-	      -isystem$(top_srcdir)/src/ebuscpp/process/forward \
-	      -isystem$(top_srcdir)/src/ebuscpp/process \
+	      -isystem$(top_srcdir)/src/ebuscpp/forward \
 	      -isystem$(top_srcdir)/src/lib/utils \
 	      -isystem$(top_srcdir)/src/lib/logger \
 	      -isystem$(top_srcdir)/src/lib/network \
-	      -isystem$(top_srcdir)/src/lib/ebus/fsm \
 	      -isystem$(top_srcdir)/src/lib/ebus
 
 bin_PROGRAMS = ebusproxy
@@ -23,16 +21,14 @@ ebusproxy_SOURCES = network/NetMessage.cpp \
 		    network/UDPReceiver.h \
 		    network/Network.cpp \
 		    network/Network.h \
-		    process/forward/Relation.cpp \
-		    process/forward/Relation.h \
-		    process/forward/Filter.cpp \
-		    process/forward/Filter.h \
-		    process/forward/Host.cpp \
-		    process/forward/Host.h \
-		    process/forward/Forward.cpp \
-		    process/forward/Forward.h \
-		    process/Proxy.cpp \
-		    process/Proxy.h \
+		    forward/Relation.cpp \
+		    forward/Relation.h \
+		    forward/Filter.cpp \
+		    forward/Filter.h \
+		    forward/Host.cpp \
+		    forward/Host.h \
+		    forward/Forward.cpp \
+		    forward/Forward.h \
 		    EbusLogger.cpp \
 		    EbusLogger.h \
 		    BaseLoop.cpp \

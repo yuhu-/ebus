@@ -20,14 +20,15 @@
 #ifndef BASELOOP_H
 #define BASELOOP_H
 
-#include "Proxy.h"
 #include "EbusLogger.h"
 #include "EbusFSM.h"
+#include "Forward.h"
 #include "Network.h"
 
 #include <cstring>
 
 using libebus::EbusFSM;
+using libebus::Action;
 using std::ostringstream;
 using std::make_shared;
 
@@ -62,7 +63,7 @@ private:
 	bool m_running = true;
 
 	unsigned char m_address = 0;
-	shared_ptr<Proxy> m_proxy = nullptr;
+	unique_ptr<Forward> m_forward = nullptr;
 	shared_ptr<EbusLogger> m_logger = make_shared<EbusLogger>();
 	unique_ptr<EbusFSM> m_ebusFSM = nullptr;
 	unique_ptr<Network> m_network = nullptr;
@@ -76,6 +77,9 @@ private:
 	void handleForward(const vector<string>& args, ostringstream& result);
 
 	static const string formatHelp();
+
+	Action identifyAction(EbusSequence& eSeq);
+	void publishMessage(EbusSequence& eSeq);
 
 };
 

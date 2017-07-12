@@ -17,31 +17,34 @@
  * along with ebuscpp. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef LIBEBUS_FSM_CONNECT_H
-#define LIBEBUS_FSM_CONNECT_H
+#ifndef FORWARD_FILTER_H
+#define FORWARD_FILTER_H
 
-#include "State.h"
+#include "Sequence.h"
 
-namespace libebus
-{
+using libebus::Sequence;
 
-class Connect : public State
+class Filter
 {
 
 public:
-	static Connect* getConnect()
-	{
-		return (&m_connect);
-	}
+	explicit Filter(const Sequence& seq);
 
-	int run(EbusFSM* fsm);
-	const string toString() const;
+	int getID() const;
+	Sequence getFilter() const;
+
+	bool equal(const Sequence& seq);
+	bool match(const Sequence& seq);
+
+	const string toString();
 
 private:
-	static Connect m_connect;
+	static int uniqueID;
+
+	int m_id;
+	Sequence m_seq;
 
 };
 
-} // namespace libebus
+#endif // FORWARD_FILTER_H
 
-#endif // LIBEBUS_FSM_CONNECT_H

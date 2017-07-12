@@ -17,46 +17,31 @@
  * along with ebuscpp. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef PROCESS_FORWARD_HOST_H
-#define PROCESS_FORWARD_HOST_H
+#ifndef LIBEBUS_FREEBUS_H
+#define LIBEBUS_FREEBUS_H
 
-#include "Client.h"
+#include "State.h"
 
-#include <string>
+namespace libebus
+{
 
-using libnetwork::Client;
-using libnetwork::Socket;
-using std::string;
-
-class Host
+class FreeBus : public State
 {
 
 public:
-	Host(const string& ip, const long port, const bool filter);
+	static FreeBus* getFreeBus()
+	{
+		return (&m_freeBus);
+	}
 
-	int getID() const;
-
-	string getIP() const;
-	long getPort() const;
-
-	void setFilter(const bool filter);
-	bool hasFilter() const;
-
-	bool equal(const string& ip, const long port) const;
-
-	void send(const string& message);
-
-	const string toString();
+	int run(EbusFSM* fsm);
+	const string toString() const;
 
 private:
-	static int uniqueID;
+	static FreeBus m_freeBus;
 
-	int m_id;
-	bool m_filter;
-
-	Client m_client;
-	unique_ptr<Socket> m_socket = nullptr;
 };
 
-#endif // PROCESS_FORWARD_HOST_H
+} // namespace libebus
 
+#endif // LIBEBUS_FREEBUS_H

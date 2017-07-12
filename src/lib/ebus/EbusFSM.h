@@ -16,12 +16,13 @@
  * You should have received a copy of the GNU General Public License
  * along with ebuscpp. If not, see http://www.gnu.org/licenses/.
  */
-#ifndef LIBEBUS_FSM_EBUSFSM_H
-#define LIBEBUS_FSM_EBUSFSM_H
+#ifndef LIBEBUS_EBUSFSM_H
+#define LIBEBUS_EBUSFSM_H
 
-#include "IEbusProcess.h"
 #include "IEbusLogger.h"
 #include "EbusDevice.h"
+#include "EbusMessage.h"
+#include "NQueue.h"
 
 #include <fstream>
 #include <thread>
@@ -32,9 +33,18 @@ using std::ofstream;
 using std::thread;
 using std::map;
 using std::shared_ptr;
+using std::function;
 
 namespace libebus
 {
+
+enum class Action
+{
+	noprocess,	// no process
+	undefined,	// undefined
+	ignore,		// ignore
+	response	// send response
+};
 
 class State;
 
@@ -54,8 +64,8 @@ class EbusFSM : public Notify
 	friend class SendResponse;
 
 public:
-	EbusFSM(const unsigned char address, const string device, const bool deviceCheck, shared_ptr<IEbusProcess> process,
-		shared_ptr<IEbusLogger> logger);
+	EbusFSM(const unsigned char address, const string device, const bool deviceCheck, shared_ptr<IEbusLogger> logger,
+		function<Action(EbusSequence&)> identifyAction, function<void(EbusSequence&)> publishMessage);
 
 	~EbusFSM();
 
@@ -64,6 +74,8 @@ public:
 
 	void open();
 	void close();
+
+	const string sendMessage(const string& message);
 
 	long getReopenTime() const;
 	void setReopenTime(const long& reopenTime);
@@ -114,19 +126,20 @@ private:
 	long m_dumpFileSize = 0;                    // current size of dump file
 	ofstream m_dumpRawStream;
 
+	NQueue<EbusMessage*> m_ebusMsgQueue;
+
 	unique_ptr<EbusDevice> m_ebusDevice = nullptr;
-	shared_ptr<IEbusProcess> m_process = nullptr;
 	shared_ptr<IEbusLogger> m_logger = nullptr;
+
+	function<Action(EbusSequence&)> m_identifyAction;
+	function<void(EbusSequence&)> m_publishMessage;
 
 	void run();
 
 	void changeState(State* state);
 
 	Action identifyAction(EbusSequence& eSeq);
-	void handleActiveMessage(EbusSequence& eSeq);
-	void handlePassiveMessage(EbusSequence& eSeq);
-	EbusMessage* dequeueMessage();
-	size_t getQueueSize();
+	void publishMessage(EbusSequence& eSeq);
 
 	void logError(const string& message);
 	void logWarn(const string& message);
@@ -138,4 +151,4 @@ private:
 
 } // namespace libebus
 
-#endif // LIBEBUS_FSM_EBUSFSM_H
+#endif // LIBEBUS_EBUSFSM_H

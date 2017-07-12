@@ -35,10 +35,11 @@ using std::copy_n;
 using std::back_inserter;
 using std::make_unique;
 
-libebus::EbusFSM::EbusFSM(const unsigned char address, const string device, const bool deviceCheck, shared_ptr<IEbusProcess> process,
-	shared_ptr<IEbusLogger> logger)
+libebus::EbusFSM::EbusFSM(const unsigned char address, const string device, const bool deviceCheck, shared_ptr<IEbusLogger> logger,
+	function<Action(EbusSequence&)> identifyAction, function<void(EbusSequence&)> publishMessage)
 	: Notify(), m_address(address), m_slaveAddress(slaveAddress(address)), m_ebusDevice(
-		make_unique<EbusDevice>(device, deviceCheck)), m_process(process), m_logger(logger)
+		make_unique<EbusDevice>(device, deviceCheck)), m_logger(logger), m_identifyAction(identifyAction), m_publishMessage(
+		publishMessage)
 {
 	changeState(Connect::getConnect());
 }
@@ -70,6 +71,28 @@ void libebus::EbusFSM::open()
 void libebus::EbusFSM::close()
 {
 	m_forceState = Idle::getIdle();
+}
+
+const string libebus::EbusFSM::sendMessage(const string& message)
+{
+	ostringstream result;
+	EbusSequence eSeq;
+	eSeq.createMaster(m_address, message);
+
+	if (eSeq.getMasterState() == EBUS_OK)
+	{
+		EbusMessage* ebusMessage = new EbusMessage(eSeq);
+		m_ebusMsgQueue.enqueue(ebusMessage);
+		ebusMessage->waitNotify();
+		result << ebusMessage->getResult();
+		delete ebusMessage;
+	}
+	else
+	{
+		result << eSeq.toStringMaster();
+	}
+
+	return (result.str());
 }
 
 long libebus::EbusFSM::getReopenTime() const
@@ -200,36 +223,15 @@ void libebus::EbusFSM::changeState(State* state)
 
 libebus::Action libebus::EbusFSM::identifyAction(EbusSequence& eSeq)
 {
-	if (m_process != nullptr)
-		return (m_process->identifyAction(eSeq));
+	if (m_identifyAction != nullptr)
+		return (m_identifyAction(eSeq));
 	else
 		return (Action::noprocess);
 }
 
-void libebus::EbusFSM::handleActiveMessage(EbusSequence& eSeq)
+void libebus::EbusFSM::publishMessage(EbusSequence& eSeq)
 {
-	if (m_process != nullptr) m_process->handleActiveMessage(eSeq);
-}
-
-void libebus::EbusFSM::handlePassiveMessage(EbusSequence& eSeq)
-{
-	if (m_process != nullptr) m_process->handlePassiveMessage(eSeq);
-}
-
-libebus::EbusMessage* libebus::EbusFSM::dequeueMessage()
-{
-	if (m_process != nullptr)
-		return (m_process->dequeueMessage());
-	else
-		return (nullptr);
-}
-
-size_t libebus::EbusFSM::getQueueSize()
-{
-	if (m_process != nullptr)
-		return (m_process->queuedMessages());
-	else
-		return (0);
+	if (m_publishMessage != nullptr) m_publishMessage(eSeq);
 }
 
 void libebus::EbusFSM::logError(const string& message)

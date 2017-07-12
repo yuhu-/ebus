@@ -17,8 +17,8 @@
  * along with ebuscpp. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef LIBEBUS_FSM_STATE_H
-#define LIBEBUS_FSM_STATE_H
+#ifndef LIBEBUS_STATE_H
+#define LIBEBUS_STATE_H
 
 #include "EbusFSM.h"
 
@@ -79,4 +79,4 @@ protected:
 
 } // namespace libebus
 
-#endif // LIBEBUS_FSM_STATE_H
+#endif // LIBEBUS_STATE_H
