@@ -60,8 +60,14 @@ void libebus::EbusFSM::start()
 void libebus::EbusFSM::stop()
 {
 	m_forceState = Idle::getIdle();
-	notify();
+
+	while (m_state != Idle::getIdle())
+		usleep(10);
+
 	m_running = false;
+	usleep(10);
+
+	notify();
 	m_thread.join();
 }
 
