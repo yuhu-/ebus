@@ -46,6 +46,9 @@ libebus::EbusFSM::EbusFSM(const unsigned char address, const string device, cons
 
 libebus::EbusFSM::~EbusFSM()
 {
+	while (m_ebusMsgQueue.size() > 0)
+		delete m_ebusMsgQueue.dequeue();
+
 	m_dumpRawStream.close();
 }
 

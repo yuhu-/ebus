@@ -47,6 +47,9 @@ BaseLoop::BaseLoop()
 
 	m_address = options.getInt("address") & 0xff;
 
+	m_forward = make_unique<Forward>();
+	m_forward->start();
+
 	m_ebusFSM = make_unique<EbusFSM>(m_address, options.getString("device"), options.getBool("devicecheck"), m_logger,
 		bind(&BaseLoop::identifyAction, this, std::placeholders::_1),
 		bind(&BaseLoop::publishMessage, this, std::placeholders::_1));
@@ -69,6 +72,8 @@ BaseLoop::BaseLoop()
 BaseLoop::~BaseLoop()
 {
 	if (m_ebusFSM != nullptr) m_ebusFSM->stop();
+
+	if (m_forward != nullptr) m_forward->stop();
 }
 
 void BaseLoop::run()

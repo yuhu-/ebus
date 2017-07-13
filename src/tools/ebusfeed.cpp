@@ -77,7 +77,7 @@ int main(int argc, char* argv[])
 		exit(EXIT_FAILURE);
 	}
 
-	EbusDevice device(options.getString("device"), true);
+	EbusDevice device(options.getString("device"), false);
 
 	device.open();
 	if (device.isOpen() == true)

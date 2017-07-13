@@ -330,7 +330,7 @@ void Forward::send(EbusSequence* eSeq) const
 	for (const auto& host : m_host)
 		if (host->hasFilter() == false)
 		{
-			LIBLOGGER_INFO("to: %s:%d", host->getIP().c_str(), host->getPort());
+			LIBLOGGER_INFO("forward to: %s:%d", host->getIP().c_str(), host->getPort());
 			host->send(eSeq->toString());
 		}
 
