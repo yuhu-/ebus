@@ -38,11 +38,11 @@ using std::function;
 namespace libebus
 {
 
-enum class Action
+enum class Reaction
 {
-	noprocess,	// no process
-	undefined,	// undefined
-	ignore,		// ignore
+	nofunction,	// no function
+	undefined,	// message undefined
+	ignore,		// message ignored
 	response	// send response
 };
 
@@ -65,12 +65,9 @@ class EbusFSM : public Notify
 
 public:
 	EbusFSM(const unsigned char address, const string device, const bool deviceCheck, shared_ptr<IEbusLogger> logger,
-		function<Action(EbusSequence&)> identifyAction, function<void(EbusSequence&)> publishMessage);
+		function<Reaction(EbusSequence&)> identifyReaction, function<void(EbusSequence&)> publishEbusSequence);
 
 	~EbusFSM();
-
-	void start();
-	void stop();
 
 	void open();
 	void close();
@@ -131,15 +128,15 @@ private:
 	unique_ptr<EbusDevice> m_ebusDevice = nullptr;
 	shared_ptr<IEbusLogger> m_logger = nullptr;
 
-	function<Action(EbusSequence&)> m_identifyAction;
-	function<void(EbusSequence&)> m_publishMessage;
+	function<Reaction(EbusSequence&)> m_identifyReaction;
+	function<void(EbusSequence&)> m_publishEbusSequence;
 
 	void run();
 
 	void changeState(State* state);
 
-	Action identifyAction(EbusSequence& eSeq);
-	void publishMessage(EbusSequence& eSeq);
+	Reaction identifyReaction(EbusSequence& eSeq);
+	void publishEbusSequence(EbusSequence& eSeq);
 
 	void logError(const string& message);
 	void logWarn(const string& message);

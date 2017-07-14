@@ -43,9 +43,6 @@ public:
 	Forward();
 	~Forward();
 
-	void start();
-	void stop();
-
 	void append(const string& ip, long port, const string& filter, ostringstream& result);
 	void remove(const string& ip, long port, const string& filter, ostringstream& result);
 

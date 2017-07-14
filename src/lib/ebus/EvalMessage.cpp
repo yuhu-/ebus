@@ -29,20 +29,20 @@ int libebus::EvalMessage::run(EbusFSM* fsm)
 	EbusSequence eSeq;
 	eSeq.createMaster(m_sequence);
 
-	Action action = fsm->identifyAction(eSeq);
+	Reaction reaction = fsm->identifyReaction(eSeq);
 
-	switch (action)
+	switch (reaction)
 	{
-	case Action::noprocess:
-		fsm->logWarn(stateMessage(STATE_WRN_NO_PROCESS));
+	case Reaction::nofunction:
+		fsm->logWarn(stateMessage(STATE_WRN_NO_FUNC));
 		break;
-	case Action::undefined:
+	case Reaction::undefined:
 		fsm->logWarn(stateMessage(STATE_WRN_NOT_DEF));
 		break;
-	case Action::ignore:
+	case Reaction::ignore:
 		fsm->logInfo(stateMessage(STATE_INF_MSG_INGORE));
 		break;
-	case Action::response:
+	case Reaction::response:
 		eSeq.setSlaveACK(ACK);
 
 		if (eSeq.getSlaveState() == EBUS_OK)

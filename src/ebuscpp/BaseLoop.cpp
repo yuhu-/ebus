@@ -33,7 +33,7 @@ using libutils::Options;
 using libebus::isHex;
 using libebus::EbusMessage;
 using libebus::EbusSequence;
-using libebus::Action;
+using libebus::Reaction;
 using std::istringstream;
 using std::istream_iterator;
 using std::endl;
@@ -48,10 +48,9 @@ BaseLoop::BaseLoop()
 	m_address = options.getInt("address") & 0xff;
 
 	m_forward = make_unique<Forward>();
-	m_forward->start();
 
 	m_ebusFSM = make_unique<EbusFSM>(m_address, options.getString("device"), options.getBool("devicecheck"), m_logger,
-		bind(&BaseLoop::identifyAction, this, std::placeholders::_1),
+		bind(&BaseLoop::identifyReaction, this, std::placeholders::_1),
 		bind(&BaseLoop::publishMessage, this, std::placeholders::_1));
 
 	m_ebusFSM->setReopenTime(options.getLong("reopentime"));
@@ -63,17 +62,7 @@ BaseLoop::BaseLoop()
 	m_ebusFSM->setDumpFile(options.getString("dumpfile"));
 	m_ebusFSM->setDumpFileMaxSize(options.getLong("dumpsize"));
 
-	m_ebusFSM->start();
-
 	m_network = make_unique<Network>(options.getBool("local"), options.getInt("port"));
-
-}
-
-BaseLoop::~BaseLoop()
-{
-	if (m_ebusFSM != nullptr) m_ebusFSM->stop();
-
-	if (m_forward != nullptr) m_forward->stop();
 }
 
 void BaseLoop::run()
@@ -354,19 +343,19 @@ const string BaseLoop::formatHelp()
 	return (ostr.str());
 }
 
-Action BaseLoop::identifyAction(EbusSequence& eSeq)
+Reaction BaseLoop::identifyReaction(EbusSequence& eSeq)
 {
 	LIBLOGGER_DEBUG("identify %s", eSeq.toStringLog().c_str());
 
 	if (eSeq.getMaster().contains("0700") == true)
 	{
-		return (Action::ignore);
+		return (Reaction::ignore);
 	}
 
 	if (eSeq.getMaster().contains("0704") == true)
 	{
 		eSeq.createSlave("0a7a50524f585901010101");
-		return (Action::response);
+		return (Reaction::response);
 	}
 
 	if (eSeq.getMaster().contains("07fe") == true)
@@ -375,20 +364,20 @@ Action BaseLoop::identifyAction(EbusSequence& eSeq)
 		eSeq.createMaster(m_address, BROADCAST, "07ff00");
 		// ToDo set some flag in main loop
 //		if (eSeq.getMasterState() == EBUS_OK) enqueueMessage(new EbusMessage(eSeq));
-		return (Action::ignore);
+		return (Reaction::ignore);
 	}
 
 	if (eSeq.getMaster().contains("b505") == true)
 	{
-		return (Action::ignore);
+		return (Reaction::ignore);
 	}
 
 	if (eSeq.getMaster().contains("b516") == true)
 	{
-		return (Action::ignore);
+		return (Reaction::ignore);
 	}
 
-	return (Action::undefined);
+	return (Reaction::undefined);
 }
 
 void BaseLoop::publishMessage(EbusSequence& eSeq)

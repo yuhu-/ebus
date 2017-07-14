@@ -39,8 +39,8 @@ namespace libebus
 #define STATE_WRN_ACK_NEG     15 // received ACK is negative -> retry
 #define STATE_WRN_RECV_RESP   16 // received response is invalid -> retry
 #define STATE_WRN_RECV_MSG    17 // at me addressed message is invalid
-#define STATE_WRN_NOT_DEF     18 // at me addressed message is not defined
-#define STATE_WRN_NO_PROCESS  19 // process not implemented
+#define STATE_WRN_NOT_DEF     18 // at me addressed message is undefined
+#define STATE_WRN_NO_FUNC     19 // function not implemented
 
 #define STATE_ERR_LOCK_FAIL   21 // lock ebus failed
 #define STATE_ERR_ACK_NEG     22 // received ACK is negative -> failed

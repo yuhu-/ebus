@@ -29,10 +29,18 @@ using std::make_shared;
 Forward::Forward()
 	: Notify()
 {
+	m_thread = thread(&Forward::run, this);
 }
 
 Forward::~Forward()
 {
+	if (m_thread.joinable())
+	{
+		m_running = false;
+		notify();
+		m_thread.join();
+	}
+
 	while (m_ebusDataQueue.size() > 0)
 		delete m_ebusDataQueue.dequeue();
 
@@ -55,21 +63,6 @@ Forward::~Forward()
 		shared_ptr<Relation> relation = m_relation.back();
 		m_relation.pop_back();
 		relation.reset();
-	}
-}
-
-void Forward::start()
-{
-	m_thread = thread(&Forward::run, this);
-}
-
-void Forward::stop()
-{
-	if (m_thread.joinable())
-	{
-		m_running = false;
-		notify();
-		m_thread.join();
 	}
 }
 

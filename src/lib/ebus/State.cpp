@@ -55,8 +55,8 @@ map<int, string> StateMessages =
 { STATE_WRN_ACK_NEG, "received ACK is negative -> retry" },
 { STATE_WRN_RECV_RESP, "received response is invalid -> retry" },
 { STATE_WRN_RECV_MSG, "at me addressed message is invalid" },
-{ STATE_WRN_NOT_DEF, "at me addressed message is not defined" },
-{ STATE_WRN_NO_PROCESS, "process not implemented" },
+{ STATE_WRN_NOT_DEF, "at me addressed message is undefined" },
+{ STATE_WRN_NO_FUNC, "function not implemented" },
 
 { STATE_ERR_LOCK_FAIL, "lock ebus failed" },
 { STATE_ERR_ACK_NEG, "received ACK is negative -> failed" },
@@ -148,7 +148,7 @@ void libebus::State::reset(EbusFSM* fsm)
 
 	if (m_activeMessage != nullptr)
 	{
-		fsm->publishMessage(m_activeMessage->getEbusSequence());
+		fsm->publishEbusSequence(m_activeMessage->getEbusSequence());
 		m_activeMessage->notify();
 		m_activeMessage = nullptr;
 	}

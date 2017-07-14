@@ -28,7 +28,7 @@
 #include <cstring>
 
 using libebus::EbusFSM;
-using libebus::Action;
+using libebus::Reaction;
 using std::ostringstream;
 using std::make_shared;
 
@@ -52,7 +52,6 @@ class BaseLoop
 
 public:
 	BaseLoop();
-	~BaseLoop();
 
 	void run();
 
@@ -78,7 +77,7 @@ private:
 
 	static const string formatHelp();
 
-	Action identifyAction(EbusSequence& eSeq);
+	Reaction identifyReaction(EbusSequence& eSeq);
 	void publishMessage(EbusSequence& eSeq);
 
 };

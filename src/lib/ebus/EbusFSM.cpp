@@ -36,28 +36,17 @@ using std::back_inserter;
 using std::make_unique;
 
 libebus::EbusFSM::EbusFSM(const unsigned char address, const string device, const bool deviceCheck, shared_ptr<IEbusLogger> logger,
-	function<Action(EbusSequence&)> identifyAction, function<void(EbusSequence&)> publishMessage)
+	function<Reaction(EbusSequence&)> identifyReaction, function<void(EbusSequence&)> publishEbusSequence)
 	: Notify(), m_address(address), m_slaveAddress(slaveAddress(address)), m_ebusDevice(
-		make_unique<EbusDevice>(device, deviceCheck)), m_logger(logger), m_identifyAction(identifyAction), m_publishMessage(
-		publishMessage)
+		make_unique<EbusDevice>(device, deviceCheck)), m_logger(logger), m_identifyReaction(identifyReaction), m_publishEbusSequence(
+		publishEbusSequence)
 {
 	changeState(Connect::getConnect());
-}
 
-libebus::EbusFSM::~EbusFSM()
-{
-	while (m_ebusMsgQueue.size() > 0)
-		delete m_ebusMsgQueue.dequeue();
-
-	m_dumpRawStream.close();
-}
-
-void libebus::EbusFSM::start()
-{
 	m_thread = thread(&EbusFSM::run, this);
 }
 
-void libebus::EbusFSM::stop()
+libebus::EbusFSM::~EbusFSM()
 {
 	m_forceState = Idle::getIdle();
 
@@ -69,6 +58,11 @@ void libebus::EbusFSM::stop()
 
 	notify();
 	m_thread.join();
+
+	while (m_ebusMsgQueue.size() > 0)
+		delete m_ebusMsgQueue.dequeue();
+
+	m_dumpRawStream.close();
 }
 
 void libebus::EbusFSM::open()
@@ -230,17 +224,17 @@ void libebus::EbusFSM::changeState(State* state)
 	}
 }
 
-libebus::Action libebus::EbusFSM::identifyAction(EbusSequence& eSeq)
+libebus::Reaction libebus::EbusFSM::identifyReaction(EbusSequence& eSeq)
 {
-	if (m_identifyAction != nullptr)
-		return (m_identifyAction(eSeq));
+	if (m_identifyReaction != nullptr)
+		return (m_identifyReaction(eSeq));
 	else
-		return (Action::noprocess);
+		return (Reaction::nofunction);
 }
 
-void libebus::EbusFSM::publishMessage(EbusSequence& eSeq)
+void libebus::EbusFSM::publishEbusSequence(EbusSequence& eSeq)
 {
-	if (m_publishMessage != nullptr) m_publishMessage(eSeq);
+	if (m_publishEbusSequence != nullptr) m_publishEbusSequence(eSeq);
 }
 
 void libebus::EbusFSM::logError(const string& message)
