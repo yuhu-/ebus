@@ -36,14 +36,14 @@ namespace libebus
 #define STATE_WRN_ARB_LOST    12 // arbitration lost
 #define STATE_WRN_PRI_FIT     13 // priority class fit -> retry
 #define STATE_WRN_PRI_LOST    14 // priority class lost
-#define STATE_WRN_ACK_NEG     15 // received ACK is negative -> retry
+#define STATE_WRN_ACK_NEG     15 // received ACK byte is negative -> retry
 #define STATE_WRN_RECV_RESP   16 // received response is invalid -> retry
 #define STATE_WRN_RECV_MSG    17 // at me addressed message is invalid
 #define STATE_WRN_NOT_DEF     18 // at me addressed message is undefined
 #define STATE_WRN_NO_FUNC     19 // function not implemented
 
 #define STATE_ERR_LOCK_FAIL   21 // lock ebus failed
-#define STATE_ERR_ACK_NEG     22 // received ACK is negative -> failed
+#define STATE_ERR_ACK_NEG     22 // received ACK byte is negative -> failed
 #define STATE_ERR_ACK_WRONG   23 // received ACK byte is wrong
 #define STATE_ERR_NN_WRONG    24 // received NN byte is wrong
 #define STATE_ERR_RECV_RESP   25 // received response is invalid -> failed
