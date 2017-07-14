@@ -27,16 +27,16 @@ using std::string;
 namespace libebus
 {
 
-#define DEV_WRN_EOF      2  // 0 bytes received
-#define DEV_WRN_TIMEOUT  1  // timeout during receive
+#define DEV_WRN_EOF      2  // EOF during receiving reached
+#define DEV_WRN_TIMEOUT  1  // Timeout during receiving reached
 
 #define DEV_OK           0  // success
 
-#define DEV_ERR_OPEN    -1  // error opening device
-#define DEV_ERR_VALID   -2  // invalid file descriptor
-#define DEV_ERR_RECV    -3  // receive error
-#define DEV_ERR_SEND    -4  // send error
-#define DEV_ERR_POLL    -5  // polling error
+#define DEV_ERR_OPEN    -1  // Error occurred when opening the input device
+#define DEV_ERR_VALID   -2  // File descriptor of input device is invalid
+#define DEV_ERR_RECV    -3  // Error occurred during data receiving
+#define DEV_ERR_SEND    -4  // Error occurred during data sending
+#define DEV_ERR_POLL    -5  // Error occurred at ppoll waiting
 
 class Device
 {
@@ -51,6 +51,8 @@ public:
 
 	ssize_t send(const unsigned char value);
 	ssize_t recv(unsigned char& value, const long sec, const long nsec);
+
+	const string errorText(const int error) const;
 
 protected:
 	int m_fd = -1;

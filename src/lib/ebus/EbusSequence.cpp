@@ -38,7 +38,7 @@ using std::map;
 
 map<int, string> SequenceErrors =
 {
-{ EBUS_EMPTY, "is empty" },
+{ EBUS_EMPTY, "sequence is empty" },
 
 { EBUS_ERR_SHORT, "sequence to short" },
 { EBUS_ERR_LONG, "sequence to long" },

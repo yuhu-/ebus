@@ -22,24 +22,10 @@
 #include "NetworkDevice.h"
 #include "Color.h"
 
-#include <cstring>
 #include <sstream>
-#include <map>
 
 using std::ostringstream;
-using std::map;
 using std::make_unique;
-
-map<int, string> DeviceErrors =
-{
-{ DEV_WRN_EOF, "EOF during receiving reached" },
-{ DEV_WRN_TIMEOUT, "Timeout during receiving reached" },
-
-{ DEV_ERR_OPEN, "Error occurred when opening the input device " },
-{ DEV_ERR_VALID, "File descriptor of input device is invalid" },
-{ DEV_ERR_RECV, "Error occurred during data receiving" },
-{ DEV_ERR_SEND, "Error occurred during data sending" },
-{ DEV_ERR_POLL, "Error occurred at ppoll waiting" } };
 
 libebus::EbusDevice::EbusDevice(const string& deviceName, const bool deviceCheck)
 	: m_deviceName(deviceName), m_deviceCheck(deviceCheck)
@@ -86,7 +72,7 @@ const string libebus::EbusDevice::errorText(const int error) const
 
 	(error > DEV_OK) ? ostr << libutils::color::yellow : ostr << libutils::color::red;
 
-	ostr << DeviceErrors[error];
+	ostr << m_device->errorText(error);
 
 	if (error == DEV_ERR_OPEN) ostr << m_deviceName;
 

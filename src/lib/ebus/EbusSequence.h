@@ -25,17 +25,17 @@
 namespace libebus
 {
 
-#define EBUS_EMPTY       1 // is empty
+#define EBUS_EMPTY       1 // sequence is empty
 
 #define EBUS_OK          0 // success
 
 #define EBUS_ERR_SHORT  -1 // sequence to short
 #define EBUS_ERR_LONG   -2 // sequence to long
-#define EBUS_ERR_BYTES  -3 // to much data bytes
-#define EBUS_ERR_CRC    -4 // crc differs
-#define EBUS_ERR_ACK    -5 // ack byte wrong
+#define EBUS_ERR_BYTES  -3 // sequence to much data bytes
+#define EBUS_ERR_CRC    -4 // sequence CRC error
+#define EBUS_ERR_ACK    -5 // sequence ACK error
 #define EBUS_ERR_MASTER -6 // wrong master address
-#define EBUS_ERR_SLAVE  -7 // slave address is invalid
+#define EBUS_ERR_SLAVE  -7 // wrong slave address
 
 #define EBUS_TYPE_BC     0
 #define EBUS_TYPE_MM     1
@@ -97,6 +97,8 @@ public:
 	const string toStringSlaveACK();
 	const string toStringSlaveError();
 
+	const string errorText(const int error) const;
+
 private:
 	int m_type = -1;
 
@@ -114,8 +116,6 @@ private:
 	unsigned char m_slaveCRC = 0;
 	unsigned char m_slaveACK = 0;
 	int m_slaveState = EBUS_EMPTY;
-
-	const string errorText(const int error) const;
 };
 
 } // namespace libebus

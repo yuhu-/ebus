@@ -19,13 +19,27 @@
 
 #include "Device.h"
 
+#include <map>
 #include <cstring>
+#include <sstream>
 
 #include <unistd.h>
 #include <sys/ioctl.h>
 #include <poll.h>
 
+using std::map;
 using std::ostringstream;
+
+map<int, string> DeviceErrors =
+{
+{ DEV_WRN_EOF, "EOF during receiving reached" },
+{ DEV_WRN_TIMEOUT, "Timeout during receiving reached" },
+
+{ DEV_ERR_OPEN, "Error occurred when opening the input device " },
+{ DEV_ERR_VALID, "File descriptor of input device is invalid" },
+{ DEV_ERR_RECV, "Error occurred during data receiving" },
+{ DEV_ERR_SEND, "Error occurred during data sending" },
+{ DEV_ERR_POLL, "Error occurred at ppoll waiting" } };
 
 libebus::Device::~Device()
 {
@@ -36,23 +50,6 @@ bool libebus::Device::isOpen()
 	if (isValid() == false) m_open = false;
 
 	return (m_open);
-}
-
-bool libebus::Device::isValid()
-{
-	if (m_deviceCheck == true)
-	{
-		int port;
-
-		if (ioctl(m_fd, TIOCMGET, &port) == -1)
-		{
-			closeDevice();
-			m_open = false;
-			return (false);
-		}
-	}
-
-	return (true);
 }
 
 ssize_t libebus::Device::send(const unsigned char value)
@@ -97,3 +94,28 @@ ssize_t libebus::Device::recv(unsigned char& value, const long sec, const long n
 	return (nbytes < 0 ? DEV_ERR_POLL : DEV_OK);
 }
 
+const string libebus::Device::errorText(const int error) const
+{
+	ostringstream errStr;
+
+	errStr << DeviceErrors[error];
+
+	return (errStr.str());
+}
+
+bool libebus::Device::isValid()
+{
+	if (m_deviceCheck == true)
+	{
+		int port;
+
+		if (ioctl(m_fd, TIOCMGET, &port) == -1)
+		{
+			closeDevice();
+			m_open = false;
+			return (false);
+		}
+	}
+
+	return (true);
+}
