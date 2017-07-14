@@ -44,9 +44,9 @@ const string libebus::EbusMessage::getResult()
 
 	if (m_result.size() != 0)
 		ostr << m_result;
-	else if (m_ebusSequence.getType() == EBUS_TYPE_BC)
+	else if (m_ebusSequence.getType() == SEQ_TYPE_BC)
 		ostr << "done";
-	else if (m_ebusSequence.getType() == EBUS_TYPE_MM)
+	else if (m_ebusSequence.getType() == SEQ_TYPE_MM)
 		ostr << m_ebusSequence.toStringSlaveACK();
 	else
 		ostr << m_ebusSequence.toStringSlave();

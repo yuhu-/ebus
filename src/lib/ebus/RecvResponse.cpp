@@ -63,7 +63,7 @@ int libebus::RecvResponse::run(EbusFSM* fsm)
 		// create slave data
 		eSeq.createSlave(seq);
 
-		if (eSeq.getSlaveState() == EBUS_OK)
+		if (eSeq.getSlaveState() == SEQ_OK)
 			byte = ACK;
 		else
 			byte = NAK;
@@ -74,7 +74,7 @@ int libebus::RecvResponse::run(EbusFSM* fsm)
 		result = writeRead(fsm, byte, 0);
 		if (result != DEV_OK) return (result);
 
-		if (eSeq.getSlaveState() == EBUS_OK)
+		if (eSeq.getSlaveState() == SEQ_OK)
 		{
 			fsm->logInfo(eSeq.toStringLog() + " done");
 			break;

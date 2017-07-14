@@ -82,7 +82,7 @@ const string libebus::EbusFSM::sendMessage(const string& message)
 	EbusSequence eSeq;
 	eSeq.createMaster(m_address, message);
 
-	if (eSeq.getMasterState() == EBUS_OK)
+	if (eSeq.getMasterState() == SEQ_OK)
 	{
 		EbusMessage* ebusMessage = new EbusMessage(eSeq);
 		m_ebusMsgQueue.enqueue(ebusMessage);

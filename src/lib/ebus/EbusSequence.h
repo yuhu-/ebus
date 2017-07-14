@@ -25,21 +25,21 @@
 namespace libebus
 {
 
-#define EBUS_EMPTY       1 // sequence is empty
+#define SEQ_EMPTY       1 // sequence is empty
 
-#define EBUS_OK          0 // success
+#define SEQ_OK          0 // success
 
-#define EBUS_ERR_SHORT  -1 // sequence to short
-#define EBUS_ERR_LONG   -2 // sequence to long
-#define EBUS_ERR_BYTES  -3 // sequence to much data bytes
-#define EBUS_ERR_CRC    -4 // sequence CRC error
-#define EBUS_ERR_ACK    -5 // sequence ACK error
-#define EBUS_ERR_MASTER -6 // wrong master address
-#define EBUS_ERR_SLAVE  -7 // wrong slave address
+#define SEQ_ERR_SHORT  -1 // sequence to short
+#define SEQ_ERR_LONG   -2 // sequence to long
+#define SEQ_ERR_BYTES  -3 // sequence to much data bytes
+#define SEQ_ERR_CRC    -4 // sequence CRC error
+#define SEQ_ERR_ACK    -5 // sequence ACK error
+#define SEQ_ERR_MASTER -6 // wrong master address
+#define SEQ_ERR_SLAVE  -7 // wrong slave address
 
-#define EBUS_TYPE_BC     0
-#define EBUS_TYPE_MM     1
-#define EBUS_TYPE_MS     2
+#define SEQ_TYPE_BC     0
+#define SEQ_TYPE_MM     1
+#define SEQ_TYPE_MS     2
 
 #define ACK       0x00  // positive acknowledge
 #define NAK       0xff  // negative acknowledge
@@ -109,13 +109,13 @@ private:
 	size_t m_masterNN = 0;
 	unsigned char m_masterCRC = 0;
 	unsigned char m_masterACK = 0;
-	int m_masterState = EBUS_EMPTY;
+	int m_masterState = SEQ_EMPTY;
 
 	Sequence m_slave;
 	size_t m_slaveNN = 0;
 	unsigned char m_slaveCRC = 0;
 	unsigned char m_slaveACK = 0;
-	int m_slaveState = EBUS_EMPTY;
+	int m_slaveState = SEQ_EMPTY;
 };
 
 } // namespace libebus

@@ -80,7 +80,7 @@ int libebus::RecvMessage::run(EbusFSM* fsm)
 
 	if (m_sequence[1] != BROADCAST)
 	{
-		if (eSeq.getMasterState() == EBUS_OK)
+		if (eSeq.getMasterState() == SEQ_OK)
 		{
 			byte = ACK;
 		}
@@ -95,11 +95,11 @@ int libebus::RecvMessage::run(EbusFSM* fsm)
 		if (result != DEV_OK) return (result);
 	}
 
-	if (eSeq.getMasterState() == EBUS_OK)
+	if (eSeq.getMasterState() == SEQ_OK)
 	{
-		if (eSeq.getType() != EBUS_TYPE_MS)
+		if (eSeq.getType() != SEQ_TYPE_MS)
 		{
-			if (eSeq.getType() == EBUS_TYPE_MM) eSeq.setSlaveACK(byte);
+			if (eSeq.getType() == SEQ_TYPE_MM) eSeq.setSlaveACK(byte);
 
 			fsm->logInfo(eSeq.toStringLog());
 			fsm->publishEbusSequence(eSeq);

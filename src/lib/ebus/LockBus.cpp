@@ -28,7 +28,7 @@ libebus::LockBus libebus::LockBus::m_lockBus;
 int libebus::LockBus::run(EbusFSM* fsm)
 {
 	EbusSequence& eSeq = m_activeMessage->getEbusSequence();
-	if (eSeq.getMasterState() != EBUS_OK)
+	if (eSeq.getMasterState() != SEQ_OK)
 	{
 		fsm->logDebug(eSeq.toStringMaster());
 		m_activeMessage->setResult(eSeq.toStringMaster());

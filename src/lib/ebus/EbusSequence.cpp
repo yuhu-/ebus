@@ -38,15 +38,15 @@ using std::map;
 
 map<int, string> SequenceErrors =
 {
-{ EBUS_EMPTY, "sequence is empty" },
+{ SEQ_EMPTY, "sequence is empty" },
 
-{ EBUS_ERR_SHORT, "sequence to short" },
-{ EBUS_ERR_LONG, "sequence to long" },
-{ EBUS_ERR_BYTES, "sequence to much data bytes" },
-{ EBUS_ERR_CRC, "sequence CRC error" },
-{ EBUS_ERR_ACK, "sequence ACK error" },
-{ EBUS_ERR_MASTER, "wrong master address" },
-{ EBUS_ERR_SLAVE, "wrong slave address" }, };
+{ SEQ_ERR_SHORT, "sequence to short" },
+{ SEQ_ERR_LONG, "sequence to long" },
+{ SEQ_ERR_BYTES, "sequence to much data bytes" },
+{ SEQ_ERR_CRC, "sequence CRC error" },
+{ SEQ_ERR_ACK, "sequence ACK error" },
+{ SEQ_ERR_MASTER, "wrong master address" },
+{ SEQ_ERR_SLAVE, "wrong slave address" }, };
 
 libebus::EbusSequence::EbusSequence()
 {
@@ -60,14 +60,14 @@ libebus::EbusSequence::EbusSequence(Sequence& seq)
 	// sequence to short
 	if (seq.size() < 5)
 	{
-		m_masterState = EBUS_ERR_SHORT;
+		m_masterState = SEQ_ERR_SHORT;
 		return;
 	}
 
 	// to much data bytes
 	if ((int) seq[4] > 16)
 	{
-		m_masterState = EBUS_ERR_BYTES;
+		m_masterState = SEQ_ERR_BYTES;
 		return;
 	}
 
@@ -76,13 +76,13 @@ libebus::EbusSequence::EbusSequence(Sequence& seq)
 	Sequence master(seq, 0, 5 + seq[4]);
 	createMaster(master);
 
-	if (m_masterState != EBUS_OK) return;
+	if (m_masterState != SEQ_OK) return;
 
-	if (m_type != EBUS_TYPE_BC)
+	if (m_type != SEQ_TYPE_BC)
 	{
 		m_slaveACK = seq[5 + m_masterNN + 1];
 		if (m_slaveACK != ACK && m_slaveACK != NAK) m_slaveState =
-		EBUS_ERR_ACK;
+		SEQ_ERR_ACK;
 
 		// handle NAK from slave
 		if (m_slaveACK == NAK)
@@ -93,22 +93,22 @@ libebus::EbusSequence::EbusSequence(Sequence& seq)
 			Sequence tmp(seq, offset, 5 + seq[offset + 4]);
 			createMaster(tmp);
 
-			if (m_masterState != EBUS_OK) return;
+			if (m_masterState != SEQ_OK) return;
 
 			m_slaveACK = seq[offset + 5 + m_masterNN + 1];
 			if (m_slaveACK != ACK && m_slaveACK != NAK) m_slaveState =
-			EBUS_ERR_ACK;
+			SEQ_ERR_ACK;
 		}
 	}
 
-	if (m_type == EBUS_TYPE_MS)
+	if (m_type == SEQ_TYPE_MS)
 	{
 		Sequence slave(seq, offset + 5 + m_masterNN + 2, 1 + seq[offset + 5 + m_masterNN + 2] + 1);
 		createSlave(slave);
 
 		m_masterACK = seq[(offset + 5 + m_masterNN + 3 + m_slaveNN + 1)];
 		if (m_masterACK != ACK && m_masterACK != NAK) m_masterState =
-		EBUS_ERR_ACK;
+		SEQ_ERR_ACK;
 
 		// handle NAK from master
 		if (m_masterACK == NAK)
@@ -121,7 +121,7 @@ libebus::EbusSequence::EbusSequence(Sequence& seq)
 
 			m_masterACK = seq[(offset + 5 + m_masterNN + 3 + m_slaveNN + 1)];
 			if (m_masterACK != ACK && m_masterACK != NAK) m_masterState =
-			EBUS_ERR_ACK;
+			SEQ_ERR_ACK;
 		}
 	}
 }
@@ -152,40 +152,40 @@ void libebus::EbusSequence::createMaster(const string& str)
 
 void libebus::EbusSequence::createMaster(Sequence& seq)
 {
-	m_masterState = EBUS_OK;
+	m_masterState = SEQ_OK;
 
 	// sequence to short
 	if (seq.size() < 5)
 	{
-		m_masterState = EBUS_ERR_SHORT;
+		m_masterState = SEQ_ERR_SHORT;
 		return;
 	}
 
 	// master sequence to long
 	if (seq.size() > (size_t) (5 + seq[4] + 1))
 	{
-		m_masterState = EBUS_ERR_LONG;
+		m_masterState = SEQ_ERR_LONG;
 		return;
 	}
 
 	// to much data bytes
 	if ((int) seq[4] > 16)
 	{
-		m_masterState = EBUS_ERR_BYTES;
+		m_masterState = SEQ_ERR_BYTES;
 		return;
 	}
 
 	// wrong master address
 	if (isMaster(seq[0]) == false)
 	{
-		m_masterState = EBUS_ERR_MASTER;
+		m_masterState = SEQ_ERR_MASTER;
 		return;
 	}
 
 	// wrong slave address
 	if (isAddressValid(seq[1]) == false)
 	{
-		m_masterState = EBUS_ERR_SLAVE;
+		m_masterState = SEQ_ERR_SLAVE;
 		return;
 	}
 
@@ -205,7 +205,7 @@ void libebus::EbusSequence::createMaster(Sequence& seq)
 		m_masterCRC = seq[5 + m_masterNN];
 
 		if (m_master.getCRC() != m_masterCRC) m_masterState =
-		EBUS_ERR_CRC;
+		SEQ_ERR_CRC;
 	}
 }
 
@@ -218,26 +218,26 @@ void libebus::EbusSequence::createSlave(const string& str)
 
 void libebus::EbusSequence::createSlave(Sequence& seq)
 {
-	m_slaveState = EBUS_OK;
+	m_slaveState = SEQ_OK;
 
 	// sequence to short
 	if (seq.size() < 2)
 	{
-		m_slaveState = EBUS_ERR_SHORT;
+		m_slaveState = SEQ_ERR_SHORT;
 		return;
 	}
 
 	// slave sequence to long
 	if (seq.size() > (size_t) (1 + seq[0] + 1))
 	{
-		m_slaveState = EBUS_ERR_LONG;
+		m_slaveState = SEQ_ERR_LONG;
 		return;
 	}
 
 	// to much data bytes
 	if (seq[0] > 16)
 	{
-		m_slaveState = EBUS_ERR_BYTES;
+		m_slaveState = SEQ_ERR_BYTES;
 		return;
 	}
 
@@ -253,7 +253,7 @@ void libebus::EbusSequence::createSlave(Sequence& seq)
 		m_slave = Sequence(seq, 0, 1 + m_slaveNN);
 		m_slaveCRC = seq[1 + m_slaveNN];
 
-		if (m_slave.getCRC() != m_slaveCRC) m_slaveState = EBUS_ERR_CRC;
+		if (m_slave.getCRC() != m_slaveCRC) m_slaveState = SEQ_ERR_CRC;
 	}
 }
 
@@ -268,13 +268,13 @@ void libebus::EbusSequence::clear()
 	m_masterNN = 0;
 	m_masterCRC = 0;
 	m_masterACK = 0;
-	m_masterState = EBUS_EMPTY;
+	m_masterState = SEQ_EMPTY;
 
 	m_slave.clear();
 	m_slaveNN = 0;
 	m_slaveCRC = 0;
 	m_slaveACK = 0;
-	m_slaveState = EBUS_EMPTY;
+	m_slaveState = SEQ_EMPTY;
 }
 
 unsigned char libebus::EbusSequence::getMasterQQ() const
@@ -340,11 +340,11 @@ void libebus::EbusSequence::setSlaveACK(const unsigned char byte)
 void libebus::EbusSequence::setType(const unsigned char byte)
 {
 	if (byte == BROADCAST)
-		m_type = EBUS_TYPE_BC;
+		m_type = SEQ_TYPE_BC;
 	else if (isMaster(byte) == true)
-		m_type = EBUS_TYPE_MM;
+		m_type = SEQ_TYPE_MM;
 	else
-		m_type = EBUS_TYPE_MS;
+		m_type = SEQ_TYPE_MS;
 }
 
 int libebus::EbusSequence::getType() const
@@ -354,9 +354,9 @@ int libebus::EbusSequence::getType() const
 
 bool libebus::EbusSequence::isValid() const
 {
-	if (m_type != EBUS_TYPE_MS) return (m_masterState == EBUS_OK ? true : false);
+	if (m_type != SEQ_TYPE_MS) return (m_masterState == SEQ_OK ? true : false);
 
-	return ((m_masterState + m_slaveState) == EBUS_OK ? true : false);
+	return ((m_masterState + m_slaveState) == SEQ_OK ? true : false);
 }
 
 const string libebus::EbusSequence::toString()
@@ -365,9 +365,9 @@ const string libebus::EbusSequence::toString()
 
 	ostr << toStringMaster();
 
-	if (m_type == EBUS_TYPE_MM) ostr << " " << toStringMasterACK();
+	if (m_type == SEQ_TYPE_MM) ostr << " " << toStringMasterACK();
 
-	if (m_type == EBUS_TYPE_MS) ostr << " " << toStringSlave();
+	if (m_type == SEQ_TYPE_MS) ostr << " " << toStringSlave();
 
 	return (ostr.str());
 }
@@ -376,18 +376,18 @@ const string libebus::EbusSequence::toStringLog()
 {
 	ostringstream ostr;
 
-	if (m_masterState != EBUS_OK) return (toStringMaster());
+	if (m_masterState != SEQ_OK) return (toStringMaster());
 
-	if (m_type == EBUS_TYPE_BC)
+	if (m_type == SEQ_TYPE_BC)
 		ostr << libutils::color::blue << "BC" << libutils::color::reset << " " << toStringMaster();
-	else if (m_type == EBUS_TYPE_MM)
+	else if (m_type == SEQ_TYPE_MM)
 		ostr << libutils::color::cyan << "MM" << libutils::color::reset << " " << toStringMaster();
 	else
 		ostr << libutils::color::magenta << "MS" << libutils::color::reset << " " << toStringMaster();
 
-	if (m_type == EBUS_TYPE_MM) ostr << " " << toStringMasterACK();
+	if (m_type == SEQ_TYPE_MM) ostr << " " << toStringMasterACK();
 
-	if (m_type == EBUS_TYPE_MS) ostr << " " << toStringSlave();
+	if (m_type == SEQ_TYPE_MS) ostr << " " << toStringSlave();
 
 	return (ostr.str());
 }
@@ -395,7 +395,7 @@ const string libebus::EbusSequence::toStringLog()
 const string libebus::EbusSequence::toStringMaster()
 {
 	ostringstream ostr;
-	if (m_masterState != EBUS_OK)
+	if (m_masterState != SEQ_OK)
 		ostr << toStringMasterError();
 	else
 		ostr << m_master.toString();
@@ -406,7 +406,7 @@ const string libebus::EbusSequence::toStringMaster()
 const string libebus::EbusSequence::toStringMasterCRC()
 {
 	ostringstream ostr;
-	if (m_masterState != EBUS_OK)
+	if (m_masterState != SEQ_OK)
 		ostr << toStringMasterError();
 	else
 		ostr << nouppercase << hex << setw(2) << setfill('0') << static_cast<unsigned>(m_masterCRC);
@@ -417,7 +417,7 @@ const string libebus::EbusSequence::toStringMasterCRC()
 const string libebus::EbusSequence::toStringMasterACK()
 {
 	ostringstream ostr;
-	if (m_masterState != EBUS_OK)
+	if (m_masterState != SEQ_OK)
 		ostr << toStringMasterError();
 	else
 		ostr << nouppercase << hex << setw(2) << setfill('0') << static_cast<unsigned>(m_masterACK);
@@ -438,7 +438,7 @@ const string libebus::EbusSequence::toStringMasterError()
 const string libebus::EbusSequence::toStringSlave()
 {
 	ostringstream ostr;
-	if (m_slaveState != EBUS_OK)
+	if (m_slaveState != SEQ_OK)
 		ostr << toStringSlaveError();
 	else
 		ostr << m_slave.toString();
@@ -449,7 +449,7 @@ const string libebus::EbusSequence::toStringSlave()
 const string libebus::EbusSequence::toStringSlaveCRC()
 {
 	ostringstream ostr;
-	if (m_slaveState != EBUS_OK)
+	if (m_slaveState != SEQ_OK)
 		ostr << toStringSlaveError();
 	else
 		ostr << nouppercase << hex << setw(2) << setfill('0') << static_cast<unsigned>(m_slaveCRC);
@@ -460,7 +460,7 @@ const string libebus::EbusSequence::toStringSlaveCRC()
 const string libebus::EbusSequence::toStringSlaveACK()
 {
 	ostringstream ostr;
-	if (m_slaveState != EBUS_OK)
+	if (m_slaveState != SEQ_OK)
 		ostr << toStringSlaveError();
 	else
 		ostr << nouppercase << hex << setw(2) << setfill('0') << static_cast<unsigned>(m_slaveACK);

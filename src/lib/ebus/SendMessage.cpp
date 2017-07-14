@@ -43,7 +43,7 @@ int libebus::SendMessage::run(EbusFSM* fsm)
 		if (result != DEV_OK) return (result);
 
 		// Broadcast ends here
-		if (eSeq.getType() == EBUS_TYPE_BC)
+		if (eSeq.getType() == SEQ_TYPE_BC)
 		{
 			fsm->logInfo(eSeq.toStringLog() + " done");
 			fsm->changeState(FreeBus::getFreeBus());
@@ -67,7 +67,7 @@ int libebus::SendMessage::run(EbusFSM* fsm)
 		else if (byte == ACK)
 		{
 			// Master Master ends here
-			if (eSeq.getType() == EBUS_TYPE_MM)
+			if (eSeq.getType() == SEQ_TYPE_MM)
 			{
 				fsm->logInfo(eSeq.toStringLog() + " done");
 				fsm->changeState(FreeBus::getFreeBus());

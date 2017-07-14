@@ -45,7 +45,7 @@ int libebus::EvalMessage::run(EbusFSM* fsm)
 	case Reaction::response:
 		eSeq.setSlaveACK(ACK);
 
-		if (eSeq.getSlaveState() == EBUS_OK)
+		if (eSeq.getSlaveState() == SEQ_OK)
 		{
 			fsm->logInfo("response: " + eSeq.toStringSlave());
 			m_passiveMessage = new EbusMessage(eSeq);
