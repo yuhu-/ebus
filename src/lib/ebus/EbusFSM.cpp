@@ -35,6 +35,13 @@ using std::copy_n;
 using std::back_inserter;
 using std::make_unique;
 
+map<int, string> FSMErrors =
+{
+{ FSM_ERR_TRANSMIT, "An 'eBus' error occurred while sending this sequence" },
+{ FSM_ERR_SEQUENCE, "The passed Sequence contains an error" },
+{ FSM_ERR_ADDRESS, "The master address of the sequence and 'FSM' must be equal" },
+{ FSM_ERR_MASTER, "Active sending is only as master possible" } };
+
 libebus::EbusFSM::EbusFSM(const unsigned char address, const string device, const bool deviceCheck, shared_ptr<IEbusLogger> logger,
 	function<Reaction(EbusSequence&)> identify, function<void(EbusSequence&)> publish)
 	: Notify(), m_address(address), m_slaveAddress(slaveAddress(address)), m_ebusDevice(
@@ -83,15 +90,15 @@ int libebus::EbusFSM::transmit(EbusSequence& eSeq)
 
 	if (m_master == false)
 	{
-		result = STATE_ERR_MASTER;
+		result = FSM_ERR_MASTER;
 	}
 	else if (eSeq.getMasterQQ() != m_address)
 	{
-		result = STATE_ERR_ADDRESS;
+		result = FSM_ERR_ADDRESS;
 	}
 	else if (eSeq.getMasterState() != SEQ_OK)
 	{
-		result = STATE_ERR_SEQUENCE;
+		result = FSM_ERR_SEQUENCE;
 	}
 	else
 	{
@@ -109,7 +116,7 @@ const string libebus::EbusFSM::errorText(const int error)
 {
 	ostringstream errStr;
 
-	errStr << State::stateMessage(error);
+	errStr << FSMErrors[error];
 
 	return (errStr.str());
 }

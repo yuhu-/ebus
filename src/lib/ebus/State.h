@@ -25,11 +25,6 @@
 namespace libebus
 {
 
-#define STATE_ERR_TRANSMIT   -14 // An 'eBus' error occurred while sending this sequence
-#define STATE_ERR_SEQUENCE   -13 // The passed Sequence contains an error
-#define STATE_ERR_ADDRESS    -12 // The master address of the sequence and 'FSM' must be equal
-#define STATE_ERR_MASTER     -11 // Active sending is only as master possible
-
 #define STATE_INF_EBUS_ON      1 // ebus connected
 #define STATE_INF_EBUS_OFF     2 // ebus disconnected
 #define STATE_INF_EBUS_LOCK    3 // ebus locked
@@ -62,8 +57,6 @@ public:
 	virtual int run(EbusFSM* fsm) = 0;
 	virtual const string toString() const = 0;
 
-	static const string stateMessage(const int state);
-
 protected:
 	virtual ~State();
 
@@ -80,6 +73,8 @@ protected:
 	static int writeRead(EbusFSM* fsm, const unsigned char& byte, const long timeout);
 
 	static void reset(EbusFSM* fsm);
+
+	static const string stateMessage(const int state);
 
 };
 

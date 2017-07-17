@@ -41,11 +41,6 @@ libebus::EbusMessage* libebus::State::m_passiveMessage = nullptr;
 
 map<int, string> StateMessages =
 {
-{ STATE_ERR_TRANSMIT, "An 'eBus' error occurred while sending this sequence" },
-{ STATE_ERR_SEQUENCE, "The passed Sequence contains an error" },
-{ STATE_ERR_ADDRESS, "The master address of the sequence and 'FSM' must be equal" },
-{ STATE_ERR_MASTER, "Active sending is only as master possible" },
-
 { STATE_INF_EBUS_ON, "ebus connected" },
 { STATE_INF_EBUS_OFF, "ebus disconnected" },
 { STATE_INF_EBUS_LOCK, "ebus locked" },
@@ -73,24 +68,6 @@ map<int, string> StateMessages =
 
 libebus::State::~State()
 {
-}
-
-const string libebus::State::stateMessage(const int state)
-{
-	ostringstream ostr;
-
-	if (state < 0)
-		ostr << StateMessages[state];
-	else if (state < 11)
-		ostr << libutils::color::green << StateMessages[state];
-	else if (state < 21)
-		ostr << libutils::color::yellow << StateMessages[state];
-	else
-		ostr << libutils::color::red << StateMessages[state];
-
-	ostr << libutils::color::reset;
-
-	return (ostr.str());
 }
 
 void libebus::State::changeState(EbusFSM* fsm, State* state)
@@ -184,3 +161,18 @@ void libebus::State::reset(EbusFSM* fsm)
 	}
 }
 
+const string libebus::State::stateMessage(const int state)
+{
+	ostringstream ostr;
+
+	if (state < 11)
+		ostr << libutils::color::green << StateMessages[state];
+	else if (state < 21)
+		ostr << libutils::color::yellow << StateMessages[state];
+	else
+		ostr << libutils::color::red << StateMessages[state];
+
+	ostr << libutils::color::reset;
+
+	return (ostr.str());
+}

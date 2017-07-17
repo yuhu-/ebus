@@ -40,7 +40,7 @@ int libebus::RecvResponse::run(EbusFSM* fsm)
 		if (byte > 0x10)
 		{
 			fsm->logWarn(stateMessage(STATE_ERR_NN_WRONG));
-			m_activeMessage->setState(STATE_ERR_TRANSMIT);
+			m_activeMessage->setState(FSM_ERR_TRANSMIT);
 
 			reset(fsm);
 			fsm->changeState(Listen::getListen());
@@ -90,7 +90,7 @@ int libebus::RecvResponse::run(EbusFSM* fsm)
 		else
 		{
 			fsm->logWarn(stateMessage(STATE_ERR_RECV_RESP));
-			m_activeMessage->setState(STATE_ERR_TRANSMIT);
+			m_activeMessage->setState(FSM_ERR_TRANSMIT);
 		}
 	}
 

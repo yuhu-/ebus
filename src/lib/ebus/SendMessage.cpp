@@ -59,7 +59,7 @@ int libebus::SendMessage::run(EbusFSM* fsm)
 		if (byte != SEQ_ACK && byte != SEQ_NAK)
 		{
 			fsm->logWarn(stateMessage(STATE_ERR_ACK_WRONG));
-			m_activeMessage->setState(STATE_ERR_TRANSMIT);
+			m_activeMessage->setState(FSM_ERR_TRANSMIT);
 
 			fsm->changeState(FreeBus::getFreeBus());
 			break;
@@ -88,7 +88,7 @@ int libebus::SendMessage::run(EbusFSM* fsm)
 			else
 			{
 				fsm->logWarn(stateMessage(STATE_ERR_ACK_NEG));
-				m_activeMessage->setState(STATE_ERR_TRANSMIT);
+				m_activeMessage->setState(FSM_ERR_TRANSMIT);
 
 				fsm->changeState(FreeBus::getFreeBus());
 			}

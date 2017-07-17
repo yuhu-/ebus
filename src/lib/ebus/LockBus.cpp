@@ -62,7 +62,7 @@ int libebus::LockBus::run(EbusFSM* fsm)
 		else
 		{
 			fsm->logWarn(stateMessage(STATE_ERR_LOCK_FAIL));
-			m_activeMessage->setState(STATE_ERR_TRANSMIT);
+			m_activeMessage->setState(FSM_ERR_TRANSMIT);
 
 			reset(fsm);
 		}
