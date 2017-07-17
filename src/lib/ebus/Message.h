@@ -17,29 +17,34 @@
  * along with ebuscpp. If not, see http://www.gnu.org/licenses/.
  */
 
-#include "EbusMessage.h"
+#ifndef LIBEBUS_MESSAGE_H
+#define LIBEBUS_MESSAGE_H
 
-#include <sstream>
+#include "EbusSequence.h"
+#include "Notify.h"
 
-using std::ostringstream;
+using libutils::Notify;
 
-libebus::EbusMessage::EbusMessage(EbusSequence& eSeq)
-	: Notify(), m_ebusSequence(eSeq)
+namespace libebus
 {
-}
 
-libebus::EbusSequence& libebus::EbusMessage::getEbusSequence()
+class Message : public Notify
 {
-	return (m_ebusSequence);
-}
 
-void libebus::EbusMessage::setState(int state)
-{
-	m_state = state;
-}
+public:
+	explicit Message(EbusSequence& eSeq);
 
-int libebus::EbusMessage::getState()
-{
-	return (m_state);
-}
+	EbusSequence& getEbusSequence();
 
+	void setState(int state);
+	int getState();
+
+private:
+	EbusSequence m_ebusSequence;
+	int m_state = 0;
+
+};
+
+} // namespace libebus
+
+#endif // LIBEBUS_MESSAGE_H

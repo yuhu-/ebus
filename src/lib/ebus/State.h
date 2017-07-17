@@ -64,8 +64,8 @@ protected:
 	static int m_lockCounter;
 	static int m_lockRetries;
 	static Sequence m_sequence;
-	static EbusMessage* m_activeMessage;
-	static EbusMessage* m_passiveMessage;
+	static Message* m_activeMessage;
+	static Message* m_passiveMessage;
 
 	static void changeState(EbusFSM* fsm, State* state);
 	static int read(EbusFSM* fsm, unsigned char& byte, const long sec, const long nsec);

@@ -21,7 +21,7 @@
 #include "Options.h"
 #include "Logger.h"
 #include "EbusCommon.h"
-#include "EbusMessage.h"
+#include "Message.h"
 
 #include <iomanip>
 #include <iterator>
@@ -31,7 +31,7 @@
 
 using libutils::Options;
 using libebus::isHex;
-using libebus::EbusMessage;
+using libebus::Message;
 using libebus::EbusSequence;
 using libebus::Reaction;
 using std::istringstream;

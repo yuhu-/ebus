@@ -21,7 +21,7 @@
 
 #include "IEbusLogger.h"
 #include "EbusDevice.h"
-#include "EbusMessage.h"
+#include "Message.h"
 #include "NQueue.h"
 
 #include <fstream>
@@ -131,7 +131,7 @@ private:
 	long m_dumpFileSize = 0;                    // current size of dump file
 	ofstream m_dumpRawStream;
 
-	NQueue<EbusMessage*> m_ebusMsgQueue;
+	NQueue<Message*> m_ebusMsgQueue;
 
 	unique_ptr<EbusDevice> m_ebusDevice = nullptr;
 	shared_ptr<IEbusLogger> m_logger = nullptr;

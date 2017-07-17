@@ -100,7 +100,7 @@ int libebus::EbusFSM::transmit(EbusSequence& eSeq)
 	}
 	else
 	{
-		EbusMessage* ebusMessage = new EbusMessage(eSeq);
+		Message* ebusMessage = new Message(eSeq);
 		m_ebusMsgQueue.enqueue(ebusMessage);
 		ebusMessage->waitNotify();
 		result = ebusMessage->getState();

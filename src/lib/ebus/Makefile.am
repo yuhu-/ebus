@@ -20,8 +20,8 @@ libebus_a_SOURCES = Device.cpp \
 		    Sequence.h \
 		    EbusSequence.cpp \
 		    EbusSequence.h \
-		    EbusMessage.cpp \
-		    EbusMessage.h \
+		    Message.cpp \
+		    Message.h \
 		    State.cpp \
 		    State.h \
 		    OnError.cpp \

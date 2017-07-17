@@ -36,8 +36,8 @@ long libebus::State::m_reopenTime = 0;
 int libebus::State::m_lockCounter = 0;
 int libebus::State::m_lockRetries = 0;
 libebus::Sequence libebus::State::m_sequence;
-libebus::EbusMessage* libebus::State::m_activeMessage = nullptr;
-libebus::EbusMessage* libebus::State::m_passiveMessage = nullptr;
+libebus::Message* libebus::State::m_activeMessage = nullptr;
+libebus::Message* libebus::State::m_passiveMessage = nullptr;
 
 map<int, string> StateMessages =
 {
@@ -155,7 +155,7 @@ void libebus::State::reset(EbusFSM* fsm)
 
 	if (m_passiveMessage != nullptr)
 	{
-		EbusMessage* message = m_passiveMessage;
+		Message* message = m_passiveMessage;
 		m_passiveMessage = nullptr;
 		delete message;
 	}
