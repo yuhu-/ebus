@@ -33,27 +33,6 @@ libebus::EbusSequence& libebus::EbusMessage::getEbusSequence()
 	return (m_ebusSequence);
 }
 
-void libebus::EbusMessage::setResult(const string& result)
-{
-	m_result = result;
-}
-
-const string libebus::EbusMessage::getResult()
-{
-	ostringstream ostr;
-
-	if (m_result.size() != 0)
-		ostr << m_result;
-	else if (m_ebusSequence.getType() == SEQ_TYPE_BC)
-		ostr << "done";
-	else if (m_ebusSequence.getType() == SEQ_TYPE_MM)
-		ostr << m_ebusSequence.toStringSlaveACK();
-	else
-		ostr << m_ebusSequence.toStringSlave();
-
-	return (ostr.str());
-}
-
 void libebus::EbusMessage::setState(int state)
 {
 	m_state = state;

@@ -71,8 +71,8 @@ int libebus::Listen::run(EbusFSM* fsm)
 
 		// handle broadcast and at me addressed messages
 		if (m_sequence.size() == 2
-			&& (m_sequence[1] == SEQ_BROAD || (m_sequence[1] == fsm->m_address && fsm->m_master)
-				|| m_sequence[1] == fsm->m_slaveAddress)) fsm->changeState(RecvMessage::getRecvMessage());
+			&& (m_sequence[1] == SEQ_BROAD || m_sequence[1] == fsm->m_address || m_sequence[1] == fsm->m_slaveAddress))
+			fsm->changeState(RecvMessage::getRecvMessage());
 
 	}
 

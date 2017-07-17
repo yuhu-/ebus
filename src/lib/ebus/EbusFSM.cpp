@@ -38,8 +38,8 @@ using std::make_unique;
 map<int, string> FSMErrors =
 {
 { FSM_ERR_TRANSMIT, "An 'eBus' error occurred while sending this sequence" },
-{ FSM_ERR_SEQUENCE, "The passed Sequence contains an error" },
 { FSM_ERR_ADDRESS, "The master address of the sequence and 'FSM' must be equal" },
+{ FSM_ERR_SEQUENCE, "The passed Sequence contains an error" },
 { FSM_ERR_MASTER, "Active sending is only as master possible" } };
 
 libebus::EbusFSM::EbusFSM(const unsigned char address, const string device, const bool deviceCheck, shared_ptr<IEbusLogger> logger,
@@ -47,8 +47,6 @@ libebus::EbusFSM::EbusFSM(const unsigned char address, const string device, cons
 	: Notify(), m_address(address), m_slaveAddress(slaveAddress(address)), m_ebusDevice(
 		make_unique<EbusDevice>(device, deviceCheck)), m_logger(logger), m_identify(identify), m_publish(publish)
 {
-	if (isMaster(address)) m_master = true;
-
 	changeState(Connect::getConnect());
 
 	m_thread = thread(&EbusFSM::run, this);
@@ -88,17 +86,17 @@ int libebus::EbusFSM::transmit(EbusSequence& eSeq)
 {
 	int result = SEQ_OK;
 
-	if (m_master == false)
+	if (!isMaster(m_address))
 	{
 		result = FSM_ERR_MASTER;
-	}
-	else if (eSeq.getMasterQQ() != m_address)
-	{
-		result = FSM_ERR_ADDRESS;
 	}
 	else if (eSeq.getMasterState() != SEQ_OK)
 	{
 		result = FSM_ERR_SEQUENCE;
+	}
+	else if (eSeq.getMasterQQ() != m_address)
+	{
+		result = FSM_ERR_ADDRESS;
 	}
 	else
 	{
@@ -116,7 +114,10 @@ const string libebus::EbusFSM::errorText(const int error)
 {
 	ostringstream errStr;
 
-	errStr << FSMErrors[error];
+	if (error < -10)
+		errStr << FSMErrors[error];
+	else
+		errStr << Device::errorText(error);
 
 	return (errStr.str());
 }
@@ -219,7 +220,6 @@ void libebus::EbusFSM::setDumpFileMaxSize(const long& dumpFileMaxSize)
 void libebus::EbusFSM::run()
 {
 	logInfo("EbusFSM started");
-	logInfo(m_master ? "EbusFSM worked as master/slave" : "EbusFSM run work as slave");
 
 	while (m_running == true)
 	{

@@ -36,15 +36,11 @@ public:
 
 	EbusSequence& getEbusSequence();
 
-	void setResult(const string& result);
-	const string getResult();
-
 	void setState(int state);
 	int getState();
 
 private:
 	EbusSequence m_ebusSequence;
-	string m_result;
 	int m_state = 0;
 
 };

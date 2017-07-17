@@ -32,7 +32,7 @@ int libebus::OnError::run(EbusFSM* fsm)
 	else
 		fsm->logError(fsm->m_ebusDevice->errorText(fsm->m_lastResult));
 
-	if (m_activeMessage != nullptr) m_activeMessage->setResult(fsm->m_ebusDevice->errorText(fsm->m_lastResult));
+	if (m_activeMessage != nullptr) m_activeMessage->setState(fsm->m_lastResult);
 
 	reset(fsm);
 
