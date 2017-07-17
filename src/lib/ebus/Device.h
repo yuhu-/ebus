@@ -27,16 +27,16 @@ using std::string;
 namespace libebus
 {
 
-#define DEV_WRN_EOF      2  // An 'EOF' occurred while data was being received
+#define DEV_WRN_EOF      2  // An EOF occurred while data was being received
 #define DEV_WRN_TIMEOUT  1  // A timeout occurred while waiting for incoming data
 
 #define DEV_OK           0  // success
 
-#define DEV_ERR_OPEN    -1  // An error occurred while opening the 'eBus' device
-#define DEV_ERR_VALID   -2  // The file descriptor of the 'eBus' device is invalid
+#define DEV_ERR_OPEN    -1  // An error occurred while opening the eBus device
+#define DEV_ERR_VALID   -2  // The file descriptor of the eBus device is invalid
 #define DEV_ERR_RECV    -3  // An device error occurred while receiving data
 #define DEV_ERR_SEND    -4  // An device error occurred while sending data
-#define DEV_ERR_POLL    -5  // An device error occurred while waiting on 'ppoll'
+#define DEV_ERR_POLL    -5  // An device error occurred while waiting on ppoll
 
 class Device
 {

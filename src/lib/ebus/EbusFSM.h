@@ -40,7 +40,7 @@ namespace libebus
 
 #define FSM_ERR_MASTER     -11 // Active sending is only as master possible
 #define FSM_ERR_SEQUENCE   -12 // The passed Sequence contains an error
-#define FSM_ERR_ADDRESS    -13 // The master address of the sequence and 'FSM' must be equal
+#define FSM_ERR_ADDRESS    -13 // The master address of the sequence and FSM must be equal
 #define FSM_ERR_TRANSMIT   -14 // An 'eBus' error occurred while sending this sequence
 
 enum class Reaction

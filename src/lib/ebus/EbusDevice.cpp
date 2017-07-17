@@ -74,7 +74,7 @@ const string libebus::EbusDevice::errorText(const int error) const
 
 	ostr << m_device->errorText(error);
 
-	if (error == DEV_ERR_OPEN) ostr << m_deviceName;
+	if (error == DEV_ERR_OPEN) ostr << " " << m_deviceName;
 
 	ostr << libutils::color::reset;
 

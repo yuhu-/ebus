@@ -39,7 +39,7 @@ map<int, string> FSMErrors =
 {
 { FSM_ERR_MASTER, "Active sending is only as master possible" },
 { FSM_ERR_SEQUENCE, "The passed Sequence contains an error" },
-{ FSM_ERR_ADDRESS, "The master address of the sequence and 'FSM' must be equal" },
+{ FSM_ERR_ADDRESS, "The master address of the sequence and FSM must be equal" },
 { FSM_ERR_TRANSMIT, "An 'eBus' error occurred while sending this sequence" } };
 
 libebus::EbusFSM::EbusFSM(const unsigned char address, const string device, const bool deviceCheck, shared_ptr<IEbusLogger> logger,
