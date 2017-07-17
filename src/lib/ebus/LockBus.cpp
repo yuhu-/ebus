@@ -28,17 +28,7 @@ libebus::LockBus libebus::LockBus::m_lockBus;
 int libebus::LockBus::run(EbusFSM* fsm)
 {
 	EbusSequence& eSeq = m_activeMessage->getEbusSequence();
-	if (eSeq.getMasterState() != SEQ_OK)
-	{
-		fsm->logDebug(eSeq.toStringMaster());
-		m_activeMessage->setResult(eSeq.toStringMaster());
-
-		reset(fsm);
-		fsm->changeState(Listen::getListen());
-		return (DEV_OK);
-	}
-
-	unsigned char byte = eSeq.getMaster()[0];
+	unsigned char byte = eSeq.getMasterQQ();
 
 	int result = write(fsm, byte);
 	if (result != DEV_OK) return (result);
@@ -50,7 +40,7 @@ int libebus::LockBus::run(EbusFSM* fsm)
 	result = read(fsm, byte, 0, fsm->m_receiveTimeout);
 	if (result != DEV_OK) return (result);
 
-	if (byte != eSeq.getMaster()[0])
+	if (byte != eSeq.getMasterQQ())
 	{
 		fsm->logDebug(stateMessage(STATE_WRN_ARB_LOST));
 
@@ -58,7 +48,7 @@ int libebus::LockBus::run(EbusFSM* fsm)
 		{
 			m_lockRetries++;
 
-			if ((byte & 0x0f) != (eSeq.getMaster()[0] & 0x0f))
+			if ((byte & 0x0f) != (eSeq.getMasterQQ() & 0x0f))
 			{
 				m_lockCounter = fsm->m_lockCounter;
 				fsm->logDebug(stateMessage(STATE_WRN_PRI_LOST));
@@ -72,7 +62,7 @@ int libebus::LockBus::run(EbusFSM* fsm)
 		else
 		{
 			fsm->logWarn(stateMessage(STATE_ERR_LOCK_FAIL));
-			m_activeMessage->setResult(stateMessage(STATE_ERR_LOCK_FAIL));
+			m_activeMessage->setState(STATE_ERR_TRANSMIT);
 
 			reset(fsm);
 		}

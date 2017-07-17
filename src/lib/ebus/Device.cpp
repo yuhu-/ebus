@@ -32,14 +32,14 @@ using std::ostringstream;
 
 map<int, string> DeviceErrors =
 {
-{ DEV_WRN_EOF, "EOF during receiving reached" },
-{ DEV_WRN_TIMEOUT, "Timeout during receiving reached" },
+{ DEV_WRN_EOF, "An 'EOF' occurred while data was being received" },
+{ DEV_WRN_TIMEOUT, "A timeout occurred while waiting for incoming data" },
 
-{ DEV_ERR_OPEN, "Error occurred when opening the input device " },
-{ DEV_ERR_VALID, "File descriptor of input device is invalid" },
-{ DEV_ERR_RECV, "Error occurred during data receiving" },
-{ DEV_ERR_SEND, "Error occurred during data sending" },
-{ DEV_ERR_POLL, "Error occurred at ppoll waiting" } };
+{ DEV_ERR_OPEN, "An error occurred while opening the 'eBus' device " },
+{ DEV_ERR_VALID, "The file descriptor of the 'eBus' device is invalid" },
+{ DEV_ERR_RECV, "An device error occurred while receiving data" },
+{ DEV_ERR_SEND, "An device error occurred while sending data" },
+{ DEV_ERR_POLL, "An device error occurred while waiting on 'ppoll'" } };
 
 libebus::Device::~Device()
 {
@@ -94,7 +94,7 @@ ssize_t libebus::Device::recv(unsigned char& value, const long sec, const long n
 	return (nbytes < 0 ? DEV_ERR_POLL : DEV_OK);
 }
 
-const string libebus::Device::errorText(const int error) const
+const string libebus::Device::errorText(const int error)
 {
 	ostringstream errStr;
 

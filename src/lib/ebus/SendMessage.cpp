@@ -56,15 +56,15 @@ int libebus::SendMessage::run(EbusFSM* fsm)
 		int result = read(fsm, byte, 0, fsm->m_receiveTimeout);
 		if (result != DEV_OK) return (result);
 
-		if (byte != ACK && byte != NAK)
+		if (byte != SEQ_ACK && byte != SEQ_NAK)
 		{
 			fsm->logWarn(stateMessage(STATE_ERR_ACK_WRONG));
-			m_activeMessage->setResult(stateMessage(STATE_ERR_ACK_WRONG));
+			m_activeMessage->setState(STATE_ERR_TRANSMIT);
 
 			fsm->changeState(FreeBus::getFreeBus());
 			break;
 		}
-		else if (byte == ACK)
+		else if (byte == SEQ_ACK)
 		{
 			// Master Master ends here
 			if (eSeq.getType() == SEQ_TYPE_MM)
@@ -88,7 +88,7 @@ int libebus::SendMessage::run(EbusFSM* fsm)
 			else
 			{
 				fsm->logWarn(stateMessage(STATE_ERR_ACK_NEG));
-				m_activeMessage->setResult(stateMessage(STATE_ERR_ACK_NEG));
+				m_activeMessage->setState(STATE_ERR_TRANSMIT);
 
 				fsm->changeState(FreeBus::getFreeBus());
 			}

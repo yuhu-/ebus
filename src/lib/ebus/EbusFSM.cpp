@@ -36,11 +36,12 @@ using std::back_inserter;
 using std::make_unique;
 
 libebus::EbusFSM::EbusFSM(const unsigned char address, const string device, const bool deviceCheck, shared_ptr<IEbusLogger> logger,
-	function<Reaction(EbusSequence&)> identifyReaction, function<void(EbusSequence&)> publishEbusSequence)
+	function<Reaction(EbusSequence&)> identify, function<void(EbusSequence&)> publish)
 	: Notify(), m_address(address), m_slaveAddress(slaveAddress(address)), m_ebusDevice(
-		make_unique<EbusDevice>(device, deviceCheck)), m_logger(logger), m_identifyReaction(identifyReaction), m_publishEbusSequence(
-		publishEbusSequence)
+		make_unique<EbusDevice>(device, deviceCheck)), m_logger(logger), m_identify(identify), m_publish(publish)
 {
+	if (isMaster(address)) m_master = true;
+
 	changeState(Connect::getConnect());
 
 	m_thread = thread(&EbusFSM::run, this);
@@ -76,26 +77,41 @@ void libebus::EbusFSM::close()
 	m_forceState = Idle::getIdle();
 }
 
-const string libebus::EbusFSM::sendMessage(const string& message)
+int libebus::EbusFSM::transmit(EbusSequence& eSeq)
 {
-	ostringstream result;
-	EbusSequence eSeq;
-	eSeq.createMaster(m_address, message);
+	int result = SEQ_OK;
 
-	if (eSeq.getMasterState() == SEQ_OK)
+	if (m_master == false)
+	{
+		result = STATE_ERR_MASTER;
+	}
+	else if (eSeq.getMasterQQ() != m_address)
+	{
+		result = STATE_ERR_ADDRESS;
+	}
+	else if (eSeq.getMasterState() != SEQ_OK)
+	{
+		result = STATE_ERR_SEQUENCE;
+	}
+	else
 	{
 		EbusMessage* ebusMessage = new EbusMessage(eSeq);
 		m_ebusMsgQueue.enqueue(ebusMessage);
 		ebusMessage->waitNotify();
-		result << ebusMessage->getResult();
+		result = ebusMessage->getState();
 		delete ebusMessage;
 	}
-	else
-	{
-		result << eSeq.toStringMaster();
-	}
 
-	return (result.str());
+	return (result);
+}
+
+const string libebus::EbusFSM::errorText(const int error)
+{
+	ostringstream errStr;
+
+	errStr << State::stateMessage(error);
+
+	return (errStr.str());
 }
 
 long libebus::EbusFSM::getReopenTime() const
@@ -196,6 +212,7 @@ void libebus::EbusFSM::setDumpFileMaxSize(const long& dumpFileMaxSize)
 void libebus::EbusFSM::run()
 {
 	logInfo("EbusFSM started");
+	logInfo(m_master ? "EbusFSM worked as master/slave" : "EbusFSM run work as slave");
 
 	while (m_running == true)
 	{
@@ -224,17 +241,17 @@ void libebus::EbusFSM::changeState(State* state)
 	}
 }
 
-libebus::Reaction libebus::EbusFSM::identifyReaction(EbusSequence& eSeq)
+libebus::Reaction libebus::EbusFSM::identify(EbusSequence& eSeq)
 {
-	if (m_identifyReaction != nullptr)
-		return (m_identifyReaction(eSeq));
+	if (m_identify != nullptr)
+		return (m_identify(eSeq));
 	else
 		return (Reaction::nofunction);
 }
 
-void libebus::EbusFSM::publishEbusSequence(EbusSequence& eSeq)
+void libebus::EbusFSM::publish(EbusSequence& eSeq)
 {
-	if (m_publishEbusSequence != nullptr) m_publishEbusSequence(eSeq);
+	if (m_publish != nullptr) m_publish(eSeq);
 }
 
 void libebus::EbusFSM::logError(const string& message)

@@ -40,6 +40,8 @@ int libebus::RecvResponse::run(EbusFSM* fsm)
 		if (byte > 0x10)
 		{
 			fsm->logWarn(stateMessage(STATE_ERR_NN_WRONG));
+			m_activeMessage->setState(STATE_ERR_TRANSMIT);
+
 			reset(fsm);
 			fsm->changeState(Listen::getListen());
 			return (DEV_OK);
@@ -64,9 +66,9 @@ int libebus::RecvResponse::run(EbusFSM* fsm)
 		eSeq.createSlave(seq);
 
 		if (eSeq.getSlaveState() == SEQ_OK)
-			byte = ACK;
+			byte = SEQ_ACK;
 		else
-			byte = NAK;
+			byte = SEQ_NAK;
 
 		eSeq.setMasterACK(byte);
 
@@ -88,7 +90,7 @@ int libebus::RecvResponse::run(EbusFSM* fsm)
 		else
 		{
 			fsm->logWarn(stateMessage(STATE_ERR_RECV_RESP));
-			m_activeMessage->setResult(stateMessage(STATE_ERR_RECV_RESP));
+			m_activeMessage->setState(STATE_ERR_TRANSMIT);
 		}
 	}
 

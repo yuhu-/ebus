@@ -50,8 +50,7 @@ BaseLoop::BaseLoop()
 	m_forward = make_unique<Forward>();
 
 	m_ebusFSM = make_unique<EbusFSM>(m_address, options.getString("device"), options.getBool("devicecheck"), m_logger,
-		bind(&BaseLoop::identifyReaction, this, std::placeholders::_1),
-		bind(&BaseLoop::publishMessage, this, std::placeholders::_1));
+		bind(&BaseLoop::identify, this, std::placeholders::_1), bind(&BaseLoop::publish, this, std::placeholders::_1));
 
 	m_ebusFSM->setReopenTime(options.getLong("reopentime"));
 	m_ebusFSM->setArbitrationTime(options.getLong("arbitrationtime"));
@@ -156,7 +155,18 @@ string BaseLoop::decodeMessage(const string& data)
 			break;
 		}
 
-		if (isHex(args[1], result, 2) == true) result << m_ebusFSM->sendMessage(args[1]);
+		if (isHex(args[1], result, 2) == true)
+		{
+			EbusSequence eSeq;
+			eSeq.createMaster(m_address, args[1]);
+			int state = m_ebusFSM->transmit(eSeq);
+
+			if (state == SEQ_OK)
+				result << eSeq.toString();
+			else
+				result << EbusFSM::errorText(state);
+
+		}
 
 		LIBLOGGER_DEBUG("error: %s", result.str().c_str());
 
@@ -343,7 +353,7 @@ const string BaseLoop::formatHelp()
 	return (ostr.str());
 }
 
-Reaction BaseLoop::identifyReaction(EbusSequence& eSeq)
+Reaction BaseLoop::identify(EbusSequence& eSeq)
 {
 	LIBLOGGER_DEBUG("identify %s", eSeq.toStringLog().c_str());
 
@@ -361,9 +371,9 @@ Reaction BaseLoop::identifyReaction(EbusSequence& eSeq)
 	if (eSeq.getMaster().contains("07fe") == true)
 	{
 		eSeq.clear();
-		eSeq.createMaster(m_address, BROADCAST, "07ff00");
-		// ToDo set some flag in main loop
-//		if (eSeq.getMasterState() == EBUS_OK) enqueueMessage(new EbusMessage(eSeq));
+		eSeq.createMaster(m_address, SEQ_BROAD, "07ff00");
+		// ToDo set some flag in main loop and transmit
+		// ...int reuslt = m_ebusFSM->transmit(eSeq);
 		return (Reaction::ignore);
 	}
 
@@ -380,7 +390,7 @@ Reaction BaseLoop::identifyReaction(EbusSequence& eSeq)
 	return (Reaction::undefined);
 }
 
-void BaseLoop::publishMessage(EbusSequence& eSeq)
+void BaseLoop::publish(EbusSequence& eSeq)
 {
 	if (m_forward->isActive())
 	{

@@ -81,11 +81,11 @@ libebus::EbusSequence::EbusSequence(Sequence& seq)
 	if (m_type != SEQ_TYPE_BC)
 	{
 		m_slaveACK = seq[5 + m_masterNN + 1];
-		if (m_slaveACK != ACK && m_slaveACK != NAK) m_slaveState =
+		if (m_slaveACK != SEQ_ACK && m_slaveACK != SEQ_NAK) m_slaveState =
 		SEQ_ERR_ACK;
 
 		// handle NAK from slave
-		if (m_slaveACK == NAK)
+		if (m_slaveACK == SEQ_NAK)
 		{
 			offset = master.size() + 2;
 			m_master.clear();
@@ -96,7 +96,7 @@ libebus::EbusSequence::EbusSequence(Sequence& seq)
 			if (m_masterState != SEQ_OK) return;
 
 			m_slaveACK = seq[offset + 5 + m_masterNN + 1];
-			if (m_slaveACK != ACK && m_slaveACK != NAK) m_slaveState =
+			if (m_slaveACK != SEQ_ACK && m_slaveACK != SEQ_NAK) m_slaveState =
 			SEQ_ERR_ACK;
 		}
 	}
@@ -107,11 +107,11 @@ libebus::EbusSequence::EbusSequence(Sequence& seq)
 		createSlave(slave);
 
 		m_masterACK = seq[(offset + 5 + m_masterNN + 3 + m_slaveNN + 1)];
-		if (m_masterACK != ACK && m_masterACK != NAK) m_masterState =
+		if (m_masterACK != SEQ_ACK && m_masterACK != SEQ_NAK) m_masterState =
 		SEQ_ERR_ACK;
 
 		// handle NAK from master
-		if (m_masterACK == NAK)
+		if (m_masterACK == SEQ_NAK)
 		{
 			offset += slave.size() + 2;
 			m_slave.clear();
@@ -120,7 +120,7 @@ libebus::EbusSequence::EbusSequence(Sequence& seq)
 			createSlave(tmp);
 
 			m_masterACK = seq[(offset + 5 + m_masterNN + 3 + m_slaveNN + 1)];
-			if (m_masterACK != ACK && m_masterACK != NAK) m_masterState =
+			if (m_masterACK != SEQ_ACK && m_masterACK != SEQ_NAK) m_masterState =
 			SEQ_ERR_ACK;
 		}
 	}
@@ -339,7 +339,7 @@ void libebus::EbusSequence::setSlaveACK(const unsigned char byte)
 
 void libebus::EbusSequence::setType(const unsigned char byte)
 {
-	if (byte == BROADCAST)
+	if (byte == SEQ_BROAD)
 		m_type = SEQ_TYPE_BC;
 	else if (isMaster(byte) == true)
 		m_type = SEQ_TYPE_MM;
@@ -478,7 +478,7 @@ const string libebus::EbusSequence::toStringSlaveError()
 	return (ostr.str());
 }
 
-const string libebus::EbusSequence::errorText(const int error) const
+const string libebus::EbusSequence::errorText(const int error)
 {
 	ostringstream errStr;
 

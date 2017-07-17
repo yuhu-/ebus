@@ -37,13 +37,13 @@ namespace libebus
 #define SEQ_ERR_MASTER -6 // wrong master address
 #define SEQ_ERR_SLAVE  -7 // wrong slave address
 
-#define SEQ_TYPE_BC     0
-#define SEQ_TYPE_MM     1
-#define SEQ_TYPE_MS     2
+#define SEQ_TYPE_BC     0 // broadcast
+#define SEQ_TYPE_MM     1 // master master
+#define SEQ_TYPE_MS     2 // master slave
 
-#define ACK       0x00  // positive acknowledge
-#define NAK       0xff  // negative acknowledge
-#define BROADCAST 0xfe  // broadcast destination address
+#define SEQ_ACK      0x00 // positive acknowledge
+#define SEQ_NAK      0xff // negative acknowledge
+#define SEQ_BROAD    0xfe // broadcast destination address
 
 class EbusSequence
 {
@@ -97,7 +97,7 @@ public:
 	const string toStringSlaveACK();
 	const string toStringSlaveError();
 
-	const string errorText(const int error) const;
+	static const string errorText(const int error);
 
 private:
 	int m_type = -1;

@@ -51,7 +51,7 @@ int libebus::Listen::run(EbusFSM* fsm)
 			EbusSequence eSeq(m_sequence);
 			fsm->logInfo(eSeq.toStringLog());
 
-			if (eSeq.isValid() == true) fsm->publishEbusSequence(eSeq);
+			if (eSeq.isValid() == true) fsm->publish(eSeq);
 
 			if (m_sequence.size() == 1 && m_lockCounter < 2) m_lockCounter = 2;
 
@@ -71,9 +71,8 @@ int libebus::Listen::run(EbusFSM* fsm)
 
 		// handle broadcast and at me addressed messages
 		if (m_sequence.size() == 2
-			&& (m_sequence[1] == BROADCAST || m_sequence[1] == fsm->m_address
-				|| m_sequence[1] == fsm->m_slaveAddress))
-			fsm->changeState(RecvMessage::getRecvMessage());
+			&& (m_sequence[1] == SEQ_BROAD || (m_sequence[1] == fsm->m_address && fsm->m_master)
+				|| m_sequence[1] == fsm->m_slaveAddress)) fsm->changeState(RecvMessage::getRecvMessage());
 
 	}
 

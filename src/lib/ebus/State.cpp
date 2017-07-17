@@ -41,6 +41,11 @@ libebus::EbusMessage* libebus::State::m_passiveMessage = nullptr;
 
 map<int, string> StateMessages =
 {
+{ STATE_ERR_TRANSMIT, "An 'eBus' error occurred while sending this sequence" },
+{ STATE_ERR_SEQUENCE, "The passed Sequence contains an error" },
+{ STATE_ERR_ADDRESS, "The master address of the sequence and 'FSM' must be equal" },
+{ STATE_ERR_MASTER, "Active sending is only as master possible" },
+
 { STATE_INF_EBUS_ON, "ebus connected" },
 { STATE_INF_EBUS_OFF, "ebus disconnected" },
 { STATE_INF_EBUS_LOCK, "ebus locked" },
@@ -63,11 +68,29 @@ map<int, string> StateMessages =
 { STATE_ERR_ACK_WRONG, "received ACK byte is wrong" },
 { STATE_ERR_NN_WRONG, "received NN byte is wrong" },
 { STATE_ERR_RECV_RESP, "received response is invalid -> failed" },
-{ STATE_ERR_CREA_MSG, "creating message failed" },
-{ STATE_ERR_SEND_FAIL, "sending response message failed" } };
+{ STATE_ERR_RESP_CREA, "creating response message failed" },
+{ STATE_ERR_RESP_SEND, "sending response message failed" } };
 
 libebus::State::~State()
 {
+}
+
+const string libebus::State::stateMessage(const int state)
+{
+	ostringstream ostr;
+
+	if (state < 0)
+		ostr << StateMessages[state];
+	else if (state < 11)
+		ostr << libutils::color::green << StateMessages[state];
+	else if (state < 21)
+		ostr << libutils::color::yellow << StateMessages[state];
+	else
+		ostr << libutils::color::red << StateMessages[state];
+
+	ostr << libutils::color::reset;
+
+	return (ostr.str());
 }
 
 void libebus::State::changeState(EbusFSM* fsm, State* state)
@@ -148,7 +171,7 @@ void libebus::State::reset(EbusFSM* fsm)
 
 	if (m_activeMessage != nullptr)
 	{
-		fsm->publishEbusSequence(m_activeMessage->getEbusSequence());
+		fsm->publish(m_activeMessage->getEbusSequence());
 		m_activeMessage->notify();
 		m_activeMessage = nullptr;
 	}
@@ -159,21 +182,5 @@ void libebus::State::reset(EbusFSM* fsm)
 		m_passiveMessage = nullptr;
 		delete message;
 	}
-}
-
-const string libebus::State::stateMessage(const int state)
-{
-	ostringstream ostr;
-
-	if (state < 11)
-		ostr << libutils::color::green << StateMessages[state];
-	else if (state < 21)
-		ostr << libutils::color::yellow << StateMessages[state];
-	else
-		ostr << libutils::color::red << StateMessages[state];
-
-	ostr << libutils::color::reset;
-
-	return (ostr.str());
 }
 

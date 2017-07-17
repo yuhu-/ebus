@@ -29,7 +29,7 @@ int libebus::EvalMessage::run(EbusFSM* fsm)
 	EbusSequence eSeq;
 	eSeq.createMaster(m_sequence);
 
-	Reaction reaction = fsm->identifyReaction(eSeq);
+	Reaction reaction = fsm->identify(eSeq);
 
 	switch (reaction)
 	{
@@ -43,7 +43,7 @@ int libebus::EvalMessage::run(EbusFSM* fsm)
 		fsm->logInfo(stateMessage(STATE_INF_MSG_INGORE));
 		break;
 	case Reaction::response:
-		eSeq.setSlaveACK(ACK);
+		eSeq.setSlaveACK(SEQ_ACK);
 
 		if (eSeq.getSlaveState() == SEQ_OK)
 		{
@@ -54,7 +54,7 @@ int libebus::EvalMessage::run(EbusFSM* fsm)
 		}
 		else
 		{
-			fsm->logWarn(stateMessage(STATE_ERR_CREA_MSG));
+			fsm->logWarn(stateMessage(STATE_ERR_RESP_CREA));
 		}
 
 		break;

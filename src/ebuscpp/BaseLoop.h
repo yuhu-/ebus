@@ -77,8 +77,8 @@ private:
 
 	static const string formatHelp();
 
-	Reaction identifyReaction(EbusSequence& eSeq);
-	void publishMessage(EbusSequence& eSeq);
+	Reaction identify(EbusSequence& eSeq);
+	void publish(EbusSequence& eSeq);
 
 };
 

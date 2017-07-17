@@ -54,3 +54,13 @@ const string libebus::EbusMessage::getResult()
 	return (ostr.str());
 }
 
+void libebus::EbusMessage::setState(int state)
+{
+	m_state = state;
+}
+
+int libebus::EbusMessage::getState()
+{
+	return (m_state);
+}
+

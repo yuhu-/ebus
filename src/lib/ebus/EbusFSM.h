@@ -65,14 +65,16 @@ class EbusFSM : public Notify
 
 public:
 	EbusFSM(const unsigned char address, const string device, const bool deviceCheck, shared_ptr<IEbusLogger> logger,
-		function<Reaction(EbusSequence&)> identifyReaction, function<void(EbusSequence&)> publishEbusSequence);
+		function<Reaction(EbusSequence&)> identify, function<void(EbusSequence&)> publish);
 
 	~EbusFSM();
 
 	void open();
 	void close();
 
-	const string sendMessage(const string& message);
+	int transmit(EbusSequence& eSeq);
+
+	static const string errorText(const int error);
 
 	long getReopenTime() const;
 	void setReopenTime(const long& reopenTime);
@@ -110,6 +112,7 @@ private:
 
 	const unsigned char m_address;              // ebus master address
 	const unsigned char m_slaveAddress;         // ebus slave address
+	bool m_master = false;                      // true if FSM worked as master and slave
 
 	long m_reopenTime = 60;                     // max. time to open ebus device [s]
 	long m_arbitrationTime = 4400;              // waiting time for arbitration test [us]
@@ -128,15 +131,15 @@ private:
 	unique_ptr<EbusDevice> m_ebusDevice = nullptr;
 	shared_ptr<IEbusLogger> m_logger = nullptr;
 
-	function<Reaction(EbusSequence&)> m_identifyReaction;
-	function<void(EbusSequence&)> m_publishEbusSequence;
+	function<Reaction(EbusSequence&)> m_identify;
+	function<void(EbusSequence&)> m_publish;
 
 	void run();
 
 	void changeState(State* state);
 
-	Reaction identifyReaction(EbusSequence& eSeq);
-	void publishEbusSequence(EbusSequence& eSeq);
+	Reaction identify(EbusSequence& eSeq);
+	void publish(EbusSequence& eSeq);
 
 	void logError(const string& message);
 	void logWarn(const string& message);
