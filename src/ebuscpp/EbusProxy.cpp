@@ -50,8 +50,8 @@ void define_args()
 	options.addBool("devicecheck", "c", true, "sanity check of serial ebus device [yes]");
 	options.addLong("reopentime", "", 60, "max. time to open ebus device in 'sec' [60]", 1);
 
-	options.addLong("arbitrationtime", "", 4400, "waiting time for arbitration test 'us' [4400]");
-	options.addLong("receivetimeout", "", 4700, "max. time for receiving of one sequence sign 'us' [4700]");
+	options.addLong("arbitrationtime", "", 5000, "waiting time for arbitration test 'us' [5000]");
+	options.addLong("receivetimeout", "", 10000, "max. time for receiving of one sequence sign 'us' [10000]");
 	options.addInt("lockcounter", "", 5, "number of characters after a successful ebus access (max: 25) [5]");
 	options.addInt("lockretries", "", 2, "number of retries to lock ebus [2]", 1);
 

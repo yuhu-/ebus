@@ -64,7 +64,8 @@ map<int, string> StateMessages =
 { STATE_ERR_NN_WRONG, "received NN byte is wrong" },
 { STATE_ERR_RECV_RESP, "received response is invalid -> failed" },
 { STATE_ERR_RESP_CREA, "creating response message failed" },
-{ STATE_ERR_RESP_SEND, "sending response message failed" } };
+{ STATE_ERR_RESP_SEND, "sending response message failed" },
+{ STATE_ERR_BAD_TYPE, "the received message type does not allow an answer" } };
 
 libebus::State::~State()
 {

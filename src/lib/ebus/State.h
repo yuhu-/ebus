@@ -49,6 +49,7 @@ namespace libebus
 #define STATE_ERR_RECV_RESP   25 // received response is invalid -> failed
 #define STATE_ERR_RESP_CREA   26 // creating response message failed
 #define STATE_ERR_RESP_SEND   27 // sending response message failed
+#define STATE_ERR_BAD_TYPE    28 // the received message type does not allow an answer
 
 class State
 {

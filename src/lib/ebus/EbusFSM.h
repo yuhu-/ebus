@@ -120,8 +120,8 @@ private:
 	bool m_master = false;                      // true if FSM worked as master and slave
 
 	long m_reopenTime = 60;                     // max. time to open ebus device [s]
-	long m_arbitrationTime = 4400;              // waiting time for arbitration test [us]
-	long m_receiveTimeout = 4700;               // max. time for receiving of one sequence sign [us]
+	long m_arbitrationTime = 5000;              // waiting time for arbitration test [us]
+	long m_receiveTimeout = 10000;              // max. time for receiving of one sequence sign [us]
 	int m_lockCounter = 5;                      // number of characters after a successful ebus access (max: 25)
 	int m_lockRetries = 2;                      // number of retries to lock ebus
 

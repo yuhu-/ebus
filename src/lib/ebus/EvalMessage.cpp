@@ -43,18 +43,25 @@ int libebus::EvalMessage::run(EbusFSM* fsm)
 		fsm->logInfo(stateMessage(STATE_INF_MSG_INGORE));
 		break;
 	case Reaction::response:
-		eSeq.setSlaveACK(SEQ_ACK);
-
-		if (eSeq.getSlaveState() == SEQ_OK)
+		if (eSeq.getType() == SEQ_TYPE_MS)
 		{
-			fsm->logInfo("response: " + eSeq.toStringSlave());
-			m_passiveMessage = new Message(eSeq);
-			fsm->changeState(SendResponse::getSendResponse());
-			return (DEV_OK);
+			eSeq.setSlaveACK(SEQ_ACK);
+
+			if (eSeq.getSlaveState() == SEQ_OK)
+			{
+				fsm->logInfo("response: " + eSeq.toStringSlave());
+				m_passiveMessage = new Message(eSeq);
+				fsm->changeState(SendResponse::getSendResponse());
+				return (DEV_OK);
+			}
+			else
+			{
+				fsm->logWarn(stateMessage(STATE_ERR_RESP_CREA));
+			}
 		}
 		else
 		{
-			fsm->logWarn(stateMessage(STATE_ERR_RESP_CREA));
+			fsm->logWarn(stateMessage(STATE_ERR_BAD_TYPE));
 		}
 
 		break;
