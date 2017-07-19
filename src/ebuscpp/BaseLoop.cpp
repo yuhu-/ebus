@@ -168,8 +168,6 @@ string BaseLoop::decodeMessage(const string& data)
 
 		}
 
-		LIBLOGGER_DEBUG("error: %s", result.str().c_str());
-
 		break;
 	}
 	case Command::forward:

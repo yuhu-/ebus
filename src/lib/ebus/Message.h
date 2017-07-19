@@ -40,7 +40,7 @@ public:
 	int getState();
 
 private:
-	EbusSequence m_ebusSequence;
+	EbusSequence& m_ebusSequence;
 	int m_state = 0;
 
 };
