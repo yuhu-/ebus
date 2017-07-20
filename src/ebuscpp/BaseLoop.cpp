@@ -60,6 +60,7 @@ BaseLoop::BaseLoop()
 	m_ebusFSM->setDump(options.getBool("dump"));
 	m_ebusFSM->setDumpFile(options.getString("dumpfile"));
 	m_ebusFSM->setDumpFileMaxSize(options.getLong("dumpsize"));
+	m_ebusFSM->setColor(options.getBool("color"));
 
 	m_network = make_unique<Network>(options.getBool("local"), options.getInt("port"));
 }
@@ -164,8 +165,7 @@ string BaseLoop::decodeMessage(const string& data)
 			if (state == SEQ_OK)
 				result << eSeq.toString();
 			else
-				result << EbusFSM::errorText(state);
-
+				result << m_ebusFSM->errorText(state);
 		}
 
 		break;
@@ -226,6 +226,35 @@ string BaseLoop::decodeMessage(const string& data)
 		result << "usage: 'dump [on|off]'";
 		break;
 	}
+	case Command::color:
+		if (args.size() > 2)
+		{
+			result << "usage: 'color [on|off]'";
+			break;
+		}
+
+		if (args.size() == 1)
+		{
+			result << "color is " << (m_ebusFSM->getColor() == true ? "enabled" : "disabled");
+			break;
+		}
+
+		if (strcasecmp(args[1].c_str(), "ON") == 0)
+		{
+			if (m_ebusFSM->getColor() == false) m_ebusFSM->setColor(true);
+			result << "color enabled";
+			break;
+		}
+
+		if (strcasecmp(args[1].c_str(), "OFF") == 0)
+		{
+			if (m_ebusFSM->getColor() == true) m_ebusFSM->setColor(false);
+			result << "color disabled";
+			break;
+		}
+
+		result << "usage: 'color [on|off]'";
+		break;
 	case Command::help:
 	{
 		result << formatHelp();
@@ -339,9 +368,11 @@ const string BaseLoop::formatHelp()
 	ostr << "               server: either ip address or hostname" << endl;
 	ostr << "               port:   target udp port number" << endl << endl;
 
-	ostr << " log      - change logging level 'log level'" << endl;
+	ostr << " log      - change logging level 'log level'" << endl << endl;
 
 	ostr << " dump     - enable/disable raw data dumping 'dump [on|off]'" << endl << endl;
+
+	ostr << " color    - enable/disable colored output 'color [on|off]'" << endl << endl;
 
 	ostr << " stop     - shutdown daemon" << endl;
 	ostr << " quit     - close tcp connection" << endl << endl;
@@ -353,7 +384,7 @@ const string BaseLoop::formatHelp()
 
 Reaction BaseLoop::identify(EbusSequence& eSeq)
 {
-	LIBLOGGER_DEBUG("identify %s", eSeq.toStringLog().c_str());
+	LIBLOGGER_DEBUG("identify %s", eSeq.toString().c_str());
 
 	if (eSeq.getMaster().contains("0700") == true)
 	{
@@ -392,7 +423,7 @@ void BaseLoop::publish(EbusSequence& eSeq)
 {
 	if (m_forward->isActive())
 	{
-		LIBLOGGER_DEBUG("forward %s", eSeq.toStringLog().c_str());
+		LIBLOGGER_DEBUG("forward %s", eSeq.toString().c_str());
 		m_forward->enqueue(eSeq);
 	}
 }

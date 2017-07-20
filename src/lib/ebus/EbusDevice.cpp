@@ -20,12 +20,24 @@
 #include "EbusDevice.h"
 #include "SerialDevice.h"
 #include "NetworkDevice.h"
-#include "Color.h"
 
+#include <map>
 #include <sstream>
 
+using std::map;
 using std::ostringstream;
 using std::make_unique;
+
+map<int, string> DeviceErrors =
+{
+{ DEV_WRN_EOF, "An EOF occurred while data was being received" },
+{ DEV_WRN_TIMEOUT, "A timeout occurred while waiting for incoming data" },
+
+{ DEV_ERR_OPEN, "An error occurred while opening the eBus device" },
+{ DEV_ERR_VALID, "The file descriptor of the eBus device is invalid" },
+{ DEV_ERR_RECV, "An device error occurred while receiving data" },
+{ DEV_ERR_SEND, "An device error occurred while sending data" },
+{ DEV_ERR_POLL, "An device error occurred while waiting on ppoll" } };
 
 libebus::EbusDevice::EbusDevice(const string& deviceName, const bool deviceCheck)
 	: m_deviceName(deviceName), m_deviceCheck(deviceCheck)
@@ -66,17 +78,11 @@ ssize_t libebus::EbusDevice::recv(unsigned char& value, const long sec, const lo
 	return (m_device->recv(value, sec, nsec));
 }
 
-const string libebus::EbusDevice::errorText(const int error) const
+const string libebus::EbusDevice::errorText(const int error)
 {
 	ostringstream ostr;
 
-	(error > DEV_OK) ? ostr << libutils::color::yellow : ostr << libutils::color::red;
-
-	ostr << m_device->errorText(error);
-
-	if (error == DEV_ERR_OPEN) ostr << " " << m_deviceName;
-
-	ostr << libutils::color::reset;
+	ostr << DeviceErrors[error];
 
 	return (ostr.str());
 }

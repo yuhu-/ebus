@@ -45,7 +45,7 @@ int libebus::Connect::run(EbusFSM* fsm)
 		}
 	}
 
-	fsm->logInfo(stateMessage(STATE_INF_EBUS_ON));
+	fsm->logInfo(stateMessage(fsm, STATE_INF_EBUS_ON));
 
 	do
 	{
@@ -55,7 +55,7 @@ int libebus::Connect::run(EbusFSM* fsm)
 
 	reset(fsm);
 
-	fsm->logInfo(stateMessage(STATE_INF_DEV_FLUSH));
+	fsm->logInfo(stateMessage(fsm, STATE_INF_DEV_FLUSH));
 
 	fsm->changeState(Listen::getListen());
 	return (result);

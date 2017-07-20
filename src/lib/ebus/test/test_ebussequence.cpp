@@ -42,7 +42,7 @@ int main()
 
 	EbusSequence full(seq);
 
-	cout << "seq: " << seq.toString() << " Full: " << full.toStringLog() << endl;
+	cout << "seq: " << seq.toString() << " Full: " << full.toString() << endl;
 	seq.clear();
 
 	// TEST FULL2 - NAK from slave
@@ -58,7 +58,7 @@ int main()
 
 	EbusSequence full2(seq);
 
-	cout << "seq: " << seq.toString() << " Full2 (NAK from slave): " << full2.toStringLog() << endl;
+	cout << "seq: " << seq.toString() << " Full2 (NAK from slave): " << full2.toString() << endl;
 	seq.clear();
 
 	// TEST FULL3 - NAK from master
@@ -74,7 +74,7 @@ int main()
 
 	EbusSequence full3(seq);
 
-	cout << "seq: " << seq.toString() << " Full3 (NAK from master): " << full3.toStringLog() << endl;
+	cout << "seq: " << seq.toString() << " Full3 (NAK from master): " << full3.toString() << endl;
 	seq.clear();
 
 	// TEST FULL4 - NAK from slave and master
@@ -92,7 +92,7 @@ int main()
 
 	EbusSequence full4(seq);
 
-	cout << "seq: " << seq.toString() << " Full4 (NAK from slave and master): " << full4.toStringLog() << endl;
+	cout << "seq: " << seq.toString() << " Full4 (NAK from slave and master): " << full4.toString() << endl;
 	seq.clear();
 
 	// TEST MASTER

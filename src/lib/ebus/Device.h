@@ -52,8 +52,6 @@ public:
 	ssize_t send(const unsigned char value);
 	ssize_t recv(unsigned char& value, const long sec, const long nsec);
 
-	static const string errorText(const int error);
-
 protected:
 	int m_fd = -1;
 

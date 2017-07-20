@@ -68,8 +68,9 @@ void define_args()
 
 	options.addString("logfile", "", "/var/log/ebusproxy.log", "log file name [/var/log/ebusproxy.log]");
 	options.addString("loglevel", "", "info", "set logging level - off|error|warn|info|debug|trace [info]");
-	options.addBool("showfunction", "", false, "show function names in logging [no]");
+	options.addBool("showfunction", "", false, "show function names in logging [no]", 1);
 
+	options.addBool("color", "", false, "colored output [no]");
 }
 
 void shutdown()

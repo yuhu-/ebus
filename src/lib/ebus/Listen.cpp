@@ -49,7 +49,7 @@ int libebus::Listen::run(EbusFSM* fsm)
 			fsm->logDebug(m_sequence.toString());
 
 			EbusSequence eSeq(m_sequence);
-			fsm->logInfo(eSeq.toStringLog());
+			fsm->logInfo(eSeqMessage(fsm, eSeq));
 
 			if (eSeq.isValid() == true) fsm->publish(eSeq);
 

@@ -85,7 +85,6 @@ public:
 	bool isValid() const;
 
 	const string toString();
-	const string toStringLog();
 
 	const string toStringMaster();
 	const string toStringMasterCRC();

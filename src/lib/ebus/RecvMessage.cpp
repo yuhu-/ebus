@@ -42,7 +42,7 @@ int libebus::RecvMessage::run(EbusFSM* fsm)
 	// check against max. possible size
 	if (m_sequence[4] > 16)
 	{
-		fsm->logWarn(stateMessage(STATE_ERR_NN_WRONG));
+		fsm->logWarn(stateMessage(fsm, STATE_ERR_NN_WRONG));
 		reset(fsm);
 		fsm->changeState(Listen::getListen());
 		return (DEV_OK);
@@ -87,21 +87,21 @@ int libebus::RecvMessage::run(EbusFSM* fsm)
 		else
 		{
 			byte = SEQ_NAK;
-			fsm->logInfo(stateMessage(STATE_WRN_RECV_MSG));
+			fsm->logInfo(stateMessage(fsm, STATE_WRN_RECV_MSG));
 		}
 
 		// send ACK
 		result = writeRead(fsm, byte, 0);
 		if (result != DEV_OK) return (result);
+
+		eSeq.setSlaveACK(byte);
 	}
 
 	if (eSeq.getMasterState() == SEQ_OK)
 	{
 		if (eSeq.getType() != SEQ_TYPE_MS)
 		{
-			if (eSeq.getType() == SEQ_TYPE_MM) eSeq.setSlaveACK(byte);
-
-			fsm->logInfo(eSeq.toStringLog());
+			fsm->logInfo(eSeqMessage(fsm, eSeq));
 			fsm->publish(eSeq);
 		}
 

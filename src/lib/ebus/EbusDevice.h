@@ -49,7 +49,7 @@ public:
 	ssize_t send(const unsigned char value);
 	ssize_t recv(unsigned char& value, const long sec, const long nsec);
 
-	const string errorText(const int error) const;
+	static const string errorText(const int error);
 
 private:
 	const string m_deviceName;

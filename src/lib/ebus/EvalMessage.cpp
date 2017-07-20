@@ -34,19 +34,17 @@ int libebus::EvalMessage::run(EbusFSM* fsm)
 	switch (reaction)
 	{
 	case Reaction::nofunction:
-		fsm->logWarn(stateMessage(STATE_WRN_NO_FUNC));
+		fsm->logWarn(stateMessage(fsm, STATE_WRN_NO_FUNC));
 		break;
 	case Reaction::undefined:
-		fsm->logWarn(stateMessage(STATE_WRN_NOT_DEF));
+		fsm->logWarn(stateMessage(fsm, STATE_WRN_NOT_DEF));
 		break;
 	case Reaction::ignore:
-		fsm->logInfo(stateMessage(STATE_INF_MSG_INGORE));
+		fsm->logInfo(stateMessage(fsm, STATE_INF_MSG_INGORE));
 		break;
 	case Reaction::response:
 		if (eSeq.getType() == SEQ_TYPE_MS)
 		{
-			eSeq.setSlaveACK(SEQ_ACK);
-
 			if (eSeq.getSlaveState() == SEQ_OK)
 			{
 				fsm->logInfo("response: " + eSeq.toStringSlave());
@@ -56,12 +54,12 @@ int libebus::EvalMessage::run(EbusFSM* fsm)
 			}
 			else
 			{
-				fsm->logWarn(stateMessage(STATE_ERR_RESP_CREA));
+				fsm->logWarn(stateMessage(fsm, STATE_ERR_RESP_CREA));
 			}
 		}
 		else
 		{
-			fsm->logWarn(stateMessage(STATE_ERR_BAD_TYPE));
+			fsm->logWarn(stateMessage(fsm, STATE_ERR_BAD_TYPE));
 		}
 
 		break;

@@ -20,17 +20,38 @@
 #include "OnError.h"
 #include "Connect.h"
 #include "Listen.h"
+#include "Color.h"
+
+#include <iomanip>
 
 #include <unistd.h>
+
+using std::ostringstream;
 
 libebus::OnError libebus::OnError::m_onError;
 
 int libebus::OnError::run(EbusFSM* fsm)
 {
+	ostringstream ostr;
+
 	if (fsm->m_lastResult > DEV_OK)
-		fsm->logWarn(fsm->m_ebusDevice->errorText(fsm->m_lastResult));
+	{
+		if (fsm->m_color == true)
+			ostr << libutils::color::yellow << fsm->m_ebusDevice->errorText(fsm->m_lastResult) << libutils::color::reset;
+		else
+			ostr << fsm->m_ebusDevice->errorText(fsm->m_lastResult);
+
+		fsm->logWarn(ostr.str());
+	}
 	else
-		fsm->logError(fsm->m_ebusDevice->errorText(fsm->m_lastResult));
+	{
+		if (fsm->m_color == true)
+			ostr << libutils::color::red << fsm->m_ebusDevice->errorText(fsm->m_lastResult) << libutils::color::reset;
+		else
+			ostr << fsm->m_ebusDevice->errorText(fsm->m_lastResult);
+
+		fsm->logError(ostr.str());
+	}
 
 	if (m_activeMessage != nullptr) m_activeMessage->setState(fsm->m_lastResult);
 
@@ -40,7 +61,7 @@ int libebus::OnError::run(EbusFSM* fsm)
 	{
 		fsm->m_ebusDevice->close();
 
-		if (fsm->m_ebusDevice->isOpen() == false) fsm->logInfo(stateMessage(STATE_INF_EBUS_OFF));
+		if (fsm->m_ebusDevice->isOpen() == false) fsm->logInfo(stateMessage(fsm, STATE_INF_EBUS_OFF));
 
 		sleep(1);
 		fsm->changeState(Connect::getConnect());

@@ -41,7 +41,7 @@ namespace libebus
 #define FSM_ERR_MASTER     -11 // Active sending is only as master possible
 #define FSM_ERR_SEQUENCE   -12 // The passed Sequence contains an error
 #define FSM_ERR_ADDRESS    -13 // The master address of the sequence and FSM must be equal
-#define FSM_ERR_TRANSMIT   -14 // An 'eBus' error occurred while sending this sequence
+#define FSM_ERR_TRANSMIT   -14 // An eBus error occurred while sending this sequence
 
 enum class Reaction
 {
@@ -79,7 +79,7 @@ public:
 
 	int transmit(EbusSequence& eSeq);
 
-	static const string errorText(const int error);
+	const string errorText(const int error) const;
 
 	long getReopenTime() const;
 	void setReopenTime(const long& reopenTime);
@@ -105,6 +105,9 @@ public:
 	long getDumpFileMaxSize() const;
 	void setDumpFileMaxSize(const long& dumpFileMaxSize);
 
+	bool getColor() const;
+	void setColor(const bool& color);
+
 private:
 	thread m_thread;
 
@@ -129,7 +132,9 @@ private:
 	string m_dumpFile = "/tmp/ebus_dump.bin";   // dump file name
 	long m_dumpFileMaxSize = 100;               // max size for dump file [kB]
 	long m_dumpFileSize = 0;                    // current size of dump file
-	ofstream m_dumpRawStream;
+	ofstream m_dumpRawStream;                   // dump stream
+
+	bool m_color = false;                       // true, when the output is in color
 
 	NQueue<Message*> m_ebusMsgQueue;
 

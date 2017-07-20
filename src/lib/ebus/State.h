@@ -75,7 +75,9 @@ protected:
 
 	static void reset(EbusFSM* fsm);
 
-	static const string stateMessage(const int state);
+	static const string stateMessage(EbusFSM* fsm, const int state);
+
+	static const string eSeqMessage(EbusFSM* fsm, EbusSequence& eSeq);
 
 };
 

@@ -40,7 +40,7 @@ map<int, string> FSMErrors =
 { FSM_ERR_MASTER, "Active sending is only as master possible" },
 { FSM_ERR_SEQUENCE, "The passed Sequence contains an error" },
 { FSM_ERR_ADDRESS, "The master address of the sequence and FSM must be equal" },
-{ FSM_ERR_TRANSMIT, "An 'eBus' error occurred while sending this sequence" } };
+{ FSM_ERR_TRANSMIT, "An eBus error occurred while sending this sequence" } };
 
 libebus::EbusFSM::EbusFSM(const unsigned char address, const string device, const bool deviceCheck, shared_ptr<IEbusLogger> logger,
 	function<Reaction(EbusSequence&)> identify, function<void(EbusSequence&)> publish)
@@ -110,16 +110,33 @@ int libebus::EbusFSM::transmit(EbusSequence& eSeq)
 	return (result);
 }
 
-const string libebus::EbusFSM::errorText(const int error)
+const string libebus::EbusFSM::errorText(const int error) const
 {
-	ostringstream errStr;
+	ostringstream ostr;
 
-	if (error < -10)
-		errStr << FSMErrors[error];
+	if (m_color == true)
+	{
+		if (error < -10)
+		{
+			ostr << libutils::color::red << FSMErrors[error] << libutils::color::reset;
+		}
+		else
+		{
+			if (error > 0)
+				ostr << libutils::color::yellow << EbusDevice::errorText(error) << libutils::color::reset;
+			else
+				ostr << libutils::color::red << EbusDevice::errorText(error) << libutils::color::reset;
+		}
+	}
 	else
-		errStr << Device::errorText(error);
+	{
+		if (error < -10)
+			ostr << FSMErrors[error];
+		else
+			ostr << EbusDevice::errorText(error);
+	}
 
-	return (errStr.str());
+	return (ostr.str());
 }
 
 long libebus::EbusFSM::getReopenTime() const
@@ -217,6 +234,16 @@ void libebus::EbusFSM::setDumpFileMaxSize(const long& dumpFileMaxSize)
 	m_dumpFileMaxSize = dumpFileMaxSize;
 }
 
+bool libebus::EbusFSM::getColor() const
+{
+	return (m_color);
+}
+
+void libebus::EbusFSM::setColor(const bool& color)
+{
+	m_color = color;
+}
+
 void libebus::EbusFSM::run()
 {
 	logInfo("EbusFSM started");
@@ -241,9 +268,13 @@ void libebus::EbusFSM::changeState(State* state)
 	if (m_state != state)
 	{
 		m_state = state;
-
 		ostringstream ostr;
-		ostr << libutils::color::cyan << m_state->toString() << libutils::color::reset;
+
+		if (m_color == true)
+			ostr << libutils::color::cyan << m_state->toString() << libutils::color::reset;
+		else
+			ostr << m_state->toString();
+
 		logDebug(ostr.str());
 	}
 }

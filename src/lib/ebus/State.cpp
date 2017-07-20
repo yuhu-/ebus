@@ -83,8 +83,7 @@ int libebus::State::read(EbusFSM* fsm, unsigned char& byte, const long sec, cons
 	if (result == DEV_OK)
 	{
 		ostringstream ostr;
-		ostr << nouppercase << hex << setw(2) << setfill('0') << static_cast<unsigned>(byte) << nouppercase
-			<< setw(0);
+		ostr << nouppercase << hex << setw(2) << setfill('0') << static_cast<unsigned>(byte) << nouppercase << setw(0);
 		fsm->logTrace("<" + ostr.str());
 	}
 
@@ -118,8 +117,7 @@ int libebus::State::write(EbusFSM* fsm, const unsigned char& byte)
 	if (result == DEV_OK)
 	{
 		ostringstream ostr;
-		ostr << nouppercase << hex << setw(2) << setfill('0') << static_cast<unsigned>(byte) << nouppercase
-			<< setw(0);
+		ostr << nouppercase << hex << setw(2) << setfill('0') << static_cast<unsigned>(byte) << nouppercase << setw(0);
 		fsm->logTrace(">" + ostr.str());
 	}
 	return (result);
@@ -134,7 +132,7 @@ int libebus::State::writeRead(EbusFSM* fsm, const unsigned char& byte, const lon
 		unsigned char readByte;
 		result = State::read(fsm, readByte, 0, timeout);
 
-		if (readByte != byte) fsm->logDebug(stateMessage(STATE_WRN_BYTE_DIF));
+		if (readByte != byte) fsm->logDebug(stateMessage(fsm, STATE_WRN_BYTE_DIF));
 	}
 
 	return (result);
@@ -162,18 +160,77 @@ void libebus::State::reset(EbusFSM* fsm)
 	}
 }
 
-const string libebus::State::stateMessage(const int state)
+const string libebus::State::stateMessage(EbusFSM* fsm, const int state)
 {
 	ostringstream ostr;
 
-	if (state < 11)
-		ostr << libutils::color::green << StateMessages[state];
-	else if (state < 21)
-		ostr << libutils::color::yellow << StateMessages[state];
-	else
-		ostr << libutils::color::red << StateMessages[state];
+	if (fsm->m_color == true)
+	{
+		if (state < 11)
+			ostr << libutils::color::green;
+		else if (state < 21)
+			ostr << libutils::color::yellow;
+		else
+			ostr << libutils::color::red;
 
-	ostr << libutils::color::reset;
+		ostr << StateMessages[state] << libutils::color::reset;
+	}
+	else
+	{
+		ostr << StateMessages[state];
+	}
+
+	return (ostr.str());
+}
+
+const string libebus::State::eSeqMessage(EbusFSM* fsm, EbusSequence& eSeq)
+{
+	ostringstream ostr;
+
+	if (fsm->m_color == true)
+	{
+		if (eSeq.getMasterState() == SEQ_OK)
+		{
+			if (eSeq.getType() == SEQ_TYPE_BC)
+			{
+				ostr << libutils::color::blue << "BC" << libutils::color::reset << " " << eSeq.toStringMaster();
+			}
+			else if (eSeq.getType() == SEQ_TYPE_MM)
+			{
+				ostr << libutils::color::cyan << "MM" << libutils::color::reset << " " << eSeq.toStringMaster() << " "
+					<< eSeq.toStringSlaveACK();
+			}
+			else
+			{
+				ostr << libutils::color::magenta << "MS" << libutils::color::reset << " " << eSeq.toStringMaster();
+
+				if (eSeq.getSlaveState() == SEQ_OK)
+					ostr << " " << eSeq.toStringSlave();
+				else
+					ostr << " " << libutils::color::red << eSeq.toStringSlave() << libutils::color::reset;
+			}
+
+		}
+		else
+		{
+			ostr << libutils::color::red << eSeq.toStringMaster() << libutils::color::reset;
+		}
+
+	}
+	else
+	{
+		if (eSeq.getMasterState() == SEQ_OK)
+		{
+			if (eSeq.getType() == SEQ_TYPE_BC)
+				ostr << "BC ";
+			else if (eSeq.getType() == SEQ_TYPE_MM)
+				ostr << "MM ";
+			else
+				ostr << "MS ";
+		}
+
+		ostr << eSeq.toString();
+	}
 
 	return (ostr.str());
 }

@@ -39,7 +39,7 @@ int libebus::RecvResponse::run(EbusFSM* fsm)
 		// check against max. possible size
 		if (byte > 0x10)
 		{
-			fsm->logWarn(stateMessage(STATE_ERR_NN_WRONG));
+			fsm->logWarn(stateMessage(fsm, STATE_ERR_NN_WRONG));
 			m_activeMessage->setState(FSM_ERR_TRANSMIT);
 
 			reset(fsm);
@@ -70,26 +70,26 @@ int libebus::RecvResponse::run(EbusFSM* fsm)
 		else
 			byte = SEQ_NAK;
 
-		eSeq.setMasterACK(byte);
-
 		// send ACK
 		result = writeRead(fsm, byte, 0);
 		if (result != DEV_OK) return (result);
 
+		eSeq.setMasterACK(byte);
+
 		if (eSeq.getSlaveState() == SEQ_OK)
 		{
-			fsm->logInfo(eSeq.toStringLog() + " done");
+			fsm->logInfo(eSeqMessage(fsm, eSeq) + " done");
 			break;
 		}
 
 		if (retry == 1)
 		{
 			seq.clear();
-			fsm->logDebug(stateMessage(STATE_WRN_RECV_RESP));
+			fsm->logDebug(stateMessage(fsm, STATE_WRN_RECV_RESP));
 		}
 		else
 		{
-			fsm->logWarn(stateMessage(STATE_ERR_RECV_RESP));
+			fsm->logWarn(stateMessage(fsm, STATE_ERR_RECV_RESP));
 			m_activeMessage->setState(FSM_ERR_TRANSMIT);
 		}
 	}
