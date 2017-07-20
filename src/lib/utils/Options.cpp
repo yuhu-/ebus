@@ -69,8 +69,7 @@ void libutils::Options::addText(const string& text, const int line)
 	option.shortname = "";
 	option.type = Type::t_text;
 	option.description = text;
-	for (int i = 0; i < line + 1; i++)
-		option.description += '\n';
+	option.line = line;
 
 	m_options.push_back(option);
 
@@ -379,6 +378,37 @@ bool libutils::Options::toStringOptions()
 		}
 
 		cerr << option.description;
+
+		if (option.type == Type::t_bool)
+		{
+			if (getBool(option.name) == true)
+				cerr << " [yes]";
+			else
+				cerr << " [no]";
+		}
+		else if (option.type == Type::t_hex)
+		{
+			cerr << " [" << hex << setw(2) << setfill('0') << getInt(option.name) << dec << "]";
+		}
+		else if (option.type == Type::t_int)
+		{
+			cerr << " [" << getInt(option.name) << "]";
+		}
+		else if (option.type == Type::t_long)
+		{
+			cerr << " [" << getLong(option.name) << "]";
+		}
+		else if (option.type == Type::t_float)
+		{
+			cerr << " [" << getFloat(option.name) << "]";
+		}
+		else if (option.type == Type::t_string)
+		{
+			cerr << " [" << getString(option.name) << "]";
+		}
+
+		for (int i = 0; i < option.line + 1; i++)
+			cerr << '\n';
 	}
 
 	cerr << endl << "   | --values";
@@ -460,8 +490,7 @@ void libutils::Options::add(const string& name, const string& shortname, const s
 	option.name = name;
 	option.shortname = shortname;
 	option.description = description;
-	for (int i = 0; i < line + 1; i++)
-		option.description += '\n';
+	option.line = line;
 	option.type = type;
 
 	m_options.push_back(option);

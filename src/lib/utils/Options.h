@@ -52,6 +52,7 @@ class Options
 		string name;
 		string shortname;
 		string description;
+		int line;
 		Type type;
 	};
 
