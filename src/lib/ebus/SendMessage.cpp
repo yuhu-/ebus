@@ -45,7 +45,7 @@ int libebus::SendMessage::run(EbusFSM* fsm)
 		// Broadcast ends here
 		if (eSeq.getType() == SEQ_TYPE_BC)
 		{
-			fsm->logInfo(eSeqMessage(fsm, eSeq) + " done");
+			fsm->logInfo(eSeqMessage(fsm, eSeq) + " transmitted");
 			fsm->changeState(FreeBus::getFreeBus());
 			break;
 		}
@@ -71,7 +71,7 @@ int libebus::SendMessage::run(EbusFSM* fsm)
 			// Master Master ends here
 			if (eSeq.getType() == SEQ_TYPE_MM)
 			{
-				fsm->logInfo(eSeqMessage(fsm, eSeq) + " done");
+				fsm->logInfo(eSeqMessage(fsm, eSeq) + " transmitted");
 				fsm->changeState(FreeBus::getFreeBus());
 			}
 			else

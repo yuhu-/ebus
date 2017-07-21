@@ -78,7 +78,7 @@ int libebus::RecvResponse::run(EbusFSM* fsm)
 
 		if (eSeq.getSlaveState() == SEQ_OK)
 		{
-			fsm->logInfo(eSeqMessage(fsm, eSeq) + " done");
+			fsm->logInfo(eSeqMessage(fsm, eSeq) + " transmitted");
 			break;
 		}
 
