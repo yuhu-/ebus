@@ -70,14 +70,14 @@ public:
 	unsigned char getMasterCRC() const;
 	int getMasterState() const;
 
-	void setMasterACK(const unsigned char byte);
+	void setSlaveACK(const unsigned char byte);
 
 	Sequence getSlave() const;
 	size_t getSlaveNN() const;
 	unsigned char getSlaveCRC() const;
 	int getSlaveState() const;
 
-	void setSlaveACK(const unsigned char byte);
+	void setMasterACK(const unsigned char byte);
 
 	void setType(const unsigned char byte);
 	int getType() const;
@@ -107,14 +107,16 @@ private:
 	Sequence m_master;
 	size_t m_masterNN = 0;
 	unsigned char m_masterCRC = 0;
-	unsigned char m_masterACK = 0;
 	int m_masterState = SEQ_EMPTY;
+
+	unsigned char m_slaveACK = 0;
 
 	Sequence m_slave;
 	size_t m_slaveNN = 0;
 	unsigned char m_slaveCRC = 0;
-	unsigned char m_slaveACK = 0;
 	int m_slaveState = SEQ_EMPTY;
+
+	unsigned char m_masterACK = 0;
 };
 
 } // namespace libebus

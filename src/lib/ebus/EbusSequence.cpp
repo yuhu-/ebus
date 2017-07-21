@@ -80,8 +80,7 @@ libebus::EbusSequence::EbusSequence(Sequence& seq)
 	if (m_type != SEQ_TYPE_BC)
 	{
 		m_slaveACK = seq[5 + m_masterNN + 1];
-		if (m_slaveACK != SEQ_ACK && m_slaveACK != SEQ_NAK) m_slaveState =
-		SEQ_ERR_ACK;
+		if (m_slaveACK != SEQ_ACK && m_slaveACK != SEQ_NAK) m_slaveState = SEQ_ERR_ACK;
 
 		// handle NAK from slave
 		if (m_slaveACK == SEQ_NAK)
@@ -95,8 +94,7 @@ libebus::EbusSequence::EbusSequence(Sequence& seq)
 			if (m_masterState != SEQ_OK) return;
 
 			m_slaveACK = seq[offset + 5 + m_masterNN + 1];
-			if (m_slaveACK != SEQ_ACK && m_slaveACK != SEQ_NAK) m_slaveState =
-			SEQ_ERR_ACK;
+			if (m_slaveACK != SEQ_ACK && m_slaveACK != SEQ_NAK) m_slaveState = SEQ_ERR_ACK;
 		}
 	}
 
@@ -106,8 +104,7 @@ libebus::EbusSequence::EbusSequence(Sequence& seq)
 		createSlave(slave);
 
 		m_masterACK = seq[(offset + 5 + m_masterNN + 3 + m_slaveNN + 1)];
-		if (m_masterACK != SEQ_ACK && m_masterACK != SEQ_NAK) m_masterState =
-		SEQ_ERR_ACK;
+		if (m_masterACK != SEQ_ACK && m_masterACK != SEQ_NAK) m_masterState = SEQ_ERR_ACK;
 
 		// handle NAK from master
 		if (m_masterACK == SEQ_NAK)
@@ -119,8 +116,7 @@ libebus::EbusSequence::EbusSequence(Sequence& seq)
 			createSlave(tmp);
 
 			m_masterACK = seq[(offset + 5 + m_masterNN + 3 + m_slaveNN + 1)];
-			if (m_masterACK != SEQ_ACK && m_masterACK != SEQ_NAK) m_masterState =
-			SEQ_ERR_ACK;
+			if (m_masterACK != SEQ_ACK && m_masterACK != SEQ_NAK) m_masterState = SEQ_ERR_ACK;
 		}
 	}
 }
@@ -203,8 +199,7 @@ void libebus::EbusSequence::createMaster(Sequence& seq)
 		m_master = Sequence(seq, 0, 5 + m_masterNN);
 		m_masterCRC = seq[5 + m_masterNN];
 
-		if (m_master.getCRC() != m_masterCRC) m_masterState =
-		SEQ_ERR_CRC;
+		if (m_master.getCRC() != m_masterCRC) m_masterState = SEQ_ERR_CRC;
 	}
 }
 
@@ -306,9 +301,9 @@ int libebus::EbusSequence::getMasterState() const
 	return (m_masterState);
 }
 
-void libebus::EbusSequence::setMasterACK(const unsigned char byte)
+void libebus::EbusSequence::setSlaveACK(const unsigned char byte)
 {
-	m_masterACK = byte;
+	m_slaveACK = byte;
 }
 
 Sequence libebus::EbusSequence::getSlave() const
@@ -331,9 +326,9 @@ int libebus::EbusSequence::getSlaveState() const
 	return (m_slaveState);
 }
 
-void libebus::EbusSequence::setSlaveACK(const unsigned char byte)
+void libebus::EbusSequence::setMasterACK(const unsigned char byte)
 {
-	m_slaveACK = byte;
+	m_masterACK = byte;
 }
 
 void libebus::EbusSequence::setType(const unsigned char byte)
