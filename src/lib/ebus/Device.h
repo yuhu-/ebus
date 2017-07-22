@@ -32,8 +32,8 @@ namespace libebus
 
 #define DEV_OK           0  // success
 
-#define DEV_ERR_OPEN    -1  // An error occurred while opening the eBus device
-#define DEV_ERR_VALID   -2  // The file descriptor of the eBus device is invalid
+#define DEV_ERR_OPEN    -1  // An error occurred while opening the ebus device
+#define DEV_ERR_VALID   -2  // The file descriptor of the ebus device is invalid
 #define DEV_ERR_RECV    -3  // An device error occurred while receiving data
 #define DEV_ERR_SEND    -4  // An device error occurred while sending data
 #define DEV_ERR_POLL    -5  // An device error occurred while waiting on ppoll

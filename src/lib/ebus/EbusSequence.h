@@ -29,13 +29,13 @@ namespace libebus
 
 #define SEQ_OK          0 // success
 
-#define SEQ_ERR_SHORT  -1 // sequence to short
-#define SEQ_ERR_LONG   -2 // sequence to long
-#define SEQ_ERR_BYTES  -3 // sequence to much data bytes
-#define SEQ_ERR_CRC    -4 // sequence CRC error
-#define SEQ_ERR_ACK    -5 // sequence ACK error
-#define SEQ_ERR_MASTER -6 // wrong master address
-#define SEQ_ERR_SLAVE  -7 // wrong slave address
+#define SEQ_ERR_SHORT  -1 // sequence is too short
+#define SEQ_ERR_LONG   -2 // sequence is too long
+#define SEQ_ERR_BYTES  -3 // sequence has too much data bytes
+#define SEQ_ERR_CRC    -4 // sequence has a CRC error
+#define SEQ_ERR_ACK    -5 // acknowledge byte is invalid
+#define SEQ_ERR_MASTER -6 // sequence source address is invalid
+#define SEQ_ERR_SLAVE  -7 // sequence target address is invalid
 
 #define SEQ_TYPE_BC     0 // broadcast
 #define SEQ_TYPE_MM     1 // master master

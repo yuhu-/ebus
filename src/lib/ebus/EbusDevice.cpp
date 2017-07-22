@@ -33,8 +33,8 @@ map<int, string> DeviceErrors =
 { DEV_WRN_EOF, "An EOF occurred while data was being received" },
 { DEV_WRN_TIMEOUT, "A timeout occurred while waiting for incoming data" },
 
-{ DEV_ERR_OPEN, "An error occurred while opening the eBus device" },
-{ DEV_ERR_VALID, "The file descriptor of the eBus device is invalid" },
+{ DEV_ERR_OPEN, "An error occurred while opening the ebus device" },
+{ DEV_ERR_VALID, "The file descriptor of the ebus device is invalid" },
 { DEV_ERR_RECV, "An device error occurred while receiving data" },
 { DEV_ERR_SEND, "An device error occurred while sending data" },
 { DEV_ERR_POLL, "An device error occurred while waiting on ppoll" } };

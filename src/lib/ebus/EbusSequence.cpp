@@ -39,13 +39,13 @@ map<int, string> SequenceErrors =
 {
 { SEQ_EMPTY, "sequence is empty" },
 
-{ SEQ_ERR_SHORT, "sequence to short" },
-{ SEQ_ERR_LONG, "sequence to long" },
-{ SEQ_ERR_BYTES, "sequence to much data bytes" },
-{ SEQ_ERR_CRC, "sequence CRC error" },
-{ SEQ_ERR_ACK, "sequence ACK error" },
-{ SEQ_ERR_MASTER, "wrong master address" },
-{ SEQ_ERR_SLAVE, "wrong slave address" }, };
+{ SEQ_ERR_SHORT, "sequence is too short" },
+{ SEQ_ERR_LONG, "sequence is too long" },
+{ SEQ_ERR_BYTES, "sequence has too much data bytes" },
+{ SEQ_ERR_CRC, "sequence has a CRC error" },
+{ SEQ_ERR_ACK, "acknowledge byte is invalid" },
+{ SEQ_ERR_MASTER, "sequence source address is invalid" },
+{ SEQ_ERR_SLAVE, "sequence target address is invalid" }, };
 
 libebus::EbusSequence::EbusSequence()
 {
@@ -56,14 +56,14 @@ libebus::EbusSequence::EbusSequence(Sequence& seq)
 	seq.reduce();
 	int offset = 0;
 
-	// sequence to short
+	// sequence is too short
 	if (seq.size() < 5)
 	{
 		m_masterState = SEQ_ERR_SHORT;
 		return;
 	}
 
-	// to much data bytes
+	// sequence has too much data bytes
 	if ((int) seq[4] > 16)
 	{
 		m_masterState = SEQ_ERR_BYTES;
@@ -80,6 +80,7 @@ libebus::EbusSequence::EbusSequence(Sequence& seq)
 	if (m_type != SEQ_TYPE_BC)
 	{
 		m_slaveACK = seq[5 + m_masterNN + 1];
+		// acknowledge byte is invalid
 		if (m_slaveACK != SEQ_ACK && m_slaveACK != SEQ_NAK) m_slaveState = SEQ_ERR_ACK;
 
 		// handle NAK from slave
@@ -94,6 +95,7 @@ libebus::EbusSequence::EbusSequence(Sequence& seq)
 			if (m_masterState != SEQ_OK) return;
 
 			m_slaveACK = seq[offset + 5 + m_masterNN + 1];
+			// acknowledge byte is invalid
 			if (m_slaveACK != SEQ_ACK && m_slaveACK != SEQ_NAK) m_slaveState = SEQ_ERR_ACK;
 		}
 	}
@@ -104,6 +106,7 @@ libebus::EbusSequence::EbusSequence(Sequence& seq)
 		createSlave(slave);
 
 		m_masterACK = seq[(offset + 5 + m_masterNN + 3 + m_slaveNN + 1)];
+		// acknowledge byte is invalid
 		if (m_masterACK != SEQ_ACK && m_masterACK != SEQ_NAK) m_masterState = SEQ_ERR_ACK;
 
 		// handle NAK from master
@@ -116,6 +119,7 @@ libebus::EbusSequence::EbusSequence(Sequence& seq)
 			createSlave(tmp);
 
 			m_masterACK = seq[(offset + 5 + m_masterNN + 3 + m_slaveNN + 1)];
+			// acknowledge byte is invalid
 			if (m_masterACK != SEQ_ACK && m_masterACK != SEQ_NAK) m_masterState = SEQ_ERR_ACK;
 		}
 	}
@@ -149,35 +153,35 @@ void libebus::EbusSequence::createMaster(Sequence& seq)
 {
 	m_masterState = SEQ_OK;
 
-	// sequence to short
+	// sequence is too short
 	if (seq.size() < 5)
 	{
 		m_masterState = SEQ_ERR_SHORT;
 		return;
 	}
 
-	// master sequence to long
+	// sequence is too long
 	if (seq.size() > (size_t) (5 + seq[4] + 1))
 	{
 		m_masterState = SEQ_ERR_LONG;
 		return;
 	}
 
-	// to much data bytes
+	// sequence has too much data bytes
 	if ((int) seq[4] > 16)
 	{
 		m_masterState = SEQ_ERR_BYTES;
 		return;
 	}
 
-	// wrong master address
+	// sequence source address is invalid
 	if (isMaster(seq[0]) == false)
 	{
 		m_masterState = SEQ_ERR_MASTER;
 		return;
 	}
 
-	// wrong slave address
+	// sequence target address is invalid
 	if (isAddressValid(seq[1]) == false)
 	{
 		m_masterState = SEQ_ERR_SLAVE;
@@ -199,6 +203,7 @@ void libebus::EbusSequence::createMaster(Sequence& seq)
 		m_master = Sequence(seq, 0, 5 + m_masterNN);
 		m_masterCRC = seq[5 + m_masterNN];
 
+		// sequence has a CRC error
 		if (m_master.getCRC() != m_masterCRC) m_masterState = SEQ_ERR_CRC;
 	}
 }
@@ -214,21 +219,21 @@ void libebus::EbusSequence::createSlave(Sequence& seq)
 {
 	m_slaveState = SEQ_OK;
 
-	// sequence to short
+	// sequence is too short
 	if (seq.size() < 2)
 	{
 		m_slaveState = SEQ_ERR_SHORT;
 		return;
 	}
 
-	// slave sequence to long
+	// sequence is too long
 	if (seq.size() > (size_t) (1 + seq[0] + 1))
 	{
 		m_slaveState = SEQ_ERR_LONG;
 		return;
 	}
 
-	// to much data bytes
+	// sequence has too much data bytes
 	if (seq[0] > 16)
 	{
 		m_slaveState = SEQ_ERR_BYTES;
@@ -247,6 +252,7 @@ void libebus::EbusSequence::createSlave(Sequence& seq)
 		m_slave = Sequence(seq, 0, 1 + m_slaveNN);
 		m_slaveCRC = seq[1 + m_slaveNN];
 
+		// sequence has a CRC error
 		if (m_slave.getCRC() != m_slaveCRC) m_slaveState = SEQ_ERR_CRC;
 	}
 }
@@ -405,7 +411,7 @@ const string libebus::EbusSequence::toStringMasterError()
 	ostringstream ostr;
 	if (m_master.size() > 0) ostr << "'" << m_master.toString() << "' ";
 
-	ostr << "ERROR master " << errorText(m_masterState);
+	ostr << "The master " << errorText(m_masterState);
 
 	return (ostr.str());
 }
@@ -446,7 +452,7 @@ const string libebus::EbusSequence::toStringSlaveError()
 	ostringstream ostr;
 	if (m_slave.size() > 0) ostr << "'" << m_slave.toString() << "' ";
 
-	ostr << "ERROR slave " << errorText(m_slaveState);
+	ostr << "The slave " << errorText(m_slaveState);
 
 	return (ostr.str());
 }

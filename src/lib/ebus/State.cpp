@@ -52,20 +52,20 @@ map<int, string> StateMessages =
 { STATE_WRN_ARB_LOST, "arbitration lost" },
 { STATE_WRN_PRI_FIT, "priority class fit -> retry" },
 { STATE_WRN_PRI_LOST, "priority class lost" },
-{ STATE_WRN_ACK_NEG, "received ACK byte is negative -> retry" },
+{ STATE_WRN_ACK_NEG, "received acknowledge byte is negative -> retry" },
 { STATE_WRN_RECV_RESP, "received response is invalid -> retry" },
 { STATE_WRN_RECV_MSG, "at me addressed message is invalid" },
 { STATE_WRN_NOT_DEF, "at me addressed message is undefined" },
 { STATE_WRN_NO_FUNC, "function not implemented" },
 
 { STATE_ERR_LOCK_FAIL, "lock ebus failed" },
-{ STATE_ERR_ACK_NEG, "received ACK byte is negative -> failed" },
-{ STATE_ERR_ACK_WRONG, "received ACK byte is wrong" },
-{ STATE_ERR_NN_WRONG, "received NN byte is wrong" },
+{ STATE_ERR_ACK_NEG, "received acknowledge byte is negative -> failed" },
+{ STATE_ERR_ACK_WRONG, "received acknowledge byte is wrong" },
+{ STATE_ERR_NN_WRONG, "received size byte is wrong" },
 { STATE_ERR_RECV_RESP, "received response is invalid -> failed" },
 { STATE_ERR_RESP_CREA, "creating response message failed" },
 { STATE_ERR_RESP_SEND, "sending response message failed" },
-{ STATE_ERR_BAD_TYPE, "the received message type does not allow an answer" } };
+{ STATE_ERR_BAD_TYPE, "received message type does not allow an answer" } };
 
 libebus::State::~State()
 {
