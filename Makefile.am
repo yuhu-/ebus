@@ -1,10 +1,5 @@
-SUBDIRS = src/lib/utils \
-	  src/lib/logger \
-	  src/lib/network \
-	  src/lib/ebus \
-	  src/lib/ebus/test \
-	  src/ebuscpp \
-	  src/tools
+SUBDIRS = src \
+	  example
 
 distclean-local:
 	-rm -rf autom4te.cache
@@ -13,4 +8,4 @@ distclean-local:
 	-rm -f configure
 	-rm -f Makefile.in
 	-rm -rf build
-	-rm -rf src/lib/.deps
+	-rm -rf src/.deps

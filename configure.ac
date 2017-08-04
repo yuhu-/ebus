@@ -1,10 +1,5 @@
 AC_PREREQ([2.68])
-AC_INIT([ebuscpp], [0.0.1], [roland.jax@liwest.at], [ebuscpp], [https://github.com/yuhu-/ebuscpp])
-
-case "$@" in
-	*"--sysconfdir="*) ;;
-	*) sysconfdir=/etc ;;
-esac
+AC_INIT([ebusfsm], [0.1.0], [roland.jax@liwest.at], [ebusfsm], [https://github.com/yuhu-/ebusfsm])
 
 if test -z $CXXFLAGS;
 	then CXXFLAGS='-g -O2'
@@ -13,16 +8,11 @@ AC_PROG_CXX
 
 AC_CONFIG_AUX_DIR([build])
 
-AC_CONFIG_SRCDIR([src/ebuscpp/EbusProxy.cpp])
+AC_CONFIG_SRCDIR([src/EbusFSM.cpp])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES([Makefile
-		 src/lib/utils/Makefile
-		 src/lib/logger/Makefile
-		 src/lib/network/Makefile
-		 src/lib/ebus/Makefile
-		 src/lib/ebus/test/Makefile
-		 src/ebuscpp/Makefile
-		 src/tools/Makefile])
+		 src/Makefile
+		 example/Makefile])
 
 AM_INIT_AUTOMAKE([1.11 -Wall -Werror foreign subdir-objects])
 
