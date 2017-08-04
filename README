@@ -16,9 +16,6 @@ provides the ability to interact with ebus as master (active) or slave (passive)
   * EbusFSM:      Represents the FSM it selfs which can be act as passive or active ebus
                   participant.
 
-  * EbusProcess:  A base class for derivation as a process thread for the coupling of FSM to
-                  active / passive Ebus message handling
-
   * IEbusLogger:  Is a simple logger interface for internal messages of FSM.
 
 

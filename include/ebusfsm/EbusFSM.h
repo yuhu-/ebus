@@ -22,7 +22,7 @@
 
 #include <IEbusLogger.h>
 #include <EbusDevice.h>
-#include <Message.h>
+#include <base/Message.h>
 #include <utils/NQueue.h>
 
 #include <fstream>

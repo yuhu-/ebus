@@ -31,13 +31,13 @@ libebusfsm_a_SOURCES = Device.cpp \
 libebusfsm_a_INCLUDES = utils/Notify.h \
 			utils/Color.h \
 			utils/NQueue.h \
-			Device.h \
+			base/Device.h \
 		        SerialDevice.h \
 		        NetworkDevice.h \
 		        EbusDevice.h \
-		        Sequence.h \
+		        base/Sequence.h \
 		        EbusSequence.h \
-		        Message.h \
+		        base/Message.h \
 		        State.h \
 		        OnError.h \
 		        Idle.h \
