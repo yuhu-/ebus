@@ -47,7 +47,7 @@ enum class Reaction
 
 class State;
 
-class EbusFSM : public Notify
+class EbusFSM : private Notify
 {
 	friend class State;
 	friend class OnError;
