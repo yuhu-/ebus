@@ -13,7 +13,7 @@ Makefile.in
 *.dirstamp
 /example/demo_ebusdevice
 /example/demo_ebussequence
-/examble/demo_ebusfsm
+/example/demo_ebusfsm
 .cproject
 .project
 .settings
