@@ -1,57 +1,56 @@
 AM_CXXFLAGS = -fpic \
 	      -Wall \
 	      -Wextra \
-	      -std=c++14 \
-	      -isystem$(top_srcdir)/include/ebusfsm
+	      -std=c++14
 
-noinst_LIBRARIES = libebusfsm.a
+lib_LTLIBRARIES = libebusfsm.la
 
-libebusfsm_a_SOURCES = Device.cpp \
-		       SerialDevice.cpp \
-		       NetworkDevice.cpp \
-		       EbusDevice.cpp \
-		       EbusCommon.cpp \
-		       Sequence.cpp \
-		       EbusSequence.cpp \
-		       Message.cpp \
-		       State.cpp \
-		       OnError.cpp \
-		       Idle.cpp \
-		       Connect.cpp \
-		       Listen.cpp \
-		       LockBus.cpp \
-		       FreeBus.cpp \
-		       EvalMessage.cpp \
-		       SendMessage.cpp \
-		       RecvMessage.cpp \
-		       SendResponse.cpp \
-		       RecvResponse.cpp \
-		       EbusFSM.cpp
+libebusfsm_la_LDFLAGS = -version-info $(EBUSFSM_SO_VERSION) \
+			-lpthread
 
-libebusfsm_a_INCLUDES = utils/Notify.h \
-			utils/Color.h \
-			utils/NQueue.h \
-			base/Device.h \
-		        SerialDevice.h \
-		        NetworkDevice.h \
-		        EbusDevice.h \
-		        base/Sequence.h \
-		        EbusSequence.h \
-		        base/Message.h \
-		        State.h \
-		        OnError.h \
-		        Idle.h \
-		        Connect.h \
-		        Listen.h \
-		        LockBus.h \
-		        FreeBus.h \
-		        EvalMessage.h \
-		        SendMessage.h \
-		        RecvMessage.h \
-		        SendResponse.h \
-		        RecvResponse.h \
-		        IEbusLogger.h \
-		        EbusFSM.h
+libebusfsm_la_SOURCES = Notify.h \
+			Color.h \
+			NQueue.h \
+			Message.cpp Message.h \
+			EbusCommon.cpp EbusCommon.h \
+			Device.cpp Device.h \
+			SerialDevice.cpp SerialDevice.h \
+			NetworkDevice.cpp NetworkDevice.h \
+			EbusDevice.cpp EbusDevice.h \
+			Sequence.cpp Sequence.h \
+			EbusSequence.cpp EbusSequence.h \
+			State.cpp State.h \
+			OnError.cpp OnError.h \
+			Idle.cpp Idle.h \
+			Connect.cpp Connect.h \
+			Listen.cpp Listen.h \
+			LockBus.cpp LockBus.h \
+			FreeBus.cpp FreeBus.h \
+			EvalMessage.cpp EvalMessage.h \
+			SendMessage.cpp SendMessage.h \
+			RecvMessage.cpp RecvMessage.h \
+			SendResponse.cpp SendResponse.h \
+			RecvResponse.cpp RecvResponse.h \
+			EbusFSM.cpp EbusFSM.h \
+			IEbusLogger.h
+
+libebusfsm_includedir = $(includedir)/ebusfsm-$(EBUSFSM_API_VERSION)
+
+libebusfsm_include_HEADERS = \
+			Notify.h \
+			Color.h \
+			NQueue.h \
+			Device.h \
+			Sequence.h \
+			Message.h \
+			EbusDevice.h \
+			EbusCommon.h \
+			EbusSequence.h \
+			EbusFSM.h \
+			IEbusLogger.h
+
+uninstall-hook:
+	-rmdir $(libebusfsm_includedir)
 
 distclean-local:
 	-rm -f Makefile.in

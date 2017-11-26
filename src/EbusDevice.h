@@ -20,7 +20,7 @@
 #ifndef EBUSFSM_EBUSDEVICE_H
 #define EBUSFSM_EBUSDEVICE_H
 
-#include <base/Device.h>
+#include <Device.h>
 
 #include <queue>
 #include <memory>

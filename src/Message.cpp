@@ -17,7 +17,7 @@
  * along with ebusfsm. If not, see http://www.gnu.org/licenses/.
  */
 
-#include <base/Message.h>
+#include <Message.h>
 
 #include <sstream>
 

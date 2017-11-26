@@ -21,7 +21,7 @@
 #define EBUSFSM_MESSAGE_H
 
 #include <EbusSequence.h>
-#include <utils/Notify.h>
+#include <Notify.h>
 
 namespace ebusfsm
 {

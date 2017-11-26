@@ -20,7 +20,7 @@
 #ifndef EBUSFSM_NETWORKDEVICE_H
 #define EBUSFSM_NETWORKDEVICE_H
 
-#include <base/Device.h>
+#include <Device.h>
 
 namespace ebusfsm
 {

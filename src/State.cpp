@@ -19,7 +19,7 @@
 
 #include <State.h>
 #include <EbusFSM.h>
-#include <utils/Color.h>
+#include <Color.h>
 
 #include <iomanip>
 #include <map>

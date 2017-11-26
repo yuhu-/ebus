@@ -17,7 +17,7 @@
  * along with ebusfsm. If not, see http://www.gnu.org/licenses/.
  */
 
-#include <base/Device.h>
+#include <Device.h>
 
 #include <cstring>
 #include <sstream>

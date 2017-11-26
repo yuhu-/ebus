@@ -1,6 +1,7 @@
 /INSTALL
 Makefile
 Makefile.in
+libtool
 /build/*
 /aclocal.m4
 /autom4te.cache/
@@ -9,11 +10,14 @@ Makefile.in
 /stamp-h?
 .deps/
 *.o
-*.a
+*.lo
+*.la
 *.dirstamp
+/src/.libs/
 /example/demo_ebusdevice
 /example/demo_ebussequence
 /example/demo_ebusfsm
+/example/.libs/
 .cproject
 .project
 .settings

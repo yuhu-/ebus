@@ -22,8 +22,8 @@
 
 #include <IEbusLogger.h>
 #include <EbusDevice.h>
-#include <base/Message.h>
-#include <utils/NQueue.h>
+#include <Message.h>
+#include <NQueue.h>
 
 #include <fstream>
 #include <thread>
