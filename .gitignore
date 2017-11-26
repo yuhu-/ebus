@@ -2,6 +2,7 @@
 Makefile
 Makefile.in
 libtool
+/m4/*
 /build/*
 /aclocal.m4
 /autom4te.cache/
@@ -18,6 +19,7 @@ libtool
 /example/demo_ebussequence
 /example/demo_ebusfsm
 /example/.libs/
+ebusfsm.pc
 .cproject
 .project
 .settings

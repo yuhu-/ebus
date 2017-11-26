@@ -14,3 +14,4 @@ distclean-local:
 	-rm -f Makefile.in
 	-rm -rf build
 	-rm -rf src/.deps
+	-rm -rf m4
