@@ -17,57 +17,32 @@
  * along with ebusfsm. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef EBUSFSM_UTILS_NQUEUE_H
-#define EBUSFSM_UTILS_NQUEUE_H
+#ifndef EBUSFSM_MESSAGE_H
+#define EBUSFSM_MESSAGE_H
 
-#include <queue>
-#include <mutex>
-#include <condition_variable>
+#include <EbusSequence.h>
+#include <utils/Notify.h>
 
 namespace ebusfsm
 {
 
-template<typename T>
-class NQueue
+class Message : public Notify
 {
 
 public:
-	NQueue()
-		: m_queue(), m_mutex(), m_condition()
-	{
-	}
+	explicit Message(EbusSequence& eSeq);
 
-	void enqueue(T item)
-	{
-		std::lock_guard<std::mutex> lock(m_mutex);
-		m_queue.push(item);
-		m_condition.notify_one();
-	}
+	EbusSequence& getEbusSequence();
 
-	T dequeue()
-	{
-		std::unique_lock<std::mutex> lock(m_mutex);
-		while (m_queue.empty() == true)
-			m_condition.wait(lock);
-
-		T val = m_queue.front();
-		m_queue.pop();
-		return (val);
-	}
-
-	size_t size()
-	{
-		std::unique_lock<std::mutex> lock(m_mutex);
-		return (m_queue.size());
-	}
+	void setState(int state);
+	int getState();
 
 private:
-	std::queue<T> m_queue;
-	std::mutex m_mutex;
-	std::condition_variable m_condition;
+	EbusSequence& m_ebusSequence;
+	int m_state = 0;
 
 };
 
 } // namespace ebusfsm
 
-#endif // EBUSFSM_UTILS_NQUEUE_H
+#endif // EBUSFSM_MESSAGE_H

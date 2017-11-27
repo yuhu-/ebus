@@ -2,7 +2,8 @@ AM_CXXFLAGS = -fpic \
 	      -Wall \
 	      -Wextra \
 	      -std=c++14 \
-	      -isystem$(top_srcdir)/src
+	      -isystem$(top_srcdir)/src \
+	      -isystem$(top_srcdir)/include/ebusfsm
 
 noinst_PROGRAMS = demo_ebusdevice \
 		  demo_ebussequence \

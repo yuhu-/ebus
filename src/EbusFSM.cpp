@@ -23,7 +23,7 @@
 #include <Idle.h>
 #include <OnError.h>
 #include <State.h>
-#include <Color.h>
+#include <utils/Color.h>
 
 #include <sstream>
 #include <algorithm>

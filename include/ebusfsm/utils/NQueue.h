@@ -17,49 +17,57 @@
  * along with ebusfsm. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef EBUSFSM_UTILS_NOTIFY_H
-#define EBUSFSM_UTILS_NOTIFY_H
+#ifndef EBUSFSM_NQUEUE_H
+#define EBUSFSM_NQUEUE_H
 
+#include <queue>
 #include <mutex>
 #include <condition_variable>
 
 namespace ebusfsm
 {
 
-class Notify
+template<typename T>
+class NQueue
 {
 
 public:
-	Notify()
-		: m_mutex(), m_condition()
+	NQueue()
+		: m_queue(), m_mutex(), m_condition()
 	{
 	}
 
-	void waitNotify()
-	{
-		std::unique_lock<std::mutex> lock(m_mutex);
-		while (m_notify == false)
-		{
-			m_condition.wait(lock);
-			m_notify = false;
-			break;
-		}
-	}
-
-	void notify()
+	void enqueue(T item)
 	{
 		std::lock_guard<std::mutex> lock(m_mutex);
-		m_notify = true;
+		m_queue.push(item);
 		m_condition.notify_one();
 	}
 
+	T dequeue()
+	{
+		std::unique_lock<std::mutex> lock(m_mutex);
+		while (m_queue.empty() == true)
+			m_condition.wait(lock);
+
+		T val = m_queue.front();
+		m_queue.pop();
+		return (val);
+	}
+
+	size_t size()
+	{
+		std::unique_lock<std::mutex> lock(m_mutex);
+		return (m_queue.size());
+	}
+
 private:
+	std::queue<T> m_queue;
 	std::mutex m_mutex;
 	std::condition_variable m_condition;
-	bool m_notify = false;
 
 };
 
 } // namespace ebusfsm
 
-#endif // EBUSFSM_UTILS_NOTIFY_H
+#endif // EBUSFSM_NQUEUE_H

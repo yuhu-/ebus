@@ -17,32 +17,49 @@
  * along with ebusfsm. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef EBUSFSM_MESSAGE_H
-#define EBUSFSM_MESSAGE_H
+#ifndef EBUSFSM_NOTIFY_H
+#define EBUSFSM_NOTIFY_H
 
-#include <EbusSequence.h>
-#include <Notify.h>
+#include <mutex>
+#include <condition_variable>
 
 namespace ebusfsm
 {
 
-class Message : public Notify
+class Notify
 {
 
 public:
-	explicit Message(EbusSequence& eSeq);
+	Notify()
+		: m_mutex(), m_condition()
+	{
+	}
 
-	EbusSequence& getEbusSequence();
+	void waitNotify()
+	{
+		std::unique_lock<std::mutex> lock(m_mutex);
+		while (m_notify == false)
+		{
+			m_condition.wait(lock);
+			m_notify = false;
+			break;
+		}
+	}
 
-	void setState(int state);
-	int getState();
+	void notify()
+	{
+		std::lock_guard<std::mutex> lock(m_mutex);
+		m_notify = true;
+		m_condition.notify_one();
+	}
 
 private:
-	EbusSequence& m_ebusSequence;
-	int m_state = 0;
+	std::mutex m_mutex;
+	std::condition_variable m_condition;
+	bool m_notify = false;
 
 };
 
 } // namespace ebusfsm
 
-#endif // EBUSFSM_MESSAGE_H
+#endif // EBUSFSM_NOTIFY_H

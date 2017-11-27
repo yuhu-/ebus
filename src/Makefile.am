@@ -1,7 +1,8 @@
 AM_CXXFLAGS = -fpic \
 	      -Wall \
 	      -Wextra \
-	      -std=c++14
+	      -std=c++14 \
+	      -isystem$(top_srcdir)/include/ebusfsm
 
 lib_LTLIBRARIES = libebusfsm.la
 
@@ -33,21 +34,6 @@ libebusfsm_la_SOURCES = Notify.h \
 			RecvResponse.cpp RecvResponse.h \
 			EbusFSM.cpp EbusFSM.h \
 			IEbusLogger.h
-
-pkginclude_HEADERS = Notify.h \
-		     Color.h \
-		     NQueue.h \
-		     Device.h \
-		     Sequence.h \
-		     Message.h \
-		     EbusDevice.h \
-		     EbusCommon.h \
-		     EbusSequence.h \
-		     EbusFSM.h \
-		     IEbusLogger.h
-
-uninstall-hook:
-	-rmdir $(pkgincludedir)
 
 distclean-local:
 	-rm -f Makefile.in
