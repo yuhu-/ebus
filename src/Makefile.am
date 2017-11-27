@@ -34,23 +34,20 @@ libebusfsm_la_SOURCES = Notify.h \
 			EbusFSM.cpp EbusFSM.h \
 			IEbusLogger.h
 
-libebusfsm_includedir = $(includedir)/ebusfsm-$(EBUSFSM_API_VERSION)
-
-libebusfsm_include_HEADERS = \
-			Notify.h \
-			Color.h \
-			NQueue.h \
-			Device.h \
-			Sequence.h \
-			Message.h \
-			EbusDevice.h \
-			EbusCommon.h \
-			EbusSequence.h \
-			EbusFSM.h \
-			IEbusLogger.h
+pkginclude_HEADERS = Notify.h \
+		     Color.h \
+		     NQueue.h \
+		     Device.h \
+		     Sequence.h \
+		     Message.h \
+		     EbusDevice.h \
+		     EbusCommon.h \
+		     EbusSequence.h \
+		     EbusFSM.h \
+		     IEbusLogger.h
 
 uninstall-hook:
-	-rmdir $(libebusfsm_includedir)
+	-rmdir $(pkgincludedir)
 
 distclean-local:
 	-rm -f Makefile.in
