@@ -7,5 +7,5 @@ Name: @PACKAGE_NAME@
 Description: C++ ebus communication library.
 Version: @PACKAGE_VERSION@
 URL: @PACKAGE_URL@
-Libs: -L${libdir} -lebusfsm-@EBUSFSM_API_VERSION@
-Cflags: -I${includedir}/ebusfsm-@EBUSFSM_API_VERSION@/
+Libs: -L${libdir} -lebusfsm
+Cflags: -I${includedir}/@PACKAGE@
