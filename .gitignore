@@ -14,11 +14,10 @@ libtool
 *.lo
 *.la
 *.dirstamp
-/src/.libs/
-/example/demo_ebusdevice
-/example/demo_ebussequence
-/example/demo_ebusfsm
-/example/.libs/
+/examples/demo_ebusdevice
+/examples/demo_ebussequence
+/examples/demo_ebusfsm
+*.libs/
 ebusfsm.pc
 .cproject
 .project

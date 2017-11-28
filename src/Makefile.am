@@ -9,31 +9,43 @@ lib_LTLIBRARIES = libebusfsm.la
 libebusfsm_la_LDFLAGS = -version-info $(EBUSFSM_SO_VERSION) \
 			-lpthread
 
-libebusfsm_la_SOURCES = Notify.h \
-			Color.h \
-			NQueue.h \
-			Message.cpp Message.h \
-			EbusCommon.cpp EbusCommon.h \
-			Device.cpp Device.h \
-			SerialDevice.cpp SerialDevice.h \
-			NetworkDevice.cpp NetworkDevice.h \
-			EbusDevice.cpp EbusDevice.h \
-			Sequence.cpp Sequence.h \
-			EbusSequence.cpp EbusSequence.h \
-			State.cpp State.h \
-			OnError.cpp OnError.h \
-			Idle.cpp Idle.h \
-			Connect.cpp Connect.h \
-			Listen.cpp Listen.h \
-			LockBus.cpp LockBus.h \
-			FreeBus.cpp FreeBus.h \
-			EvalMessage.cpp EvalMessage.h \
-			SendMessage.cpp SendMessage.h \
-			RecvMessage.cpp RecvMessage.h \
-			SendResponse.cpp SendResponse.h \
-			RecvResponse.cpp RecvResponse.h \
-			EbusFSM.cpp EbusFSM.h \
-			IEbusLogger.h
+libebusfsm_la_SOURCES = Message.cpp \
+			EbusCommon.cpp \
+			Device.cpp \
+			SerialDevice.cpp \
+			NetworkDevice.cpp \
+			EbusDevice.cpp  \
+			Sequence.cpp \
+			EbusSequence.cpp \
+			State.cpp \
+			OnError.cpp \
+			Idle.cpp \
+			Connect.cpp \
+			Listen.cpp \
+			LockBus.cpp \
+			FreeBus.cpp \
+			EvalMessage.cpp \
+			SendMessage.cpp \
+			RecvMessage.cpp \
+			SendResponse.cpp \
+			RecvResponse.cpp \
+			EbusFSM.cpp
+
+EXTRA_DIST = SerialDevice.h \
+	     NetworkDevice.h \
+	     State.h \
+	     OnError.h \
+	     Idle.h \
+	     Connect.h \
+	     Listen.h \
+	     LockBus.h \
+	     FreeBus.h \
+	     EvalMessage.h \
+	     SendMessage.h \
+	     RecvMessage.h \
+	     SendResponse.h \
+	     RecvResponse.h
+
 
 distclean-local:
 	-rm -f Makefile.in

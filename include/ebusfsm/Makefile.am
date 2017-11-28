@@ -8,6 +8,12 @@ libebusfsminclude_HEADERS = EbusCommon.h \
 			    EbusFSM.h \
 			    IEbusLogger.h
 
+EXTRA_DIST = EbusCommon.h \
+	     EbusDevice.h \
+	     EbusSequence.h \
+	     EbusFSM.h \
+	     IEbusLogger.h
+
 uninstall-hook:
 	-rmdir $(libebusfsmincludedir)
 
