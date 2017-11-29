@@ -114,7 +114,6 @@ private:
 
 	const unsigned char m_address;                   // ebus master address
 	const unsigned char m_slaveAddress;              // ebus slave address
-	bool m_master = false;                           // true if FSM worked as master and slave
 
 	long m_reopenTime = 60;                          // max. time to open ebus device [s]
 	long m_arbitrationTime = 5000;                   // waiting time for arbitration test [us]
