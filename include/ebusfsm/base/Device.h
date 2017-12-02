@@ -17,8 +17,8 @@
  * along with ebusfsm. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef EBUSFSM_DEVICE_H
-#define EBUSFSM_DEVICE_H
+#ifndef EBUSFSM_BASE_DEVICE_H
+#define EBUSFSM_BASE_DEVICE_H
 
 #include <string>
 
@@ -64,4 +64,4 @@ private:
 
 } // namespace ebusfsm
 
-#endif // EBUSFSM_DEVICE_H
+#endif // EBUSFSM_BASE_DEVICE_H

@@ -17,8 +17,8 @@
  * along with ebusfsm. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef EBUSFSM_COLOR_H
-#define EBUSFSM_COLOR_H
+#ifndef EBUSFSM_UTILS_COLOR_H
+#define EBUSFSM_UTILS_COLOR_H
 
 #include <iostream>
 
@@ -31,7 +31,7 @@ namespace color
 
 inline bool istty(const std::ostream& ostr)
 {
-	FILE* file = nullptr;
+	std::FILE* file = nullptr;
 
 	if (&ostr == &std::cout)
 		file = stdout;
@@ -108,4 +108,4 @@ inline std::ostream& white(std::ostream& ostr)
 } // namespace color
 } // namespace ebusfsm
 
-#endif // EBUSFSM_COLOR_H
+#endif // EBUSFSM_UTILS_COLOR_H

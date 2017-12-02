@@ -17,8 +17,8 @@
  * along with ebusfsm. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef EBUSFSM_NQUEUE_H
-#define EBUSFSM_NQUEUE_H
+#ifndef EBUSFSM_UTILS_NQUEUE_H
+#define EBUSFSM_UTILS_NQUEUE_H
 
 #include <queue>
 #include <mutex>
@@ -70,4 +70,4 @@ private:
 
 } // namespace ebusfsm
 
-#endif // EBUSFSM_NQUEUE_H
+#endif // EBUSFSM_UTILS_NQUEUE_H

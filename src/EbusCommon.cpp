@@ -78,7 +78,7 @@ bool ebusfsm::isHex(const std::string& str, std::ostringstream& result, const in
 
 	for (size_t i = 0; i < str.size(); ++i)
 	{
-		if (isxdigit(str[i]) == false)
+		if (std::isxdigit(str[i]) == false)
 		{
 			result << "invalid char '" << str[i] << "'";
 			return (false);

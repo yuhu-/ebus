@@ -57,7 +57,7 @@ int ebusfsm::NetworkDevice::openDevice(const std::string& device, const bool dev
 
 	freeaddrinfo(servinfo);
 
-	address.sin_port = htons(strtol(port.c_str(), nullptr, 10));
+	address.sin_port = htons(std::strtol(port.c_str(), nullptr, 10));
 
 	m_fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (m_fd < 0) return (DEV_ERR_OPEN);
