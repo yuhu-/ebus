@@ -121,8 +121,8 @@ private:
 
 	unsigned char m_masterACK = 0;
 
-	int checkMasterSequence(Sequence& seq);
-	int checkSlaveSequence(Sequence& seq);
+	static int checkMasterSequence(Sequence& seq);
+	static int checkSlaveSequence(Sequence& seq);
 };
 
 } // namespace ebusfsm
