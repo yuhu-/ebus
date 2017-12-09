@@ -39,6 +39,8 @@ std::map<int, std::string> StateMessages =
 { STATE_INF_EBUS_FREE, "ebus freed" },
 { STATE_INF_MSG_INGORE, "message ignored" },
 { STATE_INF_DEV_FLUSH, "device flushed" },
+{ STATE_INF_NOT_DEF, "at me addressed message is undefined" },
+{ STATE_INF_NO_FUNC, "function not implemented" },
 
 { STATE_WRN_BYTE_DIF, "written/read byte difference" },
 { STATE_WRN_ARB_LOST, "arbitration lost" },
@@ -47,8 +49,6 @@ std::map<int, std::string> StateMessages =
 { STATE_WRN_ACK_NEG, "received acknowledge byte is negative -> retry" },
 { STATE_WRN_RECV_RESP, "received response is invalid -> retry" },
 { STATE_WRN_RECV_MSG, "at me addressed message is invalid" },
-{ STATE_WRN_NOT_DEF, "at me addressed message is undefined" },
-{ STATE_WRN_NO_FUNC, "function not implemented" },
 
 { STATE_ERR_LOCK_FAIL, "lock ebus failed" },
 { STATE_ERR_ACK_NEG, "received acknowledge byte is negative -> failed" },

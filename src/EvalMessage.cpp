@@ -34,10 +34,10 @@ int ebusfsm::EvalMessage::run(EbusFSM* fsm)
 	switch (reaction)
 	{
 	case Reaction::nofunction:
-		fsm->logWarn(stateMessage(fsm, STATE_WRN_NO_FUNC));
+		fsm->logDebug(stateMessage(fsm, STATE_INF_NO_FUNC));
 		break;
 	case Reaction::undefined:
-		fsm->logWarn(stateMessage(fsm, STATE_WRN_NOT_DEF));
+		fsm->logDebug(stateMessage(fsm, STATE_INF_NOT_DEF));
 		break;
 	case Reaction::ignore:
 		fsm->logInfo(stateMessage(fsm, STATE_INF_MSG_INGORE));

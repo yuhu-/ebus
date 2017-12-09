@@ -31,6 +31,8 @@ namespace ebusfsm
 #define STATE_INF_EBUS_FREE    4 // ebus freed
 #define STATE_INF_MSG_INGORE   5 // message ignored
 #define STATE_INF_DEV_FLUSH    6 // device flushed
+#define STATE_INF_NOT_DEF      7 // at me addressed message is undefined
+#define STATE_INF_NO_FUNC      8 // function not implemented
 
 #define STATE_WRN_BYTE_DIF    11 // written/read byte difference
 #define STATE_WRN_ARB_LOST    12 // arbitration lost
@@ -39,8 +41,6 @@ namespace ebusfsm
 #define STATE_WRN_ACK_NEG     15 // received acknowledge byte is negative -> retry
 #define STATE_WRN_RECV_RESP   16 // received response is invalid -> retry
 #define STATE_WRN_RECV_MSG    17 // at me addressed message is invalid
-#define STATE_WRN_NOT_DEF     18 // at me addressed message is undefined
-#define STATE_WRN_NO_FUNC     19 // function not implemented
 
 #define STATE_ERR_LOCK_FAIL   21 // lock ebus failed
 #define STATE_ERR_ACK_NEG     22 // received acknowledge byte is negative -> failed
