@@ -184,7 +184,6 @@ void ebusfsm::EbusSequence::parseSequence(Sequence& seq)
 			{
 				// sequence sending failed
 				m_slaveState = SEQ_TRANSMIT;
-
 				return;
 			}
 
