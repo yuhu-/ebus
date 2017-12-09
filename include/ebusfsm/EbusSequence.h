@@ -25,17 +25,18 @@
 namespace ebusfsm
 {
 
+#define SEQ_TRANSMIT    2 // sequence sending failed
 #define SEQ_EMPTY       1 // sequence is empty
 
 #define SEQ_OK          0 // success
 
 #define SEQ_ERR_SHORT  -1 // sequence is too short
 #define SEQ_ERR_LONG   -2 // sequence is too long
-#define SEQ_ERR_BYTES  -3 // sequence has too much data bytes
+#define SEQ_ERR_NN     -3 // data byte number is invalid
 #define SEQ_ERR_CRC    -4 // sequence has a CRC error
 #define SEQ_ERR_ACK    -5 // acknowledge byte is invalid
-#define SEQ_ERR_MASTER -6 // sequence source address is invalid
-#define SEQ_ERR_SLAVE  -7 // sequence target address is invalid
+#define SEQ_ERR_QQ     -6 // source address is invalid
+#define SEQ_ERR_ZZ     -7 // target address is invalid
 
 #define SEQ_TYPE_BC     0 // broadcast
 #define SEQ_TYPE_MM     1 // master master
@@ -51,6 +52,8 @@ class EbusSequence
 public:
 	EbusSequence();
 	explicit EbusSequence(Sequence& seq);
+
+	void parseSequence(Sequence& seq);
 
 	void createMaster(const unsigned char source, const unsigned char target, const std::string& str);
 	void createMaster(const unsigned char source, const std::string& str);
@@ -88,12 +91,12 @@ public:
 
 	const std::string toStringMaster();
 	const std::string toStringMasterCRC();
-	const std::string toStringMasterACK();
+	const std::string toStringMasterACK() const;
 	const std::string toStringMasterError();
 
 	const std::string toStringSlave();
 	const std::string toStringSlaveCRC();
-	const std::string toStringSlaveACK();
+	const std::string toStringSlaveACK() const;
 	const std::string toStringSlaveError();
 
 	static const std::string errorText(const int error);
@@ -117,6 +120,9 @@ private:
 	int m_slaveState = SEQ_EMPTY;
 
 	unsigned char m_masterACK = 0;
+
+	int checkMasterSequence(Sequence& seq);
+	int checkSlaveSequence(Sequence& seq);
 };
 
 } // namespace ebusfsm

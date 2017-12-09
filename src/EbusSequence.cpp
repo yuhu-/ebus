@@ -27,15 +27,16 @@
 
 std::map<int, std::string> SequenceErrors =
 {
+{ SEQ_TRANSMIT, "sequence sending failed" },
 { SEQ_EMPTY, "sequence is empty" },
 
 { SEQ_ERR_SHORT, "sequence is too short" },
 { SEQ_ERR_LONG, "sequence is too long" },
-{ SEQ_ERR_BYTES, "sequence has too much data bytes" },
+{ SEQ_ERR_NN, "data byte number is invalid" },
 { SEQ_ERR_CRC, "sequence has a CRC error" },
 { SEQ_ERR_ACK, "acknowledge byte is invalid" },
-{ SEQ_ERR_MASTER, "sequence source address is invalid" },
-{ SEQ_ERR_SLAVE, "sequence target address is invalid" }, };
+{ SEQ_ERR_QQ, "source address is invalid" },
+{ SEQ_ERR_ZZ, "target address is invalid" }, };
 
 ebusfsm::EbusSequence::EbusSequence()
 {
@@ -43,26 +44,19 @@ ebusfsm::EbusSequence::EbusSequence()
 
 ebusfsm::EbusSequence::EbusSequence(Sequence& seq)
 {
+	parseSequence(seq);
+}
+
+void ebusfsm::EbusSequence::parseSequence(Sequence& seq)
+{
 	seq.reduce();
 	int offset = 0;
 
-	// sequence is too short
-	if (seq.size() < 5)
-	{
-		m_masterState = SEQ_ERR_SHORT;
-		return;
-	}
+	m_masterState = checkMasterSequence(seq);
 
-	// sequence has too much data bytes
-	if ((int) seq[4] > 16)
-	{
-		m_masterState = SEQ_ERR_BYTES;
-		return;
-	}
+	if (m_masterState != SEQ_OK) return;
 
-	setType(seq[1]);
-
-	Sequence master(seq, 0, 5 + seq[4]);
+	Sequence master(seq, 0, 5 + seq[4] + 1);
 	createMaster(master);
 
 	if (m_masterState != SEQ_OK) return;
@@ -70,47 +64,130 @@ ebusfsm::EbusSequence::EbusSequence(Sequence& seq)
 	if (m_type != SEQ_TYPE_BC)
 	{
 		m_slaveACK = seq[5 + m_masterNN + 1];
+
 		// acknowledge byte is invalid
-		if (m_slaveACK != SEQ_ACK && m_slaveACK != SEQ_NAK) m_slaveState = SEQ_ERR_ACK;
+		if (m_slaveACK != SEQ_ACK && m_slaveACK != SEQ_NAK)
+		{
+			m_slaveState = SEQ_ERR_ACK;
+			return;
+		}
 
 		// handle NAK from slave
 		if (m_slaveACK == SEQ_NAK)
 		{
-			offset = master.size() + 2;
+			offset = master.size() + 1;
 			m_master.clear();
 
-			Sequence tmp(seq, offset, 5 + seq[offset + 4]);
-			createMaster(tmp);
+			Sequence tmp(seq, offset);
+			m_masterState = checkMasterSequence(tmp);
 
 			if (m_masterState != SEQ_OK) return;
 
-			m_slaveACK = seq[offset + 5 + m_masterNN + 1];
+			Sequence master2(tmp, 0, 5 + tmp[4] + 1);
+			createMaster(master2);
+
+			if (m_masterState != SEQ_OK) return;
+
+			m_slaveACK = tmp[5 + m_masterNN + 1];
+
 			// acknowledge byte is invalid
-			if (m_slaveACK != SEQ_ACK && m_slaveACK != SEQ_NAK) m_slaveState = SEQ_ERR_ACK;
+			if (m_slaveACK != SEQ_ACK && m_slaveACK != SEQ_NAK)
+			{
+				m_slaveState = SEQ_ERR_ACK;
+				return;
+			}
+
+			// acknowledge byte is negativ
+			if (m_slaveACK == SEQ_NAK)
+			{
+				// sequence is too long
+				if (tmp.size() > 5 + m_masterNN + 2)
+					m_masterState = SEQ_ERR_LONG;
+
+				// sequence sending failed
+				else
+					m_masterState = SEQ_TRANSMIT;
+
+				return;
+			}
 		}
 	}
 
 	if (m_type == SEQ_TYPE_MS)
 	{
-		Sequence slave(seq, offset + 5 + m_masterNN + 2, 1 + seq[offset + 5 + m_masterNN + 2] + 1);
+		offset += 5 + m_masterNN + 2;
+
+		Sequence seq2(seq, offset);
+		m_slaveState = checkSlaveSequence(seq2);
+
+		if (m_slaveState != SEQ_OK) return;
+
+		Sequence slave(seq2, 0, 1 + seq2[0] + 1);
 		createSlave(slave);
 
-		m_masterACK = seq[(offset + 5 + m_masterNN + 3 + m_slaveNN + 1)];
+		if (m_slaveState != SEQ_OK) return;
+
+		if (seq2.size() < 1 + m_slaveNN + 1)
+		{
+			m_slaveState = SEQ_ERR_SHORT;
+			return;
+		}
+
+		m_masterACK = seq2[1 + m_slaveNN + 1];
+
 		// acknowledge byte is invalid
-		if (m_masterACK != SEQ_ACK && m_masterACK != SEQ_NAK) m_masterState = SEQ_ERR_ACK;
+		if (m_masterACK != SEQ_ACK && m_masterACK != SEQ_NAK)
+		{
+			m_masterState = SEQ_ERR_ACK;
+			return;
+		}
 
 		// handle NAK from master
 		if (m_masterACK == SEQ_NAK)
 		{
-			offset += slave.size() + 2;
+			if (seq2.size() < slave.size() + 2)
+			{
+				m_slaveState = SEQ_ERR_SHORT;
+				return;
+			}
+
+			offset = slave.size() + 2;
 			m_slave.clear();
 
-			Sequence tmp(seq, offset + 5 + m_masterNN + 2, 1 + seq[offset + 5 + m_masterNN + 2] + 1);
-			createSlave(tmp);
+			Sequence tmp(seq2, offset);
+			m_slaveState = checkSlaveSequence(tmp);
 
-			m_masterACK = seq[(offset + 5 + m_masterNN + 3 + m_slaveNN + 1)];
+			if (m_slaveState != SEQ_OK) return;
+
+			Sequence slave2(seq2, offset, 1 + seq2[offset] + 1);
+			createSlave(slave2);
+
+			m_masterACK = tmp[1 + m_slaveNN + 1];
+
 			// acknowledge byte is invalid
-			if (m_masterACK != SEQ_ACK && m_masterACK != SEQ_NAK) m_masterState = SEQ_ERR_ACK;
+			if (m_masterACK != SEQ_ACK && m_masterACK != SEQ_NAK)
+			{
+				m_masterState = SEQ_ERR_ACK;
+				return;
+			}
+
+			// sequence is too long
+			if (tmp.size() > 1 + m_slaveNN + 2)
+			{
+				m_slaveState = SEQ_ERR_LONG;
+				m_slave.clear();
+				return;
+			}
+
+			// acknowledge byte is negativ
+			if (m_masterACK == SEQ_NAK)
+			{
+				// sequence sending failed
+				m_slaveState = SEQ_TRANSMIT;
+
+				return;
+			}
+
 		}
 	}
 }
@@ -135,46 +212,53 @@ void ebusfsm::EbusSequence::createMaster(const unsigned char source, const std::
 void ebusfsm::EbusSequence::createMaster(const std::string& str)
 {
 	Sequence seq(str);
-	seq.reduce();
 	createMaster(seq);
 }
 
 void ebusfsm::EbusSequence::createMaster(Sequence& seq)
 {
 	m_masterState = SEQ_OK;
+	seq.reduce();
 
 	// sequence is too short
-	if (seq.size() < 5)
+	if (seq.size() < 6)
 	{
 		m_masterState = SEQ_ERR_SHORT;
 		return;
 	}
 
-	// sequence is too long
+	// source address is invalid
+	if (isMaster(seq[0]) == false)
+	{
+		m_masterState = SEQ_ERR_QQ;
+		return;
+	}
+
+	// target address is invalid
+	if (isAddressValid(seq[1]) == false)
+	{
+		m_masterState = SEQ_ERR_ZZ;
+		return;
+	}
+
+	// data byte number is invalid
+	if (seq[4] > 16)
+	{
+		m_masterState = SEQ_ERR_NN;
+		return;
+	}
+
+	// sequence is too short (excl. CRC)
+	if (seq.size() < (size_t) (5 + seq[4]))
+	{
+		m_masterState = SEQ_ERR_SHORT;
+		return;
+	}
+
+	// sequence is too long (incl. CRC)
 	if (seq.size() > (size_t) (5 + seq[4] + 1))
 	{
 		m_masterState = SEQ_ERR_LONG;
-		return;
-	}
-
-	// sequence has too much data bytes
-	if ((int) seq[4] > 16)
-	{
-		m_masterState = SEQ_ERR_BYTES;
-		return;
-	}
-
-	// sequence source address is invalid
-	if (isMaster(seq[0]) == false)
-	{
-		m_masterState = SEQ_ERR_MASTER;
-		return;
-	}
-
-	// sequence target address is invalid
-	if (isAddressValid(seq[1]) == false)
-	{
-		m_masterState = SEQ_ERR_SLAVE;
 		return;
 	}
 
@@ -201,13 +285,13 @@ void ebusfsm::EbusSequence::createMaster(Sequence& seq)
 void ebusfsm::EbusSequence::createSlave(const std::string& str)
 {
 	Sequence seq(str);
-	seq.reduce();
 	createSlave(seq);
 }
 
 void ebusfsm::EbusSequence::createSlave(Sequence& seq)
 {
 	m_slaveState = SEQ_OK;
+	seq.reduce();
 
 	// sequence is too short
 	if (seq.size() < 2)
@@ -216,17 +300,24 @@ void ebusfsm::EbusSequence::createSlave(Sequence& seq)
 		return;
 	}
 
-	// sequence is too long
-	if (seq.size() > (size_t) (1 + seq[0] + 1))
+	// data byte number is invalid
+	if (seq[0] > 16)
 	{
-		m_slaveState = SEQ_ERR_LONG;
+		m_slaveState = SEQ_ERR_NN;
 		return;
 	}
 
-	// sequence has too much data bytes
-	if (seq[0] > 16)
+	// sequence is too short (excl. CRC)
+	if (seq.size() < (size_t) (1 + seq[0]))
 	{
-		m_slaveState = SEQ_ERR_BYTES;
+		m_slaveState = SEQ_ERR_SHORT;
+		return;
+	}
+
+	// sequence is too long (incl. CRC)
+	if (seq.size() > (size_t) (1 + seq[0] + 1))
+	{
+		m_slaveState = SEQ_ERR_LONG;
 		return;
 	}
 
@@ -387,7 +478,7 @@ const std::string ebusfsm::EbusSequence::toStringMasterCRC()
 	return (ostr.str());
 }
 
-const std::string ebusfsm::EbusSequence::toStringMasterACK()
+const std::string ebusfsm::EbusSequence::toStringMasterACK() const
 {
 	std::ostringstream ostr;
 
@@ -428,7 +519,7 @@ const std::string ebusfsm::EbusSequence::toStringSlaveCRC()
 	return (ostr.str());
 }
 
-const std::string ebusfsm::EbusSequence::toStringSlaveACK()
+const std::string ebusfsm::EbusSequence::toStringSlaveACK() const
 {
 	std::ostringstream ostr;
 
@@ -454,4 +545,38 @@ const std::string ebusfsm::EbusSequence::errorText(const int error)
 	ostr << SequenceErrors[error];
 
 	return (ostr.str());
+}
+
+int ebusfsm::EbusSequence::checkMasterSequence(Sequence& seq)
+{
+	// sequence is too short
+	if (seq.size() < 6) return (SEQ_ERR_SHORT);
+
+	// source address is invalid
+	if (isMaster(seq[0]) == false) return (SEQ_ERR_QQ);
+
+	// target address is invalid
+	if (isAddressValid(seq[1]) == false) return (SEQ_ERR_ZZ);
+
+	// data byte number is invalid
+	if (seq[4] > 16) return (SEQ_ERR_NN);
+
+	// sequence is too short (incl. CRC)
+	if (seq.size() < (size_t) (5 + seq[4] + 1)) return (SEQ_ERR_SHORT);
+
+	return (SEQ_OK);
+}
+
+int ebusfsm::EbusSequence::checkSlaveSequence(Sequence& seq)
+{
+	// sequence is too short
+	if (seq.size() < 2) return (SEQ_ERR_SHORT);
+
+	// data byte number is invalid
+	if (seq[0] > 16) return (SEQ_ERR_NN);
+
+	// sequence is too short (incl. CRC)
+	if (seq.size() < (size_t) (1 + seq[0] + 1)) return (SEQ_ERR_SHORT);
+
+	return (SEQ_OK);
 }

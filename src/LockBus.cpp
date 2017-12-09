@@ -33,7 +33,9 @@ int ebusfsm::LockBus::run(EbusFSM* fsm)
 	int result = write(fsm, byte);
 	if (result != DEV_OK) return (result);
 
-	usleep(fsm->m_arbitrationTime);
+	struct timespec req =
+	{ 0, fsm->m_arbitrationTime * 1000L };
+	nanosleep(&req, (struct timespec *) NULL);
 
 	byte = 0;
 

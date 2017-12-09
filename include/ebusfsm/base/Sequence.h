@@ -57,7 +57,7 @@ public:
 
 	bool isExtended() const;
 
-	const std::string toString();
+	const std::string toString() const;
 	const std::vector<unsigned char> getSequence() const;
 
 	size_t find(const Sequence& seq, const size_t pos = 0) const noexcept;

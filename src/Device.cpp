@@ -52,16 +52,13 @@ ssize_t ebusfsm::Device::recv(unsigned char& value, const long sec, const long n
 	if (sec > 0 || nsec > 0)
 	{
 		int ret;
-		struct timespec tdiff;
-
-		// set select timeout
-		tdiff.tv_sec = sec;
-		tdiff.tv_nsec = nsec * 1000;
+		struct timespec tdiff =
+		{ sec, nsec * 1000L };
 
 		int nfds = 1;
 		struct pollfd fds[nfds];
 
-		memset(fds, 0, sizeof(struct pollfd) * nfds);
+		std::memset(fds, 0, sizeof(struct pollfd) * nfds);
 
 		fds[0].fd = m_fd;
 		fds[0].events = POLLIN;

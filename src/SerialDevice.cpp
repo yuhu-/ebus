@@ -44,7 +44,7 @@ int ebusfsm::SerialDevice::openDevice(const std::string& device, const bool devi
 	tcgetattr(m_fd, &m_oldSettings);
 
 	// create new settings
-	memset(&newSettings, '\0', sizeof(newSettings));
+	std::memset(&newSettings, '\0', sizeof(newSettings));
 
 	newSettings.c_cflag |= (B2400 | CS8 | CLOCAL | CREAD);
 	newSettings.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG); // non-canonical mode

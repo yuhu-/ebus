@@ -35,7 +35,7 @@ public:
 	EbusSequence& getEbusSequence();
 
 	void setState(int state);
-	int getState();
+	int getState() const;
 
 private:
 	EbusSequence& m_ebusSequence;

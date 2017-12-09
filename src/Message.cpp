@@ -36,7 +36,7 @@ void ebusfsm::Message::setState(int state)
 	m_state = state;
 }
 
-int ebusfsm::Message::getState()
+int ebusfsm::Message::getState() const
 {
 	return (m_state);
 }

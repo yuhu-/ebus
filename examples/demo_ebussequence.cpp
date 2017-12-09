@@ -24,99 +24,7 @@
 
 int main()
 {
-	ebusfsm::Sequence seq;
-
-	// TEST FULL
-	const unsigned char bytes[] =
-	{ 0xff, 0x52, 0xb5, 0x09, 0x03, 0x0d, 0x06, 0x00, 0x43,		// master
-	  0x00, 0x03, 0xb0, 0xfb, 0xa9, 0x01, 0xd0,			// slave
-	  0x00 };							// master
-
-	for (size_t i = 0; i < sizeof(bytes); i++)
-		seq.push_back(bytes[i]);
-
-	ebusfsm::EbusSequence full(seq);
-
-	std::cout << "seq: " << seq.toString() << " Full: " << full.toString() << std::endl;
-	seq.clear();
-
-	// TEST FULL2 - NAK from slave
-	const unsigned char bytes2[] =
-	{ 0xff, 0x52, 0xb5, 0x09, 0x03, 0x0d, 0x06, 0x00, 0x43,		// master
-	  0xff,								// slave NAK
-	  0xff, 0x52, 0xb5, 0x09, 0x03, 0x0d, 0x06, 0x00, 0x43,		// master
-	  0x00, 0x03, 0xb0, 0xfb, 0xa9, 0x01, 0xd0,			// slave
-	  0x00 };							// master
-
-	for (size_t i = 0; i < sizeof(bytes2); i++)
-		seq.push_back(bytes2[i]);
-
-	ebusfsm::EbusSequence full2(seq);
-
-	std::cout << "seq: " << seq.toString() << " Full2 (NAK from slave): " << full2.toString() << std::endl;
-	seq.clear();
-
-	// TEST FULL3 - NAK from master
-	const unsigned char bytes3[] =
-	{ 0xff, 0x52, 0xb5, 0x09, 0x03, 0x0d, 0x06, 0x00, 0x43,		// master
-	  0x00, 0x03, 0xb0, 0xfb, 0xa9, 0x01, 0xd0,			// slave
-	  0xff,								// master NAK
-	  0x00, 0x03, 0xb0, 0xfb, 0xa9, 0x01, 0xd0,			// slave
-	  0x00 };							// master
-
-	for (size_t i = 0; i < sizeof(bytes3); i++)
-		seq.push_back(bytes3[i]);
-
-	ebusfsm::EbusSequence full3(seq);
-
-	std::cout << "seq: " << seq.toString() << " Full3 (NAK from master): " << full3.toString() << std::endl;
-	seq.clear();
-
-	// TEST FULL4 - NAK from slave and master
-	const unsigned char bytes4[] =
-	{ 0xff, 0x52, 0xb5, 0x09, 0x03, 0x0d, 0x06, 0x00, 0x43,		// master
-	  0xff,								// slave NAK
-	  0xff, 0x52, 0xb5, 0x09, 0x03, 0x0d, 0x06, 0x00, 0x43,		// master
-	  0x00, 0x03, 0xb0, 0xfb, 0xa9, 0x01, 0xd0,			// slave
-	  0xff,								// master NAK
-	  0x00, 0x03, 0xb0, 0xfb, 0xa9, 0x01, 0xd0,			// slave
-	  0x00 };							// master
-
-	for (size_t i = 0; i < sizeof(bytes4); i++)
-		seq.push_back(bytes4[i]);
-
-	ebusfsm::EbusSequence full4(seq);
-
-	std::cout << "seq: " << seq.toString() << " Full4 (NAK from slave and master): " << full4.toString() << std::endl;
-	seq.clear();
-
-	// TEST MASTER
-	ebusfsm::EbusSequence master;
-	master.createMaster("ff52b509030d0600");
-	std::cout << "seq: ff52b509030d0600" << "   Master : " << master.toStringMaster() << std::endl;
-
-	for (size_t i = 0; i < 9; i++)
-		seq.push_back(bytes[i]);
-
-	ebusfsm::EbusSequence master2;
-	master2.createMaster(seq);
-	std::cout << "seq: " << seq.toString() << " Master2: " << master2.toStringMaster() << std::endl;
-	seq.clear();
-
-	// TEST SLAVE
-	ebusfsm::EbusSequence slave;
-	slave.createSlave("03b0fbaa");
-	std::cout << "seq: 03b0fbaa" << "   Slave: " << slave.toStringSlave() << std::endl;
-
-	for (size_t i = 10; i < sizeof(bytes) - 1; i++)
-		seq.push_back(bytes[i]);
-
-	ebusfsm::EbusSequence slave2;
-	slave2.createSlave(seq);
-	std::cout << "seq: " << seq.toString() << " Slave: " << slave2.toStringSlave() << std::endl;
-	seq.clear();
-
-	// TEST COMPARE, SEARCH
+	// Test Sequence
 	ebusfsm::Sequence source("ff52b509030d0600");
 	ebusfsm::Sequence part1("b509");
 
@@ -153,6 +61,148 @@ int main()
 		std::cout << " << equal" << std::endl;
 	else
 		std::cout << " << not equal" << std::endl;
+
+
+	// Test EbusSequence
+	ebusfsm::Sequence seq;
+
+	// Normal
+	const unsigned char bytes[] =
+	{ 0xff, 0x52, 0xb5, 0x09, 0x03, 0x0d, 0x06, 0x00, 0x43,		// master
+	  0x00, 0x03, 0xb0, 0xfb, 0xa9, 0x01, 0xd0,			// slave
+	  0x00 };							// master
+
+	for (size_t i = 0; i < sizeof(bytes); i++)
+		seq.push_back(bytes[i]);
+
+	ebusfsm::EbusSequence full(seq);
+
+	std::cout << "seq: " << seq.toString() << " Full: " << full.toString() << std::endl;
+	seq.clear();
+
+	// NAK from slave
+	const unsigned char bytes2[] =
+	{ 0xff, 0x52, 0xb5, 0x09, 0x03, 0x0d, 0x06, 0x00, 0x43,		// master
+	  0xff,								// slave NAK
+	  0xff, 0x52, 0xb5, 0x09, 0x03, 0x0d, 0x06, 0x00, 0x43,		// master
+	  0x00, 0x03, 0xb0, 0xfb, 0xa9, 0x01, 0xd0,			// slave
+	  0x00 };							// master
+
+	for (size_t i = 0; i < sizeof(bytes2); i++)
+		seq.push_back(bytes2[i]);
+
+	ebusfsm::EbusSequence full2(seq);
+
+	std::cout << "seq: " << seq.toString() << " Full2 (NAK from slave): " << full2.toString() << std::endl;
+	seq.clear();
+
+	// twice NAK from slave
+	const unsigned char bytes22[] =
+	{ 0xff, 0x52, 0xb5, 0x09, 0x03, 0x0d, 0x06, 0x00, 0x43,		// master
+	  0xff,								// slave NAK
+	  0xff, 0x52, 0xb5, 0x09, 0x03, 0x0d, 0x06, 0x00, 0x43,		// master
+	  0xff};							// slave
+
+	for (size_t i = 0; i < sizeof(bytes22); i++)
+		seq.push_back(bytes22[i]);
+
+	ebusfsm::EbusSequence full22(seq);
+
+	std::cout << "seq: " << seq.toString() << " Full22 (twice NAK from slave): " << full22.toString() << std::endl;
+	seq.clear();
+
+	// NAK from master
+	const unsigned char bytes3[] =
+	{ 0xff, 0x52, 0xb5, 0x09, 0x03, 0x0d, 0x06, 0x00, 0x43,		// master
+	  0x00, 0x03, 0xb0, 0xfb, 0xa9, 0x01, 0xd0,			// slave
+	  0xff,								// master NAK
+	  0x00, 0x03, 0xb0, 0xfb, 0xa9, 0x01, 0xd0,			// slave
+	  0x00 };							// master
+
+	for (size_t i = 0; i < sizeof(bytes3); i++)
+		seq.push_back(bytes3[i]);
+
+	ebusfsm::EbusSequence full3(seq);
+
+	std::cout << "seq: " << seq.toString() << " Full3 (NAK from master): " << full3.toString() << std::endl;
+	seq.clear();
+
+	// NAK from slave and master
+	const unsigned char bytes4[] =
+	{ 0xff, 0x52, 0xb5, 0x09, 0x03, 0x0d, 0x06, 0x00, 0x43,		// master
+	  0xff,								// slave NAK
+	  0xff, 0x52, 0xb5, 0x09, 0x03, 0x0d, 0x06, 0x00, 0x43,		// master
+	  0x00, 0x03, 0xb0, 0xfb, 0xa9, 0x01, 0xd0,			// slave
+	  0xff,								// master NAK
+	  0x00, 0x03, 0xb0, 0xfb, 0xa9, 0x01, 0xd0,			// slave
+	  0x00 };							// master
+
+	for (size_t i = 0; i < sizeof(bytes4); i++)
+		seq.push_back(bytes4[i]);
+
+	ebusfsm::EbusSequence full4(seq);
+
+	std::cout << "seq: " << seq.toString() << " Full4 (NAK from slave and master): " << full4.toString() << std::endl;
+	seq.clear();
+
+	// twice NAK from slave and master
+	const unsigned char bytes44[] =
+	{ 0xff, 0x52, 0xb5, 0x09, 0x03, 0x0d, 0x06, 0x00, 0x43,		// master
+	  0xff,								// slave NAK
+	  0xff, 0x52, 0xb5, 0x09, 0x03, 0x0d, 0x06, 0x00, 0x43,		// master
+	  0x00, 0x03, 0xb0, 0xfb, 0xa9, 0x01, 0xd0,			// slave
+	  0xff,								// master NAK
+	  0x00, 0x03, 0xb0, 0xfb, 0xa9, 0x01, 0xd0,			// slave
+	  0xff };							// master
+
+	for (size_t i = 0; i < sizeof(bytes44); i++)
+		seq.push_back(bytes44[i]);
+
+	ebusfsm::EbusSequence full44(seq);
+
+	std::cout << "seq: " << seq.toString() << " Full44 (twice NAK from slave and master): " << full44.toString() << std::endl;
+	seq.clear();
+
+
+	// parse defect sequence
+	const unsigned char bytes5[] =
+	{ 0x10, 0x7f, 0xc2, 0xb5, 0x10, 0x09, 0x00, 0x02, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x15 };
+
+	for (size_t i = 0; i < sizeof(bytes5); i++)
+		seq.push_back(bytes5[i]);
+
+	ebusfsm::EbusSequence full5;
+
+	full5.parseSequence(seq);
+	std::cout << "seq: " << seq.toString() << " Full5 (defect sequence): " << full5.toString() << std::endl;
+	seq.clear();
+
+
+	// create master
+	ebusfsm::EbusSequence master;
+	master.createMaster("ff52b509030d0600");
+	std::cout << "seq: ff52b509030d0600" << "   Master : " << master.toStringMaster() << std::endl;
+
+	for (size_t i = 0; i < 9; i++)
+		seq.push_back(bytes[i]);
+
+	ebusfsm::EbusSequence master2;
+	master2.createMaster(seq);
+	std::cout << "seq: " << seq.toString() << " Master2: " << master2.toStringMaster() << std::endl;
+	seq.clear();
+
+	// create slave
+	ebusfsm::EbusSequence slave;
+	slave.createSlave("03b0fbaa");
+	std::cout << "seq: 03b0fbaa" << "   Slave: " << slave.toStringSlave() << std::endl;
+
+	for (size_t i = 10; i < sizeof(bytes) - 1; i++)
+		seq.push_back(bytes[i]);
+
+	ebusfsm::EbusSequence slave2;
+	slave2.createSlave(seq);
+	std::cout << "seq: " << seq.toString() << " Slave: " << slave2.toStringSlave() << std::endl;
+	seq.clear();
 
 	return (0);
 }

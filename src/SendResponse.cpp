@@ -33,12 +33,12 @@ int ebusfsm::SendResponse::run(EbusFSM* fsm)
 		// send Message
 		for (size_t i = retry; i < eSeq.getSlave().size(); i++)
 		{
-			result = writeRead(fsm, eSeq.getSlave()[i], 0);
+			result = writeRead(fsm, eSeq.getSlave()[i], 0, 0);
 			if (result != DEV_OK) return (result);
 		}
 
 		// send CRC
-		result = writeRead(fsm, eSeq.getSlaveCRC(), 0);
+		result = writeRead(fsm, eSeq.getSlaveCRC(), 0, 0);
 		if (result != DEV_OK) return (result);
 
 		// receive ACK

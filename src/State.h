@@ -71,7 +71,7 @@ protected:
 	static void changeState(EbusFSM* fsm, State* state);
 	static int read(EbusFSM* fsm, unsigned char& byte, const long sec, const long nsec);
 	static int write(EbusFSM* fsm, const unsigned char& byte);
-	static int writeRead(EbusFSM* fsm, const unsigned char& byte, const long timeout);
+	static int writeRead(EbusFSM* fsm, const unsigned char& byte, const long sec, const long nsec);
 
 	static void reset(EbusFSM* fsm);
 

@@ -63,7 +63,7 @@ class EbusFSM : private Notify
 	friend class SendResponse;
 
 public:
-	EbusFSM(const unsigned char address, const std::string device, const bool deviceCheck, std::shared_ptr<IEbusLogger> logger,
+	EbusFSM(const unsigned char address, const std::string& device, const bool deviceCheck, std::shared_ptr<IEbusLogger> logger,
 		std::function<Reaction(EbusSequence&)> identify, std::function<void(EbusSequence&)> publish);
 
 	~EbusFSM();
@@ -115,16 +115,16 @@ private:
 	const unsigned char m_address;                   // ebus master address
 	const unsigned char m_slaveAddress;              // ebus slave address
 
-	long m_reopenTime = 60;                          // max. time to open ebus device [s]
-	long m_arbitrationTime = 5000;                   // waiting time for arbitration test [us]
-	long m_receiveTimeout = 10000;                   // max. time for receiving of one sequence sign [us]
+	long m_reopenTime = 60L;                         // max. time to open ebus device [s]
+	long m_arbitrationTime = 5000L;                  // waiting time for arbitration test [us]
+	long m_receiveTimeout = 10000L;                  // max. time for receiving of one sequence sign [us]
 	int m_lockCounter = 5;                           // number of characters after a successful ebus access (max: 25)
 	int m_lockRetries = 2;                           // number of retries to lock ebus
 
 	bool m_dump = false;                             // enable/disable raw data dumping
 	std::string m_dumpFile = "/tmp/ebus_dump.bin";   // dump file name
-	long m_dumpFileMaxSize = 100;                    // max size for dump file [kB]
-	long m_dumpFileSize = 0;                         // current size of dump file
+	long m_dumpFileMaxSize = 100L;                   // max size for dump file [kB]
+	long m_dumpFileSize = 0L;                        // current size of dump file
 	std::ofstream m_dumpRawStream;                   // dump stream
 
 	bool m_color = false;                            // true, when the output is in color

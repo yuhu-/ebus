@@ -115,14 +115,14 @@ int ebusfsm::State::write(EbusFSM* fsm, const unsigned char& byte)
 	return (result);
 }
 
-int ebusfsm::State::writeRead(EbusFSM* fsm, const unsigned char& byte, const long timeout)
+int ebusfsm::State::writeRead(EbusFSM* fsm, const unsigned char& byte, const long sec, const long nsec)
 {
 	int result = State::write(fsm, byte);
 
 	if (result == DEV_OK)
 	{
 		unsigned char readByte;
-		result = State::read(fsm, readByte, 0, timeout);
+		result = State::read(fsm, readByte, sec, nsec);
 
 		if (readByte != byte) fsm->logDebug(stateMessage(fsm, STATE_WRN_BYTE_DIF));
 	}

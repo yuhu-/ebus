@@ -26,7 +26,7 @@ int ebusfsm::FreeBus::run(EbusFSM* fsm)
 {
 	unsigned char byte = SYN;
 
-	int result = writeRead(fsm, byte, 0);
+	int result = writeRead(fsm, byte, 0, 0);
 	if (result != DEV_OK) return (result);
 
 	fsm->logDebug(stateMessage(fsm, STATE_INF_EBUS_FREE));

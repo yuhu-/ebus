@@ -34,12 +34,12 @@ int ebusfsm::SendMessage::run(EbusFSM* fsm)
 		// send Message
 		for (size_t i = retry; i < eSeq.getMaster().size(); i++)
 		{
-			result = writeRead(fsm, eSeq.getMaster()[i], 0);
+			result = writeRead(fsm, eSeq.getMaster()[i], 0, 0);
 			if (result != DEV_OK) return (result);
 		}
 
 		// send CRC
-		result = writeRead(fsm, eSeq.getMasterCRC(), 0);
+		result = writeRead(fsm, eSeq.getMasterCRC(), 0, 0);
 		if (result != DEV_OK) return (result);
 
 		// Broadcast ends here

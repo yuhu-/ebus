@@ -41,7 +41,7 @@ ebusfsm::Sequence::Sequence(const Sequence& seq, const size_t index, size_t len)
 	if (len == 0) len = seq.size() - index;
 
 	for (size_t i = index; i < index + len; i++)
-		m_seq.push_back(seq.m_seq[i]);
+		m_seq.push_back(seq.m_seq.at(i));
 
 	m_extended = seq.m_extended;
 }
@@ -54,7 +54,7 @@ void ebusfsm::Sequence::push_back(const unsigned char byte, const bool isExtende
 
 const unsigned char& ebusfsm::Sequence::operator[](const size_t index) const
 {
-	return (m_seq[index]);
+	return (m_seq.at(index));
 }
 
 size_t ebusfsm::Sequence::size() const
@@ -65,6 +65,7 @@ size_t ebusfsm::Sequence::size() const
 void ebusfsm::Sequence::clear()
 {
 	m_seq.clear();
+	m_seq.shrink_to_fit();
 	m_extended = false;
 }
 
@@ -75,7 +76,7 @@ unsigned char ebusfsm::Sequence::getCRC()
 	unsigned char crc = 0;
 
 	for (size_t i = 0; i < m_seq.size(); i++)
-		crc = calcCRC(m_seq[i], crc);
+		crc = calcCRC(m_seq.at(i), crc);
 
 	if (m_extended == false) reduce();
 
@@ -90,19 +91,19 @@ void ebusfsm::Sequence::extend()
 
 	for (size_t i = 0; i < m_seq.size(); i++)
 	{
-		if (m_seq[i] == SYN)
+		if (m_seq.at(i) == SYN)
 		{
 			tmp.push_back(EXT);
 			tmp.push_back(SYNEXT);
 		}
-		else if (m_seq[i] == EXT)
+		else if (m_seq.at(i) == EXT)
 		{
 			tmp.push_back(EXT);
 			tmp.push_back(EXTEXT);
 		}
 		else
 		{
-			tmp.push_back(m_seq[i]);
+			tmp.push_back(m_seq.at(i));
 		}
 	}
 
@@ -119,13 +120,13 @@ void ebusfsm::Sequence::reduce()
 
 	for (size_t i = 0; i < m_seq.size(); i++)
 	{
-		if (m_seq[i] == SYN || m_seq[i] == EXT)
+		if (m_seq.at(i) == SYN || m_seq.at(i) == EXT)
 		{
 			extended = true;
 		}
 		else if (extended == true)
 		{
-			if (m_seq[i] == SYNEXT)
+			if (m_seq.at(i) == SYNEXT)
 				tmp.push_back(SYN);
 			else
 				tmp.push_back(EXT);
@@ -134,7 +135,7 @@ void ebusfsm::Sequence::reduce()
 		}
 		else
 		{
-			tmp.push_back(m_seq[i]);
+			tmp.push_back(m_seq.at(i));
 		}
 	}
 
@@ -147,12 +148,12 @@ bool ebusfsm::Sequence::isExtended() const
 	return (m_extended);
 }
 
-const std::string ebusfsm::Sequence::toString()
+const std::string ebusfsm::Sequence::toString() const
 {
 	std::ostringstream ostr;
 
 	for (size_t i = 0; i < m_seq.size(); i++)
-		ostr << std::nouppercase << std::hex << std::setw(2) << std::setfill('0') << static_cast<unsigned>(m_seq[i]);
+		ostr << std::nouppercase << std::hex << std::setw(2) << std::setfill('0') << static_cast<unsigned>(m_seq.at(i));
 
 	return (ostr.str());
 }

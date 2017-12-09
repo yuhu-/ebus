@@ -35,8 +35,9 @@ std::map<int, std::string> FSMErrors =
 { FSM_ERR_ADDRESS, "The master address of the sequence and FSM must be equal" },
 { FSM_ERR_TRANSMIT, "An ebus error occurred while sending this sequence" } };
 
-ebusfsm::EbusFSM::EbusFSM(const unsigned char address, const std::string device, const bool deviceCheck, std::shared_ptr<IEbusLogger> logger,
-	std::function<Reaction(EbusSequence&)> identify, std::function<void(EbusSequence&)> publish)
+ebusfsm::EbusFSM::EbusFSM(const unsigned char address, const std::string& device, const bool deviceCheck,
+	std::shared_ptr<IEbusLogger> logger, std::function<Reaction(EbusSequence&)> identify,
+	std::function<void(EbusSequence&)> publish)
 	: Notify(), m_address(address), m_slaveAddress(slaveAddress(address)), m_ebusDevice(
 		std::make_unique<EbusDevice>(device, deviceCheck)), m_logger(logger), m_identify(identify), m_publish(publish)
 {
@@ -49,11 +50,14 @@ ebusfsm::EbusFSM::~EbusFSM()
 {
 	m_forceState = Idle::getIdle();
 
+	struct timespec req =
+	{ 0, 10000L };
+
 	while (m_state != Idle::getIdle())
-		usleep(10);
+		nanosleep(&req, (struct timespec *) NULL);
 
 	m_running = false;
-	usleep(10);
+	nanosleep(&req, (struct timespec *) NULL);
 
 	notify();
 	m_thread.join();

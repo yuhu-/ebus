@@ -39,13 +39,13 @@ int ebusfsm::NetworkDevice::openDevice(const std::string& device, const bool dev
 	int ret;
 
 	struct sockaddr_in address;
-	memset((char*) &address, 0, sizeof(address));
+	std::memset((char*) &address, 0, sizeof(address));
 
 	const std::string host = device.substr(0, device.find(':'));
 	const std::string port = device.substr(device.find(':') + 1);
 
 	struct addrinfo hints, *servinfo;
-	memset(&hints, 0, sizeof hints);
+	std::memset(&hints, 0, sizeof hints);
 
 	hints.ai_family = AF_INET;
 	hints.ai_socktype = SOCK_STREAM;

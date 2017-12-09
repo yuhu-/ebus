@@ -71,7 +71,7 @@ int ebusfsm::RecvResponse::run(EbusFSM* fsm)
 			byte = SEQ_NAK;
 
 		// send ACK
-		result = writeRead(fsm, byte, 0);
+		result = writeRead(fsm, byte, 0, 0);
 		if (result != DEV_OK) return (result);
 
 		eSeq.setMasterACK(byte);

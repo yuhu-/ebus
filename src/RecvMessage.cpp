@@ -31,7 +31,7 @@ int ebusfsm::RecvMessage::run(EbusFSM* fsm)
 	// receive Header PBSBNN
 	for (int i = 0; i < 3; i++)
 	{
-		unsigned char byte = 0;
+		byte = 0;
 
 		result = read(fsm, byte, 1, 0);
 		if (result != DEV_OK) return (result);
@@ -48,19 +48,24 @@ int ebusfsm::RecvMessage::run(EbusFSM* fsm)
 		return (DEV_OK);
 	}
 
+	// bytes to receive
+	int bytes = m_sequence[4];
+
 	// receive Data Dx
-	for (int i = 0; i < m_sequence[4]; i++)
+	for (int i = 0; i < bytes; i++)
 	{
-		unsigned char byte = 0;
+		byte = 0;
 
 		result = read(fsm, byte, 1, 0);
 		if (result != DEV_OK) return (result);
 
 		m_sequence.push_back(byte);
+
+		if (byte == EXT) bytes++;
 	}
 
 	// 1 for CRC
-	int bytes = 1;
+	bytes = 1;
 
 	// receive CRC
 	for (int i = 0; i < bytes; i++)
@@ -70,7 +75,7 @@ int ebusfsm::RecvMessage::run(EbusFSM* fsm)
 
 		m_sequence.push_back(byte);
 
-		if (byte == SYN || byte == EXT) bytes++;
+		if (byte == EXT) bytes++;
 	}
 
 	fsm->logDebug(m_sequence.toString());
@@ -91,7 +96,7 @@ int ebusfsm::RecvMessage::run(EbusFSM* fsm)
 		}
 
 		// send ACK
-		result = writeRead(fsm, byte, 0);
+		result = writeRead(fsm, byte, 0, 0);
 		if (result != DEV_OK) return (result);
 
 		eSeq.setSlaveACK(byte);
