@@ -25,27 +25,28 @@
 namespace ebusfsm
 {
 
-#define SEQ_TRANSMIT    2 // sequence sending failed
-#define SEQ_EMPTY       1 // sequence is empty
+#define SEQ_TRANSMIT       2 // sequence sending failed
+#define SEQ_EMPTY          1 // sequence is empty
 
-#define SEQ_OK          0 // success
+#define SEQ_OK             0 // success
 
-#define SEQ_ERR_SHORT  -1 // sequence is too short
-#define SEQ_ERR_LONG   -2 // sequence is too long
-#define SEQ_ERR_NN     -3 // data byte number is invalid
-#define SEQ_ERR_CRC    -4 // sequence has a CRC error
-#define SEQ_ERR_ACK    -5 // acknowledge byte is invalid
-#define SEQ_ERR_QQ     -6 // source address is invalid
-#define SEQ_ERR_ZZ     -7 // target address is invalid
+#define SEQ_ERR_SHORT     -1 // sequence is too short
+#define SEQ_ERR_LONG      -2 // sequence is too long
+#define SEQ_ERR_NN        -3 // data byte number is invalid
+#define SEQ_ERR_CRC       -4 // sequence has a CRC error
+#define SEQ_ERR_ACK       -5 // acknowledge byte is invalid
+#define SEQ_ERR_QQ        -6 // source address is invalid
+#define SEQ_ERR_ZZ        -7 // target address is invalid
+#define SEQ_ERR_ACK_MISS  -8 // acknowledge byte is missing
 
-#define SEQ_TYPE_BC     0 // broadcast
-#define SEQ_TYPE_MM     1 // master master
-#define SEQ_TYPE_MS     2 // master slave
+#define SEQ_TYPE_BC        0 // broadcast
+#define SEQ_TYPE_MM        1 // master master
+#define SEQ_TYPE_MS        2 // master slave
 
-#define SEQ_ACK      0x00 // positive acknowledge
-#define SEQ_NAK      0xff // negative acknowledge
-#define SEQ_BROAD    0xfe // broadcast destination address
-#define SEQ_NN_MAX   0x10 // maximum data bytes
+#define SEQ_ACK         0x00 // positive acknowledge
+#define SEQ_NAK         0xff // negative acknowledge
+#define SEQ_BROAD       0xfe // broadcast destination address
+#define SEQ_NN_MAX      0x10 // maximum data bytes
 
 class EbusSequence
 {

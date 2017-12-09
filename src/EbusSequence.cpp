@@ -36,7 +36,8 @@ std::map<int, std::string> SequenceErrors =
 { SEQ_ERR_CRC, "sequence has a CRC error" },
 { SEQ_ERR_ACK, "acknowledge byte is invalid" },
 { SEQ_ERR_QQ, "source address is invalid" },
-{ SEQ_ERR_ZZ, "target address is invalid" }, };
+{ SEQ_ERR_ZZ, "target address is invalid" },
+{ SEQ_ERR_ACK_MISS, "acknowledge byte is missing" },};
 
 ebusfsm::EbusSequence::EbusSequence()
 {
@@ -63,6 +64,13 @@ void ebusfsm::EbusSequence::parseSequence(Sequence& seq)
 
 	if (m_type != SEQ_TYPE_BC)
 	{
+		// acknowledge byte is missing
+		if (seq.size() <= (size_t) (5 + m_masterNN + 1))
+		{
+			m_slaveState = SEQ_ERR_ACK_MISS;
+			return;
+		}
+
 		m_slaveACK = seq[5 + m_masterNN + 1];
 
 		// acknowledge byte is invalid
@@ -75,6 +83,13 @@ void ebusfsm::EbusSequence::parseSequence(Sequence& seq)
 		// handle NAK from slave
 		if (m_slaveACK == SEQ_NAK)
 		{
+			// sequence is too short
+			if (seq.size() < (size_t) (master.size() + 1))
+			{
+				m_masterState = SEQ_ERR_SHORT;
+				return;
+			}
+
 			offset = master.size() + 1;
 			m_master.clear();
 
@@ -87,6 +102,13 @@ void ebusfsm::EbusSequence::parseSequence(Sequence& seq)
 			createMaster(master2);
 
 			if (m_masterState != SEQ_OK) return;
+
+			// acknowledge byte is missing
+			if (tmp.size() <= (size_t) (5 + m_masterNN + 1))
+			{
+				m_slaveState = SEQ_ERR_ACK_MISS;
+				return;
+			}
 
 			m_slaveACK = tmp[5 + m_masterNN + 1];
 
@@ -101,7 +123,7 @@ void ebusfsm::EbusSequence::parseSequence(Sequence& seq)
 			if (m_slaveACK == SEQ_NAK)
 			{
 				// sequence is too long
-				if (tmp.size() > 5 + m_masterNN + 2)
+				if (tmp.size() > (size_t) (5 + m_masterNN + 2))
 					m_masterState = SEQ_ERR_LONG;
 
 				// sequence sending failed
@@ -127,9 +149,10 @@ void ebusfsm::EbusSequence::parseSequence(Sequence& seq)
 
 		if (m_slaveState != SEQ_OK) return;
 
-		if (seq2.size() < 1 + m_slaveNN + 1)
+		// acknowledge byte is missing
+		if (seq2.size() <= (size_t) (1 + m_slaveNN + 1))
 		{
-			m_slaveState = SEQ_ERR_SHORT;
+			m_masterState = SEQ_ERR_ACK_MISS;
 			return;
 		}
 
@@ -145,7 +168,8 @@ void ebusfsm::EbusSequence::parseSequence(Sequence& seq)
 		// handle NAK from master
 		if (m_masterACK == SEQ_NAK)
 		{
-			if (seq2.size() < slave.size() + 2)
+			// sequence is too short
+			if (seq2.size() < (size_t) (slave.size() + 2))
 			{
 				m_slaveState = SEQ_ERR_SHORT;
 				return;
@@ -162,6 +186,13 @@ void ebusfsm::EbusSequence::parseSequence(Sequence& seq)
 			Sequence slave2(seq2, offset, 1 + seq2[offset] + 1);
 			createSlave(slave2);
 
+			// acknowledge byte is missing
+			if (tmp.size() <= (size_t) (1 + m_slaveNN + 1))
+			{
+				m_masterState = SEQ_ERR_ACK_MISS;
+				return;
+			}
+
 			m_masterACK = tmp[1 + m_slaveNN + 1];
 
 			// acknowledge byte is invalid
@@ -172,7 +203,7 @@ void ebusfsm::EbusSequence::parseSequence(Sequence& seq)
 			}
 
 			// sequence is too long
-			if (tmp.size() > 1 + m_slaveNN + 2)
+			if (tmp.size() > (size_t) (1 + m_slaveNN + 2))
 			{
 				m_slaveState = SEQ_ERR_LONG;
 				m_slave.clear();
@@ -266,7 +297,7 @@ void ebusfsm::EbusSequence::createMaster(Sequence& seq)
 	setType(seq[1]);
 	m_masterNN = seq[4];
 
-	if (seq.size() == (5 + m_masterNN))
+	if (seq.size() == (size_t) (5 + m_masterNN))
 	{
 		m_master = seq;
 		m_masterCRC = seq.getCRC();
@@ -293,7 +324,7 @@ void ebusfsm::EbusSequence::createSlave(Sequence& seq)
 	seq.reduce();
 
 	// sequence is too short
-	if (seq.size() < 2)
+	if (seq.size() < (size_t)2)
 	{
 		m_slaveState = SEQ_ERR_SHORT;
 		return;
@@ -549,7 +580,7 @@ const std::string ebusfsm::EbusSequence::errorText(const int error)
 int ebusfsm::EbusSequence::checkMasterSequence(Sequence& seq)
 {
 	// sequence is too short
-	if (seq.size() < 6) return (SEQ_ERR_SHORT);
+	if (seq.size() < (size_t)6) return (SEQ_ERR_SHORT);
 
 	// source address is invalid
 	if (isMaster(seq[0]) == false) return (SEQ_ERR_QQ);
@@ -569,7 +600,7 @@ int ebusfsm::EbusSequence::checkMasterSequence(Sequence& seq)
 int ebusfsm::EbusSequence::checkSlaveSequence(Sequence& seq)
 {
 	// sequence is too short
-	if (seq.size() < 2) return (SEQ_ERR_SHORT);
+	if (seq.size() < (size_t)2) return (SEQ_ERR_SHORT);
 
 	// data byte number is invalid
 	if (seq[0] > SEQ_NN_MAX) return (SEQ_ERR_NN);

@@ -164,19 +164,34 @@ int main()
 	seq.clear();
 
 
-	// parse defect sequence
+	// defect sequence
 	const unsigned char bytes5[] =
 	{ 0x10, 0x7f, 0xc2, 0xb5, 0x10, 0x09, 0x00, 0x02, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x15 };
 
 	for (size_t i = 0; i < sizeof(bytes5); i++)
 		seq.push_back(bytes5[i]);
 
-	ebusfsm::EbusSequence full5;
+	ebusfsm::EbusSequence full5(seq);
 
-	full5.parseSequence(seq);
 	std::cout << "seq: " << seq.toString() << " Full5 (defect sequence): " << full5.toString() << std::endl;
 	seq.clear();
 
+	// missing acknowledge byte
+	const unsigned char bytes6[] =
+	{ 0x10, 0x08, 0xb5, 0x11, 0x01, 0x02, 0x8a,			// master
+	  0xff,								// slave NAK
+	  0x10, 0x08, 0xb5, 0x11, 0x01, 0x02, 0x8a,			// master
+	  0x00,	0x03, 0xb0, 0xfb, 0xa9, 0x01, 0xd0,			// slave
+	  0xff,								// master NAK
+	  0x00,	0x03, 0xb0, 0xfb, 0xa9, 0x01, 0xd0 };  			// slave
+
+	for (size_t i = 0; i < sizeof(bytes6); i++)
+		seq.push_back(bytes6[i]);
+
+	ebusfsm::EbusSequence full6(seq);
+
+	std::cout << "seq: " << seq.toString() << " Full6 (missing acknowledge byte): " << full6.toString() << std::endl;
+	seq.clear();
 
 	// create master
 	ebusfsm::EbusSequence master;
