@@ -39,10 +39,12 @@ int ebusfsm::RecvMessage::run(EbusFSM* fsm)
 		m_sequence.push_back(byte);
 	}
 
-	// check against max. possible size
-	if (m_sequence[4] > 16)
+	// maximum data bytes
+	if (m_sequence[4] > SEQ_NN_MAX)
 	{
 		fsm->logWarn(stateMessage(fsm, STATE_ERR_NN_WRONG));
+		m_activeMessage->setState(FSM_ERR_TRANSMIT);
+
 		reset(fsm);
 		fsm->changeState(Listen::getListen());
 		return (DEV_OK);

@@ -45,6 +45,7 @@ namespace ebusfsm
 #define SEQ_ACK      0x00 // positive acknowledge
 #define SEQ_NAK      0xff // negative acknowledge
 #define SEQ_BROAD    0xfe // broadcast destination address
+#define SEQ_NN_MAX   0x10 // maximum data bytes
 
 class EbusSequence
 {

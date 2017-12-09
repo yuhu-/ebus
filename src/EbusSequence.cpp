@@ -241,7 +241,7 @@ void ebusfsm::EbusSequence::createMaster(Sequence& seq)
 	}
 
 	// data byte number is invalid
-	if (seq[4] > 16)
+	if (seq[4] > SEQ_NN_MAX)
 	{
 		m_masterState = SEQ_ERR_NN;
 		return;
@@ -300,7 +300,7 @@ void ebusfsm::EbusSequence::createSlave(Sequence& seq)
 	}
 
 	// data byte number is invalid
-	if (seq[0] > 16)
+	if (seq[0] > SEQ_NN_MAX)
 	{
 		m_slaveState = SEQ_ERR_NN;
 		return;
@@ -558,7 +558,7 @@ int ebusfsm::EbusSequence::checkMasterSequence(Sequence& seq)
 	if (isAddressValid(seq[1]) == false) return (SEQ_ERR_ZZ);
 
 	// data byte number is invalid
-	if (seq[4] > 16) return (SEQ_ERR_NN);
+	if (seq[4] > SEQ_NN_MAX) return (SEQ_ERR_NN);
 
 	// sequence is too short (incl. CRC)
 	if (seq.size() < (size_t) (5 + seq[4] + 1)) return (SEQ_ERR_SHORT);
@@ -572,7 +572,7 @@ int ebusfsm::EbusSequence::checkSlaveSequence(Sequence& seq)
 	if (seq.size() < 2) return (SEQ_ERR_SHORT);
 
 	// data byte number is invalid
-	if (seq[0] > 16) return (SEQ_ERR_NN);
+	if (seq[0] > SEQ_NN_MAX) return (SEQ_ERR_NN);
 
 	// sequence is too short (incl. CRC)
 	if (seq.size() < (size_t) (1 + seq[0] + 1)) return (SEQ_ERR_SHORT);

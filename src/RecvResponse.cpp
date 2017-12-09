@@ -36,8 +36,8 @@ int ebusfsm::RecvResponse::run(EbusFSM* fsm)
 		result = read(fsm, byte, 1, 0);
 		if (result != DEV_OK) return (result);
 
-		// check against max. possible size
-		if (byte > 0x10)
+		// maximum data bytes
+		if (byte > SEQ_NN_MAX)
 		{
 			fsm->logWarn(stateMessage(fsm, STATE_ERR_NN_WRONG));
 			m_activeMessage->setState(FSM_ERR_TRANSMIT);
