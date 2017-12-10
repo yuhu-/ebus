@@ -21,6 +21,7 @@
 #define EBUSFSM_EBUSCOMMON_H
 
 #include <string>
+#include <vector>
 
 namespace ebusfsm
 {
@@ -36,6 +37,10 @@ bool isAddressValid(const unsigned char byte);
 unsigned char slaveAddress(const unsigned char masterAddress);
 
 bool isHex(const std::string& str, std::ostringstream& result, const int& nibbles);
+
+float decode(short type, std::vector<unsigned char> value);
+
+std::vector<unsigned char> encode(short type, float value);
 
 } // namespace ebusfsm
 

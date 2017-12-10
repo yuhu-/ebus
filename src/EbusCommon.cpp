@@ -20,6 +20,7 @@
 #include <EbusCommon.h>
 
 #include <sstream>
+#include <cmath>
 
 // CRC8 table of the polynom 0x9b = x^8 + x^7 + x^4 + x^3 + x^1 + 1.
 static const unsigned char ebusfsm__crcTable[] =
@@ -88,3 +89,49 @@ bool ebusfsm::isHex(const std::string& str, std::ostringstream& result, const in
 	return (true);
 }
 
+float ebusfsm::decode(short type, std::vector<unsigned char> value)
+{
+	float result = 0.0;
+
+	if (type == 0) result = ((value[0]/16) < 0x0a && (value[0]%16) < 0x0a) ? (value[0]/16*10) + (value[0]%16) : 0xff;
+	if (type == 1) result = (char)(value[0]);
+	if (type == 2) result = value[0] / 2.0;
+	if (type == 3) result = (char)value[1] + value[0] / 256.0;
+	if (type == 4) result = (char)value[1] * 16.0 + value[0] / 16.0;
+
+	return (result);
+}
+
+std::vector<unsigned char> ebusfsm::encode(short type, float value)
+{
+	std::vector<unsigned char> result;
+
+	if (type == 0)
+	{
+		result.push_back(((value < 100.0) ? ((short)value/10*16) + ((short)value%10) : 0xff));
+	}
+
+	if (type == 1)
+	{
+		result.push_back((unsigned char) value);
+	}
+
+	if (type == 2)
+	{
+		result.push_back(value * 2.0);
+	}
+
+	if (type == 3)
+	{
+		result.push_back((value - floorf(value)) * 256.0);
+		result.push_back(floorf(value));
+	}
+
+	if (type == 4)
+	{
+		result.push_back(ceilf(value * 16.0));
+		result.push_back((short)floorf(value) >> 4);
+	}
+
+	return (result);
+}

@@ -17,6 +17,7 @@ libtool
 /examples/demo_ebusdevice
 /examples/demo_ebussequence
 /examples/demo_ebusfsm
+/examples/demo_ebusdata
 *.libs/
 ebusfsm.pc
 .cproject
