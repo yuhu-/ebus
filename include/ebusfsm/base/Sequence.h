@@ -45,6 +45,7 @@ public:
 	void push_back(const unsigned char byte, const bool isExtended = true);
 
 	const unsigned char& operator[](const size_t index) const;
+	std::vector<unsigned char> range(const size_t index, const size_t len);
 
 	size_t size() const;
 

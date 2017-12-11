@@ -50,12 +50,12 @@ int main()
 	{ 0x00, 0x01, 0x64, 0x7f, 0x80, 0x81, 0xc8, 0xfe, 0xff };
 
 	std::vector<unsigned char> b2 =
-	{ 0x00, 0x00, 0x01, 0x00, 0xff, 0xff, 0x00, 0xff, 0xf0, 0xff, 0x00, 0x80, 0x01, 0x80, 0xff, 0x7f, 0x65, 0x02 };
+	{ 0x00, 0x00, 0x01, 0x00, 0xff, 0xff, 0x00, 0xff, 0xf0, 0xff, 0x00, 0x80, 0x01, 0x80, 0xff, 0x7f, 0x65, 0x02, 0x77, 0x02 };
 
 	// BCD
 	std::cout << std::endl << "Examples BCD (type=0)" << std::endl;
 
-	for (int i = 0; i < 9; i++)
+	for (size_t i = 0; i < b1.size(); i++)
 	{
 		std::vector<unsigned char> source(1, b1[i]);
 
@@ -65,7 +65,7 @@ int main()
 	// DATA1b
 	std::cout << std::endl << "Examples DATA1b (type=1)" << std::endl;
 
-	for (int i = 0; i < 9; i++)
+	for (size_t i = 0; i < b1.size(); i++)
 	{
 		std::vector<unsigned char> source(1, b1[i]);
 
@@ -75,7 +75,7 @@ int main()
 	// DATA1c
 	std::cout << std::endl << "Examples DATA1c (type=2)" << std::endl;
 
-	for (int i = 0; i < 9; i++)
+	for (size_t i = 0; i < b1.size(); i++)
 	{
 		std::vector<unsigned char> source(1, b1[i]);
 
@@ -85,7 +85,7 @@ int main()
 	// DATA2b
 	std::cout << std::endl << "Examples DATA2b (type=3)" << std::endl;
 
-	for (int i = 0; i < 18; i += 2)
+	for (size_t i = 0; i < b2.size(); i += 2)
 	{
 		std::vector<unsigned char> source(&b2[i], &b2[i + 2]);
 
@@ -95,13 +95,14 @@ int main()
 	// DATA2c
 	std::cout << std::endl << "Examples DATA2c (type=4)" << std::endl;
 
-	for (int i = 0; i < 18; i += 2)
+	for (size_t i = 0; i < b2.size(); i += 2)
 	{
 		std::vector<unsigned char> source(&b2[i], &b2[i + 2]);
 
 		decode_encode(4, source);
 	}
 
+	// BCD
 	std::cout << std::endl << "Check range BCD (type=0)" << std::endl;
 
 	for (int high = 0x00; high <= 0x09; high++)
@@ -114,6 +115,7 @@ int main()
 		}
 	}
 
+	// DATA1b
 	std::cout << std::endl << "Check range DATA1b (type=1)" << std::endl;
 
 	for (int low = 0x00; low <= 0xff; low++)
@@ -123,6 +125,7 @@ int main()
 		check_range(1, source);
 	}
 
+	// DATA1c
 	std::cout << std::endl << "Check range DATA1c (type=2)" << std::endl;
 
 	for (int low = 0x00; low <= 0xff; low++)
@@ -132,6 +135,7 @@ int main()
 		check_range(2, source);
 	}
 
+	// DATA2b
 	std::cout << std::endl << "Check range DATA2b (type=3)" << std::endl;
 
 	for (int high = 0x00; high <= 0xff; high++)
@@ -145,6 +149,7 @@ int main()
 		}
 	}
 
+	// DATA2c
 	std::cout << std::endl << "Check range DATA2c (type=4)" << std::endl;
 
 	for (int high = 0x00; high <= 0xff; high++)

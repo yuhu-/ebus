@@ -130,7 +130,7 @@ std::vector<unsigned char> ebusfsm::encode(short type, float value)
 	if (type == 4)
 	{
 		result.push_back(ceilf(value * 16.0));
-		result.push_back((short)floorf(value) >> 4);
+		result.push_back(floorf(value / 16.0));
 	}
 
 	return (result);

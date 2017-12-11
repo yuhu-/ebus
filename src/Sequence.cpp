@@ -57,6 +57,19 @@ const unsigned char& ebusfsm::Sequence::operator[](const size_t index) const
 	return (m_seq.at(index));
 }
 
+std::vector<unsigned char> ebusfsm::Sequence::range(const size_t index, const size_t len)
+{
+	std::vector<unsigned char> result;
+
+	if (index < m_seq.size() && index + len < m_seq.size())
+	{
+		for (size_t i = index; i < index + len; i++)
+			result.push_back(m_seq.at(i));
+	}
+
+	return (result);
+}
+
 size_t ebusfsm::Sequence::size() const
 {
 	return (m_seq.size());

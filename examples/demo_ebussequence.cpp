@@ -18,6 +18,7 @@
  */
 
 #include <EbusSequence.h>
+#include <EbusCommon.h>
 
 #include <iostream>
 #include <iomanip>
@@ -62,7 +63,6 @@ int main()
 	else
 		std::cout << " << not equal" << std::endl;
 
-
 	// Test EbusSequence
 	ebusfsm::Sequence seq;
 
@@ -101,7 +101,7 @@ int main()
 	{ 0xff, 0x52, 0xb5, 0x09, 0x03, 0x0d, 0x06, 0x00, 0x43,		// master
 	  0xff,								// slave NAK
 	  0xff, 0x52, 0xb5, 0x09, 0x03, 0x0d, 0x06, 0x00, 0x43,		// master
-	  0xff};							// slave
+	  0xff };							// slave
 
 	for (size_t i = 0; i < sizeof(bytes22); i++)
 		seq.push_back(bytes22[i]);
@@ -163,7 +163,6 @@ int main()
 	std::cout << "seq: " << seq.toString() << " Full44 (twice NAK from slave and master): " << full44.toString() << std::endl;
 	seq.clear();
 
-
 	// defect sequence
 	const unsigned char bytes5[] =
 	{ 0x10, 0x7f, 0xc2, 0xb5, 0x10, 0x09, 0x00, 0x02, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x15 };
@@ -181,9 +180,9 @@ int main()
 	{ 0x10, 0x08, 0xb5, 0x11, 0x01, 0x02, 0x8a,			// master
 	  0xff,								// slave NAK
 	  0x10, 0x08, 0xb5, 0x11, 0x01, 0x02, 0x8a,			// master
-	  0x00,	0x03, 0xb0, 0xfb, 0xa9, 0x01, 0xd0,			// slave
+	  0x00, 0x03, 0xb0, 0xfb, 0xa9, 0x01, 0xd0,			// slave
 	  0xff,								// master NAK
-	  0x00,	0x03, 0xb0, 0xfb, 0xa9, 0x01, 0xd0 };  			// slave
+	  0x00, 0x03, 0xb0, 0xfb, 0xa9, 0x01, 0xd0 };  			// slave
 
 	for (size_t i = 0; i < sizeof(bytes6); i++)
 		seq.push_back(bytes6[i]);
@@ -218,6 +217,13 @@ int main()
 	slave2.createSlave(seq);
 	std::cout << "seq: " << seq.toString() << " Slave: " << slave2.toStringSlave() << std::endl;
 	seq.clear();
+
+	// parse sequence range
+	ebusfsm::Sequence tmp("ff12b509030d0000d700037702006100");
+	ebusfsm::EbusSequence parse(tmp);
+
+	std::cout << "parse: " << parse.toString() << " parse(" << ebusfsm::Sequence::toString(parse.getSlave().range(1, 2)) << ") => "
+		<< ebusfsm::decode(4, parse.getSlave().range(1, 2)) << std::endl;
 
 	return (0);
 }
