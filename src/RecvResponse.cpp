@@ -78,6 +78,7 @@ int ebusfsm::RecvResponse::run(EbusFSM* fsm)
 
 		if (eSeq.getSlaveState() == SEQ_OK)
 		{
+			fsm->logDebug(m_sequence.toString());
 			fsm->logInfo(eSeqMessage(fsm, eSeq) + " transmitted");
 			break;
 		}

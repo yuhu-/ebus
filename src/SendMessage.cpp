@@ -45,6 +45,7 @@ int ebusfsm::SendMessage::run(EbusFSM* fsm)
 		// Broadcast ends here
 		if (eSeq.getType() == SEQ_TYPE_BC)
 		{
+			fsm->logDebug(m_sequence.toString());
 			fsm->logInfo(eSeqMessage(fsm, eSeq) + " transmitted");
 			fsm->changeState(FreeBus::getFreeBus());
 			break;
@@ -71,6 +72,7 @@ int ebusfsm::SendMessage::run(EbusFSM* fsm)
 			// Master Master ends here
 			if (eSeq.getType() == SEQ_TYPE_MM)
 			{
+				fsm->logDebug(m_sequence.toString());
 				fsm->logInfo(eSeqMessage(fsm, eSeq) + " transmitted");
 				fsm->changeState(FreeBus::getFreeBus());
 			}
