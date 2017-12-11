@@ -61,11 +61,8 @@ std::vector<unsigned char> ebusfsm::Sequence::range(const size_t index, const si
 {
 	std::vector<unsigned char> result;
 
-	if (index < m_seq.size() && index + len < m_seq.size())
-	{
-		for (size_t i = index; i < index + len; i++)
-			result.push_back(m_seq.at(i));
-	}
+	for (size_t i = index; i < m_seq.size() && result.size() < len; i++)
+		result.push_back(m_seq.at(i));
 
 	return (result);
 }

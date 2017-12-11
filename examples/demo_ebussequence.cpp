@@ -225,5 +225,11 @@ int main()
 	std::cout << "parse: " << parse.toString() << " parse(" << ebusfsm::Sequence::toString(parse.getSlave().range(1, 2)) << ") => "
 		<< ebusfsm::decode(4, parse.getSlave().range(1, 2)) << std::endl;
 
+	ebusfsm::Sequence tmp2("ff0ab509030d0e00830002e0028900");
+	ebusfsm::EbusSequence parse2(tmp2);
+
+	std::cout << "parse: " << parse2.toString() << " parse(" << ebusfsm::Sequence::toString(parse2.getSlave().range(1, 2)) << ") => "
+		<< ebusfsm::decode(4, parse2.getSlave().range(1, 2)) << std::endl;
+
 	return (0);
 }
