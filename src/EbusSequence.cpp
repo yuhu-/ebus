@@ -37,7 +37,7 @@ std::map<int, std::string> SequenceErrors =
 { SEQ_ERR_ACK, "acknowledge byte is invalid" },
 { SEQ_ERR_QQ, "source address is invalid" },
 { SEQ_ERR_ZZ, "target address is invalid" },
-{ SEQ_ERR_ACK_MISS, "acknowledge byte is missing" },};
+{ SEQ_ERR_ACK_MISS, "acknowledge byte is missing" }, };
 
 ebusfsm::EbusSequence::EbusSequence()
 {
@@ -324,7 +324,7 @@ void ebusfsm::EbusSequence::createSlave(Sequence& seq)
 	seq.reduce();
 
 	// sequence is too short
-	if (seq.size() < (size_t)2)
+	if (seq.size() < (size_t) 2)
 	{
 		m_slaveState = SEQ_ERR_SHORT;
 		return;
@@ -580,7 +580,7 @@ const std::string ebusfsm::EbusSequence::errorText(const int error)
 int ebusfsm::EbusSequence::checkMasterSequence(Sequence& seq)
 {
 	// sequence is too short
-	if (seq.size() < (size_t)6) return (SEQ_ERR_SHORT);
+	if (seq.size() < (size_t) 6) return (SEQ_ERR_SHORT);
 
 	// source address is invalid
 	if (isMaster(seq[0]) == false) return (SEQ_ERR_QQ);
@@ -600,7 +600,7 @@ int ebusfsm::EbusSequence::checkMasterSequence(Sequence& seq)
 int ebusfsm::EbusSequence::checkSlaveSequence(Sequence& seq)
 {
 	// sequence is too short
-	if (seq.size() < (size_t)2) return (SEQ_ERR_SHORT);
+	if (seq.size() < (size_t) 2) return (SEQ_ERR_SHORT);
 
 	// data byte number is invalid
 	if (seq[0] > SEQ_NN_MAX) return (SEQ_ERR_NN);
