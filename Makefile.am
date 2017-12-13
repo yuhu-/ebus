@@ -14,3 +14,4 @@ distclean-local:
 	-rm -rf build
 	-rm -rf src/.deps
 	-rm -rf m4
+	-rm -rf *.tar.gz
