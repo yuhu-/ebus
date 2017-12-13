@@ -1,22 +1,23 @@
-ebusfsm provides c++ classes and tools to communicate via ebus.
+ebusfsm is a C++ library to communicate via ebus.
 
-The main part of this library is a 'finite state machine' (FSM) which will be run as a seperate
-thread. Via ebus device the FSM handle all the communication to other ebus participant. The FSM
-provides the ability to interact with ebus as master (active) or slave (passive) member.
+To build ebusfsm the following packages are needed:
 
-  API/Interface classes:
+  - autoconf (2.69)
+  - automake (1.11)
+  - make
+  - g++ (C++14)
+  - ppoll support (kernel)
+  - pthread support (glibc)
+  - pkg-config
 
-  * EbusCommon:   Basic functions like CRC calculation.
 
-  * EbusDevice:   Provides the hardware access for network or serial ebus devices.
+Build and install with:
 
-  * EbusSequence: All kind of ebus messages are sequences of individual hexadecimal characters.
-                  A 'EbusSequence' can hold only one (full) ebus message.
+  $ ./autogen.sh
+  $ make
+  $ make install
 
-  * EbusFSM:      Represents the FSM it selfs which can be act as passive or active ebus
-                  participant.
-
-  * IEbusLogger:  Is a simple logger interface for internal messages of FSM.
+Use autogen.sh with --prefix=/usr to install the library into /usr/lib instead of /usr/local/lib.
 
 
 For bugs and missing features use github issue system.
