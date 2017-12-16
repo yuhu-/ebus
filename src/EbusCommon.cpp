@@ -95,18 +95,20 @@ float ebusfsm::decode(short type, std::vector<unsigned char> value)
 
 	if (value.size() == 1)
 	{
-		if (type == 0)
+		if (type == 10)
 			result = ((value[0] / 16) < 0x0a && (value[0] % 16) < 0x0a) ? (value[0] / 16 * 10) + (value[0] % 16) : 0xff;
-		if (type == 1) result = (char) (value[0]);
-		if (type == 2) result = value[0] / 2.0;
+		if (type == 11) result = (char) value[0];
+		if (type == 12) result = value[0] / 2.0;
+		if (type == 13) result = value[0];
+		if (type == 14) result = (char) value[0];
 	}
 
 	if (value.size() == 2)
 	{
-		if (type == 3) result = (char) value[1] + value[0] / 256.0;
-		if (type == 4) result = (char) value[1] * 16.0 + value[0] / 16.0;
-		if (type == 5) result = (unsigned short) ((value[1] * 256) + value[0]);
-		if (type == 6) result = (short) ((value[1] * 256) + value[0]);
+		if (type == 21) result = (char) value[1] + value[0] / 256.0;
+		if (type == 22) result = (char) value[1] * 16.0 + value[0] / 16.0;
+		if (type == 23) result = (unsigned short) ((value[1] * 256) + value[0]);
+		if (type == 24) result = (short) ((value[1] * 256) + value[0]);
 	}
 
 	return (result);
@@ -116,40 +118,50 @@ std::vector<unsigned char> ebusfsm::encode(short type, float value)
 {
 	std::vector<unsigned char> result;
 
-	if (type == 0)
+	if (type == 10)
 	{
 		result.push_back(((value < 100.0) ? ((short) value / 10 * 16) + ((short) value % 10) : 0xff));
 	}
 
-	if (type == 1)
+	if (type == 11)
 	{
 		result.push_back((unsigned char) value);
 	}
 
-	if (type == 2)
+	if (type == 12)
 	{
 		result.push_back(value * 2.0);
 	}
 
-	if (type == 3)
+	if (type == 13)
+	{
+		result.push_back(value);
+	}
+
+	if (type == 14)
+	{
+		result.push_back(value);
+	}
+
+	if (type == 21)
 	{
 		result.push_back((value - floorf(value)) * 256.0);
 		result.push_back(floorf(value));
 	}
 
-	if (type == 4)
+	if (type == 22)
 	{
 		result.push_back(ceilf(value * 16.0));
 		result.push_back(floorf(value / 16.0));
 	}
 
-	if (type == 5)
+	if (type == 23)
 	{
 		result.push_back(((short) value) & 0x00ff);
 		result.push_back((((short) value) & 0xff00) / 256);
 	}
 
-	if (type == 6)
+	if (type == 24)
 	{
 		result.push_back(((short) value) & 0x00ff);
 		result.push_back((((short) value) & 0xff00) / 256);

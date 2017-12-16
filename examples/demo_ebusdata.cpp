@@ -53,77 +53,97 @@ int main()
 	{ 0x00, 0x00, 0x01, 0x00, 0xff, 0xff, 0x00, 0xff, 0xf0, 0xff, 0x00, 0x80, 0x01, 0x80, 0xff, 0x7f, 0x65, 0x02, 0x77, 0x02 };
 
 	// BCD
-	std::cout << std::endl << "Examples BCD (type=0)" << std::endl;
+	std::cout << std::endl << "Examples BCD (type=10)" << std::endl;
 
 	for (size_t i = 0; i < b1.size(); i++)
 	{
 		std::vector<unsigned char> source(1, b1[i]);
 
-		decode_encode(0, source);
+		decode_encode(10, source);
 	}
 
 	// DATA1b
-	std::cout << std::endl << "Examples DATA1b (type=1)" << std::endl;
+	std::cout << std::endl << "Examples DATA1b (type=11)" << std::endl;
 
 	for (size_t i = 0; i < b1.size(); i++)
 	{
 		std::vector<unsigned char> source(1, b1[i]);
 
-		decode_encode(1, source);
+		decode_encode(11, source);
 	}
 
 	// DATA1c
-	std::cout << std::endl << "Examples DATA1c (type=2)" << std::endl;
+	std::cout << std::endl << "Examples DATA1c (type=12)" << std::endl;
 
 	for (size_t i = 0; i < b1.size(); i++)
 	{
 		std::vector<unsigned char> source(1, b1[i]);
 
-		decode_encode(2, source);
+		decode_encode(12, source);
+	}
+
+	// uchar
+	std::cout << std::endl << "Examples uchar (type=13)" << std::endl;
+
+	for (size_t i = 0; i < b1.size(); i++)
+	{
+		std::vector<unsigned char> source(1, b1[i]);
+
+		decode_encode(13, source);
+	}
+
+	// DATA1c
+	std::cout << std::endl << "Examples schar (type=14)" << std::endl;
+
+	for (size_t i = 0; i < b1.size(); i++)
+	{
+		std::vector<unsigned char> source(1, b1[i]);
+
+		decode_encode(14, source);
 	}
 
 	// DATA2b
-	std::cout << std::endl << "Examples DATA2b (type=3)" << std::endl;
+	std::cout << std::endl << "Examples DATA2b (type=21)" << std::endl;
 
 	for (size_t i = 0; i < b2.size(); i += 2)
 	{
 		std::vector<unsigned char> source(&b2[i], &b2[i + 2]);
 
-		decode_encode(3, source);
+		decode_encode(21, source);
 	}
 
 	// DATA2c
-	std::cout << std::endl << "Examples DATA2c (type=4)" << std::endl;
+	std::cout << std::endl << "Examples DATA2c (type=22)" << std::endl;
 
 	for (size_t i = 0; i < b2.size(); i += 2)
 	{
 		std::vector<unsigned char> source(&b2[i], &b2[i + 2]);
 
-		decode_encode(4, source);
+		decode_encode(22, source);
 	}
 
 	// uint
-	std::cout << std::endl << "Examples uint (type=5)" << std::endl;
+	std::cout << std::endl << "Examples uint (type=23)" << std::endl;
 
 	for (size_t i = 0; i < b2.size(); i += 2)
 	{
 		std::vector<unsigned char> source(&b2[i], &b2[i + 2]);
 
-		decode_encode(5, source);
+		decode_encode(23, source);
 	}
 
 	// sint
-	std::cout << std::endl << "Examples sint (type=6)" << std::endl;
+	std::cout << std::endl << "Examples sint (type=24)" << std::endl;
 
 	for (size_t i = 0; i < b2.size(); i += 2)
 	{
 		std::vector<unsigned char> source(&b2[i], &b2[i + 2]);
 
-		decode_encode(6, source);
+		decode_encode(24, source);
 	}
 
 	// BCD
-	std::cout << std::endl << "Check range BCD (type=0)" << std::endl;
+	std::cout << std::endl << "Check range BCD (type=10)" << std::endl;
 
 	for (int high = 0x00; high <= 0x09; high++)
 	{
@@ -131,32 +151,52 @@ int main()
 		{
 			std::vector<unsigned char> source(1, (high << 4) + low);
 
-			check_range(0, source);
+			check_range(10, source);
 		}
 	}
 
 	// DATA1b
-	std::cout << std::endl << "Check range DATA1b (type=1)" << std::endl;
+	std::cout << std::endl << "Check range DATA1b (type=11)" << std::endl;
 
 	for (int low = 0x00; low <= 0xff; low++)
 	{
 		std::vector<unsigned char> source(1, low);
 
-		check_range(1, source);
+		check_range(11, source);
 	}
 
 	// DATA1c
-	std::cout << std::endl << "Check range DATA1c (type=2)" << std::endl;
+	std::cout << std::endl << "Check range DATA1c (type=12)" << std::endl;
 
 	for (int low = 0x00; low <= 0xff; low++)
 	{
 		std::vector<unsigned char> source(1, low);
 
-		check_range(2, source);
+		check_range(12, source);
+	}
+
+	// uchar
+	std::cout << std::endl << "Check range uchar (type=13)" << std::endl;
+
+	for (int low = 0x00; low <= 0xff; low++)
+	{
+		std::vector<unsigned char> source(1, low);
+
+		check_range(13, source);
+	}
+
+	// schar
+	std::cout << std::endl << "Check range schar (type=14)" << std::endl;
+
+	for (int low = 0x00; low <= 0xff; low++)
+	{
+		std::vector<unsigned char> source(1, low);
+
+		check_range(14, source);
 	}
 
 	// DATA2b
-	std::cout << std::endl << "Check range DATA2b (type=3)" << std::endl;
+	std::cout << std::endl << "Check range DATA2b (type=21)" << std::endl;
 
 	for (int high = 0x00; high <= 0xff; high++)
 	{
@@ -165,12 +205,12 @@ int main()
 			std::vector<unsigned char> source
 			{ (unsigned char) low, (unsigned char) high };
 
-			check_range(3, source);
+			check_range(21, source);
 		}
 	}
 
 	// DATA2c
-	std::cout << std::endl << "Check range DATA2c (type=4)" << std::endl;
+	std::cout << std::endl << "Check range DATA2c (type=22)" << std::endl;
 
 	for (int high = 0x00; high <= 0xff; high++)
 	{
@@ -179,12 +219,12 @@ int main()
 			std::vector<unsigned char> source
 			{ (unsigned char) low, (unsigned char) high };
 
-			check_range(4, source);
+			check_range(22, source);
 		}
 	}
 
 	// uint
-	std::cout << std::endl << "Check range uint (type=5)" << std::endl;
+	std::cout << std::endl << "Check range uint (type=23)" << std::endl;
 
 	for (int high = 0x00; high <= 0xff; high++)
 	{
@@ -193,12 +233,12 @@ int main()
 			std::vector<unsigned char> source
 			{ (unsigned char) low, (unsigned char) high };
 
-			check_range(5, source);
+			check_range(23, source);
 		}
 	}
 
 	// sint
-	std::cout << std::endl << "Check range sint (type=6)" << std::endl;
+	std::cout << std::endl << "Check range sint (type=24)" << std::endl;
 
 	for (int high = 0x00; high <= 0xff; high++)
 	{
@@ -207,7 +247,7 @@ int main()
 			std::vector<unsigned char> source
 			{ (unsigned char) low, (unsigned char) high };
 
-			check_range(6, source);
+			check_range(24, source);
 		}
 	}
 
