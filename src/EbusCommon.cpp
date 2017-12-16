@@ -105,6 +105,8 @@ float ebusfsm::decode(short type, std::vector<unsigned char> value)
 	{
 		if (type == 3) result = (char) value[1] + value[0] / 256.0;
 		if (type == 4) result = (char) value[1] * 16.0 + value[0] / 16.0;
+		if (type == 5) result = (unsigned short) ((value[1] * 256) + value[0]);
+		if (type == 6) result = (short) ((value[1] * 256) + value[0]);
 	}
 
 	return (result);
@@ -139,6 +141,18 @@ std::vector<unsigned char> ebusfsm::encode(short type, float value)
 	{
 		result.push_back(ceilf(value * 16.0));
 		result.push_back(floorf(value / 16.0));
+	}
+
+	if (type == 5)
+	{
+		result.push_back(((short) value) & 0x00ff);
+		result.push_back((((short) value) & 0xff00) / 256);
+	}
+
+	if (type == 6)
+	{
+		result.push_back(((short) value) & 0x00ff);
+		result.push_back((((short) value) & 0xff00) / 256);
 	}
 
 	return (result);

@@ -102,6 +102,26 @@ int main()
 		decode_encode(4, source);
 	}
 
+	// uint
+	std::cout << std::endl << "Examples uint (type=5)" << std::endl;
+
+	for (size_t i = 0; i < b2.size(); i += 2)
+	{
+		std::vector<unsigned char> source(&b2[i], &b2[i + 2]);
+
+		decode_encode(5, source);
+	}
+
+	// sint
+	std::cout << std::endl << "Examples sint (type=6)" << std::endl;
+
+	for (size_t i = 0; i < b2.size(); i += 2)
+	{
+		std::vector<unsigned char> source(&b2[i], &b2[i + 2]);
+
+		decode_encode(6, source);
+	}
+
 	// BCD
 	std::cout << std::endl << "Check range BCD (type=0)" << std::endl;
 
@@ -160,6 +180,34 @@ int main()
 			{ (unsigned char) low, (unsigned char) high };
 
 			check_range(4, source);
+		}
+	}
+
+	// uint
+	std::cout << std::endl << "Check range uint (type=5)" << std::endl;
+
+	for (int high = 0x00; high <= 0xff; high++)
+	{
+		for (int low = 0x00; low <= 0xff; low++)
+		{
+			std::vector<unsigned char> source
+			{ (unsigned char) low, (unsigned char) high };
+
+			check_range(5, source);
+		}
+	}
+
+	// sint
+	std::cout << std::endl << "Check range sint (type=6)" << std::endl;
+
+	for (int high = 0x00; high <= 0xff; high++)
+	{
+		for (int low = 0x00; low <= 0xff; low++)
+		{
+			std::vector<unsigned char> source
+			{ (unsigned char) low, (unsigned char) high };
+
+			check_range(6, source);
 		}
 	}
 
