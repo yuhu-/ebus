@@ -17,7 +17,7 @@
  * along with ebusfsm. If not, see http://www.gnu.org/licenses/.
  */
 
-#include <base/Sequence.h>
+#include <Sequence.h>
 #include <EbusCommon.h>
 
 #include <sstream>

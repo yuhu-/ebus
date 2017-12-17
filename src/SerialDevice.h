@@ -20,7 +20,7 @@
 #ifndef EBUSFSM_SERIALDEVICE_H
 #define EBUSFSM_SERIALDEVICE_H
 
-#include <base/Device.h>
+#include <Device.h>
 
 #include <termios.h>
 

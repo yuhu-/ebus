@@ -1,16 +1,22 @@
-SUBDIRS = base utils
+SUBDIRS = utils
 
 libebusfsmincludedir = $(includedir)/ebusfsm
 
-libebusfsminclude_HEADERS = EbusCommon.h \
+libebusfsminclude_HEADERS = Device.h \
 			    EbusDevice.h \
+			    EbusCommon.h \
+			    Sequence.h \
 			    EbusSequence.h \
+			    EbusMessage.h \
 			    EbusFSM.h \
 			    IEbusLogger.h
 
-EXTRA_DIST = EbusCommon.h \
+EXTRA_DIST = Device.h \
 	     EbusDevice.h \
+	     EbusCommon.h \
+	     Sequence.h \
 	     EbusSequence.h \
+	     EbusMessage.h \
 	     EbusFSM.h \
 	     IEbusLogger.h
 

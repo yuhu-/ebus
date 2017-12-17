@@ -9,14 +9,14 @@ lib_LTLIBRARIES = libebusfsm.la
 libebusfsm_la_LDFLAGS = -version-info $(EBUSFSM_SO_VERSION) \
 			-lpthread
 
-libebusfsm_la_SOURCES = Message.cpp \
-			EbusCommon.cpp \
-			Device.cpp \
+libebusfsm_la_SOURCES = Device.cpp \
 			SerialDevice.cpp \
 			NetworkDevice.cpp \
 			EbusDevice.cpp  \
+			EbusCommon.cpp \
 			Sequence.cpp \
 			EbusSequence.cpp \
+			EbusMessage.cpp \
 			State.cpp \
 			OnError.cpp \
 			Idle.cpp \

@@ -26,11 +26,11 @@
 namespace ebusfsm
 {
 
-class Message : public Notify
+class EbusMessage : public Notify
 {
 
 public:
-	explicit Message(EbusSequence& eSeq);
+	explicit EbusMessage(EbusSequence& eSeq);
 
 	EbusSequence& getEbusSequence();
 

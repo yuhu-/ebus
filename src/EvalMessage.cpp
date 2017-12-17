@@ -48,7 +48,7 @@ int ebusfsm::EvalMessage::run(EbusFSM* fsm)
 			if (eSeq.getSlaveState() == SEQ_OK)
 			{
 				fsm->logInfo("response: " + eSeq.toStringSlave());
-				m_passiveMessage = new Message(eSeq);
+				m_passiveMessage = new EbusMessage(eSeq);
 				fsm->changeState(SendResponse::getSendResponse());
 				return (DEV_OK);
 			}

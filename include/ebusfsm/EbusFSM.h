@@ -22,7 +22,7 @@
 
 #include <IEbusLogger.h>
 #include <EbusDevice.h>
-#include <base/Message.h>
+#include <EbusMessage.h>
 #include <utils/NQueue.h>
 
 #include <fstream>
@@ -129,7 +129,7 @@ private:
 
 	bool m_color = false;                            // true, when the output is in color
 
-	NQueue<Message*> m_ebusMsgQueue;
+	NQueue<EbusMessage*> m_ebusMsgQueue;
 
 	std::unique_ptr<EbusDevice> m_ebusDevice = nullptr;
 	std::shared_ptr<IEbusLogger> m_logger = nullptr;

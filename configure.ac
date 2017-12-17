@@ -26,7 +26,6 @@ AC_CONFIG_FILES([Makefile
 		 src/Makefile
 		 include/Makefile
 		 include/ebusfsm/Makefile
-		 include/ebusfsm/base/Makefile
 		 include/ebusfsm/utils/Makefile
 		 examples/Makefile
 		 ebusfsm.pc:ebusfsm.pc.in])

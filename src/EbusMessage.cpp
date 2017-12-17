@@ -17,26 +17,26 @@
  * along with ebusfsm. If not, see http://www.gnu.org/licenses/.
  */
 
-#include <base/Message.h>
+#include <EbusMessage.h>
 
 #include <sstream>
 
-ebusfsm::Message::Message(EbusSequence& eSeq)
+ebusfsm::EbusMessage::EbusMessage(EbusSequence& eSeq)
 	: Notify(), m_ebusSequence(eSeq)
 {
 }
 
-ebusfsm::EbusSequence& ebusfsm::Message::getEbusSequence()
+ebusfsm::EbusSequence& ebusfsm::EbusMessage::getEbusSequence()
 {
 	return (m_ebusSequence);
 }
 
-void ebusfsm::Message::setState(int state)
+void ebusfsm::EbusMessage::setState(int state)
 {
 	m_state = state;
 }
 
-int ebusfsm::Message::getState() const
+int ebusfsm::EbusMessage::getState() const
 {
 	return (m_state);
 }

@@ -28,8 +28,8 @@ long ebusfsm::State::m_reopenTime = 0;
 int ebusfsm::State::m_lockCounter = 0;
 int ebusfsm::State::m_lockRetries = 0;
 ebusfsm::Sequence ebusfsm::State::m_sequence;
-ebusfsm::Message* ebusfsm::State::m_activeMessage = nullptr;
-ebusfsm::Message* ebusfsm::State::m_passiveMessage = nullptr;
+ebusfsm::EbusMessage* ebusfsm::State::m_activeMessage = nullptr;
+ebusfsm::EbusMessage* ebusfsm::State::m_passiveMessage = nullptr;
 
 std::map<int, std::string> StateMessages =
 {
@@ -146,7 +146,7 @@ void ebusfsm::State::reset(EbusFSM* fsm)
 
 	if (m_passiveMessage != nullptr)
 	{
-		Message* message = m_passiveMessage;
+		EbusMessage* message = m_passiveMessage;
 		m_passiveMessage = nullptr;
 		delete message;
 	}

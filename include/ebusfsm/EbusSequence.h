@@ -20,7 +20,7 @@
 #ifndef EBUSFSM_EBUSSEQUENCE_H
 #define EBUSFSM_EBUSSEQUENCE_H
 
-#include <base/Sequence.h>
+#include <Sequence.h>
 
 namespace ebusfsm
 {
