@@ -33,7 +33,6 @@ namespace ebusfsm
 
 class Sequence
 {
-	friend class EbusSequence;
 
 public:
 	static const size_t npos = -1;
