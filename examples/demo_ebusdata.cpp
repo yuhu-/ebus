@@ -82,8 +82,8 @@ int main()
 		decode_encode(12, source);
 	}
 
-	// uchar
-	std::cout << std::endl << "Examples uchar (type=13)" << std::endl;
+	// unsigned char
+	std::cout << std::endl << "Examples unsigned char (type=13)" << std::endl;
 
 	for (size_t i = 0; i < b1.size(); i++)
 	{
@@ -92,8 +92,8 @@ int main()
 		decode_encode(13, source);
 	}
 
-	// DATA1c
-	std::cout << std::endl << "Examples schar (type=14)" << std::endl;
+	// signed char
+	std::cout << std::endl << "Examples signed char (type=14)" << std::endl;
 
 	for (size_t i = 0; i < b1.size(); i++)
 	{
@@ -122,8 +122,8 @@ int main()
 		decode_encode(22, source);
 	}
 
-	// uint
-	std::cout << std::endl << "Examples uint (type=23)" << std::endl;
+	// unsigned int
+	std::cout << std::endl << "Examples unsigned int (type=23)" << std::endl;
 
 	for (size_t i = 0; i < b2.size(); i += 2)
 	{
@@ -132,8 +132,8 @@ int main()
 		decode_encode(23, source);
 	}
 
-	// sint
-	std::cout << std::endl << "Examples sint (type=24)" << std::endl;
+	// signed int
+	std::cout << std::endl << "Examples signed int (type=24)" << std::endl;
 
 	for (size_t i = 0; i < b2.size(); i += 2)
 	{
@@ -175,8 +175,8 @@ int main()
 		check_range(12, source);
 	}
 
-	// uchar
-	std::cout << std::endl << "Check range uchar (type=13)" << std::endl;
+	// unsinged char
+	std::cout << std::endl << "Check range unsigned char (type=13)" << std::endl;
 
 	for (int low = 0x00; low <= 0xff; low++)
 	{
@@ -185,8 +185,8 @@ int main()
 		check_range(13, source);
 	}
 
-	// schar
-	std::cout << std::endl << "Check range schar (type=14)" << std::endl;
+	// signed char
+	std::cout << std::endl << "Check range signed char (type=14)" << std::endl;
 
 	for (int low = 0x00; low <= 0xff; low++)
 	{
@@ -223,8 +223,8 @@ int main()
 		}
 	}
 
-	// uint
-	std::cout << std::endl << "Check range uint (type=23)" << std::endl;
+	// unsigned int
+	std::cout << std::endl << "Check range unsinged int (type=23)" << std::endl;
 
 	for (int high = 0x00; high <= 0xff; high++)
 	{
@@ -237,8 +237,8 @@ int main()
 		}
 	}
 
-	// sint
-	std::cout << std::endl << "Check range sint (type=24)" << std::endl;
+	// signed int
+	std::cout << std::endl << "Check range signed int (type=24)" << std::endl;
 
 	for (int high = 0x00; high <= 0xff; high++)
 	{
