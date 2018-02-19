@@ -1,5 +1,5 @@
 /*
- * Copyright (C) Roland Jax 2012-2017 <roland.jax@liwest.at>
+ * Copyright (C) Roland Jax 2012-2018 <roland.jax@liwest.at>
  *
  * This file is part of ebusfsm.
  *
@@ -41,7 +41,7 @@ ssize_t ebusfsm::Device::send(const unsigned char value)
 {
 	if (isValid() == false) return (DEV_ERR_VALID);
 
-	// write bytes to device
+	// write byte to device
 	return (write(m_fd, &value, 1) == 1 ? DEV_OK : DEV_ERR_SEND);
 }
 
