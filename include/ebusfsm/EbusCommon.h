@@ -1,5 +1,5 @@
 /*
- * Copyright (C) Roland Jax 2012-2018 <roland.jax@liwest.at>
+ * Copyright (C) Roland Jax 2012-2019 <roland.jax@liwest.at>
  *
  * This file is part of ebusfsm.
  *
@@ -26,6 +26,11 @@
 namespace ebusfsm
 {
 
+enum class Type
+{
+	bcd, data1b, data1c, uchar, schar, data2b, data2c, uint, sint
+};
+
 unsigned char calcCRC(const unsigned char byte, const unsigned char init);
 
 bool isMaster(const unsigned char byte);
@@ -38,9 +43,9 @@ unsigned char slaveAddress(const unsigned char masterAddress);
 
 bool isHex(const std::string& str, std::ostringstream& result, const int& nibbles);
 
-float decode(short type, std::vector<unsigned char> value);
+float decode(const Type type, std::vector<unsigned char> value);
 
-std::vector<unsigned char> encode(short type, float value);
+std::vector<unsigned char> encode(const Type type, float value);
 
 } // namespace ebusfsm
 

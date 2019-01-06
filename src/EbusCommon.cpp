@@ -1,5 +1,5 @@
 /*
- * Copyright (C) Roland Jax 2012-2018 <roland.jax@liwest.at>
+ * Copyright (C) Roland Jax 2012-2019 <roland.jax@liwest.at>
  *
  * This file is part of ebusfsm.
  *
@@ -89,79 +89,79 @@ bool ebusfsm::isHex(const std::string& str, std::ostringstream& result, const in
 	return (true);
 }
 
-float ebusfsm::decode(short type, std::vector<unsigned char> value)
+float ebusfsm::decode(const Type type, std::vector<unsigned char> value)
 {
 	float result = 0.0;
 
 	if (value.size() == 1)
 	{
-		if (type == 10)
+		if (type == Type::bcd)
 			result = ((value[0] / 16) < 0x0a && (value[0] % 16) < 0x0a) ? (value[0] / 16 * 10) + (value[0] % 16) : 0xff;
-		if (type == 11) result = (char) value[0];
-		if (type == 12) result = value[0] / 2.0;
-		if (type == 13) result = value[0];
-		if (type == 14) result = (char) value[0];
+		if (type == Type::data1b) result = (char) value[0];
+		if (type == Type::data1c) result = value[0] / 2.0;
+		if (type == Type::uchar) result = value[0];
+		if (type == Type::schar) result = (char) value[0];
 	}
 
 	if (value.size() == 2)
 	{
-		if (type == 21) result = (char) value[1] + value[0] / 256.0;
-		if (type == 22) result = (char) value[1] * 16.0 + value[0] / 16.0;
-		if (type == 23) result = (unsigned short) ((value[1] * 256) + value[0]);
-		if (type == 24) result = (short) ((value[1] * 256) + value[0]);
+		if (type == Type::data2b) result = (char) value[1] + value[0] / 256.0;
+		if (type == Type::data2c) result = (char) value[1] * 16.0 + value[0] / 16.0;
+		if (type == Type::uint) result = (unsigned short) ((value[1] * 256) + value[0]);
+		if (type == Type::sint) result = (short) ((value[1] * 256) + value[0]);
 	}
 
 	return (result);
 }
 
-std::vector<unsigned char> ebusfsm::encode(short type, float value)
+std::vector<unsigned char> ebusfsm::encode(const Type type, float value)
 {
 	std::vector<unsigned char> result;
 
-	if (type == 10)
+	if (type == Type::bcd)
 	{
 		result.push_back(((value < 100.0) ? ((short) value / 10 * 16) + ((short) value % 10) : 0xff));
 	}
 
-	if (type == 11)
+	if (type == Type::data1b)
 	{
 		result.push_back((unsigned char) value);
 	}
 
-	if (type == 12)
+	if (type == Type::data1c)
 	{
 		result.push_back(value * 2.0);
 	}
 
-	if (type == 13)
+	if (type == Type::uchar)
 	{
 		result.push_back(value);
 	}
 
-	if (type == 14)
+	if (type == Type::schar)
 	{
 		result.push_back(value);
 	}
 
-	if (type == 21)
+	if (type == Type::data2b)
 	{
 		result.push_back((value - floorf(value)) * 256.0);
 		result.push_back(floorf(value));
 	}
 
-	if (type == 22)
+	if (type == Type::data2c)
 	{
 		result.push_back(ceilf(value * 16.0));
 		result.push_back(floorf(value / 16.0));
 	}
 
-	if (type == 23)
+	if (type == Type::uint)
 	{
 		result.push_back(((short) value) & 0x00ff);
 		result.push_back((((short) value) & 0xff00) / 256);
 	}
 
-	if (type == 24)
+	if (type == Type::sint)
 	{
 		result.push_back(((short) value) & 0x00ff);
 		result.push_back((((short) value) & 0xff00) / 256);

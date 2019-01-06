@@ -1,5 +1,5 @@
 /*
- * Copyright (C) Roland Jax 2012-2018 <roland.jax@liwest.at>
+ * Copyright (C) Roland Jax 2012-2019 <roland.jax@liwest.at>
  *
  * This file is part of ebusfsm.
  *
@@ -23,7 +23,7 @@
 #include <iostream>
 #include <iomanip>
 
-void decode_encode(int type, std::vector<unsigned char> source)
+void decode_encode(const ebusfsm::Type type, std::vector<unsigned char> source)
 {
 	float value = ebusfsm::decode(type, source);
 
@@ -33,7 +33,7 @@ void decode_encode(int type, std::vector<unsigned char> source)
 		<< " decode " << value << std::endl;
 }
 
-void check_range(int type, std::vector<unsigned char> source)
+void check_range(const ebusfsm::Type type, std::vector<unsigned char> source)
 {
 	float value = ebusfsm::decode(type, source);
 
@@ -53,97 +53,97 @@ int main()
 	{ 0x00, 0x00, 0x01, 0x00, 0xff, 0xff, 0x00, 0xff, 0xf0, 0xff, 0x00, 0x80, 0x01, 0x80, 0xff, 0x7f, 0x65, 0x02, 0x77, 0x02 };
 
 	// BCD
-	std::cout << std::endl << "Examples BCD (type=10)" << std::endl;
+	std::cout << std::endl << "Examples BCD" << std::endl;
 
 	for (size_t i = 0; i < b1.size(); i++)
 	{
 		std::vector<unsigned char> source(1, b1[i]);
 
-		decode_encode(10, source);
+		decode_encode(ebusfsm::Type::bcd, source);
 	}
 
 	// DATA1b
-	std::cout << std::endl << "Examples DATA1b (type=11)" << std::endl;
+	std::cout << std::endl << "Examples DATA1b" << std::endl;
 
 	for (size_t i = 0; i < b1.size(); i++)
 	{
 		std::vector<unsigned char> source(1, b1[i]);
 
-		decode_encode(11, source);
+		decode_encode(ebusfsm::Type::data1b, source);
 	}
 
 	// DATA1c
-	std::cout << std::endl << "Examples DATA1c (type=12)" << std::endl;
+	std::cout << std::endl << "Examples DATA1c" << std::endl;
 
 	for (size_t i = 0; i < b1.size(); i++)
 	{
 		std::vector<unsigned char> source(1, b1[i]);
 
-		decode_encode(12, source);
+		decode_encode(ebusfsm::Type::data1c, source);
 	}
 
 	// unsigned char
-	std::cout << std::endl << "Examples unsigned char (type=13)" << std::endl;
+	std::cout << std::endl << "Examples unsigned char" << std::endl;
 
 	for (size_t i = 0; i < b1.size(); i++)
 	{
 		std::vector<unsigned char> source(1, b1[i]);
 
-		decode_encode(13, source);
+		decode_encode(ebusfsm::Type::uchar, source);
 	}
 
 	// signed char
-	std::cout << std::endl << "Examples signed char (type=14)" << std::endl;
+	std::cout << std::endl << "Examples signed char" << std::endl;
 
 	for (size_t i = 0; i < b1.size(); i++)
 	{
 		std::vector<unsigned char> source(1, b1[i]);
 
-		decode_encode(14, source);
+		decode_encode(ebusfsm::Type::schar, source);
 	}
 
 	// DATA2b
-	std::cout << std::endl << "Examples DATA2b (type=21)" << std::endl;
+	std::cout << std::endl << "Examples DATA2b" << std::endl;
 
 	for (size_t i = 0; i < b2.size(); i += 2)
 	{
 		std::vector<unsigned char> source(&b2[i], &b2[i + 2]);
 
-		decode_encode(21, source);
+		decode_encode(ebusfsm::Type::data2b, source);
 	}
 
 	// DATA2c
-	std::cout << std::endl << "Examples DATA2c (type=22)" << std::endl;
+	std::cout << std::endl << "Examples DATA2c" << std::endl;
 
 	for (size_t i = 0; i < b2.size(); i += 2)
 	{
 		std::vector<unsigned char> source(&b2[i], &b2[i + 2]);
 
-		decode_encode(22, source);
+		decode_encode(ebusfsm::Type::data2c, source);
 	}
 
 	// unsigned int
-	std::cout << std::endl << "Examples unsigned int (type=23)" << std::endl;
+	std::cout << std::endl << "Examples unsigned int" << std::endl;
 
 	for (size_t i = 0; i < b2.size(); i += 2)
 	{
 		std::vector<unsigned char> source(&b2[i], &b2[i + 2]);
 
-		decode_encode(23, source);
+		decode_encode(ebusfsm::Type::uint, source);
 	}
 
 	// signed int
-	std::cout << std::endl << "Examples signed int (type=24)" << std::endl;
+	std::cout << std::endl << "Examples signed int" << std::endl;
 
 	for (size_t i = 0; i < b2.size(); i += 2)
 	{
 		std::vector<unsigned char> source(&b2[i], &b2[i + 2]);
 
-		decode_encode(24, source);
+		decode_encode(ebusfsm::Type::sint, source);
 	}
 
 	// BCD
-	std::cout << std::endl << "Check range BCD (type=10)" << std::endl;
+	std::cout << std::endl << "Check range BCD" << std::endl;
 
 	for (int high = 0x00; high <= 0x09; high++)
 	{
@@ -151,52 +151,52 @@ int main()
 		{
 			std::vector<unsigned char> source(1, (high << 4) + low);
 
-			check_range(10, source);
+			check_range(ebusfsm::Type::bcd, source);
 		}
 	}
 
 	// DATA1b
-	std::cout << std::endl << "Check range DATA1b (type=11)" << std::endl;
+	std::cout << std::endl << "Check range DATA1b" << std::endl;
 
 	for (int low = 0x00; low <= 0xff; low++)
 	{
 		std::vector<unsigned char> source(1, low);
 
-		check_range(11, source);
+		check_range(ebusfsm::Type::data1b, source);
 	}
 
 	// DATA1c
-	std::cout << std::endl << "Check range DATA1c (type=12)" << std::endl;
+	std::cout << std::endl << "Check range DATA1c" << std::endl;
 
 	for (int low = 0x00; low <= 0xff; low++)
 	{
 		std::vector<unsigned char> source(1, low);
 
-		check_range(12, source);
+		check_range(ebusfsm::Type::data1c, source);
 	}
 
 	// unsinged char
-	std::cout << std::endl << "Check range unsigned char (type=13)" << std::endl;
+	std::cout << std::endl << "Check range unsigned char" << std::endl;
 
 	for (int low = 0x00; low <= 0xff; low++)
 	{
 		std::vector<unsigned char> source(1, low);
 
-		check_range(13, source);
+		check_range(ebusfsm::Type::uchar, source);
 	}
 
 	// signed char
-	std::cout << std::endl << "Check range signed char (type=14)" << std::endl;
+	std::cout << std::endl << "Check range signed char" << std::endl;
 
 	for (int low = 0x00; low <= 0xff; low++)
 	{
 		std::vector<unsigned char> source(1, low);
 
-		check_range(14, source);
+		check_range(ebusfsm::Type::schar, source);
 	}
 
 	// DATA2b
-	std::cout << std::endl << "Check range DATA2b (type=21)" << std::endl;
+	std::cout << std::endl << "Check range DATA2b" << std::endl;
 
 	for (int high = 0x00; high <= 0xff; high++)
 	{
@@ -205,12 +205,12 @@ int main()
 			std::vector<unsigned char> source
 			{ (unsigned char) low, (unsigned char) high };
 
-			check_range(21, source);
+			check_range(ebusfsm::Type::data2b, source);
 		}
 	}
 
 	// DATA2c
-	std::cout << std::endl << "Check range DATA2c (type=22)" << std::endl;
+	std::cout << std::endl << "Check range DATA2c" << std::endl;
 
 	for (int high = 0x00; high <= 0xff; high++)
 	{
@@ -219,12 +219,12 @@ int main()
 			std::vector<unsigned char> source
 			{ (unsigned char) low, (unsigned char) high };
 
-			check_range(22, source);
+			check_range(ebusfsm::Type::data2c, source);
 		}
 	}
 
 	// unsigned int
-	std::cout << std::endl << "Check range unsinged int (type=23)" << std::endl;
+	std::cout << std::endl << "Check range unsinged int" << std::endl;
 
 	for (int high = 0x00; high <= 0xff; high++)
 	{
@@ -233,12 +233,12 @@ int main()
 			std::vector<unsigned char> source
 			{ (unsigned char) low, (unsigned char) high };
 
-			check_range(23, source);
+			check_range(ebusfsm::Type::uint, source);
 		}
 	}
 
 	// signed int
-	std::cout << std::endl << "Check range signed int (type=24)" << std::endl;
+	std::cout << std::endl << "Check range signed int" << std::endl;
 
 	for (int high = 0x00; high <= 0xff; high++)
 	{
@@ -247,7 +247,7 @@ int main()
 			std::vector<unsigned char> source
 			{ (unsigned char) low, (unsigned char) high };
 
-			check_range(24, source);
+			check_range(ebusfsm::Type::sint, source);
 		}
 	}
 

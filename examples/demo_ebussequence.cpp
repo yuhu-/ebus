@@ -1,5 +1,5 @@
 /*
- * Copyright (C) Roland Jax 2012-2018 <roland.jax@liwest.at>
+ * Copyright (C) Roland Jax 2012-2019 <roland.jax@liwest.at>
  *
  * This file is part of ebusfsm.
  *
@@ -223,13 +223,13 @@ int main()
 	ebusfsm::EbusSequence parse(tmp);
 
 	std::cout << "parse: " << parse.toString() << " parse(" << ebusfsm::Sequence::toString(parse.getSlave().range(1, 2)) << ") => "
-		<< ebusfsm::decode(4, parse.getSlave().range(1, 2)) << std::endl;
+		<< ebusfsm::decode(ebusfsm::Type::data2c, parse.getSlave().range(1, 2)) << std::endl;
 
 	ebusfsm::Sequence tmp2("ff0ab509030d0e00830002e0028900");
 	ebusfsm::EbusSequence parse2(tmp2);
 
 	std::cout << "parse: " << parse2.toString() << " parse(" << ebusfsm::Sequence::toString(parse2.getSlave().range(1, 2)) << ") => "
-		<< ebusfsm::decode(4, parse2.getSlave().range(1, 2)) << std::endl;
+		<< ebusfsm::decode(ebusfsm::Type::data2c, parse2.getSlave().range(1, 2)) << std::endl;
 
 	return (0);
 }

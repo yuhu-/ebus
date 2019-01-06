@@ -1,5 +1,5 @@
 /*
- * Copyright (C) Roland Jax 2012-2018 <roland.jax@liwest.at>
+ * Copyright (C) Roland Jax 2012-2019 <roland.jax@liwest.at>
  *
  * This file is part of ebusfsm.
  *
@@ -28,6 +28,7 @@
 #include <fstream>
 #include <thread>
 #include <map>
+#include <functional>
 
 namespace ebusfsm
 {
