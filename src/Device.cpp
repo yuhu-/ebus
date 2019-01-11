@@ -73,7 +73,7 @@ ssize_t ebusfsm::Device::recv(unsigned char& value, const long sec, const long n
 	ssize_t nbytes = read(m_fd, &value, 1);
 	if (nbytes == 0) return (DEV_WRN_EOF);
 
-	return (nbytes < 0 ? DEV_ERR_POLL : DEV_OK);
+	return (nbytes < 0 ? DEV_ERR_READ : DEV_OK);
 }
 
 bool ebusfsm::Device::isValid()

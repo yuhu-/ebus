@@ -35,6 +35,7 @@ namespace ebusfsm
 #define DEV_ERR_RECV    -3  // An device error occurred while receiving data
 #define DEV_ERR_SEND    -4  // An device error occurred while sending data
 #define DEV_ERR_POLL    -5  // An device error occurred while waiting on ppoll
+#define DEV_ERR_READ    -6  // An error occurred while reading file descriptor
 
 class Device
 {
