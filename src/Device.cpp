@@ -42,7 +42,10 @@ ssize_t ebusfsm::Device::send(const unsigned char value)
 	if (isValid() == false) return (DEV_ERR_VALID);
 
 	// write byte to device
-	return (write(m_fd, &value, 1) == 1 ? DEV_OK : DEV_ERR_SEND);
+	int ret = write(m_fd, &value, 1);
+	if (ret == -1) return(DEV_ERR_SEND);
+
+	return (DEV_OK);
 }
 
 ssize_t ebusfsm::Device::recv(unsigned char& value, const long sec, const long nsec)
@@ -69,7 +72,7 @@ ssize_t ebusfsm::Device::recv(unsigned char& value, const long sec, const long n
 		if (ret == 0) return (DEV_WRN_TIMEOUT);
 	}
 
-	// directly read byte from device
+	// read byte from device
 	ssize_t nbytes = read(m_fd, &value, 1);
 	if (nbytes < 0) return (DEV_ERR_READ);
 	if (nbytes == 0) return (DEV_WRN_EOF);
