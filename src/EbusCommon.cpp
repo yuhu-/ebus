@@ -93,22 +93,37 @@ float ebusfsm::decode(const Type type, std::vector<unsigned char> value)
 {
 	float result = 0.0;
 
-	if (value.size() == 1)
+	switch(type)
 	{
-		if (type == Type::bcd)
-			result = ((value[0] / 16) < 0x0a && (value[0] % 16) < 0x0a) ? (value[0] / 16 * 10) + (value[0] % 16) : 0xff;
-		if (type == Type::data1b) result = (char) value[0];
-		if (type == Type::data1c) result = value[0] / 2.0;
-		if (type == Type::uchar) result = value[0];
-		if (type == Type::schar) result = (char) value[0];
-	}
-
-	if (value.size() == 2)
-	{
-		if (type == Type::data2b) result = (char) value[1] + value[0] / 256.0;
-		if (type == Type::data2c) result = (char) value[1] * 16.0 + value[0] / 16.0;
-		if (type == Type::uint) result = (unsigned short) ((value[1] * 256) + value[0]);
-		if (type == Type::sint) result = (short) ((value[1] * 256) + value[0]);
+	case Type::bcd:
+		result = ((value[0] / 16) < 0x0a && (value[0] % 16) < 0x0a) ? (value[0] / 16 * 10) + (value[0] % 16) : 0xff;
+		break;
+	case Type::data1b:
+		result = (char) value[0];
+		break;
+	case Type::data1c:
+		result = value[0] / 2.0;
+		break;
+	case Type::uchar:
+		result = value[0];
+		break;
+	case Type::schar:
+		result = (char) value[0];
+		break;
+	case Type::data2b:
+		result = (char) value[1] + value[0] / 256.0;
+		break;
+	case Type::data2c:
+		result = (char) value[1] * 16.0 + value[0] / 16.0;
+		break;
+	case Type::uint:
+		result = (unsigned short) ((value[1] * 256) + value[0]);
+		break;
+	case Type::sint:
+		result = (short) ((value[1] * 256) + value[0]);
+		break;
+	default:
+		break;
 	}
 
 	return (result);
@@ -118,53 +133,41 @@ std::vector<unsigned char> ebusfsm::encode(const Type type, float value)
 {
 	std::vector<unsigned char> result;
 
-	if (type == Type::bcd)
+	switch(type)
 	{
+	case Type::bcd:
 		result.push_back(((value < 100.0) ? ((short) value / 10 * 16) + ((short) value % 10) : 0xff));
-	}
-
-	if (type == Type::data1b)
-	{
+		break;
+	case Type::data1b:
 		result.push_back((unsigned char) value);
-	}
-
-	if (type == Type::data1c)
-	{
+		break;
+	case Type::data1c:
 		result.push_back(value * 2.0);
-	}
-
-	if (type == Type::uchar)
-	{
+		break;
+	case Type::uchar:
 		result.push_back(value);
-	}
-
-	if (type == Type::schar)
-	{
+		break;
+	case Type::schar:
 		result.push_back(value);
-	}
-
-	if (type == Type::data2b)
-	{
+		break;
+	case Type::data2b:
 		result.push_back((value - floorf(value)) * 256.0);
 		result.push_back(floorf(value));
-	}
-
-	if (type == Type::data2c)
-	{
+		break;
+	case Type::data2c:
 		result.push_back(ceilf(value * 16.0));
 		result.push_back(floorf(value / 16.0));
-	}
-
-	if (type == Type::uint)
-	{
+		break;
+	case Type::uint:
 		result.push_back(((short) value) & 0x00ff);
 		result.push_back((((short) value) & 0xff00) / 256);
-	}
-
-	if (type == Type::sint)
-	{
+		break;
+	case Type::sint:
 		result.push_back(((short) value) & 0x00ff);
 		result.push_back((((short) value) & 0xff00) / 256);
+		break;
+	default:
+		break;
 	}
 
 	return (result);
