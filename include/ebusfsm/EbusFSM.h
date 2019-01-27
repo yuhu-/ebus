@@ -103,6 +103,8 @@ public:
 	bool getColor() const;
 	void setColor(const bool& color);
 
+	long getReadBytesPerSeconds() const;
+
 private:
 	std::thread m_thread;
 
@@ -130,6 +132,10 @@ private:
 
 	bool m_color = false;                            // true, when the output is in color
 
+	std::chrono::time_point<std::chrono::high_resolution_clock> m_lastTime = std::chrono::high_resolution_clock::now();
+	long m_readBytes = 0;
+	long m_readBytesPerSeconds = 0;
+
 	NQueue<EbusMessage*> m_ebusMsgQueue;
 
 	std::unique_ptr<EbusDevice> m_ebusDevice = nullptr;
@@ -144,6 +150,9 @@ private:
 
 	Reaction identify(EbusSequence& eSeq);
 	void publish(EbusSequence& eSeq);
+
+	void dumpByte(const unsigned char& byte);
+	void countByte();
 
 	void logError(const std::string& message);
 	void logWarn(const std::string& message);

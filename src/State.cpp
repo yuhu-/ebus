@@ -74,29 +74,13 @@ int ebusfsm::State::read(EbusFSM* fsm, unsigned char& byte, const long sec, cons
 
 	if (result == DEV_OK)
 	{
+		fsm->dumpByte(byte);
+		fsm->countByte();
+
 		std::ostringstream ostr;
-		ostr << std::nouppercase << std::hex << std::setw(2) << std::setfill('0') << static_cast<unsigned>(byte) << std::nouppercase << std::setw(0);
+		ostr << std::nouppercase << std::hex << std::setw(2) << std::setfill('0') << static_cast<unsigned>(byte)
+			<< std::nouppercase << std::setw(0);
 		fsm->logTrace("<" + ostr.str());
-	}
-
-	if (fsm->m_dump == true && result == DEV_OK && fsm->m_dumpRawStream.is_open() == true)
-	{
-		fsm->m_dumpRawStream.write((char*) &byte, 1);
-		fsm->m_dumpFileSize++;
-
-		if ((fsm->m_dumpFileSize % 8) == 0) fsm->m_dumpRawStream.flush();
-
-		if (fsm->m_dumpFileSize >= fsm->m_dumpFileMaxSize * 1024)
-		{
-			std::string oldfile = fsm->m_dumpFile + ".old";
-
-			if (rename(fsm->m_dumpFile.c_str(), oldfile.c_str()) == 0)
-			{
-				fsm->m_dumpRawStream.close();
-				fsm->m_dumpRawStream.open(fsm->m_dumpFile.c_str(), std::ios::binary | std::ios::app);
-				fsm->m_dumpFileSize = 0;
-			}
-		}
 	}
 
 	return (result);
@@ -109,7 +93,8 @@ int ebusfsm::State::write(EbusFSM* fsm, const unsigned char& byte)
 	if (result == DEV_OK)
 	{
 		std::ostringstream ostr;
-		ostr << std::nouppercase << std::hex << std::setw(2) << std::setfill('0') << static_cast<unsigned>(byte) << std::nouppercase << std::setw(0);
+		ostr << std::nouppercase << std::hex << std::setw(2) << std::setfill('0') << static_cast<unsigned>(byte)
+			<< std::nouppercase << std::setw(0);
 		fsm->logTrace(">" + ostr.str());
 	}
 	return (result);

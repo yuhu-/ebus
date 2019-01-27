@@ -241,6 +241,11 @@ void ebusfsm::EbusFSM::setColor(const bool& color)
 	m_color = color;
 }
 
+long ebusfsm::EbusFSM::getReadBytesPerSeconds() const
+{
+	return (m_readBytesPerSeconds);
+}
+
 void ebusfsm::EbusFSM::run()
 {
 	logInfo("EbusFSM started");
@@ -287,6 +292,45 @@ ebusfsm::Reaction ebusfsm::EbusFSM::identify(EbusSequence& eSeq)
 void ebusfsm::EbusFSM::publish(EbusSequence& eSeq)
 {
 	if (m_publish != nullptr) m_publish(eSeq);
+}
+
+void ebusfsm::EbusFSM::dumpByte(const unsigned char& byte)
+{
+	if (m_dump == true && m_dumpRawStream.is_open() == true)
+	{
+		m_dumpRawStream.write((char*) &byte, 1);
+		m_dumpFileSize++;
+
+		if ((m_dumpFileSize % 8) == 0) m_dumpRawStream.flush();
+
+		if (m_dumpFileSize >= m_dumpFileMaxSize * 1024)
+		{
+			std::string oldfile = m_dumpFile + ".old";
+
+			if (rename(m_dumpFile.c_str(), oldfile.c_str()) == 0)
+			{
+				m_dumpRawStream.close();
+				m_dumpRawStream.open(m_dumpFile.c_str(), std::ios::binary | std::ios::app);
+				m_dumpFileSize = 0;
+			}
+		}
+	}
+}
+
+void ebusfsm::EbusFSM::countByte()
+{
+	std::chrono::time_point<std::chrono::high_resolution_clock> actTime = std::chrono::high_resolution_clock::now();
+	auto seconds = std::chrono::duration_cast<std::chrono::seconds>(actTime - m_lastTime);
+
+	if (seconds.count() > 1)
+	{
+		m_readBytesPerSeconds = m_readBytes;
+		m_lastTime = actTime;
+		m_readBytes = 0;
+		// TODO push MovingAverage
+	}
+
+	m_readBytes++;
 }
 
 void ebusfsm::EbusFSM::logError(const std::string& message)
