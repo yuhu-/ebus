@@ -34,8 +34,8 @@ public:
 		return (&m_sendResponse);
 	}
 
-	int run(EbusFSM* fsm);
-	const std::string toString() const;
+	int run(EbusFSM* fsm) override;
+	const std::string toString() const override;
 
 private:
 	static SendResponse m_sendResponse;

@@ -34,8 +34,8 @@ public:
 		return (&m_lockBus);
 	}
 
-	int run(EbusFSM* fsm);
-	const std::string toString() const;
+	int run(EbusFSM* fsm) override;
+	const std::string toString() const override;
 
 private:
 	static LockBus m_lockBus;

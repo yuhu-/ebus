@@ -34,8 +34,8 @@ public:
 		return (&m_recvResponse);
 	}
 
-	int run(EbusFSM* fsm);
-	const std::string toString() const;
+	int run(EbusFSM* fsm) override;
+	const std::string toString() const override;
 
 private:
 	static RecvResponse m_recvResponse;

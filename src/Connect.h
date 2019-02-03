@@ -34,8 +34,8 @@ public:
 		return (&m_connect);
 	}
 
-	int run(EbusFSM* fsm);
-	const std::string toString() const;
+	int run(EbusFSM* fsm) override;
+	const std::string toString() const override;
 
 private:
 	static Connect m_connect;
