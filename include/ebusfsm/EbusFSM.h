@@ -24,6 +24,7 @@
 #include <EbusDevice.h>
 #include <EbusMessage.h>
 #include <utils/NQueue.h>
+#include <utils/MovingAverage.h>
 
 #include <fstream>
 #include <thread>
@@ -103,7 +104,8 @@ public:
 	bool getColor() const;
 	void setColor(const bool& color);
 
-	long getReadBytesPerSeconds() const;
+	long getBytesPerSeconds() const;
+	double getBytesPerSecondsAVG() const;
 
 private:
 	std::thread m_thread;
@@ -132,9 +134,11 @@ private:
 
 	bool m_color = false;                            // true, when the output is in color
 
-	std::chrono::time_point<std::chrono::high_resolution_clock> m_lastTime = std::chrono::high_resolution_clock::now();
-	long m_readBytes = 0;
-	long m_readBytesPerSeconds = 0;
+	long m_lastSeconds =
+		std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+	long m_bytes = 0;
+	long m_bytesPerSeconds = 0;
+	MovingAverage* m_bytesPerSecondsAVG = nullptr;
 
 	NQueue<EbusMessage*> m_ebusMsgQueue;
 

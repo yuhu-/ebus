@@ -38,7 +38,7 @@ std::map<int, std::string> FSMErrors =
 ebusfsm::EbusFSM::EbusFSM(const unsigned char address, const std::string& device, const bool deviceCheck,
 	std::shared_ptr<IEbusLogger> logger, std::function<Reaction(EbusSequence&)> identify,
 	std::function<void(EbusSequence&)> publish)
-	: Notify(), m_address(address), m_slaveAddress(slaveAddress(address)), m_ebusDevice(
+	: Notify(), m_address(address), m_slaveAddress(slaveAddress(address)), m_bytesPerSecondsAVG(new MovingAverage(10)), m_ebusDevice(
 		std::make_unique<EbusDevice>(device, deviceCheck)), m_logger(logger), m_identify(identify), m_publish(publish)
 {
 	changeState(Connect::getConnect());
@@ -241,9 +241,14 @@ void ebusfsm::EbusFSM::setColor(const bool& color)
 	m_color = color;
 }
 
-long ebusfsm::EbusFSM::getReadBytesPerSeconds() const
+long ebusfsm::EbusFSM::getBytesPerSeconds() const
 {
-	return (m_readBytesPerSeconds);
+	return (m_bytesPerSeconds);
+}
+
+double ebusfsm::EbusFSM::getBytesPerSecondsAVG() const
+{
+	return (m_bytesPerSecondsAVG->getAverage());
 }
 
 void ebusfsm::EbusFSM::run()
@@ -319,18 +324,18 @@ void ebusfsm::EbusFSM::dumpByte(const unsigned char& byte)
 
 void ebusfsm::EbusFSM::countByte()
 {
-	std::chrono::time_point<std::chrono::high_resolution_clock> actTime = std::chrono::high_resolution_clock::now();
-	auto seconds = std::chrono::duration_cast<std::chrono::seconds>(actTime - m_lastTime);
+	long actSeconds =
+		std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
-	if (seconds.count() > 1)
+	if (actSeconds > m_lastSeconds)
 	{
-		m_readBytesPerSeconds = m_readBytes;
-		m_lastTime = actTime;
-		m_readBytes = 0;
-		// TODO push MovingAverage
+		m_bytesPerSeconds = m_bytes;
+		m_bytesPerSecondsAVG->addValue(m_bytes);
+		m_lastSeconds = actSeconds;
+		m_bytes = 1;
 	}
 
-	m_readBytes++;
+	m_bytes++;
 }
 
 void ebusfsm::EbusFSM::logError(const std::string& message)
