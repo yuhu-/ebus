@@ -47,7 +47,7 @@ int ebusfsm::Connect::run(EbusFSM* fsm)
 
 	do
 	{
-		int result = read(fsm, byte, 1, 0);
+		result = read(fsm, byte, 1, 0);
 		if (result != DEV_OK) return (result);
 	} while (byte != SYN);
 

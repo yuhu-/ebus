@@ -42,7 +42,7 @@ int ebusfsm::SendResponse::run(EbusFSM* fsm)
 		if (result != DEV_OK) return (result);
 
 		// receive ACK
-		int result = read(fsm, byte, 0, fsm->m_receiveTimeout);
+		result = read(fsm, byte, 0, fsm->m_receiveTimeout);
 		if (result != DEV_OK) return (result);
 
 		if (byte != SEQ_ACK && byte != SEQ_NAK)
