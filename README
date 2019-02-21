@@ -5,7 +5,7 @@ To build ebusfsm the following packages are needed:
   - autoconf (2.69)
   - automake (1.11)
   - make
-  - g++ (C++14)
+  - g++ (C++17)
   - ppoll support (kernel)
   - pthread support (glibc)
   - pkg-config
