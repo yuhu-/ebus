@@ -43,11 +43,11 @@ namespace ebusfsm
 #define SEQ_TYPE_MM        1 // master master
 #define SEQ_TYPE_MS        2 // master slave
 
-static std::byte seq_ack;    // 0x00 positive acknowledge
-static std::byte seq_nak;    // 0xff negative acknowledge
-static std::byte seq_broad;  // 0xfe broadcast destination address
+static const std::byte seq_ack = std::byte(0x00);   // positive acknowledge
+static const std::byte seq_nak = std::byte(0xff);   // negative acknowledge
+static const std::byte seq_broad = std::byte(0xfe); // broadcast destination address
 
-static int seq_max_bytes;    // 16 maximum data bytes
+static const int seq_max_bytes = 16;                // 16 maximum data bytes
 
 class EbusSequence
 {

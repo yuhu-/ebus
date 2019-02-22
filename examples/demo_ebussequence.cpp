@@ -45,6 +45,20 @@ int main()
 	else
 		std::cout << " << not found" << std::endl;
 
+	std::cout << "contains '" << part1.toString() << "' in '" << source.toString() << "'";
+
+	if (source.contains(part1.toString()))
+		std::cout << " << yes" << std::endl;
+	else
+		std::cout << " << no" << std::endl;
+
+	std::cout << "contains '" << part2.toString() << "' in '" << source.toString() << "'";
+
+	if (source.contains(part2.toString()))
+		std::cout << " << yes: " << std::endl;
+	else
+		std::cout << " << no" << std::endl;
+
 	ebusfsm::Sequence test1("ff52b509030d0600");
 
 	std::cout << "compare '" << test1.toString() << "' with '" << source.toString() << "'";
@@ -62,6 +76,19 @@ int main()
 		std::cout << " << equal" << std::endl;
 	else
 		std::cout << " << not equal" << std::endl;
+
+	// parse sequence range
+	ebusfsm::Sequence tmp("ff12b509030d0000d700037702006100");
+	ebusfsm::EbusSequence parse(tmp);
+
+	std::cout << "range: " << parse.toString() << " slave(1,2) = '" << ebusfsm::Sequence::toString(parse.getSlave().range(1, 2))
+		<< "'" << std::endl;
+
+	ebusfsm::Sequence tmp2("ff0ab509030d0e00830002e0028900");
+	ebusfsm::EbusSequence parse2(tmp2);
+
+	std::cout << "range: " << parse2.toString() << " slave(1,2) = '" << ebusfsm::Sequence::toString(parse2.getSlave().range(1, 2))
+		<< "'" << std::endl;
 
 	// Test EbusSequence
 	ebusfsm::Sequence seq;
@@ -212,28 +239,8 @@ int main()
 	std::cout << "seq: " << seq.toString() << " Slave: " << slave2.toStringSlave() << std::endl;
 	seq.clear();
 
-	// parse sequence range
-	ebusfsm::Sequence tmp("ff12b509030d0000d700037702006100");
-	ebusfsm::EbusSequence parse(tmp);
 
-	std::cout << "parse: " << parse.toString() << " parse(" << ebusfsm::Sequence::toString(parse.getSlave().range(1, 2))
-		<< ") => found" << std::endl;
 
-	ebusfsm::Sequence tmp2("ff0ab509030d0e00830002e0028900");
-	ebusfsm::EbusSequence parse2(tmp2);
-
-	std::cout << "parse2: " << parse2.toString() << " parse(" << ebusfsm::Sequence::toString(parse2.getSlave().range(1, 2))
-		<< ") => found" << std::endl;
-
-	// slaveAddress
-	std::cout << std::endl << "slaveAddress" << std::endl;
-	for (size_t i = 0; i < sizeof(bytes); i++)
-	{
-		std::cout << std::nouppercase << std::hex << std::setw(2) << std::setfill('0') << static_cast<unsigned>(bytes[i])
-			<< " " << std::nouppercase << std::hex << std::setw(2) << std::setfill('0')
-			<< static_cast<unsigned>(ebusfsm::slaveAddress(bytes[i])) << std::endl;
-
-	}
 
 	return (0);
 }

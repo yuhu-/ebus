@@ -39,12 +39,6 @@ std::map<int, std::string> SequenceErrors =
 { SEQ_ERR_ZZ, "target address is invalid" },
 { SEQ_ERR_ACK_MISS, "acknowledge byte is missing" }, };
 
-std::byte seq_ack = std::byte(0x00);
-std::byte seq_nak = std::byte(0xff);
-std::byte seq_broad = std::byte(0xfe);
-
-int seq_max_bytes = 16;
-
 ebusfsm::EbusSequence::EbusSequence()
 {
 }

@@ -23,13 +23,6 @@
 #include <sstream>
 #include <iomanip>
 
-std::byte seq_zero = std::byte(0x00);
-
-std::byte seq_syn = std::byte(0xaa);
-std::byte seq_exp = std::byte(0xa9);
-std::byte seq_synexp = std::byte(0x01);
-std::byte seq_expexp = std::byte(0x00);
-
 ebusfsm::Sequence::Sequence()
 {
 }

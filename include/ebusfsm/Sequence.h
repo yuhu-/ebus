@@ -27,12 +27,12 @@
 namespace ebusfsm
 {
 
-static std::byte seq_zero;    // 0x00
+static const std::byte seq_zero = std::byte(0x00);     // zero byte
 
-static std::byte seq_syn;     // 0xaa synchronization byte
-static std::byte seq_exp;     // 0xa9 expand byte
-static std::byte seq_synexp;  // 0x01 expanded synchronization byte
-static std::byte seq_expexp;  // 0x00 expanded expand byte
+static const std::byte seq_syn = std::byte(0xaa);      // synchronization byte
+static const std::byte seq_exp = std::byte(0xa9);      // expand byte
+static const std::byte seq_synexp = std::byte(0x01);   // expanded synchronization byte
+static const std::byte seq_expexp = std::byte(0x00);   // expanded expand byte
 
 class Sequence
 {
