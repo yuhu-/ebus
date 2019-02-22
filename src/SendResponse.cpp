@@ -26,7 +26,7 @@ int ebusfsm::SendResponse::run(EbusFSM* fsm)
 {
 	EbusSequence& eSeq = m_passiveMessage->getEbusSequence();
 	int result;
-	unsigned char byte;
+	std::byte byte;
 
 	for (int retry = 1; retry >= 0; retry--)
 	{
@@ -45,12 +45,12 @@ int ebusfsm::SendResponse::run(EbusFSM* fsm)
 		result = read(fsm, byte, 0, fsm->m_receiveTimeout);
 		if (result != DEV_OK) return (result);
 
-		if (byte != SEQ_ACK && byte != SEQ_NAK)
+		if (byte != seq_ack && byte != seq_nak)
 		{
 			fsm->logInfo(stateMessage(fsm, STATE_ERR_ACK_WRONG));
 			break;
 		}
-		else if (byte == SEQ_ACK)
+		else if (byte == seq_ack)
 		{
 			break;
 		}

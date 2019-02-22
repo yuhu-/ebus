@@ -24,7 +24,7 @@ ebusfsm::FreeBus ebusfsm::FreeBus::m_freeBus;
 
 int ebusfsm::FreeBus::run(EbusFSM* fsm)
 {
-	unsigned char byte = SYN;
+	std::byte byte = seq_syn;
 
 	int result = writeRead(fsm, byte, 0, 0);
 	if (result != DEV_OK) return (result);

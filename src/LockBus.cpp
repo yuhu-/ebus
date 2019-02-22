@@ -28,7 +28,7 @@ ebusfsm::LockBus ebusfsm::LockBus::m_lockBus;
 int ebusfsm::LockBus::run(EbusFSM* fsm)
 {
 	EbusSequence& eSeq = m_activeMessage->getEbusSequence();
-	unsigned char byte = eSeq.getMasterQQ();
+	std::byte byte = eSeq.getMasterQQ();
 
 	int result = write(fsm, byte);
 	if (result != DEV_OK) return (result);
@@ -37,7 +37,7 @@ int ebusfsm::LockBus::run(EbusFSM* fsm)
 	{ 0, fsm->m_arbitrationTime * 1000L };
 	nanosleep(&req, (struct timespec *) NULL);
 
-	byte = 0;
+	byte = seq_zero;
 
 	result = read(fsm, byte, 0, fsm->m_receiveTimeout);
 	if (result != DEV_OK) return (result);
@@ -50,7 +50,7 @@ int ebusfsm::LockBus::run(EbusFSM* fsm)
 		{
 			m_lockRetries++;
 
-			if ((byte & 0x0f) != (eSeq.getMasterQQ() & 0x0f))
+			if ((byte & std::byte(0x0f)) != (eSeq.getMasterQQ() & std::byte(0x0f)))
 			{
 				m_lockCounter = fsm->m_lockCounter;
 				fsm->logDebug(stateMessage(fsm, STATE_WRN_PRI_LOST));

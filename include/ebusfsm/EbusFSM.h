@@ -65,7 +65,7 @@ class EbusFSM : private Notify
 	friend class SendResponse;
 
 public:
-	EbusFSM(const unsigned char address, const std::string& device, const bool deviceCheck, std::shared_ptr<IEbusLogger> logger,
+	EbusFSM(const std::byte address, const std::string& device, const bool deviceCheck, std::shared_ptr<IEbusLogger> logger,
 		std::function<Reaction(EbusSequence&)> identify, std::function<void(EbusSequence&)> publish);
 
 	~EbusFSM();
@@ -104,8 +104,8 @@ public:
 	bool getColor() const;
 	void setColor(const bool& color);
 
-	long getBytesPerSeconds() const;
-	double getBytesPerSecondsAVG() const;
+	long actBusSpeed() const;
+	double avgBusSpeed() const;
 
 private:
 	std::thread m_thread;
@@ -117,8 +117,8 @@ private:
 
 	int m_lastResult = DEV_OK;
 
-	const unsigned char m_address;                   // ebus master address
-	const unsigned char m_slaveAddress;              // ebus slave address
+	const std::byte m_address;                       // ebus master address
+	const std::byte m_slaveAddress;                  // ebus slave address
 
 	long m_reopenTime = 60L;                         // max. time to open ebus device [s]
 	long m_arbitrationTime = 5000L;                  // waiting time for arbitration test [us]
@@ -155,7 +155,7 @@ private:
 	Reaction identify(EbusSequence& eSeq);
 	void publish(EbusSequence& eSeq);
 
-	void dumpByte(const unsigned char& byte);
+	void dumpByte(const std::byte& byte);
 	void countByte();
 
 	void logError(const std::string& message);

@@ -26,7 +26,7 @@ ebusfsm::RecvResponse ebusfsm::RecvResponse::m_recvResponse;
 int ebusfsm::RecvResponse::run(EbusFSM* fsm)
 {
 	EbusSequence& eSeq = m_activeMessage->getEbusSequence();
-	unsigned char byte;
+	std::byte byte;
 	Sequence seq;
 	int result;
 
@@ -37,7 +37,7 @@ int ebusfsm::RecvResponse::run(EbusFSM* fsm)
 		if (result != DEV_OK) return (result);
 
 		// maximum data bytes
-		if (byte > SEQ_NN_MAX)
+		if (std::to_integer<int>(byte) > seq_max_bytes)
 		{
 			fsm->logWarn(stateMessage(fsm, STATE_ERR_NN_WRONG));
 			m_activeMessage->setState(FSM_ERR_TRANSMIT);
@@ -50,7 +50,7 @@ int ebusfsm::RecvResponse::run(EbusFSM* fsm)
 		seq.push_back(byte);
 
 		// +1 for CRC
-		size_t bytes = byte + 1;
+		size_t bytes = std::to_integer < size_t > (byte) + 1;
 
 		for (size_t i = 0; i < bytes; i++)
 		{
@@ -59,16 +59,16 @@ int ebusfsm::RecvResponse::run(EbusFSM* fsm)
 
 			seq.push_back(byte);
 
-			if (byte == SYN || byte == EXT) bytes++;
+			if (byte == seq_syn || byte == seq_exp) bytes++;
 		}
 
 		// create slave data
 		eSeq.createSlave(seq);
 
 		if (eSeq.getSlaveState() == SEQ_OK)
-			byte = SEQ_ACK;
+			byte = seq_ack;
 		else
-			byte = SEQ_NAK;
+			byte = seq_nak;
 
 		// send ACK
 		result = writeRead(fsm, byte, 0, 0);

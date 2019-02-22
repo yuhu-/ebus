@@ -39,7 +39,7 @@ void publish(ebusfsm::EbusSequence& eSeq)
 int main()
 {
 
-	ebusfsm::EbusFSM fsm(0xff, "/dev/ttyUSB0", false, nullptr, std::bind(&identify, std::placeholders::_1),
+	ebusfsm::EbusFSM fsm(std::byte(0xff), "/dev/ttyUSB0", false, nullptr, std::bind(&identify, std::placeholders::_1),
 		std::bind(&publish, std::placeholders::_1));
 
 	int count = 0;

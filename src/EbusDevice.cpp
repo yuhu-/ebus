@@ -65,14 +65,14 @@ bool ebusfsm::EbusDevice::isOpen()
 	return (m_device->isOpen());
 }
 
-ssize_t ebusfsm::EbusDevice::send(const unsigned char value)
+ssize_t ebusfsm::EbusDevice::send(const std::byte byte)
 {
-	return (m_device->send(value));
+	return (m_device->send(byte));
 }
 
-ssize_t ebusfsm::EbusDevice::recv(unsigned char& value, const long sec, const long nsec)
+ssize_t ebusfsm::EbusDevice::recv(std::byte& byte, const long sec, const long nsec)
 {
-	return (m_device->recv(value, sec, nsec));
+	return (m_device->recv(byte, sec, nsec));
 }
 
 const std::string ebusfsm::EbusDevice::errorText(const int error)

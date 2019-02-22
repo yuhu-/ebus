@@ -37,7 +37,8 @@ public:
 	void closeDevice();
 
 private:
-	termios m_oldSettings = { };
+	termios m_oldSettings =
+	{ };
 
 };
 

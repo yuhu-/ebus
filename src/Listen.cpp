@@ -28,12 +28,12 @@ ebusfsm::Listen ebusfsm::Listen::m_listen;
 
 int ebusfsm::Listen::run(EbusFSM* fsm)
 {
-	unsigned char byte = 0;
+	std::byte byte = seq_zero;
 
 	int result = read(fsm, byte, 1, 0);
 	if (result != DEV_OK) return (result);
 
-	if (byte == SYN)
+	if (byte == seq_syn)
 	{
 		if (m_lockCounter != 0)
 		{
@@ -69,8 +69,8 @@ int ebusfsm::Listen::run(EbusFSM* fsm)
 
 		// handle broadcast and at me addressed messages
 		if (m_sequence.size() == 2
-			&& (m_sequence[1] == SEQ_BROAD || m_sequence[1] == fsm->m_address || m_sequence[1] == fsm->m_slaveAddress))
-			fsm->changeState(RecvMessage::getRecvMessage());
+			&& (m_sequence[1] == seq_broad || m_sequence[1] == fsm->m_address
+				|| m_sequence[1] == fsm->m_slaveAddress)) fsm->changeState(RecvMessage::getRecvMessage());
 
 	}
 

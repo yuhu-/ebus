@@ -37,18 +37,18 @@ bool ebusfsm::Device::isOpen()
 	return (m_open);
 }
 
-ssize_t ebusfsm::Device::send(const unsigned char value)
+ssize_t ebusfsm::Device::send(const std::byte byte)
 {
 	if (isValid() == false) return (DEV_ERR_VALID);
 
 	// write byte to device
-	int ret = write(m_fd, &value, 1);
-	if (ret == -1) return(DEV_ERR_SEND);
+	int ret = write(m_fd, &byte, 1);
+	if (ret == -1) return (DEV_ERR_SEND);
 
 	return (DEV_OK);
 }
 
-ssize_t ebusfsm::Device::recv(unsigned char& value, const long sec, const long nsec)
+ssize_t ebusfsm::Device::recv(std::byte& byte, const long sec, const long nsec)
 {
 	if (isValid() == false) return (DEV_ERR_VALID);
 
@@ -73,7 +73,7 @@ ssize_t ebusfsm::Device::recv(unsigned char& value, const long sec, const long n
 	}
 
 	// read byte from device
-	ssize_t nbytes = read(m_fd, &value, 1);
+	ssize_t nbytes = read(m_fd, &byte, 1);
 	if (nbytes < 0) return (DEV_ERR_READ);
 	if (nbytes == 0) return (DEV_WRN_EOF);
 

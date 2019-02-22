@@ -35,10 +35,10 @@ inline bool istty(const std::ostream& ostr)
 
 	if (&ostr == &std::cout)
 		file = stdout;
-	else if (&ostr == &std::cerr || &ostr == &std::clog)
-		file = stderr;
+	else if (&ostr == &std::cerr || &ostr == &std::clog) file = stderr;
 
 	if (isatty(fileno(file))) return (true);
+
 	return (false);
 }
 

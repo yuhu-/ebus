@@ -22,30 +22,22 @@
 
 #include <string>
 #include <vector>
+#include <cstddef>
 
 namespace ebusfsm
 {
 
-enum class Type
-{
-	bcd, data1b, data1c, uchar, schar, data2b, data2c, uint, sint
-};
+std::byte calcCRC(const std::byte byte, const std::byte init);
 
-unsigned char calcCRC(const unsigned char byte, const unsigned char init);
+bool isMaster(const std::byte byte);
 
-bool isMaster(const unsigned char byte);
+bool isSlave(const std::byte byte);
 
-bool isSlave(const unsigned char byte);
+bool isAddressValid(const std::byte byte);
 
-bool isAddressValid(const unsigned char byte);
-
-unsigned char slaveAddress(const unsigned char masterAddress);
+std::byte slaveAddress(const std::byte masterAddress);
 
 bool isHex(const std::string& str, std::ostringstream& result, const int& nibbles);
-
-float decode(const Type type, std::vector<unsigned char> value);
-
-std::vector<unsigned char> encode(const Type type, float value);
 
 } // namespace ebusfsm
 

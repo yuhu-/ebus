@@ -36,7 +36,7 @@ int main()
 	while (count < 100)
 	{
 		int ret;
-		unsigned char byte = 0;
+		std::byte byte = std::byte(0x00);
 		ret = device.recv(byte, 0, 0);
 
 		if (ret == DEV_OK) std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<unsigned>(byte) << std::endl;

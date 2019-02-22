@@ -7,8 +7,7 @@ AM_CXXFLAGS = -fpic \
 
 noinst_PROGRAMS = demo_ebusdevice \
 		  demo_ebussequence \
-		  demo_ebusfsm \
-		  demo_ebusdata
+		  demo_ebusfsm
 
 demo_ebusdevice_SOURCES = demo_ebusdevice.cpp
 demo_ebusdevice_LDADD = ../src/libebusfsm.la
@@ -19,9 +18,6 @@ demo_ebussequence_LDADD = ../src/libebusfsm.la
 demo_ebusfsm_SOURCES = demo_ebusfsm.cpp
 demo_ebusfsm_LDADD = ../src/libebusfsm.la \
 		     -lpthread
-
-demo_ebusdata_SOURCES = demo_ebusdata.cpp
-demo_ebusdata_LDADD = ../src/libebusfsm.la
 
 distclean-local:
 	-rm -f Makefile.in

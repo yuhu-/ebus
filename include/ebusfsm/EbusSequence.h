@@ -43,10 +43,11 @@ namespace ebusfsm
 #define SEQ_TYPE_MM        1 // master master
 #define SEQ_TYPE_MS        2 // master slave
 
-#define SEQ_ACK         0x00 // positive acknowledge
-#define SEQ_NAK         0xff // negative acknowledge
-#define SEQ_BROAD       0xfe // broadcast destination address
-#define SEQ_NN_MAX      0x10 // maximum data bytes
+static std::byte seq_ack;    // 0x00 positive acknowledge
+static std::byte seq_nak;    // 0xff negative acknowledge
+static std::byte seq_broad;  // 0xfe broadcast destination address
+
+static int seq_max_bytes;    // 16 maximum data bytes
 
 class EbusSequence
 {
@@ -57,8 +58,8 @@ public:
 
 	void parseSequence(Sequence& seq);
 
-	void createMaster(const unsigned char source, const unsigned char target, const std::string& str);
-	void createMaster(const unsigned char source, const std::string& str);
+	void createMaster(const std::byte source, const std::byte target, const std::string& str);
+	void createMaster(const std::byte source, const std::string& str);
 	void createMaster(const std::string& str);
 	void createMaster(Sequence& seq);
 
@@ -67,24 +68,24 @@ public:
 
 	void clear();
 
-	unsigned char getMasterQQ() const;
-	unsigned char getMasterZZ() const;
+	std::byte getMasterQQ() const;
+	std::byte getMasterZZ() const;
 
 	Sequence getMaster() const;
 	size_t getMasterNN() const;
-	unsigned char getMasterCRC() const;
+	std::byte getMasterCRC() const;
 	int getMasterState() const;
 
-	void setSlaveACK(const unsigned char byte);
+	void setSlaveACK(const std::byte byte);
 
 	Sequence getSlave() const;
 	size_t getSlaveNN() const;
-	unsigned char getSlaveCRC() const;
+	std::byte getSlaveCRC() const;
 	int getSlaveState() const;
 
-	void setMasterACK(const unsigned char byte);
+	void setMasterACK(const std::byte byte);
 
-	void setType(const unsigned char byte);
+	void setType(const std::byte byte);
 	int getType() const;
 
 	bool isValid() const;
@@ -106,22 +107,22 @@ public:
 private:
 	int m_type = -1;
 
-	unsigned char m_masterQQ = 0;
-	unsigned char m_masterZZ = 0;
+	std::byte m_masterQQ = seq_zero;
+	std::byte m_masterZZ = seq_zero;
 
 	Sequence m_master;
 	size_t m_masterNN = 0;
-	unsigned char m_masterCRC = 0;
+	std::byte m_masterCRC = seq_zero;
 	int m_masterState = SEQ_EMPTY;
 
-	unsigned char m_slaveACK = 0;
+	std::byte m_slaveACK = seq_zero;
 
 	Sequence m_slave;
 	size_t m_slaveNN = 0;
-	unsigned char m_slaveCRC = 0;
+	std::byte m_slaveCRC = seq_zero;
 	int m_slaveState = SEQ_EMPTY;
 
-	unsigned char m_masterACK = 0;
+	std::byte m_masterACK = seq_zero;
 
 	static int checkMasterSequence(Sequence& seq);
 	static int checkSlaveSequence(Sequence& seq);

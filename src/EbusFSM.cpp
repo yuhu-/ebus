@@ -35,10 +35,10 @@ std::map<int, std::string> FSMErrors =
 { FSM_ERR_ADDRESS, "The master address of the sequence and FSM must be equal" },
 { FSM_ERR_TRANSMIT, "An ebus error occurred while sending this sequence" } };
 
-ebusfsm::EbusFSM::EbusFSM(const unsigned char address, const std::string& device, const bool deviceCheck,
+ebusfsm::EbusFSM::EbusFSM(const std::byte address, const std::string& device, const bool deviceCheck,
 	std::shared_ptr<IEbusLogger> logger, std::function<Reaction(EbusSequence&)> identify,
 	std::function<void(EbusSequence&)> publish)
-	: Notify(), m_address(address), m_slaveAddress(slaveAddress(address)), m_bytesPerSecondsAVG(new MovingAverage(10)), m_ebusDevice(
+	: Notify(), m_address(address), m_slaveAddress(slaveAddress(address)), m_bytesPerSecondsAVG(new MovingAverage(15)), m_ebusDevice(
 		std::make_unique<EbusDevice>(device, deviceCheck)), m_logger(logger), m_identify(identify), m_publish(publish)
 {
 	changeState(Connect::getConnect());
@@ -241,12 +241,12 @@ void ebusfsm::EbusFSM::setColor(const bool& color)
 	m_color = color;
 }
 
-long ebusfsm::EbusFSM::getBytesPerSeconds() const
+long ebusfsm::EbusFSM::actBusSpeed() const
 {
 	return (m_bytesPerSeconds);
 }
 
-double ebusfsm::EbusFSM::getBytesPerSecondsAVG() const
+double ebusfsm::EbusFSM::avgBusSpeed() const
 {
 	return (m_bytesPerSecondsAVG->getAverage());
 }
@@ -299,7 +299,7 @@ void ebusfsm::EbusFSM::publish(EbusSequence& eSeq)
 	if (m_publish != nullptr) m_publish(eSeq);
 }
 
-void ebusfsm::EbusFSM::dumpByte(const unsigned char& byte)
+void ebusfsm::EbusFSM::dumpByte(const std::byte& byte)
 {
 	if (m_dump == true && m_dumpRawStream.is_open() == true)
 	{

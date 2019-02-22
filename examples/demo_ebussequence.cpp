@@ -67,10 +67,10 @@ int main()
 	ebusfsm::Sequence seq;
 
 	// Normal
-	const unsigned char bytes[] =
-	{ 0xff, 0x52, 0xb5, 0x09, 0x03, 0x0d, 0x06, 0x00, 0x43,		// master
-	  0x00, 0x03, 0xb0, 0xfb, 0xa9, 0x01, 0xd0,			// slave
-	  0x00 };							// master
+	const std::byte bytes[] =
+	{ std::byte(0xff), std::byte(0x52), std::byte(0xb5), std::byte(0x09), std::byte(0x03), std::byte(0x0d), std::byte(0x06),
+		std::byte(0x00), std::byte(0x43), std::byte(0x00), std::byte(0x03), std::byte(0xb0), std::byte(0xfb), std::byte(0xa9),
+		std::byte(0x01), std::byte(0xd0), std::byte(0x00) };
 
 	for (size_t i = 0; i < sizeof(bytes); i++)
 		seq.push_back(bytes[i]);
@@ -81,12 +81,11 @@ int main()
 	seq.clear();
 
 	// NAK from slave
-	const unsigned char bytes2[] =
-	{ 0xff, 0x52, 0xb5, 0x09, 0x03, 0x0d, 0x06, 0x00, 0x43,		// master
-	  0xff,								// slave NAK
-	  0xff, 0x52, 0xb5, 0x09, 0x03, 0x0d, 0x06, 0x00, 0x43,		// master
-	  0x00, 0x03, 0xb0, 0xfb, 0xa9, 0x01, 0xd0,			// slave
-	  0x00 };							// master
+	const std::byte bytes2[] =
+	{ std::byte(0xff), std::byte(0x52), std::byte(0xb5), std::byte(0x09), std::byte(0x03), std::byte(0x0d), std::byte(0x06),
+		std::byte(0x00), std::byte(0x43), std::byte(0xff), std::byte(0xff), std::byte(0x52), std::byte(0xb5), std::byte(0x09),
+		std::byte(0x03), std::byte(0x0d), std::byte(0x06), std::byte(0x00), std::byte(0x43), std::byte(0x00), std::byte(0x03),
+		std::byte(0xb0), std::byte(0xfb), std::byte(0xa9), std::byte(0x01), std::byte(0xd0), std::byte(0x00) };
 
 	for (size_t i = 0; i < sizeof(bytes2); i++)
 		seq.push_back(bytes2[i]);
@@ -97,11 +96,10 @@ int main()
 	seq.clear();
 
 	// twice NAK from slave
-	const unsigned char bytes22[] =
-	{ 0xff, 0x52, 0xb5, 0x09, 0x03, 0x0d, 0x06, 0x00, 0x43,		// master
-	  0xff,								// slave NAK
-	  0xff, 0x52, 0xb5, 0x09, 0x03, 0x0d, 0x06, 0x00, 0x43,		// master
-	  0xff };							// slave
+	const std::byte bytes22[] =
+	{ std::byte(0xff), std::byte(0x52), std::byte(0xb5), std::byte(0x09), std::byte(0x03), std::byte(0x0d), std::byte(0x06),
+		std::byte(0x00), std::byte(0x43), std::byte(0xff), std::byte(0xff), std::byte(0x52), std::byte(0xb5), std::byte(0x09),
+		std::byte(0x03), std::byte(0x0d), std::byte(0x06), std::byte(0x00), std::byte(0x43), std::byte(0xff) };
 
 	for (size_t i = 0; i < sizeof(bytes22); i++)
 		seq.push_back(bytes22[i]);
@@ -112,12 +110,11 @@ int main()
 	seq.clear();
 
 	// NAK from master
-	const unsigned char bytes3[] =
-	{ 0xff, 0x52, 0xb5, 0x09, 0x03, 0x0d, 0x06, 0x00, 0x43,		// master
-	  0x00, 0x03, 0xb0, 0xfb, 0xa9, 0x01, 0xd0,			// slave
-	  0xff,								// master NAK
-	  0x00, 0x03, 0xb0, 0xfb, 0xa9, 0x01, 0xd0,			// slave
-	  0x00 };							// master
+	const std::byte bytes3[] =
+	{ std::byte(0xff), std::byte(0x52), std::byte(0xb5), std::byte(0x09), std::byte(0x03), std::byte(0x0d), std::byte(0x06),
+		std::byte(0x00), std::byte(0x43), std::byte(0x00), std::byte(0x03), std::byte(0xb0), std::byte(0xfb), std::byte(0xa9),
+		std::byte(0x01), std::byte(0xd0), std::byte(0xff), std::byte(0x00), std::byte(0x03), std::byte(0xb0), std::byte(0xfb),
+		std::byte(0xa9), std::byte(0x01), std::byte(0xd0), std::byte(0x00) };
 
 	for (size_t i = 0; i < sizeof(bytes3); i++)
 		seq.push_back(bytes3[i]);
@@ -128,14 +125,12 @@ int main()
 	seq.clear();
 
 	// NAK from slave and master
-	const unsigned char bytes4[] =
-	{ 0xff, 0x52, 0xb5, 0x09, 0x03, 0x0d, 0x06, 0x00, 0x43,		// master
-	  0xff,								// slave NAK
-	  0xff, 0x52, 0xb5, 0x09, 0x03, 0x0d, 0x06, 0x00, 0x43,		// master
-	  0x00, 0x03, 0xb0, 0xfb, 0xa9, 0x01, 0xd0,			// slave
-	  0xff,								// master NAK
-	  0x00, 0x03, 0xb0, 0xfb, 0xa9, 0x01, 0xd0,			// slave
-	  0x00 };							// master
+	const std::byte bytes4[] =
+	{ std::byte(0xff), std::byte(0x52), std::byte(0xb5), std::byte(0x09), std::byte(0x03), std::byte(0x0d), std::byte(0x06),
+		std::byte(0x00), std::byte(0x43), std::byte(0xff), std::byte(0xff), std::byte(0x52), std::byte(0xb5), std::byte(0x09),
+		std::byte(0x03), std::byte(0x0d), std::byte(0x06), std::byte(0x00), std::byte(0x43), std::byte(0x00), std::byte(0x03),
+		std::byte(0xb0), std::byte(0xfb), std::byte(0xa9), std::byte(0x01), std::byte(0xd0), std::byte(0xff), std::byte(0x00),
+		std::byte(0x03), std::byte(0xb0), std::byte(0xfb), std::byte(0xa9), std::byte(0x01), std::byte(0xd0), std::byte(0x00) };
 
 	for (size_t i = 0; i < sizeof(bytes4); i++)
 		seq.push_back(bytes4[i]);
@@ -146,14 +141,12 @@ int main()
 	seq.clear();
 
 	// twice NAK from slave and master
-	const unsigned char bytes44[] =
-	{ 0xff, 0x52, 0xb5, 0x09, 0x03, 0x0d, 0x06, 0x00, 0x43,		// master
-	  0xff,								// slave NAK
-	  0xff, 0x52, 0xb5, 0x09, 0x03, 0x0d, 0x06, 0x00, 0x43,		// master
-	  0x00, 0x03, 0xb0, 0xfb, 0xa9, 0x01, 0xd0,			// slave
-	  0xff,								// master NAK
-	  0x00, 0x03, 0xb0, 0xfb, 0xa9, 0x01, 0xd0,			// slave
-	  0xff };							// master
+	const std::byte bytes44[] =
+	{ std::byte(0xff), std::byte(0x52), std::byte(0xb5), std::byte(0x09), std::byte(0x03), std::byte(0x0d), std::byte(0x06),
+		std::byte(0x00), std::byte(0x43), std::byte(0xff), std::byte(0xff), std::byte(0x52), std::byte(0xb5), std::byte(0x09),
+		std::byte(0x03), std::byte(0x0d), std::byte(0x06), std::byte(0x00), std::byte(0x43), std::byte(0x00), std::byte(0x03),
+		std::byte(0xb0), std::byte(0xfb), std::byte(0xa9), std::byte(0x01), std::byte(0xd0), std::byte(0xff), std::byte(0x00),
+		std::byte(0x03), std::byte(0xb0), std::byte(0xfb), std::byte(0xa9), std::byte(0x01), std::byte(0xd0), std::byte(0xff) };
 
 	for (size_t i = 0; i < sizeof(bytes44); i++)
 		seq.push_back(bytes44[i]);
@@ -164,8 +157,10 @@ int main()
 	seq.clear();
 
 	// defect sequence
-	const unsigned char bytes5[] =
-	{ 0x10, 0x7f, 0xc2, 0xb5, 0x10, 0x09, 0x00, 0x02, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x15 };
+	const std::byte bytes5[] =
+	{ std::byte(0x10), std::byte(0x7f), std::byte(0xc2), std::byte(0xb5), std::byte(0x10), std::byte(0x09), std::byte(0x00),
+		std::byte(0x02), std::byte(0x40), std::byte(0x00), std::byte(0x00), std::byte(0x00), std::byte(0x00), std::byte(0x00),
+		std::byte(0x02), std::byte(0x15) };
 
 	for (size_t i = 0; i < sizeof(bytes5); i++)
 		seq.push_back(bytes5[i]);
@@ -176,13 +171,12 @@ int main()
 	seq.clear();
 
 	// missing acknowledge byte
-	const unsigned char bytes6[] =
-	{ 0x10, 0x08, 0xb5, 0x11, 0x01, 0x02, 0x8a,			// master
-	  0xff,								// slave NAK
-	  0x10, 0x08, 0xb5, 0x11, 0x01, 0x02, 0x8a,			// master
-	  0x00, 0x03, 0xb0, 0xfb, 0xa9, 0x01, 0xd0,			// slave
-	  0xff,								// master NAK
-	  0x00, 0x03, 0xb0, 0xfb, 0xa9, 0x01, 0xd0 };  			// slave
+	const std::byte bytes6[] =
+	{ std::byte(0x10), std::byte(0x08), std::byte(0xb5), std::byte(0x11), std::byte(0x01), std::byte(0x02), std::byte(0x8a),
+		std::byte(0xff), std::byte(0x10), std::byte(0x08), std::byte(0xb5), std::byte(0x11), std::byte(0x01), std::byte(0x02),
+		std::byte(0x8a), std::byte(0x00), std::byte(0x03), std::byte(0xb0), std::byte(0xfb), std::byte(0xa9), std::byte(0x01),
+		std::byte(0xd0), std::byte(0xff), std::byte(0x00), std::byte(0x03), std::byte(0xb0), std::byte(0xfb), std::byte(0xa9),
+		std::byte(0x01), std::byte(0xd0) };
 
 	for (size_t i = 0; i < sizeof(bytes6); i++)
 		seq.push_back(bytes6[i]);
@@ -222,14 +216,24 @@ int main()
 	ebusfsm::Sequence tmp("ff12b509030d0000d700037702006100");
 	ebusfsm::EbusSequence parse(tmp);
 
-	std::cout << "parse: " << parse.toString() << " parse(" << ebusfsm::Sequence::toString(parse.getSlave().range(1, 2)) << ") => "
-		<< ebusfsm::decode(ebusfsm::Type::data2c, parse.getSlave().range(1, 2)) << std::endl;
+	std::cout << "parse: " << parse.toString() << " parse(" << ebusfsm::Sequence::toString(parse.getSlave().range(1, 2))
+		<< ") => found" << std::endl;
 
 	ebusfsm::Sequence tmp2("ff0ab509030d0e00830002e0028900");
 	ebusfsm::EbusSequence parse2(tmp2);
 
-	std::cout << "parse: " << parse2.toString() << " parse(" << ebusfsm::Sequence::toString(parse2.getSlave().range(1, 2)) << ") => "
-		<< ebusfsm::decode(ebusfsm::Type::data2c, parse2.getSlave().range(1, 2)) << std::endl;
+	std::cout << "parse2: " << parse2.toString() << " parse(" << ebusfsm::Sequence::toString(parse2.getSlave().range(1, 2))
+		<< ") => found" << std::endl;
+
+	// slaveAddress
+	std::cout << std::endl << "slaveAddress" << std::endl;
+	for (size_t i = 0; i < sizeof(bytes); i++)
+	{
+		std::cout << std::nouppercase << std::hex << std::setw(2) << std::setfill('0') << static_cast<unsigned>(bytes[i])
+			<< " " << std::nouppercase << std::hex << std::setw(2) << std::setfill('0')
+			<< static_cast<unsigned>(ebusfsm::slaveAddress(bytes[i])) << std::endl;
+
+	}
 
 	return (0);
 }

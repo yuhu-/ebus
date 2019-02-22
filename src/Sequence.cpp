@@ -23,6 +23,13 @@
 #include <sstream>
 #include <iomanip>
 
+std::byte seq_zero = std::byte(0x00);
+
+std::byte seq_syn = std::byte(0xaa);
+std::byte seq_exp = std::byte(0xa9);
+std::byte seq_synexp = std::byte(0x01);
+std::byte seq_expexp = std::byte(0x00);
+
 ebusfsm::Sequence::Sequence()
 {
 }
@@ -30,10 +37,7 @@ ebusfsm::Sequence::Sequence()
 ebusfsm::Sequence::Sequence(const std::string& str)
 {
 	for (size_t i = 0; i + 1 < str.size(); i += 2)
-	{
-		unsigned long byte = std::strtoul(str.substr(i, 2).c_str(), nullptr, 16);
-		push_back((unsigned char) byte, false);
-	}
+		push_back(std::byte(std::strtoul(str.substr(i, 2).c_str(), nullptr, 16)), false);
 }
 
 ebusfsm::Sequence::Sequence(const Sequence& seq, const size_t index, size_t len)
@@ -46,20 +50,20 @@ ebusfsm::Sequence::Sequence(const Sequence& seq, const size_t index, size_t len)
 	m_extended = seq.m_extended;
 }
 
-void ebusfsm::Sequence::push_back(const unsigned char byte, const bool isExtended)
+void ebusfsm::Sequence::push_back(const std::byte byte, const bool isExtended)
 {
 	m_seq.push_back(byte);
 	m_extended = isExtended;
 }
 
-const unsigned char& ebusfsm::Sequence::operator[](const size_t index) const
+const std::byte& ebusfsm::Sequence::operator[](const size_t index) const
 {
 	return (m_seq.at(index));
 }
 
-std::vector<unsigned char> ebusfsm::Sequence::range(const size_t index, const size_t len)
+std::vector<std::byte> ebusfsm::Sequence::range(const size_t index, const size_t len)
 {
-	std::vector<unsigned char> result;
+	std::vector<std::byte> result;
 
 	for (size_t i = index; i < m_seq.size() && result.size() < len; i++)
 		result.push_back(m_seq.at(i));
@@ -79,11 +83,11 @@ void ebusfsm::Sequence::clear()
 	m_extended = false;
 }
 
-unsigned char ebusfsm::Sequence::getCRC()
+std::byte ebusfsm::Sequence::getCRC()
 {
 	if (m_extended == false) extend();
 
-	unsigned char crc = 0;
+	std::byte crc = seq_zero;
 
 	for (size_t i = 0; i < m_seq.size(); i++)
 		crc = calcCRC(m_seq.at(i), crc);
@@ -97,19 +101,19 @@ void ebusfsm::Sequence::extend()
 {
 	if (m_extended == true) return;
 
-	std::vector<unsigned char> tmp;
+	std::vector<std::byte> tmp;
 
 	for (size_t i = 0; i < m_seq.size(); i++)
 	{
-		if (m_seq.at(i) == SYN)
+		if (m_seq.at(i) == seq_syn)
 		{
-			tmp.push_back(EXT);
-			tmp.push_back(SYNEXT);
+			tmp.push_back(seq_exp);
+			tmp.push_back(seq_synexp);
 		}
-		else if (m_seq.at(i) == EXT)
+		else if (m_seq.at(i) == seq_exp)
 		{
-			tmp.push_back(EXT);
-			tmp.push_back(EXTEXT);
+			tmp.push_back(seq_exp);
+			tmp.push_back(seq_expexp);
 		}
 		else
 		{
@@ -125,21 +129,21 @@ void ebusfsm::Sequence::reduce()
 {
 	if (m_extended == false) return;
 
-	std::vector<unsigned char> tmp;
+	std::vector<std::byte> tmp;
 	bool extended = false;
 
 	for (size_t i = 0; i < m_seq.size(); i++)
 	{
-		if (m_seq.at(i) == SYN || m_seq.at(i) == EXT)
+		if (m_seq.at(i) == seq_syn || m_seq.at(i) == seq_exp)
 		{
 			extended = true;
 		}
 		else if (extended == true)
 		{
-			if (m_seq.at(i) == SYNEXT)
-				tmp.push_back(SYN);
+			if (m_seq.at(i) == seq_synexp)
+				tmp.push_back(seq_syn);
 			else
-				tmp.push_back(EXT);
+				tmp.push_back(seq_exp);
 
 			extended = false;
 		}
@@ -168,7 +172,7 @@ const std::string ebusfsm::Sequence::toString() const
 	return (ostr.str());
 }
 
-const std::vector<unsigned char> ebusfsm::Sequence::getSequence() const
+const std::vector<std::byte> ebusfsm::Sequence::getSequence() const
 {
 	return (m_seq);
 }
@@ -199,7 +203,7 @@ bool ebusfsm::Sequence::contains(const std::string& str) const noexcept
 	return (false);
 }
 
-const std::string ebusfsm::Sequence::toString(const std::vector<unsigned char>& seq)
+const std::string ebusfsm::Sequence::toString(const std::vector<std::byte>& seq)
 {
 	std::ostringstream ostr;
 

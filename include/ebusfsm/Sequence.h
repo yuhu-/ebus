@@ -22,14 +22,17 @@
 
 #include <vector>
 #include <string>
+#include <cstddef>
 
 namespace ebusfsm
 {
 
-#define SYN       0xaa  // synchronization byte
-#define SYNEXT    0x01  // extended synchronization byte
-#define EXT       0xa9  // extend byte
-#define EXTEXT    0x00  // extended extend byte
+static std::byte seq_zero;    // 0x00
+
+static std::byte seq_syn;     // 0xaa synchronization byte
+static std::byte seq_exp;     // 0xa9 expand byte
+static std::byte seq_synexp;  // 0x01 expanded synchronization byte
+static std::byte seq_expexp;  // 0x00 expanded expand byte
 
 class Sequence
 {
@@ -41,16 +44,16 @@ public:
 	explicit Sequence(const std::string& str);
 	Sequence(const Sequence& seq, const size_t index, size_t len = 0);
 
-	void push_back(const unsigned char byte, const bool isExtended = true);
+	void push_back(const std::byte byte, const bool isExtended = true);
 
-	const unsigned char& operator[](const size_t index) const;
-	std::vector<unsigned char> range(const size_t index, const size_t len);
+	const std::byte& operator[](const size_t index) const;
+	std::vector<std::byte> range(const size_t index, const size_t len);
 
 	size_t size() const;
 
 	void clear();
 
-	unsigned char getCRC();
+	std::byte getCRC();
 
 	void extend();
 	void reduce();
@@ -58,7 +61,7 @@ public:
 	bool isExtended() const;
 
 	const std::string toString() const;
-	const std::vector<unsigned char> getSequence() const;
+	const std::vector<std::byte> getSequence() const;
 
 	size_t find(const Sequence& seq, const size_t pos = 0) const noexcept;
 
@@ -66,10 +69,10 @@ public:
 
 	bool contains(const std::string& str) const noexcept;
 
-	static const std::string toString(const std::vector<unsigned char>& seq);
+	static const std::string toString(const std::vector<std::byte>& seq);
 
 private:
-	std::vector<unsigned char> m_seq;
+	std::vector<std::byte> m_seq;
 
 	bool m_extended = false;
 

@@ -68,7 +68,7 @@ void ebusfsm::State::changeState(EbusFSM* fsm, State* state)
 	fsm->changeState(state);
 }
 
-int ebusfsm::State::read(EbusFSM* fsm, unsigned char& byte, const long sec, const long nsec)
+int ebusfsm::State::read(EbusFSM* fsm, std::byte& byte, const long sec, const long nsec)
 {
 	int result = fsm->m_ebusDevice->recv(byte, sec, nsec);
 
@@ -86,7 +86,7 @@ int ebusfsm::State::read(EbusFSM* fsm, unsigned char& byte, const long sec, cons
 	return (result);
 }
 
-int ebusfsm::State::write(EbusFSM* fsm, const unsigned char& byte)
+int ebusfsm::State::write(EbusFSM* fsm, const std::byte& byte)
 {
 	int result = fsm->m_ebusDevice->send(byte);
 
@@ -100,13 +100,13 @@ int ebusfsm::State::write(EbusFSM* fsm, const unsigned char& byte)
 	return (result);
 }
 
-int ebusfsm::State::writeRead(EbusFSM* fsm, const unsigned char& byte, const long sec, const long nsec)
+int ebusfsm::State::writeRead(EbusFSM* fsm, const std::byte& byte, const long sec, const long nsec)
 {
 	int result = State::write(fsm, byte);
 
 	if (result == DEV_OK)
 	{
-		unsigned char readByte;
+		std::byte readByte;
 		result = State::read(fsm, readByte, sec, nsec);
 
 		if (readByte != byte) fsm->logDebug(stateMessage(fsm, STATE_WRN_BYTE_DIF));

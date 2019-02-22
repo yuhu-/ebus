@@ -21,6 +21,7 @@
 #define EBUSFSM_DEVICE_H
 
 #include <string>
+#include <cstddef>
 
 namespace ebusfsm
 {
@@ -48,8 +49,8 @@ public:
 
 	bool isOpen();
 
-	ssize_t send(const unsigned char value);
-	ssize_t recv(unsigned char& value, const long sec, const long nsec);
+	ssize_t send(const std::byte byte);
+	ssize_t recv(std::byte& byte, const long sec, const long nsec);
 
 protected:
 	int m_fd = -1;

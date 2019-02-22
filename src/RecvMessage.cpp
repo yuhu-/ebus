@@ -26,12 +26,12 @@ ebusfsm::RecvMessage ebusfsm::RecvMessage::m_recvMessage;
 int ebusfsm::RecvMessage::run(EbusFSM* fsm)
 {
 	int result;
-	unsigned char byte;
+	std::byte byte;
 
 	// receive Header PBSBNN
 	for (int i = 0; i < 3; i++)
 	{
-		byte = 0;
+		byte = seq_zero;
 
 		result = read(fsm, byte, 1, 0);
 		if (result != DEV_OK) return (result);
@@ -40,7 +40,7 @@ int ebusfsm::RecvMessage::run(EbusFSM* fsm)
 	}
 
 	// maximum data bytes
-	if (m_sequence[4] > SEQ_NN_MAX)
+	if (std::to_integer<int>(m_sequence[4]) > seq_max_bytes)
 	{
 		fsm->logWarn(stateMessage(fsm, STATE_ERR_NN_WRONG));
 		m_activeMessage->setState(FSM_ERR_TRANSMIT);
@@ -51,19 +51,19 @@ int ebusfsm::RecvMessage::run(EbusFSM* fsm)
 	}
 
 	// bytes to receive
-	int bytes = m_sequence[4];
+	int bytes = std::to_integer<int>(m_sequence[4]);
 
 	// receive Data Dx
 	for (int i = 0; i < bytes; i++)
 	{
-		byte = 0;
+		byte = seq_zero;
 
 		result = read(fsm, byte, 1, 0);
 		if (result != DEV_OK) return (result);
 
 		m_sequence.push_back(byte);
 
-		if (byte == EXT) bytes++;
+		if (byte == seq_exp) bytes++;
 	}
 
 	// 1 for CRC
@@ -77,7 +77,7 @@ int ebusfsm::RecvMessage::run(EbusFSM* fsm)
 
 		m_sequence.push_back(byte);
 
-		if (byte == EXT) bytes++;
+		if (byte == seq_exp) bytes++;
 	}
 
 	fsm->logDebug(m_sequence.toString());
@@ -85,15 +85,15 @@ int ebusfsm::RecvMessage::run(EbusFSM* fsm)
 	EbusSequence eSeq;
 	eSeq.createMaster(m_sequence);
 
-	if (m_sequence[1] != SEQ_BROAD)
+	if (m_sequence[1] != seq_broad)
 	{
 		if (eSeq.getMasterState() == SEQ_OK)
 		{
-			byte = SEQ_ACK;
+			byte = seq_ack;
 		}
 		else
 		{
-			byte = SEQ_NAK;
+			byte = seq_nak;
 			fsm->logInfo(stateMessage(fsm, STATE_WRN_RECV_MSG));
 		}
 

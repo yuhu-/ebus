@@ -50,7 +50,7 @@ int ebusfsm::SendMessage::run(EbusFSM* fsm)
 			break;
 		}
 
-		unsigned char byte;
+		std::byte byte;
 
 		// receive ACK
 		result = read(fsm, byte, 0, fsm->m_receiveTimeout);
@@ -58,7 +58,7 @@ int ebusfsm::SendMessage::run(EbusFSM* fsm)
 
 		eSeq.setSlaveACK(byte);
 
-		if (byte != SEQ_ACK && byte != SEQ_NAK)
+		if (byte != seq_ack && byte != seq_nak)
 		{
 			fsm->logWarn(stateMessage(fsm, STATE_ERR_ACK_WRONG));
 			m_activeMessage->setState(FSM_ERR_TRANSMIT);
@@ -66,7 +66,7 @@ int ebusfsm::SendMessage::run(EbusFSM* fsm)
 			fsm->changeState(FreeBus::getFreeBus());
 			break;
 		}
-		else if (byte == SEQ_ACK)
+		else if (byte == seq_ack)
 		{
 			// Master Master ends here
 			if (eSeq.getType() == SEQ_TYPE_MM)

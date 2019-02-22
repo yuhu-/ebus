@@ -28,7 +28,7 @@ ebusfsm::Connect ebusfsm::Connect::m_connect;
 int ebusfsm::Connect::run(EbusFSM* fsm)
 {
 	int result = DEV_OK;
-	unsigned char byte = 0;
+	std::byte byte = seq_zero;
 
 	if (fsm->m_ebusDevice->isOpen() == false)
 	{
@@ -49,7 +49,7 @@ int ebusfsm::Connect::run(EbusFSM* fsm)
 	{
 		result = read(fsm, byte, 1, 0);
 		if (result != DEV_OK) return (result);
-	} while (byte != SYN);
+	} while (byte != seq_syn);
 
 	reset(fsm);
 
