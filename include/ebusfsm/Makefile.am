@@ -11,15 +11,6 @@ libebusfsminclude_HEADERS = Device.h \
 			    EbusFSM.h \
 			    IEbusLogger.h
 
-EXTRA_DIST = Device.h \
-	     EbusDevice.h \
-	     EbusCommon.h \
-	     Sequence.h \
-	     EbusSequence.h \
-	     EbusMessage.h \
-	     EbusFSM.h \
-	     IEbusLogger.h
-
 uninstall-hook:
 	-rmdir $(libebusfsmincludedir)
 
