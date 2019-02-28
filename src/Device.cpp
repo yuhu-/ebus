@@ -58,7 +58,7 @@ ssize_t ebusfsm::Device::recv(std::byte& byte, const long sec, const long nsec)
 		struct timespec tdiff =
 		{ sec, nsec * 1000L };
 
-		int nfds = 1;
+		const nfds_t nfds = 1;
 		struct pollfd fds[nfds];
 
 		std::memset(fds, 0, sizeof(struct pollfd) * nfds);

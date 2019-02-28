@@ -1,6 +1,7 @@
 AM_CXXFLAGS = -fpic \
 	      -Wall \
 	      -Wextra \
+	      -Wpedantic \
 	      -std=c++17 \
 	      -isystem$(top_srcdir)/include/ebusfsm
 
