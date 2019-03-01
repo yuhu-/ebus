@@ -20,6 +20,14 @@ Build and install with:
 autogen.sh with --prefix=/usr for installation into /usr/lib instead of /usr/local/lib.
 
 
+To compile and link this library with your own project add pkg-config to gcc command line.
+
+for exampel: geany
+
+  compiler: $ g++ -Wall -std=c++17 `pkg-config --cflags --libs ebusfsm` -c "%f"
+    linker: $ g++ -Wall -std=c++17 `pkg-config --cflags --libs ebusfsm` -o "%e" "%f"
+
+
 For bugs and missing features use github issue system.
 
 The author can be contacted at roland.jax@liwest.at.
