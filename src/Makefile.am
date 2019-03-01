@@ -47,6 +47,5 @@ EXTRA_DIST = SerialDevice.h \
 	     SendResponse.h \
 	     RecvResponse.h
 
-
 distclean-local:
 	-rm -f Makefile.in
