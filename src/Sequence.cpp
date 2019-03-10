@@ -54,7 +54,7 @@ const std::byte& ebusfsm::Sequence::operator[](const size_t index) const
 	return (m_seq.at(index));
 }
 
-std::vector<std::byte> ebusfsm::Sequence::range(const size_t index, const size_t len)
+const std::vector<std::byte> ebusfsm::Sequence::range(const size_t index, const size_t len)
 {
 	std::vector<std::byte> result;
 

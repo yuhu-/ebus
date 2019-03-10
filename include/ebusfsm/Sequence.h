@@ -47,7 +47,7 @@ public:
 	void push_back(const std::byte byte, const bool isExtended = true);
 
 	const std::byte& operator[](const size_t index) const;
-	std::vector<std::byte> range(const size_t index, const size_t len);
+	const std::vector<std::byte> range(const size_t index, const size_t len);
 
 	size_t size() const;
 
