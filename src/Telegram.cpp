@@ -1,29 +1,27 @@
 /*
  * Copyright (C) Roland Jax 2012-2019 <roland.jax@liwest.at>
  *
- * This file is part of ebusfsm.
+ * This file is part of ebus.
  *
- * ebusfsm is free software: you can redistribute it and/or modify
+ * ebus is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
- * ebusfsm is distributed in the hope that it will be useful,
+ * ebus is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with ebusfsm. If not, see http://www.gnu.org/licenses/.
+ * along with ebus. If not, see http://www.gnu.org/licenses/.
  */
 
-#include <EbusSequence.h>
-#include <EbusCommon.h>
+#include "Telegram.h"
 
-#include <iostream>
 #include <iomanip>
-#include <cstdlib>
 #include <map>
+#include <sstream>
 
 std::map<int, std::string> SequenceErrors =
 {
@@ -39,16 +37,16 @@ std::map<int, std::string> SequenceErrors =
 { SEQ_ERR_ZZ, "target address is invalid" },
 { SEQ_ERR_ACK_MISS, "acknowledge byte is missing" }, };
 
-ebusfsm::EbusSequence::EbusSequence()
+ebus::Telegram::Telegram()
 {
 }
 
-ebusfsm::EbusSequence::EbusSequence(Sequence& seq)
+ebus::Telegram::Telegram(Sequence &seq)
 {
 	parseSequence(seq);
 }
 
-void ebusfsm::EbusSequence::parseSequence(Sequence& seq)
+void ebus::Telegram::parseSequence(Sequence &seq)
 {
 	seq.reduce();
 	int offset = 0;
@@ -62,7 +60,7 @@ void ebusfsm::EbusSequence::parseSequence(Sequence& seq)
 
 	if (m_masterState != SEQ_OK) return;
 
-	if (m_type != SEQ_TYPE_BC)
+	if (m_type != TEL_TYPE_BC)
 	{
 		// acknowledge byte is missing
 		if (seq.size() <= (size_t) (5 + m_masterNN + 1))
@@ -135,7 +133,7 @@ void ebusfsm::EbusSequence::parseSequence(Sequence& seq)
 		}
 	}
 
-	if (m_type == SEQ_TYPE_MS)
+	if (m_type == TEL_TYPE_MS)
 	{
 		offset += 5 + m_masterNN + 2;
 
@@ -222,7 +220,7 @@ void ebusfsm::EbusSequence::parseSequence(Sequence& seq)
 	}
 }
 
-void ebusfsm::EbusSequence::createMaster(const std::byte source, const std::byte target, const std::string& str)
+void ebus::Telegram::createMaster(const std::byte source, const std::byte target, const std::string &str)
 {
 	std::ostringstream ostr;
 	ostr << std::nouppercase << std::hex << std::setw(2) << std::setfill('0') << static_cast<unsigned>(source);
@@ -231,7 +229,7 @@ void ebusfsm::EbusSequence::createMaster(const std::byte source, const std::byte
 	createMaster(ostr.str());
 }
 
-void ebusfsm::EbusSequence::createMaster(const std::byte source, const std::string& str)
+void ebus::Telegram::createMaster(const std::byte source, const std::string &str)
 {
 	std::ostringstream ostr;
 	ostr << std::nouppercase << std::hex << std::setw(2) << std::setfill('0') << static_cast<unsigned>(source);
@@ -239,13 +237,13 @@ void ebusfsm::EbusSequence::createMaster(const std::byte source, const std::stri
 	createMaster(ostr.str());
 }
 
-void ebusfsm::EbusSequence::createMaster(const std::string& str)
+void ebus::Telegram::createMaster(const std::string &str)
 {
 	Sequence seq(str);
 	createMaster(seq);
 }
 
-void ebusfsm::EbusSequence::createMaster(Sequence& seq)
+void ebus::Telegram::createMaster(Sequence &seq)
 {
 	m_masterState = SEQ_OK;
 	seq.reduce();
@@ -312,13 +310,13 @@ void ebusfsm::EbusSequence::createMaster(Sequence& seq)
 	}
 }
 
-void ebusfsm::EbusSequence::createSlave(const std::string& str)
+void ebus::Telegram::createSlave(const std::string &str)
 {
 	Sequence seq(str);
 	createSlave(seq);
 }
 
-void ebusfsm::EbusSequence::createSlave(Sequence& seq)
+void ebus::Telegram::createSlave(Sequence &seq)
 {
 	m_slaveState = SEQ_OK;
 	seq.reduce();
@@ -368,7 +366,7 @@ void ebusfsm::EbusSequence::createSlave(Sequence& seq)
 	}
 }
 
-void ebusfsm::EbusSequence::clear()
+void ebus::Telegram::clear()
 {
 	m_type = -1;
 
@@ -388,89 +386,89 @@ void ebusfsm::EbusSequence::clear()
 	m_slaveState = SEQ_EMPTY;
 }
 
-std::byte ebusfsm::EbusSequence::getMasterQQ() const
+std::byte ebus::Telegram::getMasterQQ() const
 {
 	return (m_masterQQ);
 }
 
-std::byte ebusfsm::EbusSequence::getMasterZZ() const
+std::byte ebus::Telegram::getMasterZZ() const
 {
 	return (m_masterZZ);
 }
 
-ebusfsm::Sequence ebusfsm::EbusSequence::getMaster() const
+ebus::Sequence ebus::Telegram::getMaster() const
 {
 	return (m_master);
 }
 
-size_t ebusfsm::EbusSequence::getMasterNN() const
+size_t ebus::Telegram::getMasterNN() const
 {
 	return (m_masterNN);
 }
 
-std::byte ebusfsm::EbusSequence::getMasterCRC() const
+std::byte ebus::Telegram::getMasterCRC() const
 {
 	return (m_masterCRC);
 }
 
-int ebusfsm::EbusSequence::getMasterState() const
+int ebus::Telegram::getMasterState() const
 {
 	return (m_masterState);
 }
 
-void ebusfsm::EbusSequence::setSlaveACK(const std::byte byte)
+void ebus::Telegram::setSlaveACK(const std::byte byte)
 {
 	m_slaveACK = byte;
 }
 
-ebusfsm::Sequence ebusfsm::EbusSequence::getSlave() const
+ebus::Sequence ebus::Telegram::getSlave() const
 {
 	return (m_slave);
 }
 
-size_t ebusfsm::EbusSequence::getSlaveNN() const
+size_t ebus::Telegram::getSlaveNN() const
 {
 	return (m_slaveNN);
 }
 
-std::byte ebusfsm::EbusSequence::getSlaveCRC() const
+std::byte ebus::Telegram::getSlaveCRC() const
 {
 	return (m_slaveCRC);
 }
 
-int ebusfsm::EbusSequence::getSlaveState() const
+int ebus::Telegram::getSlaveState() const
 {
 	return (m_slaveState);
 }
 
-void ebusfsm::EbusSequence::setMasterACK(const std::byte byte)
+void ebus::Telegram::setMasterACK(const std::byte byte)
 {
 	m_masterACK = byte;
 }
 
-void ebusfsm::EbusSequence::setType(const std::byte byte)
+void ebus::Telegram::setType(const std::byte byte)
 {
 	if (byte == seq_broad)
-		m_type = SEQ_TYPE_BC;
+		m_type = TEL_TYPE_BC;
 	else if (isMaster(byte) == true)
-		m_type = SEQ_TYPE_MM;
+		m_type = TEL_TYPE_MM;
 	else
-		m_type = SEQ_TYPE_MS;
+		m_type = TEL_TYPE_MS;
 }
 
-int ebusfsm::EbusSequence::getType() const
+int ebus::Telegram::getType() const
 {
 	return (m_type);
 }
 
-bool ebusfsm::EbusSequence::isValid() const
+bool ebus::Telegram::isValid() const
 {
-	if (m_type != SEQ_TYPE_MS) return (m_masterState == SEQ_OK ? true : false);
+	if (m_type != TEL_TYPE_MS) return (m_masterState == SEQ_OK ? true : false);
 
 	return ((m_masterState + m_slaveState) == SEQ_OK ? true : false);
 }
 
-const std::string ebusfsm::EbusSequence::toString()
+const std::string ebus::Telegram::toString()
 {
 	std::ostringstream ostr;
 
@@ -478,15 +476,15 @@ const std::string ebusfsm::EbusSequence::toString()
 
 	if (m_masterState == SEQ_OK)
 	{
-		if (m_type == SEQ_TYPE_MM) ostr << " " << toStringSlaveACK();
+		if (m_type == TEL_TYPE_MM) ostr << " " << toStringSlaveACK();
 
-		if (m_type == SEQ_TYPE_MS) ostr << " " << toStringSlave();
+		if (m_type == TEL_TYPE_MS) ostr << " " << toStringSlave();
 	}
 
 	return (ostr.str());
 }
 
-const std::string ebusfsm::EbusSequence::toStringMaster()
+const std::string ebus::Telegram::toStringMaster()
 {
 	std::ostringstream ostr;
 	if (m_masterState != SEQ_OK)
@@ -497,7 +495,7 @@ const std::string ebusfsm::EbusSequence::toStringMaster()
 	return (ostr.str());
 }
 
-const std::string ebusfsm::EbusSequence::toStringMasterCRC()
+const std::string ebus::Telegram::toStringMasterCRC()
 {
 	std::ostringstream ostr;
 	if (m_masterState != SEQ_OK)
@@ -508,7 +506,7 @@ const std::string ebusfsm::EbusSequence::toStringMasterCRC()
 	return (ostr.str());
 }
 
-const std::string ebusfsm::EbusSequence::toStringMasterACK() const
+const std::string ebus::Telegram::toStringMasterACK() const
 {
 	std::ostringstream ostr;
 
@@ -517,7 +515,7 @@ const std::string ebusfsm::EbusSequence::toStringMasterACK() const
 	return (ostr.str());
 }
 
-const std::string ebusfsm::EbusSequence::toStringMasterError()
+const std::string ebus::Telegram::toStringMasterError()
 {
 	std::ostringstream ostr;
 	if (m_master.size() > 0) ostr << "'" << m_master.toString() << "' ";
@@ -527,7 +525,7 @@ const std::string ebusfsm::EbusSequence::toStringMasterError()
 	return (ostr.str());
 }
 
-const std::string ebusfsm::EbusSequence::toStringSlave()
+const std::string ebus::Telegram::toStringSlave()
 {
 	std::ostringstream ostr;
 	if (m_slaveState != SEQ_OK)
@@ -538,7 +536,7 @@ const std::string ebusfsm::EbusSequence::toStringSlave()
 	return (ostr.str());
 }
 
-const std::string ebusfsm::EbusSequence::toStringSlaveCRC()
+const std::string ebus::Telegram::toStringSlaveCRC()
 {
 	std::ostringstream ostr;
 	if (m_slaveState != SEQ_OK)
@@ -549,7 +547,7 @@ const std::string ebusfsm::EbusSequence::toStringSlaveCRC()
 	return (ostr.str());
 }
 
-const std::string ebusfsm::EbusSequence::toStringSlaveACK() const
+const std::string ebus::Telegram::toStringSlaveACK() const
 {
 	std::ostringstream ostr;
 
@@ -558,7 +556,7 @@ const std::string ebusfsm::EbusSequence::toStringSlaveACK() const
 	return (ostr.str());
 }
 
-const std::string ebusfsm::EbusSequence::toStringSlaveError()
+const std::string ebus::Telegram::toStringSlaveError()
 {
 	std::ostringstream ostr;
 	if (m_slave.size() > 0) ostr << "'" << m_slave.toString() << "' ";
@@ -568,7 +566,7 @@ const std::string ebusfsm::EbusSequence::toStringSlaveError()
 	return (ostr.str());
 }
 
-const std::string ebusfsm::EbusSequence::errorText(const int error)
+const std::string ebus::Telegram::errorText(const int error)
 {
 	std::ostringstream ostr;
 
@@ -577,7 +575,35 @@ const std::string ebusfsm::EbusSequence::errorText(const int error)
 	return (ostr.str());
 }
 
-int ebusfsm::EbusSequence::checkMasterSequence(Sequence& seq)
+bool ebus::Telegram::isMaster(const std::byte byte)
+{
+	std::byte hi = (byte & std::byte(0xf0)) >> 4;
+	std::byte lo = (byte & std::byte(0x0f));
+
+	return (((hi == std::byte(0x0)) || (hi == std::byte(0x1)) || (hi == std::byte(0x3)) || (hi == std::byte(0x7))
+		|| (hi == std::byte(0xf)))
+		&& ((lo == std::byte(0x0)) || (lo == std::byte(0x1)) || (lo == std::byte(0x3)) || (lo == std::byte(0x7))
+			|| (lo == std::byte(0xf))));
+}
+
+bool ebus::Telegram::isSlave(const std::byte byte)
+{
+	return (isMaster(byte) == false && byte != seq_syn && byte != seq_exp);
+}
+
+bool ebus::Telegram::isAddressValid(const std::byte byte)
+{
+	return (byte != seq_syn && byte != seq_exp);
+}
+
+std::byte ebus::Telegram::slaveAddress(const std::byte address)
+{
+	if (isSlave(address) == true) return (address);
+
+	return (std::byte(std::to_integer<int>(address) + 5));
+}
+
+int ebus::Telegram::checkMasterSequence(Sequence &seq)
 {
 	// sequence is too short
 	if (seq.size() < (size_t) 6) return (SEQ_ERR_SHORT);
@@ -597,7 +623,7 @@ int ebusfsm::EbusSequence::checkMasterSequence(Sequence& seq)
 	return (SEQ_OK);
 }
 
-int ebusfsm::EbusSequence::checkSlaveSequence(Sequence& seq)
+int ebus::Telegram::checkSlaveSequence(Sequence &seq)
 {
 	// sequence is too short
 	if (seq.size() < (size_t) 2) return (SEQ_ERR_SHORT);

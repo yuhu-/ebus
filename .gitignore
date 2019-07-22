@@ -14,12 +14,10 @@ libtool
 *.lo
 *.la
 *.dirstamp
-/examples/demo_ebusdevice
-/examples/demo_ebussequence
-/examples/demo_ebusfsm
-/examples/demo_ebusdata
+/examples/demo_telegram
+/examples/demo_ebus
 *.libs/
-ebusfsm.pc
+ebus.pc
 .cproject
 .project
 .settings

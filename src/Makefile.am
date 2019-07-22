@@ -2,50 +2,30 @@ AM_CXXFLAGS = -fpic \
 	      -Wall \
 	      -Wextra \
 	      -Wpedantic \
-	      -std=c++17 \
-	      -isystem$(top_srcdir)/include/ebusfsm
+	      -std=c++17
 
-lib_LTLIBRARIES = libebusfsm.la
+lib_LTLIBRARIES = libebus.la
 
-libebusfsm_la_LDFLAGS = -version-info $(EBUSFSM_SO_VERSION) \
+libebus_la_LDFLAGS = -version-info $(EBUS_SO_VERSION) \
 			-lpthread
 
-libebusfsm_la_SOURCES = Device.cpp \
-			SerialDevice.cpp \
-			NetworkDevice.cpp \
-			EbusDevice.cpp  \
-			EbusCommon.cpp \
-			Sequence.cpp \
-			EbusSequence.cpp \
-			EbusMessage.cpp \
-			State.cpp \
-			OnError.cpp \
-			Idle.cpp \
-			Connect.cpp \
-			Listen.cpp \
-			LockBus.cpp \
-			FreeBus.cpp \
-			EvalMessage.cpp \
-			SendMessage.cpp \
-			RecvMessage.cpp \
-			SendResponse.cpp \
-			RecvResponse.cpp \
-			EbusFSM.cpp
+libebus_la_SOURCES = Device.cpp \
+		     Sequence.cpp \
+		     Telegram.cpp \
+		     Message.cpp \
+		     Ebus.cpp
 
-EXTRA_DIST = SerialDevice.h \
-	     NetworkDevice.h \
-	     State.h \
-	     OnError.h \
-	     Idle.h \
-	     Connect.h \
-	     Listen.h \
-	     LockBus.h \
-	     FreeBus.h \
-	     EvalMessage.h \
-	     SendMessage.h \
-	     RecvMessage.h \
-	     SendResponse.h \
-	     RecvResponse.h
+EXTRA_DIST = Notify.h \
+	     NQueue.h \
+	     Average.h \
+	     runtime_warning.h \
+	     ILogger.h \
+	     Device.h \
+	     Sequence.h \
+	     Telegram.h \
+	     Message.h \
+	     Ebus.h
+	     	     
 
 distclean-local:
 	-rm -f Makefile.in

@@ -1,40 +1,42 @@
 /*
  * Copyright (C) Roland Jax 2012-2019 <roland.jax@liwest.at>
  *
- * This file is part of ebusfsm.
+ * This file is part of ebus.
  *
- * ebusfsm is free software: you can redistribute it and/or modify
+ * ebus is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
- * ebusfsm is distributed in the hope that it will be useful,
+ * ebus is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with ebusfsm. If not, see http://www.gnu.org/licenses/.
+ * along with ebus. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef EBUSFSM_UTILS_MOVINGAVERAGE_H
-#define EBUSFSM_UTILS_MOVINGAVERAGE_H
+#ifndef EBUS_AVERAGE_H
+#define EBUS_AVERAGE_H
 
+#include <stddef.h>
 #include <queue>
 
-namespace ebusfsm
+namespace ebus
 {
 
-class MovingAverage
+class Average
 {
 
 public:
-	MovingAverage(const size_t size)
-		: m_size(size), m_values()
+	explicit Average(const size_t size)
+		:
+		m_size(size), m_values()
 	{
 	}
 
-	~MovingAverage()
+	~Average()
 	{
 		std::queue<double>().swap(m_values);
 	}
@@ -69,6 +71,6 @@ private:
 
 };
 
-} // namespace ebusfsm
+} // namespace ebus
 
-#endif // EBUSFSM_UTILS_MOVINGAVERAGE_H
+#endif // EBUS_AVERAGE_H

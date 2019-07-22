@@ -1,28 +1,31 @@
 /*
  * Copyright (C) Roland Jax 2012-2019 <roland.jax@liwest.at>
  *
- * This file is part of ebusfsm.
+ * This file is part of ebus.
  *
- * ebusfsm is free software: you can redistribute it and/or modify
+ * ebus is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
- * ebusfsm is distributed in the hope that it will be useful,
+ * ebus is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with ebusfsm. If not, see http://www.gnu.org/licenses/.
+ * along with ebus. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef EBUSFSM_EBUSSEQUENCE_H
-#define EBUSFSM_EBUSSEQUENCE_H
+#ifndef EBUS_TELEGRAM_H
+#define EBUS_TELEGRAM_H
 
-#include <Sequence.h>
+#include <stddef.h>
+#include <string>
 
-namespace ebusfsm
+#include "Sequence.h"
+
+namespace ebus
 {
 
 #define SEQ_TRANSMIT       2 // sequence sending failed
@@ -39,9 +42,9 @@ namespace ebusfsm
 #define SEQ_ERR_ZZ        -7 // target address is invalid
 #define SEQ_ERR_ACK_MISS  -8 // acknowledge byte is missing
 
-#define SEQ_TYPE_BC        0 // broadcast
-#define SEQ_TYPE_MM        1 // master master
-#define SEQ_TYPE_MS        2 // master slave
+#define TEL_TYPE_BC        0 // broadcast
+#define TEL_TYPE_MM        1 // master master
+#define TEL_TYPE_MS        2 // master slave
 
 static const std::byte seq_ack = std::byte(0x00);   // positive acknowledge
 static const std::byte seq_nak = std::byte(0xff);   // negative acknowledge
@@ -49,22 +52,22 @@ static const std::byte seq_broad = std::byte(0xfe); // broadcast destination add
 
 static const int seq_max_bytes = 16;                // 16 maximum data bytes
 
-class EbusSequence
+class Telegram
 {
 
 public:
-	EbusSequence();
-	explicit EbusSequence(Sequence& seq);
+	Telegram();
+	explicit Telegram(Sequence &seq);
 
-	void parseSequence(Sequence& seq);
+	void parseSequence(Sequence &seq);
 
-	void createMaster(const std::byte source, const std::byte target, const std::string& str);
-	void createMaster(const std::byte source, const std::string& str);
-	void createMaster(const std::string& str);
-	void createMaster(Sequence& seq);
+	void createMaster(const std::byte source, const std::byte target, const std::string &str);
+	void createMaster(const std::byte source, const std::string &str);
+	void createMaster(const std::string &str);
+	void createMaster(Sequence &seq);
 
-	void createSlave(const std::string& str);
-	void createSlave(Sequence& seq);
+	void createSlave(const std::string &str);
+	void createSlave(Sequence &seq);
 
 	void clear();
 
@@ -104,6 +107,11 @@ public:
 
 	static const std::string errorText(const int error);
 
+	static bool isMaster(const std::byte byte);
+	static bool isSlave(const std::byte byte);
+	static bool isAddressValid(const std::byte byte);
+	static std::byte slaveAddress(const std::byte masterAddress);
+
 private:
 	int m_type = -1;
 
@@ -124,11 +132,11 @@ private:
 
 	std::byte m_masterACK = seq_zero;
 
-	static int checkMasterSequence(Sequence& seq);
-	static int checkSlaveSequence(Sequence& seq);
+	static int checkMasterSequence(Sequence &seq);
+	static int checkSlaveSequence(Sequence &seq);
 };
 
-} // namespace ebusfsm
+} // namespace ebus
 
-#endif // EBUSFSM_EBUSSEQUENCE_H
+#endif // EBUS_TELEGRAM_H
 

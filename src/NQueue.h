@@ -1,30 +1,31 @@
 /*
  * Copyright (C) Roland Jax 2012-2019 <roland.jax@liwest.at>
  *
- * This file is part of ebusfsm.
+ * This file is part of ebus.
  *
- * ebusfsm is free software: you can redistribute it and/or modify
+ * ebus is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
- * ebusfsm is distributed in the hope that it will be useful,
+ * ebus is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with ebusfsm. If not, see http://www.gnu.org/licenses/.
+ * along with ebus. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef EBUSFSM_UTILS_NQUEUE_H
-#define EBUSFSM_UTILS_NQUEUE_H
+#ifndef EBUS_NQUEUE_H
+#define EBUS_NQUEUE_H
 
-#include <queue>
-#include <mutex>
+#include <bits/std_mutex.h>
+#include <stddef.h>
 #include <condition_variable>
+#include <queue>
 
-namespace ebusfsm
+namespace ebus
 {
 
 template<typename T>
@@ -33,7 +34,8 @@ class NQueue
 
 public:
 	NQueue()
-		: m_queue(), m_mutex(), m_condition()
+		:
+		m_queue(), m_mutex(), m_condition()
 	{
 	}
 
@@ -68,6 +70,6 @@ private:
 
 };
 
-} // namespace ebusfsm
+} // namespace ebus
 
-#endif // EBUSFSM_UTILS_NQUEUE_H
+#endif // EBUS_NQUEUE_H

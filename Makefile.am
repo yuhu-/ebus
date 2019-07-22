@@ -1,9 +1,9 @@
-SUBDIRS = src include examples
+SUBDIRS = src examples
 
 ACLOCAL_AMFLAGS = -I m4 ${ACLOCAL_FLAGS}
 
 pkgconfigdir = $(libdir)/pkgconfig
-pkgconfig_DATA = ebusfsm.pc
+pkgconfig_DATA = ebus.pc
 
 distclean-local:
 	-rm -rf autom4te.cache

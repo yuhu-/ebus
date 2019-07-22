@@ -1,30 +1,30 @@
 /*
  * Copyright (C) Roland Jax 2012-2019 <roland.jax@liwest.at>
  *
- * This file is part of ebusfsm.
+ * This file is part of ebus.
  *
- * ebusfsm is free software: you can redistribute it and/or modify
+ * ebus is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
- * ebusfsm is distributed in the hope that it will be useful,
+ * ebus is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with ebusfsm. If not, see http://www.gnu.org/licenses/.
+ * along with ebus. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef EBUSFSM_SEQUENCE_H
-#define EBUSFSM_SEQUENCE_H
+#ifndef EBUS_SEQUENCE_H
+#define EBUS_SEQUENCE_H
 
-#include <vector>
-#include <string>
 #include <cstddef>
+#include <string>
+#include <vector>
 
-namespace ebusfsm
+namespace ebus
 {
 
 static const std::byte seq_zero = std::byte(0x00);     // zero byte
@@ -41,8 +41,8 @@ public:
 	static const size_t npos = -1;
 
 	Sequence();
-	explicit Sequence(const std::string& str);
-	Sequence(const Sequence& seq, const size_t index, size_t len = 0);
+	explicit Sequence(const std::string &str);
+	Sequence(const Sequence &seq, const size_t index, size_t len = 0);
 
 	void push_back(const std::byte byte, const bool isExtended = true);
 
@@ -63,22 +63,23 @@ public:
 	const std::string toString() const;
 	const std::vector<std::byte> getSequence() const;
 
-	size_t find(const Sequence& seq, const size_t pos = 0) const noexcept;
+	size_t find(const Sequence &seq, const size_t pos = 0) const noexcept;
 
-	int compare(const Sequence& seq) const noexcept;
+	int compare(const Sequence &seq) const noexcept;
 
-	bool contains(const std::string& str) const noexcept;
+	bool contains(const std::string &str) const noexcept;
 
-	static const std::string toString(const std::vector<std::byte>& seq);
+	static const std::string toString(const std::vector<std::byte> &seq);
 
 private:
 	std::vector<std::byte> m_seq;
 
 	bool m_extended = false;
 
+	static std::byte calcCRC(const std::byte byte, const std::byte init);
 };
 
-} // namespace ebusfsm
+} // namespace ebus
 
-#endif // EBUSFSM_SEQUENCE_H
+#endif // EBUS_SEQUENCE_H
 

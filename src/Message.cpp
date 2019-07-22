@@ -1,42 +1,41 @@
 /*
  * Copyright (C) Roland Jax 2012-2019 <roland.jax@liwest.at>
  *
- * This file is part of ebusfsm.
+ * This file is part of ebus.
  *
- * ebusfsm is free software: you can redistribute it and/or modify
+ * ebus is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
- * ebusfsm is distributed in the hope that it will be useful,
+ * ebus is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with ebusfsm. If not, see http://www.gnu.org/licenses/.
+ * along with ebus. If not, see http://www.gnu.org/licenses/.
  */
 
-#include <EbusMessage.h>
+#include "Message.h"
 
-#include <sstream>
-
-ebusfsm::EbusMessage::EbusMessage(EbusSequence& eSeq)
-	: Notify(), m_ebusSequence(eSeq)
+ebus::Message::Message(Telegram &tel)
+	:
+	Notify(), m_telegram(tel)
 {
 }
 
-ebusfsm::EbusSequence& ebusfsm::EbusMessage::getEbusSequence()
+ebus::Telegram& ebus::Message::getTelegram()
 {
-	return (m_ebusSequence);
+	return (m_telegram);
 }
 
-void ebusfsm::EbusMessage::setState(int state)
+void ebus::Message::setState(int state)
 {
 	m_state = state;
 }
 
-int ebusfsm::EbusMessage::getState() const
+int ebus::Message::getState() const
 {
 	return (m_state);
 }
