@@ -93,7 +93,7 @@ ebus::Ebus::~Ebus()
 	m_thread.join();
 
 	while (m_messageQueue.size() > 0)
-		delete m_messageQueue.dequeue();
+		m_messageQueue.dequeue().reset();
 
 	m_dumpRawStream.close();
 }
@@ -125,11 +125,11 @@ int ebus::Ebus::transmit(Telegram &tel)
 	}
 	else
 	{
-		Message *message = new Message(tel);
+		std::shared_ptr<Message> message = std::make_shared<Message>(tel);
 		m_messageQueue.enqueue(message);
 		message->waitNotify();
 		result = message->getState();
-		delete message;
+		message.reset();
 	}
 
 	return (result);
@@ -254,9 +254,8 @@ void ebus::Ebus::reset()
 
 	if (m_passiveMessage != nullptr)
 	{
-		Message *message = m_passiveMessage;
+		std::shared_ptr<Message> message = m_passiveMessage;
 		m_passiveMessage = nullptr;
-		delete message;
 	}
 }
 
@@ -575,7 +574,7 @@ ebus::State ebus::Ebus::processMessage()
 			if (tel.getSlaveState() == SEQ_OK)
 			{
 				logInfo("response: " + tel.toStringSlave());
-				m_passiveMessage = new Message(tel);
+				m_passiveMessage = std::make_shared<Message>(tel);
 
 				return (State::SendResponse);
 			}

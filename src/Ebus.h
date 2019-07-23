@@ -150,7 +150,7 @@ private:
 	long m_bytesPerSeconds = 0;
 	std::unique_ptr<Average> m_bytesPerSecondsAVG = nullptr;
 
-	NQueue<Message*> m_messageQueue;
+	NQueue<std::shared_ptr<Message>> m_messageQueue;
 
 	std::unique_ptr<Device> m_device = nullptr;
 	std::shared_ptr<ILogger> m_logger = nullptr;
@@ -162,8 +162,8 @@ private:
 	int m_lockCounterXXX = 0;
 	int m_lockRetriesXXX = 0;
 	Sequence m_sequence;
-	Message *m_activeMessage = nullptr;
-	Message *m_passiveMessage = nullptr;
+	std::shared_ptr<Message> m_activeMessage = nullptr;
+	std::shared_ptr<Message> m_passiveMessage = nullptr;
 
 	void read(std::byte &byte, const long sec, const long nsec);
 	void write(const std::byte &byte);
