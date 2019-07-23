@@ -61,9 +61,9 @@ class ILogger;
 #define STATE_WRN_PRI_LOST    14 // priority class lost
 #define STATE_WRN_ACK_NEG     15 // received acknowledge byte is negative -> retry
 #define STATE_WRN_RECV_RESP   16 // received response is invalid -> retry
-#define STATE_WRN_RECV_MSG    17 // at me addressed message is invalid
+#define STATE_WRN_RECV_MSG    17 // received message is invalid
 
-#define STATE_ERR_LOCK_FAIL   21 // ebus locking failed
+#define STATE_ERR_LOCK_FAIL   21 // locking ebus failed
 #define STATE_ERR_ACK_NEG     22 // received acknowledge byte is negative -> failed
 #define STATE_ERR_ACK_WRONG   23 // received acknowledge byte is wrong
 #define STATE_ERR_NN_WRONG    24 // received size byte is wrong
@@ -71,6 +71,8 @@ class ILogger;
 #define STATE_ERR_RESP_CREA   26 // creating response failed
 #define STATE_ERR_RESP_SEND   27 // sending response failed
 #define STATE_ERR_BAD_TYPE    28 // received type does not allow an answer
+#define STATE_ERR_OPEN_FAIL   29 // opening ebus failed
+#define STATE_ERR_CLOSE_FAIL  30 // closing ebus failed
 
 enum class Reaction
 {

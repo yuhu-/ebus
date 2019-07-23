@@ -57,16 +57,18 @@ std::map<int, std::string> StateMessages =
 { STATE_WRN_PRI_LOST, "priority class lost" },
 { STATE_WRN_ACK_NEG, "received acknowledge byte is negative -> retry" },
 { STATE_WRN_RECV_RESP, "received response is invalid -> retry" },
-{ STATE_WRN_RECV_MSG, "at me addressed message is invalid" },
+{ STATE_WRN_RECV_MSG, "message is invalid" },
 
-{ STATE_ERR_LOCK_FAIL, "ebus locking failed" },
+{ STATE_ERR_LOCK_FAIL, "locking ebus failed" },
 { STATE_ERR_ACK_NEG, "received acknowledge byte is negative -> failed" },
 { STATE_ERR_ACK_WRONG, "received acknowledge byte is wrong" },
 { STATE_ERR_NN_WRONG, "received size byte is wrong" },
 { STATE_ERR_RECV_RESP, "received response is invalid -> failed" },
 { STATE_ERR_RESP_CREA, "creating response failed" },
 { STATE_ERR_RESP_SEND, "sending response failed" },
-{ STATE_ERR_BAD_TYPE, "received type does not allow an answer" } };
+{ STATE_ERR_BAD_TYPE, "received type does not allow an answer" },
+{ STATE_ERR_OPEN_FAIL, "opening ebus failed" },
+{ STATE_ERR_CLOSE_FAIL, "closing ebus failed" } };
 
 ebus::Ebus::Ebus(const std::byte address, const std::string &device, std::shared_ptr<ILogger> logger,
 	std::function<Reaction(Telegram&)> process, std::function<void(Telegram&)> publish) : Notify(), m_address(address), m_slaveAddress(
@@ -102,6 +104,7 @@ void ebus::Ebus::open()
 {
 	notify();
 }
+
 void ebus::Ebus::close()
 {
 	m_offline = true;
@@ -346,7 +349,6 @@ void ebus::Ebus::run()
 	logInfo("Ebus stopped");
 }
 
-// TODO idleSystem
 ebus::State ebus::Ebus::idleSystem()
 {
 	logDebug("idleSystem");
@@ -355,8 +357,10 @@ ebus::State ebus::Ebus::idleSystem()
 	{
 		m_device->close();
 
-		if (!m_device->isOpen()) logInfo(stateMessage(STATE_INF_DEV_CLOSE));
-		// TODO close fail ?
+		if (!m_device->isOpen())
+			logInfo(stateMessage(STATE_INF_DEV_CLOSE));
+		else
+			logWarn(stateMessage(STATE_ERR_CLOSE_FAIL));
 	}
 
 	reset();
@@ -367,7 +371,6 @@ ebus::State ebus::Ebus::idleSystem()
 	return (State::OpenDevice);
 }
 
-// TODO openDevice
 ebus::State ebus::Ebus::openDevice()
 {
 	logDebug("openDevice");
@@ -381,7 +384,11 @@ ebus::State ebus::Ebus::openDevice()
 		if (!m_device->isOpen())
 		{
 			m_reopenTimeXXX++;
-			if (m_reopenTimeXXX > m_reopenTime) return (ebus::State::IdleSystem);
+			if (m_reopenTimeXXX > m_reopenTime)
+			{
+				logWarn(stateMessage(STATE_ERR_OPEN_FAIL));
+				return (ebus::State::IdleSystem);
+			}
 		}
 	}
 
@@ -399,7 +406,6 @@ ebus::State ebus::Ebus::openDevice()
 	return (State::MonitorBus);
 }
 
-// TODO monitorBus
 ebus::State ebus::Ebus::monitorBus()
 {
 	logDebug("monitorBus");
@@ -452,7 +458,6 @@ ebus::State ebus::Ebus::monitorBus()
 	return (State::MonitorBus);
 }
 
-// TODO receiveMessage
 ebus::State ebus::Ebus::receiveMessage()
 {
 	logDebug("receiveMessage");
@@ -547,7 +552,6 @@ ebus::State ebus::Ebus::receiveMessage()
 	return (State::MonitorBus);
 }
 
-// TODO processMessage
 ebus::State ebus::Ebus::processMessage()
 {
 	logDebug("processMessage");
@@ -598,7 +602,6 @@ ebus::State ebus::Ebus::processMessage()
 	return (State::MonitorBus);
 }
 
-// TODO sendResponse
 ebus::State ebus::Ebus::sendResponse()
 {
 	logDebug("sendResponse");
@@ -651,7 +654,6 @@ ebus::State ebus::Ebus::sendResponse()
 	return (State::MonitorBus);
 }
 
-// TODO lookBus
 ebus::State ebus::Ebus::lockBus()
 {
 	logDebug("lockBus");
@@ -704,7 +706,6 @@ ebus::State ebus::Ebus::lockBus()
 	return (State::SendMessage);
 }
 
-// TODO sendMessage
 ebus::State ebus::Ebus::sendMessage()
 {
 	logDebug("sendMessage");
@@ -771,7 +772,6 @@ ebus::State ebus::Ebus::sendMessage()
 	return (State::FreeBus);
 }
 
-// TODO receiveResponse
 ebus::State ebus::Ebus::receiveResponse()
 {
 	logDebug("receiveResponse");
@@ -844,7 +844,6 @@ ebus::State ebus::Ebus::receiveResponse()
 	return (State::FreeBus);
 }
 
-// TODO freeBus
 ebus::State ebus::Ebus::freeBus()
 {
 	logDebug("freeBus");
@@ -860,7 +859,6 @@ ebus::State ebus::Ebus::freeBus()
 	return (State::MonitorBus);
 }
 
-// TODO handleDeviceError
 ebus::State ebus::Ebus::handleDeviceError(bool error, const std::string &message)
 {
 	if (m_activeMessage != nullptr) m_activeMessage->setState(EBUS_ERR_DEVICE);

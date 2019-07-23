@@ -95,8 +95,6 @@ void ebus::Device::close()
 
 bool ebus::Device::isOpen()
 {
-	// TODO use status variable instead - if (isValid() == false) m_open = false;
-
 	return (m_open);
 }
 
