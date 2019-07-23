@@ -12,6 +12,5 @@ distclean-local:
 	-rm -f configure
 	-rm -f Makefile.in
 	-rm -rf build
-	-rm -rf src/.deps
 	-rm -rf m4
 	-rm -rf *.tar.gz

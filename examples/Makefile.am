@@ -20,3 +20,4 @@ demo_ebus_LDFLAGS = -no-install
 distclean-local:
 	-rm -f Makefile.in
 	-rm -rf .libs
+	-rm -rf .deps
