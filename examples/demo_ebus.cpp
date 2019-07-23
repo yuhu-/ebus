@@ -17,10 +17,13 @@
  * along with ebus. If not, see http://www.gnu.org/licenses/.
  */
 
-#include <iostream>
-#include <functional>
-
 #include <unistd.h>
+#include <cstddef>
+#include <functional>
+#include <iostream>
+#include <memory>
+#include <string>
+
 #include "../src/Ebus.h"
 #include "../src/ILogger.h"
 

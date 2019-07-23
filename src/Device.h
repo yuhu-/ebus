@@ -30,7 +30,7 @@ class Device
 {
 
 public:
-	Device(const std::string &device);
+	explicit Device(const std::string &device);
 	~Device();
 
 	void open();
@@ -44,8 +44,7 @@ public:
 private:
 	const std::string m_device;
 
-	termios m_oldSettings =
-	{ };
+	termios m_oldSettings = {};
 
 	int m_fd = -1;
 

@@ -29,7 +29,9 @@ class runtime_warning : public std::runtime_error
 {
 
 public:
-	using std::runtime_error::runtime_error;
+	explicit runtime_warning(const char *what) : std::runtime_error(what)
+	{
+	}
 
 };
 

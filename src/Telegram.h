@@ -20,7 +20,7 @@
 #ifndef EBUS_TELEGRAM_H
 #define EBUS_TELEGRAM_H
 
-#include <stddef.h>
+#include <cstddef>
 #include <string>
 
 #include "Sequence.h"

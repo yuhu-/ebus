@@ -17,8 +17,10 @@
  * along with ebus. If not, see http://www.gnu.org/licenses/.
  */
 
+#include <cstddef>
 #include <iostream>
-#include <iomanip>
+#include <string>
+
 #include "../src/Telegram.h"
 
 int main()

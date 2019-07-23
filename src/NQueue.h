@@ -20,9 +20,9 @@
 #ifndef EBUS_NQUEUE_H
 #define EBUS_NQUEUE_H
 
-#include <bits/std_mutex.h>
 #include <stddef.h>
 #include <condition_variable>
+#include <mutex>
 #include <queue>
 
 namespace ebus
@@ -33,9 +33,7 @@ class NQueue
 {
 
 public:
-	NQueue()
-		:
-		m_queue(), m_mutex(), m_condition()
+	NQueue() : m_queue(), m_mutex(), m_condition()
 	{
 	}
 

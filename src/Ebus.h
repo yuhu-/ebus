@@ -21,6 +21,7 @@
 #define EBUS_EBUS_H
 
 #include <chrono>
+#include <cstddef>
 #include <fstream>
 #include <functional>
 #include <memory>
@@ -98,7 +99,7 @@ class Ebus : private Notify
 
 public:
 	Ebus(const std::byte address, const std::string &device, std::shared_ptr<ILogger> logger,
-		std::function<Reaction(Telegram&)> identify, std::function<void(Telegram&)> publish);
+		std::function<Reaction(Telegram&)> process, std::function<void(Telegram&)> publish);
 
 	~Ebus();
 
@@ -154,7 +155,7 @@ private:
 	std::unique_ptr<Device> m_device = nullptr;
 	std::shared_ptr<ILogger> m_logger = nullptr;
 
-	std::function<Reaction(Telegram&)> m_identify;
+	std::function<Reaction(Telegram&)> m_process;
 	std::function<void(Telegram&)> m_publish;
 
 	long m_reopenTimeXXX = 0;
@@ -188,7 +189,7 @@ private:
 
 	State handleDeviceError(bool error, const std::string &message);
 
-	Reaction identify(Telegram &tel);
+	Reaction process(Telegram &tel);
 	void publish(Telegram &tel);
 
 	void dumpByte(const std::byte &byte);

@@ -20,7 +20,7 @@
 #ifndef EBUS_MESSAGE_H
 #define EBUS_MESSAGE_H
 
-#include <Notify.h>
+#include "Notify.h"
 
 namespace ebus
 {

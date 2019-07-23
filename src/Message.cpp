@@ -19,9 +19,7 @@
 
 #include "Message.h"
 
-ebus::Message::Message(Telegram &tel)
-	:
-	Notify(), m_telegram(tel)
+ebus::Message::Message(Telegram &tel) : Notify(), m_telegram(tel)
 {
 }
 

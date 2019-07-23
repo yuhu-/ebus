@@ -20,8 +20,8 @@
 #ifndef EBUS_NOTIFY_H
 #define EBUS_NOTIFY_H
 
-#include <mutex>
 #include <condition_variable>
+#include <mutex>
 
 namespace ebus
 {
@@ -30,9 +30,7 @@ class Notify
 {
 
 public:
-	Notify()
-		:
-		m_mutex(), m_condition()
+	Notify() : m_mutex(), m_condition()
 	{
 	}
 

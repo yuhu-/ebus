@@ -20,7 +20,6 @@
 #include "Ebus.h"
 
 #include <bits/types/struct_timespec.h>
-#include <stddef.h>
 #include <unistd.h>
 #include <cstdio>
 #include <ctime>
@@ -29,7 +28,6 @@
 #include <sstream>
 
 #include "Average.h"
-#include "Device.h"
 #include "ILogger.h"
 #include "Notify.h"
 #include "runtime_warning.h"
@@ -71,10 +69,9 @@ std::map<int, std::string> StateMessages =
 { STATE_ERR_BAD_TYPE, "received type does not allow an answer" } };
 
 ebus::Ebus::Ebus(const std::byte address, const std::string &device, std::shared_ptr<ILogger> logger,
-	std::function<Reaction(Telegram&)> identify, std::function<void(Telegram&)> publish)
-	:
-	Notify(), m_address(address), m_slaveAddress(Telegram::slaveAddress(address)), m_bytesPerSecondsAVG(new Average(15)), m_device(
-		std::make_unique<Device>(device)), m_logger(logger), m_identify(identify), m_publish(publish)
+	std::function<Reaction(Telegram&)> process, std::function<void(Telegram&)> publish) : Notify(), m_address(address), m_slaveAddress(
+	Telegram::slaveAddress(address)), m_bytesPerSecondsAVG(new Average(15)), m_device(std::make_unique<Device>(device)), m_logger(
+	logger), m_process(process), m_publish(publish)
 {
 	m_thread = std::thread(&Ebus::run, this);
 }
@@ -559,7 +556,7 @@ ebus::State ebus::Ebus::processMessage()
 	Telegram tel;
 	tel.createMaster(m_sequence);
 
-	Reaction reaction = identify(tel);
+	Reaction reaction = process(tel);
 
 	switch (reaction)
 	{
@@ -803,7 +800,7 @@ ebus::State ebus::Ebus::receiveResponse()
 		seq.push_back(byte);
 
 		// +1 for CRC
-		size_t bytes = std::to_integer < size_t > (byte) + 1;
+		size_t bytes = std::to_integer<size_t>(byte) + 1;
 
 		for (size_t i = 0; i < bytes; i++)
 		{
@@ -888,10 +885,10 @@ ebus::State ebus::Ebus::handleDeviceError(bool error, const std::string &message
 	return (State::MonitorBus);
 }
 
-ebus::Reaction ebus::Ebus::identify(Telegram &tel)
+ebus::Reaction ebus::Ebus::process(Telegram &tel)
 {
-	if (m_identify != nullptr)
-		return (m_identify(tel));
+	if (m_process != nullptr)
+		return (m_process(tel));
 	else
 		return (Reaction::nofunction);
 }

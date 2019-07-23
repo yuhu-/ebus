@@ -30,9 +30,7 @@ class Average
 {
 
 public:
-	explicit Average(const size_t size)
-		:
-		m_size(size), m_values()
+	explicit Average(const size_t size) : m_size(size), m_values()
 	{
 	}
 

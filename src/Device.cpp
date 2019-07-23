@@ -19,14 +19,6 @@
 
 #include "Device.h"
 
-#include <asm-generic/ioctls.h>
-#include <bits/termios-c_cc.h>
-#include <bits/termios-c_cflag.h>
-#include <bits/termios-c_iflag.h>
-#include <bits/termios-c_lflag.h>
-#include <bits/termios-c_oflag.h>
-#include <bits/termios-tcflow.h>
-#include <bits/types/struct_timespec.h>
 #include <fcntl.h>
 #include <poll.h>
 #include <sys/ioctl.h>
@@ -35,9 +27,7 @@
 
 #include "runtime_warning.h"
 
-ebus::Device::Device(const std::string &device)
-	:
-	m_device(device)
+ebus::Device::Device(const std::string &device) : m_device(device)
 {
 }
 
