@@ -28,6 +28,7 @@
 #include <string>
 #include <thread>
 
+#include "Average.h"
 #include "Device.h"
 #include "Message.h"
 #include "NQueue.h"
@@ -38,7 +39,6 @@ namespace ebus
 {
 
 class ILogger;
-class Average;
 
 #define EBUS_ERR_MASTER       -1 // sending is only as master possible
 #define EBUS_ERR_SEQUENCE     -2 // the passed sequence contains an error
@@ -148,7 +148,7 @@ private:
 		std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 	long m_bytes = 0;
 	long m_bytesPerSeconds = 0;
-	Average *m_bytesPerSecondsAVG = nullptr;
+	std::unique_ptr<Average> m_bytesPerSecondsAVG = nullptr;
 
 	NQueue<Message*> m_messageQueue;
 

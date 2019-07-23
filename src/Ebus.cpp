@@ -70,21 +70,19 @@ std::map<int, std::string> StateMessages =
 
 ebus::Ebus::Ebus(const std::byte address, const std::string &device, std::shared_ptr<ILogger> logger,
 	std::function<Reaction(Telegram&)> process, std::function<void(Telegram&)> publish) : Notify(), m_address(address), m_slaveAddress(
-	Telegram::slaveAddress(address)), m_bytesPerSecondsAVG(new Average(15)), m_device(std::make_unique<Device>(device)), m_logger(
-	logger), m_process(process), m_publish(publish)
+	Telegram::slaveAddress(address)), m_bytesPerSecondsAVG(std::make_unique<Average>(15)), m_device(
+	std::make_unique<Device>(device)), m_logger(logger), m_process(process), m_publish(publish)
 {
 	m_thread = std::thread(&Ebus::run, this);
 }
 
 ebus::Ebus::~Ebus()
 {
-	//m_forceState = Idle::getIdle();
 	m_offline = true;
 
 	struct timespec req =
 	{ 0, 10000L };
 
-//	while (m_state != Idle::getIdle())
 	while (m_offline)
 		nanosleep(&req, (struct timespec*) NULL);
 
@@ -127,11 +125,11 @@ int ebus::Ebus::transmit(Telegram &tel)
 	}
 	else
 	{
-		Message *ebusMessage = new Message(tel);
-		m_messageQueue.enqueue(ebusMessage);
-		ebusMessage->waitNotify();
-		result = ebusMessage->getState();
-		delete ebusMessage;
+		Message *message = new Message(tel);
+		m_messageQueue.enqueue(message);
+		message->waitNotify();
+		result = message->getState();
+		delete message;
 	}
 
 	return (result);
@@ -331,6 +329,8 @@ void ebus::Ebus::run()
 				break;
 			case State::FreeBus:
 				state = freeBus();
+				break;
+			default:
 				break;
 			}
 		} catch (const ebus::runtime_warning &ex)
