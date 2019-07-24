@@ -40,40 +40,6 @@ namespace ebus
 
 class ILogger;
 
-#define EBUS_ERR_MASTER       -1 // sending is only as master possible
-#define EBUS_ERR_SEQUENCE     -2 // the passed sequence contains an error
-#define EBUS_ERR_ADDRESS      -3 // the sequence master address differs from own address
-#define EBUS_ERR_TRANSMIT     -4 // a data error occurred during sending
-#define EBUS_ERR_DEVICE       -5 // a device error occurred
-
-#define STATE_INF_DEV_OPEN     1 // device opened
-#define STATE_INF_DEV_CLOSE    2 // device closed
-#define STATE_INF_EBUS_LOCK    3 // ebus locked
-#define STATE_INF_EBUS_FREE    4 // ebus freed
-#define STATE_INF_MSG_INGORE   5 // message ignored
-#define STATE_INF_DEV_FLUSH    6 // device flushed
-#define STATE_INF_NOT_DEF      7 // message not defined
-#define STATE_INF_NO_FUNC      8 // function not implemented
-
-#define STATE_WRN_BYTE_DIF    11 // written/read byte difference
-#define STATE_WRN_ARB_LOST    12 // arbitration lost
-#define STATE_WRN_PRI_FIT     13 // priority class fit -> retry
-#define STATE_WRN_PRI_LOST    14 // priority class lost
-#define STATE_WRN_ACK_NEG     15 // received acknowledge byte is negative -> retry
-#define STATE_WRN_RECV_RESP   16 // received response is invalid -> retry
-#define STATE_WRN_RECV_MSG    17 // received message is invalid
-
-#define STATE_ERR_LOCK_FAIL   21 // locking ebus failed
-#define STATE_ERR_ACK_NEG     22 // received acknowledge byte is negative -> failed
-#define STATE_ERR_ACK_WRONG   23 // received acknowledge byte is wrong
-#define STATE_ERR_NN_WRONG    24 // received size byte is wrong
-#define STATE_ERR_RECV_RESP   25 // received response is invalid -> failed
-#define STATE_ERR_RESP_CREA   26 // creating response failed
-#define STATE_ERR_RESP_SEND   27 // sending response failed
-#define STATE_ERR_BAD_TYPE    28 // received type does not allow an answer
-#define STATE_ERR_OPEN_FAIL   29 // opening ebus failed
-#define STATE_ERR_CLOSE_FAIL  30 // closing ebus failed
-
 enum class Reaction
 {
 	nofunction,	// no function
