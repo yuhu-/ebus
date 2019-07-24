@@ -14,7 +14,7 @@ libtool
 *.lo
 *.la
 *.dirstamp
-/examples/demo_telegram
+/test/test_telegram
 /examples/demo_ebus
 *.libs/
 ebus.pc

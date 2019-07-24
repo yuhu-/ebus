@@ -37,6 +37,7 @@
 #define EBUS_ERR_ADDRESS      -3 // the sequence master address differs from own address
 #define EBUS_ERR_TRANSMIT     -4 // a data error occurred during sending
 #define EBUS_ERR_DEVICE       -5 // a device error occurred
+#define EBUS_ERR_OFFLINE      -6 // ebus service is offline
 
 #define STATE_INF_DEV_OPEN     1 // device opened
 #define STATE_INF_DEV_CLOSE    2 // device closed
@@ -72,7 +73,8 @@ std::map<int, std::string> EbusErrors =
 { EBUS_ERR_SEQUENCE, "the passed sequence contains an error" },
 { EBUS_ERR_ADDRESS, "the sequence master address differs from own address" },
 { EBUS_ERR_TRANSMIT, "a data error occurred during sending" },
-{ EBUS_ERR_DEVICE, "a device error occurred" } };
+{ EBUS_ERR_DEVICE, "a device error occurred" },
+{ EBUS_ERR_OFFLINE, "ebus service is offline" } };
 
 std::map<int, std::string> StateMessages =
 {
@@ -115,12 +117,12 @@ ebus::Ebus::Ebus(const std::byte address, const std::string &device, std::shared
 
 ebus::Ebus::~Ebus()
 {
-	m_offline = true;
+	close();
 
 	struct timespec req =
 	{ 0, 10000L };
 
-	while (m_offline)
+	while (m_online)
 		nanosleep(&req, (struct timespec*) NULL);
 
 	m_running = false;
@@ -142,13 +144,22 @@ void ebus::Ebus::open()
 
 void ebus::Ebus::close()
 {
-	m_offline = true;
+	m_close = true;
+}
+
+bool ebus::Ebus::isOnline()
+{
+	return (m_online);
 }
 
 int ebus::Ebus::transmit(Telegram &tel)
 {
 	int result = SEQ_OK;
 
+	if (!isOnline())
+	{
+		result = EBUS_ERR_OFFLINE;
+	}
 	if (!Telegram::isMaster(m_address))
 	{
 		result = EBUS_ERR_MASTER;
@@ -378,7 +389,7 @@ void ebus::Ebus::run()
 			state = handleDeviceError(true, ex.what());
 		}
 
-		if (m_offline) state = State::IdleSystem;
+		if (m_close) state = State::IdleSystem;
 	}
 
 	logInfo("Ebus stopped");
@@ -400,7 +411,9 @@ ebus::State ebus::Ebus::idleSystem()
 
 	reset();
 
-	m_offline = false;
+	m_online = false;
+	m_close = false;
+
 	waitNotify();
 
 	return (State::OpenDevice);
@@ -435,6 +448,8 @@ ebus::State ebus::Ebus::openDevice()
 	} while (byte != seq_syn);
 
 	reset();
+
+	m_online = true;
 
 	logInfo(stateMessage(STATE_INF_DEV_FLUSH));
 

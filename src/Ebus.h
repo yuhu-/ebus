@@ -73,6 +73,7 @@ public:
 
 	void open();
 	void close();
+	bool isOnline();
 
 	int transmit(Telegram &tel);
 
@@ -95,7 +96,8 @@ private:
 	std::thread m_thread;
 
 	bool m_running = true;
-	bool m_offline = false;
+	bool m_online = false;
+	bool m_close = false;
 
 	const std::byte m_address;                       // ebus master address
 	const std::byte m_slaveAddress;                  // ebus slave address
