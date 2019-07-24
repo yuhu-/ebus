@@ -73,9 +73,11 @@ public:
 
 	void open();
 	void close();
+
 	bool isOnline();
 
-	int transmit(Telegram &tel);
+	int transmit(const std::string &message, std::string &response);
+	int transmit(const std::string &message, std::vector<std::byte> &response);
 
 	const std::string errorText(const int error) const;
 
@@ -134,6 +136,8 @@ private:
 	Sequence m_sequence;
 	std::shared_ptr<Message> m_activeMessage = nullptr;
 	std::shared_ptr<Message> m_passiveMessage = nullptr;
+
+	int transmit(Telegram &tel);
 
 	void read(std::byte &byte, const long sec, const long nsec);
 	void write(const std::byte &byte);

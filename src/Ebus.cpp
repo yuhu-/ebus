@@ -34,10 +34,9 @@
 
 #define EBUS_ERR_MASTER       -1 // sending is only as master possible
 #define EBUS_ERR_SEQUENCE     -2 // the passed sequence contains an error
-#define EBUS_ERR_ADDRESS      -3 // the sequence master address differs from own address
-#define EBUS_ERR_TRANSMIT     -4 // a data error occurred during sending
-#define EBUS_ERR_DEVICE       -5 // a device error occurred
-#define EBUS_ERR_OFFLINE      -6 // ebus service is offline
+#define EBUS_ERR_TRANSMIT     -3 // a data error occurred during sending
+#define EBUS_ERR_DEVICE       -4 // a device error occurred
+#define EBUS_ERR_OFFLINE      -5 // ebus service is offline
 
 #define STATE_INF_DEV_OPEN     1 // device opened
 #define STATE_INF_DEV_CLOSE    2 // device closed
@@ -71,7 +70,6 @@ std::map<int, std::string> EbusErrors =
 {
 { EBUS_ERR_MASTER, "sending is only as master possible" },
 { EBUS_ERR_SEQUENCE, "the passed sequence contains an error" },
-{ EBUS_ERR_ADDRESS, "the sequence master address differs from own address" },
 { EBUS_ERR_TRANSMIT, "a data error occurred during sending" },
 { EBUS_ERR_DEVICE, "a device error occurred" },
 { EBUS_ERR_OFFLINE, "ebus service is offline" } };
@@ -152,34 +150,28 @@ bool ebus::Ebus::isOnline()
 	return (m_online);
 }
 
-int ebus::Ebus::transmit(Telegram &tel)
+int ebus::Ebus::transmit(const std::string &message, std::string &response)
 {
 	int result = SEQ_OK;
 
-	if (!isOnline())
-	{
-		result = EBUS_ERR_OFFLINE;
-	}
-	if (!Telegram::isMaster(m_address))
-	{
-		result = EBUS_ERR_MASTER;
-	}
-	else if (tel.getMasterState() != SEQ_OK)
-	{
-		result = EBUS_ERR_SEQUENCE;
-	}
-	else if (tel.getMasterQQ() != m_address)
-	{
-		result = EBUS_ERR_ADDRESS;
-	}
-	else
-	{
-		std::shared_ptr<Message> message = std::make_shared<Message>(tel);
-		m_messageQueue.enqueue(message);
-		message->waitNotify();
-		result = message->getState();
-		message.reset();
-	}
+	Telegram tel;
+	tel.createMaster(m_address, message);
+
+	result = transmit(tel);
+	response = tel.getSlave().toString();
+
+	return (result);
+}
+
+int ebus::Ebus::transmit(const std::string &message, std::vector<std::byte> &response)
+{
+	int result = SEQ_OK;
+
+	Telegram tel;
+	tel.createMaster(m_address, message);
+
+	result = transmit(tel);
+	response = tel.getSlave().getSequence();
 
 	return (result);
 }
@@ -252,6 +244,34 @@ long ebus::Ebus::actBusSpeed() const
 double ebus::Ebus::avgBusSpeed() const
 {
 	return (m_bytesPerSecondsAVG->getAverage());
+}
+
+int ebus::Ebus::transmit(Telegram &tel)
+{
+	int result = SEQ_OK;
+
+	if (tel.getMasterState() != SEQ_OK)
+	{
+		result = EBUS_ERR_SEQUENCE;
+	}
+	else if (!Telegram::isMaster(m_address))
+	{
+		result = EBUS_ERR_MASTER;
+	}
+	else if (!isOnline())
+	{
+		result = EBUS_ERR_OFFLINE;
+	}
+	else
+	{
+		std::shared_ptr<Message> message = std::make_shared<Message>(tel);
+		m_messageQueue.enqueue(message);
+		message->waitNotify();
+		result = message->getState();
+		message.reset();
+	}
+
+	return (result);
 }
 
 void ebus::Ebus::read(std::byte &byte, const long sec, const long nsec)
