@@ -28,8 +28,7 @@
 namespace ebus
 {
 
-#define SEQ_TRANSMIT       2 // sequence sending failed
-#define SEQ_EMPTY          1 // sequence is empty
+#define SEQ_EMPTY         99 // sequence is empty
 
 #define SEQ_OK             0 // success
 
@@ -41,6 +40,7 @@ namespace ebus
 #define SEQ_ERR_QQ        -6 // source address is invalid
 #define SEQ_ERR_ZZ        -7 // target address is invalid
 #define SEQ_ERR_ACK_MISS  -8 // acknowledge byte is missing
+#define SEQ_ERR_INVALID   -9 // sequence is invalid
 
 #define TEL_TYPE_BC        0 // broadcast
 #define TEL_TYPE_MM        1 // master master

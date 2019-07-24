@@ -243,9 +243,9 @@ void ebus::Ebus::writeRead(const std::byte &byte, const long sec, const long nse
 
 void ebus::Ebus::reset()
 {
-	m_reopenTimeXXX = 0;
-	m_lockCounterXXX = m_lockCounter;
-	m_lockRetriesXXX = 0;
+	m_curReopenTime = 0;
+	m_curLockCounter = m_lockCounter;
+	m_curLockRetries = 0;
 	m_sequence.clear();
 
 	if (m_activeMessage != nullptr)
@@ -383,8 +383,8 @@ ebus::State ebus::Ebus::openDevice()
 
 		if (!m_device->isOpen())
 		{
-			m_reopenTimeXXX++;
-			if (m_reopenTimeXXX > m_reopenTime)
+			m_curReopenTime++;
+			if (m_curReopenTime > m_reopenTime)
 			{
 				logWarn(stateMessage(STATE_ERR_OPEN_FAIL));
 				return (ebus::State::IdleSystem);
@@ -416,10 +416,10 @@ ebus::State ebus::Ebus::monitorBus()
 
 	if (byte == seq_syn)
 	{
-		if (m_lockCounterXXX != 0)
+		if (m_curLockCounter != 0)
 		{
-			m_lockCounterXXX--;
-			logDebug("lockCounterXXX: " + std::to_string(m_lockCounterXXX));
+			m_curLockCounter--;
+			logDebug("curLockCounter: " + std::to_string(m_curLockCounter));
 		}
 
 		// decode Sequence
@@ -432,7 +432,7 @@ ebus::State ebus::Ebus::monitorBus()
 
 			if (tel.isValid() == true) publish(tel);
 
-			if (m_sequence.size() == 1 && m_lockCounterXXX < 2) m_lockCounterXXX = 2;
+			if (m_sequence.size() == 1 && m_curLockCounter < 2) m_curLockCounter = 2;
 
 			tel.clear();
 			m_sequence.clear();
@@ -442,7 +442,7 @@ ebus::State ebus::Ebus::monitorBus()
 		if (m_activeMessage == nullptr && m_messageQueue.size() > 0) m_activeMessage = m_messageQueue.dequeue();
 
 		// handle Message
-		if (m_activeMessage != nullptr && m_lockCounterXXX == 0) return (State::LockBus);
+		if (m_activeMessage != nullptr && m_curLockCounter == 0) return (State::LockBus);
 	}
 	else
 	{
@@ -675,18 +675,18 @@ ebus::State ebus::Ebus::lockBus()
 	{
 		logDebug(stateMessage(STATE_WRN_ARB_LOST));
 
-		if (m_lockRetriesXXX < m_lockRetries)
+		if (m_curLockRetries < m_lockRetries)
 		{
-			m_lockRetriesXXX++;
+			m_curLockRetries++;
 
 			if ((byte & std::byte(0x0f)) != (tel.getMasterQQ() & std::byte(0x0f)))
 			{
-				m_lockCounterXXX = m_lockCounter;
+				m_curLockCounter = m_lockCounter;
 				logDebug(stateMessage(STATE_WRN_PRI_LOST));
 			}
 			else
 			{
-				m_lockCounterXXX = 1;
+				m_curLockCounter = 1;
 				logDebug(stateMessage(STATE_WRN_PRI_FIT));
 			}
 		}

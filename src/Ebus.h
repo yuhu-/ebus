@@ -160,9 +160,9 @@ private:
 	std::function<Reaction(Telegram&)> m_process;
 	std::function<void(Telegram&)> m_publish;
 
-	long m_reopenTimeXXX = 0;
-	int m_lockCounterXXX = 0;
-	int m_lockRetriesXXX = 0;
+	long m_curReopenTime = 0;
+	int m_curLockCounter = 0;
+	int m_curLockRetries = 0;
 	Sequence m_sequence;
 	std::shared_ptr<Message> m_activeMessage = nullptr;
 	std::shared_ptr<Message> m_passiveMessage = nullptr;

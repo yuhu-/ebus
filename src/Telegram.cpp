@@ -25,7 +25,7 @@
 
 std::map<int, std::string> SequenceErrors =
 {
-{ SEQ_TRANSMIT, "sequence sending failed" },
+
 { SEQ_EMPTY, "sequence is empty" },
 
 { SEQ_ERR_SHORT, "sequence is too short" },
@@ -35,7 +35,8 @@ std::map<int, std::string> SequenceErrors =
 { SEQ_ERR_ACK, "acknowledge byte is invalid" },
 { SEQ_ERR_QQ, "source address is invalid" },
 { SEQ_ERR_ZZ, "target address is invalid" },
-{ SEQ_ERR_ACK_MISS, "acknowledge byte is missing" }, };
+{ SEQ_ERR_ACK_MISS, "acknowledge byte is missing" },
+{ SEQ_ERR_INVALID, "sequence is invalid" } };
 
 ebus::Telegram::Telegram()
 {
@@ -126,7 +127,7 @@ void ebus::Telegram::parseSequence(Sequence &seq)
 
 				// sequence sending failed
 				else
-					m_masterState = SEQ_TRANSMIT;
+					m_masterState = SEQ_ERR_INVALID;
 
 				return;
 			}
@@ -212,7 +213,7 @@ void ebus::Telegram::parseSequence(Sequence &seq)
 			if (m_masterACK == seq_nak)
 			{
 				// sequence sending failed
-				m_slaveState = SEQ_TRANSMIT;
+				m_slaveState = SEQ_ERR_INVALID;
 				return;
 			}
 
@@ -520,7 +521,7 @@ const std::string ebus::Telegram::toStringMasterError()
 	std::ostringstream ostr;
 	if (m_master.size() > 0) ostr << "'" << m_master.toString() << "' ";
 
-	ostr << "The master " << errorText(m_masterState);
+	ostr << "master " << errorText(m_masterState);
 
 	return (ostr.str());
 }
@@ -561,7 +562,7 @@ const std::string ebus::Telegram::toStringSlaveError()
 	std::ostringstream ostr;
 	if (m_slave.size() > 0) ostr << "'" << m_slave.toString() << "' ";
 
-	ostr << "The slave " << errorText(m_slaveState);
+	ostr << "slave " << errorText(m_slaveState);
 
 	return (ostr.str());
 }
