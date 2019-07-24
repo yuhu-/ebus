@@ -38,6 +38,7 @@ AC_CONFIG_SRCDIR([src/Ebus.cpp])
 
 AC_CONFIG_FILES([Makefile
 		 src/Makefile
+		 test/Makefile
 		 examples/Makefile
 		 ebus.pc:ebus.pc.in])
 

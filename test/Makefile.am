@@ -5,12 +5,11 @@ AM_CXXFLAGS = -fpic \
 	      -std=c++17 \
 	      -isystem$(top_srcdir)/src
 
-noinst_PROGRAMS = demo_ebus
+noinst_PROGRAMS = test_telegram
 
-demo_ebus_SOURCES = demo_ebus.cpp
-demo_ebus_LDADD = ../src/libebus.la \
-		     -lpthread
-demo_ebus_LDFLAGS = -no-install
+test_telegram_SOURCES = test_telegram.cpp
+test_telegram_LDADD = ../src/libebus.la
+test_telegram_LDFLAGS = -no-install
 
 distclean-local:
 	-rm -f Makefile.in

@@ -24,8 +24,8 @@
 #include <memory>
 #include <string>
 
-#include "../src/Ebus.h"
-#include "../src/ILogger.h"
+#include <Ebus.h>
+#include <ILogger.h>
 
 class logger : public ebus::ILogger
 {
@@ -64,30 +64,30 @@ void logger::trace(const std::string &message)
 	//std::cout << "TRACE:   " << message << std::endl;
 }
 
-ebus::Reaction identify(ebus::Telegram &eSeq)
+ebus::Reaction process(const std::string &message)
 {
-	std::cout << "identify: " << eSeq.toString().c_str() << std::endl;
+	std::cout << "process: " << message << std::endl;
 
 	return (ebus::Reaction::undefined);
 }
 
-void publish(ebus::Telegram &eSeq)
+void publish(const std::string &message)
 {
-	std::cout << "publish: " << eSeq.toString().c_str() << std::endl;
+	std::cout << "publish: " << message << std::endl;
 }
 
 int main()
 {
 
-	ebus::Ebus fsm(std::byte(0xff), "/dev/ttyUSB0", std::make_shared<logger>(), std::bind(&identify, std::placeholders::_1),
+	ebus::Ebus service(std::byte(0xff), "/dev/ttyUSB0", std::make_shared<logger>(), std::bind(&process, std::placeholders::_1),
 		std::bind(&publish, std::placeholders::_1));
 
 	int count = 0;
 
-	while (count < 100)
+	while (count < 10)
 	{
 		sleep(1);
-		std::cout << "main loop - count: " << count << std::endl;
+		std::cout << "main: " << count << " seconds passed" << std::endl;
 
 		count++;
 	}

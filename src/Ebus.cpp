@@ -105,7 +105,8 @@ std::map<int, std::string> StateMessages =
 { STATE_ERR_CLOSE_FAIL, "closing ebus failed" } };
 
 ebus::Ebus::Ebus(const std::byte address, const std::string &device, std::shared_ptr<ILogger> logger,
-	std::function<Reaction(Telegram&)> process, std::function<void(Telegram&)> publish) : Notify(), m_address(address), m_slaveAddress(
+	std::function<Reaction(const std::string&)> process, std::function<void(const std::string&)> publish) : Notify(), m_address(
+	address), m_slaveAddress(
 	Telegram::slaveAddress(address)), m_bytesPerSecondsAVG(std::make_unique<Average>(15)), m_device(
 	std::make_unique<Device>(device)), m_logger(logger), m_process(process), m_publish(publish)
 {
@@ -284,7 +285,7 @@ void ebus::Ebus::reset()
 
 	if (m_activeMessage != nullptr)
 	{
-		publish(m_activeMessage->getTelegram());
+		publish(m_activeMessage->getTelegram().toString());
 		m_activeMessage->notify();
 		m_activeMessage = nullptr;
 	}
@@ -464,7 +465,7 @@ ebus::State ebus::Ebus::monitorBus()
 			Telegram tel(m_sequence);
 			logInfo(telegramInfo(tel));
 
-			if (tel.isValid() == true) publish(tel);
+			if (tel.isValid() == true) publish(tel.toString());
 
 			if (m_sequence.size() == 1 && m_curLockCounter < 2) m_curLockCounter = 2;
 
@@ -575,7 +576,7 @@ ebus::State ebus::Ebus::receiveMessage()
 		if (tel.getType() != TEL_TYPE_MS)
 		{
 			logInfo(telegramInfo(tel));
-			publish(tel);
+			publish(tel.toString());
 		}
 
 		return (State::ProcessMessage);
@@ -593,7 +594,7 @@ ebus::State ebus::Ebus::processMessage()
 	Telegram tel;
 	tel.createMaster(m_sequence);
 
-	Reaction reaction = process(tel);
+	Reaction reaction = process(tel.toString());
 
 	switch (reaction)
 	{
@@ -681,7 +682,7 @@ ebus::State ebus::Ebus::sendResponse()
 	tel.setMasterACK(byte);
 
 	logInfo(telegramInfo(tel));
-	publish(tel);
+	publish(tel.toString());
 
 	reset();
 
@@ -916,17 +917,17 @@ ebus::State ebus::Ebus::handleDeviceError(bool error, const std::string &message
 	return (State::MonitorBus);
 }
 
-ebus::Reaction ebus::Ebus::process(Telegram &tel)
+ebus::Reaction ebus::Ebus::process(const std::string &message)
 {
 	if (m_process != nullptr)
-		return (m_process(tel));
+		return (m_process(message));
 	else
 		return (Reaction::nofunction);
 }
 
-void ebus::Ebus::publish(Telegram &tel)
+void ebus::Ebus::publish(const std::string &message)
 {
-	if (m_publish != nullptr) m_publish(tel);
+	if (m_publish != nullptr) m_publish(message);
 }
 
 void ebus::Ebus::dumpByte(const std::byte &byte)

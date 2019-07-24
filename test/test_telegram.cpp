@@ -21,7 +21,7 @@
 #include <iostream>
 #include <string>
 
-#include "../src/Telegram.h"
+#include <Telegram.h>
 
 int main()
 {

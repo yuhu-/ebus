@@ -29,4 +29,5 @@ EXTRA_DIST = Notify.h \
 
 distclean-local:
 	-rm -f Makefile.in
-	-rm .deps
+	-rm -rf .libs
+	-rm -rf .deps
