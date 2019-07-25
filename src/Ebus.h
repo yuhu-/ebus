@@ -67,7 +67,8 @@ class Ebus : private Notify
 
 public:
 	Ebus(const std::byte address, const std::string &device, std::shared_ptr<ILogger> logger,
-		std::function<Reaction(const std::string&)> process, std::function<void(const std::string&)> publish);
+		std::function<Reaction(const std::string &message, std::string &response)> process,
+		std::function<void(const std::string &message)> publish);
 
 	~Ebus();
 
@@ -127,8 +128,8 @@ private:
 	std::unique_ptr<Device> m_device = nullptr;
 	std::shared_ptr<ILogger> m_logger = nullptr;
 
-	std::function<Reaction(const std::string&)> m_process;
-	std::function<void(const std::string&)> m_publish;
+	std::function<Reaction(const std::string &message, std::string &response)> m_process;
+	std::function<void(const std::string &message)> m_publish;
 
 	long m_curReopenTime = 0;
 	int m_curLockCounter = 0;
@@ -163,7 +164,7 @@ private:
 
 	State handleDeviceError(bool error, const std::string &message);
 
-	Reaction process(const std::string &message);
+	Reaction process(const std::string &message, std::string &response);
 	void publish(const std::string &message);
 
 	void dumpByte(const std::byte &byte);

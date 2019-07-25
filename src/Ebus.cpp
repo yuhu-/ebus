@@ -105,7 +105,8 @@ std::map<int, std::string> StateMessages =
 { STATE_ERR_CLOSE_FAIL, "closing ebus failed" } };
 
 ebus::Ebus::Ebus(const std::byte address, const std::string &device, std::shared_ptr<ILogger> logger,
-	std::function<Reaction(const std::string&)> process, std::function<void(const std::string&)> publish) : Notify(), m_address(
+	std::function<Reaction(const std::string &message, std::string &response)> process,
+	std::function<void(const std::string &message)> publish) : Notify(), m_address(
 	address), m_slaveAddress(
 	Telegram::slaveAddress(address)), m_bytesPerSecondsAVG(std::make_unique<Average>(15)), m_device(
 	std::make_unique<Device>(device)), m_logger(logger), m_process(process), m_publish(publish)
@@ -628,8 +629,9 @@ ebus::State ebus::Ebus::processMessage()
 
 	Telegram tel;
 	tel.createMaster(m_sequence);
+	std::string response;
 
-	Reaction reaction = process(tel.toString());
+	Reaction reaction = process(tel.toString(), response);
 
 	switch (reaction)
 	{
@@ -645,6 +647,8 @@ ebus::State ebus::Ebus::processMessage()
 	case Reaction::response:
 		if (tel.getType() == TEL_TYPE_MS)
 		{
+			tel.createSlave(response);
+
 			if (tel.getSlaveState() == SEQ_OK)
 			{
 				logInfo("response: " + tel.toStringSlave());
@@ -952,10 +956,10 @@ ebus::State ebus::Ebus::handleDeviceError(bool error, const std::string &message
 	return (State::MonitorBus);
 }
 
-ebus::Reaction ebus::Ebus::process(const std::string &message)
+ebus::Reaction ebus::Ebus::process(const std::string &message, std::string &response)
 {
 	if (m_process != nullptr)
-		return (m_process(message));
+		return (m_process(message, response));
 	else
 		return (Reaction::nofunction);
 }
