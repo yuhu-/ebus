@@ -69,6 +69,8 @@ public:
 
 	bool contains(const std::string &str) const noexcept;
 
+	static const std::vector<std::byte> toVector(const std::string &str);
+
 	static const std::string toString(const std::vector<std::byte> &seq);
 
 private:

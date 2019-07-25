@@ -198,6 +198,16 @@ bool ebus::Sequence::contains(const std::string &str) const noexcept
 	return (false);
 }
 
+const std::vector<std::byte> ebus::Sequence::toVector(const std::string &str)
+{
+	std::vector<std::byte> result;
+
+	for (size_t i = 0; i + 1 < str.size(); i += 2)
+		result.push_back(std::byte(std::strtoul(str.substr(i, 2).c_str(), nullptr, 16)));
+
+	return (result);
+}
+
 const std::string ebus::Sequence::toString(const std::vector<std::byte> &seq)
 {
 	std::ostringstream ostr;
