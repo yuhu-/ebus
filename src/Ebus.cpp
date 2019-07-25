@@ -17,20 +17,28 @@
  * along with ebus. If not, see http://www.gnu.org/licenses/.
  */
 
-#include "Ebus.h"
+#include "../include/ebus/Ebus.h"
 
 #include <bits/types/struct_timespec.h>
 #include <unistd.h>
+#include <chrono>
 #include <cstdio>
 #include <ctime>
+#include <fstream>
 #include <iomanip>
 #include <map>
 #include <sstream>
+#include <thread>
 
+#include "../include/ebus/ILogger.h"
 #include "Average.h"
-#include "ILogger.h"
+#include "Device.h"
+#include "Message.h"
 #include "Notify.h"
+#include "NQueue.h"
 #include "runtime_warning.h"
+#include "Sequence.h"
+#include "Telegram.h"
 
 #define EBUS_ERR_MASTER       -1 // sending is only as master possible
 #define EBUS_ERR_SEQUENCE     -2 // the passed sequence contains an error
@@ -104,17 +112,271 @@ std::map<int, std::string> StateMessages =
 { STATE_ERR_OPEN_FAIL, "opening ebus failed" },
 { STATE_ERR_CLOSE_FAIL, "closing ebus failed" } };
 
+enum class State
+{
+	IdleSystem,
+	OpenDevice,
+	MonitorBus,
+	ReceiveMessage,
+	ProcessMessage,
+	SendResponse,
+	LockBus,
+	SendMessage,
+	ReceiveResponse,
+	FreeBus
+};
+
+class ebus::Ebus::EbusImpl : private Notify
+{
+
+public:
+	EbusImpl(const std::byte address, const std::string &device, std::shared_ptr<ILogger> logger,
+		std::function<Reaction(const std::string &message, std::string &response)> process,
+		std::function<void(const std::string &message)> publish);
+
+	~EbusImpl();
+
+	void open();
+	void close();
+
+	bool isOnline();
+
+	int transmit(const std::string &message, std::string &response);
+	int transmit(const std::string &message, std::vector<std::byte> &response);
+
+	const std::string errorText(const int error) const;
+
+	void setReopenTime(const long &reopenTime);
+	void setArbitrationTime(const long &arbitrationTime);
+	void setReceiveTimeout(const long &receiveTimeout);
+	void setLockCounter(const int &lockCounter);
+	void setLockRetries(const int &lockRetries);
+
+	void setDump(const bool &dump);
+	void setDumpFile(const std::string &dumpFile);
+	void setDumpFileMaxSize(const long &dumpFileMaxSize);
+
+	long actBusSpeed() const;
+	double avgBusSpeed() const;
+
+	static const std::vector<std::byte> toVector(const std::string &str);
+	static const std::string toString(const std::vector<std::byte> &seq);
+	static bool isHex(const std::string &str, std::ostringstream &result, const int &nibbles);
+
+private:
+	std::thread m_thread;
+
+	bool m_running = true;
+	bool m_online = false;
+	bool m_close = false;
+
+	const std::byte m_address;                       // ebus master address
+	const std::byte m_slaveAddress;                  // ebus slave address
+
+	long m_reopenTime = 10L;                         // max. time to open ebus device [s]
+	long m_arbitrationTime = 5000L;                  // waiting time for arbitration test [us]
+	long m_receiveTimeout = 10000L;                  // max. time for receiving of one sequence sign [us]
+	int m_lockCounter = 5;                           // number of characters after a successful ebus access (max: 25)
+	int m_lockRetries = 2;                           // number of retries to lock ebus
+
+	bool m_dump = false;                             // enable/disable raw data dumping
+	std::string m_dumpFile = "/tmp/ebus_dump.bin";   // dump file name
+	long m_dumpFileMaxSize = 100L;                   // max size for dump file [kB]
+	long m_dumpFileSize = 0L;                        // current size of dump file
+	std::ofstream m_dumpRawStream;                   // dump stream
+
+	long m_lastSeconds = std::chrono::duration_cast < std::chrono::seconds
+		> (std::chrono::system_clock::now().time_since_epoch()).count();
+	long m_bytes = 0;
+	long m_bytesPerSeconds = 0;
+	std::unique_ptr<Average> m_bytesPerSecondsAVG = nullptr;
+
+	NQueue<std::shared_ptr<Message>> m_messageQueue;
+
+	std::unique_ptr<Device> m_device = nullptr;
+	std::shared_ptr<ILogger> m_logger = nullptr;
+
+	std::function<Reaction(const std::string &message, std::string &response)> m_process;
+	std::function<void(const std::string &message)> m_publish;
+
+	long m_curReopenTime = 0;
+	int m_curLockCounter = 0;
+	int m_curLockRetries = 0;
+	Sequence m_sequence;
+	std::shared_ptr<Message> m_activeMessage = nullptr;
+	std::shared_ptr<Message> m_passiveMessage = nullptr;
+
+	int transmit(Telegram &tel);
+
+	void read(std::byte &byte, const long sec, const long nsec);
+	void write(const std::byte &byte);
+	void writeRead(const std::byte &byte, const long sec, const long nsec);
+
+	void reset();
+
+	const std::string stateMessage(const int state);
+	const std::string telegramInfo(Telegram &tel);
+
+	void run();
+
+	State idleSystem();
+	State openDevice();
+	State monitorBus();
+	State receiveMessage();
+	State processMessage();
+	State sendResponse();
+	State lockBus();
+	State sendMessage();
+	State receiveResponse();
+	State freeBus();
+
+	State handleDeviceError(bool error, const std::string &message);
+
+	Reaction process(const std::string &message, std::string &response);
+	void publish(const std::string &message);
+
+	void dumpByte(const std::byte &byte);
+	void countByte();
+
+	void logError(const std::string &message);
+	void logWarn(const std::string &message);
+	void logInfo(const std::string &message);
+	void logDebug(const std::string &message);
+	void logTrace(const std::string &message);
+
+};
+
 ebus::Ebus::Ebus(const std::byte address, const std::string &device, std::shared_ptr<ILogger> logger,
+	std::function<Reaction(const std::string &message, std::string &response)> process,
+	std::function<void(const std::string &message)> publish) : impl
+{ std::make_unique<EbusImpl>(address, device, logger, process, publish) }
+{
+}
+
+// Move functions defined here
+ebus::Ebus& ebus::Ebus::operator=(Ebus&&) = default;
+ebus::Ebus::Ebus(Ebus&&) = default;
+
+// Copy functions defined here
+//ebus::Ebus& ebus::Ebus::Ebus::operator=(const Ebus &anotherEbus)
+//{
+//	*pImpl = *anotherEbus.pImpl;
+//	return (*this);
+//}
+//
+//ebus::Ebus::Ebus(const Ebus &anotherEbus) : pImpl(std::make_unique<Ebus::impl>(*anotherEbus.pImpl))
+//{
+//}
+
+ebus::Ebus::~Ebus() = default;
+
+void ebus::Ebus::open()
+{
+	this->impl->open();
+}
+
+void ebus::Ebus::close()
+{
+	this->impl->close();
+}
+
+bool ebus::Ebus::isOnline()
+{
+	return (this->impl->isOnline());
+}
+
+int ebus::Ebus::transmit(const std::string &message, std::string &response)
+{
+	return (this->impl->transmit(message, response));
+}
+
+int ebus::Ebus::transmit(const std::string &message, std::vector<std::byte> &response)
+{
+	return (this->impl->transmit(message, response));
+}
+
+const std::string ebus::Ebus::errorText(const int error) const
+{
+	return (this->impl->errorText(error));
+}
+
+void ebus::Ebus::setReopenTime(const long &reopenTime)
+{
+	this->impl->setReopenTime(reopenTime);
+}
+
+void ebus::Ebus::setArbitrationTime(const long &arbitrationTime)
+{
+	this->impl->setArbitrationTime(arbitrationTime);
+}
+
+void ebus::Ebus::setReceiveTimeout(const long &receiveTimeout)
+{
+	this->impl->setReceiveTimeout(receiveTimeout);
+}
+
+void ebus::Ebus::setLockCounter(const int &lockCounter)
+{
+	this->impl->setLockCounter(lockCounter);
+}
+
+void ebus::Ebus::setLockRetries(const int &lockRetries)
+{
+	this->impl->setLockRetries(lockRetries);
+}
+
+void ebus::Ebus::setDump(const bool &dump)
+{
+	this->impl->setDump(dump);
+}
+
+void ebus::Ebus::setDumpFile(const std::string &dumpFile)
+{
+	this->impl->setDumpFile(dumpFile);
+}
+
+void ebus::Ebus::setDumpFileMaxSize(const long &dumpFileMaxSize)
+{
+	this->impl->setDumpFileMaxSize(dumpFileMaxSize);
+}
+
+long ebus::Ebus::actBusSpeed() const
+{
+	return (this->impl->actBusSpeed());
+}
+
+double ebus::Ebus::avgBusSpeed() const
+{
+	return (this->impl->avgBusSpeed());
+}
+
+const std::vector<std::byte> ebus::Ebus::toVector(const std::string &str)
+{
+	return (EbusImpl::toVector(str));
+}
+
+const std::string ebus::Ebus::toString(const std::vector<std::byte> &seq)
+{
+	return (EbusImpl::toString(seq));
+}
+
+bool ebus::Ebus::isHex(const std::string &str, std::ostringstream &result, const int &nibbles)
+{
+	return (EbusImpl::isHex(str, result, nibbles));
+}
+
+
+ebus::Ebus::EbusImpl::EbusImpl(const std::byte address, const std::string &device, std::shared_ptr<ILogger> logger,
 	std::function<Reaction(const std::string &message, std::string &response)> process,
 	std::function<void(const std::string &message)> publish) : Notify(), m_address(
 	address), m_slaveAddress(
 	Telegram::slaveAddress(address)), m_bytesPerSecondsAVG(std::make_unique<Average>(15)), m_device(
 	std::make_unique<Device>(device)), m_logger(logger), m_process(process), m_publish(publish)
 {
-	m_thread = std::thread(&Ebus::run, this);
+	m_thread = std::thread(&EbusImpl::run, this);
 }
 
-ebus::Ebus::~Ebus()
+ebus::Ebus::EbusImpl::~EbusImpl()
 {
 	close();
 
@@ -136,22 +398,22 @@ ebus::Ebus::~Ebus()
 	m_dumpRawStream.close();
 }
 
-void ebus::Ebus::open()
+void ebus::Ebus::EbusImpl::open()
 {
 	notify();
 }
 
-void ebus::Ebus::close()
+void ebus::Ebus::EbusImpl::close()
 {
 	m_close = true;
 }
 
-bool ebus::Ebus::isOnline()
+bool ebus::Ebus::EbusImpl::isOnline()
 {
 	return (m_online);
 }
 
-int ebus::Ebus::transmit(const std::string &message, std::string &response)
+int ebus::Ebus::EbusImpl::transmit(const std::string &message, std::string &response)
 {
 	int result = SEQ_OK;
 
@@ -164,7 +426,7 @@ int ebus::Ebus::transmit(const std::string &message, std::string &response)
 	return (result);
 }
 
-int ebus::Ebus::transmit(const std::string &message, std::vector<std::byte> &response)
+int ebus::Ebus::EbusImpl::transmit(const std::string &message, std::vector<std::byte> &response)
 {
 	int result = SEQ_OK;
 
@@ -177,37 +439,37 @@ int ebus::Ebus::transmit(const std::string &message, std::vector<std::byte> &res
 	return (result);
 }
 
-const std::string ebus::Ebus::errorText(const int error) const
+const std::string ebus::Ebus::EbusImpl::errorText(const int error) const
 {
 	return (EbusErrors[error]);
 }
 
-void ebus::Ebus::setReopenTime(const long &reopenTime)
+void ebus::Ebus::EbusImpl::setReopenTime(const long &reopenTime)
 {
 	m_reopenTime = reopenTime;
 }
 
-void ebus::Ebus::setArbitrationTime(const long &arbitrationTime)
+void ebus::Ebus::EbusImpl::setArbitrationTime(const long &arbitrationTime)
 {
 	m_arbitrationTime = arbitrationTime;
 }
 
-void ebus::Ebus::setReceiveTimeout(const long &receiveTimeout)
+void ebus::Ebus::EbusImpl::setReceiveTimeout(const long &receiveTimeout)
 {
 	m_receiveTimeout = receiveTimeout;
 }
 
-void ebus::Ebus::setLockCounter(const int &lockCounter)
+void ebus::Ebus::EbusImpl::setLockCounter(const int &lockCounter)
 {
 	m_lockCounter = lockCounter;
 }
 
-void ebus::Ebus::setLockRetries(const int &lockRetries)
+void ebus::Ebus::EbusImpl::setLockRetries(const int &lockRetries)
 {
 	m_lockRetries = lockRetries;
 }
 
-void ebus::Ebus::setDump(const bool &dump)
+void ebus::Ebus::EbusImpl::setDump(const bool &dump)
 {
 	if (dump == m_dump) return;
 
@@ -224,7 +486,7 @@ void ebus::Ebus::setDump(const bool &dump)
 	}
 }
 
-void ebus::Ebus::setDumpFile(const std::string &dumpFile)
+void ebus::Ebus::EbusImpl::setDumpFile(const std::string &dumpFile)
 {
 	bool dump = m_dump;
 	if (dump == true) setDump(false);
@@ -232,37 +494,37 @@ void ebus::Ebus::setDumpFile(const std::string &dumpFile)
 	m_dump = dump;
 }
 
-void ebus::Ebus::setDumpFileMaxSize(const long &dumpFileMaxSize)
+void ebus::Ebus::EbusImpl::setDumpFileMaxSize(const long &dumpFileMaxSize)
 {
 	m_dumpFileMaxSize = dumpFileMaxSize;
 }
 
-long ebus::Ebus::actBusSpeed() const
+long ebus::Ebus::EbusImpl::actBusSpeed() const
 {
 	return (m_bytesPerSeconds);
 }
 
-double ebus::Ebus::avgBusSpeed() const
+double ebus::Ebus::EbusImpl::avgBusSpeed() const
 {
 	return (m_bytesPerSecondsAVG->getAverage());
 }
 
-const std::vector<std::byte> ebus::Ebus::toVector(const std::string &str)
+const std::vector<std::byte> ebus::Ebus::EbusImpl::toVector(const std::string &str)
 {
 	return (Sequence::toVector((str)));
 }
 
-const std::string ebus::Ebus::toString(const std::vector<std::byte> &seq)
+const std::string ebus::Ebus::EbusImpl::toString(const std::vector<std::byte> &seq)
 {
 	return (Sequence::toString(seq));
 }
 
-bool ebus::Ebus::isHex(const std::string &str, std::ostringstream &result, const int &nibbles)
+bool ebus::Ebus::EbusImpl::isHex(const std::string &str, std::ostringstream &result, const int &nibbles)
 {
 	return (Sequence::isHex(str, result, nibbles));
 }
 
-int ebus::Ebus::transmit(Telegram &tel)
+int ebus::Ebus::EbusImpl::transmit(Telegram &tel)
 {
 	int result = SEQ_OK;
 
@@ -290,7 +552,7 @@ int ebus::Ebus::transmit(Telegram &tel)
 	return (result);
 }
 
-void ebus::Ebus::read(std::byte &byte, const long sec, const long nsec)
+void ebus::Ebus::EbusImpl::read(std::byte &byte, const long sec, const long nsec)
 {
 	m_device->recv(byte, sec, nsec);
 
@@ -303,7 +565,7 @@ void ebus::Ebus::read(std::byte &byte, const long sec, const long nsec)
 	logTrace("<" + ostr.str());
 }
 
-void ebus::Ebus::write(const std::byte &byte)
+void ebus::Ebus::EbusImpl::write(const std::byte &byte)
 {
 	m_device->send(byte);
 
@@ -313,7 +575,7 @@ void ebus::Ebus::write(const std::byte &byte)
 	logTrace(">" + ostr.str());
 }
 
-void ebus::Ebus::writeRead(const std::byte &byte, const long sec, const long nsec)
+void ebus::Ebus::EbusImpl::writeRead(const std::byte &byte, const long sec, const long nsec)
 {
 	write(byte);
 
@@ -323,7 +585,7 @@ void ebus::Ebus::writeRead(const std::byte &byte, const long sec, const long nse
 	if (readByte != byte) logDebug(stateMessage(STATE_WRN_BYTE_DIF));
 }
 
-void ebus::Ebus::reset()
+void ebus::Ebus::EbusImpl::reset()
 {
 	m_curReopenTime = 0;
 	m_curLockCounter = m_lockCounter;
@@ -344,7 +606,7 @@ void ebus::Ebus::reset()
 	}
 }
 
-const std::string ebus::Ebus::stateMessage(const int state)
+const std::string ebus::Ebus::EbusImpl::stateMessage(const int state)
 {
 	std::ostringstream ostr;
 
@@ -353,7 +615,7 @@ const std::string ebus::Ebus::stateMessage(const int state)
 	return (ostr.str());
 }
 
-const std::string ebus::Ebus::telegramInfo(Telegram &tel)
+const std::string ebus::Ebus::EbusImpl::telegramInfo(Telegram &tel)
 {
 	std::ostringstream ostr;
 
@@ -372,7 +634,7 @@ const std::string ebus::Ebus::telegramInfo(Telegram &tel)
 	return (ostr.str());
 }
 
-void ebus::Ebus::run()
+void ebus::Ebus::EbusImpl::run()
 {
 	logInfo("Ebus started");
 
@@ -431,7 +693,7 @@ void ebus::Ebus::run()
 	logInfo("Ebus stopped");
 }
 
-ebus::State ebus::Ebus::idleSystem()
+State ebus::Ebus::EbusImpl::idleSystem()
 {
 	logDebug("idleSystem");
 
@@ -455,7 +717,7 @@ ebus::State ebus::Ebus::idleSystem()
 	return (State::OpenDevice);
 }
 
-ebus::State ebus::Ebus::openDevice()
+State ebus::Ebus::EbusImpl::openDevice()
 {
 	logDebug("openDevice");
 
@@ -471,7 +733,7 @@ ebus::State ebus::Ebus::openDevice()
 			if (m_curReopenTime > m_reopenTime)
 			{
 				logWarn(stateMessage(STATE_ERR_OPEN_FAIL));
-				return (ebus::State::IdleSystem);
+				return (State::IdleSystem);
 			}
 		}
 	}
@@ -492,7 +754,7 @@ ebus::State ebus::Ebus::openDevice()
 	return (State::MonitorBus);
 }
 
-ebus::State ebus::Ebus::monitorBus()
+State ebus::Ebus::EbusImpl::monitorBus()
 {
 	logDebug("monitorBus");
 
@@ -544,7 +806,7 @@ ebus::State ebus::Ebus::monitorBus()
 	return (State::MonitorBus);
 }
 
-ebus::State ebus::Ebus::receiveMessage()
+State ebus::Ebus::EbusImpl::receiveMessage()
 {
 	logDebug("receiveMessage");
 
@@ -638,7 +900,7 @@ ebus::State ebus::Ebus::receiveMessage()
 	return (State::MonitorBus);
 }
 
-ebus::State ebus::Ebus::processMessage()
+State ebus::Ebus::EbusImpl::processMessage()
 {
 	logDebug("processMessage");
 
@@ -691,7 +953,7 @@ ebus::State ebus::Ebus::processMessage()
 	return (State::MonitorBus);
 }
 
-ebus::State ebus::Ebus::sendResponse()
+State ebus::Ebus::EbusImpl::sendResponse()
 {
 	logDebug("sendResponse");
 
@@ -743,7 +1005,7 @@ ebus::State ebus::Ebus::sendResponse()
 	return (State::MonitorBus);
 }
 
-ebus::State ebus::Ebus::lockBus()
+State ebus::Ebus::EbusImpl::lockBus()
 {
 	logDebug("lockBus");
 
@@ -795,7 +1057,7 @@ ebus::State ebus::Ebus::lockBus()
 	return (State::SendMessage);
 }
 
-ebus::State ebus::Ebus::sendMessage()
+State ebus::Ebus::EbusImpl::sendMessage()
 {
 	logDebug("sendMessage");
 
@@ -861,7 +1123,7 @@ ebus::State ebus::Ebus::sendMessage()
 	return (State::FreeBus);
 }
 
-ebus::State ebus::Ebus::receiveResponse()
+State ebus::Ebus::EbusImpl::receiveResponse()
 {
 	logDebug("receiveResponse");
 
@@ -933,7 +1195,7 @@ ebus::State ebus::Ebus::receiveResponse()
 	return (State::FreeBus);
 }
 
-ebus::State ebus::Ebus::freeBus()
+State ebus::Ebus::EbusImpl::freeBus()
 {
 	logDebug("freeBus");
 
@@ -948,7 +1210,7 @@ ebus::State ebus::Ebus::freeBus()
 	return (State::MonitorBus);
 }
 
-ebus::State ebus::Ebus::handleDeviceError(bool error, const std::string &message)
+State ebus::Ebus::EbusImpl::handleDeviceError(bool error, const std::string &message)
 {
 	if (m_activeMessage != nullptr) m_activeMessage->setState(EBUS_ERR_DEVICE);
 
@@ -971,7 +1233,7 @@ ebus::State ebus::Ebus::handleDeviceError(bool error, const std::string &message
 	return (State::MonitorBus);
 }
 
-ebus::Reaction ebus::Ebus::process(const std::string &message, std::string &response)
+ebus::Reaction ebus::Ebus::EbusImpl::process(const std::string &message, std::string &response)
 {
 	if (m_process != nullptr)
 		return (m_process(message, response));
@@ -979,12 +1241,12 @@ ebus::Reaction ebus::Ebus::process(const std::string &message, std::string &resp
 		return (Reaction::nofunction);
 }
 
-void ebus::Ebus::publish(const std::string &message)
+void ebus::Ebus::EbusImpl::publish(const std::string &message)
 {
 	if (m_publish != nullptr) m_publish(message);
 }
 
-void ebus::Ebus::dumpByte(const std::byte &byte)
+void ebus::Ebus::EbusImpl::dumpByte(const std::byte &byte)
 {
 	if (m_dump == true && m_dumpRawStream.is_open() == true)
 	{
@@ -1007,7 +1269,7 @@ void ebus::Ebus::dumpByte(const std::byte &byte)
 	}
 }
 
-void ebus::Ebus::countByte()
+void ebus::Ebus::EbusImpl::countByte()
 {
 	long actSeconds =
 		std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
@@ -1023,27 +1285,27 @@ void ebus::Ebus::countByte()
 	m_bytes++;
 }
 
-void ebus::Ebus::logError(const std::string &message)
+void ebus::Ebus::EbusImpl::logError(const std::string &message)
 {
 	if (m_logger != nullptr) m_logger->error(message);
 }
 
-void ebus::Ebus::logWarn(const std::string &message)
+void ebus::Ebus::EbusImpl::logWarn(const std::string &message)
 {
 	if (m_logger != nullptr) m_logger->warn(message);
 }
 
-void ebus::Ebus::logInfo(const std::string &message)
+void ebus::Ebus::EbusImpl::logInfo(const std::string &message)
 {
 	if (m_logger != nullptr) m_logger->info(message);
 }
 
-void ebus::Ebus::logDebug(const std::string &message)
+void ebus::Ebus::EbusImpl::logDebug(const std::string &message)
 {
 	if (m_logger != nullptr) m_logger->debug(message);
 }
 
-void ebus::Ebus::logTrace(const std::string &message)
+void ebus::Ebus::EbusImpl::logTrace(const std::string &message)
 {
 	if (m_logger != nullptr) m_logger->trace(message);
 }

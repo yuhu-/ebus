@@ -1,4 +1,4 @@
-SUBDIRS = src test examples
+SUBDIRS = src include test examples
 
 ACLOCAL_AMFLAGS = -I m4 ${ACLOCAL_FLAGS}
 

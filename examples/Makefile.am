@@ -3,13 +3,14 @@ AM_CXXFLAGS = -fpic \
 	      -Wextra \
 	      -Wpedantic \
 	      -std=c++17 \
-	      -isystem$(top_srcdir)/src
+	      -isystem$(top_srcdir)/src \
+	      -isystem$(top_srcdir)/include/ebus
 
 noinst_PROGRAMS = demo_ebus
 
 demo_ebus_SOURCES = demo_ebus.cpp
 demo_ebus_LDADD = ../src/libebus.la \
-		     -lpthread
+		  -lpthread
 demo_ebus_LDFLAGS = -no-install
 
 distclean-local:

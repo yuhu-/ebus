@@ -2,12 +2,13 @@ AM_CXXFLAGS = -fpic \
 	      -Wall \
 	      -Wextra \
 	      -Wpedantic \
-	      -std=c++17
+	      -std=c++17 \
+	      -isystem$(top_srcdir)/include/ebus
 
 lib_LTLIBRARIES = libebus.la
 
 libebus_la_LDFLAGS = -version-info $(EBUS_SO_VERSION) \
-			-lpthread
+		     -lpthread
 
 libebus_la_SOURCES = Device.cpp \
 		     Sequence.cpp \
@@ -19,13 +20,10 @@ EXTRA_DIST = Notify.h \
 	     NQueue.h \
 	     Average.h \
 	     runtime_warning.h \
-	     ILogger.h \
 	     Device.h \
 	     Sequence.h \
 	     Telegram.h \
-	     Message.h \
-	     Ebus.h
-	     	     
+	     Message.h
 
 distclean-local:
 	-rm -f Makefile.in

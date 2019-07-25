@@ -21,6 +21,7 @@
 #include <iostream>
 #include <string>
 
+#include <Sequence.h>
 #include <Telegram.h>
 
 int main()

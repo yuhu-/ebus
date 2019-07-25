@@ -3,7 +3,8 @@ AM_CXXFLAGS = -fpic \
 	      -Wextra \
 	      -Wpedantic \
 	      -std=c++17 \
-	      -isystem$(top_srcdir)/src
+	      -isystem$(top_srcdir)/src \
+	      -isystem$(top_srcdir)/include/ebus
 
 noinst_PROGRAMS = test_telegram
 
