@@ -125,7 +125,7 @@ void ebus::Telegram::parseSequence(Sequence &seq)
 				if (tmp.size() > (size_t) (5 + m_masterNN + 2))
 					m_masterState = SEQ_ERR_LONG;
 
-				// sequence sending failed
+				// sequence is invalid
 				else
 					m_masterState = SEQ_ERR_INVALID;
 
@@ -212,7 +212,7 @@ void ebus::Telegram::parseSequence(Sequence &seq)
 			// acknowledge byte is negativ
 			if (m_masterACK == seq_nak)
 			{
-				// sequence sending failed
+				// sequence is invalid
 				m_slaveState = SEQ_ERR_INVALID;
 				return;
 			}
@@ -240,8 +240,17 @@ void ebus::Telegram::createMaster(const std::byte source, const std::string &str
 
 void ebus::Telegram::createMaster(const std::string &str)
 {
-	Sequence seq(str);
-	createMaster(seq);
+	std::ostringstream result;
+
+	if (isHex(str, result, 2))
+	{
+		Sequence seq(str);
+		createMaster(seq);
+	}
+	else
+	{
+		m_masterState = SEQ_ERR_INVALID;
+	}
 }
 
 void ebus::Telegram::createMaster(Sequence &seq)
@@ -313,8 +322,17 @@ void ebus::Telegram::createMaster(Sequence &seq)
 
 void ebus::Telegram::createSlave(const std::string &str)
 {
-	Sequence seq(str);
-	createSlave(seq);
+	std::ostringstream result;
+
+	if (isHex(str, result, 2))
+	{
+		Sequence seq(str);
+		createSlave(seq);
+	}
+	else
+	{
+		m_slaveState = SEQ_ERR_INVALID;
+	}
 }
 
 void ebus::Telegram::createSlave(Sequence &seq)
@@ -602,6 +620,26 @@ std::byte ebus::Telegram::slaveAddress(const std::byte address)
 	if (isSlave(address) == true) return (address);
 
 	return (std::byte(std::to_integer<int>(address) + 5));
+}
+
+bool ebus::Telegram::isHex(const std::string &str, std::ostringstream &result, const int &nibbles)
+{
+	if ((str.length() % nibbles) != 0)
+	{
+		result << "invalid hex string";
+		return (false);
+	}
+
+	for (size_t i = 0; i < str.size(); ++i)
+	{
+		if (std::isxdigit(str[i]) == false)
+		{
+			result << "invalid char '" << str[i] << "'";
+			return (false);
+		}
+	}
+
+	return (true);
 }
 
 int ebus::Telegram::checkMasterSequence(Sequence &seq)

@@ -111,6 +111,7 @@ public:
 	static bool isSlave(const std::byte byte);
 	static bool isAddressValid(const std::byte byte);
 	static std::byte slaveAddress(const std::byte masterAddress);
+	static bool isHex(const std::string &str, std::ostringstream &result, const int &nibbles);
 
 private:
 	int m_type = -1;
