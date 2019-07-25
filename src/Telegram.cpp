@@ -242,7 +242,7 @@ void ebus::Telegram::createMaster(const std::string &str)
 {
 	std::ostringstream result;
 
-	if (isHex(str, result, 2))
+	if (Sequence::isHex(str, result, 2))
 	{
 		Sequence seq(str);
 		createMaster(seq);
@@ -324,7 +324,7 @@ void ebus::Telegram::createSlave(const std::string &str)
 {
 	std::ostringstream result;
 
-	if (isHex(str, result, 2))
+	if (Sequence::isHex(str, result, 2))
 	{
 		Sequence seq(str);
 		createSlave(seq);
@@ -620,26 +620,6 @@ std::byte ebus::Telegram::slaveAddress(const std::byte address)
 	if (isSlave(address) == true) return (address);
 
 	return (std::byte(std::to_integer<int>(address) + 5));
-}
-
-bool ebus::Telegram::isHex(const std::string &str, std::ostringstream &result, const int &nibbles)
-{
-	if ((str.length() % nibbles) != 0)
-	{
-		result << "invalid hex string";
-		return (false);
-	}
-
-	for (size_t i = 0; i < str.size(); ++i)
-	{
-		if (std::isxdigit(str[i]) == false)
-		{
-			result << "invalid char '" << str[i] << "'";
-			return (false);
-		}
-	}
-
-	return (true);
 }
 
 int ebus::Telegram::checkMasterSequence(Sequence &seq)

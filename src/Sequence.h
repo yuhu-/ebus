@@ -73,6 +73,8 @@ public:
 
 	static const std::string toString(const std::vector<std::byte> &seq);
 
+	static bool isHex(const std::string &str, std::ostringstream &result, const int &nibbles);
+
 private:
 	std::vector<std::byte> m_seq;
 

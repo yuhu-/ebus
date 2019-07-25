@@ -247,6 +247,21 @@ double ebus::Ebus::avgBusSpeed() const
 	return (m_bytesPerSecondsAVG->getAverage());
 }
 
+const std::vector<std::byte> ebus::Ebus::toVector(const std::string &str)
+{
+	return (Sequence::toVector((str)));
+}
+
+const std::string ebus::Ebus::toString(const std::vector<std::byte> &seq)
+{
+	return (Sequence::toString(seq));
+}
+
+bool ebus::Ebus::isHex(const std::string &str, std::ostringstream &result, const int &nibbles)
+{
+	return (Sequence::isHex(str, result, nibbles));
+}
+
 int ebus::Ebus::transmit(Telegram &tel)
 {
 	int result = SEQ_OK;
@@ -1032,4 +1047,3 @@ void ebus::Ebus::logTrace(const std::string &message)
 {
 	if (m_logger != nullptr) m_logger->trace(message);
 }
-

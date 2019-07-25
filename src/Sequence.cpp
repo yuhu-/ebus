@@ -193,7 +193,12 @@ int ebus::Sequence::compare(const Sequence &seq) const noexcept
 
 bool ebus::Sequence::contains(const std::string &str) const noexcept
 {
-	if (find(Sequence(str)) != npos) return (true);
+	std::ostringstream result;
+
+	if (isHex(str, result, 2))
+	{
+		if (find(Sequence(str)) != npos) return (true);
+	}
 
 	return (false);
 }
@@ -216,6 +221,26 @@ const std::string ebus::Sequence::toString(const std::vector<std::byte> &seq)
 		ostr << std::nouppercase << std::hex << std::setw(2) << std::setfill('0') << static_cast<unsigned>(seq[i]);
 
 	return (ostr.str());
+}
+
+bool ebus::Sequence::isHex(const std::string &str, std::ostringstream &result, const int &nibbles)
+{
+	if ((str.length() % nibbles) != 0)
+	{
+		result << "invalid hex string";
+		return (false);
+	}
+
+	for (size_t i = 0; i < str.size(); ++i)
+	{
+		if (std::isxdigit(str[i]) == false)
+		{
+			result << "invalid char '" << str[i] << "'";
+			return (false);
+		}
+	}
+
+	return (true);
 }
 
 // CRC8 table of the polynom 0x9b = x^8 + x^7 + x^4 + x^3 + x^1 + 1.
