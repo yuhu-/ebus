@@ -1,10 +1,8 @@
 libebusincludedir = $(includedir)/ebus
 
-libebusinclude_HEADERS = Ebus.h \
-			 ILogger.h
+libebusinclude_HEADERS = Ebus.h
 
-EXTRA_DIST = Ebus.h \
-	     ILogger.h
+EXTRA_DIST = Ebus.h
 
 uninstall-hook:
 	-rmdir $(libebusincludedir)

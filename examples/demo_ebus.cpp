@@ -25,7 +25,6 @@
 #include <string>
 
 #include <Ebus.h>
-#include <ILogger.h>
 
 class logger : public ebus::ILogger
 {

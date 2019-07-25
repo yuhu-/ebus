@@ -21,6 +21,7 @@
 #define EBUS_SEQUENCE_H
 
 #include <cstddef>
+#include <iostream>
 #include <string>
 #include <vector>
 

@@ -30,7 +30,6 @@
 #include <sstream>
 #include <thread>
 
-#include "../include/ebus/ILogger.h"
 #include "Average.h"
 #include "Device.h"
 #include "Message.h"
