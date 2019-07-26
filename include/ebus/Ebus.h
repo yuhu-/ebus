@@ -94,9 +94,10 @@ public:
 	long actBusSpeed() const;
 	double avgBusSpeed() const;
 
+	static const std::vector<std::byte> range(const std::vector<std::byte> &seq, const size_t index, const size_t len);
 	static const std::vector<std::byte> toVector(const std::string &str);
 	static const std::string toString(const std::vector<std::byte> &seq);
-	static bool isHex(const std::string &str, std::ostringstream &result, const int &nibbles);
+	static bool isHex(const std::string &str, std::ostringstream &result, const int nibbles);
 
 private:
 	class EbusImpl;

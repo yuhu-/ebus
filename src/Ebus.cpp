@@ -174,6 +174,7 @@ public:
 	long actBusSpeed() const;
 	double avgBusSpeed() const;
 
+	static const std::vector<std::byte> range(const std::vector<std::byte> &seq, const size_t index, const size_t len);
 	static const std::vector<std::byte> toVector(const std::string &str);
 	static const std::string toString(const std::vector<std::byte> &seq);
 	static bool isHex(const std::string &str, std::ostringstream &result, const int &nibbles);
@@ -365,6 +366,11 @@ double ebus::Ebus::avgBusSpeed() const
 	return (this->impl->avgBusSpeed());
 }
 
+const std::vector<std::byte> ebus::Ebus::range(const std::vector<std::byte> &seq, const size_t index, const size_t len)
+{
+	return (EbusImpl::range(seq, index, len));
+}
+
 const std::vector<std::byte> ebus::Ebus::toVector(const std::string &str)
 {
 	return (EbusImpl::toVector(str));
@@ -375,7 +381,7 @@ const std::string ebus::Ebus::toString(const std::vector<std::byte> &seq)
 	return (EbusImpl::toString(seq));
 }
 
-bool ebus::Ebus::isHex(const std::string &str, std::ostringstream &result, const int &nibbles)
+bool ebus::Ebus::isHex(const std::string &str, std::ostringstream &result, const int nibbles)
 {
 	return (EbusImpl::isHex(str, result, nibbles));
 }
@@ -522,6 +528,11 @@ long ebus::Ebus::EbusImpl::actBusSpeed() const
 double ebus::Ebus::EbusImpl::avgBusSpeed() const
 {
 	return (m_bytesPerSecondsAVG->getAverage());
+}
+
+const std::vector<std::byte> ebus::Ebus::EbusImpl::range(const std::vector<std::byte> &seq, const size_t index, const size_t len)
+{
+	return (Sequence::range(seq, index, len));
 }
 
 const std::vector<std::byte> ebus::Ebus::EbusImpl::toVector(const std::string &str)

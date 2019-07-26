@@ -55,12 +55,7 @@ const std::byte& ebus::Sequence::operator[](const size_t index) const
 
 const std::vector<std::byte> ebus::Sequence::range(const size_t index, const size_t len)
 {
-	std::vector<std::byte> result;
-
-	for (size_t i = index; i < m_seq.size() && result.size() < len; i++)
-		result.push_back(m_seq.at(i));
-
-	return (result);
+	return (range(m_seq, index, len));
 }
 
 size_t ebus::Sequence::size() const
@@ -200,6 +195,16 @@ bool ebus::Sequence::contains(const std::string &str) const noexcept
 	return (false);
 }
 
+const std::vector<std::byte> ebus::Sequence::range(const std::vector<std::byte> &seq, const size_t index, const size_t len)
+{
+	std::vector<std::byte> result;
+
+	for (size_t i = index; i < seq.size() && result.size() < len; i++)
+		result.push_back(seq.at(i));
+
+	return (result);
+}
+
 const std::vector<std::byte> ebus::Sequence::toVector(const std::string &str)
 {
 	std::vector<std::byte> result;
@@ -220,7 +225,7 @@ const std::string ebus::Sequence::toString(const std::vector<std::byte> &seq)
 	return (ostr.str());
 }
 
-bool ebus::Sequence::isHex(const std::string &str, std::ostringstream &result, const int &nibbles)
+bool ebus::Sequence::isHex(const std::string &str, std::ostringstream &result, const int nibbles)
 {
 	if ((str.length() % nibbles) != 0)
 	{
