@@ -32,7 +32,6 @@
 
 #include "Average.h"
 #include "Device.h"
-#include "Message.h"
 #include "Notify.h"
 #include "NQueue.h"
 #include "runtime_warning.h"
@@ -111,6 +110,21 @@ std::map<int, std::string> StateMessages =
 { STATE_ERR_OPEN_FAIL, "opening ebus failed" },
 { STATE_ERR_CLOSE_FAIL, "closing ebus failed" } };
 
+namespace ebus
+{
+
+struct Message : public Notify
+{
+
+	explicit Message(Telegram &tel) : Notify(), m_telegram(tel)
+	{
+	}
+
+	Telegram &m_telegram;
+	int m_state = 0;
+
+};
+
 enum class State
 {
 	IdleSystem,
@@ -124,6 +138,8 @@ enum class State
 	ReceiveResponse,
 	FreeBus
 };
+
+} // namespace ebus
 
 class ebus::Ebus::EbusImpl : private Notify
 {
@@ -544,7 +560,7 @@ int ebus::Ebus::EbusImpl::transmit(Telegram &tel)
 		std::shared_ptr<Message> message = std::make_shared<Message>(tel);
 		m_messageQueue.enqueue(message);
 		message->waitNotify();
-		result = message->getState();
+		result = message->m_state;
 		message.reset();
 	}
 
@@ -593,7 +609,7 @@ void ebus::Ebus::EbusImpl::reset()
 
 	if (m_activeMessage != nullptr)
 	{
-		publish(m_activeMessage->getTelegram().toString());
+		publish(m_activeMessage->m_telegram.toString());
 		m_activeMessage->notify();
 		m_activeMessage = nullptr;
 	}
@@ -692,7 +708,7 @@ void ebus::Ebus::EbusImpl::run()
 	logInfo("Ebus stopped");
 }
 
-State ebus::Ebus::EbusImpl::idleSystem()
+ebus::State ebus::Ebus::EbusImpl::idleSystem()
 {
 	logDebug("idleSystem");
 
@@ -716,7 +732,7 @@ State ebus::Ebus::EbusImpl::idleSystem()
 	return (State::OpenDevice);
 }
 
-State ebus::Ebus::EbusImpl::openDevice()
+ebus::State ebus::Ebus::EbusImpl::openDevice()
 {
 	logDebug("openDevice");
 
@@ -753,7 +769,7 @@ State ebus::Ebus::EbusImpl::openDevice()
 	return (State::MonitorBus);
 }
 
-State ebus::Ebus::EbusImpl::monitorBus()
+ebus::State ebus::Ebus::EbusImpl::monitorBus()
 {
 	logDebug("monitorBus");
 
@@ -805,7 +821,7 @@ State ebus::Ebus::EbusImpl::monitorBus()
 	return (State::MonitorBus);
 }
 
-State ebus::Ebus::EbusImpl::receiveMessage()
+ebus::State ebus::Ebus::EbusImpl::receiveMessage()
 {
 	logDebug("receiveMessage");
 
@@ -825,7 +841,7 @@ State ebus::Ebus::EbusImpl::receiveMessage()
 	if (std::to_integer<int>(m_sequence[4]) > seq_max_bytes)
 	{
 		logWarn(stateMessage(STATE_ERR_NN_WRONG));
-		m_activeMessage->setState(EBUS_ERR_TRANSMIT);
+		m_activeMessage->m_state = EBUS_ERR_TRANSMIT;
 
 		reset();
 
@@ -899,7 +915,7 @@ State ebus::Ebus::EbusImpl::receiveMessage()
 	return (State::MonitorBus);
 }
 
-State ebus::Ebus::EbusImpl::processMessage()
+ebus::State ebus::Ebus::EbusImpl::processMessage()
 {
 	logDebug("processMessage");
 
@@ -952,11 +968,11 @@ State ebus::Ebus::EbusImpl::processMessage()
 	return (State::MonitorBus);
 }
 
-State ebus::Ebus::EbusImpl::sendResponse()
+ebus::State ebus::Ebus::EbusImpl::sendResponse()
 {
 	logDebug("sendResponse");
 
-	Telegram &tel = m_passiveMessage->getTelegram();
+	Telegram &tel = m_passiveMessage->m_telegram;
 	std::byte byte;
 
 	for (int retry = 1; retry >= 0; retry--)
@@ -1004,11 +1020,11 @@ State ebus::Ebus::EbusImpl::sendResponse()
 	return (State::MonitorBus);
 }
 
-State ebus::Ebus::EbusImpl::lockBus()
+ebus::State ebus::Ebus::EbusImpl::lockBus()
 {
 	logDebug("lockBus");
 
-	Telegram &tel = m_activeMessage->getTelegram();
+	Telegram &tel = m_activeMessage->m_telegram;
 	std::byte byte = tel.getMasterQQ();
 
 	write(byte);
@@ -1043,7 +1059,7 @@ State ebus::Ebus::EbusImpl::lockBus()
 		else
 		{
 			logWarn(stateMessage(STATE_ERR_LOCK_FAIL));
-			m_activeMessage->setState(EBUS_ERR_TRANSMIT);
+			m_activeMessage->m_state = EBUS_ERR_TRANSMIT;
 
 			reset();
 		}
@@ -1056,11 +1072,11 @@ State ebus::Ebus::EbusImpl::lockBus()
 	return (State::SendMessage);
 }
 
-State ebus::Ebus::EbusImpl::sendMessage()
+ebus::State ebus::Ebus::EbusImpl::sendMessage()
 {
 	logDebug("sendMessage");
 
-	Telegram &tel = m_activeMessage->getTelegram();
+	Telegram &tel = m_activeMessage->m_telegram;
 
 	for (int retry = 1; retry >= 0; retry--)
 	{
@@ -1088,7 +1104,7 @@ State ebus::Ebus::EbusImpl::sendMessage()
 		if (byte != seq_ack && byte != seq_nak)
 		{
 			logWarn(stateMessage(STATE_ERR_ACK_WRONG));
-			m_activeMessage->setState(EBUS_ERR_TRANSMIT);
+			m_activeMessage->m_state = EBUS_ERR_TRANSMIT;
 
 			return (State::FreeBus);
 		}
@@ -1114,7 +1130,7 @@ State ebus::Ebus::EbusImpl::sendMessage()
 			else
 			{
 				logWarn(stateMessage(STATE_ERR_ACK_NEG));
-				m_activeMessage->setState(EBUS_ERR_TRANSMIT);
+				m_activeMessage->m_state = EBUS_ERR_TRANSMIT;
 			}
 		}
 	}
@@ -1122,11 +1138,11 @@ State ebus::Ebus::EbusImpl::sendMessage()
 	return (State::FreeBus);
 }
 
-State ebus::Ebus::EbusImpl::receiveResponse()
+ebus::State ebus::Ebus::EbusImpl::receiveResponse()
 {
 	logDebug("receiveResponse");
 
-	Telegram &tel = m_activeMessage->getTelegram();
+	Telegram &tel = m_activeMessage->m_telegram;
 	std::byte byte;
 	Sequence seq;
 
@@ -1139,7 +1155,7 @@ State ebus::Ebus::EbusImpl::receiveResponse()
 		if (std::to_integer<int>(byte) > seq_max_bytes)
 		{
 			logWarn(stateMessage(STATE_ERR_NN_WRONG));
-			m_activeMessage->setState(EBUS_ERR_TRANSMIT);
+			m_activeMessage->m_state = EBUS_ERR_TRANSMIT;
 
 			reset();
 
@@ -1187,14 +1203,14 @@ State ebus::Ebus::EbusImpl::receiveResponse()
 		else
 		{
 			logWarn(stateMessage(STATE_ERR_RECV_RESP));
-			m_activeMessage->setState(EBUS_ERR_TRANSMIT);
+			m_activeMessage->m_state = EBUS_ERR_TRANSMIT;
 		}
 	}
 
 	return (State::FreeBus);
 }
 
-State ebus::Ebus::EbusImpl::freeBus()
+ebus::State ebus::Ebus::EbusImpl::freeBus()
 {
 	logDebug("freeBus");
 
@@ -1209,9 +1225,9 @@ State ebus::Ebus::EbusImpl::freeBus()
 	return (State::MonitorBus);
 }
 
-State ebus::Ebus::EbusImpl::handleDeviceError(bool error, const std::string &message)
+ebus::State ebus::Ebus::EbusImpl::handleDeviceError(bool error, const std::string &message)
 {
-	if (m_activeMessage != nullptr) m_activeMessage->setState(EBUS_ERR_DEVICE);
+	if (m_activeMessage != nullptr) m_activeMessage->m_state = EBUS_ERR_DEVICE;
 
 	reset();
 

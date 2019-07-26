@@ -13,17 +13,15 @@ libebus_la_LDFLAGS = -version-info $(EBUS_SO_VERSION) \
 libebus_la_SOURCES = Device.cpp \
 		     Sequence.cpp \
 		     Telegram.cpp \
-		     Message.cpp \
 		     Ebus.cpp
 
-EXTRA_DIST = Notify.h \
-	     NQueue.h \
-	     Average.h \
-	     runtime_warning.h \
-	     Device.h \
+EXTRA_DIST = Device.h \
 	     Sequence.h \
 	     Telegram.h \
-	     Message.h
+	     Notify.h \
+	     NQueue.h \
+	     Average.h \
+	     runtime_warning.h
 
 distclean-local:
 	-rm -f Makefile.in
