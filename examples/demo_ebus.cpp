@@ -57,7 +57,7 @@ public:
 
 };
 
-ebus::Reaction process(const std::string &message)
+ebus::Reaction process(const std::string &message, std::string &response)
 {
 	std::cout << "process: " << message << std::endl;
 
@@ -72,7 +72,8 @@ void publish(const std::string &message)
 int main()
 {
 
-	ebus::Ebus service(std::byte(0xff), "/dev/ttyUSB0", std::make_shared<logger>(), std::bind(&process, std::placeholders::_1),
+	ebus::Ebus service(std::byte(0xff), "/dev/ttyUSB0", std::make_shared<logger>(),
+		std::bind(&process, std::placeholders::_1, std::placeholders::_2),
 		std::bind(&publish, std::placeholders::_1));
 
 	int count = 0;
