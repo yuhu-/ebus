@@ -38,10 +38,6 @@ std::map<int, std::string> SequenceErrors =
 { SEQ_ERR_ACK_MISS, "acknowledge byte is missing" },
 { SEQ_ERR_INVALID, "sequence is invalid" } };
 
-ebus::Telegram::Telegram()
-{
-}
-
 ebus::Telegram::Telegram(Sequence &seq)
 {
 	parseSequence(seq);

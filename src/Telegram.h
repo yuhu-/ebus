@@ -56,7 +56,7 @@ class Telegram
 {
 
 public:
-	Telegram();
+	Telegram() = default;
 	explicit Telegram(Sequence &seq);
 
 	void parseSequence(Sequence &seq);

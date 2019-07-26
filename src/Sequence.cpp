@@ -26,10 +26,6 @@
 #include <iterator>
 #include <sstream>
 
-ebus::Sequence::Sequence()
-{
-}
-
 ebus::Sequence::Sequence(const std::string &str)
 {
 	for (size_t i = 0; i + 1 < str.size(); i += 2)

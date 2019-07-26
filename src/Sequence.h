@@ -41,7 +41,7 @@ class Sequence
 public:
 	static const size_t npos = -1;
 
-	Sequence();
+	Sequence() = default;
 	explicit Sequence(const std::string &str);
 	Sequence(const Sequence &seq, const size_t index, size_t len = 0);
 
