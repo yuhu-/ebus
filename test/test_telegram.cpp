@@ -21,8 +21,8 @@
 #include <iostream>
 #include <string>
 
-#include <Sequence.h>
-#include <Telegram.h>
+#include "../src/Sequence.h"
+#include "../src/Telegram.h"
 
 int main()
 {
