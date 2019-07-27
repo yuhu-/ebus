@@ -255,7 +255,7 @@ void ebus::Telegram::createMaster(const std::byte source, const std::vector<std:
 
 	seq.push_back(source);
 
-	for (size_t i = 0; i < seq.size(); i++)
+	for (size_t i = 0; i < vec.size(); i++)
 		seq.push_back(vec.at(i));
 
 	createMaster(seq);
