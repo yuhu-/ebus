@@ -215,12 +215,12 @@ const std::vector<std::byte> ebus::Sequence::toVector(const std::string &str)
 	return (result);
 }
 
-const std::string ebus::Sequence::toString(const std::vector<std::byte> &seq)
+const std::string ebus::Sequence::toString(const std::vector<std::byte> &vec)
 {
 	std::ostringstream ostr;
 
-	for (size_t i = 0; i < seq.size(); i++)
-		ostr << std::nouppercase << std::hex << std::setw(2) << std::setfill('0') << static_cast<unsigned>(seq[i]);
+	for (size_t i = 0; i < vec.size(); i++)
+		ostr << std::nouppercase << std::hex << std::setw(2) << std::setfill('0') << static_cast<unsigned>(vec[i]);
 
 	return (ostr.str());
 }

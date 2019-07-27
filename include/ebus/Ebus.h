@@ -77,7 +77,7 @@ public:
 	bool isOnline();
 
 	int transmit(const std::string &message, std::string &response);
-	int transmit(const std::string &message, std::vector<std::byte> &response);
+	int transmit(const std::vector<std::byte> &message, std::vector<std::byte> &response);
 
 	const std::string errorText(const int error) const;
 

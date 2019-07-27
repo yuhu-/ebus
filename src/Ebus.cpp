@@ -157,7 +157,7 @@ public:
 	bool isOnline();
 
 	int transmit(const std::string &message, std::string &response);
-	int transmit(const std::string &message, std::vector<std::byte> &response);
+	int transmit(const std::vector<std::byte> &message, std::vector<std::byte> &response);
 
 	const std::string errorText(const int error) const;
 
@@ -306,7 +306,7 @@ int ebus::Ebus::transmit(const std::string &message, std::string &response)
 	return (this->impl->transmit(message, response));
 }
 
-int ebus::Ebus::transmit(const std::string &message, std::vector<std::byte> &response)
+int ebus::Ebus::transmit(const std::vector<std::byte> &message, std::vector<std::byte> &response)
 {
 	return (this->impl->transmit(message, response));
 }
@@ -445,7 +445,7 @@ int ebus::Ebus::EbusImpl::transmit(const std::string &message, std::string &resp
 	return (result);
 }
 
-int ebus::Ebus::EbusImpl::transmit(const std::string &message, std::vector<std::byte> &response)
+int ebus::Ebus::EbusImpl::transmit(const std::vector<std::byte> &message, std::vector<std::byte> &response)
 {
 	Telegram tel;
 	tel.createMaster(m_address, message);

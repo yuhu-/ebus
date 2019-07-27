@@ -64,6 +64,7 @@ public:
 	void createMaster(const std::byte source, const std::byte target, const std::string &str);
 	void createMaster(const std::byte source, const std::string &str);
 	void createMaster(const std::string &str);
+	void createMaster(const std::byte source, const std::vector<std::byte> &vec);
 	void createMaster(Sequence &seq);
 
 	void createSlave(const std::string &str);

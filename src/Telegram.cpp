@@ -249,6 +249,18 @@ void ebus::Telegram::createMaster(const std::string &str)
 	}
 }
 
+void ebus::Telegram::createMaster(const std::byte source, const std::vector<std::byte> &vec)
+{
+	Sequence seq;
+
+	seq.push_back(source);
+
+	for (size_t i = 0; i < seq.size(); i++)
+		seq.push_back(vec.at(i));
+
+	createMaster(seq);
+}
+
 void ebus::Telegram::createMaster(Sequence &seq)
 {
 	m_masterState = SEQ_OK;
