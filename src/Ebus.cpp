@@ -436,12 +436,10 @@ bool ebus::Ebus::EbusImpl::isOnline()
 
 int ebus::Ebus::EbusImpl::transmit(const std::string &message, std::string &response)
 {
-	int result = SEQ_OK;
-
 	Telegram tel;
 	tel.createMaster(m_address, message);
 
-	result = transmit(tel);
+	int result = transmit(tel);
 	response = tel.getSlave().toString();
 
 	return (result);
@@ -449,12 +447,10 @@ int ebus::Ebus::EbusImpl::transmit(const std::string &message, std::string &resp
 
 int ebus::Ebus::EbusImpl::transmit(const std::string &message, std::vector<std::byte> &response)
 {
-	int result = SEQ_OK;
-
 	Telegram tel;
 	tel.createMaster(m_address, message);
 
-	result = transmit(tel);
+	int result = transmit(tel);
 	response = tel.getSlave().getSequence();
 
 	return (result);
