@@ -228,16 +228,14 @@ int main()
 	seq.clear();
 
 	// create slave
-	ebus::Telegram slave;
-	slave.createSlave("03b0fbaa");
-	std::cout << "seq: 03b0fbaa" << "   Slave: " << slave.toStringSlave() << std::endl;
+	master.createSlave("03b0fbaa");
+	std::cout << "seq: 03b0fbaa" << "   Slave: " << master.toStringSlave() << std::endl;
 
 	for (size_t i = 10; i < sizeof(bytes) - 1; i++)
 		seq.push_back(bytes[i]);
 
-	ebus::Telegram slave2;
-	slave2.createSlave(seq);
-	std::cout << "seq: " << seq.toString() << " Slave: " << slave2.toStringSlave() << std::endl;
+	master2.createSlave(seq);
+	std::cout << "seq: " << seq.toString() << " Slave: " << master2.toStringSlave() << std::endl;
 	seq.clear();
 
 	return (0);
