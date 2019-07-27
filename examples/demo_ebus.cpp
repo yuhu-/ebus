@@ -63,9 +63,9 @@ ebus::Reaction process(const std::string &message, std::string &response)
 	return (ebus::Reaction::undefined);
 }
 
-void publish(const std::string &message)
+void publish(const std::string &message, const std::string &response)
 {
-	std::cout << "publish: " << message << std::endl;
+	std::cout << "publish: " << message << " " << response << std::endl;
 }
 
 int main()

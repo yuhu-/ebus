@@ -68,6 +68,7 @@ public:
 	void createMaster(Sequence &seq);
 
 	void createSlave(const std::string &str);
+	void createSlave(const std::vector<std::byte> &vec);
 	void createSlave(Sequence &seq);
 
 	void clear();

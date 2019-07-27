@@ -343,6 +343,16 @@ void ebus::Telegram::createSlave(const std::string &str)
 	}
 }
 
+void ebus::Telegram::createSlave(const std::vector<std::byte> &vec)
+{
+	Sequence seq;
+
+	for (size_t i = 0; i < vec.size(); i++)
+		seq.push_back(vec.at(i));
+
+	createSlave(seq);
+}
+
 void ebus::Telegram::createSlave(Sequence &seq)
 {
 	m_slaveState = SEQ_OK;
@@ -555,10 +565,16 @@ const std::string ebus::Telegram::toStringMasterError()
 const std::string ebus::Telegram::toStringSlave()
 {
 	std::ostringstream ostr;
-	if (m_slaveState != SEQ_OK)
+	if (m_slaveState != SEQ_OK && m_type != TEL_TYPE_BC)
+	{
 		ostr << toStringSlaveError();
+	}
 	else
-		ostr << m_slave.toString();
+	{
+		if (m_type == TEL_TYPE_MM) ostr << toStringSlaveACK();
+
+		if (m_type == TEL_TYPE_MS) ostr << m_slave.toString();
+	}
 
 	return (ostr.str());
 }

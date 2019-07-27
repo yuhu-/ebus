@@ -80,7 +80,13 @@ public:
 	const std::string errorText(const int error) const;
 
 	void register_process(std::function<Reaction(const std::string &message, std::string &response)> process);
-	void register_publish(std::function<void(const std::string &message)> publish);
+	void register_process(
+		std::function<Reaction(const std::vector<std::byte> &message, std::vector<std::byte> &response)> process);
+
+	void register_publish(std::function<void(const std::string &message, const std::string &response)> publish);
+	void register_publish(
+		std::function<void(const std::vector<std::byte> &message, const std::vector<std::byte> &response)> publish);
+
 	void register_logger(std::shared_ptr<ILogger> logger);
 
 	void setReopenTime(const long &reopenTime);
