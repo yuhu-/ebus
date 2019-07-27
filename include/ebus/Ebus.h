@@ -57,9 +57,7 @@ class Ebus
 {
 
 public:
-	Ebus(const std::byte address, const std::string &device, std::shared_ptr<ILogger> logger,
-		std::function<Reaction(const std::string &message, std::string &response)> process,
-		std::function<void(const std::string &message)> publish);
+	Ebus(const std::byte address, const std::string &device);
 
 	// Move functions declared
 	Ebus& operator=(Ebus&&);
@@ -80,6 +78,10 @@ public:
 	int transmit(const std::vector<std::byte> &message, std::vector<std::byte> &response);
 
 	const std::string errorText(const int error) const;
+
+	void register_process(std::function<Reaction(const std::string &message, std::string &response)> process);
+	void register_publish(std::function<void(const std::string &message)> publish);
+	void register_logger(std::shared_ptr<ILogger> logger);
 
 	void setReopenTime(const long &reopenTime);
 	void setArbitrationTime(const long &arbitrationTime);

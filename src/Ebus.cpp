@@ -145,9 +145,7 @@ class ebus::Ebus::EbusImpl : private Notify
 {
 
 public:
-	EbusImpl(const std::byte address, const std::string &device, std::shared_ptr<ILogger> logger,
-		std::function<Reaction(const std::string &message, std::string &response)> process,
-		std::function<void(const std::string &message)> publish);
+	EbusImpl(const std::byte address, const std::string &device);
 
 	~EbusImpl();
 
@@ -160,6 +158,10 @@ public:
 	int transmit(const std::vector<std::byte> &message, std::vector<std::byte> &response);
 
 	const std::string errorText(const int error) const;
+
+	void register_process(std::function<Reaction(const std::string &message, std::string &response)> process);
+	void register_publish(std::function<void(const std::string &message)> publish);
+	void register_logger(std::shared_ptr<ILogger> logger);
 
 	void setReopenTime(const long &reopenTime);
 	void setArbitrationTime(const long &arbitrationTime);
@@ -201,8 +203,8 @@ private:
 	long m_dumpFileSize = 0L;                        // current size of dump file
 	std::ofstream m_dumpRawStream;                   // dump stream
 
-	long m_lastSeconds = std::chrono::duration_cast < std::chrono::seconds
-		> (std::chrono::system_clock::now().time_since_epoch()).count();
+	long m_lastSeconds =
+		std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 	long m_bytes = 0;
 	long m_bytesPerSeconds = 0;
 	std::unique_ptr<Average> m_bytesPerSecondsAVG = nullptr;
@@ -262,10 +264,8 @@ private:
 
 };
 
-ebus::Ebus::Ebus(const std::byte address, const std::string &device, std::shared_ptr<ILogger> logger,
-	std::function<Reaction(const std::string &message, std::string &response)> process,
-	std::function<void(const std::string &message)> publish) : impl
-{ std::make_unique<EbusImpl>(address, device, logger, process, publish) }
+ebus::Ebus::Ebus(const std::byte address, const std::string &device) : impl
+{ std::make_unique<EbusImpl>(address, device) }
 {
 }
 
@@ -314,6 +314,21 @@ int ebus::Ebus::transmit(const std::vector<std::byte> &message, std::vector<std:
 const std::string ebus::Ebus::errorText(const int error) const
 {
 	return (this->impl->errorText(error));
+}
+
+void ebus::Ebus::register_process(std::function<Reaction(const std::string &message, std::string &response)> process)
+{
+	this->impl->register_process(process);
+}
+
+void ebus::Ebus::register_publish(std::function<void(const std::string &message)> publish)
+{
+	this->impl->register_publish(publish);
+}
+
+void ebus::Ebus::register_logger(std::shared_ptr<ILogger> logger)
+{
+	this->impl->register_logger(logger);
 }
 
 void ebus::Ebus::setReopenTime(const long &reopenTime)
@@ -386,13 +401,9 @@ bool ebus::Ebus::isHex(const std::string &str, std::ostringstream &result, const
 	return (EbusImpl::isHex(str, result, nibbles));
 }
 
-
-ebus::Ebus::EbusImpl::EbusImpl(const std::byte address, const std::string &device, std::shared_ptr<ILogger> logger,
-	std::function<Reaction(const std::string &message, std::string &response)> process,
-	std::function<void(const std::string &message)> publish) : Notify(), m_address(
-	address), m_slaveAddress(
+ebus::Ebus::EbusImpl::EbusImpl(const std::byte address, const std::string &device) : Notify(), m_address(address), m_slaveAddress(
 	Telegram::slaveAddress(address)), m_bytesPerSecondsAVG(std::make_unique<Average>(15)), m_device(
-	std::make_unique<Device>(device)), m_logger(logger), m_process(process), m_publish(publish)
+	std::make_unique<Device>(device))
 {
 	m_thread = std::thread(&EbusImpl::run, this);
 }
@@ -459,6 +470,21 @@ int ebus::Ebus::EbusImpl::transmit(const std::vector<std::byte> &message, std::v
 const std::string ebus::Ebus::EbusImpl::errorText(const int error) const
 {
 	return (EbusErrors[error]);
+}
+
+void ebus::Ebus::EbusImpl::register_process(std::function<Reaction(const std::string &message, std::string &response)> process)
+{
+	m_process = process;
+}
+
+void ebus::Ebus::EbusImpl::register_publish(std::function<void(const std::string &message)> publish)
+{
+	m_publish = publish;
+}
+
+void ebus::Ebus::EbusImpl::register_logger(std::shared_ptr<ILogger> logger)
+{
+	m_logger = logger;
 }
 
 void ebus::Ebus::EbusImpl::setReopenTime(const long &reopenTime)
