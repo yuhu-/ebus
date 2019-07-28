@@ -56,16 +56,16 @@ public:
 
 };
 
-ebus::Reaction process(const std::string &message, std::string &response)
+ebus::Reaction process(const std::vector<std::byte> &message, std::vector<std::byte> &response)
 {
-	std::cout << "process: " << message << std::endl;
+	std::cout << "process: " << ebus::Ebus::toString(message) << std::endl;
 
 	return (ebus::Reaction::undefined);
 }
 
-void publish(const std::string &message, const std::string &response)
+void publish(const std::vector<std::byte> &message, const std::vector<std::byte> &response)
 {
-	std::cout << "publish: " << message << " " << response << std::endl;
+	std::cout << "publish: " << ebus::Ebus::toString(message) << " " << ebus::Ebus::toString(response) << std::endl;
 }
 
 int main()

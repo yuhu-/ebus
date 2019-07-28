@@ -154,16 +154,13 @@ public:
 
 	bool isOnline();
 
-	int transmit(const std::string &message, std::string &response);
 	int transmit(const std::vector<std::byte> &message, std::vector<std::byte> &response);
 
 	const std::string errorText(const int error) const;
 
-	void register_process(std::function<Reaction(const std::string &message, std::string &response)> process);
 	void register_process(
 		std::function<Reaction(const std::vector<std::byte> &message, std::vector<std::byte> &response)> process);
 
-	void register_publish(std::function<void(const std::string &message, const std::string &response)> publish);
 	void register_publish(
 		std::function<void(const std::vector<std::byte> &message, const std::vector<std::byte> &response)> publish);
 
@@ -220,11 +217,9 @@ private:
 	std::unique_ptr<Device> m_device = nullptr;
 	std::shared_ptr<ILogger> m_logger = nullptr;
 
-	std::function<Reaction(const std::string &message, std::string &response)> m_process;
-	std::function<Reaction(const std::vector<std::byte> &message, std::vector<std::byte> &response)> m_process_vec;
+	std::function<Reaction(const std::vector<std::byte> &message, std::vector<std::byte> &response)> m_process;
 
-	std::function<void(const std::string &message, const std::string &response)> m_publish;
-	std::function<void(const std::vector<std::byte> &message, const std::vector<std::byte> &response)> m_publish_vec;
+	std::function<void(const std::vector<std::byte> &message, const std::vector<std::byte> &response)> m_publish;
 
 	long m_curReopenTime = 0;
 	int m_curLockCounter = 0;
@@ -259,11 +254,9 @@ private:
 
 	State handleDeviceError(bool error, const std::string &message);
 
-	Reaction process(const std::string &message, std::string &response);
-	Reaction process_vec(const std::vector<std::byte> &message, std::vector<std::byte> &response);
+	Reaction process(const std::vector<std::byte> &message, std::vector<std::byte> &response);
 
-	void publish(const std::string &message, const std::string &response);
-	void publish_vec(const std::vector<std::byte> &message, const std::vector<std::byte> &response);
+	void publish(const std::vector<std::byte> &message, const std::vector<std::byte> &response);
 
 	void dumpByte(const std::byte &byte);
 	void countByte();
@@ -313,11 +306,6 @@ bool ebus::Ebus::isOnline()
 	return (this->impl->isOnline());
 }
 
-int ebus::Ebus::transmit(const std::string &message, std::string &response)
-{
-	return (this->impl->transmit(message, response));
-}
-
 int ebus::Ebus::transmit(const std::vector<std::byte> &message, std::vector<std::byte> &response)
 {
 	return (this->impl->transmit(message, response));
@@ -328,20 +316,10 @@ const std::string ebus::Ebus::errorText(const int error) const
 	return (this->impl->errorText(error));
 }
 
-void ebus::Ebus::register_process(std::function<Reaction(const std::string &message, std::string &response)> process)
-{
-	this->impl->register_process(process);
-}
-
 void ebus::Ebus::register_process(
 	std::function<Reaction(const std::vector<std::byte> &message, std::vector<std::byte> &response)> process)
 {
 	this->impl->register_process(process);
-}
-
-void ebus::Ebus::register_publish(std::function<void(const std::string &message, const std::string &response)> publish)
-{
-	this->impl->register_publish(publish);
 }
 
 void ebus::Ebus::register_publish(
@@ -415,9 +393,9 @@ const std::vector<std::byte> ebus::Ebus::toVector(const std::string &str)
 	return (EbusImpl::toVector(str));
 }
 
-const std::string ebus::Ebus::toString(const std::vector<std::byte> &seq)
+const std::string ebus::Ebus::toString(const std::vector<std::byte> &vec)
 {
-	return (EbusImpl::toString(seq));
+	return (EbusImpl::toString(vec));
 }
 
 bool ebus::Ebus::isHex(const std::string &str, std::ostringstream &result, const int nibbles)
@@ -469,17 +447,6 @@ bool ebus::Ebus::EbusImpl::isOnline()
 	return (m_online);
 }
 
-int ebus::Ebus::EbusImpl::transmit(const std::string &message, std::string &response)
-{
-	Telegram tel;
-	tel.createMaster(m_address, message);
-
-	int result = transmit(tel);
-	response = tel.getSlave().toString();
-
-	return (result);
-}
-
 int ebus::Ebus::EbusImpl::transmit(const std::vector<std::byte> &message, std::vector<std::byte> &response)
 {
 	Telegram tel;
@@ -496,26 +463,16 @@ const std::string ebus::Ebus::EbusImpl::errorText(const int error) const
 	return (EbusErrors[error]);
 }
 
-void ebus::Ebus::EbusImpl::register_process(std::function<Reaction(const std::string &message, std::string &response)> process)
-{
-	m_process = process;
-}
-
 void ebus::Ebus::EbusImpl::register_process(
 	std::function<Reaction(const std::vector<std::byte> &message, std::vector<std::byte> &response)> process)
 {
-	m_process_vec = process;
-}
-
-void ebus::Ebus::EbusImpl::register_publish(std::function<void(const std::string &message, const std::string &response)> publish)
-{
-	m_publish = publish;
+	m_process = process;
 }
 
 void ebus::Ebus::EbusImpl::register_publish(
 	std::function<void(const std::vector<std::byte> &message, const std::vector<std::byte> &response)> publish)
 {
-	m_publish_vec = publish;
+	m_publish = publish;
 }
 
 void ebus::Ebus::EbusImpl::register_logger(std::shared_ptr<ILogger> logger)
@@ -598,9 +555,9 @@ const std::vector<std::byte> ebus::Ebus::EbusImpl::toVector(const std::string &s
 	return (Sequence::toVector((str)));
 }
 
-const std::string ebus::Ebus::EbusImpl::toString(const std::vector<std::byte> &seq)
+const std::string ebus::Ebus::EbusImpl::toString(const std::vector<std::byte> &vec)
 {
-	return (Sequence::toString(seq));
+	return (Sequence::toString(vec));
 }
 
 bool ebus::Ebus::EbusImpl::isHex(const std::string &str, std::ostringstream &result, const int &nibbles)
@@ -678,9 +635,7 @@ void ebus::Ebus::EbusImpl::reset()
 
 	if (m_activeMessage != nullptr)
 	{
-		publish(m_activeMessage->m_telegram.toStringMaster(), m_activeMessage->m_telegram.toStringSlave());
-		publish_vec(m_activeMessage->m_telegram.getMaster().getSequence(),
-			m_activeMessage->m_telegram.getSlave().getSequence());
+		publish(m_activeMessage->m_telegram.getMaster().getSequence(), m_activeMessage->m_telegram.getSlave().getSequence());
 
 		m_activeMessage->notify();
 		m_activeMessage = nullptr;
@@ -865,11 +820,7 @@ ebus::State ebus::Ebus::EbusImpl::monitorBus()
 			Telegram tel(m_sequence);
 			logInfo(telegramInfo(tel));
 
-			if (tel.isValid() == true)
-			{
-				publish(tel.toStringMaster(), tel.toStringSlave());
-				publish_vec(tel.getMaster().getSequence(), tel.getSlave().getSequence());
-			}
+			if (tel.isValid() == true) publish(tel.getMaster().getSequence(), tel.getSlave().getSequence());
 
 			if (m_sequence.size() == 1 && m_curLockCounter < 2) m_curLockCounter = 2;
 
@@ -980,8 +931,7 @@ ebus::State ebus::Ebus::EbusImpl::receiveMessage()
 		if (tel.getType() != TEL_TYPE_MS)
 		{
 			logInfo(telegramInfo(tel));
-			publish(tel.toStringMaster(), tel.toStringSlave());
-			publish_vec(tel.getMaster().getSequence(), tel.getSlave().getSequence());
+			publish(tel.getMaster().getSequence(), tel.getSlave().getSequence());
 		}
 
 		return (State::ProcessMessage);
@@ -998,12 +948,10 @@ ebus::State ebus::Ebus::EbusImpl::processMessage()
 
 	Telegram tel;
 	tel.createMaster(m_sequence);
-	std::string response;
-	std::vector<std::byte> response_vec;
 
-	Reaction reaction = process(tel.toStringMaster(), response);
+	std::vector<std::byte> response;
 
-	if (reaction == Reaction::nofunction) reaction = process_vec(tel.getMaster().getSequence(), response_vec);
+	Reaction reaction = process(tel.getMaster().getSequence(), response);
 
 	switch (reaction)
 	{
@@ -1019,8 +967,7 @@ ebus::State ebus::Ebus::EbusImpl::processMessage()
 	case Reaction::response:
 		if (tel.getType() == TEL_TYPE_MS)
 		{
-			if (!response.empty()) tel.createSlave(response);
-			if (!response_vec.empty()) tel.createSlave(response_vec);
+			tel.createSlave(response);
 
 			if (tel.getSlaveState() == SEQ_OK)
 			{
@@ -1094,8 +1041,7 @@ ebus::State ebus::Ebus::EbusImpl::sendResponse()
 	tel.setMasterACK(byte);
 
 	logInfo(telegramInfo(tel));
-	publish(tel.toStringMaster(), tel.toStringSlave());
-	publish_vec(tel.getMaster().getSequence(), tel.getSlave().getSequence());
+	publish(tel.getMaster().getSequence(), tel.getSlave().getSequence());
 
 	reset();
 
@@ -1330,7 +1276,7 @@ ebus::State ebus::Ebus::EbusImpl::handleDeviceError(bool error, const std::strin
 	return (State::MonitorBus);
 }
 
-ebus::Reaction ebus::Ebus::EbusImpl::process(const std::string &message, std::string &response)
+ebus::Reaction ebus::Ebus::EbusImpl::process(const std::vector<std::byte> &message, std::vector<std::byte> &response)
 {
 	if (m_process != nullptr)
 		return (m_process(message, response));
@@ -1338,22 +1284,9 @@ ebus::Reaction ebus::Ebus::EbusImpl::process(const std::string &message, std::st
 		return (Reaction::nofunction);
 }
 
-ebus::Reaction ebus::Ebus::EbusImpl::process_vec(const std::vector<std::byte> &message, std::vector<std::byte> &response)
-{
-	if (m_process_vec != nullptr)
-		return (m_process_vec(message, response));
-	else
-		return (Reaction::nofunction);
-}
-
-void ebus::Ebus::EbusImpl::publish(const std::string &message, const std::string &response)
+void ebus::Ebus::EbusImpl::publish(const std::vector<std::byte> &message, const std::vector<std::byte> &response)
 {
 	if (m_publish != nullptr) m_publish(message, response);
-}
-
-void ebus::Ebus::EbusImpl::publish_vec(const std::vector<std::byte> &message, const std::vector<std::byte> &response)
-{
-	if (m_publish_vec != nullptr) m_publish_vec(message, response);
 }
 
 void ebus::Ebus::EbusImpl::dumpByte(const std::byte &byte)

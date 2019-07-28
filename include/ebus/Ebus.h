@@ -74,16 +74,13 @@ public:
 
 	bool isOnline();
 
-	int transmit(const std::string &message, std::string &response);
 	int transmit(const std::vector<std::byte> &message, std::vector<std::byte> &response);
 
 	const std::string errorText(const int error) const;
 
-	void register_process(std::function<Reaction(const std::string &message, std::string &response)> process);
 	void register_process(
 		std::function<Reaction(const std::vector<std::byte> &message, std::vector<std::byte> &response)> process);
 
-	void register_publish(std::function<void(const std::string &message, const std::string &response)> publish);
 	void register_publish(
 		std::function<void(const std::vector<std::byte> &message, const std::vector<std::byte> &response)> publish);
 
@@ -104,7 +101,7 @@ public:
 
 	static const std::vector<std::byte> range(const std::vector<std::byte> &seq, const size_t index, const size_t len);
 	static const std::vector<std::byte> toVector(const std::string &str);
-	static const std::string toString(const std::vector<std::byte> &seq);
+	static const std::string toString(const std::vector<std::byte> &vec);
 	static bool isHex(const std::string &str, std::ostringstream &result, const int nibbles);
 
 private:
