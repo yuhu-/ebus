@@ -20,7 +20,6 @@ EXTRA_DIST = Device.h \
 	     Telegram.h \
 	     Notify.h \
 	     NQueue.h \
-	     Average.h \
 	     runtime_warning.h
 
 distclean-local:

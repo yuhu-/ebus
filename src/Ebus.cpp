@@ -21,16 +21,12 @@
 
 #include <bits/types/struct_timespec.h>
 #include <unistd.h>
-#include <chrono>
-#include <cstdio>
 #include <ctime>
-#include <fstream>
 #include <iomanip>
 #include <map>
 #include <sstream>
 #include <thread>
 
-#include "Average.h"
 #include "Device.h"
 #include "Notify.h"
 #include "NQueue.h"
@@ -158,26 +154,21 @@ public:
 
 	const std::string errorText(const int error) const;
 
+	void register_logger(std::shared_ptr<ILogger> logger);
+
 	void register_process(
 		std::function<Reaction(const std::vector<std::byte> &message, std::vector<std::byte> &response)> process);
 
 	void register_publish(
 		std::function<void(const std::vector<std::byte> &message, const std::vector<std::byte> &response)> publish);
 
-	void register_logger(std::shared_ptr<ILogger> logger);
+	void register_rawdata(std::function<void(const std::byte &byte)> rawdata);
 
 	void setReopenTime(const long &reopenTime);
 	void setArbitrationTime(const long &arbitrationTime);
 	void setReceiveTimeout(const long &receiveTimeout);
 	void setLockCounter(const int &lockCounter);
 	void setLockRetries(const int &lockRetries);
-
-	void setDump(const bool &dump);
-	void setDumpFile(const std::string &dumpFile);
-	void setDumpFileMaxSize(const long &dumpFileMaxSize);
-
-	long actBusSpeed() const;
-	double avgBusSpeed() const;
 
 	static const std::vector<std::byte> range(const std::vector<std::byte> &seq, const size_t index, const size_t len);
 	static const std::vector<std::byte> toVector(const std::string &str);
@@ -200,26 +191,17 @@ private:
 	int m_lockCounter = 5;                           // number of characters after a successful ebus access (max: 25)
 	int m_lockRetries = 2;                           // number of retries to lock ebus
 
-	bool m_dump = false;                             // enable/disable raw data dumping
-	std::string m_dumpFile = "/tmp/ebus_dump.bin";   // dump file name
-	long m_dumpFileMaxSize = 100L;                   // max size for dump file [kB]
-	long m_dumpFileSize = 0L;                        // current size of dump file
-	std::ofstream m_dumpRawStream;                   // dump stream
-
-	long m_lastSeconds =
-		std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-	long m_bytes = 0;
-	long m_bytesPerSeconds = 0;
-	std::unique_ptr<Average> m_bytesPerSecondsAVG = nullptr;
-
 	NQueue<std::shared_ptr<Message>> m_messageQueue;
 
 	std::unique_ptr<Device> m_device = nullptr;
+
 	std::shared_ptr<ILogger> m_logger = nullptr;
 
 	std::function<Reaction(const std::vector<std::byte> &message, std::vector<std::byte> &response)> m_process;
 
 	std::function<void(const std::vector<std::byte> &message, const std::vector<std::byte> &response)> m_publish;
+
+	std::function<void(const std::byte &byte)> m_rawdata;
 
 	long m_curReopenTime = 0;
 	int m_curLockCounter = 0;
@@ -258,8 +240,9 @@ private:
 
 	void publish(const std::vector<std::byte> &message, const std::vector<std::byte> &response);
 
-	void dumpByte(const std::byte &byte);
-	void countByte();
+	void rawdata(const std::byte &byte);
+
+	void count();
 
 	void logError(const std::string &message);
 	void logWarn(const std::string &message);
@@ -316,6 +299,11 @@ const std::string ebus::Ebus::errorText(const int error) const
 	return (this->impl->errorText(error));
 }
 
+void ebus::Ebus::register_logger(std::shared_ptr<ILogger> logger)
+{
+	this->impl->register_logger(logger);
+}
+
 void ebus::Ebus::register_process(
 	std::function<Reaction(const std::vector<std::byte> &message, std::vector<std::byte> &response)> process)
 {
@@ -328,9 +316,9 @@ void ebus::Ebus::register_publish(
 	this->impl->register_publish(publish);
 }
 
-void ebus::Ebus::register_logger(std::shared_ptr<ILogger> logger)
+void ebus::Ebus::register_rawdata(std::function<void(const std::byte &byte)> rawdata)
 {
-	this->impl->register_logger(logger);
+	this->impl->register_rawdata(rawdata);
 }
 
 void ebus::Ebus::setReopenTime(const long &reopenTime)
@@ -358,31 +346,6 @@ void ebus::Ebus::setLockRetries(const int &lockRetries)
 	this->impl->setLockRetries(lockRetries);
 }
 
-void ebus::Ebus::setDump(const bool &dump)
-{
-	this->impl->setDump(dump);
-}
-
-void ebus::Ebus::setDumpFile(const std::string &dumpFile)
-{
-	this->impl->setDumpFile(dumpFile);
-}
-
-void ebus::Ebus::setDumpFileMaxSize(const long &dumpFileMaxSize)
-{
-	this->impl->setDumpFileMaxSize(dumpFileMaxSize);
-}
-
-long ebus::Ebus::actBusSpeed() const
-{
-	return (this->impl->actBusSpeed());
-}
-
-double ebus::Ebus::avgBusSpeed() const
-{
-	return (this->impl->avgBusSpeed());
-}
-
 const std::vector<std::byte> ebus::Ebus::range(const std::vector<std::byte> &seq, const size_t index, const size_t len)
 {
 	return (EbusImpl::range(seq, index, len));
@@ -404,8 +367,7 @@ bool ebus::Ebus::isHex(const std::string &str, std::ostringstream &result, const
 }
 
 ebus::Ebus::EbusImpl::EbusImpl(const std::byte address, const std::string &device) : Notify(), m_address(address), m_slaveAddress(
-	Telegram::slaveAddress(address)), m_bytesPerSecondsAVG(std::make_unique<Average>(15)), m_device(
-	std::make_unique<Device>(device))
+	Telegram::slaveAddress(address)), m_device(std::make_unique<Device>(device))
 {
 	m_thread = std::thread(&EbusImpl::run, this);
 }
@@ -428,8 +390,6 @@ ebus::Ebus::EbusImpl::~EbusImpl()
 
 	while (m_messageQueue.size() > 0)
 		m_messageQueue.dequeue().reset();
-
-	m_dumpRawStream.close();
 }
 
 void ebus::Ebus::EbusImpl::open()
@@ -463,6 +423,11 @@ const std::string ebus::Ebus::EbusImpl::errorText(const int error) const
 	return (EbusErrors[error]);
 }
 
+void ebus::Ebus::EbusImpl::register_logger(std::shared_ptr<ILogger> logger)
+{
+	m_logger = logger;
+}
+
 void ebus::Ebus::EbusImpl::register_process(
 	std::function<Reaction(const std::vector<std::byte> &message, std::vector<std::byte> &response)> process)
 {
@@ -475,9 +440,9 @@ void ebus::Ebus::EbusImpl::register_publish(
 	m_publish = publish;
 }
 
-void ebus::Ebus::EbusImpl::register_logger(std::shared_ptr<ILogger> logger)
+void ebus::Ebus::EbusImpl::register_rawdata(std::function<void(const std::byte &byte)> rawdata)
 {
-	m_logger = logger;
+	m_rawdata = rawdata;
 }
 
 void ebus::Ebus::EbusImpl::setReopenTime(const long &reopenTime)
@@ -503,46 +468,6 @@ void ebus::Ebus::EbusImpl::setLockCounter(const int &lockCounter)
 void ebus::Ebus::EbusImpl::setLockRetries(const int &lockRetries)
 {
 	m_lockRetries = lockRetries;
-}
-
-void ebus::Ebus::EbusImpl::setDump(const bool &dump)
-{
-	if (dump == m_dump) return;
-
-	m_dump = dump;
-
-	if (dump == false)
-	{
-		m_dumpRawStream.close();
-	}
-	else
-	{
-		m_dumpRawStream.open(m_dumpFile.c_str(), std::ios::binary | std::ios::app);
-		m_dumpFileSize = 0;
-	}
-}
-
-void ebus::Ebus::EbusImpl::setDumpFile(const std::string &dumpFile)
-{
-	bool dump = m_dump;
-	if (dump == true) setDump(false);
-	m_dumpFile = dumpFile;
-	m_dump = dump;
-}
-
-void ebus::Ebus::EbusImpl::setDumpFileMaxSize(const long &dumpFileMaxSize)
-{
-	m_dumpFileMaxSize = dumpFileMaxSize;
-}
-
-long ebus::Ebus::EbusImpl::actBusSpeed() const
-{
-	return (m_bytesPerSeconds);
-}
-
-double ebus::Ebus::EbusImpl::avgBusSpeed() const
-{
-	return (m_bytesPerSecondsAVG->getAverage());
 }
 
 const std::vector<std::byte> ebus::Ebus::EbusImpl::range(const std::vector<std::byte> &seq, const size_t index, const size_t len)
@@ -597,8 +522,7 @@ void ebus::Ebus::EbusImpl::read(std::byte &byte, const long sec, const long nsec
 {
 	m_device->recv(byte, sec, nsec);
 
-	dumpByte(byte);
-	countByte();
+	rawdata(byte);
 
 	std::ostringstream ostr;
 	ostr << std::nouppercase << std::hex << std::setw(2) << std::setfill('0') << static_cast<unsigned>(byte) << std::nouppercase
@@ -1289,43 +1213,9 @@ void ebus::Ebus::EbusImpl::publish(const std::vector<std::byte> &message, const 
 	if (m_publish != nullptr) m_publish(message, response);
 }
 
-void ebus::Ebus::EbusImpl::dumpByte(const std::byte &byte)
+void ebus::Ebus::EbusImpl::rawdata(const std::byte &byte)
 {
-	if (m_dump == true && m_dumpRawStream.is_open() == true)
-	{
-		m_dumpRawStream.write((char*) &byte, 1);
-		m_dumpFileSize++;
-
-		if ((m_dumpFileSize % 8) == 0) m_dumpRawStream.flush();
-
-		if (m_dumpFileSize >= m_dumpFileMaxSize * 1024)
-		{
-			std::string oldfile = m_dumpFile + ".old";
-
-			if (rename(m_dumpFile.c_str(), oldfile.c_str()) == 0)
-			{
-				m_dumpRawStream.close();
-				m_dumpRawStream.open(m_dumpFile.c_str(), std::ios::binary | std::ios::app);
-				m_dumpFileSize = 0;
-			}
-		}
-	}
-}
-
-void ebus::Ebus::EbusImpl::countByte()
-{
-	long actSeconds =
-		std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-
-	if (actSeconds > m_lastSeconds)
-	{
-		m_bytesPerSeconds = m_bytes;
-		m_bytesPerSecondsAVG->addValue(m_bytes);
-		m_lastSeconds = actSeconds;
-		m_bytes = 1;
-	}
-
-	m_bytes++;
+	if (m_rawdata != nullptr) m_rawdata(byte);
 }
 
 void ebus::Ebus::EbusImpl::logError(const std::string &message)

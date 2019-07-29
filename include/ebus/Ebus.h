@@ -78,26 +78,21 @@ public:
 
 	const std::string errorText(const int error) const;
 
+	void register_logger(std::shared_ptr<ILogger> logger);
+
 	void register_process(
 		std::function<Reaction(const std::vector<std::byte> &message, std::vector<std::byte> &response)> process);
 
 	void register_publish(
 		std::function<void(const std::vector<std::byte> &message, const std::vector<std::byte> &response)> publish);
 
-	void register_logger(std::shared_ptr<ILogger> logger);
+	void register_rawdata(std::function<void(const std::byte &byte)> rawdata);
 
 	void setReopenTime(const long &reopenTime);
 	void setArbitrationTime(const long &arbitrationTime);
 	void setReceiveTimeout(const long &receiveTimeout);
 	void setLockCounter(const int &lockCounter);
 	void setLockRetries(const int &lockRetries);
-
-	void setDump(const bool &dump);
-	void setDumpFile(const std::string &dumpFile);
-	void setDumpFileMaxSize(const long &dumpFileMaxSize);
-
-	long actBusSpeed() const;
-	double avgBusSpeed() const;
 
 	static const std::vector<std::byte> range(const std::vector<std::byte> &seq, const size_t index, const size_t len);
 	static const std::vector<std::byte> toVector(const std::string &str);
