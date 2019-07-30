@@ -199,9 +199,9 @@ private:
 
 	std::function<Reaction(const std::vector<std::byte> &message, std::vector<std::byte> &response)> m_process;
 
-	std::function<void(const std::vector<std::byte> &message, const std::vector<std::byte> &response)> m_publish;
+	std::vector<std::function<void(const std::vector<std::byte> &message, const std::vector<std::byte> &response)>> m_publish;
 
-	std::function<void(const std::byte &byte)> m_rawdata;
+	std::vector<std::function<void(const std::byte &byte)>> m_rawdata;
 
 	long m_curReopenTime = 0;
 	int m_curLockCounter = 0;
@@ -241,8 +241,6 @@ private:
 	void publish(const std::vector<std::byte> &message, const std::vector<std::byte> &response);
 
 	void rawdata(const std::byte &byte);
-
-	void count();
 
 	void logError(const std::string &message);
 	void logWarn(const std::string &message);
@@ -437,12 +435,12 @@ void ebus::Ebus::EbusImpl::register_process(
 void ebus::Ebus::EbusImpl::register_publish(
 	std::function<void(const std::vector<std::byte> &message, const std::vector<std::byte> &response)> publish)
 {
-	m_publish = publish;
+	m_publish.push_back(publish);
 }
 
 void ebus::Ebus::EbusImpl::register_rawdata(std::function<void(const std::byte &byte)> rawdata)
 {
-	m_rawdata = rawdata;
+	m_rawdata.push_back(rawdata);
 }
 
 void ebus::Ebus::EbusImpl::setReopenTime(const long &reopenTime)
@@ -1210,12 +1208,20 @@ ebus::Reaction ebus::Ebus::EbusImpl::process(const std::vector<std::byte> &messa
 
 void ebus::Ebus::EbusImpl::publish(const std::vector<std::byte> &message, const std::vector<std::byte> &response)
 {
-	if (m_publish != nullptr) m_publish(message, response);
+	if (!m_publish.empty())
+	{
+		for (const auto &publish : m_publish)
+			publish(message, response);
+	}
 }
 
 void ebus::Ebus::EbusImpl::rawdata(const std::byte &byte)
 {
-	if (m_rawdata != nullptr) m_rawdata(byte);
+	if (!m_rawdata.empty())
+	{
+		for (const auto &rawdata : m_rawdata)
+			rawdata(byte);
+	}
 }
 
 void ebus::Ebus::EbusImpl::logError(const std::string &message)
