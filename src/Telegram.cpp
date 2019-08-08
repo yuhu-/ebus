@@ -217,46 +217,14 @@ void ebus::Telegram::parseSequence(Sequence &seq)
 	}
 }
 
-void ebus::Telegram::createMaster(const std::byte source, const std::byte target, const std::string &str)
-{
-	std::ostringstream ostr;
-	ostr << std::nouppercase << std::hex << std::setw(2) << std::setfill('0') << static_cast<unsigned>(source);
-	ostr << std::nouppercase << std::hex << std::setw(2) << std::setfill('0') << static_cast<unsigned>(target);
-	ostr << std::nouppercase << std::setw(0) << str;
-	createMaster(ostr.str());
-}
-
-void ebus::Telegram::createMaster(const std::byte source, const std::string &str)
-{
-	std::ostringstream ostr;
-	ostr << std::nouppercase << std::hex << std::setw(2) << std::setfill('0') << static_cast<unsigned>(source);
-	ostr << std::nouppercase << std::setw(0) << str;
-	createMaster(ostr.str());
-}
-
-void ebus::Telegram::createMaster(const std::string &str)
-{
-	std::ostringstream result;
-
-	if (Sequence::isHex(str, result, 2))
-	{
-		Sequence seq(str);
-		createMaster(seq);
-	}
-	else
-	{
-		m_masterState = SEQ_ERR_INVALID;
-	}
-}
-
-void ebus::Telegram::createMaster(const std::byte source, const std::vector<std::byte> &vec)
+void ebus::Telegram::createMaster(const std::byte src, const std::vector<std::byte> &vec)
 {
 	Sequence seq;
 
-	seq.push_back(source);
+	seq.push_back(src, false);
 
 	for (size_t i = 0; i < vec.size(); i++)
-		seq.push_back(vec.at(i));
+		seq.push_back(vec.at(i), false);
 
 	createMaster(seq);
 }
@@ -328,27 +296,12 @@ void ebus::Telegram::createMaster(Sequence &seq)
 	}
 }
 
-void ebus::Telegram::createSlave(const std::string &str)
-{
-	std::ostringstream result;
-
-	if (Sequence::isHex(str, result, 2))
-	{
-		Sequence seq(str);
-		createSlave(seq);
-	}
-	else
-	{
-		m_slaveState = SEQ_ERR_INVALID;
-	}
-}
-
 void ebus::Telegram::createSlave(const std::vector<std::byte> &vec)
 {
 	Sequence seq;
 
 	for (size_t i = 0; i < vec.size(); i++)
-		seq.push_back(vec.at(i));
+		seq.push_back(vec.at(i), false);
 
 	createSlave(seq);
 }

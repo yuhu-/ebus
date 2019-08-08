@@ -216,7 +216,7 @@ int main()
 
 	// create master
 	ebus::Telegram master;
-	master.createMaster("ff52b509030d0600");
+	master.createMaster(std::byte(0xff), ebus::Sequence::toVector("52b509030d0600"));
 	std::cout << "seq: ff52b509030d0600" << "   Master : " << master.toStringMaster() << std::endl;
 
 	for (size_t i = 0; i < 9; i++)
@@ -228,14 +228,14 @@ int main()
 	seq.clear();
 
 	// create slave
-	master.createSlave("03b0fbaa");
-	std::cout << "seq: 03b0fbaa" << "   Slave: " << master.toStringSlave() << std::endl;
+	master.createSlave(ebus::Sequence::toVector("03b0fbaa"));
+	std::cout << "seq: 03b0fbaa" << "   Slave : " << master.toStringSlave() << std::endl;
 
 	for (size_t i = 10; i < sizeof(bytes) - 1; i++)
 		seq.push_back(bytes[i]);
 
 	master2.createSlave(seq);
-	std::cout << "seq: " << seq.toString() << " Slave: " << master2.toStringSlave() << std::endl;
+	std::cout << "seq: " << seq.toString() << " Slave2: " << master2.toStringSlave() << std::endl;
 	seq.clear();
 
 	return (0);

@@ -61,13 +61,9 @@ public:
 
 	void parseSequence(Sequence &seq);
 
-	void createMaster(const std::byte source, const std::byte target, const std::string &str);
-	void createMaster(const std::byte source, const std::string &str);
-	void createMaster(const std::string &str);
-	void createMaster(const std::byte source, const std::vector<std::byte> &vec);
+	void createMaster(const std::byte src, const std::vector<std::byte> &vec);
 	void createMaster(Sequence &seq);
 
-	void createSlave(const std::string &str);
 	void createSlave(const std::vector<std::byte> &vec);
 	void createSlave(Sequence &seq);
 
@@ -112,7 +108,7 @@ public:
 	static bool isMaster(const std::byte byte);
 	static bool isSlave(const std::byte byte);
 	static bool isAddressValid(const std::byte byte);
-	static std::byte slaveAddress(const std::byte masterAddress);
+	static std::byte slaveAddress(const std::byte address);
 
 private:
 	int m_type = -1;
