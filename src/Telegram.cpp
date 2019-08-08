@@ -274,14 +274,14 @@ void ebus::Telegram::createMaster(Sequence &seq)
 	}
 
 	// source address is invalid
-	if (isMaster(seq[0]) == false)
+	if (!isMaster(seq[0]))
 	{
 		m_masterState = SEQ_ERR_QQ;
 		return;
 	}
 
 	// target address is invalid
-	if (isAddressValid(seq[1]) == false)
+	if (!isAddressValid(seq[1]))
 	{
 		m_masterState = SEQ_ERR_ZZ;
 		return;
@@ -487,7 +487,7 @@ void ebus::Telegram::setType(const std::byte byte)
 {
 	if (byte == seq_broad)
 		m_type = TEL_TYPE_BC;
-	else if (isMaster(byte) == true)
+	else if (isMaster(byte))
 		m_type = TEL_TYPE_MM;
 	else
 		m_type = TEL_TYPE_MS;
@@ -631,7 +631,7 @@ bool ebus::Telegram::isMaster(const std::byte byte)
 
 bool ebus::Telegram::isSlave(const std::byte byte)
 {
-	return (isMaster(byte) == false && byte != seq_syn && byte != seq_exp);
+	return (!isMaster(byte) && byte != seq_syn && byte != seq_exp);
 }
 
 bool ebus::Telegram::isAddressValid(const std::byte byte)
@@ -641,7 +641,7 @@ bool ebus::Telegram::isAddressValid(const std::byte byte)
 
 std::byte ebus::Telegram::slaveAddress(const std::byte address)
 {
-	if (isSlave(address) == true) return (address);
+	if (isSlave(address)) return (address);
 
 	return (std::byte(std::to_integer<int>(address) + 5));
 }
@@ -652,10 +652,10 @@ int ebus::Telegram::checkMasterSequence(Sequence &seq)
 	if (seq.size() < (size_t) 6) return (SEQ_ERR_SHORT);
 
 	// source address is invalid
-	if (isMaster(seq[0]) == false) return (SEQ_ERR_QQ);
+	if (!isMaster(seq[0])) return (SEQ_ERR_QQ);
 
 	// target address is invalid
-	if (isAddressValid(seq[1]) == false) return (SEQ_ERR_ZZ);
+	if (!isAddressValid(seq[1])) return (SEQ_ERR_ZZ);
 
 	// number data byte is invalid
 	if (std::to_integer<int>(seq[4]) > seq_max_bytes) return (SEQ_ERR_NN);

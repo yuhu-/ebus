@@ -47,7 +47,7 @@ public:
 	T dequeue()
 	{
 		std::unique_lock<std::mutex> lock(m_mutex);
-		while (m_queue.empty() == true)
+		while (m_queue.empty())
 			m_condition.wait(lock);
 
 		T val = m_queue.front();

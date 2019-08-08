@@ -604,7 +604,7 @@ void ebus::Ebus::EbusImpl::run()
 
 	State state = State::OpenDevice;
 
-	while (m_running == true)
+	while (m_running)
 	{
 		try
 		{
@@ -693,12 +693,13 @@ ebus::State ebus::Ebus::EbusImpl::openDevice()
 
 		if (!m_device->isOpen())
 		{
+			logWarn(stateMessage(STATE_ERR_OPEN_FAIL));
+
 			m_curReopenTime++;
-			if (m_curReopenTime > m_reopenTime)
-			{
-				logWarn(stateMessage(STATE_ERR_OPEN_FAIL));
-				return (State::IdleSystem);
-			}
+			if (m_curReopenTime > m_reopenTime) return (State::IdleSystem);
+
+			sleep(1);
+			return (State::OpenDevice);
 		}
 	}
 
@@ -742,7 +743,7 @@ ebus::State ebus::Ebus::EbusImpl::monitorBus()
 			Telegram tel(m_sequence);
 			logInfo(telegramInfo(tel));
 
-			if (tel.isValid() == true) publish(tel.getMaster().getSequence(), tel.getSlave().getSequence());
+			if (tel.isValid()) publish(tel.getMaster().getSequence(), tel.getSlave().getSequence());
 
 			if (m_sequence.size() == 1 && m_curLockCounter < 2) m_curLockCounter = 2;
 
@@ -1187,9 +1188,7 @@ ebus::State ebus::Ebus::EbusImpl::handleDeviceError(bool error, const std::strin
 
 		m_device->close();
 
-		if (m_device->isOpen() == false) logInfo(stateMessage(STATE_INF_DEV_CLOSE));
-
-		sleep(1);
+		if (!m_device->isOpen()) logInfo(stateMessage(STATE_INF_DEV_CLOSE));
 
 		return (State::OpenDevice);
 	}

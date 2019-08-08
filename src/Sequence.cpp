@@ -72,21 +72,21 @@ void ebus::Sequence::clear()
 
 std::byte ebus::Sequence::getCRC()
 {
-	if (m_extended == false) extend();
+	if (!m_extended) extend();
 
 	std::byte crc = seq_zero;
 
 	for (size_t i = 0; i < m_seq.size(); i++)
 		crc = calcCRC(m_seq.at(i), crc);
 
-	if (m_extended == false) reduce();
+	if (!m_extended) reduce();
 
 	return (crc);
 }
 
 void ebus::Sequence::extend()
 {
-	if (m_extended == true) return;
+	if (m_extended) return;
 
 	std::vector<std::byte> tmp;
 
@@ -114,7 +114,7 @@ void ebus::Sequence::extend()
 
 void ebus::Sequence::reduce()
 {
-	if (m_extended == false) return;
+	if (!m_extended) return;
 
 	std::vector<std::byte> tmp;
 	bool extended = false;
@@ -125,7 +125,7 @@ void ebus::Sequence::reduce()
 		{
 			extended = true;
 		}
-		else if (extended == true)
+		else if (extended)
 		{
 			if (m_seq.at(i) == seq_synexp)
 				tmp.push_back(seq_syn);
@@ -167,7 +167,7 @@ const std::vector<std::byte> ebus::Sequence::getSequence() const
 size_t ebus::Sequence::find(const Sequence &seq, const size_t pos) const noexcept
 {
 	for (size_t i = pos; i + seq.size() <= m_seq.size(); i++)
-		if (equal(m_seq.begin() + i, m_seq.begin() + i + seq.size(), seq.m_seq.begin()) == true) return (i);
+		if (equal(m_seq.begin() + i, m_seq.begin() + i + seq.size(), seq.m_seq.begin())) return (i);
 
 	return (npos);
 }
@@ -178,7 +178,7 @@ int ebus::Sequence::compare(const Sequence &seq) const noexcept
 		return (-1);
 	else if (m_seq.size() > seq.size())
 		return (1);
-	else if (equal(m_seq.begin(), m_seq.end(), seq.m_seq.begin()) == true) return (0);
+	else if (equal(m_seq.begin(), m_seq.end(), seq.m_seq.begin())) return (0);
 
 	return (-1);
 }
@@ -235,7 +235,7 @@ bool ebus::Sequence::isHex(const std::string &str, std::ostringstream &result, c
 
 	for (size_t i = 0; i < str.size(); ++i)
 	{
-		if (std::isxdigit(str[i]) == false)
+		if (!std::isxdigit(str[i]))
 		{
 			result << "invalid char '" << str[i] << "'";
 			return (false);
