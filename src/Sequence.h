@@ -21,7 +21,6 @@
 #define EBUS_SEQUENCE_H
 
 #include <cstddef>
-#include <iostream>
 #include <string>
 #include <vector>
 
@@ -67,12 +66,6 @@ public:
 	const std::vector<std::byte> getSequence() const;
 
 	static const std::vector<std::byte> range(const std::vector<std::byte> &seq, const size_t index, const size_t len);
-
-	static const std::vector<std::byte> toVector(const std::string &str);
-
-	static const std::string toString(const std::vector<std::byte> &vec);
-
-	static bool isHex(const std::string &str, std::ostringstream &result, const int nibbles);
 
 private:
 	std::vector<std::byte> m_seq;

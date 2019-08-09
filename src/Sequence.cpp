@@ -19,11 +19,7 @@
 
 #include "Sequence.h"
 
-#include <algorithm>
-#include <cctype>
-#include <cstdlib>
 #include <iomanip>
-#include <iterator>
 #include <sstream>
 
 ebus::Sequence::Sequence(const std::vector<std::byte> &vec, const bool extended)
@@ -179,46 +175,6 @@ const std::vector<std::byte> ebus::Sequence::range(const std::vector<std::byte> 
 		result.push_back(seq.at(i));
 
 	return (result);
-}
-
-const std::vector<std::byte> ebus::Sequence::toVector(const std::string &str)
-{
-	std::vector<std::byte> result;
-
-	for (size_t i = 0; i + 1 < str.size(); i += 2)
-		result.push_back(std::byte(std::strtoul(str.substr(i, 2).c_str(), nullptr, 16)));
-
-	return (result);
-}
-
-const std::string ebus::Sequence::toString(const std::vector<std::byte> &vec)
-{
-	std::ostringstream ostr;
-
-	for (size_t i = 0; i < vec.size(); i++)
-		ostr << std::nouppercase << std::hex << std::setw(2) << std::setfill('0') << static_cast<unsigned>(vec[i]);
-
-	return (ostr.str());
-}
-
-bool ebus::Sequence::isHex(const std::string &str, std::ostringstream &result, const int nibbles)
-{
-	if ((str.length() % nibbles) != 0)
-	{
-		result << "invalid hex string";
-		return (false);
-	}
-
-	for (size_t i = 0; i < str.size(); ++i)
-	{
-		if (!std::isxdigit(str[i]))
-		{
-			result << "invalid char '" << str[i] << "'";
-			return (false);
-		}
-	}
-
-	return (true);
 }
 
 // CRC8 table of the polynom 0x9b = x^8 + x^7 + x^4 + x^3 + x^1 + 1.

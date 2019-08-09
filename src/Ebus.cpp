@@ -21,6 +21,8 @@
 
 #include <bits/types/struct_timespec.h>
 #include <unistd.h>
+#include <cctype>
+#include <cstdlib>
 #include <ctime>
 #include <iomanip>
 #include <map>
@@ -475,17 +477,42 @@ const std::vector<std::byte> ebus::Ebus::EbusImpl::range(const std::vector<std::
 
 const std::vector<std::byte> ebus::Ebus::EbusImpl::toVector(const std::string &str)
 {
-	return (Sequence::toVector((str)));
+	std::vector<std::byte> result;
+
+	for (size_t i = 0; i + 1 < str.size(); i += 2)
+		result.push_back(std::byte(std::strtoul(str.substr(i, 2).c_str(), nullptr, 16)));
+
+	return (result);
 }
 
 const std::string ebus::Ebus::EbusImpl::toString(const std::vector<std::byte> &vec)
 {
-	return (Sequence::toString(vec));
+	std::ostringstream ostr;
+
+	for (size_t i = 0; i < vec.size(); i++)
+		ostr << std::nouppercase << std::hex << std::setw(2) << std::setfill('0') << static_cast<unsigned>(vec[i]);
+
+	return (ostr.str());
 }
 
 bool ebus::Ebus::EbusImpl::isHex(const std::string &str, std::ostringstream &result, const int &nibbles)
 {
-	return (Sequence::isHex(str, result, nibbles));
+	if ((str.length() % nibbles) != 0)
+	{
+		result << "invalid hex string";
+		return (false);
+	}
+
+	for (size_t i = 0; i < str.size(); ++i)
+	{
+		if (!std::isxdigit(str[i]))
+		{
+			result << "invalid char '" << str[i] << "'";
+			return (false);
+		}
+	}
+
+	return (true);
 }
 
 int ebus::Ebus::EbusImpl::transmit(Telegram &tel)
