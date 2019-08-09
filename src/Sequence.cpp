@@ -26,10 +26,9 @@
 #include <iterator>
 #include <sstream>
 
-ebus::Sequence::Sequence(const std::string &str)
+ebus::Sequence::Sequence(const std::vector<std::byte> &vec, const bool extended)
 {
-	for (size_t i = 0; i + 1 < str.size(); i += 2)
-		push_back(std::byte(std::strtoul(str.substr(i, 2).c_str(), nullptr, 16)), false);
+	assign(vec, extended);
 }
 
 ebus::Sequence::Sequence(const Sequence &seq, const size_t index, size_t len)
@@ -42,10 +41,18 @@ ebus::Sequence::Sequence(const Sequence &seq, const size_t index, size_t len)
 	m_extended = seq.m_extended;
 }
 
-void ebus::Sequence::push_back(const std::byte byte, const bool isExtended)
+void ebus::Sequence::assign(const std::vector<std::byte> &vec, const bool extended)
+{
+	clear();
+
+	for (size_t i = 0; i < vec.size(); i++)
+		push_back(vec[i], extended);
+}
+
+void ebus::Sequence::push_back(const std::byte byte, const bool extended)
 {
 	m_seq.push_back(byte);
-	m_extended = isExtended;
+	m_extended = extended;
 }
 
 const std::byte& ebus::Sequence::operator[](const size_t index) const
@@ -162,37 +169,6 @@ const std::string ebus::Sequence::toString() const
 const std::vector<std::byte> ebus::Sequence::getSequence() const
 {
 	return (m_seq);
-}
-
-size_t ebus::Sequence::find(const Sequence &seq, const size_t pos) const noexcept
-{
-	for (size_t i = pos; i + seq.size() <= m_seq.size(); i++)
-		if (equal(m_seq.begin() + i, m_seq.begin() + i + seq.size(), seq.m_seq.begin())) return (i);
-
-	return (npos);
-}
-
-int ebus::Sequence::compare(const Sequence &seq) const noexcept
-{
-	if (m_seq.size() < seq.size())
-		return (-1);
-	else if (m_seq.size() > seq.size())
-		return (1);
-	else if (equal(m_seq.begin(), m_seq.end(), seq.m_seq.begin())) return (0);
-
-	return (-1);
-}
-
-bool ebus::Sequence::contains(const std::string &str) const noexcept
-{
-	std::ostringstream result;
-
-	if (isHex(str, result, 2))
-	{
-		if (find(Sequence(str)) != npos) return (true);
-	}
-
-	return (false);
 }
 
 const std::vector<std::byte> ebus::Sequence::range(const std::vector<std::byte> &seq, const size_t index, const size_t len)

@@ -45,6 +45,7 @@ ebus::Telegram::Telegram(Sequence &seq)
 
 void ebus::Telegram::parseSequence(Sequence &seq)
 {
+	clear();
 	seq.reduce();
 	int offset = 0;
 

@@ -42,10 +42,12 @@ public:
 	static const size_t npos = -1;
 
 	Sequence() = default;
-	explicit Sequence(const std::string &str);
+	Sequence(const std::vector<std::byte> &vec, const bool extended = true);
 	Sequence(const Sequence &seq, const size_t index, size_t len = 0);
 
-	void push_back(const std::byte byte, const bool isExtended = true);
+	void assign(const std::vector<std::byte> &vec, const bool extended = true);
+
+	void push_back(const std::byte byte, const bool extended = true);
 
 	const std::byte& operator[](const size_t index) const;
 	const std::vector<std::byte> range(const size_t index, const size_t len);
@@ -63,12 +65,6 @@ public:
 
 	const std::string toString() const;
 	const std::vector<std::byte> getSequence() const;
-
-	size_t find(const Sequence &seq, const size_t pos = 0) const noexcept;
-
-	int compare(const Sequence &seq) const noexcept;
-
-	bool contains(const std::string &str) const noexcept;
 
 	static const std::vector<std::byte> range(const std::vector<std::byte> &seq, const size_t index, const size_t len);
 
