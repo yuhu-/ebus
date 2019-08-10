@@ -912,7 +912,7 @@ ebus::State ebus::Ebus::EbusImpl::sendResponse()
 		writeRead(tel.getSlaveCRC(), 0, 0);
 
 		// receive ACK
-		read(byte, 0, 5000L);
+		read(byte, 0, 10000L);
 
 		if (byte != seq_ack && byte != seq_nak)
 		{
@@ -962,7 +962,7 @@ ebus::State ebus::Ebus::EbusImpl::lockBus()
 
 	byte = seq_zero;
 
-	read(byte, 0, 5000L);
+	read(byte, 0, 10000L);
 
 	if (byte != tel.getMasterQQ())
 	{
@@ -1012,7 +1012,7 @@ ebus::State ebus::Ebus::EbusImpl::sendMessage()
 		std::byte byte;
 
 		// receive ACK
-		read(byte, 0, 5000L);
+		read(byte, 0, 10000L);
 
 		tel.setSlaveACK(byte);
 
