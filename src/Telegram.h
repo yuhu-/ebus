@@ -119,7 +119,6 @@ private:
 	const std::string errorText(const int error);
 
 	const std::string toStringMasterError();
-
 	const std::string toStringSlaveError();
 	const std::string toStringSlaveACK() const;
 
