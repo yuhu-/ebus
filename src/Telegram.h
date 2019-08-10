@@ -71,17 +71,14 @@ public:
 	void clear();
 
 	std::byte getMasterQQ() const;
-	std::byte getMasterZZ() const;
 
 	Sequence getMaster() const;
-	size_t getMasterNN() const;
 	std::byte getMasterCRC() const;
 	int getMasterState() const;
 
 	void setSlaveACK(const std::byte byte);
 
 	Sequence getSlave() const;
-	size_t getSlaveNN() const;
 	std::byte getSlaveCRC() const;
 	int getSlaveState() const;
 
@@ -95,20 +92,16 @@ public:
 	const std::string toString();
 
 	const std::string toStringMaster();
-	const std::string toStringMasterCRC();
-	const std::string toStringMasterACK() const;
 	const std::string toStringMasterError();
 
 	const std::string toStringSlave();
-	const std::string toStringSlaveCRC();
 	const std::string toStringSlaveACK() const;
 	const std::string toStringSlaveError();
 
-	static const std::string errorText(const int error);
+	const std::string errorText(const int error);
 
 	static bool isMaster(const std::byte byte);
 	static bool isSlave(const std::byte byte);
-	static bool isAddressValid(const std::byte byte);
 	static std::byte slaveAddress(const std::byte address);
 
 private:
@@ -131,8 +124,9 @@ private:
 
 	std::byte m_masterACK = seq_zero;
 
-	static int checkMasterSequence(Sequence &seq);
-	static int checkSlaveSequence(Sequence &seq);
+	bool isAddressValid(const std::byte byte);
+	int checkMasterSequence(Sequence &seq);
+	int checkSlaveSequence(Sequence &seq);
 };
 
 } // namespace ebus

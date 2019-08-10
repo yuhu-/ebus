@@ -382,19 +382,9 @@ std::byte ebus::Telegram::getMasterQQ() const
 	return (m_masterQQ);
 }
 
-std::byte ebus::Telegram::getMasterZZ() const
-{
-	return (m_masterZZ);
-}
-
 ebus::Sequence ebus::Telegram::getMaster() const
 {
 	return (m_master);
-}
-
-size_t ebus::Telegram::getMasterNN() const
-{
-	return (m_masterNN);
 }
 
 std::byte ebus::Telegram::getMasterCRC() const
@@ -415,11 +405,6 @@ void ebus::Telegram::setSlaveACK(const std::byte byte)
 ebus::Sequence ebus::Telegram::getSlave() const
 {
 	return (m_slave);
-}
-
-size_t ebus::Telegram::getSlaveNN() const
-{
-	return (m_slaveNN);
 }
 
 std::byte ebus::Telegram::getSlaveCRC() const
@@ -486,26 +471,6 @@ const std::string ebus::Telegram::toStringMaster()
 	return (ostr.str());
 }
 
-const std::string ebus::Telegram::toStringMasterCRC()
-{
-	std::ostringstream ostr;
-	if (m_masterState != SEQ_OK)
-		ostr << toStringMasterError();
-	else
-		ostr << std::nouppercase << std::hex << std::setw(2) << std::setfill('0') << static_cast<unsigned>(m_masterCRC);
-
-	return (ostr.str());
-}
-
-const std::string ebus::Telegram::toStringMasterACK() const
-{
-	std::ostringstream ostr;
-
-	ostr << std::nouppercase << std::hex << std::setw(2) << std::setfill('0') << static_cast<unsigned>(m_masterACK);
-
-	return (ostr.str());
-}
-
 const std::string ebus::Telegram::toStringMasterError()
 {
 	std::ostringstream ostr;
@@ -529,17 +494,6 @@ const std::string ebus::Telegram::toStringSlave()
 
 		if (m_type == TEL_TYPE_MS) ostr << m_slave.toString();
 	}
-
-	return (ostr.str());
-}
-
-const std::string ebus::Telegram::toStringSlaveCRC()
-{
-	std::ostringstream ostr;
-	if (m_slaveState != SEQ_OK)
-		ostr << toStringSlaveError();
-	else
-		ostr << std::nouppercase << std::hex << std::setw(2) << std::setfill('0') << static_cast<unsigned>(m_slaveCRC);
 
 	return (ostr.str());
 }
@@ -588,16 +542,16 @@ bool ebus::Telegram::isSlave(const std::byte byte)
 	return (!isMaster(byte) && byte != seq_syn && byte != seq_exp);
 }
 
-bool ebus::Telegram::isAddressValid(const std::byte byte)
-{
-	return (byte != seq_syn && byte != seq_exp);
-}
-
 std::byte ebus::Telegram::slaveAddress(const std::byte address)
 {
 	if (isSlave(address)) return (address);
 
 	return (std::byte(std::to_integer<int>(address) + 5));
+}
+
+bool ebus::Telegram::isAddressValid(const std::byte byte)
+{
+	return (byte != seq_syn && byte != seq_exp);
 }
 
 int ebus::Telegram::checkMasterSequence(Sequence &seq)

@@ -142,11 +142,6 @@ void ebus::Sequence::reduce()
 	m_extended = false;
 }
 
-bool ebus::Sequence::isExtended() const
-{
-	return (m_extended);
-}
-
 const std::string ebus::Sequence::toString() const
 {
 	std::ostringstream ostr;

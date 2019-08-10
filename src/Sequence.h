@@ -59,8 +59,6 @@ public:
 	void extend();
 	void reduce();
 
-	bool isExtended() const;
-
 	const std::string toString() const;
 	const std::vector<std::byte> getSequence() const;
 
@@ -71,7 +69,7 @@ private:
 
 	bool m_extended = false;
 
-	static std::byte calcCRC(const std::byte byte, const std::byte init);
+	std::byte calcCRC(const std::byte byte, const std::byte init);
 };
 
 } // namespace ebus
