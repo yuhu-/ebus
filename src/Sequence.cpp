@@ -22,11 +22,6 @@
 #include <iomanip>
 #include <sstream>
 
-ebus::Sequence::Sequence(const std::vector<std::byte> &vec, const bool extended)
-{
-	assign(vec, extended);
-}
-
 ebus::Sequence::Sequence(const Sequence &seq, const size_t index, size_t len)
 {
 	if (len == 0) len = seq.size() - index;

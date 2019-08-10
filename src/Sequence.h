@@ -41,7 +41,6 @@ public:
 	static const size_t npos = -1;
 
 	Sequence() = default;
-	Sequence(const std::vector<std::byte> &vec, const bool extended = true);
 	Sequence(const Sequence &seq, const size_t index, size_t len = 0);
 
 	void assign(const std::vector<std::byte> &vec, const bool extended = true);
