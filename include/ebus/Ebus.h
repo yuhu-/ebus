@@ -23,7 +23,6 @@
 #include <cstddef>
 #include <experimental/propagate_const>
 #include <functional>
-#include <iostream>
 #include <memory>
 #include <string>
 #include <vector>
@@ -31,6 +30,9 @@
 namespace ebus
 {
 
+/**
+ * logger interface
+ */
 class ILogger
 {
 
@@ -45,6 +47,9 @@ public:
 
 };
 
+/**
+ * reaction type for active ebus participants only
+ */
 enum class Reaction
 {
 	nofunction,	// no function
@@ -53,51 +58,151 @@ enum class Reaction
 	response	// send response
 };
 
+/**
+ * ebus communication class
+ */
 class Ebus
 {
 
 public:
+	/**
+	 * create an ebus object
+	 *
+	 * @param address - own address byte
+	 * @param device - serial device string
+	 */
 	Ebus(const std::byte address, const std::string &device);
 
-	// Move functions declared
+	/**
+	 * move functions
+	 */
 	Ebus& operator=(Ebus&&);
 	Ebus(Ebus&&);
 
-	// Copy functions declared and defined here
+	/**
+	 * copy functions
+	 */
 	Ebus& operator=(const Ebus&) = delete;
 	Ebus(const Ebus&) = delete;
 
+	/**
+	 * destructor
+	 */
 	~Ebus();
 
+	/**
+	 * open the ebus device
+	 */
 	void open();
+
+	/**
+	 * close the ebus device
+	 */
 	void close();
 
-	bool isOnline();
+	/**
+	 * ebus device status
+	 *
+	 * @return true, when the ebus device is open
+	 */
+	bool online();
 
+	/**
+	 * transmit an ebus message
+	 *
+	 * @param message to transmit
+	 * @param response to transmitted message
+	 *
+	 * @return error number if an error occurred
+	 */
 	int transmit(const std::vector<std::byte> &message, std::vector<std::byte> &response);
 
-	const std::string errorText(const int error) const;
+	/**
+	 * error description
+	 *
+	 * @return string of given error number
+	 */
+	const std::string error_text(const int error) const;
 
+	/**
+	 * register a logger object for internal logging facilities
+	 *
+	 * @param logger object
+	 */
 	void register_logger(std::shared_ptr<ILogger> logger);
 
+	/**
+	 * register a 'process' reference which is necessary for active ebus participants only
+	 *
+	 * @param process callback function
+	 */
 	void register_process(
 		std::function<Reaction(const std::vector<std::byte> &message, std::vector<std::byte> &response)> process);
 
+	/**
+	 * register a 'publish' reference which is triggered after each successful ebus telegram
+	 *
+	 * @param publish callback function
+	 */
 	void register_publish(
 		std::function<void(const std::vector<std::byte> &message, const std::vector<std::byte> &response)> publish);
 
+	/**
+	 * register a 'rawdata' reference which is triggered after each received byte
+	 *
+	 * @param rawdata callback function
+	 */
 	void register_rawdata(std::function<void(const std::byte &byte)> rawdata);
 
-	void setReopenTime(const long &reopenTime);
-	void setArbitrationTime(const long &arbitrationTime);
-	void setReceiveTimeout(const long &receiveTimeout);
-	void setLockCounter(const int &lockCounter);
-	void setLockRetries(const int &lockRetries);
+	/**
+	 * timeout for bus access
+	 *
+	 * @param access_timeout [default: 4400 us]
+	 */
+	void set_access_timeout(const long &access_timeout);
 
-	static const std::vector<std::byte> range(const std::vector<std::byte> &seq, const size_t index, const size_t len);
-	static const std::vector<std::byte> toVector(const std::string &str);
-	static const std::string toString(const std::vector<std::byte> &vec);
-	static bool isHex(const std::string &str, std::ostringstream &result, const int nibbles);
+	/**
+	 * number of skipped characters after a successful ebus access
+	 *
+	 * @param lock_counter_max [default: 5 max: 25]
+	 */
+	void set_lock_counter_max(const int &lock_counter_max);
+
+	/**
+	 * number of attempts to open the ebus device (one second pause between two attempts)
+	 *
+	 * @param open_counter_max [default: 10]
+	 */
+	void set_open_counter_max(const int &open_counter_max);
+
+	/**
+	 * returns a part of given byte vector
+	 *
+	 * @param vec - byte vector
+	 * @param index - start position
+	 * @param len - length
+	 *
+	 * @return byte vector
+	 */
+	static const std::vector<std::byte> range(const std::vector<std::byte> &vec, const size_t index, const size_t len);
+
+	/**
+	 * convert a given string into a byte vector
+	 *
+	 * @param str - string
+	 *
+	 * @return byte vector
+	 */
+	static const std::vector<std::byte> to_vector(const std::string &str);
+
+	/**
+	 * convert a given byte vector into a string
+	 *
+	 * @param vec - byte vector
+	 *
+	 * @return string
+	 */
+	static const std::string to_string(const std::vector<std::byte> &vec);
 
 private:
 	class EbusImpl;

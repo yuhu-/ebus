@@ -21,7 +21,6 @@
 
 #include <bits/types/struct_timespec.h>
 #include <unistd.h>
-#include <cctype>
 #include <cstdlib>
 #include <ctime>
 #include <iomanip>
@@ -59,16 +58,15 @@
 #define STATE_WRN_RECV_RESP   16 // received response is invalid -> retry
 #define STATE_WRN_RECV_MSG    17 // received message is invalid
 
-#define STATE_ERR_LOCK_FAIL   21 // locking ebus failed
-#define STATE_ERR_ACK_NEG     22 // received acknowledge byte is negative -> failed
-#define STATE_ERR_ACK_WRONG   23 // received acknowledge byte is wrong
-#define STATE_ERR_NN_WRONG    24 // received size byte is wrong
-#define STATE_ERR_RECV_RESP   25 // received response is invalid -> failed
-#define STATE_ERR_RESP_CREA   26 // creating response failed
-#define STATE_ERR_RESP_SEND   27 // sending response failed
-#define STATE_ERR_BAD_TYPE    28 // received type does not allow an answer
-#define STATE_ERR_OPEN_FAIL   29 // opening ebus failed
-#define STATE_ERR_CLOSE_FAIL  30 // closing ebus failed
+#define STATE_ERR_OPEN_FAIL   21 // opening ebus failed
+#define STATE_ERR_CLOSE_FAIL  22 // closing ebus failed
+#define STATE_ERR_ACK_NEG     23 // received acknowledge byte is negative -> failed
+#define STATE_ERR_ACK_WRONG   24 // received acknowledge byte is wrong
+#define STATE_ERR_NN_WRONG    25 // received size byte is wrong
+#define STATE_ERR_RECV_RESP   26 // received response is invalid -> failed
+#define STATE_ERR_RESP_CREA   27 // creating response failed
+#define STATE_ERR_RESP_SEND   28 // sending response failed
+#define STATE_ERR_BAD_TYPE    29 // received type does not allow an answer
 
 std::map<int, std::string> EbusErrors =
 {
@@ -97,16 +95,15 @@ std::map<int, std::string> StateMessages =
 { STATE_WRN_RECV_RESP, "received response is invalid -> retry" },
 { STATE_WRN_RECV_MSG, "message is invalid" },
 
-{ STATE_ERR_LOCK_FAIL, "locking ebus failed" },
+{ STATE_ERR_OPEN_FAIL, "opening ebus failed" },
+{ STATE_ERR_CLOSE_FAIL, "closing ebus failed" },
 { STATE_ERR_ACK_NEG, "received acknowledge byte is negative -> failed" },
 { STATE_ERR_ACK_WRONG, "received acknowledge byte is wrong" },
 { STATE_ERR_NN_WRONG, "received size byte is wrong" },
 { STATE_ERR_RECV_RESP, "received response is invalid -> failed" },
 { STATE_ERR_RESP_CREA, "creating response failed" },
 { STATE_ERR_RESP_SEND, "sending response failed" },
-{ STATE_ERR_BAD_TYPE, "received type does not allow an answer" },
-{ STATE_ERR_OPEN_FAIL, "opening ebus failed" },
-{ STATE_ERR_CLOSE_FAIL, "closing ebus failed" } };
+{ STATE_ERR_BAD_TYPE, "received type does not allow an answer" } };
 
 namespace ebus
 {
@@ -150,7 +147,7 @@ public:
 	void open();
 	void close();
 
-	bool isOnline();
+	bool online();
 
 	int transmit(const std::vector<std::byte> &message, std::vector<std::byte> &response);
 
@@ -166,16 +163,14 @@ public:
 
 	void register_rawdata(std::function<void(const std::byte &byte)> rawdata);
 
-	void setReopenTime(const long &reopenTime);
-	void setArbitrationTime(const long &arbitrationTime);
-	void setReceiveTimeout(const long &receiveTimeout);
-	void setLockCounter(const int &lockCounter);
-	void setLockRetries(const int &lockRetries);
+	void set_access_timeout(const long &access_timeout);
+	void set_lock_counter_max(const int &lock_counter_max);
+
+	void set_open_counter_max(const int &open_counter_max);
 
 	static const std::vector<std::byte> range(const std::vector<std::byte> &seq, const size_t index, const size_t len);
-	static const std::vector<std::byte> toVector(const std::string &str);
-	static const std::string toString(const std::vector<std::byte> &seq);
-	static bool isHex(const std::string &str, std::ostringstream &result, const int &nibbles);
+	static const std::vector<std::byte> to_vector(const std::string &str);
+	static const std::string to_string(const std::vector<std::byte> &seq);
 
 private:
 	std::thread m_thread;
@@ -184,14 +179,16 @@ private:
 	bool m_online = false;
 	bool m_close = false;
 
-	const std::byte m_address;                       // ebus master address
-	const std::byte m_slaveAddress;                  // ebus slave address
+	const std::byte m_address;
+	const std::byte m_slaveAddress;
 
-	long m_reopenTime = 10L;                         // max. time to open ebus device [s]
-	long m_arbitrationTime = 5000L;                  // waiting time for arbitration test [us]
-	long m_receiveTimeout = 10000L;                  // max. time for receiving of one sequence sign [us]
-	int m_lockCounter = 5;                           // number of characters after a successful ebus access (max: 25)
-	int m_lockRetries = 2;                           // number of retries to lock ebus
+	long m_access_timeout = 4400L;
+
+	int m_lock_counter_max = 5;
+	int m_lock_counter = 0;
+
+	long m_open_counter_max = 10;
+	long m_open_counter = 0;
 
 	NQueue<std::shared_ptr<Message>> m_messageQueue;
 
@@ -205,9 +202,6 @@ private:
 
 	std::vector<std::function<void(const std::byte &byte)>> m_rawdata;
 
-	long m_curReopenTime = 0;
-	int m_curLockCounter = 0;
-	int m_curLockRetries = 0;
 	Sequence m_sequence;
 	std::shared_ptr<Message> m_activeMessage = nullptr;
 	std::shared_ptr<Message> m_passiveMessage = nullptr;
@@ -257,17 +251,17 @@ ebus::Ebus::Ebus(const std::byte address, const std::string &device) : impl
 {
 }
 
-// Move functions defined here
+// move functions
 ebus::Ebus& ebus::Ebus::operator=(Ebus&&) = default;
 ebus::Ebus::Ebus(Ebus&&) = default;
 
-// Copy functions defined here
+// copy functions
 //ebus::Ebus& ebus::Ebus::Ebus::operator=(const Ebus &anotherEbus)
 //{
 //	*pImpl = *anotherEbus.pImpl;
 //	return (*this);
 //}
-//
+
 //ebus::Ebus::Ebus(const Ebus &anotherEbus) : pImpl(std::make_unique<Ebus::impl>(*anotherEbus.pImpl))
 //{
 //}
@@ -284,9 +278,9 @@ void ebus::Ebus::close()
 	this->impl->close();
 }
 
-bool ebus::Ebus::isOnline()
+bool ebus::Ebus::online()
 {
-	return (this->impl->isOnline());
+	return (this->impl->online());
 }
 
 int ebus::Ebus::transmit(const std::vector<std::byte> &message, std::vector<std::byte> &response)
@@ -294,7 +288,7 @@ int ebus::Ebus::transmit(const std::vector<std::byte> &message, std::vector<std:
 	return (this->impl->transmit(message, response));
 }
 
-const std::string ebus::Ebus::errorText(const int error) const
+const std::string ebus::Ebus::error_text(const int error) const
 {
 	return (this->impl->errorText(error));
 }
@@ -321,29 +315,19 @@ void ebus::Ebus::register_rawdata(std::function<void(const std::byte &byte)> raw
 	this->impl->register_rawdata(rawdata);
 }
 
-void ebus::Ebus::setReopenTime(const long &reopenTime)
+void ebus::Ebus::set_access_timeout(const long &access_timeout)
 {
-	this->impl->setReopenTime(reopenTime);
+	this->impl->set_access_timeout(access_timeout);
 }
 
-void ebus::Ebus::setArbitrationTime(const long &arbitrationTime)
+void ebus::Ebus::set_lock_counter_max(const int &lock_counter_max)
 {
-	this->impl->setArbitrationTime(arbitrationTime);
+	this->impl->set_lock_counter_max(lock_counter_max);
 }
 
-void ebus::Ebus::setReceiveTimeout(const long &receiveTimeout)
+void ebus::Ebus::set_open_counter_max(const int &open_counter_max)
 {
-	this->impl->setReceiveTimeout(receiveTimeout);
-}
-
-void ebus::Ebus::setLockCounter(const int &lockCounter)
-{
-	this->impl->setLockCounter(lockCounter);
-}
-
-void ebus::Ebus::setLockRetries(const int &lockRetries)
-{
-	this->impl->setLockRetries(lockRetries);
+	this->impl->set_open_counter_max(open_counter_max);
 }
 
 const std::vector<std::byte> ebus::Ebus::range(const std::vector<std::byte> &seq, const size_t index, const size_t len)
@@ -351,19 +335,14 @@ const std::vector<std::byte> ebus::Ebus::range(const std::vector<std::byte> &seq
 	return (EbusImpl::range(seq, index, len));
 }
 
-const std::vector<std::byte> ebus::Ebus::toVector(const std::string &str)
+const std::vector<std::byte> ebus::Ebus::to_vector(const std::string &str)
 {
-	return (EbusImpl::toVector(str));
+	return (EbusImpl::to_vector(str));
 }
 
-const std::string ebus::Ebus::toString(const std::vector<std::byte> &vec)
+const std::string ebus::Ebus::to_string(const std::vector<std::byte> &vec)
 {
-	return (EbusImpl::toString(vec));
-}
-
-bool ebus::Ebus::isHex(const std::string &str, std::ostringstream &result, const int nibbles)
-{
-	return (EbusImpl::isHex(str, result, nibbles));
+	return (EbusImpl::to_string(vec));
 }
 
 ebus::Ebus::EbusImpl::EbusImpl(const std::byte address, const std::string &device) : Notify(), m_address(address), m_slaveAddress(
@@ -402,7 +381,7 @@ void ebus::Ebus::EbusImpl::close()
 	m_close = true;
 }
 
-bool ebus::Ebus::EbusImpl::isOnline()
+bool ebus::Ebus::EbusImpl::online()
 {
 	return (m_online);
 }
@@ -445,29 +424,19 @@ void ebus::Ebus::EbusImpl::register_rawdata(std::function<void(const std::byte &
 	m_rawdata.push_back(rawdata);
 }
 
-void ebus::Ebus::EbusImpl::setReopenTime(const long &reopenTime)
+void ebus::Ebus::EbusImpl::set_access_timeout(const long &access_timeout)
 {
-	m_reopenTime = reopenTime;
+	m_access_timeout = access_timeout;
 }
 
-void ebus::Ebus::EbusImpl::setArbitrationTime(const long &arbitrationTime)
+void ebus::Ebus::EbusImpl::set_lock_counter_max(const int &lock_counter_max)
 {
-	m_arbitrationTime = arbitrationTime;
+	m_lock_counter_max = lock_counter_max;
 }
 
-void ebus::Ebus::EbusImpl::setReceiveTimeout(const long &receiveTimeout)
+void ebus::Ebus::EbusImpl::set_open_counter_max(const int &open_counter_max)
 {
-	m_receiveTimeout = receiveTimeout;
-}
-
-void ebus::Ebus::EbusImpl::setLockCounter(const int &lockCounter)
-{
-	m_lockCounter = lockCounter;
-}
-
-void ebus::Ebus::EbusImpl::setLockRetries(const int &lockRetries)
-{
-	m_lockRetries = lockRetries;
+	m_open_counter_max = open_counter_max;
 }
 
 const std::vector<std::byte> ebus::Ebus::EbusImpl::range(const std::vector<std::byte> &seq, const size_t index, const size_t len)
@@ -475,7 +444,7 @@ const std::vector<std::byte> ebus::Ebus::EbusImpl::range(const std::vector<std::
 	return (Sequence::range(seq, index, len));
 }
 
-const std::vector<std::byte> ebus::Ebus::EbusImpl::toVector(const std::string &str)
+const std::vector<std::byte> ebus::Ebus::EbusImpl::to_vector(const std::string &str)
 {
 	std::vector<std::byte> result;
 
@@ -485,7 +454,7 @@ const std::vector<std::byte> ebus::Ebus::EbusImpl::toVector(const std::string &s
 	return (result);
 }
 
-const std::string ebus::Ebus::EbusImpl::toString(const std::vector<std::byte> &vec)
+const std::string ebus::Ebus::EbusImpl::to_string(const std::vector<std::byte> &vec)
 {
 	std::ostringstream ostr;
 
@@ -493,26 +462,6 @@ const std::string ebus::Ebus::EbusImpl::toString(const std::vector<std::byte> &v
 		ostr << std::nouppercase << std::hex << std::setw(2) << std::setfill('0') << static_cast<unsigned>(vec[i]);
 
 	return (ostr.str());
-}
-
-bool ebus::Ebus::EbusImpl::isHex(const std::string &str, std::ostringstream &result, const int &nibbles)
-{
-	if ((str.length() % nibbles) != 0)
-	{
-		result << "invalid hex string";
-		return (false);
-	}
-
-	for (size_t i = 0; i < str.size(); ++i)
-	{
-		if (!std::isxdigit(str[i]))
-		{
-			result << "invalid char '" << str[i] << "'";
-			return (false);
-		}
-	}
-
-	return (true);
 }
 
 int ebus::Ebus::EbusImpl::transmit(Telegram &tel)
@@ -527,7 +476,7 @@ int ebus::Ebus::EbusImpl::transmit(Telegram &tel)
 	{
 		result = EBUS_ERR_MASTER;
 	}
-	else if (!isOnline())
+	else if (!online())
 	{
 		result = EBUS_ERR_OFFLINE;
 	}
@@ -577,9 +526,9 @@ void ebus::Ebus::EbusImpl::writeRead(const std::byte &byte, const long sec, cons
 
 void ebus::Ebus::EbusImpl::reset()
 {
-	m_curReopenTime = 0;
-	m_curLockCounter = m_lockCounter;
-	m_curLockRetries = 0;
+	m_open_counter = 0;
+	m_lock_counter = m_lock_counter_max;
+
 	m_sequence.clear();
 
 	if (m_activeMessage != nullptr)
@@ -722,8 +671,8 @@ ebus::State ebus::Ebus::EbusImpl::openDevice()
 		{
 			logWarn(stateMessage(STATE_ERR_OPEN_FAIL));
 
-			m_curReopenTime++;
-			if (m_curReopenTime > m_reopenTime) return (State::IdleSystem);
+			m_open_counter++;
+			if (m_open_counter > m_open_counter_max) return (State::IdleSystem);
 
 			sleep(1);
 			return (State::OpenDevice);
@@ -756,10 +705,10 @@ ebus::State ebus::Ebus::EbusImpl::monitorBus()
 
 	if (byte == seq_syn)
 	{
-		if (m_curLockCounter != 0)
+		if (m_lock_counter != 0)
 		{
-			m_curLockCounter--;
-			logDebug("curLockCounter: " + std::to_string(m_curLockCounter));
+			m_lock_counter--;
+			logDebug("m_lock_counter: " + std::to_string(m_lock_counter));
 		}
 
 		// decode Sequence
@@ -772,7 +721,7 @@ ebus::State ebus::Ebus::EbusImpl::monitorBus()
 
 			if (tel.isValid()) publish(tel.getMaster().getSequence(), tel.getSlave().getSequence());
 
-			if (m_sequence.size() == 1 && m_curLockCounter < 2) m_curLockCounter = 2;
+			if (m_sequence.size() == 1 && m_lock_counter < 2) m_lock_counter = 2;
 
 			tel.clear();
 			m_sequence.clear();
@@ -782,7 +731,7 @@ ebus::State ebus::Ebus::EbusImpl::monitorBus()
 		if (m_activeMessage == nullptr && m_messageQueue.size() > 0) m_activeMessage = m_messageQueue.dequeue();
 
 		// handle Message
-		if (m_activeMessage != nullptr && m_curLockCounter == 0) return (State::LockBus);
+		if (m_activeMessage != nullptr && m_lock_counter == 0) return (State::LockBus);
 	}
 	else
 	{
@@ -963,7 +912,7 @@ ebus::State ebus::Ebus::EbusImpl::sendResponse()
 		writeRead(tel.getSlaveCRC(), 0, 0);
 
 		// receive ACK
-		read(byte, 0, m_receiveTimeout);
+		read(byte, 0, 5000L);
 
 		if (byte != seq_ack && byte != seq_nak)
 		{
@@ -1008,38 +957,26 @@ ebus::State ebus::Ebus::EbusImpl::lockBus()
 	write(byte);
 
 	struct timespec req =
-	{ 0, m_arbitrationTime * 1000L };
+	{ 0, m_access_timeout * 1000L };
 	nanosleep(&req, (struct timespec*) NULL);
 
 	byte = seq_zero;
 
-	read(byte, 0, m_receiveTimeout);
+	read(byte, 0, 5000L);
 
 	if (byte != tel.getMasterQQ())
 	{
 		logDebug(stateMessage(STATE_WRN_ARB_LOST));
 
-		if (m_curLockRetries < m_lockRetries)
+		if ((byte & std::byte(0x0f)) != (tel.getMasterQQ() & std::byte(0x0f)))
 		{
-			m_curLockRetries++;
-
-			if ((byte & std::byte(0x0f)) != (tel.getMasterQQ() & std::byte(0x0f)))
-			{
-				m_curLockCounter = m_lockCounter;
-				logDebug(stateMessage(STATE_WRN_PRI_LOST));
-			}
-			else
-			{
-				m_curLockCounter = 1;
-				logDebug(stateMessage(STATE_WRN_PRI_FIT));
-			}
+			m_lock_counter = m_lock_counter_max;
+			logDebug(stateMessage(STATE_WRN_PRI_LOST));
 		}
 		else
 		{
-			logWarn(stateMessage(STATE_ERR_LOCK_FAIL));
-			m_activeMessage->m_state = EBUS_ERR_TRANSMIT;
-
-			reset();
+			m_lock_counter = 1;
+			logDebug(stateMessage(STATE_WRN_PRI_FIT));
 		}
 
 		return (State::MonitorBus);
@@ -1075,7 +1012,7 @@ ebus::State ebus::Ebus::EbusImpl::sendMessage()
 		std::byte byte;
 
 		// receive ACK
-		read(byte, 0, m_receiveTimeout);
+		read(byte, 0, 5000L);
 
 		tel.setSlaveACK(byte);
 
