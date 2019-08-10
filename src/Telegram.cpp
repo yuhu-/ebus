@@ -40,10 +40,10 @@ std::map<int, std::string> SequenceErrors =
 
 ebus::Telegram::Telegram(Sequence &seq)
 {
-	parseSequence(seq);
+	parse(seq);
 }
 
-void ebus::Telegram::parseSequence(Sequence &seq)
+void ebus::Telegram::parse(Sequence &seq)
 {
 	clear();
 	seq.reduce();
@@ -422,16 +422,6 @@ void ebus::Telegram::setMasterACK(const std::byte byte)
 	m_masterACK = byte;
 }
 
-void ebus::Telegram::setType(const std::byte byte)
-{
-	if (byte == seq_broad)
-		m_type = TEL_TYPE_BC;
-	else if (isMaster(byte))
-		m_type = TEL_TYPE_MM;
-	else
-		m_type = TEL_TYPE_MS;
-}
-
 int ebus::Telegram::getType() const
 {
 	return (m_type);
@@ -471,16 +461,6 @@ const std::string ebus::Telegram::toStringMaster()
 	return (ostr.str());
 }
 
-const std::string ebus::Telegram::toStringMasterError()
-{
-	std::ostringstream ostr;
-	if (m_master.size() > 0) ostr << "'" << m_master.toString() << "' ";
-
-	ostr << "master " << errorText(m_masterState);
-
-	return (ostr.str());
-}
-
 const std::string ebus::Telegram::toStringSlave()
 {
 	std::ostringstream ostr;
@@ -494,34 +474,6 @@ const std::string ebus::Telegram::toStringSlave()
 
 		if (m_type == TEL_TYPE_MS) ostr << m_slave.toString();
 	}
-
-	return (ostr.str());
-}
-
-const std::string ebus::Telegram::toStringSlaveACK() const
-{
-	std::ostringstream ostr;
-
-	ostr << std::nouppercase << std::hex << std::setw(2) << std::setfill('0') << static_cast<unsigned>(m_slaveACK);
-
-	return (ostr.str());
-}
-
-const std::string ebus::Telegram::toStringSlaveError()
-{
-	std::ostringstream ostr;
-	if (m_slave.size() > 0) ostr << "'" << m_slave.toString() << "' ";
-
-	ostr << "slave " << errorText(m_slaveState);
-
-	return (ostr.str());
-}
-
-const std::string ebus::Telegram::errorText(const int error)
-{
-	std::ostringstream ostr;
-
-	ostr << SequenceErrors[error];
 
 	return (ostr.str());
 }
@@ -547,6 +499,54 @@ std::byte ebus::Telegram::slaveAddress(const std::byte address)
 	if (isSlave(address)) return (address);
 
 	return (std::byte(std::to_integer<int>(address) + 5));
+}
+
+const std::string ebus::Telegram::errorText(const int error)
+{
+	std::ostringstream ostr;
+
+	ostr << SequenceErrors[error];
+
+	return (ostr.str());
+}
+
+const std::string ebus::Telegram::toStringMasterError()
+{
+	std::ostringstream ostr;
+	if (m_master.size() > 0) ostr << "'" << m_master.toString() << "' ";
+
+	ostr << "master " << errorText(m_masterState);
+
+	return (ostr.str());
+}
+
+const std::string ebus::Telegram::toStringSlaveError()
+{
+	std::ostringstream ostr;
+	if (m_slave.size() > 0) ostr << "'" << m_slave.toString() << "' ";
+
+	ostr << "slave " << errorText(m_slaveState);
+
+	return (ostr.str());
+}
+
+const std::string ebus::Telegram::toStringSlaveACK() const
+{
+	std::ostringstream ostr;
+
+	ostr << std::nouppercase << std::hex << std::setw(2) << std::setfill('0') << static_cast<unsigned>(m_slaveACK);
+
+	return (ostr.str());
+}
+
+void ebus::Telegram::setType(const std::byte byte)
+{
+	if (byte == seq_broad)
+		m_type = TEL_TYPE_BC;
+	else if (isMaster(byte))
+		m_type = TEL_TYPE_MM;
+	else
+		m_type = TEL_TYPE_MS;
 }
 
 bool ebus::Telegram::isAddressValid(const std::byte byte)

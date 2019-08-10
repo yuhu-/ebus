@@ -60,7 +60,7 @@ public:
 	Telegram() = default;
 	explicit Telegram(Sequence &seq);
 
-	void parseSequence(Sequence &seq);
+	void parse(Sequence &seq);
 
 	void createMaster(const std::byte src, const std::vector<std::byte> &vec);
 	void createMaster(Sequence &seq);
@@ -84,21 +84,13 @@ public:
 
 	void setMasterACK(const std::byte byte);
 
-	void setType(const std::byte byte);
 	int getType() const;
 
 	bool isValid() const;
 
 	const std::string toString();
-
 	const std::string toStringMaster();
-	const std::string toStringMasterError();
-
 	const std::string toStringSlave();
-	const std::string toStringSlaveACK() const;
-	const std::string toStringSlaveError();
-
-	const std::string errorText(const int error);
 
 	static bool isMaster(const std::byte byte);
 	static bool isSlave(const std::byte byte);
@@ -124,6 +116,14 @@ private:
 
 	std::byte m_masterACK = seq_zero;
 
+	const std::string errorText(const int error);
+
+	const std::string toStringMasterError();
+
+	const std::string toStringSlaveError();
+	const std::string toStringSlaveACK() const;
+
+	void setType(const std::byte byte);
 	bool isAddressValid(const std::byte byte);
 	int checkMasterSequence(Sequence &seq);
 	int checkSlaveSequence(Sequence &seq);
