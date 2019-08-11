@@ -41,33 +41,6 @@
 #define EBUS_ERR_DEVICE       -4 // a device error occurred
 #define EBUS_ERR_OFFLINE      -5 // ebus service is offline
 
-#define STATE_INF_DEV_OPEN     1 // device opened
-#define STATE_INF_DEV_CLOSE    2 // device closed
-#define STATE_INF_EBUS_LOCK    3 // ebus locked
-#define STATE_INF_EBUS_FREE    4 // ebus freed
-#define STATE_INF_MSG_INGORE   5 // message ignored
-#define STATE_INF_DEV_FLUSH    6 // device flushed
-#define STATE_INF_NOT_DEF      7 // message not defined
-#define STATE_INF_NO_FUNC      8 // function not implemented
-
-#define STATE_WRN_BYTE_DIF    11 // written/read byte difference
-#define STATE_WRN_ARB_LOST    12 // arbitration lost
-#define STATE_WRN_PRI_FIT     13 // priority class fit -> retry
-#define STATE_WRN_PRI_LOST    14 // priority class lost
-#define STATE_WRN_ACK_NEG     15 // received acknowledge byte is negative -> retry
-#define STATE_WRN_RECV_RESP   16 // received response is invalid -> retry
-#define STATE_WRN_RECV_MSG    17 // received message is invalid
-
-#define STATE_ERR_OPEN_FAIL   21 // opening ebus failed
-#define STATE_ERR_CLOSE_FAIL  22 // closing ebus failed
-#define STATE_ERR_ACK_NEG     23 // received acknowledge byte is negative -> failed
-#define STATE_ERR_ACK_WRONG   24 // received acknowledge byte is wrong
-#define STATE_ERR_NN_WRONG    25 // received size byte is wrong
-#define STATE_ERR_RECV_RESP   26 // received response is invalid -> failed
-#define STATE_ERR_RESP_CREA   27 // creating response failed
-#define STATE_ERR_RESP_SEND   28 // sending response failed
-#define STATE_ERR_BAD_TYPE    29 // received type does not allow an answer
-
 std::map<int, std::string> EbusErrors =
 {
 { EBUS_ERR_MASTER, "sending is only as master possible" },
@@ -76,37 +49,35 @@ std::map<int, std::string> EbusErrors =
 { EBUS_ERR_DEVICE, "a device error occurred" },
 { EBUS_ERR_OFFLINE, "ebus service is offline" } };
 
-std::map<int, std::string> StateMessages =
-{
-{ STATE_INF_DEV_OPEN, "device opened" },
-{ STATE_INF_DEV_CLOSE, "device closed" },
-{ STATE_INF_EBUS_LOCK, "ebus locked" },
-{ STATE_INF_EBUS_FREE, "ebus freed" },
-{ STATE_INF_MSG_INGORE, "message ignored" },
-{ STATE_INF_DEV_FLUSH, "device flushed" },
-{ STATE_INF_NOT_DEF, "message not defined" },
-{ STATE_INF_NO_FUNC, "function not implemented" },
-
-{ STATE_WRN_BYTE_DIF, "written/read byte difference" },
-{ STATE_WRN_ARB_LOST, "arbitration lost" },
-{ STATE_WRN_PRI_FIT, "priority class fit -> retry" },
-{ STATE_WRN_PRI_LOST, "priority class lost" },
-{ STATE_WRN_ACK_NEG, "received acknowledge byte is negative -> retry" },
-{ STATE_WRN_RECV_RESP, "received response is invalid -> retry" },
-{ STATE_WRN_RECV_MSG, "message is invalid" },
-
-{ STATE_ERR_OPEN_FAIL, "opening ebus failed" },
-{ STATE_ERR_CLOSE_FAIL, "closing ebus failed" },
-{ STATE_ERR_ACK_NEG, "received acknowledge byte is negative -> failed" },
-{ STATE_ERR_ACK_WRONG, "received acknowledge byte is wrong" },
-{ STATE_ERR_NN_WRONG, "received size byte is wrong" },
-{ STATE_ERR_RECV_RESP, "received response is invalid -> failed" },
-{ STATE_ERR_RESP_CREA, "creating response failed" },
-{ STATE_ERR_RESP_SEND, "sending response failed" },
-{ STATE_ERR_BAD_TYPE, "received type does not allow an answer" } };
-
 namespace ebus
 {
+
+static const std::string info_dev_open = "device opened";
+static const std::string info_dev_close = "device closed";
+static const std::string info_ebus_lock = "ebus locked";
+static const std::string info_ebus_free = "ebus freed";
+static const std::string info_msg_ignore = "message ignored";
+static const std::string info_dev_flush = "device flushed";
+static const std::string info_not_def = "message not defined";
+static const std::string info_no_func = "no function registered";
+
+static const std::string warn_byte_dif = "written/read byte difference";
+static const std::string warn_arb_lost = "arbitration lost";
+static const std::string warn_pri_fit = "priority class fit -> retry";
+static const std::string warn_pri_lost = "priority class lost";
+static const std::string warn_ack_neg = "received acknowledge byte is negative -> retry";
+static const std::string warn_recv_resp = "received response is invalid -> retry";
+static const std::string warn_recv_msg = "message is invalid";
+
+static const std::string error_open_fail = "opening ebus failed";
+static const std::string error_close_fail = "closing ebus failed";
+static const std::string error_ack_neg = "received acknowledge byte is negative -> failed";
+static const std::string error_ack_wrong = "received acknowledge byte is wrong";
+static const std::string error_nn_wrong = "received size byte is wrong";
+static const std::string error_recv_resp = "received response is invalid -> failed";
+static const std::string error_resp_crea = "creating response failed";
+static const std::string error_resp_send = "sending response failed";
+static const std::string error_bad_type = "received type does not allow an answer";
 
 struct Message : public Notify
 {
@@ -151,7 +122,7 @@ public:
 
 	int transmit(const std::vector<std::byte> &message, std::vector<std::byte> &response);
 
-	const std::string errorText(const int error) const;
+	const std::string error_text(const int error) const;
 
 	void register_logger(std::shared_ptr<ILogger> logger);
 
@@ -210,11 +181,10 @@ private:
 
 	void read(std::byte &byte, const long sec, const long nsec);
 	void write(const std::byte &byte);
-	void writeRead(const std::byte &byte, const long sec, const long nsec);
+	void write_read(const std::byte &byte, const long sec, const long nsec);
 
 	void reset();
 
-	const std::string stateMessage(const int state);
 	const std::string telegramInfo(Telegram &tel);
 
 	void run();
@@ -290,7 +260,7 @@ int ebus::Ebus::transmit(const std::vector<std::byte> &message, std::vector<std:
 
 const std::string ebus::Ebus::error_text(const int error) const
 {
-	return (this->impl->errorText(error));
+	return (this->impl->error_text(error));
 }
 
 void ebus::Ebus::register_logger(std::shared_ptr<ILogger> logger)
@@ -397,7 +367,7 @@ int ebus::Ebus::EbusImpl::transmit(const std::vector<std::byte> &message, std::v
 	return (result);
 }
 
-const std::string ebus::Ebus::EbusImpl::errorText(const int error) const
+const std::string ebus::Ebus::EbusImpl::error_text(const int error) const
 {
 	return (EbusErrors[error]);
 }
@@ -484,7 +454,7 @@ int ebus::Ebus::EbusImpl::transmit(Telegram &tel)
 	{
 		std::shared_ptr<Message> message = std::make_shared<Message>(tel);
 		m_messageQueue.enqueue(message);
-		message->waitNotify();
+		message->wait();
 		result = message->m_state;
 		message.reset();
 	}
@@ -514,14 +484,14 @@ void ebus::Ebus::EbusImpl::write(const std::byte &byte)
 	logTrace(">" + ostr.str());
 }
 
-void ebus::Ebus::EbusImpl::writeRead(const std::byte &byte, const long sec, const long nsec)
+void ebus::Ebus::EbusImpl::write_read(const std::byte &byte, const long sec, const long nsec)
 {
 	write(byte);
 
 	std::byte readByte;
 	read(readByte, sec, nsec);
 
-	if (readByte != byte) logDebug(stateMessage(STATE_WRN_BYTE_DIF));
+	if (readByte != byte) logDebug(warn_byte_dif);
 }
 
 void ebus::Ebus::EbusImpl::reset()
@@ -544,15 +514,6 @@ void ebus::Ebus::EbusImpl::reset()
 		std::shared_ptr<Message> message = m_passiveMessage;
 		m_passiveMessage = nullptr;
 	}
-}
-
-const std::string ebus::Ebus::EbusImpl::stateMessage(const int state)
-{
-	std::ostringstream ostr;
-
-	ostr << StateMessages[state];
-
-	return (ostr.str());
 }
 
 const std::string ebus::Ebus::EbusImpl::telegramInfo(Telegram &tel)
@@ -642,9 +603,9 @@ ebus::State ebus::Ebus::EbusImpl::idleSystem()
 		m_device->close();
 
 		if (!m_device->isOpen())
-			logInfo(stateMessage(STATE_INF_DEV_CLOSE));
+			logInfo(info_dev_close);
 		else
-			logWarn(stateMessage(STATE_ERR_CLOSE_FAIL));
+			logWarn(error_close_fail);
 	}
 
 	reset();
@@ -652,7 +613,7 @@ ebus::State ebus::Ebus::EbusImpl::idleSystem()
 	m_online = false;
 	m_close = false;
 
-	waitNotify();
+	wait();
 
 	return (State::OpenDevice);
 }
@@ -669,7 +630,7 @@ ebus::State ebus::Ebus::EbusImpl::openDevice()
 
 		if (!m_device->isOpen())
 		{
-			logWarn(stateMessage(STATE_ERR_OPEN_FAIL));
+			logWarn(error_open_fail);
 
 			m_open_counter++;
 			if (m_open_counter > m_open_counter_max) return (State::IdleSystem);
@@ -679,7 +640,7 @@ ebus::State ebus::Ebus::EbusImpl::openDevice()
 		}
 	}
 
-	logInfo(stateMessage(STATE_INF_DEV_OPEN));
+	logInfo(info_dev_open);
 
 	do
 	{
@@ -690,7 +651,7 @@ ebus::State ebus::Ebus::EbusImpl::openDevice()
 
 	m_online = true;
 
-	logInfo(stateMessage(STATE_INF_DEV_FLUSH));
+	logInfo(info_dev_flush);
 
 	return (State::MonitorBus);
 }
@@ -766,7 +727,7 @@ ebus::State ebus::Ebus::EbusImpl::receiveMessage()
 	// maximum data bytes
 	if (std::to_integer<int>(m_sequence[4]) > seq_max_bytes)
 	{
-		logWarn(stateMessage(STATE_ERR_NN_WRONG));
+		logWarn(error_nn_wrong);
 		m_activeMessage->m_state = EBUS_ERR_TRANSMIT;
 
 		reset();
@@ -816,11 +777,11 @@ ebus::State ebus::Ebus::EbusImpl::receiveMessage()
 		else
 		{
 			byte = seq_nak;
-			logInfo(stateMessage(STATE_WRN_RECV_MSG));
+			logInfo(warn_recv_msg);
 		}
 
 		// send ACK
-		writeRead(byte, 0, 0);
+		write_read(byte, 0, 0);
 
 		tel.setSlaveACK(byte);
 	}
@@ -855,13 +816,13 @@ ebus::State ebus::Ebus::EbusImpl::processMessage()
 	switch (reaction)
 	{
 	case Reaction::nofunction:
-		logDebug(stateMessage(STATE_INF_NO_FUNC));
+		logDebug(info_no_func);
 		break;
 	case Reaction::undefined:
-		logDebug(stateMessage(STATE_INF_NOT_DEF));
+		logDebug(info_not_def);
 		break;
 	case Reaction::ignore:
-		logInfo(stateMessage(STATE_INF_MSG_INGORE));
+		logInfo(info_msg_ignore);
 		break;
 	case Reaction::response:
 		if (tel.getType() == TEL_TYPE_MS)
@@ -877,12 +838,12 @@ ebus::State ebus::Ebus::EbusImpl::processMessage()
 			}
 			else
 			{
-				logWarn(stateMessage(STATE_ERR_RESP_CREA));
+				logWarn(error_resp_crea);
 			}
 		}
 		else
 		{
-			logWarn(stateMessage(STATE_ERR_BAD_TYPE));
+			logWarn(error_bad_type);
 		}
 
 		break;
@@ -906,17 +867,17 @@ ebus::State ebus::Ebus::EbusImpl::sendResponse()
 	{
 		// send Message
 		for (size_t i = retry; i < tel.getSlave().size(); i++)
-			writeRead(tel.getSlave()[i], 0, 0);
+			write_read(tel.getSlave()[i], 0, 0);
 
 		// send CRC
-		writeRead(tel.getSlaveCRC(), 0, 0);
+		write_read(tel.getSlaveCRC(), 0, 0);
 
 		// receive ACK
 		read(byte, 0, 10000L);
 
 		if (byte != seq_ack && byte != seq_nak)
 		{
-			logInfo(stateMessage(STATE_ERR_ACK_WRONG));
+			logInfo(error_ack_wrong);
 			break;
 		}
 		else if (byte == seq_ack)
@@ -927,12 +888,12 @@ ebus::State ebus::Ebus::EbusImpl::sendResponse()
 		{
 			if (retry == 1)
 			{
-				logInfo(stateMessage(STATE_WRN_ACK_NEG));
+				logInfo(warn_ack_neg);
 			}
 			else
 			{
-				logInfo(stateMessage(STATE_ERR_ACK_NEG));
-				logInfo(stateMessage(STATE_ERR_RESP_SEND));
+				logInfo(error_ack_neg);
+				logInfo(error_resp_send);
 			}
 		}
 	}
@@ -966,23 +927,23 @@ ebus::State ebus::Ebus::EbusImpl::lockBus()
 
 	if (byte != tel.getMasterQQ())
 	{
-		logDebug(stateMessage(STATE_WRN_ARB_LOST));
+		logDebug(warn_arb_lost);
 
 		if ((byte & std::byte(0x0f)) != (tel.getMasterQQ() & std::byte(0x0f)))
 		{
 			m_lock_counter = m_lock_counter_max;
-			logDebug(stateMessage(STATE_WRN_PRI_LOST));
+			logDebug(warn_pri_lost);
 		}
 		else
 		{
 			m_lock_counter = 1;
-			logDebug(stateMessage(STATE_WRN_PRI_FIT));
+			logDebug(warn_pri_fit);
 		}
 
 		return (State::MonitorBus);
 	}
 
-	logDebug(stateMessage(STATE_INF_EBUS_LOCK));
+	logDebug(info_ebus_lock);
 
 	return (State::SendMessage);
 }
@@ -997,10 +958,10 @@ ebus::State ebus::Ebus::EbusImpl::sendMessage()
 	{
 		// send Message
 		for (size_t i = retry; i < tel.getMaster().size(); i++)
-			writeRead(tel.getMaster()[i], 0, 0);
+			write_read(tel.getMaster()[i], 0, 0);
 
 		// send CRC
-		writeRead(tel.getMasterCRC(), 0, 0);
+		write_read(tel.getMasterCRC(), 0, 0);
 
 		// Broadcast ends here
 		if (tel.getType() == TEL_TYPE_BC)
@@ -1018,7 +979,7 @@ ebus::State ebus::Ebus::EbusImpl::sendMessage()
 
 		if (byte != seq_ack && byte != seq_nak)
 		{
-			logWarn(stateMessage(STATE_ERR_ACK_WRONG));
+			logWarn(error_ack_wrong);
 			m_activeMessage->m_state = EBUS_ERR_TRANSMIT;
 
 			return (State::FreeBus);
@@ -1040,11 +1001,11 @@ ebus::State ebus::Ebus::EbusImpl::sendMessage()
 		{
 			if (retry == 1)
 			{
-				logDebug(stateMessage(STATE_WRN_ACK_NEG));
+				logDebug(warn_ack_neg);
 			}
 			else
 			{
-				logWarn(stateMessage(STATE_ERR_ACK_NEG));
+				logWarn(error_ack_neg);
 				m_activeMessage->m_state = EBUS_ERR_TRANSMIT;
 			}
 		}
@@ -1069,7 +1030,7 @@ ebus::State ebus::Ebus::EbusImpl::receiveResponse()
 		// maximum data bytes
 		if (std::to_integer<int>(byte) > seq_max_bytes)
 		{
-			logWarn(stateMessage(STATE_ERR_NN_WRONG));
+			logWarn(error_nn_wrong);
 			m_activeMessage->m_state = EBUS_ERR_TRANSMIT;
 
 			reset();
@@ -1100,7 +1061,7 @@ ebus::State ebus::Ebus::EbusImpl::receiveResponse()
 			byte = seq_nak;
 
 		// send ACK
-		writeRead(byte, 0, 0);
+		write_read(byte, 0, 0);
 
 		tel.setMasterACK(byte);
 
@@ -1113,11 +1074,11 @@ ebus::State ebus::Ebus::EbusImpl::receiveResponse()
 		if (retry == 1)
 		{
 			seq.clear();
-			logDebug(stateMessage(STATE_WRN_RECV_RESP));
+			logDebug(warn_recv_resp);
 		}
 		else
 		{
-			logWarn(stateMessage(STATE_ERR_RECV_RESP));
+			logWarn(error_recv_resp);
 			m_activeMessage->m_state = EBUS_ERR_TRANSMIT;
 		}
 	}
@@ -1131,9 +1092,9 @@ ebus::State ebus::Ebus::EbusImpl::freeBus()
 
 	std::byte byte = seq_syn;
 
-	writeRead(byte, 0, 0);
+	write_read(byte, 0, 0);
 
-	logDebug(stateMessage(STATE_INF_EBUS_FREE));
+	logDebug(info_ebus_free);
 
 	reset();
 
@@ -1152,7 +1113,7 @@ ebus::State ebus::Ebus::EbusImpl::handleDeviceError(bool error, const std::strin
 
 		m_device->close();
 
-		if (!m_device->isOpen()) logInfo(stateMessage(STATE_INF_DEV_CLOSE));
+		if (!m_device->isOpen()) logInfo(info_dev_close);
 
 		return (State::OpenDevice);
 	}

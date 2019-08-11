@@ -34,7 +34,7 @@ public:
 	{
 	}
 
-	void waitNotify()
+	void wait()
 	{
 		std::unique_lock<std::mutex> lock(m_mutex);
 		while (!m_notify)
