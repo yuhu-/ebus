@@ -58,7 +58,7 @@ void ebus::Telegram::parse(Sequence &seq)
 
 	if (m_masterState != SEQ_OK) return;
 
-	if (m_type != TEL_TYPE_BC)
+	if (m_type != Type::BC)
 	{
 		// acknowledge byte is missing
 		if (seq.size() <= (size_t) (5 + m_masterNN + 1))
@@ -131,7 +131,7 @@ void ebus::Telegram::parse(Sequence &seq)
 		}
 	}
 
-	if (m_type == TEL_TYPE_MS)
+	if (m_type == Type::MS)
 	{
 		offset += 5 + m_masterNN + 2;
 
@@ -279,7 +279,7 @@ void ebus::Telegram::createMaster(Sequence &seq)
 
 	m_masterQQ = seq[0];
 	m_masterZZ = seq[1];
-	setType(seq[1]);
+	set_type(seq[1]);
 	m_masterNN = (size_t) std::to_integer<int>(seq[4]);
 
 	if (seq.size() == (size_t) (5 + m_masterNN))
@@ -359,7 +359,7 @@ void ebus::Telegram::createSlave(Sequence &seq)
 
 void ebus::Telegram::clear()
 {
-	m_type = -1;
+	m_type = Type::undefined;
 
 	m_masterQQ = seq_zero;
 	m_masterZZ = seq_zero;
@@ -422,14 +422,14 @@ void ebus::Telegram::setMasterACK(const std::byte byte)
 	m_masterACK = byte;
 }
 
-int ebus::Telegram::getType() const
+ebus::Type ebus::Telegram::get_type() const
 {
 	return (m_type);
 }
 
 bool ebus::Telegram::isValid() const
 {
-	if (m_type != TEL_TYPE_MS) return (m_masterState == SEQ_OK ? true : false);
+	if (m_type != Type::MS) return (m_masterState == SEQ_OK ? true : false);
 
 	return ((m_masterState + m_slaveState) == SEQ_OK ? true : false);
 }
@@ -442,9 +442,9 @@ const std::string ebus::Telegram::toString()
 
 	if (m_masterState == SEQ_OK)
 	{
-		if (m_type == TEL_TYPE_MM) ostr << " " << toStringSlaveACK();
+		if (m_type == Type::MM) ostr << " " << toStringSlaveACK();
 
-		if (m_type == TEL_TYPE_MS) ostr << " " << toStringSlave();
+		if (m_type == Type::MS) ostr << " " << toStringSlave();
 	}
 
 	return (ostr.str());
@@ -464,15 +464,15 @@ const std::string ebus::Telegram::toStringMaster()
 const std::string ebus::Telegram::toStringSlave()
 {
 	std::ostringstream ostr;
-	if (m_slaveState != SEQ_OK && m_type != TEL_TYPE_BC)
+	if (m_slaveState != SEQ_OK && m_type != Type::BC)
 	{
 		ostr << toStringSlaveError();
 	}
 	else
 	{
-		if (m_type == TEL_TYPE_MM) ostr << toStringSlaveACK();
+		if (m_type == Type::MM) ostr << toStringSlaveACK();
 
-		if (m_type == TEL_TYPE_MS) ostr << m_slave.to_string();
+		if (m_type == Type::MS) ostr << m_slave.to_string();
 	}
 
 	return (ostr.str());
@@ -539,14 +539,14 @@ const std::string ebus::Telegram::toStringSlaveACK() const
 	return (ostr.str());
 }
 
-void ebus::Telegram::setType(const std::byte byte)
+void ebus::Telegram::set_type(const std::byte byte)
 {
 	if (byte == seq_broad)
-		m_type = TEL_TYPE_BC;
+		m_type = Type::BC;
 	else if (isMaster(byte))
-		m_type = TEL_TYPE_MM;
+		m_type = Type::MM;
 	else
-		m_type = TEL_TYPE_MS;
+		m_type = Type::MS;
 }
 
 bool ebus::Telegram::isAddressValid(const std::byte byte)

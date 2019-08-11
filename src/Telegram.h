@@ -43,9 +43,13 @@ namespace ebus
 #define SEQ_ERR_ACK_MISS  -8 // acknowledge byte is missing
 #define SEQ_ERR_INVALID   -9 // sequence is invalid
 
-#define TEL_TYPE_BC        0 // broadcast
-#define TEL_TYPE_MM        1 // master master
-#define TEL_TYPE_MS        2 // master slave
+enum class Type
+{
+	undefined,           // default value
+	BC,                  // broadcast
+	MM,                  // master master
+	MS                   // master slave
+};
 
 static const std::byte seq_ack = std::byte(0x00);   // positive acknowledge
 static const std::byte seq_nak = std::byte(0xff);   // negative acknowledge
@@ -84,7 +88,7 @@ public:
 
 	void setMasterACK(const std::byte byte);
 
-	int getType() const;
+	ebus::Type get_type() const;
 
 	bool isValid() const;
 
@@ -97,7 +101,7 @@ public:
 	static std::byte slaveAddress(const std::byte address);
 
 private:
-	int m_type = -1;
+	Type m_type = Type::undefined;
 
 	std::byte m_masterQQ = seq_zero;
 	std::byte m_masterZZ = seq_zero;
@@ -122,7 +126,7 @@ private:
 	const std::string toStringSlaveError();
 	const std::string toStringSlaveACK() const;
 
-	void setType(const std::byte byte);
+	void set_type(const std::byte byte);
 	bool isAddressValid(const std::byte byte);
 	int checkMasterSequence(Sequence &seq);
 	int checkSlaveSequence(Sequence &seq);

@@ -522,9 +522,9 @@ const std::string ebus::Ebus::EbusImpl::telegramInfo(Telegram &tel)
 
 	if (tel.getMasterState() == SEQ_OK)
 	{
-		if (tel.getType() == TEL_TYPE_BC)
+		if (tel.get_type() == Type::BC)
 			ostr << "BC ";
-		else if (tel.getType() == TEL_TYPE_MM)
+		else if (tel.get_type() == Type::MM)
 			ostr << "MM ";
 		else
 			ostr << "MS ";
@@ -788,7 +788,7 @@ ebus::State ebus::Ebus::EbusImpl::receiveMessage()
 
 	if (tel.getMasterState() == SEQ_OK)
 	{
-		if (tel.getType() != TEL_TYPE_MS)
+		if (tel.get_type() != Type::MS)
 		{
 			logInfo(telegramInfo(tel));
 			publish(tel.getMaster().get_sequence(), tel.getSlave().get_sequence());
@@ -825,7 +825,7 @@ ebus::State ebus::Ebus::EbusImpl::processMessage()
 		logInfo(info_msg_ignore);
 		break;
 	case Reaction::response:
-		if (tel.getType() == TEL_TYPE_MS)
+		if (tel.get_type() == Type::MS)
 		{
 			tel.createSlave(response);
 
@@ -964,7 +964,7 @@ ebus::State ebus::Ebus::EbusImpl::sendMessage()
 		write_read(tel.getMasterCRC(), 0, 0);
 
 		// Broadcast ends here
-		if (tel.getType() == TEL_TYPE_BC)
+		if (tel.get_type() == Type::BC)
 		{
 			logInfo(telegramInfo(tel) + " transmitted");
 			return (State::FreeBus);
@@ -987,7 +987,7 @@ ebus::State ebus::Ebus::EbusImpl::sendMessage()
 		else if (byte == seq_ack)
 		{
 			// Master Master ends here
-			if (tel.getType() == TEL_TYPE_MM)
+			if (tel.get_type() == Type::MM)
 			{
 				logInfo(telegramInfo(tel) + " transmitted");
 				return (State::FreeBus);

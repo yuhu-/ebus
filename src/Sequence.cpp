@@ -169,7 +169,7 @@ const std::vector<std::byte> ebus::Sequence::range(const std::vector<std::byte> 
 
 // CRC8 table of the polynom 0x9b = x^8 + x^7 + x^4 + x^3 + x^1 + 1.
 // @formatter:off
-static const std::byte ebus__crcTable[] = {
+static const std::byte crc_table[] = {
  std::byte(0x00), std::byte(0x9b), std::byte(0xad), std::byte(0x36), std::byte(0xc1), std::byte(0x5a), std::byte(0x6c), std::byte(0xf7),
  std::byte(0x19), std::byte(0x82), std::byte(0xb4), std::byte(0x2f), std::byte(0xd8), std::byte(0x43), std::byte(0x75), std::byte(0xee),
  std::byte(0x32), std::byte(0xa9), std::byte(0x9f), std::byte(0x04), std::byte(0xf3), std::byte(0x68), std::byte(0x5e), std::byte(0xc5),
@@ -206,5 +206,5 @@ static const std::byte ebus__crcTable[] = {
 
 std::byte ebus::Sequence::calc_crc(const std::byte byte, const std::byte init)
 {
-	return (std::byte(ebus__crcTable[std::to_integer<int>(init)] ^ byte));
+	return (std::byte(crc_table[std::to_integer<int>(init)] ^ byte));
 }
