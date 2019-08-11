@@ -68,14 +68,14 @@ void ebus::Sequence::clear()
 	m_extended = false;
 }
 
-std::byte ebus::Sequence::getCRC()
+std::byte ebus::Sequence::crc()
 {
 	if (!m_extended) extend();
 
 	std::byte crc = seq_zero;
 
 	for (size_t i = 0; i < m_seq.size(); i++)
-		crc = calcCRC(m_seq.at(i), crc);
+		crc = calc_crc(m_seq.at(i), crc);
 
 	if (!m_extended) reduce();
 
@@ -142,7 +142,7 @@ void ebus::Sequence::reduce()
 	m_extended = false;
 }
 
-const std::string ebus::Sequence::toString() const
+const std::string ebus::Sequence::to_string() const
 {
 	std::ostringstream ostr;
 
@@ -152,7 +152,7 @@ const std::string ebus::Sequence::toString() const
 	return (ostr.str());
 }
 
-const std::vector<std::byte> ebus::Sequence::getSequence() const
+const std::vector<std::byte> ebus::Sequence::get_sequence() const
 {
 	return (m_seq);
 }
@@ -203,7 +203,8 @@ static const std::byte ebus__crcTable[] = {
  std::byte(0x95), std::byte(0x0e), std::byte(0x38), std::byte(0xa3), std::byte(0x54), std::byte(0xcf), std::byte(0xf9), std::byte(0x62),
  std::byte(0x8c), std::byte(0x17), std::byte(0x21), std::byte(0xba), std::byte(0x4d), std::byte(0xd6), std::byte(0xe0), std::byte(0x7b)};
 // @formatter:on
-std::byte ebus::Sequence::calcCRC(const std::byte byte, const std::byte init)
+
+std::byte ebus::Sequence::calc_crc(const std::byte byte, const std::byte init)
 {
 	return (std::byte(ebus__crcTable[std::to_integer<int>(init)] ^ byte));
 }

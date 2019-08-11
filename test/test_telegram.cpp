@@ -34,7 +34,7 @@ int main()
 
 	ebus::Telegram parse(seq);
 
-	std::cout << "    seq: " << seq.toString() << std::endl;
+	std::cout << "    seq: " << seq.to_string() << std::endl;
 	std::cout << "  range: " << parse.toString() << " slave(1,2) = '" << ebus::Ebus::to_string(parse.getSlave().range(1, 2)) << "'"
 		<< std::endl << std::endl;
 
@@ -43,7 +43,7 @@ int main()
 
 	ebus::Telegram parse2(seq);
 
-	std::cout << "    seq: " << seq.toString() << std::endl;
+	std::cout << "    seq: " << seq.to_string() << std::endl;
 	std::cout << "  range: " << parse2.toString() << " slave(1,2) = '" << ebus::Ebus::to_string(parse2.getSlave().range(1, 2))
 		<< "'" << std::endl << std::endl;
 
@@ -56,7 +56,7 @@ int main()
 	seq.assign(ebus::Ebus::to_vector("ff52b509030d060043"));
 
 	tel.createMaster(seq);
-	std::cout << "    seq: " << seq.toString() << std::endl;
+	std::cout << "    seq: " << seq.to_string() << std::endl;
 	std::cout << " master: " << tel.toStringMaster() << std::endl << std::endl;
 
 	// create slave
@@ -67,7 +67,7 @@ int main()
 	seq.assign(ebus::Ebus::to_vector("03b0fba901d0"));
 
 	tel.createSlave(seq);
-	std::cout << "    seq: " << seq.toString() << std::endl;
+	std::cout << "    seq: " << seq.to_string() << std::endl;
 	std::cout << "  slave: " << tel.toStringSlave() << std::endl << std::endl;
 
 	// Normal
@@ -75,7 +75,7 @@ int main()
 
 	ebus::Telegram full(seq);
 
-	std::cout << "    seq: " << seq.toString() << std::endl;
+	std::cout << "    seq: " << seq.to_string() << std::endl;
 	std::cout << "   full: " << full.toString() << " ==> Normal" << std::endl << std::endl;
 
 	// NAK from slave
@@ -83,7 +83,7 @@ int main()
 
 	ebus::Telegram full2(seq);
 
-	std::cout << "    seq: " << seq.toString() << std::endl;
+	std::cout << "    seq: " << seq.to_string() << std::endl;
 	std::cout << "  full2: " << full2.toString() << " ==> NAK from slave" << std::endl << std::endl;
 
 	// twice NAK from slave
@@ -91,7 +91,7 @@ int main()
 
 	ebus::Telegram full22(seq);
 
-	std::cout << "    seq: " << seq.toString() << std::endl;
+	std::cout << "    seq: " << seq.to_string() << std::endl;
 	std::cout << " full22: " << full22.toString() << " ==> twice NAK from slave" << std::endl << std::endl;
 
 	// NAK from master
@@ -99,7 +99,7 @@ int main()
 
 	ebus::Telegram full3(seq);
 
-	std::cout << "    seq: " << seq.toString() << std::endl;
+	std::cout << "    seq: " << seq.to_string() << std::endl;
 	std::cout << "  full3: " << full3.toString() << " ==> NAK from master" << std::endl << std::endl;
 
 	// NAK from slave and master
@@ -107,7 +107,7 @@ int main()
 
 	ebus::Telegram full4(seq);
 
-	std::cout << "    seq: " << seq.toString() << std::endl;
+	std::cout << "    seq: " << seq.to_string() << std::endl;
 	std::cout << "  full4:  " << full4.toString() << " ==> NAK from slave and master" << std::endl << std::endl;
 
 	// twice NAK from slave and master
@@ -115,7 +115,7 @@ int main()
 
 	ebus::Telegram full44(seq);
 
-	std::cout << "    seq: " << seq.toString() << std::endl;
+	std::cout << "    seq: " << seq.to_string() << std::endl;
 	std::cout << " full44: " << full44.toString() << " ==> twice NAK from slave and master" << std::endl << std::endl;
 
 	// defect sequence
@@ -123,7 +123,7 @@ int main()
 
 	ebus::Telegram full5(seq);
 
-	std::cout << "    seq: " << seq.toString() << std::endl;
+	std::cout << "    seq: " << seq.to_string() << std::endl;
 	std::cout << "  full5: " << full5.toString() << std::endl << std::endl;
 
 	// missing acknowledge byte
@@ -131,7 +131,7 @@ int main()
 
 	ebus::Telegram full6(seq);
 
-	std::cout << "    seq: " << seq.toString() << std::endl;
+	std::cout << "    seq: " << seq.to_string() << std::endl;
 	std::cout << "  full6: " << full6.toString() << std::endl << std::endl;
 
 	return (0);

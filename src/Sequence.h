@@ -54,13 +54,13 @@ public:
 
 	void clear();
 
-	std::byte getCRC();
+	std::byte crc();
 
 	void extend();
 	void reduce();
 
-	const std::string toString() const;
-	const std::vector<std::byte> getSequence() const;
+	const std::string to_string() const;
+	const std::vector<std::byte> get_sequence() const;
 
 	static const std::vector<std::byte> range(const std::vector<std::byte> &seq, const size_t index, const size_t len);
 
@@ -69,7 +69,7 @@ private:
 
 	bool m_extended = false;
 
-	std::byte calcCRC(const std::byte byte, const std::byte init);
+	std::byte calc_crc(const std::byte byte, const std::byte init);
 };
 
 } // namespace ebus

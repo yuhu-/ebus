@@ -362,7 +362,7 @@ int ebus::Ebus::EbusImpl::transmit(const std::vector<std::byte> &message, std::v
 	tel.createMaster(m_address, message);
 
 	int result = transmit(tel);
-	response = tel.getSlave().getSequence();
+	response = tel.getSlave().get_sequence();
 
 	return (result);
 }
@@ -503,7 +503,7 @@ void ebus::Ebus::EbusImpl::reset()
 
 	if (m_activeMessage != nullptr)
 	{
-		publish(m_activeMessage->m_telegram.getMaster().getSequence(), m_activeMessage->m_telegram.getSlave().getSequence());
+		publish(m_activeMessage->m_telegram.getMaster().get_sequence(), m_activeMessage->m_telegram.getSlave().get_sequence());
 
 		m_activeMessage->notify();
 		m_activeMessage = nullptr;
@@ -675,12 +675,12 @@ ebus::State ebus::Ebus::EbusImpl::monitorBus()
 		// decode Sequence
 		if (m_sequence.size() != 0)
 		{
-			logDebug(m_sequence.toString());
+			logDebug(m_sequence.to_string());
 
 			Telegram tel(m_sequence);
 			logInfo(telegramInfo(tel));
 
-			if (tel.isValid()) publish(tel.getMaster().getSequence(), tel.getSlave().getSequence());
+			if (tel.isValid()) publish(tel.getMaster().get_sequence(), tel.getSlave().get_sequence());
 
 			if (m_sequence.size() == 1 && m_lock_counter < 2) m_lock_counter = 2;
 
@@ -763,7 +763,7 @@ ebus::State ebus::Ebus::EbusImpl::receiveMessage()
 		if (byte == seq_exp) bytes++;
 	}
 
-	logDebug(m_sequence.toString());
+	logDebug(m_sequence.to_string());
 
 	Telegram tel;
 	tel.createMaster(m_sequence);
@@ -791,7 +791,7 @@ ebus::State ebus::Ebus::EbusImpl::receiveMessage()
 		if (tel.getType() != TEL_TYPE_MS)
 		{
 			logInfo(telegramInfo(tel));
-			publish(tel.getMaster().getSequence(), tel.getSlave().getSequence());
+			publish(tel.getMaster().get_sequence(), tel.getSlave().get_sequence());
 		}
 
 		return (State::ProcessMessage);
@@ -811,7 +811,7 @@ ebus::State ebus::Ebus::EbusImpl::processMessage()
 
 	std::vector<std::byte> response;
 
-	Reaction reaction = process(tel.getMaster().getSequence(), response);
+	Reaction reaction = process(tel.getMaster().get_sequence(), response);
 
 	switch (reaction)
 	{
@@ -901,7 +901,7 @@ ebus::State ebus::Ebus::EbusImpl::sendResponse()
 	tel.setMasterACK(byte);
 
 	logInfo(telegramInfo(tel));
-	publish(tel.getMaster().getSequence(), tel.getSlave().getSequence());
+	publish(tel.getMaster().get_sequence(), tel.getSlave().get_sequence());
 
 	reset();
 

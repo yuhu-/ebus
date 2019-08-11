@@ -285,7 +285,7 @@ void ebus::Telegram::createMaster(Sequence &seq)
 	if (seq.size() == (size_t) (5 + m_masterNN))
 	{
 		m_master = seq;
-		m_masterCRC = seq.getCRC();
+		m_masterCRC = seq.crc();
 	}
 	else
 	{
@@ -293,7 +293,7 @@ void ebus::Telegram::createMaster(Sequence &seq)
 		m_masterCRC = seq[5 + m_masterNN];
 
 		// sequence has a CRC error
-		if (m_master.getCRC() != m_masterCRC) m_masterState = SEQ_ERR_CRC;
+		if (m_master.crc() != m_masterCRC) m_masterState = SEQ_ERR_CRC;
 	}
 }
 
@@ -345,7 +345,7 @@ void ebus::Telegram::createSlave(Sequence &seq)
 	if (seq.size() == (1 + m_slaveNN))
 	{
 		m_slave = seq;
-		m_slaveCRC = seq.getCRC();
+		m_slaveCRC = seq.crc();
 	}
 	else
 	{
@@ -353,7 +353,7 @@ void ebus::Telegram::createSlave(Sequence &seq)
 		m_slaveCRC = seq[1 + m_slaveNN];
 
 		// sequence has a CRC error
-		if (m_slave.getCRC() != m_slaveCRC) m_slaveState = SEQ_ERR_CRC;
+		if (m_slave.crc() != m_slaveCRC) m_slaveState = SEQ_ERR_CRC;
 	}
 }
 
@@ -456,7 +456,7 @@ const std::string ebus::Telegram::toStringMaster()
 	if (m_masterState != SEQ_OK)
 		ostr << toStringMasterError();
 	else
-		ostr << m_master.toString();
+		ostr << m_master.to_string();
 
 	return (ostr.str());
 }
@@ -472,7 +472,7 @@ const std::string ebus::Telegram::toStringSlave()
 	{
 		if (m_type == TEL_TYPE_MM) ostr << toStringSlaveACK();
 
-		if (m_type == TEL_TYPE_MS) ostr << m_slave.toString();
+		if (m_type == TEL_TYPE_MS) ostr << m_slave.to_string();
 	}
 
 	return (ostr.str());
@@ -513,7 +513,7 @@ const std::string ebus::Telegram::errorText(const int error)
 const std::string ebus::Telegram::toStringMasterError()
 {
 	std::ostringstream ostr;
-	if (m_master.size() > 0) ostr << "'" << m_master.toString() << "' ";
+	if (m_master.size() > 0) ostr << "'" << m_master.to_string() << "' ";
 
 	ostr << "master " << errorText(m_masterState);
 
@@ -523,7 +523,7 @@ const std::string ebus::Telegram::toStringMasterError()
 const std::string ebus::Telegram::toStringSlaveError()
 {
 	std::ostringstream ostr;
-	if (m_slave.size() > 0) ostr << "'" << m_slave.toString() << "' ";
+	if (m_slave.size() > 0) ostr << "'" << m_slave.to_string() << "' ";
 
 	ostr << "slave " << errorText(m_slaveState);
 
