@@ -35,7 +35,7 @@ int main()
 	ebus::Telegram parse(seq);
 
 	std::cout << "    seq: " << seq.to_string() << std::endl;
-	std::cout << "  range: " << parse.toString() << " slave(1,2) = '" << ebus::Ebus::to_string(parse.getSlave().range(1, 2)) << "'"
+	std::cout << "  range: " << parse.to_string() << " slave(1,2) = '" << ebus::Ebus::to_string(parse.getSlave().range(1, 2)) << "'"
 		<< std::endl << std::endl;
 
 	// parse sequence
@@ -44,7 +44,7 @@ int main()
 	ebus::Telegram parse2(seq);
 
 	std::cout << "    seq: " << seq.to_string() << std::endl;
-	std::cout << "  range: " << parse2.toString() << " slave(1,2) = '" << ebus::Ebus::to_string(parse2.getSlave().range(1, 2))
+	std::cout << "  range: " << parse2.to_string() << " slave(1,2) = '" << ebus::Ebus::to_string(parse2.getSlave().range(1, 2))
 		<< "'" << std::endl << std::endl;
 
 	// create telegram
@@ -76,7 +76,7 @@ int main()
 	ebus::Telegram full(seq);
 
 	std::cout << "    seq: " << seq.to_string() << std::endl;
-	std::cout << "   full: " << full.toString() << " ==> Normal" << std::endl << std::endl;
+	std::cout << "   full: " << full.to_string() << " ==> Normal" << std::endl << std::endl;
 
 	// NAK from slave
 	seq.assign(ebus::Ebus::to_vector("ff52b509030d060043ffff52b509030d0600430003b0fba901d000"));
@@ -84,7 +84,7 @@ int main()
 	ebus::Telegram full2(seq);
 
 	std::cout << "    seq: " << seq.to_string() << std::endl;
-	std::cout << "  full2: " << full2.toString() << " ==> NAK from slave" << std::endl << std::endl;
+	std::cout << "  full2: " << full2.to_string() << " ==> NAK from slave" << std::endl << std::endl;
 
 	// twice NAK from slave
 	seq.assign(ebus::Ebus::to_vector("ff52b509030d060043ffff52b509030d060043ff"));
@@ -92,7 +92,7 @@ int main()
 	ebus::Telegram full22(seq);
 
 	std::cout << "    seq: " << seq.to_string() << std::endl;
-	std::cout << " full22: " << full22.toString() << " ==> twice NAK from slave" << std::endl << std::endl;
+	std::cout << " full22: " << full22.to_string() << " ==> twice NAK from slave" << std::endl << std::endl;
 
 	// NAK from master
 	seq.assign(ebus::Ebus::to_vector("ff52b509030d0600430003b0fba901d0ff0003b0fba901d000"));
@@ -100,7 +100,7 @@ int main()
 	ebus::Telegram full3(seq);
 
 	std::cout << "    seq: " << seq.to_string() << std::endl;
-	std::cout << "  full3: " << full3.toString() << " ==> NAK from master" << std::endl << std::endl;
+	std::cout << "  full3: " << full3.to_string() << " ==> NAK from master" << std::endl << std::endl;
 
 	// NAK from slave and master
 	seq.assign(ebus::Ebus::to_vector("ff52b509030d060043ffff52b509030d0600430003b0fba901d0ff0003b0fba901d000"));
@@ -108,7 +108,7 @@ int main()
 	ebus::Telegram full4(seq);
 
 	std::cout << "    seq: " << seq.to_string() << std::endl;
-	std::cout << "  full4:  " << full4.toString() << " ==> NAK from slave and master" << std::endl << std::endl;
+	std::cout << "  full4:  " << full4.to_string() << " ==> NAK from slave and master" << std::endl << std::endl;
 
 	// twice NAK from slave and master
 	seq.assign(ebus::Ebus::to_vector("ff52b509030d060043ffff52b509030d0600430003b0fba901d0ff0003b0fba901d0ff"));
@@ -116,7 +116,7 @@ int main()
 	ebus::Telegram full44(seq);
 
 	std::cout << "    seq: " << seq.to_string() << std::endl;
-	std::cout << " full44: " << full44.toString() << " ==> twice NAK from slave and master" << std::endl << std::endl;
+	std::cout << " full44: " << full44.to_string() << " ==> twice NAK from slave and master" << std::endl << std::endl;
 
 	// defect sequence
 	seq.assign(ebus::Ebus::to_vector("107fc2b5100900024000000000000215"));
@@ -124,7 +124,7 @@ int main()
 	ebus::Telegram full5(seq);
 
 	std::cout << "    seq: " << seq.to_string() << std::endl;
-	std::cout << "  full5: " << full5.toString() << std::endl << std::endl;
+	std::cout << "  full5: " << full5.to_string() << std::endl << std::endl;
 
 	// missing acknowledge byte
 	seq.assign(ebus::Ebus::to_vector("1008b51101028aff1008b51101028a0003b0fba901d0ff0003b0fba901d0"));
@@ -132,7 +132,7 @@ int main()
 	ebus::Telegram full6(seq);
 
 	std::cout << "    seq: " << seq.to_string() << std::endl;
-	std::cout << "  full6: " << full6.toString() << std::endl << std::endl;
+	std::cout << "  full6: " << full6.to_string() << std::endl << std::endl;
 
 	return (0);
 }

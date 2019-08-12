@@ -92,7 +92,7 @@ public:
 
 	bool isValid() const;
 
-	const std::string toString();
+	const std::string to_string();
 	const std::string toStringMaster();
 	const std::string toStringSlave();
 
@@ -102,9 +102,6 @@ public:
 
 private:
 	Type m_type = Type::undefined;
-
-	std::byte m_masterQQ = seq_zero;
-	std::byte m_masterZZ = seq_zero;
 
 	Sequence m_master;
 	size_t m_masterNN = 0;
@@ -124,7 +121,6 @@ private:
 
 	const std::string toStringMasterError();
 	const std::string toStringSlaveError();
-	const std::string toStringSlaveACK() const;
 
 	void set_type(const std::byte byte);
 	bool isAddressValid(const std::byte byte);

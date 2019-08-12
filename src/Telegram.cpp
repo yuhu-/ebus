@@ -277,8 +277,6 @@ void ebus::Telegram::createMaster(Sequence &seq)
 		return;
 	}
 
-	m_masterQQ = seq[0];
-	m_masterZZ = seq[1];
 	set_type(seq[1]);
 	m_masterNN = (size_t) std::to_integer<int>(seq[4]);
 
@@ -361,9 +359,6 @@ void ebus::Telegram::clear()
 {
 	m_type = Type::undefined;
 
-	m_masterQQ = seq_zero;
-	m_masterZZ = seq_zero;
-
 	m_master.clear();
 	m_masterNN = 0;
 	m_masterCRC = seq_zero;
@@ -379,7 +374,7 @@ void ebus::Telegram::clear()
 
 std::byte ebus::Telegram::getMasterQQ() const
 {
-	return (m_masterQQ);
+	return (m_master[0]);
 }
 
 ebus::Sequence ebus::Telegram::getMaster() const
@@ -434,18 +429,13 @@ bool ebus::Telegram::isValid() const
 	return ((m_masterState + m_slaveState) == SEQ_OK ? true : false);
 }
 
-const std::string ebus::Telegram::toString()
+const std::string ebus::Telegram::to_string()
 {
 	std::ostringstream ostr;
 
 	ostr << toStringMaster();
 
-	if (m_masterState == SEQ_OK)
-	{
-		if (m_type == Type::MM) ostr << " " << toStringSlaveACK();
-
-		if (m_type == Type::MS) ostr << " " << toStringSlave();
-	}
+	if (m_masterState == SEQ_OK && m_type == Type::MS) ostr << " " << toStringSlave();
 
 	return (ostr.str());
 }
@@ -470,8 +460,6 @@ const std::string ebus::Telegram::toStringSlave()
 	}
 	else
 	{
-		if (m_type == Type::MM) ostr << toStringSlaveACK();
-
 		if (m_type == Type::MS) ostr << m_slave.to_string();
 	}
 
@@ -526,15 +514,6 @@ const std::string ebus::Telegram::toStringSlaveError()
 	if (m_slave.size() > 0) ostr << "'" << m_slave.to_string() << "' ";
 
 	ostr << "slave " << errorText(m_slaveState);
-
-	return (ostr.str());
-}
-
-const std::string ebus::Telegram::toStringSlaveACK() const
-{
-	std::ostringstream ostr;
-
-	ostr << std::nouppercase << std::hex << std::setw(2) << std::setfill('0') << static_cast<unsigned>(m_slaveACK);
 
 	return (ostr.str());
 }
