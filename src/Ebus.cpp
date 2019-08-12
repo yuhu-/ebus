@@ -185,8 +185,6 @@ private:
 
 	void reset();
 
-	const std::string telegramInfo(Telegram &tel);
-
 	void run();
 
 	State idleSystem();
@@ -516,25 +514,6 @@ void ebus::Ebus::EbusImpl::reset()
 	}
 }
 
-const std::string ebus::Ebus::EbusImpl::telegramInfo(Telegram &tel)
-{
-	std::ostringstream ostr;
-
-	if (tel.getMasterState() == SEQ_OK)
-	{
-		if (tel.get_type() == Type::BC)
-			ostr << "BC ";
-		else if (tel.get_type() == Type::MM)
-			ostr << "MM ";
-		else
-			ostr << "MS ";
-	}
-
-	ostr << tel.toString();
-
-	return (ostr.str());
-}
-
 void ebus::Ebus::EbusImpl::run()
 {
 	logInfo("Ebus started");
@@ -678,7 +657,7 @@ ebus::State ebus::Ebus::EbusImpl::monitorBus()
 			logDebug(m_sequence.to_string());
 
 			Telegram tel(m_sequence);
-			logInfo(telegramInfo(tel));
+			logInfo(tel.to_string());
 
 			if (tel.isValid()) publish(tel.getMaster().get_sequence(), tel.getSlave().get_sequence());
 
@@ -790,7 +769,7 @@ ebus::State ebus::Ebus::EbusImpl::receiveMessage()
 	{
 		if (tel.get_type() != Type::MS)
 		{
-			logInfo(telegramInfo(tel));
+			logInfo(tel.to_string());
 			publish(tel.getMaster().get_sequence(), tel.getSlave().get_sequence());
 		}
 
@@ -900,7 +879,7 @@ ebus::State ebus::Ebus::EbusImpl::sendResponse()
 
 	tel.setMasterACK(byte);
 
-	logInfo(telegramInfo(tel));
+	logInfo(tel.to_string());
 	publish(tel.getMaster().get_sequence(), tel.getSlave().get_sequence());
 
 	reset();
@@ -966,7 +945,7 @@ ebus::State ebus::Ebus::EbusImpl::sendMessage()
 		// Broadcast ends here
 		if (tel.get_type() == Type::BC)
 		{
-			logInfo(telegramInfo(tel) + " transmitted");
+			logInfo(tel.to_string() + " transmitted");
 			return (State::FreeBus);
 		}
 
@@ -989,7 +968,7 @@ ebus::State ebus::Ebus::EbusImpl::sendMessage()
 			// Master Master ends here
 			if (tel.get_type() == Type::MM)
 			{
-				logInfo(telegramInfo(tel) + " transmitted");
+				logInfo(tel.to_string() + " transmitted");
 				return (State::FreeBus);
 			}
 			else
@@ -1067,7 +1046,7 @@ ebus::State ebus::Ebus::EbusImpl::receiveResponse()
 
 		if (tel.getSlaveState() == SEQ_OK)
 		{
-			logInfo(telegramInfo(tel) + " transmitted");
+			logInfo(tel.to_string() + " transmitted");
 			break;
 		}
 
