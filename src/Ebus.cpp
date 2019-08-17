@@ -1028,7 +1028,7 @@ ebus::State ebus::Ebus::EbusImpl::receiveResponse()
 
 			seq.push_back(byte);
 
-			if (byte == seq_syn || byte == seq_exp) bytes++;
+			if (byte == seq_exp) bytes++;
 		}
 
 		// create slave data
