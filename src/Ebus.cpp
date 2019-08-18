@@ -655,7 +655,7 @@ ebus::State ebus::Ebus::EbusImpl::monitorBus()
 		if (m_sequence.size() != 0)
 		{
 			logDebug(m_sequence.to_string());
-
+// TODO new decoding
 			Telegram tel(m_sequence);
 			logInfo(tel.to_string());
 
@@ -743,7 +743,7 @@ ebus::State ebus::Ebus::EbusImpl::receiveMessage()
 	}
 
 	logDebug(m_sequence.to_string());
-
+// TODO check CRC of sequence
 	Telegram tel;
 	tel.createMaster(m_sequence);
 
@@ -842,6 +842,8 @@ ebus::State ebus::Ebus::EbusImpl::sendResponse()
 	Telegram &tel = m_passiveMessage->m_telegram;
 	std::byte byte;
 
+// TODO expand, calc CRC of sequence and send
+
 	for (int retry = 1; retry >= 0; retry--)
 	{
 		// send Message
@@ -886,7 +888,7 @@ ebus::State ebus::Ebus::EbusImpl::sendResponse()
 
 	return (State::MonitorBus);
 }
-
+// TODO move into sendMessage
 ebus::State ebus::Ebus::EbusImpl::lockBus()
 {
 	logDebug("lockBus");
@@ -932,6 +934,8 @@ ebus::State ebus::Ebus::EbusImpl::sendMessage()
 	logDebug("sendMessage");
 
 	Telegram &tel = m_activeMessage->m_telegram;
+
+// TODO expand, calc CRC of sequence and send
 
 	for (int retry = 1; retry >= 0; retry--)
 	{
@@ -1030,7 +1034,7 @@ ebus::State ebus::Ebus::EbusImpl::receiveResponse()
 
 			if (byte == seq_exp) bytes++;
 		}
-
+// TODO check CRC of sequence
 		// create slave data
 		tel.createSlave(seq);
 
