@@ -847,7 +847,7 @@ ebus::State ebus::Ebus::EbusImpl::sendResponse()
 	for (int retry = 1; retry >= 0; retry--)
 	{
 		// send Message
-		for (size_t i = retry; i < tel.getSlave().size(); i++)
+		for (size_t i = 0; i < tel.getSlave().size(); i++)
 			write_read(tel.getSlave()[i], 0, 0);
 
 		// send CRC
