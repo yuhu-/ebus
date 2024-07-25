@@ -41,7 +41,7 @@
 #define EBUS_ERR_DEVICE       -4 // a device error occurred
 #define EBUS_ERR_OFFLINE      -5 // ebus service is offline
 
-std::map<int, std::string> EbusErrors =
+std::map<int, const char*> EbusErrors =
 {
 { EBUS_ERR_MASTER, "sending is only as master possible" },
 { EBUS_ERR_SEQUENCE, "the passed sequence contains an error" },
@@ -52,32 +52,32 @@ std::map<int, std::string> EbusErrors =
 namespace ebus
 {
 
-static const std::string info_dev_open = "device opened";
-static const std::string info_dev_close = "device closed";
-static const std::string info_ebus_lock = "ebus locked";
-static const std::string info_ebus_free = "ebus freed";
-static const std::string info_msg_ignore = "message ignored";
-static const std::string info_dev_flush = "device flushed";
-static const std::string info_not_def = "message not defined";
-static const std::string info_no_func = "no function registered";
+static const char *info_dev_open = "device opened";
+static const char *info_dev_close = "device closed";
+static const char *info_ebus_lock = "ebus locked";
+static const char *info_ebus_free = "ebus freed";
+static const char *info_msg_ignore = "message ignored";
+static const char *info_dev_flush = "device flushed";
+static const char *info_not_def = "message not defined";
+static const char *info_no_func = "no function registered";
 
-static const std::string warn_byte_dif = "written/read byte difference";
-static const std::string warn_arb_lost = "arbitration lost";
-static const std::string warn_pri_fit = "priority class fit -> retry";
-static const std::string warn_pri_lost = "priority class lost";
-static const std::string warn_ack_neg = "received acknowledge byte is negative -> retry";
-static const std::string warn_recv_resp = "received response is invalid -> retry";
-static const std::string warn_recv_msg = "message is invalid";
+static const char *warn_byte_dif = "written/read byte difference";
+static const char *warn_arb_lost = "arbitration lost";
+static const char *warn_pri_fit = "priority class fit -> retry";
+static const char *warn_pri_lost = "priority class lost";
+static const char *warn_ack_neg = "received acknowledge byte is negative -> retry";
+static const char *warn_recv_resp = "received response is invalid -> retry";
+static const char *warn_recv_msg = "message is invalid";
 
-static const std::string error_open_fail = "opening ebus failed";
-static const std::string error_close_fail = "closing ebus failed";
-static const std::string error_ack_neg = "received acknowledge byte is negative -> failed";
-static const std::string error_ack_wrong = "received acknowledge byte is wrong";
-static const std::string error_nn_wrong = "received size byte is wrong";
-static const std::string error_recv_resp = "received response is invalid -> failed";
-static const std::string error_resp_crea = "creating response failed";
-static const std::string error_resp_send = "sending response failed";
-static const std::string error_bad_type = "received type does not allow an answer";
+static const char *error_open_fail = "opening ebus failed";
+static const char *error_close_fail = "closing ebus failed";
+static const char *error_ack_neg = "received acknowledge byte is negative -> failed";
+static const char *error_ack_wrong = "received acknowledge byte is wrong";
+static const char *error_nn_wrong = "received size byte is wrong";
+static const char *error_recv_resp = "received response is invalid -> failed";
+static const char *error_resp_crea = "creating response failed";
+static const char *error_resp_send = "sending response failed";
+static const char *error_bad_type = "received type does not allow an answer";
 
 struct Message : public Notify
 {
