@@ -1,5 +1,5 @@
 /*
- * Copyright (C) Roland Jax 2012-2019 <roland.jax@liwest.at>
+ * Copyright (C) Roland Jax 2012-2024 <roland.jax@liwest.at>
  *
  * This file is part of ebus.
  *
@@ -17,8 +17,8 @@
  * along with ebus. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef EBUS_EBUS_H
-#define EBUS_EBUS_H
+#ifndef INCLUDE_EBUS_EBUS_H_
+#define INCLUDE_EBUS_EBUS_H_
 
 #include <cstddef>
 #include <experimental/propagate_const>
@@ -27,189 +27,190 @@
 #include <string>
 #include <vector>
 
-namespace ebus
-{
+namespace ebus {
 
 /**
  * logger interface
  */
-class ILogger
-{
+class ILogger {
+ public:
+  virtual ~ILogger() = default;
 
-public:
-	virtual ~ILogger() = default;
-
-	virtual void error(const std::string &message) = 0;
-	virtual void warn(const std::string &message) = 0;
-	virtual void info(const std::string &message) = 0;
-	virtual void debug(const std::string &message) = 0;
-	virtual void trace(const std::string &message) = 0;
-
+  virtual void error(const std::string &message) = 0;
+  virtual void warn(const std::string &message) = 0;
+  virtual void info(const std::string &message) = 0;
+  virtual void debug(const std::string &message) = 0;
+  virtual void trace(const std::string &message) = 0;
 };
 
 /**
  * reaction type for active ebus participants only
  */
-enum class Reaction
-{
-	nofunction,	// no function
-	undefined,	// message undefined
-	ignore,		// message ignored
-	response	// send response
+enum class Reaction {
+  nofunction,  // no function
+  undefined,   // message undefined
+  ignore,      // message ignored
+  response     // send response
 };
 
 /**
  * ebus communication class
  */
-class Ebus
-{
+class Ebus {
+ public:
+  /**
+   * create an ebus object
+   *
+   * @param address - own address byte
+   * @param device - serial device string
+   */
+  Ebus(const uint8_t address, const std::string &device);
 
-public:
-	/**
-	 * create an ebus object
-	 *
-	 * @param address - own address byte
-	 * @param device - serial device string
-	 */
-	Ebus(const std::byte address, const std::string &device);
+  /**
+   * move functions
+   */
+  Ebus &operator=(Ebus &&);
+  Ebus(Ebus &&);
 
-	/**
-	 * move functions
-	 */
-	Ebus& operator=(Ebus&&);
-	Ebus(Ebus&&);
+  /**
+   * copy functions
+   */
+  Ebus &operator=(const Ebus &) = delete;
+  Ebus(const Ebus &) = delete;
 
-	/**
-	 * copy functions
-	 */
-	Ebus& operator=(const Ebus&) = delete;
-	Ebus(const Ebus&) = delete;
+  /**
+   * destructor
+   */
+  ~Ebus();
 
-	/**
-	 * destructor
-	 */
-	~Ebus();
+  /**
+   * open the ebus device
+   */
+  void open();
 
-	/**
-	 * open the ebus device
-	 */
-	void open();
+  /**
+   * close the ebus device
+   */
+  void close();
 
-	/**
-	 * close the ebus device
-	 */
-	void close();
+  /**
+   * ebus device status
+   *
+   * @return true, when the ebus device is open
+   */
+  bool online();
 
-	/**
-	 * ebus device status
-	 *
-	 * @return true, when the ebus device is open
-	 */
-	bool online();
+  /**
+   * transmit an ebus message
+   *
+   * @param message to transmit
+   * @param response to transmitted message
+   *
+   * @return error number if an error occurred
+   */
+  int transmit(const std::vector<uint8_t> &message,
+               std::vector<uint8_t> &response);
 
-	/**
-	 * transmit an ebus message
-	 *
-	 * @param message to transmit
-	 * @param response to transmitted message
-	 *
-	 * @return error number if an error occurred
-	 */
-	int transmit(const std::vector<std::byte> &message, std::vector<std::byte> &response);
+  /**
+   * error description
+   *
+   * @return string of given error number
+   */
+  const std::string error_text(const int error) const;
 
-	/**
-	 * error description
-	 *
-	 * @return string of given error number
-	 */
-	const std::string error_text(const int error) const;
+  /**
+   * register a logger object for internal logging facilities
+   *
+   * @param logger object
+   */
+  void register_logger(std::shared_ptr<ILogger> logger);
 
-	/**
-	 * register a logger object for internal logging facilities
-	 *
-	 * @param logger object
-	 */
-	void register_logger(std::shared_ptr<ILogger> logger);
+  /**
+   * register a 'process' reference which is necessary for active ebus
+   * participants only
+   *
+   * @param process callback function
+   */
+  void register_process(
+      std::function<Reaction(const std::vector<uint8_t> &message,
+                             std::vector<uint8_t> &response)>
+          process);
 
-	/**
-	 * register a 'process' reference which is necessary for active ebus participants only
-	 *
-	 * @param process callback function
-	 */
-	void register_process(
-		std::function<Reaction(const std::vector<std::byte> &message, std::vector<std::byte> &response)> process);
+  /**
+   * register a 'publish' reference which is triggered after each successful
+   * ebus telegram
+   *
+   * @param publish callback function
+   */
+  void register_publish(
+      std::function<void(const std::vector<uint8_t> &message,
+                         const std::vector<uint8_t> &response)>
+          publish);
 
-	/**
-	 * register a 'publish' reference which is triggered after each successful ebus telegram
-	 *
-	 * @param publish callback function
-	 */
-	void register_publish(
-		std::function<void(const std::vector<std::byte> &message, const std::vector<std::byte> &response)> publish);
+  /**
+   * register a 'rawdata' reference which is triggered after each received byte
+   *
+   * @param rawdata callback function
+   */
+  void register_rawdata(std::function<void(const uint8_t &byte)> rawdata);
 
-	/**
-	 * register a 'rawdata' reference which is triggered after each received byte
-	 *
-	 * @param rawdata callback function
-	 */
-	void register_rawdata(std::function<void(const std::byte &byte)> rawdata);
+  /**
+   * timeout for bus access
+   *
+   * @param access_timeout [default: 4400 us]
+   */
+  void set_access_timeout(const uint16_t &access_timeout);
 
-	/**
-	 * timeout for bus access
-	 *
-	 * @param access_timeout [default: 4400 us]
-	 */
-	void set_access_timeout(const long &access_timeout);
+  /**
+   * number of skipped characters after a successful ebus access
+   *
+   * @param lock_counter_max [default: 5 max: 25]
+   */
+  void set_lock_counter_max(const uint8_t &lock_counter_max);
 
-	/**
-	 * number of skipped characters after a successful ebus access
-	 *
-	 * @param lock_counter_max [default: 5 max: 25]
-	 */
-	void set_lock_counter_max(const int &lock_counter_max);
+  /**
+   * number of attempts to open the ebus device (one second pause between two
+   * attempts)
+   *
+   * @param open_counter_max [default: 10]
+   */
+  void set_open_counter_max(const uint8_t &open_counter_max);
 
-	/**
-	 * number of attempts to open the ebus device (one second pause between two attempts)
-	 *
-	 * @param open_counter_max [default: 10]
-	 */
-	void set_open_counter_max(const int &open_counter_max);
+  /**
+   * returns a part of given byte vector
+   *
+   * @param vec - byte vector
+   * @param index - start position
+   * @param len - length
+   *
+   * @return byte vector
+   */
+  static const std::vector<uint8_t> range(const std::vector<uint8_t> &vec,
+                                          const size_t index, const size_t len);
 
-	/**
-	 * returns a part of given byte vector
-	 *
-	 * @param vec - byte vector
-	 * @param index - start position
-	 * @param len - length
-	 *
-	 * @return byte vector
-	 */
-	static const std::vector<std::byte> range(const std::vector<std::byte> &vec, const size_t index, const size_t len);
+  /**
+   * convert a given string into a byte vector
+   *
+   * @param str - string
+   *
+   * @return byte vector
+   */
+  static const std::vector<uint8_t> to_vector(const std::string &str);
 
-	/**
-	 * convert a given string into a byte vector
-	 *
-	 * @param str - string
-	 *
-	 * @return byte vector
-	 */
-	static const std::vector<std::byte> to_vector(const std::string &str);
+  /**
+   * convert a given byte vector into a string
+   *
+   * @param vec - byte vector
+   *
+   * @return string
+   */
+  static const std::string to_string(const std::vector<uint8_t> &vec);
 
-	/**
-	 * convert a given byte vector into a string
-	 *
-	 * @param vec - byte vector
-	 *
-	 * @return string
-	 */
-	static const std::string to_string(const std::vector<std::byte> &vec);
-
-private:
-	class EbusImpl;
-	std::experimental::propagate_const<std::unique_ptr<EbusImpl>> impl;
-
+ private:
+  class EbusImpl;
+  std::experimental::propagate_const<std::unique_ptr<EbusImpl>> impl;
 };
 
-} // namespace ebus
+}  // namespace ebus
 
-#endif // EBUS_EBUS_H
+#endif  // INCLUDE_EBUS_EBUS_H_

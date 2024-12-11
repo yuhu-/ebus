@@ -1,5 +1,5 @@
 /*
- * Copyright (C) Roland Jax 2012-2019 <roland.jax@liwest.at>
+ * Copyright (C) Roland Jax 2012-2024 <roland.jax@liwest.at>
  *
  * This file is part of ebus.
  *
@@ -17,62 +17,72 @@
  * along with ebus. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef EBUS_SEQUENCE_H
-#define EBUS_SEQUENCE_H
+// This class implements basic routines for sequence handling in accordance with
+// the ebus specification, in particular the reduction, extension and
+// crc-calculation.
+//
+// (reduced) 0xaa <-> 0xa9 0x01 (expanded)
+// (reduced) 0xa9 <-> 0xa9 0x00 (expanded)
+
+#ifndef SRC_SEQUENCE_H_
+#define SRC_SEQUENCE_H_
+
+#include <stdint.h>
 
 #include <cstddef>
 #include <string>
 #include <vector>
 
-namespace ebus
-{
+namespace ebus {
 
-static const std::byte seq_zero = std::byte(0x00);     // zero byte
+static const uint8_t sym_zero = 0x00;    // zero byte
+static const uint8_t sym_syn = 0xaa;     // synchronization byte
+static const uint8_t sym_exp = 0xa9;     // expand byte
+static const uint8_t sym_synexp = 0x01;  // expanded synchronization byte
+static const uint8_t sym_expexp = 0x00;  // expanded expand byte
 
-static const std::byte seq_syn = std::byte(0xaa);      // synchronization byte
-static const std::byte seq_exp = std::byte(0xa9);      // expand byte
-static const std::byte seq_synexp = std::byte(0x01);   // expanded synchronization byte
-static const std::byte seq_expexp = std::byte(0x00);   // expanded expand byte
+class Sequence {
+ public:
+  Sequence() = default;
+  Sequence(const Sequence &seq, const size_t index, size_t len = 0);
 
-class Sequence
-{
+  void assign(const std::vector<uint8_t> &vec, const bool extended = true);
 
-public:
-	static const size_t npos = -1;
+  void push_back(const uint8_t byte, const bool extended = true);
 
-	Sequence() = default;
-	Sequence(const Sequence &seq, const size_t index, size_t len = 0);
+  const uint8_t &operator[](const size_t index) const;
+  const std::vector<uint8_t> range(const size_t index, const size_t len) const;
 
-	void assign(const std::vector<std::byte> &vec, const bool extended = true);
+  size_t size() const;
 
-	void push_back(const std::byte byte, const bool extended = true);
+  void clear();
 
-	const std::byte& operator[](const size_t index) const;
-	const std::vector<std::byte> range(const size_t index, const size_t len);
+  uint8_t crc();
 
-	size_t size() const;
+  void extend();
+  void reduce();
 
-	void clear();
+  const std::string to_string() const;
+  const std::vector<uint8_t> &to_vector() const;
 
-	std::byte crc();
+  static const std::vector<uint8_t> range(const std::vector<uint8_t> &vec,
+                                          const size_t index, const size_t len);
 
-	void extend();
-	void reduce();
+  static const std::vector<uint8_t> to_vector(const std::string &str);
 
-	const std::string to_string() const;
-	const std::vector<std::byte> get_sequence() const;
+  static const std::string to_string(const std::vector<uint8_t> &vec);
 
-	static const std::vector<std::byte> range(const std::vector<std::byte> &seq, const size_t index, const size_t len);
+  static bool contains(const std::vector<uint8_t> &vec,
+                       const std::vector<uint8_t> &search);
 
-private:
-	std::vector<std::byte> m_seq;
+ private:
+  std::vector<uint8_t> m_seq;
 
-	bool m_extended = false;
+  bool m_extended = false;
 
-	std::byte calc_crc(const std::byte byte, const std::byte init);
+  static uint8_t calc_crc(const uint8_t byte, const uint8_t init);
 };
 
-} // namespace ebus
+}  // namespace ebus
 
-#endif // EBUS_SEQUENCE_H
-
+#endif  // SRC_SEQUENCE_H_

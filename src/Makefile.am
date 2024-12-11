@@ -2,7 +2,7 @@ AM_CXXFLAGS = -fpic \
 	      -Wall \
 	      -Wextra \
 	      -Wpedantic \
-	      -std=c++17 \
+	      -std=c++20 \
 	      -isystem$(top_srcdir)/include/ebus
 
 lib_LTLIBRARIES = libebus.la

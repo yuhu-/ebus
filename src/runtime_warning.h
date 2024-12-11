@@ -1,5 +1,5 @@
 /*
- * Copyright (C) Roland Jax 2012-2019 <roland.jax@liwest.at>
+ * Copyright (C) Roland Jax 2012-2024 <roland.jax@liwest.at>
  *
  * This file is part of ebus.
  *
@@ -17,24 +17,18 @@
  * along with ebus. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef EBUS_RUNTIME_WARNING_H
-#define EBUS_RUNTIME_WARNING_H
+#ifndef SRC_RUNTIME_WARNING_H_
+#define SRC_RUNTIME_WARNING_H_
 
 #include <stdexcept>
 
-namespace ebus
-{
+namespace ebus {
 
-class runtime_warning : public std::runtime_error
-{
-
-public:
-	explicit runtime_warning(const char *what) : std::runtime_error(what)
-	{
-	}
-
+class runtime_warning : public std::runtime_error {
+ public:
+  explicit runtime_warning(const char *what) : std::runtime_error(what) {}
 };
 
-} // namespace ebus
+}  // namespace ebus
 
-#endif // EBUS_RUNTIME_WARNING_H
+#endif  // SRC_RUNTIME_WARNING_H_

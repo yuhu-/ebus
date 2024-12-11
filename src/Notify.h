@@ -1,5 +1,5 @@
 /*
- * Copyright (C) Roland Jax 2012-2019 <roland.jax@liwest.at>
+ * Copyright (C) Roland Jax 2012-2024 <roland.jax@liwest.at>
  *
  * This file is part of ebus.
  *
@@ -17,48 +17,39 @@
  * along with ebus. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef EBUS_NOTIFY_H
-#define EBUS_NOTIFY_H
+#ifndef SRC_NOTIFY_H_
+#define SRC_NOTIFY_H_
 
 #include <condition_variable>
 #include <mutex>
 
-namespace ebus
-{
+namespace ebus {
 
-class Notify
-{
+class Notify {
+ public:
+  Notify() : m_mutex(), m_condition() {}
 
-public:
-	Notify() : m_mutex(), m_condition()
-	{
-	}
+  void wait() {
+    std::unique_lock<std::mutex> lock(m_mutex);
+    while (!m_notify) {
+      m_condition.wait(lock);
+      m_notify = false;
+      break;
+    }
+  }
 
-	void wait()
-	{
-		std::unique_lock<std::mutex> lock(m_mutex);
-		while (!m_notify)
-		{
-			m_condition.wait(lock);
-			m_notify = false;
-			break;
-		}
-	}
+  void notify() {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_notify = true;
+    m_condition.notify_one();
+  }
 
-	void notify()
-	{
-		std::lock_guard<std::mutex> lock(m_mutex);
-		m_notify = true;
-		m_condition.notify_one();
-	}
-
-private:
-	std::mutex m_mutex;
-	std::condition_variable m_condition;
-	bool m_notify = false;
-
+ private:
+  std::mutex m_mutex;
+  std::condition_variable m_condition;
+  bool m_notify = false;
 };
 
-} // namespace ebus
+}  // namespace ebus
 
-#endif // EBUS_NOTIFY_H
+#endif  // SRC_NOTIFY_H_

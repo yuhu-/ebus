@@ -23,3 +23,5 @@ ebus.pc
 .settings
 .autotools
 *.tar.gz
+.vscode/
+configure~

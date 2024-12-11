@@ -1,5 +1,5 @@
 /*
- * Copyright (C) Roland Jax 2012-2019 <roland.jax@liwest.at>
+ * Copyright (C) Roland Jax 2012-2024 <roland.jax@liwest.at>
  *
  * This file is part of ebus.
  *
@@ -18,75 +18,66 @@
  */
 
 #include <unistd.h>
+
 #include <cstddef>
 #include <iostream>
 #include <memory>
 #include <string>
 #include <vector>
 
-#include <Ebus.h>
+#include "../include/ebus/Ebus.h"
 
-class logger : public ebus::ILogger
-{
+class logger : public ebus::ILogger {
+ public:
+  void error(const std::string &message) {
+    std::cout << "ERROR:   " << message << std::endl;
+  }
 
-public:
-	void error(const std::string &message)
-	{
-		std::cout << "ERROR:   " << message << std::endl;
-	}
+  void warn(const std::string &message) {
+    std::cout << "WARN:    " << message << std::endl;
+  }
 
-	void warn(const std::string &message)
-	{
-		std::cout << "WARN:    " << message << std::endl;
-	}
+  void info(const std::string &message) {
+    std::cout << "INFO:    " << message << std::endl;
+  }
 
-	void info(const std::string &message)
-	{
-		std::cout << "INFO:    " << message << std::endl;
-	}
+  void debug(const std::string &message) {
+    // std::cout << "DEBUG:   " << message << std::endl;
+  }
 
-	void debug(const std::string &message)
-	{
-		//std::cout << "DEBUG:   " << message << std::endl;
-	}
-
-	void trace(const std::string &message)
-	{
-		//std::cout << "TRACE:   " << message << std::endl;
-	}
-
+  void trace(const std::string &message) {
+    // std::cout << "TRACE:   " << message << std::endl;
+  }
 };
 
-ebus::Reaction process(const std::vector<std::byte> &message, std::vector<std::byte> &response)
-{
-	std::cout << "process: " << ebus::Ebus::to_string(message) << std::endl;
+ebus::Reaction process(const std::vector<uint8_t> &message,
+                       std::vector<uint8_t> &response) {
+  std::cout << "process: " << ebus::Ebus::to_string(message) << std::endl;
 
-	return (ebus::Reaction::undefined);
+  return (ebus::Reaction::undefined);
 }
 
-void publish(const std::vector<std::byte> &message, const std::vector<std::byte> &response)
-{
-	std::cout << "publish: " << ebus::Ebus::to_string(message) << " " << ebus::Ebus::to_string(response) << std::endl;
+void publish(const std::vector<uint8_t> &message,
+             const std::vector<uint8_t> &response) {
+  std::cout << "publish: " << ebus::Ebus::to_string(message) << " "
+            << ebus::Ebus::to_string(response) << std::endl;
 }
 
-int main()
-{
+int main() {
+  ebus::Ebus service(uint8_t(0xff), "/dev/ttyUSB0");
 
-	ebus::Ebus service(std::byte(0xff), "/dev/ttyUSB0");
+  service.register_logger(std::make_shared<logger>());
+  service.register_process(&process);
+  service.register_publish(&publish);
 
-	service.register_logger(std::make_shared<logger>());
-	service.register_process(&process);
-	service.register_publish(&publish);
+  int count = 0;
 
-	int count = 0;
+  while (count < 10) {
+    sleep(1);
+    std::cout << "main: " << count << " seconds passed" << std::endl;
 
-	while (count < 10)
-	{
-		sleep(1);
-		std::cout << "main: " << count << " seconds passed" << std::endl;
+    count++;
+  }
 
-		count++;
-	}
-
-	return (0);
+  return (0);
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) Roland Jax 2012-2019 <roland.jax@liwest.at>
+ * Copyright (C) Roland Jax 2012-2024 <roland.jax@liwest.at>
  *
  * This file is part of ebus.
  *
@@ -17,43 +17,41 @@
  * along with ebus. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef EBUS_DEVICE_H
-#define EBUS_DEVICE_H
+#ifndef SRC_DEVICE_H_
+#define SRC_DEVICE_H_
 
 #include <termios.h>
+
+#include <cstdint>
 #include <string>
 
-namespace ebus
-{
+namespace ebus {
 
-class Device
-{
+class Device {
+ public:
+  explicit Device(const std::string &device);
+  ~Device();
 
-public:
-	explicit Device(const std::string &device);
-	~Device();
+  void open();
+  void close();
 
-	void open();
-	void close();
+  bool isOpen();
 
-	bool isOpen();
+  void send(const uint8_t byte);
+  void recv(uint8_t &byte, const uint8_t sec, const uint16_t nsec);
 
-	void send(const std::byte byte);
-	void recv(std::byte &byte, const long sec, const long nsec);
+ private:
+  const std::string m_device;
 
-private:
-	const std::string m_device;
+  termios m_oldSettings = {};
 
-	termios m_oldSettings = {};
+  int m_fd = -1;
 
-	int m_fd = -1;
+  bool m_open = false;
 
-	bool m_open = false;
-
-	bool isValid();
-
+  bool isValid();
 };
 
-} // namespace ebus
+}  // namespace ebus
 
-#endif // EBUS_DEVICE_H
+#endif  // SRC_DEVICE_H_
