@@ -2,7 +2,7 @@ AM_CXXFLAGS = -fpic \
 	      -Wall \
 	      -Wextra \
 	      -Wpedantic \
-	      -std=c++20 \
+	      -std=c++14 \
 	      -isystem$(top_srcdir)/src \
 	      -isystem$(top_srcdir)/include/ebus
 

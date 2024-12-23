@@ -5,7 +5,7 @@ To build ebus the following packages are needed:
   - autoconf (2.69)
   - automake (1.11)
   - make
-  - g++ (C++20)
+  - g++ (C++14)
   - ppoll support (kernel)
   - pthread support (glibc)
   - pkg-config
@@ -24,8 +24,8 @@ To compile and link this library with your own project add pkg-config to gcc com
 
 for exampel: geany
 
-  compiler: $ g++ -Wall -std=c++20 `pkg-config --cflags --libs ebus` -c "%f"
-    linker: $ g++ -Wall -std=c++20 `pkg-config --cflags --libs ebus` -o "%e" "%f"
+  compiler: $ g++ -Wall -std=c++14 `pkg-config --cflags --libs ebus` -c "%f"
+    linker: $ g++ -Wall -std=c++14 `pkg-config --cflags --libs ebus` -o "%e" "%f"
 
 
 For bugs and missing features use github issue system.
