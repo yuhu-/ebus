@@ -17,8 +17,7 @@
  * along with ebus. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef SRC_NQUEUE_H_
-#define SRC_NQUEUE_H_
+#pragma once
 
 #include <stddef.h>
 
@@ -60,5 +59,3 @@ class NQueue {
 };
 
 }  // namespace ebus
-
-#endif  // SRC_NQUEUE_H_

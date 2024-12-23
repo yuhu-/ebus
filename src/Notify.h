@@ -17,8 +17,7 @@
  * along with ebus. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef SRC_NOTIFY_H_
-#define SRC_NOTIFY_H_
+#pragma once
 
 #include <condition_variable>
 #include <mutex>
@@ -51,5 +50,3 @@ class Notify {
 };
 
 }  // namespace ebus
-
-#endif  // SRC_NOTIFY_H_

@@ -17,8 +17,7 @@
  * along with ebus. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef SRC_DEVICE_H_
-#define SRC_DEVICE_H_
+#pragma once
 
 #include <termios.h>
 
@@ -53,5 +52,3 @@ class Device {
 };
 
 }  // namespace ebus
-
-#endif  // SRC_DEVICE_H_

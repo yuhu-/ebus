@@ -17,8 +17,7 @@
  * along with ebus. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef INCLUDE_EBUS_EBUS_H_
-#define INCLUDE_EBUS_EBUS_H_
+#pragma once
 
 #include <cstddef>
 #include <experimental/propagate_const>
@@ -212,5 +211,3 @@ class Ebus {
 };
 
 }  // namespace ebus
-
-#endif  // INCLUDE_EBUS_EBUS_H_

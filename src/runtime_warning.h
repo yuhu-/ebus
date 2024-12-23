@@ -17,8 +17,7 @@
  * along with ebus. If not, see http://www.gnu.org/licenses/.
  */
 
-#ifndef SRC_RUNTIME_WARNING_H_
-#define SRC_RUNTIME_WARNING_H_
+#pragma once
 
 #include <stdexcept>
 
@@ -30,5 +29,3 @@ class runtime_warning : public std::runtime_error {
 };
 
 }  // namespace ebus
-
-#endif  // SRC_RUNTIME_WARNING_H_

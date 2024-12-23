@@ -42,8 +42,7 @@
 // ACK..Acknowledgement byte (0x00 OK, 0xff NOK)
 // SYN..Synchronisation byte (0xaa)
 
-#ifndef SRC_TELEGRAM_H_
-#define SRC_TELEGRAM_H_
+#pragma once
 
 #include <cstddef>
 #include <string>
@@ -153,5 +152,3 @@ class Telegram {
 };
 
 }  // namespace ebus
-
-#endif  // SRC_TELEGRAM_H_
