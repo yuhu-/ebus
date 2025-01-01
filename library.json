@@ -1,0 +1,21 @@
+{
+  "name": "ebus",
+  "version": "1.0.0",
+  "description": "ebus provides c++ classes to communicate via eBUS.",
+  "keywords": "ebus, heating",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yuhu-/ebus.git"
+  },
+  "authors": {
+    "name": "Roland Jax",
+    "email": "roland.jax@liwest.at",
+    "maintainer": true
+  },
+  "license": "GPL-3.0",
+  "frameworks": "arduino",
+  "platforms": [
+    "espressif8266",
+    "espressif32"
+  ]
+}

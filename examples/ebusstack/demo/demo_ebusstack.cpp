@@ -1,5 +1,5 @@
 /*
- * Copyright (C) Roland Jax 2012-2024 <roland.jax@liwest.at>
+ * Copyright (C) 2012-2025 Roland Jax
  *
  * This file is part of ebus.
  *
@@ -25,7 +25,7 @@
 #include <string>
 #include <vector>
 
-#include "../include/ebus/Ebus.h"
+#include "../include/ebus/EbusStack.h"
 
 class logger : public ebus::ILogger {
  public:
@@ -52,19 +52,19 @@ class logger : public ebus::ILogger {
 
 ebus::Reaction process(const std::vector<uint8_t> &message,
                        std::vector<uint8_t> &response) {
-  std::cout << "process: " << ebus::Ebus::to_string(message) << std::endl;
+  std::cout << "process: " << ebus::EbusStack::to_string(message) << std::endl;
 
   return (ebus::Reaction::undefined);
 }
 
 void publish(const std::vector<uint8_t> &message,
              const std::vector<uint8_t> &response) {
-  std::cout << "publish: " << ebus::Ebus::to_string(message) << " "
-            << ebus::Ebus::to_string(response) << std::endl;
+  std::cout << "publish: " << ebus::EbusStack::to_string(message) << " "
+            << ebus::EbusStack::to_string(response) << std::endl;
 }
 
 int main() {
-  ebus::Ebus service(uint8_t(0xff), "/dev/ttyUSB0");
+  ebus::EbusStack service(uint8_t(0xff), "/dev/ttyUSB0");
 
   service.register_logger(std::make_shared<logger>());
   service.register_process(&process);

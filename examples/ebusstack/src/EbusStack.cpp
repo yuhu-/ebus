@@ -1,5 +1,5 @@
 /*
- * Copyright (C) Roland Jax 2012-2024 <roland.jax@liwest.at>
+ * Copyright (C) 2012-2025 Roland Jax
  *
  * This file is part of ebus.
  *
@@ -17,7 +17,7 @@
  * along with ebus. If not, see http://www.gnu.org/licenses/.
  */
 
-#include "../include/ebus/Ebus.h"
+#include "../include/ebus/EbusStack.h"
 
 #include <bits/types/struct_timespec.h>
 #include <unistd.h>
@@ -102,7 +102,7 @@ enum class State {
 
 }  // namespace ebus
 
-class ebus::Ebus::EbusImpl : private Notify {
+class ebus::EbusStack::EbusImpl : private Notify {
  public:
   EbusImpl(const uint8_t address, const std::string &device);
 
@@ -218,80 +218,80 @@ class ebus::Ebus::EbusImpl : private Notify {
   void logTrace(const std::string &message);
 };
 
-ebus::Ebus::Ebus(const uint8_t address, const std::string &device)
+ebus::EbusStack::EbusStack(const uint8_t address, const std::string &device)
     : impl{std::make_unique<EbusImpl>(address, device)} {}
 
 // move functions
-ebus::Ebus &ebus::Ebus::operator=(Ebus &&) = default;
-ebus::Ebus::Ebus(Ebus &&) = default;
+ebus::EbusStack &ebus::EbusStack::operator=(EbusStack &&) = default;
+ebus::EbusStack::EbusStack(EbusStack &&) = default;
 
-ebus::Ebus::~Ebus() = default;
+ebus::EbusStack::~EbusStack() = default;
 
-void ebus::Ebus::open() { this->impl->open(); }
+void ebus::EbusStack::open() { this->impl->open(); }
 
-void ebus::Ebus::close() { this->impl->close(); }
+void ebus::EbusStack::close() { this->impl->close(); }
 
-bool ebus::Ebus::online() { return this->impl->online(); }
+bool ebus::EbusStack::online() { return this->impl->online(); }
 
-int ebus::Ebus::transmit(const std::vector<uint8_t> &message,
-                         std::vector<uint8_t> &response) {
+int ebus::EbusStack::transmit(const std::vector<uint8_t> &message,
+                              std::vector<uint8_t> &response) {
   return this->impl->transmit(message, response);
 }
 
-const std::string ebus::Ebus::error_text(const int error) const {
+const std::string ebus::EbusStack::error_text(const int error) const {
   return this->impl->error_text(error);
 }
 
-void ebus::Ebus::register_logger(std::shared_ptr<ILogger> logger) {
+void ebus::EbusStack::register_logger(std::shared_ptr<ILogger> logger) {
   this->impl->register_logger(logger);
 }
 
-void ebus::Ebus::register_process(
+void ebus::EbusStack::register_process(
     std::function<Reaction(const std::vector<uint8_t> &message,
                            std::vector<uint8_t> &response)>
         process) {
   this->impl->register_process(process);
 }
 
-void ebus::Ebus::register_publish(
+void ebus::EbusStack::register_publish(
     std::function<void(const std::vector<uint8_t> &message,
                        const std::vector<uint8_t> &response)>
         publish) {
   this->impl->register_publish(publish);
 }
 
-void ebus::Ebus::register_rawdata(
+void ebus::EbusStack::register_rawdata(
     std::function<void(const uint8_t &byte)> rawdata) {
   this->impl->register_rawdata(rawdata);
 }
 
-void ebus::Ebus::set_access_timeout(const uint16_t &access_timeout) {
+void ebus::EbusStack::set_access_timeout(const uint16_t &access_timeout) {
   this->impl->set_access_timeout(access_timeout);
 }
 
-void ebus::Ebus::set_lock_counter_max(const uint8_t &lock_counter_max) {
+void ebus::EbusStack::set_lock_counter_max(const uint8_t &lock_counter_max) {
   this->impl->set_lock_counter_max(lock_counter_max);
 }
 
-void ebus::Ebus::set_open_counter_max(const uint8_t &open_counter_max) {
+void ebus::EbusStack::set_open_counter_max(const uint8_t &open_counter_max) {
   this->impl->set_open_counter_max(open_counter_max);
 }
 
-const std::vector<uint8_t> ebus::Ebus::range(const std::vector<uint8_t> &seq,
-                                             const size_t index,
-                                             const size_t len) {
+const std::vector<uint8_t> ebus::EbusStack::range(
+    const std::vector<uint8_t> &seq, const size_t index, const size_t len) {
   return EbusImpl::range(seq, index, len);
 }
 
-const std::vector<uint8_t> ebus::Ebus::to_vector(const std::string &str) {
+const std::vector<uint8_t> ebus::EbusStack::to_vector(const std::string &str) {
   return EbusImpl::to_vector(str);
 }
 
-const std::string ebus::Ebus::to_string(const std::vector<uint8_t> &vec) {
+const std::string ebus::EbusStack::to_string(const std::vector<uint8_t> &vec) {
   return EbusImpl::to_string(vec);
 }
 
-ebus::Ebus::EbusImpl::EbusImpl(const uint8_t address, const std::string &device)
+ebus::EbusStack::EbusImpl::EbusImpl(const uint8_t address,
+                                    const std::string &device)
     : Notify(),
       m_address(address),
       m_slaveAddress(Telegram::slaveAddress(address)),
@@ -299,7 +299,7 @@ ebus::Ebus::EbusImpl::EbusImpl(const uint8_t address, const std::string &device)
   m_thread = std::thread(&EbusImpl::run, this);
 }
 
-ebus::Ebus::EbusImpl::~EbusImpl() {
+ebus::EbusStack::EbusImpl::~EbusImpl() {
   close();
 
   struct timespec req = {0, 10000L};
@@ -315,14 +315,14 @@ ebus::Ebus::EbusImpl::~EbusImpl() {
   while (m_messageQueue.size() > 0) m_messageQueue.dequeue().reset();
 }
 
-void ebus::Ebus::EbusImpl::open() { notify(); }
+void ebus::EbusStack::EbusImpl::open() { notify(); }
 
-void ebus::Ebus::EbusImpl::close() { m_close = true; }
+void ebus::EbusStack::EbusImpl::close() { m_close = true; }
 
-bool ebus::Ebus::EbusImpl::online() { return m_online; }
+bool ebus::EbusStack::EbusImpl::online() { return m_online; }
 
-int ebus::Ebus::EbusImpl::transmit(const std::vector<uint8_t> &message,
-                                   std::vector<uint8_t> &response) {
+int ebus::EbusStack::EbusImpl::transmit(const std::vector<uint8_t> &message,
+                                        std::vector<uint8_t> &response) {
   Telegram tel;
   tel.createMaster(m_address, message);
 
@@ -332,75 +332,65 @@ int ebus::Ebus::EbusImpl::transmit(const std::vector<uint8_t> &message,
   return result;
 }
 
-const std::string ebus::Ebus::EbusImpl::error_text(const int error) const {
+const std::string ebus::EbusStack::EbusImpl::error_text(const int error) const {
   return EbusErrors[error];
 }
 
-void ebus::Ebus::EbusImpl::register_logger(std::shared_ptr<ILogger> logger) {
+void ebus::EbusStack::EbusImpl::register_logger(
+    std::shared_ptr<ILogger> logger) {
   m_logger = logger;
 }
 
-void ebus::Ebus::EbusImpl::register_process(
+void ebus::EbusStack::EbusImpl::register_process(
     std::function<Reaction(const std::vector<uint8_t> &message,
                            std::vector<uint8_t> &response)>
         process) {
   m_process = process;
 }
 
-void ebus::Ebus::EbusImpl::register_publish(
+void ebus::EbusStack::EbusImpl::register_publish(
     std::function<void(const std::vector<uint8_t> &message,
                        const std::vector<uint8_t> &response)>
         publish) {
   m_publish.push_back(publish);
 }
 
-void ebus::Ebus::EbusImpl::register_rawdata(
+void ebus::EbusStack::EbusImpl::register_rawdata(
     std::function<void(const uint8_t &byte)> rawdata) {
   m_rawdata.push_back(rawdata);
 }
 
-void ebus::Ebus::EbusImpl::set_access_timeout(const uint16_t &access_timeout) {
+void ebus::EbusStack::EbusImpl::set_access_timeout(
+    const uint16_t &access_timeout) {
   m_access_timeout = access_timeout;
 }
 
-void ebus::Ebus::EbusImpl::set_lock_counter_max(
+void ebus::EbusStack::EbusImpl::set_lock_counter_max(
     const uint8_t &lock_counter_max) {
   m_lock_counter_max = lock_counter_max;
 }
 
-void ebus::Ebus::EbusImpl::set_open_counter_max(
+void ebus::EbusStack::EbusImpl::set_open_counter_max(
     const uint8_t &open_counter_max) {
   m_open_counter_max = open_counter_max;
 }
 
-const std::vector<uint8_t> ebus::Ebus::EbusImpl::range(
+const std::vector<uint8_t> ebus::EbusStack::EbusImpl::range(
     const std::vector<uint8_t> &seq, const size_t index, const size_t len) {
   return Sequence::range(seq, index, len);
 }
 
-const std::vector<uint8_t> ebus::Ebus::EbusImpl::to_vector(
+const std::vector<uint8_t> ebus::EbusStack::EbusImpl::to_vector(
     const std::string &str) {
-  std::vector<uint8_t> result;
-
-  for (size_t i = 0; i + 1 < str.size(); i += 2)
-    result.push_back(
-        uint8_t(std::strtoul(str.substr(i, 2).c_str(), nullptr, 16)));
-
-  return result;
+  return ebus::Sequence::to_vector(str);
 }
 
-const std::string ebus::Ebus::EbusImpl::to_string(
+const std::string ebus::EbusStack::EbusImpl::to_string(
     const std::vector<uint8_t> &vec) {
-  std::ostringstream ostr;
-
-  for (size_t i = 0; i < vec.size(); i++)
-    ostr << std::nouppercase << std::hex << std::setw(2) << std::setfill('0')
-         << static_cast<unsigned>(vec[i]);
-
-  return ostr.str();
+  return ebus::Sequence::to_string(vec);
 }
 
-int ebus::Ebus::EbusImpl::transmit(Telegram &tel) {
+int ebus::EbusStack::EbusImpl::transmit(Telegram &tel) {
   int result = SEQ_OK;
 
   if (tel.getMasterState() != SEQ_OK) {
@@ -420,8 +410,8 @@ int ebus::Ebus::EbusImpl::transmit(Telegram &tel) {
   return result;
 }
 
-void ebus::Ebus::EbusImpl::read(uint8_t &byte, const uint8_t sec,
-                                const uint16_t nsec) {
+void ebus::EbusStack::EbusImpl::read(uint8_t &byte, const uint8_t sec,
+                                     const uint16_t nsec) {
   m_device->recv(byte, sec, nsec);
 
   rawdata(byte);
@@ -432,7 +422,7 @@ void ebus::Ebus::EbusImpl::read(uint8_t &byte, const uint8_t sec,
   logTrace("<" + ostr.str());
 }
 
-void ebus::Ebus::EbusImpl::write(const uint8_t &byte) {
+void ebus::EbusStack::EbusImpl::write(const uint8_t &byte) {
   m_device->send(byte);
 
   std::ostringstream ostr;
@@ -441,8 +431,9 @@ void ebus::Ebus::EbusImpl::write(const uint8_t &byte) {
   logTrace(">" + ostr.str());
 }
 
-void ebus::Ebus::EbusImpl::write_read(const uint8_t &byte, const uint8_t sec,
-                                      const uint16_t nsec) {
+void ebus::EbusStack::EbusImpl::write_read(const uint8_t &byte,
+                                           const uint8_t sec,
+                                           const uint16_t nsec) {
   write(byte);
 
   uint8_t readByte;
@@ -451,7 +442,7 @@ void ebus::Ebus::EbusImpl::write_read(const uint8_t &byte, const uint8_t sec,
   if (readByte != byte) logDebug(warn_byte_dif);
 }
 
-void ebus::Ebus::EbusImpl::reset() {
+void ebus::EbusStack::EbusImpl::reset() {
   m_open_counter = 0;
   m_lock_counter = m_lock_counter_max;
 
@@ -471,7 +462,7 @@ void ebus::Ebus::EbusImpl::reset() {
   }
 }
 
-void ebus::Ebus::EbusImpl::run() {
+void ebus::EbusStack::EbusImpl::run() {
   logInfo("Ebus started");
 
   State state = State::OpenDevice;
@@ -524,7 +515,7 @@ void ebus::Ebus::EbusImpl::run() {
   logInfo("Ebus stopped");
 }
 
-ebus::State ebus::Ebus::EbusImpl::idleSystem() {
+ebus::State ebus::EbusStack::EbusImpl::idleSystem() {
   logDebug("idleSystem");
 
   if (m_device->isOpen()) {
@@ -546,7 +537,7 @@ ebus::State ebus::Ebus::EbusImpl::idleSystem() {
   return State::OpenDevice;
 }
 
-ebus::State ebus::Ebus::EbusImpl::openDevice() {
+ebus::State ebus::EbusStack::EbusImpl::openDevice() {
   logDebug("openDevice");
 
   uint8_t byte = sym_zero;
@@ -580,7 +571,7 @@ ebus::State ebus::Ebus::EbusImpl::openDevice() {
   return State::MonitorBus;
 }
 
-ebus::State ebus::Ebus::EbusImpl::monitorBus() {
+ebus::State ebus::EbusStack::EbusImpl::monitorBus() {
   logDebug("monitorBus");
 
   uint8_t byte = sym_zero;
@@ -629,7 +620,7 @@ ebus::State ebus::Ebus::EbusImpl::monitorBus() {
   return State::MonitorBus;
 }
 
-ebus::State ebus::Ebus::EbusImpl::receiveMessage() {
+ebus::State ebus::EbusStack::EbusImpl::receiveMessage() {
   logDebug("receiveMessage");
 
   uint8_t byte;
@@ -712,7 +703,7 @@ ebus::State ebus::Ebus::EbusImpl::receiveMessage() {
   return State::MonitorBus;
 }
 
-ebus::State ebus::Ebus::EbusImpl::processMessage() {
+ebus::State ebus::EbusStack::EbusImpl::processMessage() {
   logDebug("processMessage");
 
   Telegram tel;
@@ -758,7 +749,7 @@ ebus::State ebus::Ebus::EbusImpl::processMessage() {
   return State::MonitorBus;
 }
 
-ebus::State ebus::Ebus::EbusImpl::sendResponse() {
+ebus::State ebus::EbusStack::EbusImpl::sendResponse() {
   logDebug("sendResponse");
 
   Telegram &tel = m_passiveMessage->m_telegram;
@@ -802,7 +793,7 @@ ebus::State ebus::Ebus::EbusImpl::sendResponse() {
   return State::MonitorBus;
 }
 
-ebus::State ebus::Ebus::EbusImpl::lockBus() {
+ebus::State ebus::EbusStack::EbusImpl::lockBus() {
   logDebug("lockBus");
 
   Telegram &tel = m_activeMessage->m_telegram;
@@ -836,7 +827,7 @@ ebus::State ebus::Ebus::EbusImpl::lockBus() {
   return State::SendMessage;
 }
 
-ebus::State ebus::Ebus::EbusImpl::sendMessage() {
+ebus::State ebus::EbusStack::EbusImpl::sendMessage() {
   logDebug("sendMessage");
 
   Telegram &tel = m_activeMessage->m_telegram;
@@ -890,7 +881,7 @@ ebus::State ebus::Ebus::EbusImpl::sendMessage() {
   return State::FreeBus;
 }
 
-ebus::State ebus::Ebus::EbusImpl::receiveResponse() {
+ebus::State ebus::EbusStack::EbusImpl::receiveResponse() {
   logDebug("receiveResponse");
 
   Telegram &tel = m_activeMessage->m_telegram;
@@ -954,7 +945,7 @@ ebus::State ebus::Ebus::EbusImpl::receiveResponse() {
   return State::FreeBus;
 }
 
-ebus::State ebus::Ebus::EbusImpl::freeBus() {
+ebus::State ebus::EbusStack::EbusImpl::freeBus() {
   logDebug("freeBus");
 
   uint8_t byte = sym_syn;
@@ -968,7 +959,7 @@ ebus::State ebus::Ebus::EbusImpl::freeBus() {
   return State::MonitorBus;
 }
 
-ebus::State ebus::Ebus::EbusImpl::handleDeviceError(
+ebus::State ebus::EbusStack::EbusImpl::handleDeviceError(
     bool error, const std::string &message) {
   if (m_activeMessage != nullptr) m_activeMessage->m_state = EBUS_ERR_DEVICE;
 
@@ -988,7 +979,7 @@ ebus::State ebus::Ebus::EbusImpl::handleDeviceError(
   return State::MonitorBus;
 }
 
-ebus::Reaction ebus::Ebus::EbusImpl::process(
+ebus::Reaction ebus::EbusStack::EbusImpl::process(
     const std::vector<uint8_t> &message, std::vector<uint8_t> &response) {
   if (m_process != nullptr)
     return m_process(message, response);
@@ -996,35 +987,35 @@ ebus::Reaction ebus::Ebus::EbusImpl::process(
     return Reaction::nofunction;
 }
 
-void ebus::Ebus::EbusImpl::publish(const std::vector<uint8_t> &message,
-                                   const std::vector<uint8_t> &response) {
+void ebus::EbusStack::EbusImpl::publish(const std::vector<uint8_t> &message,
+                                        const std::vector<uint8_t> &response) {
   if (!m_publish.empty()) {
     for (const auto &publish : m_publish) publish(message, response);
   }
 }
 
-void ebus::Ebus::EbusImpl::rawdata(const uint8_t &byte) {
+void ebus::EbusStack::EbusImpl::rawdata(const uint8_t &byte) {
   if (!m_rawdata.empty()) {
     for (const auto &rawdata : m_rawdata) rawdata(byte);
   }
 }
 
-void ebus::Ebus::EbusImpl::logError(const std::string &message) {
+void ebus::EbusStack::EbusImpl::logError(const std::string &message) {
   if (m_logger != nullptr) m_logger->error(message);
 }
 
-void ebus::Ebus::EbusImpl::logWarn(const std::string &message) {
+void ebus::EbusStack::EbusImpl::logWarn(const std::string &message) {
   if (m_logger != nullptr) m_logger->warn(message);
 }
 
-void ebus::Ebus::EbusImpl::logInfo(const std::string &message) {
+void ebus::EbusStack::EbusImpl::logInfo(const std::string &message) {
   if (m_logger != nullptr) m_logger->info(message);
 }
 
-void ebus::Ebus::EbusImpl::logDebug(const std::string &message) {
+void ebus::EbusStack::EbusImpl::logDebug(const std::string &message) {
   if (m_logger != nullptr) m_logger->debug(message);
 }
 
-void ebus::Ebus::EbusImpl::logTrace(const std::string &message) {
+void ebus::EbusStack::EbusImpl::logTrace(const std::string &message) {
   if (m_logger != nullptr) m_logger->trace(message);
 }

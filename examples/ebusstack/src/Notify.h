@@ -1,5 +1,5 @@
 /*
- * Copyright (C) Roland Jax 2012-2024 <roland.jax@liwest.at>
+ * Copyright (C) 2012-2025 Roland Jax
  *
  * This file is part of ebus.
  *
@@ -19,36 +19,34 @@
 
 #pragma once
 
-#include <termios.h>
-
-#include <cstdint>
-#include <string>
+#include <condition_variable>
+#include <mutex>
 
 namespace ebus {
 
-class Device {
+class Notify {
  public:
-  explicit Device(const std::string &device);
-  ~Device();
+  Notify() : m_mutex(), m_condition() {}
 
-  void open();
-  void close();
+  void wait() {
+    std::unique_lock<std::mutex> lock(m_mutex);
+    while (!m_notify) {
+      m_condition.wait(lock);
+      m_notify = false;
+      break;
+    }
+  }
 
-  bool isOpen();
-
-  void send(const uint8_t byte);
-  void recv(uint8_t &byte, const uint8_t sec, const uint16_t nsec);
+  void notify() {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_notify = true;
+    m_condition.notify_one();
+  }
 
  private:
-  const std::string m_device;
-
-  termios m_oldSettings = {};
-
-  int m_fd = -1;
-
-  bool m_open = false;
-
-  bool isValid();
+  std::mutex m_mutex;
+  std::condition_variable m_condition;
+  bool m_notify = false;
 };
 
 }  // namespace ebus

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) Roland Jax 2012-2024 <roland.jax@liwest.at>
+ * Copyright (C) 2012-2025 Roland Jax
  *
  * This file is part of ebus.
  *
@@ -19,34 +19,13 @@
 
 #pragma once
 
-#include <condition_variable>
-#include <mutex>
+#include <stdexcept>
 
 namespace ebus {
 
-class Notify {
+class runtime_warning : public std::runtime_error {
  public:
-  Notify() : m_mutex(), m_condition() {}
-
-  void wait() {
-    std::unique_lock<std::mutex> lock(m_mutex);
-    while (!m_notify) {
-      m_condition.wait(lock);
-      m_notify = false;
-      break;
-    }
-  }
-
-  void notify() {
-    std::lock_guard<std::mutex> lock(m_mutex);
-    m_notify = true;
-    m_condition.notify_one();
-  }
-
- private:
-  std::mutex m_mutex;
-  std::condition_variable m_condition;
-  bool m_notify = false;
+  explicit runtime_warning(const char *what) : std::runtime_error(what) {}
 };
 
 }  // namespace ebus

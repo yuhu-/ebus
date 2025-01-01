@@ -1,5 +1,5 @@
 /*
- * Copyright (C) Roland Jax 2012-2024 <roland.jax@liwest.at>
+ * Copyright (C) 2012-2025 Roland Jax
  *
  * This file is part of ebus.
  *
@@ -19,43 +19,36 @@
 
 #pragma once
 
-#include <stddef.h>
+#include <termios.h>
 
-#include <condition_variable>
-#include <mutex>
-#include <queue>
+#include <cstdint>
+#include <string>
 
 namespace ebus {
 
-template <typename T>
-class NQueue {
+class Device {
  public:
-  NQueue() : m_queue(), m_mutex(), m_condition() {}
+  explicit Device(const std::string &device);
+  ~Device();
 
-  void enqueue(T item) {
-    std::lock_guard<std::mutex> lock(m_mutex);
-    m_queue.push(item);
-    m_condition.notify_one();
-  }
+  void open();
+  void close();
 
-  T dequeue() {
-    std::unique_lock<std::mutex> lock(m_mutex);
-    while (m_queue.empty()) m_condition.wait(lock);
+  bool isOpen();
 
-    T val = m_queue.front();
-    m_queue.pop();
-    return val;
-  }
-
-  size_t size() {
-    std::unique_lock<std::mutex> lock(m_mutex);
-    return m_queue.size();
-  }
+  void send(const uint8_t byte);
+  void recv(uint8_t &byte, const uint8_t sec, const uint16_t nsec);
 
  private:
-  std::queue<T> m_queue;
-  std::mutex m_mutex;
-  std::condition_variable m_condition;
+  const std::string m_device;
+
+  termios m_oldSettings = {};
+
+  int m_fd = -1;
+
+  bool m_open = false;
+
+  bool isValid();
 };
 
 }  // namespace ebus

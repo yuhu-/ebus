@@ -1,5 +1,5 @@
 /*
- * Copyright (C) Roland Jax 2012-2024 <roland.jax@liwest.at>
+ * Copyright (C) 2012-2025 Roland Jax
  *
  * This file is part of ebus.
  *
@@ -55,7 +55,7 @@ enum class Reaction {
 /**
  * ebus communication class
  */
-class Ebus {
+class EbusStack {
  public:
   /**
    * create an ebus object
@@ -63,24 +63,24 @@ class Ebus {
    * @param address - own address byte
    * @param device - serial device string
    */
-  Ebus(const uint8_t address, const std::string &device);
+  EbusStack(const uint8_t address, const std::string &device);
 
   /**
    * move functions
    */
-  Ebus &operator=(Ebus &&);
-  Ebus(Ebus &&);
+  EbusStack &operator=(EbusStack &&);
+  EbusStack(EbusStack &&);
 
   /**
    * copy functions
    */
-  Ebus &operator=(const Ebus &) = delete;
-  Ebus(const Ebus &) = delete;
+  EbusStack &operator=(const EbusStack &) = delete;
+  EbusStack(const EbusStack &) = delete;
 
   /**
    * destructor
    */
-  ~Ebus();
+  ~EbusStack();
 
   /**
    * open the ebus device
