@@ -1,7 +1,7 @@
 {
   "name": "ebus",
   "version": "1.0.0",
-  "description": "ebus provides c++ classes to communicate via eBUS.",
+  "description": "ebus provides c++ classes to communicate via eBUS",
   "keywords": "ebus, heating",
   "repository": {
     "type": "git",
