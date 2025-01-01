@@ -21,8 +21,8 @@
 #include <iostream>
 #include <string>
 
-#include "../src/Sequence.h"
-#include "../src/Telegram.h"
+#include "Sequence.h"
+#include "Telegram.h"
 
 int main() {
   ebus::Sequence seq;

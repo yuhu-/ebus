@@ -88,7 +88,7 @@ void ebus::Device::close() {
   }
 }
 
-bool ebus::Device::isOpen() { return m_open; }
+bool ebus::Device::isOpen() const { return m_open; }
 
 void ebus::Device::send(const uint8_t byte) {
   isValid();

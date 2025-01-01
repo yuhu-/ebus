@@ -17,7 +17,7 @@
  * along with ebus. If not, see http://www.gnu.org/licenses/.
  */
 
-#include "../include/ebus/EbusStack.h"
+#include "EbusStack.h"
 
 #include <bits/types/struct_timespec.h>
 #include <unistd.h>
@@ -140,7 +140,7 @@ class ebus::EbusStack::EbusImpl : private Notify {
   static const std::vector<uint8_t> range(const std::vector<uint8_t> &seq,
                                           const size_t index, const size_t len);
   static const std::vector<uint8_t> to_vector(const std::string &str);
-  static const std::string to_string(const std::vector<uint8_t> &seq);
+  static const std::string to_string(const std::vector<uint8_t> &vec);
 
  private:
   std::thread m_thread;
@@ -278,8 +278,8 @@ void ebus::EbusStack::set_open_counter_max(const uint8_t &open_counter_max) {
 }
 
 const std::vector<uint8_t> ebus::EbusStack::range(
-    const std::vector<uint8_t> &seq, const size_t index, const size_t len) {
-  return EbusImpl::range(seq, index, len);
+    const std::vector<uint8_t> &vec, const size_t index, const size_t len) {
+  return EbusImpl::range(vec, index, len);
 }
 
 const std::vector<uint8_t> ebus::EbusStack::to_vector(const std::string &str) {

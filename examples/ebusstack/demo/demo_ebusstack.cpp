@@ -25,7 +25,7 @@
 #include <string>
 #include <vector>
 
-#include "../include/ebus/EbusStack.h"
+#include "EbusStack.h"
 
 class logger : public ebus::ILogger {
  public:

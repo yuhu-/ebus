@@ -34,7 +34,7 @@ class Device {
   void open();
   void close();
 
-  bool isOpen();
+  bool isOpen() const;
 
   void send(const uint8_t byte);
   void recv(uint8_t &byte, const uint8_t sec, const uint16_t nsec);

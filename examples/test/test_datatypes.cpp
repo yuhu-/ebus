@@ -27,7 +27,7 @@
 #include <string>
 #include <vector>
 
-#include "../src/Datatypes.h"
+#include "Datatypes.h"
 
 const std::string toString(const std::vector<uint8_t>& seq) {
   std::ostringstream ostr;
