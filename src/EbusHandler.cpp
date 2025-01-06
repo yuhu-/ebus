@@ -129,11 +129,19 @@ void ebus::EbusHandler::receive(const uint8_t byte) {
       break;
     case State::SendMessage:
       receiveIndex++;
-      if (receiveIndex >= master.size()) state = State::ReceiveAcknowledge;
+      if (receiveIndex >= master.size()) {
+        if (telegram.get_type() == Type::BC)
+          state = State::FreeBus;
+        else
+          state = State::ReceiveAcknowledge;
+      }
       break;
     case State::ReceiveAcknowledge:
       if (byte == sym_ack) {
-        state = State::ReceiveResponse;
+        if (telegram.get_type() == Type::MM)
+          state = State::FreeBus;
+        else
+          state = State::ReceiveResponse;
       } else if (!masterRepeated) {
         masterRepeated = true;
         sendIndex = 1;

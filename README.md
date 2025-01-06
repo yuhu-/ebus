@@ -11,9 +11,10 @@ library, **Sequence** (low-level) and **Telegram** (high-level), can store such 
 The purpose of the **Sequence** class is to replace or insert special characters and calculate the CRC byte. 
 The **Telegram** class can analyze, generate and evaluate these sequences according to the eBUS specification.
 
-The **EbusHandler** has implemented routines for sending master-slave telegrams. To perform this task, the
-**EbusHandler** requires a serial bus device. The arbitration procedure is currently not supported and must
-be ensured externally. There is also the possibility to collect statistical data about the eBUS system.
+The **EbusHandler** has implemented routines for sending all types of telegrams and the option of collecting
+statistical data about the eBUS system. To perform this task, the EbusHandler requires a serial bus device.
+The processing of received telegrams and the arbitration procedure, which currently has to be ensured 
+externally, are not yet supported. 
 
 **Datatypes** offers various functions for decoding/encoding in accordance with the eBUS data types.
 
