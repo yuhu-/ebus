@@ -77,7 +77,7 @@ static const uint8_t sym_ack = 0x00;    // positive acknowledge
 static const uint8_t sym_nak = 0xff;    // negative acknowledge
 static const uint8_t sym_broad = 0xfe;  // broadcast destination address
 
-static const int max_bytes = 16;  // 16 maximum data bytes
+static const uint8_t max_bytes = 0x10;  // 16 maximum data bytes
 
 class Telegram {
  public:

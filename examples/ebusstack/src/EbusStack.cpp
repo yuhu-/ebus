@@ -647,7 +647,7 @@ ebus::State ebus::EbusStack::EbusImpl::receiveMessage() {
   // bytes to receive
   uint8_t bytes = m_sequence[4];
 
-  // receive Data Dx
+  // receive Data DBx
   for (uint8_t i = 0; i < bytes; i++) {
     byte = sym_zero;
 
