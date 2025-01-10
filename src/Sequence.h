@@ -21,8 +21,8 @@
 // the ebus specification, in particular the reduction, extension and
 // crc-calculation.
 //
-// (reduced) 0xaa <-> 0xa9 0x01 (expanded)
-// (reduced) 0xa9 <-> 0xa9 0x00 (expanded)
+// (reduced) 0xaa <-> 0xa9 0x01 (extended)
+// (reduced) 0xa9 <-> 0xa9 0x00 (extended)
 
 #pragma once
 
@@ -36,9 +36,9 @@ namespace ebus {
 
 static const uint8_t sym_zero = 0x00;    // zero byte
 static const uint8_t sym_syn = 0xaa;     // synchronization byte
-static const uint8_t sym_exp = 0xa9;     // expand byte
-static const uint8_t sym_synexp = 0x01;  // expanded synchronization byte
-static const uint8_t sym_expexp = 0x00;  // expanded expand byte
+static const uint8_t sym_exp = 0xa9;     // extend byte
+static const uint8_t sym_synexp = 0x01;  // extended synchronization byte
+static const uint8_t sym_expexp = 0x00;  // extended extend byte
 
 class Sequence {
  public:

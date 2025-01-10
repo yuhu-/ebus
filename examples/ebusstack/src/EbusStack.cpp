@@ -755,7 +755,7 @@ ebus::State ebus::EbusStack::EbusImpl::sendResponse() {
   Telegram &tel = m_passiveMessage->m_telegram;
   uint8_t byte;
 
-  // TODO expand, calc CRC of sequence and send
+  // TODO extend, calc CRC of sequence and send
 
   for (int retry = 1; retry >= 0; retry--) {
     // send Message
@@ -832,7 +832,7 @@ ebus::State ebus::EbusStack::EbusImpl::sendMessage() {
 
   Telegram &tel = m_activeMessage->m_telegram;
 
-  // TODO expand, calc CRC of sequence and send
+  // TODO extend, calc CRC of sequence and send
 
   for (int retry = 1; retry >= 0; retry--) {
     // send Message
