@@ -21,7 +21,6 @@
 
 #include <algorithm>
 #include <cstring>
-#include <iomanip>
 #include <map>
 #include <sstream>
 #include <utility>
@@ -195,9 +194,7 @@ std::vector<uint8_t> ebus::float_2_byte(const double_t &value) {
 const std::string ebus::byte_2_string(const std::vector<uint8_t> &vec) {
   std::ostringstream ostr;
 
-  for (size_t i = 0; i < vec.size(); i++)
-    ostr << std::nouppercase << std::hex << std::setw(2) << std::setfill('0')
-         << static_cast<unsigned>(vec[i]);
+  for (size_t i = 0; i < vec.size(); i++) ostr << static_cast<char>(vec[i]);
 
   return ostr.str();
 }
