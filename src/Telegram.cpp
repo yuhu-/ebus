@@ -244,7 +244,7 @@ void ebus::Telegram::createMaster(Sequence &seq) {
     return;
   }
 
-  set_type(seq[1]);
+  m_type = typeOf(seq[1]);
   m_masterNN = static_cast<size_t>(uint8_t(seq[4]));
 
   if (seq.size() == static_cast<size_t>(5 + m_masterNN)) {
@@ -345,7 +345,7 @@ int ebus::Telegram::getSlaveState() const { return m_slaveState; }
 
 void ebus::Telegram::setMasterACK(const uint8_t byte) { m_masterACK = byte; }
 
-ebus::Type ebus::Telegram::get_type() const { return m_type; }
+ebus::Type ebus::Telegram::getType() const { return m_type; }
 
 bool ebus::Telegram::isValid() const {
   if (m_type != Type::MS) return m_masterState == SEQ_OK ? true : false;
@@ -383,6 +383,15 @@ const std::string ebus::Telegram::toStringSlave() const {
   }
 
   return ostr.str();
+}
+
+ebus::Type ebus::Telegram::typeOf(const uint8_t byte) {
+  if (byte == sym_broad)
+    return Type::BC;
+  else if (isMaster(byte))
+    return Type::MM;
+  else
+    return Type::MS;
 }
 
 bool ebus::Telegram::isMaster(const uint8_t byte) {
@@ -430,15 +439,6 @@ const std::string ebus::Telegram::toStringSlaveError() const {
   ostr << "slave " << errorText(m_slaveState);
 
   return ostr.str();
-}
-
-void ebus::Telegram::set_type(const uint8_t byte) {
-  if (byte == sym_broad)
-    m_type = Type::BC;
-  else if (isMaster(byte))
-    m_type = Type::MM;
-  else
-    m_type = Type::MS;
 }
 
 bool ebus::Telegram::isAddressValid(const uint8_t byte) {

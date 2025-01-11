@@ -111,13 +111,15 @@ class Telegram {
 
   void setMasterACK(const uint8_t byte);
 
-  ebus::Type get_type() const;
+  ebus::Type getType() const;
 
   bool isValid() const;
 
   const std::string to_string() const;
   const std::string toStringMaster() const;
   const std::string toStringSlave() const;
+
+  static ebus::Type typeOf(const uint8_t byte);
 
   static bool isMaster(const uint8_t byte);
   static bool isSlave(const uint8_t byte);
@@ -145,7 +147,6 @@ class Telegram {
   const std::string toStringMasterError() const;
   const std::string toStringSlaveError() const;
 
-  void set_type(const uint8_t byte);
   static bool isAddressValid(const uint8_t byte);
   static int checkMasterSequence(const Sequence &seq);
   static int checkSlaveSequence(const Sequence &seq);
