@@ -379,7 +379,7 @@ const std::string ebus::Telegram::toStringSlave() const {
   if (m_slaveState != SEQ_OK && m_type != Type::BC) {
     ostr << toStringSlaveError();
   } else {
-    if (m_type == Type::MS) ostr << m_slave.to_string();
+    ostr << m_slave.to_string();
   }
 
   return ostr.str();
