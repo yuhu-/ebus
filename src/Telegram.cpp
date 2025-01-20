@@ -151,7 +151,7 @@ void ebus::Telegram::parse(Sequence &seq) {
         return;
       }
 
-      offset = slave.size() + 2;
+      offset = slave.size() + 1;
       m_slave.clear();
 
       Sequence tmp(seq2, offset);

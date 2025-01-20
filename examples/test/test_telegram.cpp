@@ -105,7 +105,7 @@ int main() {
 
   // NAK from master
   seq.assign(ebus::Sequence::to_vector(
-      "ff52b509030d0600430003b0fba901d0ff0003b0fba901d000"));
+      "ff52b509030d0600430003b0fba901d0ff03b0fba901d000"));
 
   ebus::Telegram full3(seq);
 
@@ -115,9 +115,8 @@ int main() {
             << std::endl;
 
   // NAK from slave and master
-  seq.assign(
-      ebus::Sequence::to_vector("ff52b509030d060043ffff52b509030d0600430003b0fb"
-                                "a901d0ff0003b0fba901d000"));
+  seq.assign(ebus::Sequence::to_vector(
+      "ff52b509030d060043ffff52b509030d0600430003b0fba901d0ff03b0fba901d000"));
 
   ebus::Telegram full4(seq);
 
@@ -127,9 +126,8 @@ int main() {
             << std::endl;
 
   // twice NAK from slave and master
-  seq.assign(
-      ebus::Sequence::to_vector("ff52b509030d060043ffff52b509030d0600430003b0fb"
-                                "a901d0ff0003b0fba901d0ff"));
+  seq.assign(ebus::Sequence::to_vector(
+      "ff52b509030d060043ffff52b509030d0600430003b0fba901d0ff03b0fba901d0ff"));
 
   ebus::Telegram full44(seq);
 
