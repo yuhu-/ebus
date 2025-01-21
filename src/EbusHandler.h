@@ -25,6 +25,7 @@
 
 #include <functional>
 #include <map>
+#include <string>
 #include <vector>
 
 #include "Telegram.h"
@@ -34,100 +35,176 @@ namespace ebus {
 struct Counters {
   uint32_t total = 0;
 
-  uint32_t success = 0;
-  float successPercent = 0;
+  uint32_t passive = 0;
+  float passivePercent = 0;
 
-  uint32_t successMS = 0;
-  uint32_t successMM = 0;
-  uint32_t successBC = 0;
+  uint32_t passiveMS = 0;
+  uint32_t passiveMM = 0;
+  uint32_t passiveBC = 0;
+
+  uint32_t passiveMSAtMe = 0;
+  uint32_t passiveMMAtMe = 0;
+
+  uint32_t active = 0;
+  float activePercent = 0;
+
+  uint32_t activeMS = 0;
+  uint32_t activeMM = 0;
+  uint32_t activeBC = 0;
 
   uint32_t failure = 0;
   float failurePercent = 0;
 
-  std::map<int, uint32_t> failureMaster = {
-      {SEQ_EMPTY, 0},        {SEQ_OK, 0},         {SEQ_ERR_SHORT, 0},
-      {SEQ_ERR_LONG, 0},     {SEQ_ERR_NN, 0},     {SEQ_ERR_CRC, 0},
-      {SEQ_ERR_ACK, 0},      {SEQ_ERR_QQ, 0},     {SEQ_ERR_ZZ, 0},
-      {SEQ_ERR_ACK_MISS, 0}, {SEQ_ERR_INVALID, 0}};
+  uint32_t requestTotal = 0;
 
-  std::map<int, uint32_t> failureSlave = {
-      {SEQ_EMPTY, 0},        {SEQ_OK, 0},         {SEQ_ERR_SHORT, 0},
-      {SEQ_ERR_LONG, 0},     {SEQ_ERR_NN, 0},     {SEQ_ERR_CRC, 0},
-      {SEQ_ERR_ACK, 0},      {SEQ_ERR_QQ, 0},     {SEQ_ERR_ZZ, 0},
-      {SEQ_ERR_ACK_MISS, 0}, {SEQ_ERR_INVALID, 0}};
+  uint32_t requestWon = 0;
+  float requestWonPercent = 0;
+  uint32_t requestWon1 = 0;
+  uint32_t requestWon2 = 0;
+  uint32_t requestRetry = 0;
 
-  uint32_t special00 = 0;
-  uint32_t special0704Success = 0;
-  uint32_t special0704Failure = 0;
+  uint32_t requestLost = 0;
+  float requestLostPercent = 0;
+  uint32_t requestLost1 = 0;
+  uint32_t requestLost2 = 0;
+
+  uint32_t requestError = 0;
+  float requestErrorPercent = 0;
 };
 
 enum class State {
-  MonitorBus,
-  Arbitration,
-  SendMessage,
-  ReceiveAcknowledge,
-  ReceiveResponse,
-  SendPositiveAcknowledge,
-  SendNegativeAcknowledge,
-  FreeBus
+  passiveReceiveMaster,
+  passiveReceiveMasterAcknowledge,
+  passiveReceiveSlave,
+  passiveReceiveSlaveAcknowledge,
+  reactiveSendMasterPositiveAcknowledge,
+  reactiveSendMasterNegativeAcknowledge,
+  reactiveSendSlave,
+  reactiveReceiveSlaveAcknowledge,
+  requestBusFirstTry,
+  requestBusPriorityRetry,
+  requestBusSecondTry,
+  activeSendMaster,
+  activeReceiveMasterAcknowledge,
+  activeReceiveSlave,
+  activeSendSlavePositiveAcknowledge,
+  activeSendSlaveNegativeAcknowledge,
+  releaseBus
 };
+
+static const char *stateString(State state) {
+  const char *values[] = {"passiveReceiveMaster",
+                          "passiveReceiveMasterAcknowledge",
+                          "passiveReceiveSlave",
+                          "passiveReceiveSlaveAcknowledge",
+                          "reactiveSendMasterPositiveAcknowledge",
+                          "reactiveSendMasterNegativeAcknowledge",
+                          "reactiveSendSlave",
+                          "reactiveReceiveSlaveAcknowledge",
+                          "requestBusFirstTry",
+                          "requestBusPriorityRetry",
+                          "requestBusSecondTry",
+                          "activeSendMaster",
+                          "activeReceiveMasterAcknowledge",
+                          "activeReceiveSlave",
+                          "activeSendSlavePositiveAcknowledge",
+                          "activeSendSlaveNegativeAcknowledge",
+                          "releaseBus"};
+  return values[static_cast<int>(state)];
+}
 
 class EbusHandler {
  public:
   EbusHandler() = default;
-  EbusHandler(
-      const uint8_t source, std::function<bool()> busReadyFunction,
-      std::function<void(const uint8_t byte)> busWriteFunction,
-      std::function<void(const std::vector<uint8_t> slave)> responseFunction,
-      std::function<void(const std::vector<uint8_t> master,
-                         const std::vector<uint8_t> slave)>
-          telegramFunction);
+  EbusHandler(const uint8_t source, std::function<bool()> busReadyFunction,
+              std::function<void(const uint8_t byte)> busWriteFunction,
+              std::function<void(const std::vector<uint8_t> master,
+                                 const std::vector<uint8_t> slave)>
+                  activeFunction,
+              std::function<void(const std::vector<uint8_t> master,
+                                 const std::vector<uint8_t> slave)>
+                  passiveFunction,
+              std::function<void(const std::vector<uint8_t> master,
+                                 std::vector<uint8_t> *const slave)>
+                  reactiveFunction);
+
+  void setTraceCallback(std::function<void(const char *)> traceFunction);
 
   void setAddress(const uint8_t source);
   uint8_t getAddress() const;
+  uint8_t getSlaveAddress() const;
+
+  void setMaxLockCounter(const uint8_t counter);
 
   State getState() const;
+  bool isActive() const;
 
   void reset();
   bool enque(const std::vector<uint8_t> &message);
 
-  void send();
-  void receive(const uint8_t byte);
+  void run(const uint8_t &byte);
 
-  void feedCounters(const uint8_t byte);
   void resetCounters();
-  Counters &getCounters();
+  const Counters &getCounters();
 
  private:
   uint8_t address = 0;
+  uint8_t slaveAddress = 0;
 
   std::function<bool()> busReadyCallback = nullptr;
   std::function<void(const uint8_t byte)> busWriteCallback = nullptr;
-  std::function<void(const std::vector<uint8_t> slave)> responseCallback =
-      nullptr;
   std::function<void(const std::vector<uint8_t> master,
                      const std::vector<uint8_t> slave)>
-      telegramCallback = nullptr;
+      activeCallback = nullptr;
+  std::function<void(const std::vector<uint8_t> master,
+                     const std::vector<uint8_t> slave)>
+      passiveCallback = nullptr;
+  std::function<void(const std::vector<uint8_t> master,
+                     std::vector<uint8_t> *const slave)>
+      reactiveCallback = nullptr;
 
-  State state = State::MonitorBus;
+  std::function<void(const char *)> traceCallback = nullptr;
 
-  Sequence sequence;
+  State state = State::passiveReceiveMaster;
+
   Counters counters;
 
-  Telegram telegram;
+  // control
+  bool write = false;
+  uint8_t maxLockCounter = 3;
+  uint8_t lockCoutner = 0;
 
-  Sequence master;
-  size_t sendIndex = 0;
-  size_t receiveIndex = 0;
-  bool masterRepeated = false;
+  // passive
+  Telegram passiveTelegram;
 
-  Sequence slave;
-  size_t slaveIndex = 0;
-  size_t slaveNN = 0;
-  bool slaveRepeated = false;
+  Sequence passiveMaster;
+  size_t passiveMasterDBx = 0;
+  bool passiveMasterRepeated = false;
 
-  bool sendAcknowledge = true;
-  bool sendSyn = true;
+  Sequence passiveSlave;
+  size_t passiveSlaveDBx = 0;
+  size_t passiveSlaveSendIndex = 0;
+  size_t passiveSlaveReceiveIndex = 0;
+  bool passiveSlaveRepeated = false;
+
+  // active
+  bool active = false;
+  Telegram activeTelegram;
+
+  Sequence activeMaster;
+  size_t activeMasterSendIndex = 0;
+  size_t activeMasterReceiveIndex = 0;
+  bool activeMasterRepeated = false;
+
+  Sequence activeSlave;
+  size_t activeSlaveDBx = 0;
+  bool activeSlaveRepeated = false;
+
+  void receive(const uint8_t &byte);
+  void send();
+
+  void resetPassive();
+  void resetActive();
 };
 
 }  // namespace ebus

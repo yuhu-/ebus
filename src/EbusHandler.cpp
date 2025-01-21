@@ -29,238 +29,610 @@
 ebus::EbusHandler::EbusHandler(
     const uint8_t source, std::function<bool()> busReadyFunction,
     std::function<void(const uint8_t byte)> busWriteFunction,
-    std::function<void(const std::vector<uint8_t> slave)> responseFunction,
     std::function<void(const std::vector<uint8_t> master,
                        const std::vector<uint8_t> slave)>
-        telegramFunction)
-    : address(source),
-      busReadyCallback(busReadyFunction),
-      busWriteCallback(busWriteFunction),
-      responseCallback(responseFunction),
-      telegramCallback(telegramFunction) {}
+        activeFunction,
+    std::function<void(const std::vector<uint8_t> master,
+                       const std::vector<uint8_t> slave)>
+        passiveFunction,
+    std::function<void(const std::vector<uint8_t> master,
+                       std::vector<uint8_t> *const slave)>
+        reactiveFunction) {
+  setAddress(source);
+  busReadyCallback = busReadyFunction;
+  busWriteCallback = busWriteFunction;
+  activeCallback = activeFunction;
+  passiveCallback = passiveFunction;
+  reactiveCallback = reactiveFunction;
+}
 
-void ebus::EbusHandler::setAddress(const uint8_t source) { address = source; }
+void ebus::EbusHandler::setTraceCallback(
+    std::function<void(const char *)> traceFunction) {
+  traceCallback = traceFunction;
+}
+
+void ebus::EbusHandler::setAddress(const uint8_t source) {
+  if (ebus::Telegram::isMaster(source))
+    address = source;
+  else
+    address = 0xff;
+
+  slaveAddress = Telegram::slaveAddress(address);
+}
 
 uint8_t ebus::EbusHandler::getAddress() const { return address; }
 
+uint8_t ebus::EbusHandler::getSlaveAddress() const { return slaveAddress; }
+
+void ebus::EbusHandler::setMaxLockCounter(const uint8_t counter) {
+  if (counter > 25)
+    maxLockCounter = 3;
+  else
+    maxLockCounter = counter;
+
+  lockCoutner = maxLockCounter;
+}
+
 ebus::State ebus::EbusHandler::getState() const { return state; }
 
+bool ebus::EbusHandler::isActive() const { return active; }
+
 void ebus::EbusHandler::reset() {
-  state = State::MonitorBus;
-
-  telegram.clear();
-
-  master.clear();
-  sendIndex = 0;
-  receiveIndex = 0;
-  masterRepeated = false;
-
-  slave.clear();
-  slaveIndex = 0;
-  slaveNN = 0;
-  slaveRepeated = false;
-
-  sendAcknowledge = true;
-  sendSyn = true;
+  state = State::passiveReceiveMaster;
+  write = false;
+  resetActive();
+  resetPassive();
 }
 
 bool ebus::EbusHandler::enque(const std::vector<uint8_t> &message) {
-  reset();
-  telegram.createMaster(address, message);
-  if (telegram.getMasterState() == SEQ_OK) {
-    master = telegram.getMaster();
-    master.push_back(telegram.getMasterCRC(), false);
-    master.extend();
-    state = State::Arbitration;
-    return true;
-  }
-  return false;
-}
-
-void ebus::EbusHandler::send() {
-  switch (state) {
-    case State::MonitorBus:
-      break;
-    case State::Arbitration:
-      break;
-    case State::SendMessage:
-      if (busReadyCallback() && sendIndex == receiveIndex) {
-        busWriteCallback(master[sendIndex]);
-        sendIndex++;
-      }
-      break;
-    case State::ReceiveAcknowledge:
-      break;
-    case State::ReceiveResponse:
-      break;
-    case State::SendPositiveAcknowledge:
-      if (busReadyCallback() && sendAcknowledge) {
-        sendAcknowledge = false;
-        busWriteCallback(sym_ack);
-      }
-      break;
-    case State::SendNegativeAcknowledge:
-      if (busReadyCallback() && sendAcknowledge) {
-        sendAcknowledge = false;
-        busWriteCallback(sym_nak);
-      }
-      break;
-    case State::FreeBus:
-      if (busReadyCallback() && sendSyn) {
-        sendSyn = false;
-        busWriteCallback(sym_syn);
-      }
-      break;
-    default:
-      break;
-  }
-}
-
-void ebus::EbusHandler::receive(const uint8_t byte) {
-  switch (state) {
-    case State::MonitorBus:
-      break;
-    case State::Arbitration:
-      if (byte == address) {
-        sendIndex = 1;
-        receiveIndex = 1;
-        state = State::SendMessage;
-      }
-      break;
-    case State::SendMessage:
-      receiveIndex++;
-      if (receiveIndex >= master.size()) {
-        if (telegram.get_type() == Type::BC)
-          state = State::FreeBus;
-        else
-          state = State::ReceiveAcknowledge;
-      }
-      break;
-    case State::ReceiveAcknowledge:
-      if (byte == sym_ack) {
-        if (telegram.get_type() == Type::MM)
-          state = State::FreeBus;
-        else
-          state = State::ReceiveResponse;
-      } else if (!masterRepeated) {
-        masterRepeated = true;
-        sendIndex = 1;
-        receiveIndex = 1;
-        state = State::SendMessage;
-      } else {
-        state = State::FreeBus;
-      }
-      break;
-    case State::ReceiveResponse:
-      slaveIndex++;
-      slave.push_back(byte);
-
-      if (slave.size() == 1) slaveNN = 1 + byte + 1;  // NN + DBx + CRC
-
-      if (byte == sym_exp)  // AA >> A9 + 01 || A9 >> A9 + 00
-        slaveNN++;
-
-      if (slave.size() >= slaveNN) {
-        telegram.createSlave(slave);
-        if (telegram.getSlaveState() == SEQ_OK) {
-          sendAcknowledge = true;
-          state = State::SendPositiveAcknowledge;
-
-          responseCallback(telegram.getSlave().to_vector());
-        } else {
-          slaveIndex = 0;
-          slave.clear();
-          sendAcknowledge = true;
-          state = State::SendNegativeAcknowledge;
-        }
-      }
-
-      break;
-    case State::SendPositiveAcknowledge:
-      state = State::FreeBus;
-      break;
-    case State::SendNegativeAcknowledge:
-      if (!slaveRepeated) {
-        slaveRepeated = true;
-        state = State::ReceiveResponse;
-      } else {
-        state = State::FreeBus;
-      }
-      break;
-    case State::FreeBus:
-      state = State::MonitorBus;
-      break;
-    default:
-      break;
-  }
-}
-
-void ebus::EbusHandler::feedCounters(const uint8_t byte) {
-  if (byte == sym_syn) {
-    if (sequence.size() > 0) {
-      counters.total++;
-
-      Telegram tel(sequence);
-
-      if (tel.isValid()) {
-        telegramCallback(tel.getMaster().to_vector(),
-                         tel.getSlave().to_vector());
-        counters.success++;
-
-        if (tel.get_type() == Type::MS)
-          counters.successMS++;
-        else if (tel.get_type() == Type::MM)
-          counters.successMM++;
-        else if (tel.get_type() == Type::BC)
-          counters.successBC++;
-      } else {
-        counters.failure++;
-
-        counters.failureMaster[tel.getMasterState()]++;
-        counters.failureSlave[tel.getSlaveState()]++;
-      }
-
-      counters.successPercent =
-          counters.success / static_cast<float>(counters.total) * 100.0f;
-      counters.failurePercent =
-          counters.failure / static_cast<float>(counters.total) * 100.0f;
-
-      if (sequence.size() == 1 && sequence[0] == 0x00) {
-        counters.special00++;
-      } else if (sequence.size() >= 3 && sequence[2] == 0x07 &&
-                 sequence[3] == 0x04) {
-        if (sequence.size() > 6)
-          counters.special0704Success++;
-        else
-          counters.special0704Failure++;
-      }
-
-      sequence.clear();
+  if (!active) {
+    activeTelegram.createMaster(address, message);
+    if (activeTelegram.getMasterState() == SEQ_OK) {
+      active = true;
     }
-  } else {
-    sequence.push_back(byte);
   }
+  return active;
+}
+
+void ebus::EbusHandler::run(const uint8_t &byte) {
+  receive(byte);
+  send();
 }
 
 void ebus::EbusHandler::resetCounters() {
   counters.total = 0;
 
-  counters.success = 0;
-  counters.successMS = 0;
-  counters.successMM = 0;
-  counters.successBC = 0;
+  counters.passive = 0;
+  counters.passivePercent = 0;
+
+  counters.passiveMS = 0;
+  counters.passiveMM = 0;
+  counters.passiveBC = 0;
+
+  counters.passiveMSAtMe = 0;
+  counters.passiveMMAtMe = 0;
+
+  counters.active = 0;
+  counters.activePercent = 0;
+
+  counters.activeMS = 0;
+  counters.activeMM = 0;
+  counters.activeBC = 0;
 
   counters.failure = 0;
+  counters.failurePercent = 0;
 
-  for (std::pair<const int, uint32_t> &item : counters.failureMaster)
-    item.second = 0;
+  counters.requestTotal = 0;
 
-  for (std::pair<const int, uint32_t> &item : counters.failureSlave)
-    item.second = 0;
+  counters.requestWon = 0;
+  counters.requestWonPercent = 0;
+  counters.requestWon1 = 0;
+  counters.requestWon2 = 0;
+  counters.requestRetry = 0;
 
-  counters.special00 = 0;
-  counters.special0704Success = 0;
-  counters.special0704Failure = 0;
+  counters.requestLost = 0;
+  counters.requestLostPercent = 0;
+  counters.requestLost1 = 0;
+  counters.requestLost2 = 0;
+
+  counters.requestError = 0;
+  counters.requestErrorPercent = 0;
 }
 
-ebus::Counters &ebus::EbusHandler::getCounters() { return counters; }
+const ebus::Counters &ebus::EbusHandler::getCounters() {
+  counters.passive = counters.passiveMS + counters.passiveMM +
+                     counters.passiveBC + counters.passiveMMAtMe +
+                     counters.passiveMSAtMe;
+
+  counters.active = counters.activeMS + counters.activeMM + counters.activeBC;
+
+  counters.total = counters.passive + counters.active + counters.failure;
+
+  counters.passivePercent =
+      counters.passive / static_cast<float>(counters.total) * 100.0f;
+
+  counters.activePercent =
+      counters.active / static_cast<float>(counters.total) * 100.0f;
+
+  counters.failurePercent =
+      counters.failure / static_cast<float>(counters.total) * 100.0f;
+
+  counters.requestWon = counters.requestWon1 + counters.requestWon2;
+  counters.requestLost = counters.requestLost1 + counters.requestLost2;
+  counters.requestTotal =
+      counters.requestWon + counters.requestLost + counters.requestError;
+
+  counters.requestWonPercent =
+      counters.requestWon / static_cast<float>(counters.requestTotal) * 100.0f;
+
+  counters.requestLostPercent =
+      counters.requestLost / static_cast<float>(counters.requestTotal) * 100.0f;
+
+  counters.requestErrorPercent = counters.requestError /
+                                 static_cast<float>(counters.requestTotal) *
+                                 100.0f;
+
+  return counters;
+}
+
+void ebus::EbusHandler::receive(const uint8_t &byte) {
+  if (traceCallback != nullptr) traceCallback(stateString(state));
+
+  switch (state) {
+    case State::passiveReceiveMaster: {
+      if (byte != sym_syn) {
+        passiveMaster.push_back(byte);
+
+        if (passiveMaster.size() == 5) passiveMasterDBx = passiveMaster[4];
+
+        // AA >> A9 + 01 || A9 >> A9 + 00
+        if (byte == sym_exp) passiveMasterDBx++;
+
+        // size() > ZZ QQ PB SB NN + DBx + CRC
+        if (passiveMaster.size() >= 5 + passiveMasterDBx + 1) {
+          passiveTelegram.createMaster(passiveMaster);
+          if (passiveTelegram.getMasterState() == SEQ_OK) {
+            if (passiveTelegram.getType() == Type::BC) {
+              reactiveCallback(passiveTelegram.getMaster().to_vector(),
+                               nullptr);
+              counters.passiveBC++;
+              resetPassive();
+            } else if (passiveMaster[1] == address ||
+                       passiveMaster[1] == slaveAddress) {
+              state = State::reactiveSendMasterPositiveAcknowledge;
+              write = true;
+
+              if (passiveTelegram.getType() == Type::MM) {
+                reactiveCallback(passiveTelegram.getMaster().to_vector(),
+                                 nullptr);
+                counters.passiveMMAtMe++;
+              } else if (passiveTelegram.getType() == Type::MS) {
+                std::vector<uint8_t> response;
+                reactiveCallback(passiveTelegram.getMaster().to_vector(),
+                                 &response);
+                counters.passiveMSAtMe++;
+                passiveTelegram.createSlave(response);
+                if (passiveTelegram.getSlaveState() == SEQ_OK) {
+                  passiveSlave = passiveTelegram.getSlave();
+                  passiveSlave.push_back(passiveTelegram.getSlaveCRC(), false);
+                  passiveSlave.extend();
+                } else {
+                  state = State::releaseBus;
+                  write = true;
+                  resetPassive();
+                }
+              }
+            } else {
+              state = State::passiveReceiveMasterAcknowledge;
+            }
+          } else {
+            if (passiveTelegram.getType() == Type::MM ||
+                passiveTelegram.getType() == Type::MS) {
+              state = State::reactiveSendMasterNegativeAcknowledge;
+              write = true;
+              passiveTelegram.clear();
+              passiveMaster.clear();
+              passiveMasterDBx = 0;
+            } else {
+              counters.failure++;
+            }
+          }
+        }
+
+      } else {
+        if (passiveMaster.size() != 1 && lockCoutner > 0) lockCoutner--;
+
+        if (passiveMaster.size() > 0 || passiveSlave.size() > 0 ||
+            passiveMasterDBx > 0 || passiveSlaveDBx > 0 ||
+            passiveSlaveSendIndex > 0 || passiveSlaveReceiveIndex > 0 ||
+            passiveSlaveRepeated) {
+          if (traceCallback != nullptr) traceCallback("passive data reseted");
+          resetPassive();
+          counters.failure++;
+        }
+
+        if (activeMaster.size() > 0 || activeSlave.size() > 0 ||
+            activeSlaveDBx > 0 || activeMasterSendIndex > 0 ||
+            activeMasterReceiveIndex > 0 || activeMasterRepeated ||
+            activeSlaveRepeated) {
+          if (!active) {
+            if (traceCallback != nullptr) traceCallback("active data reseted");
+            resetActive();
+            counters.failure++;
+          }
+        }
+
+        // starting active telegram
+        if (lockCoutner == 0 && active) {
+          activeMaster = activeTelegram.getMaster();
+          activeMaster.push_back(activeTelegram.getMasterCRC(), false);
+          activeMaster.extend();
+          state = State::requestBusFirstTry;
+          write = true;
+        }
+      }
+      break;
+    }
+    case State::passiveReceiveMasterAcknowledge: {
+      if (byte == sym_ack) {
+        if (passiveTelegram.getType() == Type::MM) {
+          passiveCallback(passiveTelegram.getMaster().to_vector(),
+                          passiveTelegram.getSlave().to_vector());
+          counters.passiveMM++;
+          state = State::passiveReceiveMaster;
+          resetPassive();
+        } else {
+          state = State::passiveReceiveSlave;
+        }
+      } else if (!passiveMasterRepeated) {
+        passiveMasterRepeated = true;
+        state = State::passiveReceiveMaster;
+        passiveTelegram.clear();
+        passiveMaster.clear();
+        passiveMasterDBx = 0;
+      } else {
+        counters.failure++;
+        state = State::passiveReceiveMaster;
+        resetPassive();
+      }
+      break;
+    }
+    case State::passiveReceiveSlave: {
+      passiveSlave.push_back(byte);
+
+      if (passiveSlave.size() == 1) passiveSlaveDBx = byte;
+
+      // AA >> A9 + 01 || A9 >> A9 + 00
+      if (byte == sym_exp) passiveSlaveDBx++;
+
+      // size() > NN + DBx + CRC
+      if (passiveSlave.size() >= 1 + passiveSlaveDBx + 1) {
+        passiveTelegram.createSlave(passiveSlave);
+        state = State::passiveReceiveSlaveAcknowledge;
+      }
+      break;
+    }
+    case State::passiveReceiveSlaveAcknowledge: {
+      if (byte == sym_nak && !passiveSlaveRepeated) {
+        passiveSlaveRepeated = true;
+        state = State::passiveReceiveSlave;
+        passiveSlave.clear();
+        passiveSlaveDBx = 0;
+      } else if (byte == sym_ack) {
+        passiveCallback(passiveTelegram.getMaster().to_vector(),
+                        passiveTelegram.getSlave().to_vector());
+        counters.passiveMS++;
+        state = State::passiveReceiveMaster;
+        resetPassive();
+      } else {
+        counters.failure++;
+        state = State::passiveReceiveMaster;
+        resetPassive();
+      }
+      break;
+    }
+    case State::reactiveSendMasterPositiveAcknowledge: {
+      if (passiveTelegram.getType() == Type::MM) {
+        state = State::releaseBus;
+        write = true;
+        resetPassive();
+      } else {
+        state = State::reactiveSendSlave;
+      }
+      break;
+    }
+    case State::reactiveSendMasterNegativeAcknowledge: {
+      state = State::passiveReceiveMaster;
+      break;
+    }
+    case State::reactiveSendSlave: {
+      passiveSlaveReceiveIndex++;
+      if (passiveSlaveReceiveIndex >= passiveSlave.size())
+        state = State::reactiveReceiveSlaveAcknowledge;
+      break;
+    }
+    case State::reactiveReceiveSlaveAcknowledge: {
+      if (byte == sym_nak && !passiveSlaveRepeated) {
+        passiveSlaveRepeated = true;
+        state = State::reactiveSendSlave;
+        passiveSlaveSendIndex = 0;
+        passiveSlaveReceiveIndex = 0;
+      } else {
+        if (byte == sym_nak) counters.failure++;
+        state = State::releaseBus;
+        write = true;
+        resetPassive();
+      }
+      break;
+    }
+    case State::requestBusFirstTry: {
+      if (byte != address) {
+        if ((byte & 0x0f) == (address & 0x0f)) {
+          state = State::requestBusPriorityRetry;
+        } else {
+          counters.requestLost1++;
+          state = State::passiveReceiveMaster;
+          active = false;
+          activeTelegram.clear();
+          activeMaster.clear();
+        }
+      } else {
+        counters.requestWon1++;
+        state = State::activeSendMaster;
+        activeMasterSendIndex = 1;
+        activeMasterReceiveIndex = 1;
+      }
+      break;
+    }
+    case State::requestBusPriorityRetry: {
+      if (byte != sym_syn) {
+        counters.requestError++;
+        state = State::passiveReceiveMaster;
+        active = false;
+        activeTelegram.clear();
+        activeMaster.clear();
+      } else {
+        counters.requestRetry++;
+        state = State::requestBusSecondTry;
+        write = true;
+      }
+      break;
+    }
+    case State::requestBusSecondTry: {
+      if (byte != address) {
+        counters.requestLost2++;
+        state = State::passiveReceiveMaster;
+        active = false;
+        activeTelegram.clear();
+        activeMaster.clear();
+      } else {
+        counters.requestWon2++;
+        state = State::activeSendMaster;
+        activeMasterSendIndex = 1;
+        activeMasterReceiveIndex = 1;
+      }
+      break;
+    }
+    case State::activeSendMaster: {
+      activeMasterReceiveIndex++;
+      if (activeMasterReceiveIndex >= activeMaster.size()) {
+        if (activeTelegram.getType() == Type::BC) {
+          activeCallback(activeTelegram.getMaster().to_vector(),
+                         activeTelegram.getSlave().to_vector());
+          counters.activeBC++;
+          state = State::releaseBus;
+          write = true;
+          lockCoutner = maxLockCounter;
+          resetActive();
+        } else {
+          state = State::activeReceiveMasterAcknowledge;
+        }
+      }
+      break;
+    }
+    case State::activeReceiveMasterAcknowledge: {
+      if (byte == sym_ack) {
+        if (activeTelegram.getType() == Type::MM) {
+          activeCallback(activeTelegram.getMaster().to_vector(),
+                         activeTelegram.getSlave().to_vector());
+          counters.activeMM++;
+          state = State::releaseBus;
+          write = true;
+          lockCoutner = maxLockCounter;
+          resetActive();
+        } else {
+          state = State::activeReceiveSlave;
+        }
+      } else if (!activeMasterRepeated) {
+        activeMasterRepeated = true;
+        state = State::activeSendMaster;
+        activeMasterSendIndex = 0;
+        activeMasterReceiveIndex = 0;
+      } else {
+        counters.failure++;
+        state = State::releaseBus;
+        write = true;
+        lockCoutner = maxLockCounter;
+        resetActive();
+      }
+      break;
+    }
+    case State::activeReceiveSlave: {
+      activeSlave.push_back(byte);
+
+      if (activeSlave.size() == 1) activeSlaveDBx = byte;
+
+      // AA >> A9 + 01 || A9 >> A9 + 00
+      if (byte == sym_exp) activeSlaveDBx++;
+
+      // size() > NN + DBx + CRC
+      if (activeSlave.size() >= 1 + activeSlaveDBx + 1) {
+        activeTelegram.createSlave(activeSlave);
+        if (activeTelegram.getSlaveState() == SEQ_OK) {
+          state = State::activeSendSlavePositiveAcknowledge;
+          write = true;
+        } else {
+          state = State::activeSendSlaveNegativeAcknowledge;
+          write = true;
+          activeSlave.clear();
+          activeSlaveDBx = 0;
+        }
+      }
+      break;
+    }
+    case State::activeSendSlavePositiveAcknowledge: {
+      activeCallback(activeTelegram.getMaster().to_vector(),
+                     activeTelegram.getSlave().to_vector());
+      counters.activeMS++;
+      state = State::releaseBus;
+      write = true;
+      lockCoutner = maxLockCounter;
+      resetActive();
+      break;
+    }
+    case State::activeSendSlaveNegativeAcknowledge: {
+      if (!activeSlaveRepeated) {
+        activeSlaveRepeated = true;
+        state = State::activeReceiveSlave;
+        write = true;
+      } else {
+        counters.failure++;
+        state = State::releaseBus;
+        write = true;
+        lockCoutner = maxLockCounter;
+        resetActive();
+      }
+      break;
+    }
+    case State::releaseBus: {
+      state = State::passiveReceiveMaster;
+      break;
+    }
+    default:
+      break;
+  }
+}
+
+void ebus::EbusHandler::send() {
+  switch (state) {
+    case State::passiveReceiveMaster: {
+      break;
+    }
+    case State::passiveReceiveMasterAcknowledge: {
+      break;
+    }
+    case State::passiveReceiveSlave: {
+      break;
+    }
+    case State::passiveReceiveSlaveAcknowledge: {
+      break;
+    }
+    case State::reactiveSendMasterPositiveAcknowledge: {
+      if (busReadyCallback() && write) {
+        write = false;
+        busWriteCallback(sym_ack);
+      }
+      break;
+    }
+    case State::reactiveSendMasterNegativeAcknowledge: {
+      if (busReadyCallback() && write) {
+        write = false;
+        busWriteCallback(sym_nak);
+      }
+      break;
+    }
+    case State::reactiveSendSlave: {
+      if (busReadyCallback() &&
+          passiveSlaveSendIndex == passiveSlaveReceiveIndex) {
+        busWriteCallback(passiveSlave[passiveSlaveSendIndex]);
+        passiveSlaveSendIndex++;
+      }
+      break;
+    }
+    case State::reactiveReceiveSlaveAcknowledge: {
+      break;
+    }
+    case State::requestBusFirstTry: {
+      if (busReadyCallback() && write) {
+        write = false;
+        busWriteCallback(address);
+      }
+      break;
+    }
+    case State::requestBusPriorityRetry: {
+      break;
+    }
+    case State::requestBusSecondTry: {
+      if (busReadyCallback() && write) {
+        write = false;
+        busWriteCallback(address);
+      }
+      break;
+    }
+    case State::activeSendMaster: {
+      if (busReadyCallback() &&
+          activeMasterSendIndex == activeMasterReceiveIndex) {
+        busWriteCallback(activeMaster[activeMasterSendIndex]);
+        activeMasterSendIndex++;
+      }
+      break;
+    }
+    case State::activeReceiveMasterAcknowledge: {
+      break;
+    }
+    case State::activeReceiveSlave: {
+      break;
+    }
+    case State::activeSendSlavePositiveAcknowledge: {
+      if (busReadyCallback() && write) {
+        write = false;
+        busWriteCallback(sym_ack);
+      }
+      break;
+    }
+    case State::activeSendSlaveNegativeAcknowledge: {
+      if (busReadyCallback() && write) {
+        write = false;
+        busWriteCallback(sym_nak);
+      }
+      break;
+    }
+    case State::releaseBus: {
+      if (busReadyCallback() && write) {
+        write = false;
+        busWriteCallback(sym_syn);
+      }
+      break;
+    }
+    default:
+      break;
+  }
+}
+
+void ebus::EbusHandler::resetPassive() {
+  passiveTelegram.clear();
+
+  passiveMaster.clear();
+  passiveMasterDBx = 0;
+  passiveMasterRepeated = false;
+
+  passiveSlave.clear();
+  passiveSlaveDBx = 0;
+  passiveSlaveSendIndex = 0;
+  passiveSlaveReceiveIndex = 0;
+  passiveSlaveRepeated = false;
+}
+
+void ebus::EbusHandler::resetActive() {
+  active = false;
+  activeTelegram.clear();
+
+  activeMaster.clear();
+  activeMasterSendIndex = 0;
+  activeMasterReceiveIndex = 0;
+  activeMasterRepeated = false;
+
+  activeSlave.clear();
+  activeSlaveDBx = 0;
+  activeSlaveRepeated = false;
+}
