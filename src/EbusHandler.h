@@ -35,16 +35,18 @@ namespace ebus {
 struct Counters {
   uint32_t total = 0;
 
+  // passive + reactive
   uint32_t passive = 0;
   float passivePercent = 0;
 
   uint32_t passiveMS = 0;
   uint32_t passiveMM = 0;
-  uint32_t passiveBC = 0;
 
-  uint32_t passiveMSAtMe = 0;
-  uint32_t passiveMMAtMe = 0;
+  uint32_t reactiveMS = 0;
+  uint32_t reactiveMM = 0;
+  uint32_t reactiveBC = 0;
 
+  // active
   uint32_t active = 0;
   float activePercent = 0;
 
@@ -52,24 +54,42 @@ struct Counters {
   uint32_t activeMM = 0;
   uint32_t activeBC = 0;
 
-  uint32_t failure = 0;
-  float failurePercent = 0;
+  // error
+  uint32_t error = 0;
+  float errorPercent = 0;
 
+  uint32_t errorPassive = 0;
+  float errorPassivePercent = 0;
+
+  uint32_t errorPassiveMaster = 0;
+  uint32_t errorPassiveMasterACK = 0;
+  uint32_t errorPassiveSlaveACK = 0;
+
+  uint32_t errorReactiveSlaveACK = 0;
+
+  uint32_t errorActive = 0;
+  float errorActivePercent = 0;
+
+  uint32_t errorActiveMasterACK = 0;
+  uint32_t errorActiveSlaveACK = 0;
+
+  // reset
+  uint32_t reset = 0;
+
+  uint32_t resetPassive = 0;
+  uint32_t resetActive = 0;
+
+  // request
   uint32_t requestTotal = 0;
 
   uint32_t requestWon = 0;
   float requestWonPercent = 0;
-  uint32_t requestWon1 = 0;
-  uint32_t requestWon2 = 0;
-  uint32_t requestRetry = 0;
 
   uint32_t requestLost = 0;
   float requestLostPercent = 0;
-  uint32_t requestLost1 = 0;
-  uint32_t requestLost2 = 0;
 
+  uint32_t requestRetry = 0;
   uint32_t requestError = 0;
-  float requestErrorPercent = 0;
 };
 
 enum class State {
@@ -128,7 +148,8 @@ class EbusHandler {
                                  std::vector<uint8_t> *const slave)>
                   reactiveFunction);
 
-  void setTraceCallback(std::function<void(const char *)> traceFunction);
+  void setErrorCallback(
+      std::function<void(const std::string str)> errorFunction);
 
   void setAddress(const uint8_t source);
   uint8_t getAddress() const;
@@ -163,7 +184,8 @@ class EbusHandler {
                      std::vector<uint8_t> *const slave)>
       reactiveCallback = nullptr;
 
-  std::function<void(const char *)> traceCallback = nullptr;
+  std::function<void(const std::string str)> traceCallback = nullptr;
+  std::function<void(const std::string str)> errorCallback = nullptr;
 
   State state = State::passiveReceiveMaster;
 

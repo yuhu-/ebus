@@ -100,11 +100,12 @@ ebus::EbusHandler ebusHandler(0x33, &busReadyCallback, &busWriteCallback,
 
 const char *getState() { return ebus::stateString(ebusHandler.getState()); }
 
-void testCallback(const std::string &header, const std::string &message,
-                  const std::string &sequence) {
+void testCallback(const std::string &test, const std::string &header,
+                  const std::string &message, const std::string &sequence) {
   ebus::Sequence seq;
   seq.assign(ebus::Sequence::to_vector(sequence));
 
+  std::cout << "    test: " << test << std::endl;
   std::cout << " address: " << to_string(ebusHandler.getAddress()) << " ("
             << to_string(ebusHandler.getSlaveAddress()) << ")" << std::endl;
   std::cout << "    name: " << header << std::endl;
@@ -140,13 +141,11 @@ void testCallback(const std::string &header, const std::string &message,
 }
 
 void testPassiveCallback() {
+  std::string test = "passiveCallback";
   std::string header;
-  std::cout << std::endl
-            << "    test: passiveCallback" << std::endl
-            << std::endl;
 
   header = "MS: Normal";
-  testCallback(header, "",
+  testCallback(test, header, "",
                "aaaaaa"
                "ff52b509030d060043"
                "00"
@@ -155,7 +154,7 @@ void testPassiveCallback() {
                "aaaaaa");
 
   header = "MS: Master NAK/repeat";
-  testCallback(header, "",
+  testCallback(test, header, "",
                "aaaaaa"
                "ff52b509030d060043"
                "ff"                  // Master NAK
@@ -166,7 +165,7 @@ void testPassiveCallback() {
                "aaaaaa");
 
   header = "MS: Master NAK/repeat/NAK";
-  testCallback(header, "",
+  testCallback(test, header, "",
                "aaaaaa"
                "ff52b509030d060043"
                "ff"                  // Master NAK
@@ -175,7 +174,7 @@ void testPassiveCallback() {
                "aaaaaa");
 
   header = "MS: Slave NAK/repeat";
-  testCallback(header, "",
+  testCallback(test, header, "",
                "aaaaaa"
                "ff52b509030d060043"
                "00"
@@ -186,7 +185,7 @@ void testPassiveCallback() {
                "aaaaaa");
 
   header = "MS: Slave NAK/repeat/NAK";
-  testCallback(header, "",
+  testCallback(test, header, "",
                "aaaaaa"
                "ff52b509030d060043"
                "00"
@@ -197,7 +196,7 @@ void testPassiveCallback() {
                "aaaaaa");
 
   header = "MS: Master NAK/repeat - Slave NAK/repeat";
-  testCallback(header, "",
+  testCallback(test, header, "",
                "aaaaaa"
                "ff52b509030d060043"
                "ff"                  // Master NAK
@@ -210,7 +209,7 @@ void testPassiveCallback() {
                "aaaaaa");
 
   header = "MS: Master NAK/repeat/ACK - Slave NAK/repeat/NAK";
-  testCallback(header, "",
+  testCallback(test, header, "",
                "aaaaaa"
                "ff52b509030d060043"
                "ff"                  // Master NAK
@@ -223,13 +222,13 @@ void testPassiveCallback() {
                "aaaaaa");
 
   header = "MM: Normal";
-  testCallback(header, "",
+  testCallback(test, header, "",
                "aaaaaa"
                "1000b5050427002400d900"
                "aaaaaa");
 
   header = "BC: defect";
-  testCallback(header, "",
+  testCallback(test, header, "",
                "aaaaaa"
                "00"
                "fe"        // broadcast
@@ -238,13 +237,11 @@ void testPassiveCallback() {
 }
 
 void testReactiveCallback() {
+  std::string test = "reactiveCallback";
   std::string header;
-  std::cout << std::endl
-            << "    test: reactiveCallback" << std::endl
-            << std::endl;
 
   header = "MS: Slave NAK/ACK";
-  testCallback(header, "",
+  testCallback(test, header, "",
                "aaaaaa"
                "00"
                "38"  // own slave address
@@ -254,7 +251,7 @@ void testReactiveCallback() {
                "aaaaaa");
 
   header = "MS: Slave defect";
-  testCallback(header, "",
+  testCallback(test, header, "",
                "aaaaaa"
                "00"
                "38"        // own slave address
@@ -262,7 +259,7 @@ void testReactiveCallback() {
                "aaaaaa");
 
   header = "MS: Master defect/correct";
-  testCallback(header, "",
+  testCallback(test, header, "",
                "aaaaaa"
                "00"
                "38"        // own slave address
@@ -274,7 +271,7 @@ void testReactiveCallback() {
                "aaaaaa");
 
   header = "MM: Normal";
-  testCallback(header, "",
+  testCallback(test, header, "",
                "aaaaaa"
                "00"
                "33"  // own master address
@@ -282,7 +279,7 @@ void testReactiveCallback() {
                "aaaaaa");
 
   header = "BC: Normal";
-  testCallback(header, "",
+  testCallback(test, header, "",
                "aaaaaa"
                "00"
                "fe"  // broadcast
@@ -291,32 +288,30 @@ void testReactiveCallback() {
 }
 
 void testActiveCallback() {
+  std::string test = "activeCallback";
   std::string header;
-  std::cout << std::endl
-            << "    test: activeCallback" << std::endl
-            << std::endl;
 
   header = "BC: Request Bus - Normal";
-  testCallback(header, "feb5050427002d00",
+  testCallback(test, header, "feb5050427002d00",
                "aaaaaa"
                "33"  // own Address == Arbitration won
                "aaaaaa");
 
   header = "BC: Request Bus - Priority lost";
-  testCallback(header, "feb5050427002d00",
+  testCallback(test, header, "feb5050427002d00",
                "aaaaaa"
                "01"  // other Address == Priority lost
                "aaaaaa");
 
   header = "BC: Request Bus - Priority lost/wrong byte";
-  testCallback(header, "feb5050427002d00",
+  testCallback(test, header, "feb5050427002d00",
                "aaaaaa"
                "01"  // other Address == Priority lost
                "ab"  // wrong byte
                "aaaaaa");
 
   header = "BC: Request Bus - Priority fit/won";
-  testCallback(header, "feb5050427002d00",
+  testCallback(test, header, "feb5050427002d00",
                "aaaaaa"
                "73"  // own Address == Priority retry
                "aa"
@@ -324,7 +319,7 @@ void testActiveCallback() {
                "aaaaaa");
 
   header = "BC: Request Bus - Priority fit/lost";
-  testCallback(header, "feb5050427002d00",
+  testCallback(test, header, "feb5050427002d00",
                "aaaaaa"
                "73"  // own Address == Priority retry
                "aa"
@@ -332,14 +327,14 @@ void testActiveCallback() {
                "aaaaaa");
 
   header = "BC: Request Bus - Priority retry/error";
-  testCallback(header, "feb5050427002d00",
+  testCallback(test, header, "feb5050427002d00",
                "aaaaaa"
                "73"  // own Address == Priority retry
                "a0"  // error
                "aaaaaa");
 
   header = "MS: Normal";
-  testCallback(header, "52b509030d4600",
+  testCallback(test, header, "52b509030d4600",
                "aaaaaa"
                "33"  // own master address == Arbitration won
                "00"  // Master ACK
@@ -347,7 +342,7 @@ void testActiveCallback() {
                "aaaaaa");
 
   header = "MS: Master NAK/ACK - Slave CRC wrong/correct";
-  testCallback(header, "52b509030d4600",
+  testCallback(test, header, "52b509030d4600",
                "aaaaaa"
                "33"      // own master address == Arbitration won
                "ff"      // Master NAK
@@ -357,7 +352,7 @@ void testActiveCallback() {
                "aaaaaa");
 
   header = "MS: Master NAK/ACK - Slave CRC wrong/wrong";
-  testCallback(header, "52b509030d4600",
+  testCallback(test, header, "52b509030d4600",
                "aaaaaa"
                "33"      // own master address == Arbitration won
                "00"      // Master ACK
@@ -366,7 +361,7 @@ void testActiveCallback() {
                "aaaaaa");
 
   header = "MS: Master NAK/NAK";
-  testCallback(header, "52b509030d4600",
+  testCallback(test, header, "52b509030d4600",
                "aaaaaa"
                "33"  // own master address == Arbitration won
                "ff"  // Master NAK
@@ -374,7 +369,7 @@ void testActiveCallback() {
                "aaaaaa");
 
   header = "MM: Master NAK/ACK";
-  testCallback(header, "10b57900",
+  testCallback(test, header, "10b57900",
                "aaaaaa"
                "33"  // own Address == Arbitration won
                "ff"  // Master NAK
@@ -382,59 +377,89 @@ void testActiveCallback() {
                "aaaaaa");
 }
 
-void traceCallback(const char *state) {
-  std::cout << " handler:    " << state << std::endl;
+void errorCallback(const std::string str) {
+  std::cout << "   error: " << str << std::endl;
+}
+
+void printCounters() {
+  ebus::Counters counter = ebusHandler.getCounters();
+
+  std::cout << "total: " << counter.total << std::endl;
+
+  // passive + reactive
+  std::cout << "passive: " << counter.passive << std::endl;
+  std::cout << "passivePercent:" << counter.passivePercent << std::endl;
+
+  std::cout << "passiveMS: " << counter.passiveMS << std::endl;
+  std::cout << "passiveMM: " << counter.passiveMM << std::endl;
+
+  std::cout << "reactiveMS: " << counter.reactiveMS << std::endl;
+  std::cout << "reactiveMM: " << counter.reactiveMM << std::endl;
+  std::cout << "reactiveBC: " << counter.reactiveBC << std::endl;
+
+  // active
+  std::cout << "active: " << counter.active << std::endl;
+  std::cout << "activePercent: " << counter.activePercent << std::endl;
+
+  std::cout << "activeMS: " << counter.activeMS << std::endl;
+  std::cout << "activeMM: " << counter.activeMM << std::endl;
+  std::cout << "activeBC: " << counter.activeBC << std::endl;
+
+  // error
+  std::cout << "error: " << counter.error << std::endl;
+  std::cout << "errorPercent: " << counter.errorPercent << std::endl;
+
+  std::cout << "errorPassive: " << counter.errorPassive << std::endl;
+  std::cout << "errorPassivePercent: " << counter.errorPassivePercent
+            << std::endl;
+
+  std::cout << "errorPassiveMaster: " << counter.errorPassiveMaster
+            << std::endl;
+  std::cout << "errorPassiveMasterACK: " << counter.errorPassiveMasterACK
+            << std::endl;
+  std::cout << "errorPassiveSlaveACK: " << counter.errorPassiveSlaveACK
+            << std::endl;
+  std::cout << "errorReactiveSlaveACK: " << counter.errorReactiveSlaveACK
+            << std::endl;
+
+  std::cout << "errorActive: " << counter.errorActive << std::endl;
+  std::cout << "errorActivePercent: " << counter.errorActivePercent
+            << std::endl;
+
+  std::cout << "errorActiveMasterACK: " << counter.errorActiveMasterACK
+            << std::endl;
+  std::cout << "errorActiveSlaveACK: " << counter.errorActiveSlaveACK
+            << std::endl;
+
+  // reset
+  std::cout << "reset: " << counter.reset << std::endl;
+
+  std::cout << "resetPassive: " << counter.resetPassive << std::endl;
+  std::cout << "resetActive: " << counter.resetActive << std::endl;
+
+  // request
+  std::cout << "requestTotal: " << counter.requestTotal << std::endl;
+
+  std::cout << "requestWon: " << counter.requestWon << std::endl;
+  std::cout << "requestWonPercent: " << counter.requestWonPercent << std::endl;
+
+  std::cout << "requestLost: " << counter.requestLost << std::endl;
+  std::cout << "requestLostPercent: " << counter.requestLostPercent
+            << std::endl;
+
+  std::cout << "requestRetry: " << counter.requestRetry << std::endl;
+  std::cout << "requestError: " << counter.requestError << std::endl;
 }
 
 int main() {
-  // ebusHandler.setTraceCallback(traceCallback);
+  ebusHandler.setErrorCallback(errorCallback);
   // printBytes = true;
 
   testPassiveCallback();
   testReactiveCallback();
   testActiveCallback();
 
-  ebus::Counters counter = ebusHandler.getCounters();
-
-  std::cout << "tolal:               " << counter.total << std::endl;
-
-  std::cout << "passive:             " << counter.passive << std::endl;
-  std::cout << "passivePercent:      " << counter.passivePercent << std::endl;
-
-  std::cout << "passiveMS:           " << counter.passiveMS << std::endl;
-  std::cout << "passiveMM:           " << counter.passiveMM << std::endl;
-  std::cout << "passiveBC:           " << counter.passiveBC << std::endl;
-
-  std::cout << "passiveMSAtMe:       " << counter.passiveMSAtMe << std::endl;
-  std::cout << "passiveMMAtMe:       " << counter.passiveMMAtMe << std::endl;
-
-  std::cout << "active:              " << counter.active << std::endl;
-  std::cout << "activePercent:       " << counter.activePercent << std::endl;
-
-  std::cout << "activeMS:            " << counter.activeMS << std::endl;
-  std::cout << "activeMM:            " << counter.activeMM << std::endl;
-  std::cout << "activeBC:            " << counter.activeBC << std::endl;
-
-  std::cout << "failure:             " << counter.failure << std::endl;
-  std::cout << "failurePercent:      " << counter.failurePercent << std::endl;
-
-  std::cout << "requestTotal:        " << counter.requestTotal << std::endl;
-
-  std::cout << "requestWon1:         " << counter.requestWon1 << std::endl;
-  std::cout << "requestWon2:         " << counter.requestWon2 << std::endl;
-
-  std::cout << "requestLost1:        " << counter.requestLost1 << std::endl;
-  std::cout << "requestLost2:        " << counter.requestLost2 << std::endl;
-
-  std::cout << "requestRetry:        " << counter.requestRetry << std::endl;
-  std::cout << "requestError:        " << counter.requestError << std::endl;
-
-  std::cout << "requestWonPercent:   " << counter.requestWonPercent
-            << std::endl;
-  std::cout << "requestLostPercent:  " << counter.requestLostPercent
-            << std::endl;
-  std::cout << "requestErrorPercent: " << counter.requestErrorPercent
-            << std::endl;
+  printCounters();
 
   return (0);
 }

@@ -46,9 +46,9 @@ ebus::EbusHandler::EbusHandler(
   reactiveCallback = reactiveFunction;
 }
 
-void ebus::EbusHandler::setTraceCallback(
-    std::function<void(const char *)> traceFunction) {
-  traceCallback = traceFunction;
+void ebus::EbusHandler::setErrorCallback(
+    std::function<void(const std::string)> errorFunction) {
+  errorCallback = errorFunction;
 }
 
 void ebus::EbusHandler::setAddress(const uint8_t source) {
@@ -102,16 +102,18 @@ void ebus::EbusHandler::run(const uint8_t &byte) {
 void ebus::EbusHandler::resetCounters() {
   counters.total = 0;
 
+  // passive + reactive
   counters.passive = 0;
   counters.passivePercent = 0;
 
   counters.passiveMS = 0;
   counters.passiveMM = 0;
-  counters.passiveBC = 0;
 
-  counters.passiveMSAtMe = 0;
-  counters.passiveMMAtMe = 0;
+  counters.reactiveMS = 0;
+  counters.reactiveMM = 0;
+  counters.reactiveBC = 0;
 
+  // active
   counters.active = 0;
   counters.activePercent = 0;
 
@@ -119,46 +121,80 @@ void ebus::EbusHandler::resetCounters() {
   counters.activeMM = 0;
   counters.activeBC = 0;
 
-  counters.failure = 0;
-  counters.failurePercent = 0;
+  // error
+  counters.error = 0;
+  counters.errorPercent = 0;
 
+  counters.errorPassive = 0;
+  counters.errorPassivePercent = 0;
+
+  counters.errorPassiveMaster = 0;
+  counters.errorPassiveMasterACK = 0;
+  counters.errorPassiveSlaveACK = 0;
+
+  counters.errorReactiveSlaveACK = 0;
+
+  counters.errorActive = 0;
+  counters.errorActivePercent = 0;
+
+  counters.errorActiveMasterACK = 0;
+  counters.errorActiveSlaveACK = 0;
+
+  // reset
+  counters.reset = 0;
+
+  counters.resetPassive = 0;
+  counters.resetActive = 0;
+
+  // request
   counters.requestTotal = 0;
 
   counters.requestWon = 0;
   counters.requestWonPercent = 0;
-  counters.requestWon1 = 0;
-  counters.requestWon2 = 0;
-  counters.requestRetry = 0;
 
   counters.requestLost = 0;
   counters.requestLostPercent = 0;
-  counters.requestLost1 = 0;
-  counters.requestLost2 = 0;
 
+  counters.requestRetry = 0;
   counters.requestError = 0;
-  counters.requestErrorPercent = 0;
 }
 
 const ebus::Counters &ebus::EbusHandler::getCounters() {
+  counters.errorPassive =
+      counters.errorPassiveMaster + counters.errorPassiveMasterACK +
+      counters.errorPassiveSlaveACK + counters.errorReactiveSlaveACK;
+
   counters.passive = counters.passiveMS + counters.passiveMM +
-                     counters.passiveBC + counters.passiveMMAtMe +
-                     counters.passiveMSAtMe;
+                     counters.reactiveMS + counters.reactiveMM +
+                     counters.reactiveBC + counters.errorPassive;
 
-  counters.active = counters.activeMS + counters.activeMM + counters.activeBC;
+  counters.errorActive =
+      counters.errorActiveMasterACK + counters.errorActiveSlaveACK;
 
-  counters.total = counters.passive + counters.active + counters.failure;
+  counters.active = counters.activeMS + counters.activeMM + counters.activeBC +
+                    counters.errorActive;
+
+  counters.error = counters.errorPassive + counters.errorActive;
+
+  counters.total = counters.passive + counters.active;
+
+  counters.reset = counters.resetPassive + counters.resetActive;
 
   counters.passivePercent =
       counters.passive / static_cast<float>(counters.total) * 100.0f;
 
+  counters.errorPassivePercent =
+      counters.errorPassive / static_cast<float>(counters.passive) * 100.0f;
+
   counters.activePercent =
       counters.active / static_cast<float>(counters.total) * 100.0f;
 
-  counters.failurePercent =
-      counters.failure / static_cast<float>(counters.total) * 100.0f;
+  counters.errorActivePercent =
+      counters.errorActive / static_cast<float>(counters.active) * 100.0f;
 
-  counters.requestWon = counters.requestWon1 + counters.requestWon2;
-  counters.requestLost = counters.requestLost1 + counters.requestLost2;
+  counters.errorPercent =
+      counters.error / static_cast<float>(counters.total) * 100.0f;
+
   counters.requestTotal =
       counters.requestWon + counters.requestLost + counters.requestError;
 
@@ -168,16 +204,10 @@ const ebus::Counters &ebus::EbusHandler::getCounters() {
   counters.requestLostPercent =
       counters.requestLost / static_cast<float>(counters.requestTotal) * 100.0f;
 
-  counters.requestErrorPercent = counters.requestError /
-                                 static_cast<float>(counters.requestTotal) *
-                                 100.0f;
-
   return counters;
 }
 
 void ebus::EbusHandler::receive(const uint8_t &byte) {
-  if (traceCallback != nullptr) traceCallback(stateString(state));
-
   switch (state) {
     case State::passiveReceiveMaster: {
       if (byte != sym_syn) {
@@ -195,7 +225,7 @@ void ebus::EbusHandler::receive(const uint8_t &byte) {
             if (passiveTelegram.getType() == Type::BC) {
               reactiveCallback(passiveTelegram.getMaster().to_vector(),
                                nullptr);
-              counters.passiveBC++;
+              counters.reactiveBC++;
               resetPassive();
             } else if (passiveMaster[1] == address ||
                        passiveMaster[1] == slaveAddress) {
@@ -205,12 +235,12 @@ void ebus::EbusHandler::receive(const uint8_t &byte) {
               if (passiveTelegram.getType() == Type::MM) {
                 reactiveCallback(passiveTelegram.getMaster().to_vector(),
                                  nullptr);
-                counters.passiveMMAtMe++;
+                counters.reactiveMM++;
               } else if (passiveTelegram.getType() == Type::MS) {
                 std::vector<uint8_t> response;
                 reactiveCallback(passiveTelegram.getMaster().to_vector(),
                                  &response);
-                counters.passiveMSAtMe++;
+                counters.reactiveMS++;
                 passiveTelegram.createSlave(response);
                 if (passiveTelegram.getSlaveState() == SEQ_OK) {
                   passiveSlave = passiveTelegram.getSlave();
@@ -234,7 +264,8 @@ void ebus::EbusHandler::receive(const uint8_t &byte) {
               passiveMaster.clear();
               passiveMasterDBx = 0;
             } else {
-              counters.failure++;
+              counters.errorPassiveMaster++;
+              resetPassive();
             }
           }
         }
@@ -245,21 +276,42 @@ void ebus::EbusHandler::receive(const uint8_t &byte) {
         if (passiveMaster.size() > 0 || passiveSlave.size() > 0 ||
             passiveMasterDBx > 0 || passiveSlaveDBx > 0 ||
             passiveSlaveSendIndex > 0 || passiveSlaveReceiveIndex > 0 ||
-            passiveSlaveRepeated) {
-          if (traceCallback != nullptr) traceCallback("passive data reseted");
+            passiveMasterRepeated || passiveSlaveRepeated) {
+          if (errorCallback != nullptr) {
+            std::ostringstream ostr;
+            ostr << "passive";
+            ostr << " M '" << passiveMaster.to_string();
+            ostr << "' S '" << passiveSlave.to_string();
+            ostr << "' MDBx " << passiveMasterDBx;
+            ostr << " SDBx " << passiveSlaveDBx;
+            ostr << " SSI " << passiveSlaveSendIndex;
+            ostr << " SRI " << passiveSlaveReceiveIndex;
+            ostr << " MR " << (passiveMasterRepeated ? "true" : "false");
+            ostr << " SR " << (passiveSlaveRepeated ? "true" : "false");
+            errorCallback(ostr.str());
+          }
           resetPassive();
-          counters.failure++;
+          counters.resetPassive++;
         }
 
         if (activeMaster.size() > 0 || activeSlave.size() > 0 ||
             activeSlaveDBx > 0 || activeMasterSendIndex > 0 ||
             activeMasterReceiveIndex > 0 || activeMasterRepeated ||
             activeSlaveRepeated) {
-          if (!active) {
-            if (traceCallback != nullptr) traceCallback("active data reseted");
-            resetActive();
-            counters.failure++;
+          if (errorCallback != nullptr) {
+            std::ostringstream ostr;
+            ostr << "active";
+            ostr << " M '" << activeMaster.to_string();
+            ostr << "' S '" << activeSlave.to_string();
+            ostr << " SDBx " << activeSlaveDBx;
+            ostr << " SSI " << activeMasterSendIndex;
+            ostr << " SRI " << activeMasterReceiveIndex;
+            ostr << " MR " << (activeMasterRepeated ? "true" : "false");
+            ostr << " SR " << (activeSlaveRepeated ? "true" : "false");
+            errorCallback(ostr.str());
           }
+          resetActive();
+          counters.resetActive++;
         }
 
         // starting active telegram
@@ -291,7 +343,7 @@ void ebus::EbusHandler::receive(const uint8_t &byte) {
         passiveMaster.clear();
         passiveMasterDBx = 0;
       } else {
-        counters.failure++;
+        counters.errorPassiveMasterACK++;
         state = State::passiveReceiveMaster;
         resetPassive();
       }
@@ -313,19 +365,19 @@ void ebus::EbusHandler::receive(const uint8_t &byte) {
       break;
     }
     case State::passiveReceiveSlaveAcknowledge: {
-      if (byte == sym_nak && !passiveSlaveRepeated) {
-        passiveSlaveRepeated = true;
-        state = State::passiveReceiveSlave;
-        passiveSlave.clear();
-        passiveSlaveDBx = 0;
-      } else if (byte == sym_ack) {
+      if (byte == sym_ack) {
         passiveCallback(passiveTelegram.getMaster().to_vector(),
                         passiveTelegram.getSlave().to_vector());
         counters.passiveMS++;
         state = State::passiveReceiveMaster;
         resetPassive();
+      } else if (byte == sym_nak && !passiveSlaveRepeated) {
+        passiveSlaveRepeated = true;
+        state = State::passiveReceiveSlave;
+        passiveSlave.clear();
+        passiveSlaveDBx = 0;
       } else {
-        counters.failure++;
+        counters.errorPassiveSlaveACK++;
         state = State::passiveReceiveMaster;
         resetPassive();
       }
@@ -358,7 +410,7 @@ void ebus::EbusHandler::receive(const uint8_t &byte) {
         passiveSlaveSendIndex = 0;
         passiveSlaveReceiveIndex = 0;
       } else {
-        if (byte == sym_nak) counters.failure++;
+        if (byte == sym_nak) counters.errorReactiveSlaveACK++;
         state = State::releaseBus;
         write = true;
         resetPassive();
@@ -370,14 +422,15 @@ void ebus::EbusHandler::receive(const uint8_t &byte) {
         if ((byte & 0x0f) == (address & 0x0f)) {
           state = State::requestBusPriorityRetry;
         } else {
-          counters.requestLost1++;
+          counters.requestLost++;
           state = State::passiveReceiveMaster;
+          passiveMaster.push_back(byte);
           active = false;
           activeTelegram.clear();
           activeMaster.clear();
         }
       } else {
-        counters.requestWon1++;
+        counters.requestWon++;
         state = State::activeSendMaster;
         activeMasterSendIndex = 1;
         activeMasterReceiveIndex = 1;
@@ -400,13 +453,14 @@ void ebus::EbusHandler::receive(const uint8_t &byte) {
     }
     case State::requestBusSecondTry: {
       if (byte != address) {
-        counters.requestLost2++;
+        counters.requestLost++;
         state = State::passiveReceiveMaster;
+        passiveMaster.push_back(byte);
         active = false;
         activeTelegram.clear();
         activeMaster.clear();
       } else {
-        counters.requestWon2++;
+        counters.requestWon++;
         state = State::activeSendMaster;
         activeMasterSendIndex = 1;
         activeMasterReceiveIndex = 1;
@@ -449,7 +503,7 @@ void ebus::EbusHandler::receive(const uint8_t &byte) {
         activeMasterSendIndex = 0;
         activeMasterReceiveIndex = 0;
       } else {
-        counters.failure++;
+        counters.errorActiveMasterACK++;
         state = State::releaseBus;
         write = true;
         lockCoutner = maxLockCounter;
@@ -496,7 +550,7 @@ void ebus::EbusHandler::receive(const uint8_t &byte) {
         state = State::activeReceiveSlave;
         write = true;
       } else {
-        counters.failure++;
+        counters.errorActiveSlaveACK++;
         state = State::releaseBus;
         write = true;
         lockCoutner = maxLockCounter;
