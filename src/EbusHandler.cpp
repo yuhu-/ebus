@@ -87,9 +87,10 @@ void ebus::EbusHandler::reset() {
 bool ebus::EbusHandler::enque(const std::vector<uint8_t> &message) {
   if (!active) {
     activeTelegram.createMaster(address, message);
-    if (activeTelegram.getMasterState() == SEQ_OK) {
+    if (activeTelegram.getMasterState() == SEQ_OK)
       active = true;
-    }
+    else
+      counters.errorsActiveMaster++;
   }
   return active;
 }
@@ -100,109 +101,74 @@ void ebus::EbusHandler::run(const uint8_t &byte) {
 }
 
 void ebus::EbusHandler::resetCounters() {
-  counters.total = 0;
+  // messages
+  counters.messagesTotal = 0;
 
-  // passive + reactive
-  counters.passive = 0;
-  counters.passivePercent = 0;
+  counters.messagesPassiveMS = 0;
+  counters.messagesPassiveMM = 0;
 
-  counters.passiveMS = 0;
-  counters.passiveMM = 0;
+  counters.messagesReactiveMS = 0;
+  counters.messagesReactiveMM = 0;
+  counters.messagesReactiveBC = 0;
 
-  counters.reactiveMS = 0;
-  counters.reactiveMM = 0;
-  counters.reactiveBC = 0;
+  counters.messagesActiveMS = 0;
+  counters.messagesActiveMM = 0;
+  counters.messagesActiveBC = 0;
 
-  // active
-  counters.active = 0;
-  counters.activePercent = 0;
+  // errors
+  counters.errorsTotal = 0;
 
-  counters.activeMS = 0;
-  counters.activeMM = 0;
-  counters.activeBC = 0;
+  counters.errorsPassive = 0;
+  counters.errorsPassiveMaster = 0;
+  counters.errorsPassiveMasterACK = 0;
+  counters.errorsPassiveSlave = 0;
+  counters.errorsPassiveSlaveACK = 0;
+  counters.errorsReactiveSlave = 0;
+  counters.errorsReactiveSlaveACK = 0;
 
-  // error
-  counters.error = 0;
-  counters.errorPercent = 0;
+  counters.errorsActive = 0;
+  counters.errorsActiveMaster = 0;
+  counters.errorsActiveMasterACK = 0;
+  counters.errorsActiveSlave = 0;
+  counters.errorsActiveSlaveACK = 0;
 
-  counters.errorPassive = 0;
-  counters.errorPassivePercent = 0;
+  // resets
+  counters.resetsTotal = 0;
+  counters.resetsPassive = 0;
+  counters.resetsPassive = 0;
+  counters.resetsActive = 0;
 
-  counters.errorPassiveMaster = 0;
-  counters.errorPassiveMasterACK = 0;
-  counters.errorPassiveSlaveACK = 0;
-
-  counters.errorReactiveSlaveACK = 0;
-
-  counters.errorActive = 0;
-  counters.errorActivePercent = 0;
-
-  counters.errorActiveMasterACK = 0;
-  counters.errorActiveSlaveACK = 0;
-
-  // reset
-  counters.reset = 0;
-
-  counters.resetPassive = 0;
-  counters.resetActive = 0;
-
-  // request
-  counters.requestTotal = 0;
-
-  counters.requestWon = 0;
-  counters.requestWonPercent = 0;
-
-  counters.requestLost = 0;
-  counters.requestLostPercent = 0;
-
-  counters.requestRetry = 0;
-  counters.requestError = 0;
+  // requests
+  counters.requestsTotal = 0;
+  counters.requestsWon = 0;
+  counters.requestsLost = 0;
+  counters.requestsRetry = 0;
+  counters.requestsError = 0;
 }
 
 const ebus::Counters &ebus::EbusHandler::getCounters() {
-  counters.errorPassive =
-      counters.errorPassiveMaster + counters.errorPassiveMasterACK +
-      counters.errorPassiveSlaveACK + counters.errorReactiveSlaveACK;
+  counters.messagesTotal =
+      counters.messagesPassiveMS + counters.messagesPassiveMM +
+      counters.messagesReactiveMS + counters.messagesReactiveMM +
+      counters.messagesReactiveBC + counters.messagesActiveMS +
+      counters.messagesActiveMM + counters.messagesActiveBC;
 
-  counters.passive = counters.passiveMS + counters.passiveMM +
-                     counters.reactiveMS + counters.reactiveMM +
-                     counters.reactiveBC + counters.errorPassive;
+  counters.errorsPassive =
+      counters.errorsPassiveMaster + counters.errorsPassiveMasterACK +
+      counters.errorsPassiveSlave + counters.errorsPassiveSlaveACK +
+      counters.errorsReactiveSlave + counters.errorsReactiveSlaveACK;
 
-  counters.errorActive =
-      counters.errorActiveMasterACK + counters.errorActiveSlaveACK;
+  counters.errorsActive =
+      counters.errorsActiveMaster + counters.errorsActiveMasterACK +
+      counters.errorsActiveSlave + counters.errorsActiveSlaveACK;
 
-  counters.active = counters.activeMS + counters.activeMM + counters.activeBC +
-                    counters.errorActive;
+  counters.errorsTotal = counters.errorsPassive + counters.errorsActive;
 
-  counters.error = counters.errorPassive + counters.errorActive;
+  counters.resetsTotal =
+      counters.resetsPassive00 + counters.resetsPassive + counters.resetsActive;
 
-  counters.total = counters.passive + counters.active;
-
-  counters.reset = counters.resetPassive + counters.resetActive;
-
-  counters.passivePercent =
-      counters.passive / static_cast<float>(counters.total) * 100.0f;
-
-  counters.errorPassivePercent =
-      counters.errorPassive / static_cast<float>(counters.passive) * 100.0f;
-
-  counters.activePercent =
-      counters.active / static_cast<float>(counters.total) * 100.0f;
-
-  counters.errorActivePercent =
-      counters.errorActive / static_cast<float>(counters.active) * 100.0f;
-
-  counters.errorPercent =
-      counters.error / static_cast<float>(counters.total) * 100.0f;
-
-  counters.requestTotal =
-      counters.requestWon + counters.requestLost + counters.requestError;
-
-  counters.requestWonPercent =
-      counters.requestWon / static_cast<float>(counters.requestTotal) * 100.0f;
-
-  counters.requestLostPercent =
-      counters.requestLost / static_cast<float>(counters.requestTotal) * 100.0f;
+  counters.requestsTotal =
+      counters.requestsWon + counters.requestsLost + counters.requestsError;
 
   return counters;
 }
@@ -225,7 +191,7 @@ void ebus::EbusHandler::receive(const uint8_t &byte) {
             if (passiveTelegram.getType() == Type::BC) {
               reactiveCallback(passiveTelegram.getMaster().to_vector(),
                                nullptr);
-              counters.reactiveBC++;
+              counters.messagesReactiveBC++;
               resetPassive();
             } else if (passiveMaster[1] == address ||
                        passiveMaster[1] == slaveAddress) {
@@ -235,18 +201,19 @@ void ebus::EbusHandler::receive(const uint8_t &byte) {
               if (passiveTelegram.getType() == Type::MM) {
                 reactiveCallback(passiveTelegram.getMaster().to_vector(),
                                  nullptr);
-                counters.reactiveMM++;
+                counters.messagesReactiveMM++;
               } else if (passiveTelegram.getType() == Type::MS) {
                 std::vector<uint8_t> response;
                 reactiveCallback(passiveTelegram.getMaster().to_vector(),
                                  &response);
-                counters.reactiveMS++;
+                counters.messagesReactiveMS++;
                 passiveTelegram.createSlave(response);
                 if (passiveTelegram.getSlaveState() == SEQ_OK) {
                   passiveSlave = passiveTelegram.getSlave();
                   passiveSlave.push_back(passiveTelegram.getSlaveCRC(), false);
                   passiveSlave.extend();
                 } else {
+                  counters.errorsReactiveSlave++;
                   state = State::releaseBus;
                   write = true;
                   resetPassive();
@@ -256,15 +223,18 @@ void ebus::EbusHandler::receive(const uint8_t &byte) {
               state = State::passiveReceiveMasterAcknowledge;
             }
           } else {
-            if (passiveTelegram.getType() == Type::MM ||
-                passiveTelegram.getType() == Type::MS) {
+            if (passiveMaster[1] == address ||
+                passiveMaster[1] == slaveAddress) {
               state = State::reactiveSendMasterNegativeAcknowledge;
               write = true;
               passiveTelegram.clear();
               passiveMaster.clear();
               passiveMasterDBx = 0;
+            } else if (passiveTelegram.getType() == Type::MM ||
+                       passiveTelegram.getType() == Type::MS) {
+              state = State::passiveReceiveMasterAcknowledge;
             } else {
-              counters.errorPassiveMaster++;
+              counters.errorsPassiveMaster++;
               resetPassive();
             }
           }
@@ -290,8 +260,13 @@ void ebus::EbusHandler::receive(const uint8_t &byte) {
             ostr << " SR " << (passiveSlaveRepeated ? "true" : "false");
             errorCallback(ostr.str());
           }
+
+          if (passiveMaster.size() == 1 && passiveMaster[0] == 0x00)
+            counters.resetsPassive00++;
+          else
+            counters.resetsPassive++;
+
           resetPassive();
-          counters.resetPassive++;
         }
 
         if (activeMaster.size() > 0 || activeSlave.size() > 0 ||
@@ -310,8 +285,9 @@ void ebus::EbusHandler::receive(const uint8_t &byte) {
             ostr << " SR " << (activeSlaveRepeated ? "true" : "false");
             errorCallback(ostr.str());
           }
+
+          counters.resetsActive++;
           resetActive();
-          counters.resetActive++;
         }
 
         // starting active telegram
@@ -330,7 +306,7 @@ void ebus::EbusHandler::receive(const uint8_t &byte) {
         if (passiveTelegram.getType() == Type::MM) {
           passiveCallback(passiveTelegram.getMaster().to_vector(),
                           passiveTelegram.getSlave().to_vector());
-          counters.passiveMM++;
+          counters.messagesPassiveMM++;
           state = State::passiveReceiveMaster;
           resetPassive();
         } else {
@@ -343,7 +319,7 @@ void ebus::EbusHandler::receive(const uint8_t &byte) {
         passiveMaster.clear();
         passiveMasterDBx = 0;
       } else {
-        counters.errorPassiveMasterACK++;
+        counters.errorsPassiveMasterACK++;
         state = State::passiveReceiveMaster;
         resetPassive();
       }
@@ -360,6 +336,8 @@ void ebus::EbusHandler::receive(const uint8_t &byte) {
       // size() > NN + DBx + CRC
       if (passiveSlave.size() >= 1 + passiveSlaveDBx + 1) {
         passiveTelegram.createSlave(passiveSlave);
+        if (passiveTelegram.getSlaveState() != SEQ_OK)
+          counters.errorsPassiveSlave++;
         state = State::passiveReceiveSlaveAcknowledge;
       }
       break;
@@ -368,7 +346,7 @@ void ebus::EbusHandler::receive(const uint8_t &byte) {
       if (byte == sym_ack) {
         passiveCallback(passiveTelegram.getMaster().to_vector(),
                         passiveTelegram.getSlave().to_vector());
-        counters.passiveMS++;
+        counters.messagesPassiveMS++;
         state = State::passiveReceiveMaster;
         resetPassive();
       } else if (byte == sym_nak && !passiveSlaveRepeated) {
@@ -377,7 +355,7 @@ void ebus::EbusHandler::receive(const uint8_t &byte) {
         passiveSlave.clear();
         passiveSlaveDBx = 0;
       } else {
-        counters.errorPassiveSlaveACK++;
+        counters.errorsPassiveSlaveACK++;
         state = State::passiveReceiveMaster;
         resetPassive();
       }
@@ -410,7 +388,7 @@ void ebus::EbusHandler::receive(const uint8_t &byte) {
         passiveSlaveSendIndex = 0;
         passiveSlaveReceiveIndex = 0;
       } else {
-        if (byte == sym_nak) counters.errorReactiveSlaveACK++;
+        if (byte == sym_nak) counters.errorsReactiveSlaveACK++;
         state = State::releaseBus;
         write = true;
         resetPassive();
@@ -422,7 +400,7 @@ void ebus::EbusHandler::receive(const uint8_t &byte) {
         if ((byte & 0x0f) == (address & 0x0f)) {
           state = State::requestBusPriorityRetry;
         } else {
-          counters.requestLost++;
+          counters.requestsLost++;
           state = State::passiveReceiveMaster;
           passiveMaster.push_back(byte);
           active = false;
@@ -430,7 +408,7 @@ void ebus::EbusHandler::receive(const uint8_t &byte) {
           activeMaster.clear();
         }
       } else {
-        counters.requestWon++;
+        counters.requestsWon++;
         state = State::activeSendMaster;
         activeMasterSendIndex = 1;
         activeMasterReceiveIndex = 1;
@@ -439,13 +417,13 @@ void ebus::EbusHandler::receive(const uint8_t &byte) {
     }
     case State::requestBusPriorityRetry: {
       if (byte != sym_syn) {
-        counters.requestError++;
+        counters.requestsError++;
         state = State::passiveReceiveMaster;
         active = false;
         activeTelegram.clear();
         activeMaster.clear();
       } else {
-        counters.requestRetry++;
+        counters.requestsRetry++;
         state = State::requestBusSecondTry;
         write = true;
       }
@@ -453,14 +431,14 @@ void ebus::EbusHandler::receive(const uint8_t &byte) {
     }
     case State::requestBusSecondTry: {
       if (byte != address) {
-        counters.requestLost++;
+        counters.requestsLost++;
         state = State::passiveReceiveMaster;
         passiveMaster.push_back(byte);
         active = false;
         activeTelegram.clear();
         activeMaster.clear();
       } else {
-        counters.requestWon++;
+        counters.requestsWon++;
         state = State::activeSendMaster;
         activeMasterSendIndex = 1;
         activeMasterReceiveIndex = 1;
@@ -473,7 +451,7 @@ void ebus::EbusHandler::receive(const uint8_t &byte) {
         if (activeTelegram.getType() == Type::BC) {
           activeCallback(activeTelegram.getMaster().to_vector(),
                          activeTelegram.getSlave().to_vector());
-          counters.activeBC++;
+          counters.messagesActiveBC++;
           state = State::releaseBus;
           write = true;
           lockCoutner = maxLockCounter;
@@ -489,7 +467,7 @@ void ebus::EbusHandler::receive(const uint8_t &byte) {
         if (activeTelegram.getType() == Type::MM) {
           activeCallback(activeTelegram.getMaster().to_vector(),
                          activeTelegram.getSlave().to_vector());
-          counters.activeMM++;
+          counters.messagesActiveMM++;
           state = State::releaseBus;
           write = true;
           lockCoutner = maxLockCounter;
@@ -503,7 +481,7 @@ void ebus::EbusHandler::receive(const uint8_t &byte) {
         activeMasterSendIndex = 0;
         activeMasterReceiveIndex = 0;
       } else {
-        counters.errorActiveMasterACK++;
+        counters.errorsActiveMasterACK++;
         state = State::releaseBus;
         write = true;
         lockCoutner = maxLockCounter;
@@ -526,6 +504,7 @@ void ebus::EbusHandler::receive(const uint8_t &byte) {
           state = State::activeSendSlavePositiveAcknowledge;
           write = true;
         } else {
+          counters.errorsActiveSlave++;
           state = State::activeSendSlaveNegativeAcknowledge;
           write = true;
           activeSlave.clear();
@@ -537,7 +516,7 @@ void ebus::EbusHandler::receive(const uint8_t &byte) {
     case State::activeSendSlavePositiveAcknowledge: {
       activeCallback(activeTelegram.getMaster().to_vector(),
                      activeTelegram.getSlave().to_vector());
-      counters.activeMS++;
+      counters.messagesActiveMS++;
       state = State::releaseBus;
       write = true;
       lockCoutner = maxLockCounter;
@@ -550,7 +529,7 @@ void ebus::EbusHandler::receive(const uint8_t &byte) {
         state = State::activeReceiveSlave;
         write = true;
       } else {
-        counters.errorActiveSlaveACK++;
+        counters.errorsActiveSlaveACK++;
         state = State::releaseBus;
         write = true;
         lockCoutner = maxLockCounter;

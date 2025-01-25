@@ -109,15 +109,15 @@ void testCallback(const std::string &test, const std::string &header,
   std::cout << " address: " << to_string(ebusHandler.getAddress()) << " ("
             << to_string(ebusHandler.getSlaveAddress()) << ")" << std::endl;
   std::cout << "    name: " << header << std::endl;
-  if (message.size() > 0)
+  if (message.size() > 0) {
     std::cout << " message: " << to_string(ebusHandler.getAddress()) << message
               << std::endl;
-  else
+
+    ebusHandler.enque(ebus::Sequence::to_vector(message));
+    ebusHandler.setMaxLockCounter(3);
+  } else {
     std::cout << "sequence: " << sequence << std::endl;
-
-  ebusHandler.enque(ebus::Sequence::to_vector(message));
-  ebusHandler.setMaxLockCounter(3);
-
+  }
   for (size_t i = 0; i < seq.size(); i++) {
     switch (ebusHandler.getState()) {
       case ebus::State::reactiveSendMasterPositiveAcknowledge:
@@ -150,6 +150,17 @@ void testPassiveCallback() {
                "ff52b509030d060043"
                "00"
                "03b0fba901d0"  // extended a901 >> aa
+               "00"
+               "aaaaaa");
+
+  header = "MS: Master defect/NAK";
+  testCallback(test, header, "",
+               "aaaaaa"
+               "ff52b509030d060044"  // defect
+               "ff"                  // NAK
+               "ff52b509030d060043"
+               "00"
+               "03b0fba901d0"
                "00"
                "aaaaaa");
 
@@ -233,6 +244,12 @@ void testPassiveCallback() {
                "00"
                "fe"        // broadcast
                "0704003c"  // defect
+               "aaaaaa");
+
+  header = "00: reset";
+  testCallback(test, header, "",
+               "aaaaaa"
+               "00"
                "aaaaaa");
 }
 
@@ -384,71 +401,61 @@ void errorCallback(const std::string str) {
 void printCounters() {
   ebus::Counters counter = ebusHandler.getCounters();
 
-  std::cout << "total: " << counter.total << std::endl;
+  // messages
+  std::cout << "messagesTotal: " << counter.messagesTotal << std::endl;
 
-  // passive + reactive
-  std::cout << "passive: " << counter.passive << std::endl;
-  std::cout << "passivePercent:" << counter.passivePercent << std::endl;
+  std::cout << "messagesPassiveMS: " << counter.messagesPassiveMS << std::endl;
+  std::cout << "messagesPassiveMM: " << counter.messagesPassiveMM << std::endl;
 
-  std::cout << "passiveMS: " << counter.passiveMS << std::endl;
-  std::cout << "passiveMM: " << counter.passiveMM << std::endl;
-
-  std::cout << "reactiveMS: " << counter.reactiveMS << std::endl;
-  std::cout << "reactiveMM: " << counter.reactiveMM << std::endl;
-  std::cout << "reactiveBC: " << counter.reactiveBC << std::endl;
-
-  // active
-  std::cout << "active: " << counter.active << std::endl;
-  std::cout << "activePercent: " << counter.activePercent << std::endl;
-
-  std::cout << "activeMS: " << counter.activeMS << std::endl;
-  std::cout << "activeMM: " << counter.activeMM << std::endl;
-  std::cout << "activeBC: " << counter.activeBC << std::endl;
-
-  // error
-  std::cout << "error: " << counter.error << std::endl;
-  std::cout << "errorPercent: " << counter.errorPercent << std::endl;
-
-  std::cout << "errorPassive: " << counter.errorPassive << std::endl;
-  std::cout << "errorPassivePercent: " << counter.errorPassivePercent
+  std::cout << "messagesReactiveMS: " << counter.messagesReactiveMS
+            << std::endl;
+  std::cout << "messagesReactiveMM: " << counter.messagesReactiveMM
+            << std::endl;
+  std::cout << "messagesReactiveBC: " << counter.messagesReactiveBC
             << std::endl;
 
-  std::cout << "errorPassiveMaster: " << counter.errorPassiveMaster
-            << std::endl;
-  std::cout << "errorPassiveMasterACK: " << counter.errorPassiveMasterACK
-            << std::endl;
-  std::cout << "errorPassiveSlaveACK: " << counter.errorPassiveSlaveACK
-            << std::endl;
-  std::cout << "errorReactiveSlaveACK: " << counter.errorReactiveSlaveACK
-            << std::endl;
+  std::cout << "messagesActiveMS: " << counter.messagesActiveMS << std::endl;
+  std::cout << "messagesActiveMM: " << counter.messagesActiveMM << std::endl;
+  std::cout << "messagesActiveBC: " << counter.messagesActiveBC << std::endl;
 
-  std::cout << "errorActive: " << counter.errorActive << std::endl;
-  std::cout << "errorActivePercent: " << counter.errorActivePercent
+  // errors
+  std::cout << "errorsTotal: " << counter.errorsTotal << std::endl;
+
+  std::cout << "errorsPassive: " << counter.errorsPassive << std::endl;
+  std::cout << "errorsPassiveMaster: " << counter.errorsPassiveMaster
             << std::endl;
-
-  std::cout << "errorActiveMasterACK: " << counter.errorActiveMasterACK
+  std::cout << "errorsPassiveMasterACK: " << counter.errorsPassiveMasterACK
             << std::endl;
-  std::cout << "errorActiveSlaveACK: " << counter.errorActiveSlaveACK
+  std::cout << "errorsPassiveSlave: " << counter.errorsPassiveSlave
             << std::endl;
-
-  // reset
-  std::cout << "reset: " << counter.reset << std::endl;
-
-  std::cout << "resetPassive: " << counter.resetPassive << std::endl;
-  std::cout << "resetActive: " << counter.resetActive << std::endl;
-
-  // request
-  std::cout << "requestTotal: " << counter.requestTotal << std::endl;
-
-  std::cout << "requestWon: " << counter.requestWon << std::endl;
-  std::cout << "requestWonPercent: " << counter.requestWonPercent << std::endl;
-
-  std::cout << "requestLost: " << counter.requestLost << std::endl;
-  std::cout << "requestLostPercent: " << counter.requestLostPercent
+  std::cout << "errorsPassiveSlaveACK: " << counter.errorsPassiveSlaveACK
+            << std::endl;
+  std::cout << "errorsReactiveSlave: " << counter.errorsReactiveSlave
+            << std::endl;
+  std::cout << "errorsReactiveSlaveACK: " << counter.errorsReactiveSlaveACK
             << std::endl;
 
-  std::cout << "requestRetry: " << counter.requestRetry << std::endl;
-  std::cout << "requestError: " << counter.requestError << std::endl;
+  std::cout << "errorsActive: " << counter.errorsActive << std::endl;
+  std::cout << "errorsActiveMaster: " << counter.errorsActiveMaster
+            << std::endl;
+  std::cout << "errorsActiveMasterACK: " << counter.errorsActiveMasterACK
+            << std::endl;
+  std::cout << "errorsActiveSlave: " << counter.errorsActiveSlave << std::endl;
+  std::cout << "errorsActiveSlaveACK: " << counter.errorsActiveSlaveACK
+            << std::endl;
+
+  // resets
+  std::cout << "resetsTotal: " << counter.resetsTotal << std::endl;
+  std::cout << "resetsPassive00: " << counter.resetsPassive00 << std::endl;
+  std::cout << "resetsPassive: " << counter.resetsPassive << std::endl;
+  std::cout << "resetsActive: " << counter.resetsActive << std::endl;
+
+  // requests
+  std::cout << "requestsTotal: " << counter.requestsTotal << std::endl;
+  std::cout << "requestsWon: " << counter.requestsWon << std::endl;
+  std::cout << "requestsLost: " << counter.requestsLost << std::endl;
+  std::cout << "requestsRetry: " << counter.requestsRetry << std::endl;
+  std::cout << "requestsError: " << counter.requestsError << std::endl;
 }
 
 int main() {

@@ -33,63 +33,49 @@
 namespace ebus {
 
 struct Counters {
-  uint32_t total = 0;
+    // messages
+  uint32_t messagesTotal = 0;
 
-  // passive + reactive
-  uint32_t passive = 0;
-  float passivePercent = 0;
+  uint32_t messagesPassiveMS = 0;
+  uint32_t messagesPassiveMM = 0;
 
-  uint32_t passiveMS = 0;
-  uint32_t passiveMM = 0;
+  uint32_t messagesReactiveMS = 0;
+  uint32_t messagesReactiveMM = 0;
+  uint32_t messagesReactiveBC = 0;
 
-  uint32_t reactiveMS = 0;
-  uint32_t reactiveMM = 0;
-  uint32_t reactiveBC = 0;
+  uint32_t messagesActiveMS = 0;
+  uint32_t messagesActiveMM = 0;
+  uint32_t messagesActiveBC = 0;
 
-  // active
-  uint32_t active = 0;
-  float activePercent = 0;
+  // errors
+  uint32_t errorsTotal = 0;
 
-  uint32_t activeMS = 0;
-  uint32_t activeMM = 0;
-  uint32_t activeBC = 0;
+  uint32_t errorsPassive = 0;
+  uint32_t errorsPassiveMaster = 0;
+  uint32_t errorsPassiveMasterACK = 0;
+  uint32_t errorsPassiveSlave = 0;
+  uint32_t errorsPassiveSlaveACK = 0;
+  uint32_t errorsReactiveSlave = 0;
+  uint32_t errorsReactiveSlaveACK = 0;
 
-  // error
-  uint32_t error = 0;
-  float errorPercent = 0;
+  uint32_t errorsActive = 0;
+  uint32_t errorsActiveMaster = 0;
+  uint32_t errorsActiveMasterACK = 0;
+  uint32_t errorsActiveSlave = 0;
+  uint32_t errorsActiveSlaveACK = 0;
 
-  uint32_t errorPassive = 0;
-  float errorPassivePercent = 0;
+  // resets
+  uint32_t resetsTotal = 0;
+  uint32_t resetsPassive00 = 0;
+  uint32_t resetsPassive = 0;
+  uint32_t resetsActive = 0;
 
-  uint32_t errorPassiveMaster = 0;
-  uint32_t errorPassiveMasterACK = 0;
-  uint32_t errorPassiveSlaveACK = 0;
-
-  uint32_t errorReactiveSlaveACK = 0;
-
-  uint32_t errorActive = 0;
-  float errorActivePercent = 0;
-
-  uint32_t errorActiveMasterACK = 0;
-  uint32_t errorActiveSlaveACK = 0;
-
-  // reset
-  uint32_t reset = 0;
-
-  uint32_t resetPassive = 0;
-  uint32_t resetActive = 0;
-
-  // request
-  uint32_t requestTotal = 0;
-
-  uint32_t requestWon = 0;
-  float requestWonPercent = 0;
-
-  uint32_t requestLost = 0;
-  float requestLostPercent = 0;
-
-  uint32_t requestRetry = 0;
-  uint32_t requestError = 0;
+  // requests
+  uint32_t requestsTotal = 0;
+  uint32_t requestsWon = 0;
+  uint32_t requestsLost = 0;
+  uint32_t requestsRetry = 0;
+  uint32_t requestsError = 0;
 };
 
 enum class State {
