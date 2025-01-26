@@ -33,7 +33,7 @@
 namespace ebus {
 
 struct Counters {
-    // messages
+  // messages
   uint32_t messagesTotal = 0;
 
   uint32_t messagesPassiveMS = 0;
@@ -143,11 +143,15 @@ class EbusHandler {
 
   void setMaxLockCounter(const uint8_t counter);
 
+  void setExternalBusRequest(const bool external);
+
   State getState() const;
   bool isActive() const;
 
   void reset();
   bool enque(const std::vector<uint8_t> &message);
+
+  void wonExternalBusRequest(const bool won);
 
   void run(const uint8_t &byte);
 
@@ -170,14 +174,14 @@ class EbusHandler {
                      std::vector<uint8_t> *const slave)>
       reactiveCallback = nullptr;
 
-  std::function<void(const std::string str)> traceCallback = nullptr;
   std::function<void(const std::string str)> errorCallback = nullptr;
 
-  State state = State::passiveReceiveMaster;
+  bool external = false;
 
   Counters counters;
 
   // control
+  State state = State::passiveReceiveMaster;
   bool write = false;
   uint8_t maxLockCounter = 3;
   uint8_t lockCoutner = 0;
