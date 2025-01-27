@@ -140,7 +140,7 @@ void testCallback(const bool &external, const std::string &test,
 
     if (external && !locked) {
       if (seq[i] == ebusHandler.getAddress()) {
-        ebusHandler.wonExternalBusRequest(true);
+        ebusHandler.pokeExternalBusRequest(true);
         locked = true;
       }
     }

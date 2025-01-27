@@ -152,7 +152,7 @@ class EbusHandler {
   void reset();
   bool enque(const std::vector<uint8_t> &message);
 
-  void wonExternalBusRequest(const bool won);
+  void pokeExternalBusRequest(const bool won);
 
   void run(const uint8_t &byte);
 

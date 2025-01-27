@@ -103,7 +103,7 @@ bool ebus::EbusHandler::enque(const std::vector<uint8_t> &message) {
   return active;
 }
 
-void ebus::EbusHandler::wonExternalBusRequest(const bool won) {
+void ebus::EbusHandler::pokeExternalBusRequest(const bool won) {
   if (externalBusRequest) {
     if (won) {
       resetPassive();
