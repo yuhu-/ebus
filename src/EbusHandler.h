@@ -176,7 +176,7 @@ class EbusHandler {
 
   std::function<void(const std::string str)> errorCallback = nullptr;
 
-  bool external = false;
+  bool externalBusRequest = false;
 
   Counters counters;
 
