@@ -77,6 +77,10 @@ void ebus::EbusHandler::setExternalBusRequest(const bool external) {
   externalBusRequest = external;
 }
 
+const bool ebus::EbusHandler::getExternalBusRequest() const {
+  return externalBusRequest;
+}
+
 ebus::State ebus::EbusHandler::getState() const { return state; }
 
 bool ebus::EbusHandler::isActive() const { return active; }

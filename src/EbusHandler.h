@@ -144,6 +144,7 @@ class EbusHandler {
   void setMaxLockCounter(const uint8_t counter);
 
   void setExternalBusRequest(const bool external);
+  const bool getExternalBusRequest() const;
 
   State getState() const;
   bool isActive() const;
