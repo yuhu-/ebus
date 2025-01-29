@@ -103,7 +103,7 @@ bool ebus::EbusHandler::enque(const std::vector<uint8_t> &message) {
   return active;
 }
 
-void ebus::EbusHandler::pokeExternalBusRequest(const bool won) {
+void ebus::EbusHandler::stateExternalBusRequest(const bool won) {
   if (externalBusRequest) {
     if (won) {
       resetPassive();
@@ -151,6 +151,10 @@ void ebus::EbusHandler::resetCounters() {
   counters.errorsPassiveMasterACK = 0;
   counters.errorsPassiveSlave = 0;
   counters.errorsPassiveSlaveACK = 0;
+
+  counters.errorsReactive = 0;
+  counters.errorsReactiveMaster = 0;
+  counters.errorsReactiveMasterACK = 0;
   counters.errorsReactiveSlave = 0;
   counters.errorsReactiveSlaveACK = 0;
 
@@ -183,17 +187,21 @@ const ebus::Counters &ebus::EbusHandler::getCounters() {
 
   counters.errorsPassive =
       counters.errorsPassiveMaster + counters.errorsPassiveMasterACK +
-      counters.errorsPassiveSlave + counters.errorsPassiveSlaveACK +
+      counters.errorsPassiveSlave + counters.errorsPassiveSlaveACK;
+
+  counters.errorsReactive =
+      counters.errorsReactiveMaster + counters.errorsReactiveMasterACK +
       counters.errorsReactiveSlave + counters.errorsReactiveSlaveACK;
 
   counters.errorsActive =
       counters.errorsActiveMaster + counters.errorsActiveMasterACK +
       counters.errorsActiveSlave + counters.errorsActiveSlaveACK;
 
-  counters.errorsTotal = counters.errorsPassive + counters.errorsActive;
+  counters.errorsTotal =
+      counters.errorsPassive + counters.errorsReactive + counters.errorsActive;
 
   counters.resetsTotal =
-      counters.resetsPassive00 + counters.resetsPassive + counters.resetsActive;
+      counters.resetsPassive00 + counters.resetsActive + counters.resetsPassive;
 
   counters.requestsTotal =
       counters.requestsWon + counters.requestsLost + counters.requestsError;
@@ -225,7 +233,6 @@ void ebus::EbusHandler::receive(const uint8_t &byte) {
                        passiveMaster[1] == slaveAddress) {
               state = State::reactiveSendMasterPositiveAcknowledge;
               write = true;
-
               if (passiveTelegram.getType() == Type::MM) {
                 reactiveCallback(passiveTelegram.getMaster().to_vector(),
                                  nullptr);
@@ -253,6 +260,7 @@ void ebus::EbusHandler::receive(const uint8_t &byte) {
           } else {
             if (passiveMaster[1] == address ||
                 passiveMaster[1] == slaveAddress) {
+              counters.errorsReactiveMaster++;
               state = State::reactiveSendMasterNegativeAcknowledge;
               write = true;
               passiveTelegram.clear();
@@ -390,17 +398,20 @@ void ebus::EbusHandler::receive(const uint8_t &byte) {
       break;
     }
     case State::reactiveSendMasterPositiveAcknowledge: {
-      if (passiveTelegram.getType() == Type::MM) {
-        state = State::releaseBus;
-        write = true;
+      if (passiveTelegram.getType() == Type::MM)
         resetPassive();
-      } else {
+      else
         state = State::reactiveSendSlave;
-      }
       break;
     }
     case State::reactiveSendMasterNegativeAcknowledge: {
       state = State::passiveReceiveMaster;
+      if (!passiveMasterRepeated) {
+        passiveMasterRepeated = true;
+      } else {
+        counters.errorsReactiveMasterACK++;
+        resetPassive();
+      }
       break;
     }
     case State::reactiveSendSlave: {
@@ -417,8 +428,7 @@ void ebus::EbusHandler::receive(const uint8_t &byte) {
         passiveSlaveReceiveIndex = 0;
       } else {
         if (byte == sym_nak) counters.errorsReactiveSlaveACK++;
-        state = State::releaseBus;
-        write = true;
+        state = State::passiveReceiveMaster;
         resetPassive();
       }
       break;

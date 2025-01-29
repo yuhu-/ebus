@@ -140,7 +140,7 @@ void testCallback(const bool &external, const std::string &test,
 
     if (external && !locked) {
       if (seq[i] == ebusHandler.getAddress()) {
-        ebusHandler.pokeExternalBusRequest(true);
+        ebusHandler.stateExternalBusRequest(true);
         locked = true;
       }
     }
@@ -441,6 +441,12 @@ void printCounters() {
             << std::endl;
   std::cout << "errorsPassiveSlaveACK: " << counter.errorsPassiveSlaveACK
             << std::endl;
+
+  std::cout << "errorsReactive: " << counter.errorsReactive << std::endl;
+  std::cout << "errorsReactiveMaster: " << counter.errorsReactiveMaster
+            << std::endl;
+  std::cout << "errorsReactiveMasterACK: " << counter.errorsReactiveMasterACK
+            << std::endl;
   std::cout << "errorsReactiveSlave: " << counter.errorsReactiveSlave
             << std::endl;
   std::cout << "errorsReactiveSlaveACK: " << counter.errorsReactiveSlaveACK
@@ -471,14 +477,14 @@ void printCounters() {
 
 int main() {
   ebusHandler.setErrorCallback(errorCallback);
-  printBytes = true;
+  // printBytes = true;
 
-  // testPassive();
-  // testReactive();
-  // testActive(false);
+  testPassive();
+  testReactive();
+  testActive(false);
   testActive(true);
 
-  // printCounters();
+  printCounters();
 
   return (0);
 }

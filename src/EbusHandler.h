@@ -55,6 +55,10 @@ struct Counters {
   uint32_t errorsPassiveMasterACK = 0;
   uint32_t errorsPassiveSlave = 0;
   uint32_t errorsPassiveSlaveACK = 0;
+
+  uint32_t errorsReactive = 0;
+  uint32_t errorsReactiveMaster = 0;
+  uint32_t errorsReactiveMasterACK = 0;
   uint32_t errorsReactiveSlave = 0;
   uint32_t errorsReactiveSlaveACK = 0;
 
@@ -152,7 +156,7 @@ class EbusHandler {
   void reset();
   bool enque(const std::vector<uint8_t> &message);
 
-  void pokeExternalBusRequest(const bool won);
+  void stateExternalBusRequest(const bool won);
 
   void run(const uint8_t &byte);
 

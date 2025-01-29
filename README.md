@@ -17,15 +17,12 @@ bus device.
 
 **Datatypes** offers various functions for decoding/encoding in accordance with the eBUS data types.
 
-
-Among examples:
-**EbusStack** offers the possibility to act as a fully-fledged eBUS participant. It has been implemented
-as a PIMPL idiom and runs in its own thread.
-
-
 Compilation requires CMake and a C++ compiler with C++14 support. 
 
-**EbusStack** also requires ppoll and pthread support.
+Among examples:
+
+[deprecated] **EbusStack** offers the possibility to act as a fully-fledged eBUS participant. It has been implemented
+as a PIMPL idiom and runs in its own thread. EbusStack also requires ppoll and pthread support.
 
 
 For bugs and missing features use github issue system.
