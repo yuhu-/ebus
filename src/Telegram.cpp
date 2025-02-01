@@ -325,13 +325,27 @@ void ebus::Telegram::clear() {
   m_slaveState = SEQ_EMPTY;
 }
 
-uint8_t ebus::Telegram::getSourceAddress() const { return m_master[0]; }
-
-uint8_t ebus::Telegram::getTargetAddress() const { return m_master[1]; }
-
 const ebus::Sequence &ebus::Telegram::getMaster() const { return m_master; }
 
-uint8_t ebus::Telegram::getMasterCRC() const { return m_masterCRC; }
+const uint8_t ebus::Telegram::getSourceAddress() const { return m_master[0]; }
+
+const uint8_t ebus::Telegram::getTargetAddress() const { return m_master[1]; }
+
+const uint8_t ebus::Telegram::getPrimaryCommand() const { return m_master[2]; }
+
+const uint8_t ebus::Telegram::getSecondaryCommand() const {
+  return m_master[3];
+}
+
+const uint8_t ebus::Telegram::getMasterNumberBytes() const {
+  return m_master[4];
+}
+
+const std::vector<uint8_t> ebus::Telegram::getMasterDataBytes() const {
+  return m_master.range(5, m_master.size() - 5);
+}
+
+const uint8_t ebus::Telegram::getMasterCRC() const { return m_masterCRC; }
 
 int ebus::Telegram::getMasterState() const { return m_masterState; }
 
@@ -339,7 +353,13 @@ void ebus::Telegram::setSlaveACK(const uint8_t byte) { m_slaveACK = byte; }
 
 const ebus::Sequence &ebus::Telegram::getSlave() const { return m_slave; }
 
-uint8_t ebus::Telegram::getSlaveCRC() const { return m_slaveCRC; }
+const uint8_t ebus::Telegram::getSlaveNumberBytes() const { return m_slave[0]; }
+
+const std::vector<uint8_t> ebus::Telegram::getSlaveDataBytes() const {
+  return m_slave.range(1, m_slave.size() - 1);
+}
+
+const uint8_t ebus::Telegram::getSlaveCRC() const { return m_slaveCRC; }
 
 int ebus::Telegram::getSlaveState() const { return m_slaveState; }
 

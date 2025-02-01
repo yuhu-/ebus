@@ -36,7 +36,7 @@
 // ZZ...Target address (254 possible addresses)
 // PB...Primary command
 // SB...Secondary command
-// NN...Number of databytes (0 < NN < 16)
+// NN...Number of data bytes (0 < NN < 16)
 // DBx..Data bytes (payload)
 // CRC..8-Bit CRC byte
 // ACK..Acknowledgement byte (0x00 OK, 0xff NOK)
@@ -94,19 +94,30 @@ class Telegram {
 
   void clear();
 
-  uint8_t getSourceAddress() const;
-  uint8_t getTargetAddress() const;
-
   // returns the master sequence [QQ ZZ PB SB NN DBx] without CRC byte
   const Sequence &getMaster() const;
-  uint8_t getMasterCRC() const;
+
+  const uint8_t getSourceAddress() const;
+  const uint8_t getTargetAddress() const;
+
+  const uint8_t getPrimaryCommand() const;
+  const uint8_t getSecondaryCommand() const;
+
+  const uint8_t getMasterNumberBytes() const;
+  const std::vector<uint8_t> getMasterDataBytes() const;
+
+  const uint8_t getMasterCRC() const;
   int getMasterState() const;
 
   void setSlaveACK(const uint8_t byte);
 
   // returns the slave sequence [NN DBx] without CRC byte
   const Sequence &getSlave() const;
-  uint8_t getSlaveCRC() const;
+
+  const uint8_t getSlaveNumberBytes() const;
+  const std::vector<uint8_t> getSlaveDataBytes() const;
+
+  const uint8_t getSlaveCRC() const;
   int getSlaveState() const;
 
   void setMasterACK(const uint8_t byte);
