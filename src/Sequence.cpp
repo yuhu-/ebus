@@ -160,6 +160,10 @@ const std::string ebus::Sequence::to_string(const std::vector<uint8_t> &vec) {
   return ostr.str();
 }
 
+const std::string ebus::Sequence::to_string(const uint8_t &byte) {
+  return to_string(std::vector<uint8_t>(1, byte));
+}
+
 bool ebus::Sequence::contains(const std::vector<uint8_t> &vec,
                               const std::vector<uint8_t> &search) {
   return std::search(vec.begin(), vec.end(), search.begin(), search.end()) !=

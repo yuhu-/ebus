@@ -71,6 +71,8 @@ class Sequence {
 
   static const std::string to_string(const std::vector<uint8_t> &vec);
 
+  static const std::string to_string(const uint8_t &byte);
+
   static bool contains(const std::vector<uint8_t> &vec,
                        const std::vector<uint8_t> &search);
 
