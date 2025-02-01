@@ -398,10 +398,12 @@ void ebus::EbusHandler::receive(const uint8_t &byte) {
       break;
     }
     case State::reactiveSendMasterPositiveAcknowledge: {
-      if (passiveTelegram.getType() == Type::MM)
+      if (passiveTelegram.getType() == Type::MM) {
+        state = State::passiveReceiveMaster;
         resetPassive();
-      else
+      } else {
         state = State::reactiveSendSlave;
+      }
       break;
     }
     case State::reactiveSendMasterNegativeAcknowledge: {
