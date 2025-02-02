@@ -37,8 +37,8 @@ const std::string to_string(const uint8_t &byte) {
   return ebus::Sequence::to_string(std::vector<uint8_t>(1, byte));
 }
 
-void printByte(const std::string prefix, const uint8_t &byte,
-               const std::string postfix) {
+void printByte(const std::string &prefix, const uint8_t &byte,
+               const std::string &postfix) {
   std::cout << prefix << to_string(byte) << " " << postfix << std::endl;
 }
 
@@ -405,7 +405,7 @@ void testActive(const bool &external) {
                "aaaaaa");
 }
 
-void errorCallback(const std::string str) {
+void errorCallback(const std::string &str) {
   std::cout << "   error: " << str << std::endl;
 }
 

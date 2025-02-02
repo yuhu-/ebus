@@ -22,11 +22,9 @@
 
 #pragma once
 
-#include <stdint.h>
-#include <sys/types.h>
-
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <string>
 #include <vector>
 

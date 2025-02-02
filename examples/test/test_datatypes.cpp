@@ -17,10 +17,9 @@
  * along with ebus. If not, see http://www.gnu.org/licenses/.
  */
 
-#include <stdint.h>
-
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
@@ -29,12 +28,12 @@
 
 #include "Datatypes.h"
 
-const std::string toString(const std::vector<uint8_t>& seq) {
+const std::string toString(const std::vector<uint8_t>& vec) {
   std::ostringstream ostr;
 
-  for (size_t i = 0; i < seq.size(); i++)
+  for (size_t i = 0; i < vec.size(); i++)
     ostr << std::nouppercase << std::hex << std::setw(2) << std::setfill('0')
-         << static_cast<unsigned>(seq[i]);
+         << static_cast<unsigned>(vec[i]);
 
   return (ostr.str());
 }
@@ -127,16 +126,12 @@ void compareFLOAT(const std::vector<uint8_t>& bytes, const bool& print) {
 }
 
 int main() {
-  std::vector<uint8_t> b1 = {uint8_t(0x00), uint8_t(0x01), uint8_t(0x64),
-                             uint8_t(0x7f), uint8_t(0x80), uint8_t(0x81),
-                             uint8_t(0xc8), uint8_t(0xfe), uint8_t(0xff)};
+  std::vector<uint8_t> b1 = {0x00, 0x01, 0x64, 0x7f, 0x80,
+                             0x81, 0xc8, 0xfe, 0xff};
 
-  std::vector<uint8_t> b2 = {
-      uint8_t(0x00), uint8_t(0x00), uint8_t(0x01), uint8_t(0x00),
-      uint8_t(0xff), uint8_t(0xff), uint8_t(0x00), uint8_t(0xff),
-      uint8_t(0xf0), uint8_t(0xff), uint8_t(0x00), uint8_t(0x80),
-      uint8_t(0x01), uint8_t(0x80), uint8_t(0xff), uint8_t(0x7f),
-      uint8_t(0x65), uint8_t(0x02), uint8_t(0x77), uint8_t(0x02)};
+  std::vector<uint8_t> b2 = {0x00, 0x00, 0x01, 0x00, 0xff, 0xff, 0x00,
+                             0xff, 0xf0, 0xff, 0x00, 0x80, 0x01, 0x80,
+                             0xff, 0x7f, 0x65, 0x02, 0x77, 0x02};
 
   // BCD
   std::cout << std::endl
@@ -249,17 +244,17 @@ int main() {
             << std::endl;
 
   for (size_t i = 0; i < b1.size(); i++) {
-    std::vector<uint8_t> source(1, b1[i]);
+    std::vector<uint8_t> src(1, b1[i]);
 
-    compareDATA1b(source, true);
+    compareDATA1b(src, true);
   }
 
   std::cout << std::endl << "Check range DATA1b" << std::endl;
 
   for (int low = 0x00; low <= 0xff; low++) {
-    std::vector<uint8_t> source(1, uint8_t(low));
+    std::vector<uint8_t> src(1, uint8_t(low));
 
-    compareDATA1b(source, false);
+    compareDATA1b(src, false);
   }
 
   // DATA1c
@@ -269,17 +264,17 @@ int main() {
             << std::endl;
 
   for (size_t i = 0; i < b1.size(); i++) {
-    std::vector<uint8_t> source(1, b1[i]);
+    std::vector<uint8_t> src(1, b1[i]);
 
-    compareDATA1c(source, true);
+    compareDATA1c(src, true);
   }
 
   std::cout << std::endl << "Check range DATA1c" << std::endl;
 
   for (int low = 0x00; low <= 0xff; low++) {
-    std::vector<uint8_t> source(1, uint8_t(low));
+    std::vector<uint8_t> src(1, uint8_t(low));
 
-    compareDATA1c(source, false);
+    compareDATA1c(src, false);
   }
 
   // DATA2b
@@ -289,18 +284,18 @@ int main() {
             << std::endl;
 
   for (size_t i = 0; i < b2.size(); i += 2) {
-    std::vector<uint8_t> source(&b2[i], &b2[i + 2]);
+    std::vector<uint8_t> src{b2[i], b2[i + 1]};
 
-    compareDATA2b(source, true);
+    compareDATA2b(src, true);
   }
 
   std::cout << std::endl << "Check range DATA2b" << std::endl;
 
   for (int high = 0x00; high <= 0xff; high++) {
     for (int low = 0x00; low <= 0xff; low++) {
-      std::vector<uint8_t> source{uint8_t(low), uint8_t(high)};
+      std::vector<uint8_t> src{uint8_t(low), uint8_t(high)};
 
-      compareDATA2b(source, false);
+      compareDATA2b(src, false);
     }
   }
 
@@ -311,18 +306,18 @@ int main() {
             << std::endl;
 
   for (size_t i = 0; i < b2.size(); i += 2) {
-    std::vector<uint8_t> source(&b2[i], &b2[i + 2]);
+    std::vector<uint8_t> src{b2[i], b2[i + 1]};
 
-    compareDATA2c(source, true);
+    compareDATA2c(src, true);
   }
 
   std::cout << std::endl << "Check range DATA2c" << std::endl;
 
   for (int high = 0x00; high <= 0xff; high++) {
     for (int low = 0x00; low <= 0xff; low++) {
-      std::vector<uint8_t> source{uint8_t(low), uint8_t(high)};
+      std::vector<uint8_t> src{uint8_t(low), uint8_t(high)};
 
-      compareDATA2c(source, false);
+      compareDATA2c(src, false);
     }
   }
 
@@ -333,18 +328,18 @@ int main() {
             << std::endl;
 
   for (size_t i = 0; i < b2.size(); i += 2) {
-    std::vector<uint8_t> source(&b2[i], &b2[i + 2]);
+    std::vector<uint8_t> src{b2[i], b2[i + 1]};
 
-    compareFLOAT(source, true);
+    compareFLOAT(src, true);
   }
 
   std::cout << std::endl << "Check range float" << std::endl;
 
   for (int high = 0x00; high <= 0xff; high++) {
     for (int low = 0x00; low <= 0xff; low++) {
-      std::vector<uint8_t> source{uint8_t(low), uint8_t(high)};
+      std::vector<uint8_t> src{uint8_t(low), uint8_t(high)};
 
-      compareFLOAT(source, false);
+      compareFLOAT(src, false);
     }
   }
 
