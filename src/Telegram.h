@@ -110,6 +110,7 @@ class Telegram {
   int getMasterState() const;
 
   void setSlaveACK(const uint8_t byte);
+  const uint8_t getSlaveACK() const;
 
   // returns the slave sequence [NN DBx] without CRC byte
   const Sequence &getSlave() const;
@@ -121,6 +122,7 @@ class Telegram {
   int getSlaveState() const;
 
   void setMasterACK(const uint8_t byte);
+  const uint8_t getMasterACK() const;
 
   ebus::Type getType() const;
 

@@ -351,6 +351,8 @@ int ebus::Telegram::getMasterState() const { return m_masterState; }
 
 void ebus::Telegram::setSlaveACK(const uint8_t byte) { m_slaveACK = byte; }
 
+const uint8_t ebus::Telegram::getSlaveACK() const { return m_slaveACK; }
+
 const ebus::Sequence &ebus::Telegram::getSlave() const { return m_slave; }
 
 const uint8_t ebus::Telegram::getSlaveNumberBytes() const { return m_slave[0]; }
@@ -364,6 +366,8 @@ const uint8_t ebus::Telegram::getSlaveCRC() const { return m_slaveCRC; }
 int ebus::Telegram::getSlaveState() const { return m_slaveState; }
 
 void ebus::Telegram::setMasterACK(const uint8_t byte) { m_masterACK = byte; }
+
+const uint8_t ebus::Telegram::getMasterACK() const { return m_masterACK; }
 
 ebus::Type ebus::Telegram::getType() const { return m_type; }
 
