@@ -7,5 +7,7 @@ add_subdirectory(src)
 
 add_subdirectory(examples/test)
 
+add_subdirectory(examples/reader)
+
 add_subdirectory(examples/ebusstack/src)
 add_subdirectory(examples/ebusstack/demo)
