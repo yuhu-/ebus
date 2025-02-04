@@ -47,6 +47,7 @@
 
 bool bold = false;
 bool color = false;
+bool dump = false;
 bool noerror = false;
 bool notime = false;
 bool raw = false;
@@ -177,9 +178,12 @@ void run(const int sfd) {
     ssize_t datalen = recv(sfd, data, sizeof(data), 0);
 
     for (int i = 0; i < datalen; i++) {
-      std::string result = collect(data[i]);
-
-      if (result.size() > 0) std::cout << result << std::endl;
+      if (dump) {
+        std::cout << data[i];
+      } else {
+        std::string result = collect(data[i]);
+        if (result.size() > 0) std::cout << result << std::endl;
+      }
     }
 
     fflush(stdout);
@@ -225,6 +229,7 @@ void usage() {
   std::cout << "options:" << std::endl;
   std::cout << "  --bold,    -b   bold data bytes" << std::endl;
   std::cout << "  --color,   -c   colorized output" << std::endl;
+  std::cout << "  --dump,    -d   dump only raw data" << std::endl;
   std::cout << "  --noerror  -e   suppress errors" << std::endl;
   std::cout << "  --notime,  -n   suppress timestamp" << std::endl;
   std::cout << "  --raw,     -r   print raw data" << std::endl;
@@ -236,6 +241,7 @@ void usage() {
 int main(int argc, char *argv[]) {
   static struct option options[] = {{"bold", no_argument, nullptr, 'b'},
                                     {"color", no_argument, nullptr, 'c'},
+                                    {"dump", no_argument, nullptr, 'd'},
                                     {"noerror", no_argument, nullptr, 'e'},
                                     {"notime", no_argument, nullptr, 'n'},
                                     {"raw", no_argument, nullptr, 'r'},
@@ -245,7 +251,7 @@ int main(int argc, char *argv[]) {
                                     {nullptr, 0, nullptr, 0}};
 
   int option;
-  while ((option = getopt_long(argc, argv, "bcenrsth", options, nullptr)) !=
+  while ((option = getopt_long(argc, argv, "bcdenrsth", options, nullptr)) !=
          -1) {
     switch (option) {
       case 'b':
@@ -253,6 +259,9 @@ int main(int argc, char *argv[]) {
         break;
       case 'c':
         color = true;
+        break;
+      case 'd':
+        dump = true;
         break;
       case 'e':
         noerror = true;
