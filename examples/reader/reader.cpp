@@ -36,111 +36,130 @@
 #include "Telegram.h"
 
 #define RESET "\033[0m"
-#define BOLD "\033[1m"  // Bold
+#define BOLD "\033[1m"
 
-#define RED "\033[31m"      // Red
-#define GREEN "\033[32m"    // Green
-#define YELLOW "\033[33m"   // Yellow
-#define BLUE "\033[34m"     // Blue
-#define MAGENTA "\033[35m"  // Magenta
+#define RED "\033[31m"
+#define GREEN "\033[32m"
+#define YELLOW "\033[33m"
+#define BLUE "\033[34m"
+#define MAGENTA "\033[35m"
+#define CYAN "\033[36m"
 
 bool bold = false;
 bool color = false;
-bool full = false;
-bool space = false;
+bool noerror = false;
+bool notime = false;
+bool raw = false;
+bool split = false;
+bool type = false;
 
 const char *timestamp() {
   static char time[24];
   struct timeval tv;
-  struct tm *tm;
+  struct tm tm;
 
-  gettimeofday(&tv, NULL);
-  tm = localtime(&tv.tv_sec);
+  gettimeofday(&tv, nullptr);
+  localtime_r(&tv.tv_sec, &tm);
 
   snprintf(time, sizeof(time), "%04d-%02d-%02d %02d:%02d:%02d.%03ld",
-           tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour,
-           tm->tm_min, tm->tm_sec, tv.tv_usec / 1000);
+           tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min,
+           tm.tm_sec, tv.tv_usec / 1000);
 
   return time;
 }
 
 std::string collect(const uint8_t byte) {
-  static bool running = false;
   static ebus::Sequence sequence;
   std::string result = "";
 
+  if (raw) std::cout << ebus::Sequence::to_string(byte) << std::endl;
+
   if (byte == ebus::sym_syn) {
+    static bool running = false;
     if (sequence.size() > 0 && running) {
       ebus::Telegram tel(sequence);
       std::ostringstream ostr;
 
       if (tel.isValid()) {
-        ostr << timestamp();
-        ostr << " - ";
+        if (!notime) {
+          ostr << timestamp();
+          ostr << " ";
+        }
+        if (type) {
+          if (color) ostr << CYAN;
+          if (tel.getType() == ebus::Type::MS)
+            ostr << "MS";
+          else if (tel.getType() == ebus::Type::MM)
+            ostr << "MM";
+          else
+            ostr << "BC";
+          if (color) ostr << RESET;
+          ostr << " ";
+        }
         if (color) ostr << GREEN;
         ostr << ebus::Sequence::to_string(tel.getSourceAddress());
         ostr << ebus::Sequence::to_string(tel.getTargetAddress());
         if (color) ostr << RESET;
-        if (space) ostr << " ";
+        if (split) ostr << " ";
         if (color) ostr << BLUE;
         ostr << ebus::Sequence::to_string(tel.getPrimaryCommand());
         ostr << ebus::Sequence::to_string(tel.getSecondaryCommand());
         if (color) ostr << RESET;
-        if (space) ostr << " ";
+        if (split) ostr << " ";
         if (color) ostr << YELLOW;
         ostr << ebus::Sequence::to_string(tel.getMasterNumberBytes());
         if (color) ostr << RESET;
-        if (space) ostr << " ";
+        if (split) ostr << " ";
         if (bold) ostr << BOLD;
         ostr << ebus::Sequence::to_string(tel.getMasterDataBytes());
         if (bold) ostr << RESET;
-        if (full) {
-          if (space) ostr << " ";
-          if (color) ostr << MAGENTA;
-          ostr << ebus::Sequence::to_string(tel.getMasterCRC());
-          if (color) ostr << RESET;
-        } else {
-          ostr << "   ";
-        }
+        if (split) ostr << " ";
+        if (color) ostr << MAGENTA;
+        ostr << ebus::Sequence::to_string(tel.getMasterCRC());
+        if (color) ostr << RESET;
         if (tel.getType() != ebus::Type::BC) {
-          if (full) {
-            if (space) ostr << " ";
-            ostr << ebus::Sequence::to_string(tel.getSlaveACK());
-          } else {
-            ostr << "   ";
-          }
+          if (split) ostr << " ";
+          ostr << ebus::Sequence::to_string(tel.getSlaveACK());
           if (tel.getType() == ebus::Type::MS) {
-            if (space) ostr << " ";
+            if (split) ostr << " ";
             if (color) ostr << YELLOW;
             ostr << ebus::Sequence::to_string(tel.getSlaveNumberBytes());
             if (color) ostr << RESET;
             if (tel.getSlaveNumberBytes() > 0) {
-              if (space) ostr << " ";
+              if (split) ostr << " ";
               if (bold) ostr << BOLD;
               ostr << ebus::Sequence::to_string(tel.getSlaveDataBytes());
               if (bold) ostr << RESET;
             }
-            if (full) {
-              if (space) ostr << " ";
-              if (color) ostr << MAGENTA;
-              ostr << ebus::Sequence::to_string(tel.getSlaveCRC());
-              if (color) ostr << RESET;
-              if (space) ostr << " ";
-              ostr << ebus::Sequence::to_string(tel.getMasterACK());
-            }
+            if (split) ostr << " ";
+            if (color) ostr << MAGENTA;
+            ostr << ebus::Sequence::to_string(tel.getSlaveCRC());
+            if (color) ostr << RESET;
+            if (split) ostr << " ";
+            ostr << ebus::Sequence::to_string(tel.getMasterACK());
           }
         }
-
-      } else {
-        ostr << timestamp();
-        ostr << " - ";
+      } else if (!noerror) {
+        if (!notime) {
+          ostr << timestamp();
+          ostr << " ";
+        }
+        if (type) ostr << "   ";
         ostr << sequence.to_string() << std::endl;
         if (color) ostr << RED;
-        ostr << "-----ERROR-DETECTED-----> " + tel.to_string();
+        if (!notime) {
+          ostr << "----ERROR-DETECTED----> ";
+          if (type) ostr << "   ";
+        }
+        ostr << tel.to_string();
         if (color) ostr << RESET;
       }
 
       result = ostr.str();
+      if (!notime) {
+        ostr << timestamp();
+        ostr << " ";
+      }
       sequence.clear();
     }
     running = true;
@@ -153,10 +172,9 @@ std::string collect(const uint8_t byte) {
 
 void run(const int sfd) {
   char data[1024];
-  ssize_t datalen;
 
   while (1) {
-    datalen = recv(sfd, data, sizeof(data), 0);
+    ssize_t datalen = recv(sfd, data, sizeof(data), 0);
 
     for (int i = 0; i < datalen; i++) {
       std::string result = collect(data[i]);
@@ -182,20 +200,14 @@ int connect(const char *hostname, const char *port) {
   }
 
   int sfd = 0, err = 0;
-  for (struct addrinfo *addr = addrs; addr != nullptr; addr = addr->ai_next) {
+  for (const struct addrinfo *addr = addrs; addr != nullptr;
+       addr = addr->ai_next) {
     sfd = socket(addrs->ai_family, addrs->ai_socktype, addrs->ai_protocol);
-    if (sfd < 0) {
+    if (sfd > 0) {
+      if (connect(sfd, addr->ai_addr, addr->ai_addrlen) == 0) break;
+    } else {
       err = errno;
-      continue;
     }
-
-    if (connect(sfd, addr->ai_addr, addr->ai_addrlen) == 0) {
-      break;
-    }
-
-    err = errno;
-    sfd = -1;
-    close(sfd);
   }
 
   freeaddrinfo(addrs);
@@ -211,21 +223,30 @@ int connect(const char *hostname, const char *port) {
 void usage() {
   std::cout << "Usage: reader [options] host:port" << std::endl;
   std::cout << "options:" << std::endl;
-  std::cout << "  --bold,  -b   data bytes bolded" << std::endl;
-  std::cout << "  --color, -c   colorized output" << std::endl;
-  std::cout << "  --full,  -f   inclusiv CRC and ACK" << std::endl;
-  std::cout << "  --space, -s   space bewtween bytes" << std::endl;
-  std::cout << "  --help,  -h   show this page" << std::endl;
+  std::cout << "  --bold,    -b   bold data bytes" << std::endl;
+  std::cout << "  --color,   -c   colorized output" << std::endl;
+  std::cout << "  --noerror  -e   suppress errors" << std::endl;
+  std::cout << "  --notime,  -n   suppress timestamp" << std::endl;
+  std::cout << "  --raw,     -r   print raw data" << std::endl;
+  std::cout << "  --split,   -s   split telegram parts" << std::endl;
+  std::cout << "  --type,    -t   print telegram type" << std::endl;
+  std::cout << "  --help,    -h   show this page" << std::endl;
 }
 
 int main(int argc, char *argv[]) {
-  static struct option options[] = {
-      {"bold", no_argument, nullptr, 'b'}, {"color", no_argument, nullptr, 'c'},
-      {"full", no_argument, nullptr, 'f'}, {"space", no_argument, nullptr, 's'},
-      {"help", no_argument, nullptr, 'h'}, {nullptr, 0, nullptr, 0}};
+  static struct option options[] = {{"bold", no_argument, nullptr, 'b'},
+                                    {"color", no_argument, nullptr, 'c'},
+                                    {"noerror", no_argument, nullptr, 'e'},
+                                    {"notime", no_argument, nullptr, 'n'},
+                                    {"raw", no_argument, nullptr, 'r'},
+                                    {"split", no_argument, nullptr, 's'},
+                                    {"type", no_argument, nullptr, 't'},
+                                    {"help", no_argument, nullptr, 'h'},
+                                    {nullptr, 0, nullptr, 0}};
 
   int option;
-  while ((option = getopt_long(argc, argv, "bcfsh", options, nullptr)) != -1) {
+  while ((option = getopt_long(argc, argv, "bcenrsth", options, nullptr)) !=
+         -1) {
     switch (option) {
       case 'b':
         bold = true;
@@ -233,11 +254,20 @@ int main(int argc, char *argv[]) {
       case 'c':
         color = true;
         break;
-      case 'f':
-        full = true;
+      case 'e':
+        noerror = true;
+        break;
+      case 'n':
+        notime = true;
+        break;
+      case 'r':
+        raw = true;
         break;
       case 's':
-        space = true;
+        split = true;
+        break;
+      case 't':
+        type = true;
         break;
       case 'h':
       case '?':
