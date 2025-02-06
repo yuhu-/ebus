@@ -21,7 +21,10 @@ Compilation requires CMake and a C++ compiler with C++14 support.
 
 Among examples:
 
-The **reader** console program connects to a tcp socket and interprets all incoming data as eBUS data. The data is evaluated for correctness and output on the console.
+The **reader** interprets all incoming values ​​as eBUS data. As a console-based program, it accepts input from
+standard input via pipe as well as reading from files or a TCP socket. The data is checked for correctness
+and output to standard output. Various formatting options are available for attractive output. Dumping of
+binary values ​​is also supported.
 
 [deprecated] **EbusStack** offers the possibility to act as a fully-fledged eBUS participant. It has been implemented
 as a PIMPL idiom and runs in its own thread. EbusStack also requires ppoll and pthread support.

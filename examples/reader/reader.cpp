@@ -17,6 +17,12 @@
  * along with ebus. If not, see http://www.gnu.org/licenses/.
  */
 
+// The reader interprets all incoming values ​​as eBUS data. As a
+// console-based program, it accepts input from standard input via pipe as well
+// as reading from files or a TCP socket. The data is checked for correctness
+// and output to standard output. Various formatting options are available for
+// attractive output. Dumping of binary values ​​is also supported.
+
 #include <arpa/inet.h>
 #include <fcntl.h>
 #include <getopt.h>
@@ -29,6 +35,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <cstring>
+#include <fstream>
 #include <iostream>
 #include <sstream>
 
@@ -69,7 +76,7 @@ const char *timestamp() {
   return time;
 }
 
-std::string collect(const uint8_t byte) {
+std::string collect(const uint8_t &byte) {
   static ebus::Sequence sequence;
   std::string result = "";
 
@@ -172,7 +179,7 @@ std::string collect(const uint8_t byte) {
 }
 
 void run(const int sfd) {
-  char data[1024];
+  char data[1];
 
   while (1) {
     ssize_t datalen = recv(sfd, data, sizeof(data), 0);
@@ -225,14 +232,14 @@ int connect(const char *hostname, const char *port) {
 }
 
 void usage() {
-  std::cout << "Usage: reader [options] host:port" << std::endl;
-  std::cout << "options:" << std::endl;
+  std::cout << "Usage: reader [option] host:port|file" << std::endl;
+  std::cout << "option:" << std::endl;
   std::cout << "  --bold,    -b   bold data bytes" << std::endl;
   std::cout << "  --color,   -c   colorized output" << std::endl;
-  std::cout << "  --dump,    -d   dump only raw data" << std::endl;
+  std::cout << "  --dump,    -d   dump binary values to stdout" << std::endl;
   std::cout << "  --noerror  -e   suppress errors" << std::endl;
   std::cout << "  --notime,  -n   suppress timestamp" << std::endl;
-  std::cout << "  --raw,     -r   print raw data" << std::endl;
+  std::cout << "  --raw,     -r   print raw values" << std::endl;
   std::cout << "  --split,   -s   split telegram parts" << std::endl;
   std::cout << "  --type,    -t   print telegram type" << std::endl;
   std::cout << "  --help,    -h   show this page" << std::endl;
@@ -251,7 +258,7 @@ int main(int argc, char *argv[]) {
                                     {nullptr, 0, nullptr, 0}};
 
   int option;
-  while ((option = getopt_long(argc, argv, "bcdenrsth", options, nullptr)) !=
+  while ((option = getopt_long(argc, argv, "bcdefnrsth", options, nullptr)) !=
          -1) {
     switch (option) {
       case 'b':
@@ -289,20 +296,36 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  std::string tmp = argv[argc - 1];
-  size_t pos = tmp.find(':');
-  if (pos == std::string::npos) {
-    usage();
-    exit(EXIT_FAILURE);
+  if (argv[optind] != nullptr) {
+    std::string tmp = argv[optind];
+    size_t pos = tmp.find(':');
+    if (pos == std::string::npos) {
+      std::ifstream stream(argv[optind], std::ios::binary);
+      if (stream.is_open() == true) {
+        while (stream.eof() == false) {
+          unsigned char byte = stream.get();
+          std::string result = collect(byte);
+          if (result.size() > 0) std::cout << result << std::endl;
+        }
+        stream.close();
+      } else {
+        std::cerr << "file '" << argv[optind] << "' not found" << std::endl;
+        exit(EXIT_FAILURE);
+      }
+    } else {
+      std::string hostname = tmp.substr(0, pos);
+      std::string port = tmp.substr(pos + 1);
+      int sfd = connect(hostname.c_str(), port.c_str());
+      run(sfd);
+      close(sfd);
+    }
+  } else {
+    while (std::cin.good()) {
+      uint8_t byte = std::cin.get();
+      std::string result = collect(byte);
+      if (result.size() > 0) std::cout << result << std::endl;
+    }
   }
 
-  std::string hostname = tmp.substr(0, pos);
-  std::string port = tmp.substr(pos + 1);
-
-  int sfd = connect(hostname.c_str(), port.c_str());
-
-  run(sfd);
-
-  close(sfd);
-  return 0;
+  return EXIT_SUCCESS;
 }
