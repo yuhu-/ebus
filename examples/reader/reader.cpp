@@ -184,6 +184,11 @@ void run(const int sfd) {
   while (1) {
     ssize_t datalen = recv(sfd, data, sizeof(data), 0);
 
+    if (datalen == -1) {
+      std::cerr << "recv error" << std::endl;
+      exit(EXIT_FAILURE);
+    }
+
     for (int i = 0; i < datalen; i++) {
       if (dump) {
         std::cout << data[i];
