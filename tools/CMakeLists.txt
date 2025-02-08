@@ -9,3 +9,9 @@ target_link_libraries(test_telegram ebus)
 
 add_executable(test_ebushandler test_ebushandler.cpp)
 target_link_libraries(test_ebushandler ebus)
+
+add_executable(ebusread ebusread.cpp)
+target_link_libraries(ebusread ebus)
+
+add_executable(playground playground.cpp)
+target_link_libraries(playground ebus)

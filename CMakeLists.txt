@@ -5,10 +5,6 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
 
 add_subdirectory(src)
 
-add_subdirectory(examples/test)
+add_subdirectory(tools)
 
-add_subdirectory(examples/playground)
-add_subdirectory(examples/reader)
-
-add_subdirectory(examples/ebusstack/src)
-add_subdirectory(examples/ebusstack/demo)
+add_subdirectory(ebusstack)
