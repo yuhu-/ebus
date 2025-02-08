@@ -39,7 +39,6 @@
 #include <iostream>
 #include <sstream>
 
-#include "Datatypes.h"
 #include "Telegram.h"
 
 #define RESET "\033[0m"
