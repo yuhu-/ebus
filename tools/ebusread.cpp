@@ -237,17 +237,17 @@ int connect(const char *hostname, const char *port) {
 }
 
 void usage() {
-  std::cout << "Usage: reader [option] host:port|file" << std::endl;
-  std::cout << "option:" << std::endl;
-  std::cout << "  --bold,    -b   bold data bytes" << std::endl;
-  std::cout << "  --color,   -c   colorized output" << std::endl;
-  std::cout << "  --dump,    -d   dump binary values to stdout" << std::endl;
-  std::cout << "  --noerror  -e   suppress errors" << std::endl;
-  std::cout << "  --notime,  -n   suppress timestamp" << std::endl;
-  std::cout << "  --raw,     -r   print raw values" << std::endl;
-  std::cout << "  --split,   -s   split telegram parts" << std::endl;
-  std::cout << "  --type,    -t   print telegram type" << std::endl;
-  std::cout << "  --help,    -h   show this page" << std::endl;
+  std::cout << "Usage: ebusread [options] <device|file|host:port>" << std::endl;
+  std::cout << "eBUS binary data reader" << std::endl;
+  std::cout << "  -b, --bold       bold data bytes" << std::endl;
+  std::cout << "  -c, --color      colorized output" << std::endl;
+  std::cout << "  -d, --dump       dump binary values to stdout" << std::endl;
+  std::cout << "  -e, --noerror    suppress errors" << std::endl;
+  std::cout << "  -n, --notime     suppress timestamp" << std::endl;
+  std::cout << "  -r, --raw        print raw values" << std::endl;
+  std::cout << "  -s, --split      split telegram parts" << std::endl;
+  std::cout << "  -t, --type       print telegram type" << std::endl;
+  std::cout << "  -h, --help       show this page" << std::endl;
 }
 
 int main(int argc, char *argv[]) {

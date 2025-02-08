@@ -1,4 +1,4 @@
-C++ library for eBUS communication.
+***C++ library for eBUS communication.***
 
 eBUS is a two-wire bus that operates at a speed of 2400 baud and is used in heating systems. 
 The participants (max. 25 masters, 228 slaves) exchange messages (=telegrams) in a byte-oriented
@@ -21,10 +21,8 @@ Compilation requires CMake and a C++ compiler with C++14 support.
 
 ***Among tools:***
 
-**ebusread** interprets all incoming values ​​as eBUS data. As a console-based program, it accepts input from
-standard input via pipe as well as reading from files or a TCP socket. The data is checked for correctness
-and output to standard output. Various formatting options are available for attractive output. Dumping of
-binary values ​​is also supported.
+**ebusread** interprets all incoming values ​​as eBUS data. The data is checked for correctness and output to
+standard output. Reading from files, devices, pipes and TCP sockets is supported. 
 
 **playground** a little helper for development.
 
