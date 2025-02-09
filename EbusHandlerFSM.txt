@@ -87,9 +87,23 @@ passiveReceiveMaster <----------------------------------------------------------
 |                                                                                              |
 |-> byte == SYN                                                                                |
     |                                                                                          |
-    |-> resetPassive                                                                           |
+    |-> passive Errors > 0                                                                     |
+    |   |                                                                                      |
+    |   |-> errorCallback (passive)                                                            |
+    |   |                                                                                      |
+    |   |-> resetPassive                                                                       |    
+    |   |                                                                                      |
+    |<--|                                                                                      |    
     |                                                                                          |
-    |-> resetActive                                                                            |
+    |-> active Errors > 0                                                                      |
+    |   |                                                                                      |
+    |   |-> errorCallback (active)                                                             |
+    |   |                                                                                      |      
+    |   |-> resetActive                                                                        |
+    |   |                                                                                      |
+    |<--|                                                                                      |             
+    |                                                                                          |
+    |-> active != true ----------------------------------------------------------------------->|
     |                                                                                          |
     |-> active == true                                                                         |
         |                                                                                      |
