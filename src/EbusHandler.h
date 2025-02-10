@@ -17,9 +17,9 @@
  * along with ebus. If not, see http://www.gnu.org/licenses/.
  */
 
-// Implementation of the sending routines for Master-Slave telegrams based on
-// the ebus classes Telegram and Sequence. It also collects statistical data
-// about the ebus system.
+// Implementation of the send and receive routines for all types of telegrams on
+// the basis of a finite state machine. A large number of counters and
+// statistical data about the eBUS system are collected.
 
 #pragma once
 
