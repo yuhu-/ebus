@@ -46,11 +46,11 @@ void busReadFunction(const uint8_t &byte) {
   if (printBytes) printByte("->  read: ", byte, getState());
 }
 
-bool busReadyCallback() { return true; }
-
-void busWriteCallback(const uint8_t &byte) {
+void writeCallback(const uint8_t &byte) {
   if (printBytes) printByte("<- write: ", byte, getState());
 }
+
+bool readBufferCallback() { return 0; }
 
 void activeCallback(const std::vector<uint8_t> &master,
                     const std::vector<uint8_t> &slave) {
@@ -94,7 +94,7 @@ void reactiveCallback(const std::vector<uint8_t> &master,
             << std::endl;
 }
 
-ebus::EbusHandler ebusHandler(0x33, &busReadyCallback, &busWriteCallback,
+ebus::EbusHandler ebusHandler(0x33, &writeCallback, &readBufferCallback,
                               &activeCallback, &passiveCallback,
                               &reactiveCallback);
 

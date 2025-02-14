@@ -126,8 +126,9 @@ static const char *stateString(State state) {
 class EbusHandler {
  public:
   EbusHandler() = default;
-  EbusHandler(const uint8_t source, std::function<bool()> busReadyFunction,
-              std::function<void(const uint8_t byte)> busWriteFunction,
+  EbusHandler(const uint8_t source,
+              std::function<void(const uint8_t byte)> writeFunction,
+              std::function<int()> readBufferFunction,
               std::function<void(const std::vector<uint8_t> master,
                                  const std::vector<uint8_t> slave)>
                   activeFunction,
@@ -167,14 +168,17 @@ class EbusHandler {
   uint8_t address = 0;
   uint8_t slaveAddress = 0;
 
-  std::function<bool()> busReadyCallback = nullptr;
-  std::function<void(const uint8_t byte)> busWriteCallback = nullptr;
+  std::function<void(const uint8_t byte)> writeCallback = nullptr;
+  std::function<int()> readBufferCallback = nullptr;
+
   std::function<void(const std::vector<uint8_t> master,
                      const std::vector<uint8_t> slave)>
       activeCallback = nullptr;
+
   std::function<void(const std::vector<uint8_t> master,
                      const std::vector<uint8_t> slave)>
       passiveCallback = nullptr;
+
   std::function<void(const std::vector<uint8_t> master,
                      std::vector<uint8_t> *const slave)>
       reactiveCallback = nullptr;
@@ -187,7 +191,6 @@ class EbusHandler {
 
   // control
   State state = State::passiveReceiveMaster;
-  bool write = false;
   uint8_t maxLockCounter = 3;
   uint8_t lockCoutner = 0;
 
@@ -200,8 +203,7 @@ class EbusHandler {
 
   Sequence passiveSlave;
   size_t passiveSlaveDBx = 0;
-  size_t passiveSlaveSendIndex = 0;
-  size_t passiveSlaveReceiveIndex = 0;
+  size_t passiveSlaveIndex = 0;
   bool passiveSlaveRepeated = false;
 
   // active
@@ -209,8 +211,7 @@ class EbusHandler {
   Telegram activeTelegram;
 
   Sequence activeMaster;
-  size_t activeMasterSendIndex = 0;
-  size_t activeMasterReceiveIndex = 0;
+  size_t activeMasterIndex = 0;
   bool activeMasterRepeated = false;
 
   Sequence activeSlave;
