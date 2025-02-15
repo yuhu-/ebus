@@ -42,7 +42,7 @@ void printByte(const std::string &prefix, const uint8_t &byte,
   std::cout << prefix << to_string(byte) << " " << postfix << std::endl;
 }
 
-void busReadFunction(const uint8_t &byte) {
+void readFunction(const uint8_t &byte) {
   if (printBytes) printByte("->  read: ", byte, getState());
 }
 
@@ -82,7 +82,7 @@ void reactiveCallback(const std::vector<uint8_t> &master,
         *slave = ebus::Sequence::to_vector("0ab5504d53303001074302");
       search = {0x07, 0x05};  // 0008070500
       if (ebus::Sequence::contains(master, search))
-        *slave = ebus::Sequence::to_vector("0ab5504d533030010743");
+        *slave = ebus::Sequence::to_vector("0ab5504d533030010743");  // defect
       break;
     default:
       break;
@@ -134,7 +134,7 @@ void testCallback(const bool &external, const std::string &test,
         i--;
         break;
       default:
-        busReadFunction(seq[i]);
+        readFunction(seq[i]);
         break;
     }
 
@@ -195,12 +195,12 @@ void testPassive() {
                "ff"                  // Master NAK
                "aaaaaa");
 
-  header = "MS: Slave NAK/repeat";
+  header = "MS: Slave defect/NAK/repeat";
   testCallback(false, test, header, "",
                "aaaaaa"
                "ff52b509030d060043"
                "00"
-               "03b0fba901d0"
+               "03b0fba902d0"  // Slave defect
                "ff"            // Slave NAK
                "03b0fba901d0"  // Slave repeat
                "00"
@@ -278,12 +278,14 @@ void testReactive() {
                "00"  // Slave ACK
                "aaaaaa");
 
-  header = "MS: Slave defect";
+  header = "MS: Slave NAK/NAK";
   testCallback(false, test, header, "",
                "aaaaaa"
                "00"
-               "38"        // own slave address
-               "07050031"  // Slave defect
+               "38"  // own slave address
+               "070400ab"
+               "ff"  // Slave NAK
+               "ff"  // Slave NAK
                "aaaaaa");
 
   header = "MS: Master defect/correct";
@@ -296,6 +298,25 @@ void testReactive() {
                "38"        // own slave address
                "070400ab"  // Master correct
                "00"
+               "aaaaaa");
+
+  header = "MS: Master defect/defect";
+  testCallback(false, test, header, "",
+               "aaaaaa"
+               "00"
+               "38"        // own slave address
+               "070400ff"  // Master defect
+               "00"
+               "38"        // own slave address
+               "070400ac"  // Master defect
+               "aaaaaa");
+
+  header = "MS: Slave defect (reactiveCallback)";
+  testCallback(false, test, header, "",
+               "aaaaaa"
+               "00"
+               "38"  // own slave address
+               "07050030"
                "aaaaaa");
 
   header = "MM: Normal";
@@ -427,7 +448,8 @@ void printCounters() {
 
   std::cout << "messagesActiveMS: " << counter.messagesActiveMS << std::endl;
   std::cout << "messagesActiveMM: " << counter.messagesActiveMM << std::endl;
-  std::cout << "messagesActiveBC: " << counter.messagesActiveBC << std::endl;
+  std::cout << "messagesActiveBC: " << counter.messagesActiveBC << std::endl
+            << std::endl;
 
   // errors
   std::cout << "errorsTotal: " << counter.errorsTotal << std::endl;
