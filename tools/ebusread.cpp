@@ -39,6 +39,7 @@
 #include <iostream>
 #include <sstream>
 
+#include "Datatypes.h"
 #include "Telegram.h"
 
 #define RESET "\033[0m"
@@ -56,6 +57,7 @@ bool color = false;
 bool dump = false;
 bool noerror = false;
 bool notime = false;
+bool parse = false;
 bool raw = false;
 bool split = false;
 bool type = false;
@@ -73,6 +75,39 @@ const char *timestamp() {
            tm.tm_sec, tv.tv_usec / 1000);
 
   return time;
+}
+
+std::string services(const std::vector<uint8_t> &master,
+                     const std::vector<uint8_t> &slave) {
+  std::ostringstream ostr;
+  if (master[2] == 0x07 && master[3] == 0x00) {
+    ostr << "0700: 20";
+    ostr << ebus::Sequence::to_string(master[13]);
+    ostr << "-";
+    ostr << ebus::Sequence::to_string(master[11]);
+    ostr << "-";
+    ostr << ebus::Sequence::to_string(master[10]);
+    ostr << " ";
+    ostr << ebus::Sequence::to_string(master[9]);
+    ostr << ":";
+    ostr << ebus::Sequence::to_string(master[8]);
+    ostr << ":";
+    ostr << ebus::Sequence::to_string(master[7]);
+    ostr << " - ";
+    ostr << ebus::byte_2_data2b(ebus::Sequence::range(master, 5, 2));
+    ostr << " °C";
+  } else if (master[2] == 0x07 && master[3] == 0x04) {
+    ostr << "0704: " + ebus::Sequence::to_string(master[1]);
+    ostr << " MF=";
+    ostr << ebus::Sequence::to_string(ebus::Sequence::range(slave, 1, 1));
+    ostr << " ID=";
+    ostr << ebus::byte_2_string(ebus::Sequence::range(slave, 2, 5));
+    ostr << " SW=";
+    ostr << ebus::Sequence::to_string(ebus::Sequence::range(slave, 7, 2));
+    ostr << " HW=";
+    ostr << ebus::Sequence::to_string(ebus::Sequence::range(slave, 9, 2));
+  }
+  return ostr.str();
 }
 
 std::string collect(const uint8_t &byte) {
@@ -144,6 +179,20 @@ std::string collect(const uint8_t &byte) {
             if (color) ostr << RESET;
             if (split) ostr << " ";
             ostr << ebus::Sequence::to_string(tel.getMasterACK());
+          }
+        }
+        if (parse) {
+          std::string tmp =
+              services(tel.getMaster().to_vector(), tel.getSlave().to_vector());
+          if (!tmp.empty()) {
+            ostr << std::endl;
+            if (color) ostr << CYAN;
+            if (!notime) {
+              ostr << "---SERVICE-DETECTED---> ";
+              if (type) ostr << "   ";
+            }
+            ostr << tmp;
+            if (color) ostr << RESET;
           }
         }
       } else if (!noerror) {
@@ -243,6 +292,7 @@ void usage() {
   std::cout << "  -d, --dump       dump binary values to stdout" << std::endl;
   std::cout << "  -e, --noerror    suppress errors" << std::endl;
   std::cout << "  -n, --notime     suppress timestamp" << std::endl;
+  std::cout << "  -p, --parse      parse known services" << std::endl;
   std::cout << "  -r, --raw        print raw values" << std::endl;
   std::cout << "  -s, --split      split telegram parts" << std::endl;
   std::cout << "  -t, --type       print telegram type" << std::endl;
@@ -255,6 +305,7 @@ int main(int argc, char *argv[]) {
                                     {"dump", no_argument, nullptr, 'd'},
                                     {"noerror", no_argument, nullptr, 'e'},
                                     {"notime", no_argument, nullptr, 'n'},
+                                    {"parse", no_argument, nullptr, 'p'},
                                     {"raw", no_argument, nullptr, 'r'},
                                     {"split", no_argument, nullptr, 's'},
                                     {"type", no_argument, nullptr, 't'},
@@ -262,7 +313,7 @@ int main(int argc, char *argv[]) {
                                     {nullptr, 0, nullptr, 0}};
 
   int option;
-  while ((option = getopt_long(argc, argv, "bcdefnrsth", options, nullptr)) !=
+  while ((option = getopt_long(argc, argv, "bcdefnprsth", options, nullptr)) !=
          -1) {
     switch (option) {
       case 'b':
@@ -279,6 +330,9 @@ int main(int argc, char *argv[]) {
         break;
       case 'n':
         notime = true;
+        break;
+      case 'p':
+        parse = true;
         break;
       case 'r':
         raw = true;
