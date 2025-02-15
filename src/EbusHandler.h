@@ -148,16 +148,11 @@ class EbusHandler {
 
   void setMaxLockCounter(const uint8_t counter);
 
-  void setExternalBusRequest(const bool external);
-  const bool getExternalBusRequest() const;
-
   State getState() const;
   bool isActive() const;
 
   void reset();
   bool enque(const std::vector<uint8_t> &message);
-
-  void stateExternalBusRequest(const bool won);
 
   void run(const uint8_t &byte);
 
@@ -184,8 +179,6 @@ class EbusHandler {
       reactiveCallback = nullptr;
 
   std::function<void(const std::string str)> errorCallback = nullptr;
-
-  bool externalBusRequest = false;
 
   Counters counters;
 

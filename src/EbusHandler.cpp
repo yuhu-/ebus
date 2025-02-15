@@ -73,14 +73,6 @@ void ebus::EbusHandler::setMaxLockCounter(const uint8_t counter) {
   lockCoutner = maxLockCounter;
 }
 
-void ebus::EbusHandler::setExternalBusRequest(const bool external) {
-  externalBusRequest = external;
-}
-
-const bool ebus::EbusHandler::getExternalBusRequest() const {
-  return externalBusRequest;
-}
-
 ebus::State ebus::EbusHandler::getState() const { return state; }
 
 bool ebus::EbusHandler::isActive() const { return active; }
@@ -100,25 +92,6 @@ bool ebus::EbusHandler::enque(const std::vector<uint8_t> &message) {
     counters.errorsActiveMaster++;
 
   return active;
-}
-
-void ebus::EbusHandler::stateExternalBusRequest(const bool won) {
-  if (externalBusRequest) {
-    if (won) {
-      resetPassive();
-
-      activeMaster = activeTelegram.getMaster();
-      activeMaster.push_back(activeTelegram.getMasterCRC(), false);
-      activeMaster.extend();
-
-      activeMasterIndex = 1;
-      state = State::activeSendMaster;
-
-      send();
-    } else {
-      resetActive();
-    }
-  }
 }
 
 void ebus::EbusHandler::run(const uint8_t &byte) {
@@ -315,13 +288,11 @@ void ebus::EbusHandler::receive(const uint8_t &byte) {
           resetActive();
         }
 
-        if (!externalBusRequest) {
-          if (lockCoutner == 0 && readBufferCallback() == 0 && active) {
-            activeMaster = activeTelegram.getMaster();
-            activeMaster.push_back(activeTelegram.getMasterCRC(), false);
-            activeMaster.extend();
-            state = State::requestBusFirstTry;
-          }
+        if (lockCoutner == 0 && readBufferCallback() == 0 && active) {
+          activeMaster = activeTelegram.getMaster();
+          activeMaster.push_back(activeTelegram.getMasterCRC(), false);
+          activeMaster.extend();
+          state = State::requestBusFirstTry;
         }
       }
       break;

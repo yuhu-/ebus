@@ -100,10 +100,8 @@ ebus::EbusHandler ebusHandler(0x33, &writeCallback, &readBufferCallback,
 
 const char *getState() { return ebus::stateString(ebusHandler.getState()); }
 
-void testCallback(const bool &external, const std::string &test,
-                  const std::string &header, const std::string &message,
-                  const std::string &sequence) {
-  bool locked = false;
+void testCallback(const std::string &test, const std::string &header,
+                  const std::string &message, const std::string &sequence) {
   ebus::Sequence seq;
   seq.assign(ebus::Sequence::to_vector(sequence));
 
@@ -117,7 +115,6 @@ void testCallback(const bool &external, const std::string &test,
 
     ebusHandler.enque(ebus::Sequence::to_vector(message));
     ebusHandler.setMaxLockCounter(3);
-    ebusHandler.setExternalBusRequest(external);
 
   } else {
     std::cout << "sequence: " << sequence << std::endl;
@@ -138,13 +135,6 @@ void testCallback(const bool &external, const std::string &test,
         break;
     }
 
-    if (external && !locked) {
-      if (seq[i] == ebusHandler.getAddress()) {
-        ebusHandler.stateExternalBusRequest(true);
-        locked = true;
-      }
-    }
-
     ebusHandler.run(seq[i]);
   }
 
@@ -156,7 +146,7 @@ void testPassive() {
   std::string header;
 
   header = "MS: Normal";
-  testCallback(false, test, header, "",
+  testCallback(test, header, "",
                "aaaaaa"
                "ff52b509030d060043"
                "00"
@@ -165,7 +155,7 @@ void testPassive() {
                "aaaaaa");
 
   header = "MS: Master defect/NAK";
-  testCallback(false, test, header, "",
+  testCallback(test, header, "",
                "aaaaaa"
                "ff52b509030d060044"  // defect
                "ff"                  // NAK
@@ -176,7 +166,7 @@ void testPassive() {
                "aaaaaa");
 
   header = "MS: Master NAK/repeat";
-  testCallback(false, test, header, "",
+  testCallback(test, header, "",
                "aaaaaa"
                "ff52b509030d060043"
                "ff"                  // Master NAK
@@ -187,7 +177,7 @@ void testPassive() {
                "aaaaaa");
 
   header = "MS: Master NAK/repeat/NAK";
-  testCallback(false, test, header, "",
+  testCallback(test, header, "",
                "aaaaaa"
                "ff52b509030d060043"
                "ff"                  // Master NAK
@@ -196,7 +186,7 @@ void testPassive() {
                "aaaaaa");
 
   header = "MS: Slave defect/NAK/repeat";
-  testCallback(false, test, header, "",
+  testCallback(test, header, "",
                "aaaaaa"
                "ff52b509030d060043"
                "00"
@@ -207,7 +197,7 @@ void testPassive() {
                "aaaaaa");
 
   header = "MS: Slave NAK/repeat/NAK";
-  testCallback(false, test, header, "",
+  testCallback(test, header, "",
                "aaaaaa"
                "ff52b509030d060043"
                "00"
@@ -218,7 +208,7 @@ void testPassive() {
                "aaaaaa");
 
   header = "MS: Master NAK/repeat - Slave NAK/repeat";
-  testCallback(false, test, header, "",
+  testCallback(test, header, "",
                "aaaaaa"
                "ff52b509030d060043"
                "ff"                  // Master NAK
@@ -231,7 +221,7 @@ void testPassive() {
                "aaaaaa");
 
   header = "MS: Master NAK/repeat/ACK - Slave NAK/repeat/NAK";
-  testCallback(false, test, header, "",
+  testCallback(test, header, "",
                "aaaaaa"
                "ff52b509030d060043"
                "ff"                  // Master NAK
@@ -244,13 +234,13 @@ void testPassive() {
                "aaaaaa");
 
   header = "MM: Normal";
-  testCallback(false, test, header, "",
+  testCallback(test, header, "",
                "aaaaaa"
                "1000b5050427002400d900"
                "aaaaaa");
 
   header = "BC: defect";
-  testCallback(false, test, header, "",
+  testCallback(test, header, "",
                "aaaaaa"
                "00"
                "fe"        // broadcast
@@ -258,7 +248,7 @@ void testPassive() {
                "aaaaaa");
 
   header = "00: reset";
-  testCallback(false, test, header, "",
+  testCallback(test, header, "",
                "aaaaaa"
                "00"
                "aaaaaa");
@@ -269,7 +259,7 @@ void testReactive() {
   std::string header;
 
   header = "MS: Slave NAK/ACK";
-  testCallback(false, test, header, "",
+  testCallback(test, header, "",
                "aaaaaa"
                "00"
                "38"  // own slave address
@@ -279,7 +269,7 @@ void testReactive() {
                "aaaaaa");
 
   header = "MS: Slave NAK/NAK";
-  testCallback(false, test, header, "",
+  testCallback(test, header, "",
                "aaaaaa"
                "00"
                "38"  // own slave address
@@ -289,7 +279,7 @@ void testReactive() {
                "aaaaaa");
 
   header = "MS: Master defect/correct";
-  testCallback(false, test, header, "",
+  testCallback(test, header, "",
                "aaaaaa"
                "00"
                "38"        // own slave address
@@ -301,7 +291,7 @@ void testReactive() {
                "aaaaaa");
 
   header = "MS: Master defect/defect";
-  testCallback(false, test, header, "",
+  testCallback(test, header, "",
                "aaaaaa"
                "00"
                "38"        // own slave address
@@ -312,7 +302,7 @@ void testReactive() {
                "aaaaaa");
 
   header = "MS: Slave defect (reactiveCallback)";
-  testCallback(false, test, header, "",
+  testCallback(test, header, "",
                "aaaaaa"
                "00"
                "38"  // own slave address
@@ -320,7 +310,7 @@ void testReactive() {
                "aaaaaa");
 
   header = "MM: Normal";
-  testCallback(false, test, header, "",
+  testCallback(test, header, "",
                "aaaaaa"
                "00"
                "33"  // own master address
@@ -328,7 +318,7 @@ void testReactive() {
                "aaaaaa");
 
   header = "BC: Normal";
-  testCallback(false, test, header, "",
+  testCallback(test, header, "",
                "aaaaaa"
                "00"
                "fe"  // broadcast
@@ -336,31 +326,31 @@ void testReactive() {
                "aaaaaa");
 }
 
-void testActive(const bool &external) {
-  std::string test = external ? "activeCallback - External" : "activeCallback";
+void testActive() {
+  std::string test = "activeCallback";
   std::string header;
 
   header = "BC: Request Bus - Normal";
-  testCallback(external, test, header, "feb5050427002d00",
+  testCallback(test, header, "feb5050427002d00",
                "aaaaaa"
                "33"  // own Address == Arbitration won
                "aaaaaa");
 
   header = "BC: Request Bus - Priority lost";
-  testCallback(external, test, header, "feb5050427002d00",
+  testCallback(test, header, "feb5050427002d00",
                "aaaaaa"
                "01"  // other Address == Priority lost
                "aaaaaa");
 
   header = "BC: Request Bus - Priority lost/wrong byte";
-  testCallback(external, test, header, "feb5050427002d00",
+  testCallback(test, header, "feb5050427002d00",
                "aaaaaa"
                "01"  // other Address == Priority lost
                "ab"  // wrong byte
                "aaaaaa");
 
   header = "BC: Request Bus - Priority fit/won";
-  testCallback(external, test, header, "feb5050427002d00",
+  testCallback(test, header, "feb5050427002d00",
                "aaaaaa"
                "73"  // own Address == Priority retry
                "aa"
@@ -368,7 +358,7 @@ void testActive(const bool &external) {
                "aaaaaa");
 
   header = "BC: Request Bus - Priority fit/lost";
-  testCallback(external, test, header, "feb5050427002d00",
+  testCallback(test, header, "feb5050427002d00",
                "aaaaaa"
                "73"  // own Address == Priority retry
                "aa"
@@ -376,14 +366,14 @@ void testActive(const bool &external) {
                "aaaaaa");
 
   header = "BC: Request Bus - Priority retry/error";
-  testCallback(external, test, header, "feb5050427002d00",
+  testCallback(test, header, "feb5050427002d00",
                "aaaaaa"
                "73"  // own Address == Priority retry
                "a0"  // error
                "aaaaaa");
 
   header = "MS: Normal";
-  testCallback(external, test, header, "52b509030d4600",
+  testCallback(test, header, "52b509030d4600",
                "aaaaaa"
                "33"  // own master address == Arbitration won
                "00"  // Master ACK
@@ -391,7 +381,7 @@ void testActive(const bool &external) {
                "aaaaaa");
 
   header = "MS: Master NAK/ACK - Slave CRC wrong/correct";
-  testCallback(external, test, header, "52b509030d4600",
+  testCallback(test, header, "52b509030d4600",
                "aaaaaa"
                "33"      // own master address == Arbitration won
                "ff"      // Master NAK
@@ -401,7 +391,7 @@ void testActive(const bool &external) {
                "aaaaaa");
 
   header = "MS: Master NAK/ACK - Slave CRC wrong/wrong";
-  testCallback(external, test, header, "52b509030d4600",
+  testCallback(test, header, "52b509030d4600",
                "aaaaaa"
                "33"      // own master address == Arbitration won
                "00"      // Master ACK
@@ -410,7 +400,7 @@ void testActive(const bool &external) {
                "aaaaaa");
 
   header = "MS: Master NAK/NAK";
-  testCallback(external, test, header, "52b509030d4600",
+  testCallback(test, header, "52b509030d4600",
                "aaaaaa"
                "33"  // own master address == Arbitration won
                "ff"  // Master NAK
@@ -418,7 +408,7 @@ void testActive(const bool &external) {
                "aaaaaa");
 
   header = "MM: Master NAK/ACK";
-  testCallback(external, test, header, "10b57900",
+  testCallback(test, header, "10b57900",
                "aaaaaa"
                "33"  // own Address == Arbitration won
                "ff"  // Master NAK
@@ -505,8 +495,7 @@ int main() {
 
   testPassive();
   testReactive();
-  testActive(false);
-  testActive(true);
+  testActive();
 
   printCounters();
 
