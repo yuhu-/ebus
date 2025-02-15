@@ -227,29 +227,26 @@ void ebus::EbusHandler::receive(const uint8_t &byte) {
                                nullptr);
               counters.messagesReactiveBC++;
               resetPassive();
-            } else if (passiveMaster[1] == address ||
-                       passiveMaster[1] == slaveAddress) {
-              if (passiveTelegram.getType() == Type::MM) {
-                reactiveCallback(passiveTelegram.getMaster().to_vector(),
-                                 nullptr);
-                counters.messagesReactiveMM++;
+            } else if (passiveMaster[1] == address) {
+              reactiveCallback(passiveTelegram.getMaster().to_vector(),
+                               nullptr);
+              counters.messagesReactiveMM++;
+              state = State::reactiveSendMasterPositiveAcknowledge;
+            } else if (passiveMaster[1] == slaveAddress) {
+              std::vector<uint8_t> response;
+              reactiveCallback(passiveTelegram.getMaster().to_vector(),
+                               &response);
+              counters.messagesReactiveMS++;
+              passiveTelegram.createSlave(response);
+              if (passiveTelegram.getSlaveState() == SEQ_OK) {
+                passiveSlave = passiveTelegram.getSlave();
+                passiveSlave.push_back(passiveTelegram.getSlaveCRC(), false);
+                passiveSlave.extend();
                 state = State::reactiveSendMasterPositiveAcknowledge;
-              } else if (passiveTelegram.getType() == Type::MS) {
-                std::vector<uint8_t> response;
-                reactiveCallback(passiveTelegram.getMaster().to_vector(),
-                                 &response);
-                counters.messagesReactiveMS++;
-                passiveTelegram.createSlave(response);
-                if (passiveTelegram.getSlaveState() == SEQ_OK) {
-                  passiveSlave = passiveTelegram.getSlave();
-                  passiveSlave.push_back(passiveTelegram.getSlaveCRC(), false);
-                  passiveSlave.extend();
-                  state = State::reactiveSendMasterPositiveAcknowledge;
-                } else {
-                  counters.errorsReactiveSlave++;
-                  resetPassive();
-                  state = State::releaseBus;
-                }
+              } else {
+                counters.errorsReactiveSlave++;
+                resetPassive();
+                state = State::releaseBus;
               }
             } else {
               state = State::passiveReceiveMasterAcknowledge;

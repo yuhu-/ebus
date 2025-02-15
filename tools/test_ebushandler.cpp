@@ -459,13 +459,15 @@ void printCounters() {
             << std::endl;
   std::cout << "errorsActiveSlave: " << counter.errorsActiveSlave << std::endl;
   std::cout << "errorsActiveSlaveACK: " << counter.errorsActiveSlaveACK
+            << std::endl
             << std::endl;
 
   // resets
   std::cout << "resetsTotal: " << counter.resetsTotal << std::endl;
   std::cout << "resetsPassive00: " << counter.resetsPassive00 << std::endl;
   std::cout << "resetsPassive: " << counter.resetsPassive << std::endl;
-  std::cout << "resetsActive: " << counter.resetsActive << std::endl;
+  std::cout << "resetsActive: " << counter.resetsActive << std::endl
+            << std::endl;
 
   // requests
   std::cout << "requestsTotal: " << counter.requestsTotal << std::endl;
