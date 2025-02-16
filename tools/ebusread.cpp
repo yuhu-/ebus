@@ -151,10 +151,13 @@ std::string collect(const uint8_t &byte) {
         if (color) ostr << YELLOW;
         ostr << ebus::Sequence::to_string(tel.getMasterNumberBytes());
         if (color) ostr << RESET;
-        if (split) ostr << " ";
-        if (bold) ostr << BOLD;
-        ostr << ebus::Sequence::to_string(tel.getMasterDataBytes());
-        if (bold) ostr << RESET;
+        if (tel.getMasterNumberBytes() > 0) {
+          if (split) ostr << " ";
+
+          if (bold) ostr << BOLD;
+          ostr << ebus::Sequence::to_string(tel.getMasterDataBytes());
+          if (bold) ostr << RESET;
+        }
         if (split) ostr << " ";
         if (color) ostr << MAGENTA;
         ostr << ebus::Sequence::to_string(tel.getMasterCRC());
