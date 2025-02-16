@@ -71,6 +71,7 @@ struct Counters {
   // resets
   uint32_t resetsTotal = 0;
   uint32_t resetsPassive00 = 0;
+  uint32_t resetsPassive0704 = 0;
   uint32_t resetsPassive = 0;
   uint32_t resetsActive = 0;
 
@@ -213,6 +214,9 @@ class EbusHandler {
 
   void receive(const uint8_t &byte);
   void send();
+
+  void passiveErrors();
+  void activeErrors();
 
   void resetPassive();
   void resetActive();
