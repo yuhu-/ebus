@@ -109,8 +109,8 @@ class Telegram {
   const uint8_t getMasterCRC() const;
   int getMasterState() const;
 
-  void setSlaveACK(const uint8_t byte);
-  const uint8_t getSlaveACK() const;
+  void setMasterACK(const uint8_t byte);
+  const uint8_t getMasterACK() const;
 
   // returns the slave sequence [NN DBx] without CRC byte
   const Sequence &getSlave() const;
@@ -121,8 +121,8 @@ class Telegram {
   const uint8_t getSlaveCRC() const;
   int getSlaveState() const;
 
-  void setMasterACK(const uint8_t byte);
-  const uint8_t getMasterACK() const;
+  void setSlaveACK(const uint8_t byte);
+  const uint8_t getSlaveACK() const;
 
   ebus::Type getType() const;
 
@@ -144,16 +144,14 @@ class Telegram {
   Sequence m_master;
   size_t m_masterNN = 0;
   uint8_t m_masterCRC = sym_zero;
+  uint8_t m_masterACK = sym_zero;
   int m_masterState = SEQ_EMPTY;
-
-  uint8_t m_slaveACK = sym_zero;
 
   Sequence m_slave;
   size_t m_slaveNN = 0;
   uint8_t m_slaveCRC = sym_zero;
+  uint8_t m_slaveACK = sym_zero;
   int m_slaveState = SEQ_EMPTY;
-
-  uint8_t m_masterACK = sym_zero;
 
   static const std::string errorText(const int error);
 

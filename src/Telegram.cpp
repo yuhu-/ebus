@@ -54,20 +54,20 @@ void ebus::Telegram::parse(Sequence &seq) {
   if (m_type != Type::BC) {
     // acknowledge byte is missing
     if (seq.size() <= static_cast<size_t>(5 + m_masterNN + 1)) {
-      m_slaveState = SEQ_ERR_ACK_MISS;
+      m_masterState = SEQ_ERR_ACK_MISS;
       return;
     }
 
-    m_slaveACK = seq[5 + m_masterNN + 1];
+    m_masterACK = seq[5 + m_masterNN + 1];
 
     // acknowledge byte is invalid
-    if (m_slaveACK != sym_ack && m_slaveACK != sym_nak) {
-      m_slaveState = SEQ_ERR_ACK;
+    if (m_masterACK != sym_ack && m_masterACK != sym_nak) {
+      m_masterState = SEQ_ERR_ACK;
       return;
     }
 
     // handle NAK from slave
-    if (m_slaveACK == sym_nak) {
+    if (m_masterACK == sym_nak) {
       // sequence is too short
       if (seq.size() < static_cast<size_t>(master.size() + 1)) {
         m_masterState = SEQ_ERR_SHORT;
@@ -89,20 +89,20 @@ void ebus::Telegram::parse(Sequence &seq) {
 
       // acknowledge byte is missing
       if (tmp.size() <= static_cast<size_t>(5 + m_masterNN + 1)) {
-        m_slaveState = SEQ_ERR_ACK_MISS;
+        m_masterState = SEQ_ERR_ACK_MISS;
         return;
       }
 
-      m_slaveACK = tmp[5 + m_masterNN + 1];
+      m_masterACK = tmp[5 + m_masterNN + 1];
 
       // acknowledge byte is invalid
-      if (m_slaveACK != sym_ack && m_slaveACK != sym_nak) {
-        m_slaveState = SEQ_ERR_ACK;
+      if (m_masterACK != sym_ack && m_masterACK != sym_nak) {
+        m_masterState = SEQ_ERR_ACK;
         return;
       }
 
       // acknowledge byte is negativ
-      if (m_slaveACK == sym_nak) {
+      if (m_masterACK == sym_nak) {
         // sequence is too long
         if (tmp.size() > static_cast<size_t>(5 + m_masterNN + 2))
           m_masterState = SEQ_ERR_LONG;
@@ -131,20 +131,20 @@ void ebus::Telegram::parse(Sequence &seq) {
 
     // acknowledge byte is missing
     if (seq2.size() <= static_cast<size_t>(1 + m_slaveNN + 1)) {
-      m_masterState = SEQ_ERR_ACK_MISS;
+      m_slaveState = SEQ_ERR_ACK_MISS;
       return;
     }
 
-    m_masterACK = seq2[1 + m_slaveNN + 1];
+    m_slaveACK = seq2[1 + m_slaveNN + 1];
 
     // acknowledge byte is invalid
-    if (m_masterACK != sym_ack && m_masterACK != sym_nak) {
-      m_masterState = SEQ_ERR_ACK;
+    if (m_slaveACK != sym_ack && m_slaveACK != sym_nak) {
+      m_slaveState = SEQ_ERR_ACK;
       return;
     }
 
     // handle NAK from master
-    if (m_masterACK == sym_nak) {
+    if (m_slaveACK == sym_nak) {
       // sequence is too short
       if (seq2.size() < static_cast<size_t>(slave.size() + 2)) {
         m_slaveState = SEQ_ERR_SHORT;
@@ -164,15 +164,15 @@ void ebus::Telegram::parse(Sequence &seq) {
 
       // acknowledge byte is missing
       if (tmp.size() <= static_cast<size_t>(1 + m_slaveNN + 1)) {
-        m_masterState = SEQ_ERR_ACK_MISS;
+        m_slaveState = SEQ_ERR_ACK_MISS;
         return;
       }
 
-      m_masterACK = tmp[1 + m_slaveNN + 1];
+      m_slaveACK = tmp[1 + m_slaveNN + 1];
 
       // acknowledge byte is invalid
-      if (m_masterACK != sym_ack && m_masterACK != sym_nak) {
-        m_masterState = SEQ_ERR_ACK;
+      if (m_slaveACK != sym_ack && m_slaveACK != sym_nak) {
+        m_slaveState = SEQ_ERR_ACK;
         return;
       }
 
@@ -184,7 +184,7 @@ void ebus::Telegram::parse(Sequence &seq) {
       }
 
       // acknowledge byte is negativ
-      if (m_masterACK == sym_nak) {
+      if (m_slaveACK == sym_nak) {
         // sequence is invalid
         m_slaveState = SEQ_ERR_INVALID;
         return;
@@ -349,9 +349,9 @@ const uint8_t ebus::Telegram::getMasterCRC() const { return m_masterCRC; }
 
 int ebus::Telegram::getMasterState() const { return m_masterState; }
 
-void ebus::Telegram::setSlaveACK(const uint8_t byte) { m_slaveACK = byte; }
+void ebus::Telegram::setMasterACK(const uint8_t byte) { m_masterACK = byte; }
 
-const uint8_t ebus::Telegram::getSlaveACK() const { return m_slaveACK; }
+const uint8_t ebus::Telegram::getMasterACK() const { return m_masterACK; }
 
 const ebus::Sequence &ebus::Telegram::getSlave() const { return m_slave; }
 
@@ -365,9 +365,9 @@ const uint8_t ebus::Telegram::getSlaveCRC() const { return m_slaveCRC; }
 
 int ebus::Telegram::getSlaveState() const { return m_slaveState; }
 
-void ebus::Telegram::setMasterACK(const uint8_t byte) { m_masterACK = byte; }
+void ebus::Telegram::setSlaveACK(const uint8_t byte) { m_slaveACK = byte; }
 
-const uint8_t ebus::Telegram::getMasterACK() const { return m_masterACK; }
+const uint8_t ebus::Telegram::getSlaveACK() const { return m_slaveACK; }
 
 ebus::Type ebus::Telegram::getType() const { return m_type; }
 
