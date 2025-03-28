@@ -380,6 +380,9 @@ int main(int argc, char *argv[]) {
       run(sfd);
       close(sfd);
     }
+  } else if (argv[optind] == nullptr && isatty(STDIN_FILENO)) {
+    usage();
+    exit(EXIT_SUCCESS);
   } else {
     while (std::cin.good()) {
       uint8_t byte = std::cin.get();
