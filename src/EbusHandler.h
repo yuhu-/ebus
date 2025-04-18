@@ -124,21 +124,18 @@ static const char *stateString(State state) {
   return values[static_cast<int>(state)];
 }
 
+enum class Message { active, passive, reactive };
+
 class EbusHandler {
  public:
   EbusHandler() = default;
   EbusHandler(const uint8_t source,
               std::function<void(const uint8_t byte)> writeFunction,
               std::function<int()> readBufferFunction,
-              std::function<void(const std::vector<uint8_t> master,
-                                 const std::vector<uint8_t> slave)>
-                  activeFunction,
-              std::function<void(const std::vector<uint8_t> master,
-                                 const std::vector<uint8_t> slave)>
-                  passiveFunction,
-              std::function<void(const std::vector<uint8_t> master,
+              std::function<void(const Message message,
+                                 const std::vector<uint8_t> &master,
                                  std::vector<uint8_t> *const slave)>
-                  reactiveFunction);
+                  publishFunction);
 
   void setErrorCallback(
       std::function<void(const std::string str)> errorFunction);
@@ -167,17 +164,9 @@ class EbusHandler {
   std::function<void(const uint8_t byte)> writeCallback = nullptr;
   std::function<int()> readBufferCallback = nullptr;
 
-  std::function<void(const std::vector<uint8_t> master,
-                     const std::vector<uint8_t> slave)>
-      activeCallback = nullptr;
-
-  std::function<void(const std::vector<uint8_t> master,
-                     const std::vector<uint8_t> slave)>
-      passiveCallback = nullptr;
-
-  std::function<void(const std::vector<uint8_t> master,
+  std::function<void(const Message message, const std::vector<uint8_t> &master,
                      std::vector<uint8_t> *const slave)>
-      reactiveCallback = nullptr;
+      publishCallback = nullptr;
 
   std::function<void(const std::string str)> errorCallback = nullptr;
 

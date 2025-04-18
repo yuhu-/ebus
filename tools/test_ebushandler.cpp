@@ -63,51 +63,54 @@ void writeCallback(const uint8_t &byte) {
 
 bool readBufferCallback() { return 0; }
 
-void activeCallback(const std::vector<uint8_t> &master,
-                    const std::vector<uint8_t> &slave) {
-  std::cout << "  active: " << ebus::Sequence::to_string(master) << " "
-            << ebus::Sequence::to_string(slave) << std::endl;
-}
-
-void passiveCallback(const std::vector<uint8_t> &master,
-                     const std::vector<uint8_t> &slave) {
-  std::cout << " passive: " << ebus::Sequence::to_string(master) << " "
-            << ebus::Sequence::to_string(slave) << std::endl;
-}
-
-void reactiveCallback(const std::vector<uint8_t> &master,
-                      std::vector<uint8_t> *const slave) {
+void publishCallback(const ebus::Message message,
+                     const std::vector<uint8_t> &master,
+                     std::vector<uint8_t> *const slave) {
   std::vector<uint8_t> search;
   std::string typeString = "";
-  switch (ebus::Telegram::typeOf(master[1])) {
-    case ebus::Type::BC:
-      typeString = "broadcast message";
+  switch (message) {
+    case ebus::Message::active:
+      std::cout << "  active: " << ebus::Sequence::to_string(master) << " "
+                << ebus::Sequence::to_string(*slave) << std::endl;
       break;
-    case ebus::Type::MM:
-      typeString = "master master message";
+    case ebus::Message::passive:
+      std::cout << " passive: " << ebus::Sequence::to_string(master) << " "
+                << ebus::Sequence::to_string(*slave) << std::endl;
       break;
-    case ebus::Type::MS:
-      typeString = "master slave message";
-      search = {0x07, 0x04};  // 0008070400
-      if (ebus::Sequence::contains(master, search))
-        *slave = ebus::Sequence::to_vector("0ab5504d53303001074302");
-      search = {0x07, 0x05};  // 0008070500
-      if (ebus::Sequence::contains(master, search))
-        *slave = ebus::Sequence::to_vector("0ab5504d533030010743");  // defect
+    case ebus::Message::reactive:
+
+      switch (ebus::Telegram::typeOf(master[1])) {
+        case ebus::Type::BC:
+          typeString = "broadcast message";
+          break;
+        case ebus::Type::MM:
+          typeString = "master master message";
+          break;
+        case ebus::Type::MS:
+          typeString = "master slave message";
+          search = {0x07, 0x04};  // 0008070400
+          if (ebus::Sequence::contains(master, search))
+            *slave = ebus::Sequence::to_vector("0ab5504d53303001074302");
+          search = {0x07, 0x05};  // 0008070500
+          if (ebus::Sequence::contains(master, search))
+            *slave =
+                ebus::Sequence::to_vector("0ab5504d533030010743");  // defect
+          break;
+        default:
+          break;
+      }
+      std::cout << "    type: " << typeString << std::endl;
+      std::cout << "reactive: " << ebus::Sequence::to_string(master) << " "
+                << ebus::Sequence::to_string(*slave) << std::endl;
+
       break;
     default:
       break;
   }
-
-  std::cout << "    type: " << typeString << std::endl;
-  std::cout << "reactive: " << ebus::Sequence::to_string(master) << " "
-            << (slave != nullptr ? ebus::Sequence::to_string(*slave) : "")
-            << std::endl;
 }
 
 ebus::EbusHandler ebusHandler(0x33, &writeCallback, &readBufferCallback,
-                              &activeCallback, &passiveCallback,
-                              &reactiveCallback);
+                              &publishCallback);
 
 const char *getState() { return ebus::stateString(ebusHandler.getState()); }
 
