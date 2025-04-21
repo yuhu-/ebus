@@ -132,7 +132,7 @@ class EbusHandler {
   EbusHandler(const uint8_t source,
               std::function<void(const uint8_t byte)> writeFunction,
               std::function<int()> readBufferFunction,
-              std::function<void(const Message message,
+              std::function<void(const Message &message, const Type &type,
                                  const std::vector<uint8_t> &master,
                                  std::vector<uint8_t> *const slave)>
                   publishFunction);
@@ -164,7 +164,8 @@ class EbusHandler {
   std::function<void(const uint8_t byte)> writeCallback = nullptr;
   std::function<int()> readBufferCallback = nullptr;
 
-  std::function<void(const Message message, const std::vector<uint8_t> &master,
+  std::function<void(const Message &message, const Type &type,
+                     const std::vector<uint8_t> &master,
                      std::vector<uint8_t> *const slave)>
       publishCallback = nullptr;
 

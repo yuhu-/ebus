@@ -66,12 +66,7 @@ namespace ebus {
 #define SEQ_ERR_ACK_MISS -8  // acknowledge byte is missing
 #define SEQ_ERR_INVALID -9   // sequence is invalid
 
-enum class Type {
-  undefined,  // default value
-  BC,         // broadcast
-  MM,         // master master
-  MS          // master slave
-};
+enum class Type { undefined, broadcast, masterMaster, masterSlave };
 
 static const uint8_t sym_ack = 0x00;    // positive acknowledge
 static const uint8_t sym_nak = 0xff;    // negative acknowledge

@@ -63,7 +63,7 @@ void writeCallback(const uint8_t &byte) {
 
 bool readBufferCallback() { return 0; }
 
-void publishCallback(const ebus::Message message,
+void publishCallback(const ebus::Message &message, const ebus::Type &type,
                      const std::vector<uint8_t> &master,
                      std::vector<uint8_t> *const slave) {
   std::vector<uint8_t> search;
@@ -79,14 +79,14 @@ void publishCallback(const ebus::Message message,
       break;
     case ebus::Message::reactive:
 
-      switch (ebus::Telegram::typeOf(master[1])) {
-        case ebus::Type::BC:
+      switch (type) {
+        case ebus::Type::broadcast:
           typeString = "broadcast message";
           break;
-        case ebus::Type::MM:
+        case ebus::Type::masterMaster:
           typeString = "master master message";
           break;
-        case ebus::Type::MS:
+        case ebus::Type::masterSlave:
           typeString = "master slave message";
           search = {0x07, 0x04};  // 0008070400
           if (ebus::Sequence::contains(master, search))

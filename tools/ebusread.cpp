@@ -129,9 +129,9 @@ std::string collect(const uint8_t &byte) {
         }
         if (type) {
           if (color) ostr << CYAN;
-          if (tel.getType() == ebus::Type::MS)
+          if (tel.getType() == ebus::Type::masterSlave)
             ostr << "MS";
-          else if (tel.getType() == ebus::Type::MM)
+          else if (tel.getType() == ebus::Type::masterMaster)
             ostr << "MM";
           else
             ostr << "BC";
@@ -162,10 +162,10 @@ std::string collect(const uint8_t &byte) {
         if (color) ostr << MAGENTA;
         ostr << ebus::Sequence::to_string(tel.getMasterCRC());
         if (color) ostr << RESET;
-        if (tel.getType() != ebus::Type::BC) {
+        if (tel.getType() != ebus::Type::broadcast) {
           if (split) ostr << " ";
           ostr << ebus::Sequence::to_string(tel.getSlaveACK());
-          if (tel.getType() == ebus::Type::MS) {
+          if (tel.getType() == ebus::Type::masterSlave) {
             if (split) ostr << " ";
             if (color) ostr << YELLOW;
             ostr << ebus::Sequence::to_string(tel.getSlaveNumberBytes());

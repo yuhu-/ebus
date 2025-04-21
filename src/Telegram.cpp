@@ -51,7 +51,7 @@ void ebus::Telegram::parse(Sequence &seq) {
 
   if (m_masterState != SEQ_OK) return;
 
-  if (m_type != Type::BC) {
+  if (m_type != Type::broadcast) {
     // acknowledge byte is missing
     if (seq.size() <= static_cast<size_t>(5 + m_masterNN + 1)) {
       m_masterState = SEQ_ERR_ACK_MISS;
@@ -116,7 +116,7 @@ void ebus::Telegram::parse(Sequence &seq) {
     }
   }
 
-  if (m_type == Type::MS) {
+  if (m_type == Type::masterSlave) {
     offset += 5 + m_masterNN + 2;
 
     Sequence seq2(seq, offset);
@@ -372,7 +372,8 @@ const uint8_t ebus::Telegram::getSlaveACK() const { return m_slaveACK; }
 ebus::Type ebus::Telegram::getType() const { return m_type; }
 
 bool ebus::Telegram::isValid() const {
-  if (m_type != Type::MS) return m_masterState == SEQ_OK ? true : false;
+  if (m_type != Type::masterSlave)
+    return m_masterState == SEQ_OK ? true : false;
 
   return (m_masterState + m_slaveState) == SEQ_OK ? true : false;
 }
@@ -382,7 +383,7 @@ const std::string ebus::Telegram::to_string() const {
 
   ostr << toStringMaster();
 
-  if (m_masterState == SEQ_OK && m_type == Type::MS)
+  if (m_masterState == SEQ_OK && m_type == Type::masterSlave)
     ostr << " " << toStringSlave();
 
   return ostr.str();
@@ -400,7 +401,7 @@ const std::string ebus::Telegram::toStringMaster() const {
 
 const std::string ebus::Telegram::toStringSlave() const {
   std::ostringstream ostr;
-  if (m_slaveState != SEQ_OK && m_type != Type::BC) {
+  if (m_slaveState != SEQ_OK && m_type != Type::broadcast) {
     ostr << toStringSlaveError();
   } else {
     ostr << m_slave.to_string();
@@ -411,11 +412,11 @@ const std::string ebus::Telegram::toStringSlave() const {
 
 ebus::Type ebus::Telegram::typeOf(const uint8_t byte) {
   if (byte == sym_broad)
-    return Type::BC;
+    return Type::broadcast;
   else if (isMaster(byte))
-    return Type::MM;
+    return Type::masterMaster;
   else
-    return Type::MS;
+    return Type::masterSlave;
 }
 
 bool ebus::Telegram::isMaster(const uint8_t byte) {

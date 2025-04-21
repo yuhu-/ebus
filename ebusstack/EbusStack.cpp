@@ -690,7 +690,7 @@ ebus::State ebus::EbusStack::EbusImpl::receiveMessage() {
   }
 
   if (tel.getMasterState() == SEQ_OK) {
-    if (tel.getType() != Type::MS) {
+    if (tel.getType() != Type::masterSlave) {
       logInfo(tel.to_string());
       publish(tel.getMaster().to_vector(), tel.getSlave().to_vector());
     }
@@ -724,7 +724,7 @@ ebus::State ebus::EbusStack::EbusImpl::processMessage() {
       logInfo(info_msg_ignore);
       break;
     case Reaction::response:
-      if (tel.getType() == Type::MS) {
+      if (tel.getType() == Type::masterSlave) {
         tel.createSlave(response);
 
         if (tel.getSlaveState() == SEQ_OK) {
@@ -843,7 +843,7 @@ ebus::State ebus::EbusStack::EbusImpl::sendMessage() {
     write_read(tel.getMasterCRC(), 0, 0);
 
     // Broadcast ends here
-    if (tel.getType() == Type::BC) {
+    if (tel.getType() == Type::broadcast) {
       logInfo(tel.to_string() + " transmitted");
       return State::FreeBus;
     }
@@ -862,7 +862,7 @@ ebus::State ebus::EbusStack::EbusImpl::sendMessage() {
       return State::FreeBus;
     } else if (byte == sym_ack) {
       // Master Master ends here
-      if (tel.getType() == Type::MM) {
+      if (tel.getType() == Type::masterMaster) {
         logInfo(tel.to_string() + " transmitted");
         return State::FreeBus;
       } else {
