@@ -494,19 +494,24 @@ void printCounters() {
   // messages
   std::cout << "messagesTotal: " << counter.messagesTotal << std::endl;
 
-  std::cout << "messagesPassiveMS: " << counter.messagesPassiveMS << std::endl;
-  std::cout << "messagesPassiveMM: " << counter.messagesPassiveMM << std::endl;
+  std::cout << "messagesPassiveMasterSlave: "
+            << counter.messagesPassiveMasterSlave << std::endl;
+  std::cout << "messagesPassiveMasterMaster: "
+            << counter.messagesPassiveMasterMaster << std::endl;
 
-  std::cout << "messagesReactiveMS: " << counter.messagesReactiveMS
-            << std::endl;
-  std::cout << "messagesReactiveMM: " << counter.messagesReactiveMM
-            << std::endl;
-  std::cout << "messagesReactiveBC: " << counter.messagesReactiveBC
-            << std::endl;
+  std::cout << "messagesReactiveMasterSlave: "
+            << counter.messagesReactiveMasterSlave << std::endl;
+  std::cout << "messagesReactiveMasterMaster: "
+            << counter.messagesReactiveMasterMaster << std::endl;
+  std::cout << "messagesReactiveBroadcast: "
+            << counter.messagesReactiveBroadcast << std::endl;
 
-  std::cout << "messagesActiveMS: " << counter.messagesActiveMS << std::endl;
-  std::cout << "messagesActiveMM: " << counter.messagesActiveMM << std::endl;
-  std::cout << "messagesActiveBC: " << counter.messagesActiveBC << std::endl
+  std::cout << "messagesActiveMasterSlave: "
+            << counter.messagesActiveMasterSlave << std::endl;
+  std::cout << "messagesActiveMasterMaster: "
+            << counter.messagesActiveMasterMaster << std::endl;
+  std::cout << "messagesActiveBroadcast: " << counter.messagesActiveBroadcast
+            << std::endl
             << std::endl;
 
   // errors

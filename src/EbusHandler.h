@@ -36,16 +36,16 @@ struct Counters {
   // messages
   uint32_t messagesTotal = 0;
 
-  uint32_t messagesPassiveMS = 0;
-  uint32_t messagesPassiveMM = 0;
+  uint32_t messagesPassiveMasterSlave = 0;
+  uint32_t messagesPassiveMasterMaster = 0;
 
-  uint32_t messagesReactiveMS = 0;
-  uint32_t messagesReactiveMM = 0;
-  uint32_t messagesReactiveBC = 0;
+  uint32_t messagesReactiveMasterSlave = 0;
+  uint32_t messagesReactiveMasterMaster = 0;
+  uint32_t messagesReactiveBroadcast = 0;
 
-  uint32_t messagesActiveMS = 0;
-  uint32_t messagesActiveMM = 0;
-  uint32_t messagesActiveBC = 0;
+  uint32_t messagesActiveMasterSlave = 0;
+  uint32_t messagesActiveMasterMaster = 0;
+  uint32_t messagesActiveBroadcast = 0;
 
   // errors
   uint32_t errorsTotal = 0;
