@@ -85,32 +85,32 @@ void compareINT16(const std::vector<uint8_t>& bytes, const bool& print) {
   if (bytes != result || print) printLine(bytes, result, std::to_string(value));
 }
 
-// DATA1b
-void compareDATA1b(const std::vector<uint8_t>& bytes, const bool& print) {
+// DATA1B
+void compareDATA1B(const std::vector<uint8_t>& bytes, const bool& print) {
   double_t value = ebus::byte_2_data1b(bytes);
   std::vector<uint8_t> result = ebus::data1b_2_byte(value);
 
   if (bytes != result || print) printLine(bytes, result, std::to_string(value));
 }
 
-// DATA1c
-void compareDATA1c(const std::vector<uint8_t>& bytes, const bool& print) {
+// DATA1C
+void compareDATA1C(const std::vector<uint8_t>& bytes, const bool& print) {
   double_t value = ebus::byte_2_data1c(bytes);
   std::vector<uint8_t> result = ebus::data1c_2_byte(value);
 
   if (bytes != result || print) printLine(bytes, result, std::to_string(value));
 }
 
-// DATA2b
-void compareDATA2b(const std::vector<uint8_t>& bytes, const bool& print) {
+// DATA2B
+void compareDATA2B(const std::vector<uint8_t>& bytes, const bool& print) {
   double_t value = ebus::byte_2_data2b(bytes);
   std::vector<uint8_t> result = ebus::data2b_2_byte(value);
 
   if (bytes != result || print) printLine(bytes, result, std::to_string(value));
 }
 
-// DATA2c
-void compareDATA2c(const std::vector<uint8_t>& bytes, const bool& print) {
+// DATA2C
+void compareDATA2C(const std::vector<uint8_t>& bytes, const bool& print) {
   double_t value = ebus::byte_2_data2c(bytes);
   std::vector<uint8_t> result = ebus::data2c_2_byte(value);
 
@@ -237,87 +237,87 @@ int main() {
     }
   }
 
-  // DATA1b
+  // DATA1B
   std::cout << std::endl
             << std::endl
-            << "Examples DATA1b" << std::endl
+            << "Examples DATA1B" << std::endl
             << std::endl;
 
   for (size_t i = 0; i < b1.size(); i++) {
     std::vector<uint8_t> src(1, b1[i]);
 
-    compareDATA1b(src, true);
+    compareDATA1B(src, true);
   }
 
-  std::cout << std::endl << "Check range DATA1b" << std::endl;
+  std::cout << std::endl << "Check range DATA1B" << std::endl;
 
   for (int low = 0x00; low <= 0xff; low++) {
     std::vector<uint8_t> src(1, uint8_t(low));
 
-    compareDATA1b(src, false);
+    compareDATA1B(src, false);
   }
 
-  // DATA1c
+  // DATA1C
   std::cout << std::endl
             << std::endl
-            << "Examples DATA1c" << std::endl
+            << "Examples DATA1C" << std::endl
             << std::endl;
 
   for (size_t i = 0; i < b1.size(); i++) {
     std::vector<uint8_t> src(1, b1[i]);
 
-    compareDATA1c(src, true);
+    compareDATA1C(src, true);
   }
 
-  std::cout << std::endl << "Check range DATA1c" << std::endl;
+  std::cout << std::endl << "Check range DATA1C" << std::endl;
 
   for (int low = 0x00; low <= 0xff; low++) {
     std::vector<uint8_t> src(1, uint8_t(low));
 
-    compareDATA1c(src, false);
+    compareDATA1C(src, false);
   }
 
-  // DATA2b
+  // DATA2B
   std::cout << std::endl
             << std::endl
-            << "Examples DATA2b" << std::endl
+            << "Examples DATA2B" << std::endl
             << std::endl;
 
   for (size_t i = 0; i < b2.size(); i += 2) {
     std::vector<uint8_t> src{b2[i], b2[i + 1]};
 
-    compareDATA2b(src, true);
+    compareDATA2B(src, true);
   }
 
-  std::cout << std::endl << "Check range DATA2b" << std::endl;
+  std::cout << std::endl << "Check range DATA2B" << std::endl;
 
   for (int high = 0x00; high <= 0xff; high++) {
     for (int low = 0x00; low <= 0xff; low++) {
       std::vector<uint8_t> src{uint8_t(low), uint8_t(high)};
 
-      compareDATA2b(src, false);
+      compareDATA2B(src, false);
     }
   }
 
-  // DATA2c
+  // DATA2C
   std::cout << std::endl
             << std::endl
-            << "Examples DATA2c" << std::endl
+            << "Examples DATA2C" << std::endl
             << std::endl;
 
   for (size_t i = 0; i < b2.size(); i += 2) {
     std::vector<uint8_t> src{b2[i], b2[i + 1]};
 
-    compareDATA2c(src, true);
+    compareDATA2C(src, true);
   }
 
-  std::cout << std::endl << "Check range DATA2c" << std::endl;
+  std::cout << std::endl << "Check range DATA2C" << std::endl;
 
   for (int high = 0x00; high <= 0xff; high++) {
     for (int low = 0x00; low <= 0xff; low++) {
       std::vector<uint8_t> src{uint8_t(low), uint8_t(high)};
 
-      compareDATA2c(src, false);
+      compareDATA2C(src, false);
     }
   }
 
