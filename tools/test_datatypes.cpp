@@ -53,7 +53,7 @@ void compareBCD(const std::vector<uint8_t>& bytes, const bool& print) {
     printLine(bytes, result, std::to_string(value));
 }
 
-// uint8_t
+// UINT8
 void compareUINT8(const std::vector<uint8_t>& bytes, const bool& print) {
   uint8_t value = ebus::byte_2_uint8(bytes);
   std::vector<uint8_t> result = ebus::uint8_2_byte(value);
@@ -61,7 +61,7 @@ void compareUINT8(const std::vector<uint8_t>& bytes, const bool& print) {
   if (bytes != result || print) printLine(bytes, result, std::to_string(value));
 }
 
-// int8_t
+// INT8
 void compareINT8(const std::vector<uint8_t>& bytes, const bool& print) {
   int8_t value = ebus::byte_2_int8(bytes);
   std::vector<uint8_t> result = ebus::int8_2_byte(value);
@@ -69,7 +69,7 @@ void compareINT8(const std::vector<uint8_t>& bytes, const bool& print) {
   if (bytes != result || print) printLine(bytes, result, std::to_string(value));
 }
 
-// uint16_t
+// UINT16
 void compareUINT16(const std::vector<uint8_t>& bytes, const bool& print) {
   uint16_t value = ebus::byte_2_uint16(bytes);
   std::vector<uint8_t> result = ebus::uint16_2_byte(value);
@@ -77,7 +77,7 @@ void compareUINT16(const std::vector<uint8_t>& bytes, const bool& print) {
   if (bytes != result || print) printLine(bytes, result, std::to_string(value));
 }
 
-// int16_t
+// INT16
 void compareINT16(const std::vector<uint8_t>& bytes, const bool& print) {
   int16_t value = ebus::byte_2_int16(bytes);
   std::vector<uint8_t> result = ebus::int16_2_byte(value);
@@ -117,7 +117,7 @@ void compareDATA2C(const std::vector<uint8_t>& bytes, const bool& print) {
   if (bytes != result || print) printLine(bytes, result, std::to_string(value));
 }
 
-// float
+// FLOAT
 void compareFLOAT(const std::vector<uint8_t>& bytes, const bool& print) {
   double_t value = ebus::byte_2_float(bytes);
   std::vector<uint8_t> result = ebus::float_2_byte(value);
@@ -153,10 +153,10 @@ int main() {
     compareBCD(src, false);
   }
 
-  // uint8_t
+  // UINT8
   std::cout << std::endl
             << std::endl
-            << "Examples uint8_t" << std::endl
+            << "Examples UINT8" << std::endl
             << std::endl;
 
   for (size_t i = 0; i < b1.size(); i++) {
@@ -165,7 +165,7 @@ int main() {
     compareUINT8(src, true);
   }
 
-  std::cout << std::endl << "Check range uint8_t" << std::endl;
+  std::cout << std::endl << "Check range UINT8" << std::endl;
 
   for (int low = 0x00; low <= 0xff; low++) {
     std::vector<uint8_t> src(1, uint8_t(low));
@@ -173,10 +173,10 @@ int main() {
     compareUINT8(src, false);
   }
 
-  // int8_t
+  // INT8
   std::cout << std::endl
             << std::endl
-            << "Examples int8_t" << std::endl
+            << "Examples INT8" << std::endl
             << std::endl;
 
   for (size_t i = 0; i < b1.size(); i++) {
@@ -185,7 +185,7 @@ int main() {
     compareINT8(src, true);
   }
 
-  std::cout << std::endl << "Check range int8_t" << std::endl;
+  std::cout << std::endl << "Check range INT8" << std::endl;
 
   for (int low = 0x00; low <= 0xff; low++) {
     std::vector<uint8_t> src(1, uint8_t(low));
@@ -193,10 +193,10 @@ int main() {
     compareINT8(src, false);
   }
 
-  // uint16_t
+  // UINT16
   std::cout << std::endl
             << std::endl
-            << "Examples uint16_t" << std::endl
+            << "Examples UINT16" << std::endl
             << std::endl;
 
   for (size_t i = 0; i < b2.size(); i += 2) {
@@ -205,7 +205,7 @@ int main() {
     compareUINT16(src, true);
   }
 
-  std::cout << std::endl << "Check range uint16_t" << std::endl;
+  std::cout << std::endl << "Check range UINT16" << std::endl;
 
   for (int high = 0x00; high <= 0xff; high++) {
     for (int low = 0x00; low <= 0xff; low++) {
@@ -215,10 +215,10 @@ int main() {
     }
   }
 
-  // int16_t
+  // INT16
   std::cout << std::endl
             << std::endl
-            << "Examples int16_t" << std::endl
+            << "Examples INT16" << std::endl
             << std::endl;
 
   for (size_t i = 0; i < b2.size(); i += 2) {
@@ -227,7 +227,7 @@ int main() {
     compareINT16(src, true);
   }
 
-  std::cout << std::endl << "Check range int16_t" << std::endl;
+  std::cout << std::endl << "Check range INT16" << std::endl;
 
   for (int high = 0x00; high <= 0xff; high++) {
     for (int low = 0x00; low <= 0xff; low++) {
@@ -321,10 +321,10 @@ int main() {
     }
   }
 
-  // float
+  // FLOAT
   std::cout << std::endl
             << std::endl
-            << "Examples float" << std::endl
+            << "Examples FLOAT" << std::endl
             << std::endl;
 
   for (size_t i = 0; i < b2.size(); i += 2) {
@@ -333,7 +333,7 @@ int main() {
     compareFLOAT(src, true);
   }
 
-  std::cout << std::endl << "Check range float" << std::endl;
+  std::cout << std::endl << "Check range FLOAT" << std::endl;
 
   for (int high = 0x00; high <= 0xff; high++) {
     for (int low = 0x00; low <= 0xff; low++) {
