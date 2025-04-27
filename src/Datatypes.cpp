@@ -41,12 +41,13 @@ const char *ebus::datatype2string(ebus::Datatype datatype) {
 ebus::Datatype ebus::string2datatype(const char *str) {
   Datatype datatype = Datatype::ERROR;
 
-  datatype =
+  const std::map<ebus::Datatype, const char *>::const_iterator it =
       std::find_if(DatatypeName.begin(), DatatypeName.end(),
                    [&str](const std::pair<Datatype, const char *> &item) {
                      return strcmp(str, item.second) == 0;
-                   })
-          ->first;
+                   });
+
+  if (it != DatatypeName.end()) datatype = it->first;
 
   return datatype;
 }

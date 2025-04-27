@@ -343,5 +343,22 @@ int main() {
     }
   }
 
+  // ERROR
+  std::cout << std::endl << std::endl << "Examples ERROR" << std::endl;
+
+  std::cout << std::endl
+            << "DATA2c "
+            << (ebus::string2datatype("DATA2c") == ebus::Datatype::ERROR
+                    ? "not definded"
+                    : "defined")
+            << std::endl;
+
+  std::cout << std::endl
+            << "DATA2C "
+            << (ebus::string2datatype("DATA2C") == ebus::Datatype::ERROR
+                    ? "not definded"
+                    : "defined")
+            << std::endl;
+
   return (0);
 }
