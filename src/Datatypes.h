@@ -57,7 +57,7 @@ struct templateType {
 };
 
 template <typename T>
-void byte2int(T &t, const std::vector<uint8_t> &bytes) {
+void byte2int(T &t, const std::vector<uint8_t> &bytes) {  // NOLINT
   t = 0;
 
   for (size_t i = 0; i < bytes.size(); i++) t |= bytes[i] << (8 * i);
@@ -71,7 +71,7 @@ typename templateType<T>::type byte2int(const std::vector<uint8_t> &bytes) {
 }
 
 template <typename T>
-void int2byte(const T &t, std::vector<uint8_t> &bytes) {
+void int2byte(const T &t, std::vector<uint8_t> &bytes) {  // NOLINT
   for (size_t i = 0; i < sizeof(T); i++) bytes.push_back(uint8_t(t >> (8 * i)));
 }
 
