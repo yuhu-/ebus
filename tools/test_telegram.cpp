@@ -182,5 +182,5 @@ int main() {
     std::cout << " master: " << master.to_string() << std::endl << std::endl;
   }
 
-  return (0);
+  return EXIT_SUCCESS;
 }

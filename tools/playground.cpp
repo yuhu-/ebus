@@ -78,5 +78,5 @@ int main() {
 
   createTelegram("1008b5110203001e000a0e028709b104032c00007e00");
 
-  return (0);
+  return EXIT_SUCCESS;
 }
