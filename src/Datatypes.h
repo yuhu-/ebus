@@ -84,7 +84,6 @@ std::vector<uint8_t> int2byte(const T &t) {
 
 // helper functions
 uint convert_base(uint value, const uint &oldBase, const uint &newBase);
-
 double_t round_digits(const double_t &value, const uint8_t &digits);
 
 // BCD
