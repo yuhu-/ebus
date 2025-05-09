@@ -17,9 +17,11 @@
  * along with ebus. If not, see http://www.gnu.org/licenses/.
  */
 
+#include <cassert>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
@@ -27,24 +29,31 @@
 #include <vector>
 
 #include "Datatypes.h"
+#include "Sequence.h"
 
-const std::string toString(const std::vector<uint8_t>& vec) {
-  std::ostringstream ostr;
+// Examples 1 byte
+std::vector<uint8_t> vecB1 = {0x00, 0x01, 0x64, 0x7f, 0x80,
+                              0x81, 0xc8, 0xfe, 0xff};
 
-  for (size_t i = 0; i < vec.size(); i++)
-    ostr << std::nouppercase << std::hex << std::setw(2) << std::setfill('0')
-         << static_cast<unsigned>(vec[i]);
+// Examples 2 bytes
+std::vector<uint8_t> vecB2 = {0x00, 0x00, 0x01, 0x00, 0xff, 0xff, 0x00,
+                              0xff, 0xf0, 0xff, 0x00, 0x80, 0x01, 0x80,
+                              0xff, 0x7f, 0x65, 0x02, 0x77, 0x02};
 
-  return (ostr.str());
-}
+// Examples 4 bytes
+std::vector<uint8_t> vecB4 = {0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+                              0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0xff, 0xff,
+                              0xf0, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x80,
+                              0x01, 0x00, 0x00, 0x80, 0xff, 0xff, 0xff, 0x7f,
+                              0x65, 0x02, 0x7b, 0xcc, 0x77, 0x02, 0x2d, 0xe4};
 
 void printLine(const std::vector<uint8_t>& bytes,
                const std::vector<uint8_t>& result, const std::string& value) {
-  std::cout << "bytes " << toString(bytes) << " encode " << toString(result)
-            << " decode " << value << std::endl;
+  std::cout << "bytes " << ebus::Sequence::to_string(bytes) << " encode "
+            << ebus::Sequence::to_string(result) << " decode " << value
+            << std::endl;
 }
 
-// BCD
 void compareBCD(const std::vector<uint8_t>& bytes, const bool& print) {
   uint8_t value = ebus::byte_2_bcd(bytes);
   std::vector<uint8_t> result(1, ebus::bcd_2_byte(value)[0]);
@@ -53,7 +62,6 @@ void compareBCD(const std::vector<uint8_t>& bytes, const bool& print) {
     printLine(bytes, result, std::to_string(value));
 }
 
-// UINT8
 void compareUINT8(const std::vector<uint8_t>& bytes, const bool& print) {
   uint8_t value = ebus::byte_2_uint8(bytes);
   std::vector<uint8_t> result = ebus::uint8_2_byte(value);
@@ -61,7 +69,6 @@ void compareUINT8(const std::vector<uint8_t>& bytes, const bool& print) {
   if (bytes != result || print) printLine(bytes, result, std::to_string(value));
 }
 
-// INT8
 void compareINT8(const std::vector<uint8_t>& bytes, const bool& print) {
   int8_t value = ebus::byte_2_int8(bytes);
   std::vector<uint8_t> result = ebus::int8_2_byte(value);
@@ -69,23 +76,6 @@ void compareINT8(const std::vector<uint8_t>& bytes, const bool& print) {
   if (bytes != result || print) printLine(bytes, result, std::to_string(value));
 }
 
-// UINT16
-void compareUINT16(const std::vector<uint8_t>& bytes, const bool& print) {
-  uint16_t value = ebus::byte_2_uint16(bytes);
-  std::vector<uint8_t> result = ebus::uint16_2_byte(value);
-
-  if (bytes != result || print) printLine(bytes, result, std::to_string(value));
-}
-
-// INT16
-void compareINT16(const std::vector<uint8_t>& bytes, const bool& print) {
-  int16_t value = ebus::byte_2_int16(bytes);
-  std::vector<uint8_t> result = ebus::int16_2_byte(value);
-
-  if (bytes != result || print) printLine(bytes, result, std::to_string(value));
-}
-
-// DATA1B
 void compareDATA1B(const std::vector<uint8_t>& bytes, const bool& print) {
   double_t value = ebus::byte_2_data1b(bytes);
   std::vector<uint8_t> result = ebus::data1b_2_byte(value);
@@ -93,7 +83,6 @@ void compareDATA1B(const std::vector<uint8_t>& bytes, const bool& print) {
   if (bytes != result || print) printLine(bytes, result, std::to_string(value));
 }
 
-// DATA1C
 void compareDATA1C(const std::vector<uint8_t>& bytes, const bool& print) {
   double_t value = ebus::byte_2_data1c(bytes);
   std::vector<uint8_t> result = ebus::data1c_2_byte(value);
@@ -101,7 +90,20 @@ void compareDATA1C(const std::vector<uint8_t>& bytes, const bool& print) {
   if (bytes != result || print) printLine(bytes, result, std::to_string(value));
 }
 
-// DATA2B
+void compareUINT16(const std::vector<uint8_t>& bytes, const bool& print) {
+  uint16_t value = ebus::byte_2_uint16(bytes);
+  std::vector<uint8_t> result = ebus::uint16_2_byte(value);
+
+  if (bytes != result || print) printLine(bytes, result, std::to_string(value));
+}
+
+void compareINT16(const std::vector<uint8_t>& bytes, const bool& print) {
+  int16_t value = ebus::byte_2_int16(bytes);
+  std::vector<uint8_t> result = ebus::int16_2_byte(value);
+
+  if (bytes != result || print) printLine(bytes, result, std::to_string(value));
+}
+
 void compareDATA2B(const std::vector<uint8_t>& bytes, const bool& print) {
   double_t value = ebus::byte_2_data2b(bytes);
   std::vector<uint8_t> result = ebus::data2b_2_byte(value);
@@ -109,7 +111,6 @@ void compareDATA2B(const std::vector<uint8_t>& bytes, const bool& print) {
   if (bytes != result || print) printLine(bytes, result, std::to_string(value));
 }
 
-// DATA2C
 void compareDATA2C(const std::vector<uint8_t>& bytes, const bool& print) {
   double_t value = ebus::byte_2_data2c(bytes);
   std::vector<uint8_t> result = ebus::data2c_2_byte(value);
@@ -117,7 +118,6 @@ void compareDATA2C(const std::vector<uint8_t>& bytes, const bool& print) {
   if (bytes != result || print) printLine(bytes, result, std::to_string(value));
 }
 
-// FLOAT
 void compareFLOAT(const std::vector<uint8_t>& bytes, const bool& print) {
   double_t value = ebus::byte_2_float(bytes);
   std::vector<uint8_t> result = ebus::float_2_byte(value);
@@ -125,225 +125,203 @@ void compareFLOAT(const std::vector<uint8_t>& bytes, const bool& print) {
   if (bytes != result || print) printLine(bytes, result, std::to_string(value));
 }
 
-int main() {
-  std::vector<uint8_t> b1 = {0x00, 0x01, 0x64, 0x7f, 0x80,
-                             0x81, 0xc8, 0xfe, 0xff};
+void compareUINT32(const std::vector<uint8_t>& bytes, const bool& print) {
+  uint32_t value = ebus::byte_2_uint32(bytes);
+  std::vector<uint8_t> result = ebus::uint32_2_byte(value);
 
-  std::vector<uint8_t> b2 = {0x00, 0x00, 0x01, 0x00, 0xff, 0xff, 0x00,
-                             0xff, 0xf0, 0xff, 0x00, 0x80, 0x01, 0x80,
-                             0xff, 0x7f, 0x65, 0x02, 0x77, 0x02};
+  if (bytes != result || print) printLine(bytes, result, std::to_string(value));
+}
 
-  // BCD
+void compareINT32(const std::vector<uint8_t>& bytes, const bool& print) {
+  int32_t value = ebus::byte_2_int32(bytes);
+  std::vector<uint8_t> result = ebus::int32_2_byte(value);
+
+  if (bytes != result || print) printLine(bytes, result, std::to_string(value));
+}
+
+void examplesB1(
+    const ebus::Datatype& datatype, const bool& print,
+    std::function<void(const std::vector<uint8_t>& bytes, const bool& print)>
+        function) {
   std::cout << std::endl
-            << std::endl
-            << "Examples BCD" << std::endl
+            << "Examples " << datatype2string(datatype) << std::endl
             << std::endl;
 
-  for (size_t i = 0; i < b1.size(); i++) {
-    std::vector<uint8_t> src(1, b1[i]);
-
-    compareBCD(src, true);
+  for (size_t i = 0; i < vecB1.size(); i++) {
+    std::vector<uint8_t> src(1, vecB1[i]);
+    function(src, print);
   }
+}
 
-  std::cout << std::endl << "Check range BCD" << std::endl;
-
-  for (int low = 0x00; low <= 0xff; low++) {
-    std::vector<uint8_t> src(1, uint8_t(low));
-
-    compareBCD(src, false);
-  }
-
-  // UINT8
+void fullB1(
+    const ebus::Datatype& datatype, const bool& print,
+    std::function<void(const std::vector<uint8_t>& bytes, const bool& print)>
+        function) {
   std::cout << std::endl
-            << std::endl
-            << "Examples UINT8" << std::endl
+            << "Full " << datatype2string(datatype) << std::endl
             << std::endl;
 
-  for (size_t i = 0; i < b1.size(); i++) {
-    std::vector<uint8_t> src(1, b1[i]);
-
-    compareUINT8(src, true);
+  for (int b0 = 0x00; b0 <= 0xff; b0++) {
+    std::vector<uint8_t> src(1, uint8_t(b0));
+    function(src, print);
   }
+}
 
-  std::cout << std::endl << "Check range UINT8" << std::endl;
-
-  for (int low = 0x00; low <= 0xff; low++) {
-    std::vector<uint8_t> src(1, uint8_t(low));
-
-    compareUINT8(src, false);
+void testB1(const ebus::Datatype& datatype, const bool& printExamples,
+            const bool& printFull) {
+  switch (datatype) {
+    case ebus::Datatype::BCD:
+      examplesB1(datatype, printExamples, compareBCD);
+      fullB1(datatype, printFull, compareBCD);
+      break;
+    case ebus::Datatype::UINT8:
+      examplesB1(datatype, printExamples, compareUINT8);
+      fullB1(datatype, printFull, compareUINT8);
+      break;
+    case ebus::Datatype::INT8:
+      examplesB1(datatype, printExamples, compareINT8);
+      fullB1(datatype, printFull, compareINT8);
+      break;
+    case ebus::Datatype::DATA1B:
+      examplesB1(datatype, printExamples, compareDATA1B);
+      fullB1(datatype, printFull, compareDATA1B);
+      break;
+    case ebus::Datatype::DATA1C:
+      examplesB1(datatype, printExamples, compareDATA1C);
+      fullB1(datatype, printFull, compareDATA1C);
+      break;
+    default:
+      break;
   }
+}
 
-  // INT8
+void examplesB2(
+    const ebus::Datatype& datatype, const bool& print,
+    std::function<void(const std::vector<uint8_t>& bytes, const bool& print)>
+        function) {
   std::cout << std::endl
-            << std::endl
-            << "Examples INT8" << std::endl
+            << "Examples " << datatype2string(datatype) << std::endl
             << std::endl;
 
-  for (size_t i = 0; i < b1.size(); i++) {
-    std::vector<uint8_t> src(1, b1[i]);
-
-    compareINT8(src, true);
+  for (size_t i = 0; i < vecB2.size(); i += 2) {
+    std::vector<uint8_t> src{vecB2[i], vecB2[i + 1]};
+    function(src, print);
   }
+}
 
-  std::cout << std::endl << "Check range INT8" << std::endl;
-
-  for (int low = 0x00; low <= 0xff; low++) {
-    std::vector<uint8_t> src(1, uint8_t(low));
-
-    compareINT8(src, false);
-  }
-
-  // UINT16
+void fullB2(
+    const ebus::Datatype& datatype, const bool& print,
+    std::function<void(const std::vector<uint8_t>& bytes, const bool& print)>
+        function) {
   std::cout << std::endl
-            << std::endl
-            << "Examples UINT16" << std::endl
+            << "Full " << datatype2string(datatype) << std::endl
             << std::endl;
 
-  for (size_t i = 0; i < b2.size(); i += 2) {
-    std::vector<uint8_t> src{b2[i], b2[i + 1]};
-
-    compareUINT16(src, true);
-  }
-
-  std::cout << std::endl << "Check range UINT16" << std::endl;
-
-  for (int high = 0x00; high <= 0xff; high++) {
-    for (int low = 0x00; low <= 0xff; low++) {
-      std::vector<uint8_t> src{uint8_t(low), uint8_t(high)};
-
-      compareUINT16(src, false);
+  for (int b1 = 0x00; b1 <= 0xff; b1++) {
+    for (int b0 = 0x00; b0 <= 0xff; b0++) {
+      std::vector<uint8_t> src{uint8_t(b0), uint8_t(b1)};
+      function(src, print);
     }
   }
+}
 
-  // INT16
+void testB2(const ebus::Datatype& datatype, const bool& printExamples,
+            const bool& printFull) {
+  switch (datatype) {
+    case ebus::Datatype::UINT16:
+      examplesB2(datatype, printExamples, compareUINT16);
+      fullB2(datatype, printFull, compareUINT16);
+      break;
+    case ebus::Datatype::INT16:
+      examplesB2(datatype, printExamples, compareINT16);
+      fullB2(datatype, printFull, compareINT16);
+      break;
+    case ebus::Datatype::DATA2B:
+      examplesB2(datatype, printExamples, compareDATA2B);
+      fullB2(datatype, printFull, compareDATA2B);
+      break;
+    case ebus::Datatype::DATA2C:
+      examplesB2(datatype, printExamples, compareDATA2C);
+      fullB2(datatype, printFull, compareDATA2C);
+      break;
+    case ebus::Datatype::FLOAT:
+      examplesB2(datatype, printExamples, compareFLOAT);
+      fullB2(datatype, printFull, compareFLOAT);
+      break;
+    default:
+      break;
+  }
+}
+
+void examplesB4(
+    const ebus::Datatype& datatype, const bool& print,
+    std::function<void(const std::vector<uint8_t>& bytes, const bool& print)>
+        function) {
   std::cout << std::endl
-            << std::endl
-            << "Examples INT16" << std::endl
+            << "Examples " << datatype2string(datatype) << std::endl
             << std::endl;
 
-  for (size_t i = 0; i < b2.size(); i += 2) {
-    std::vector<uint8_t> src{b2[i], b2[i + 1]};
-
-    compareINT16(src, true);
+  for (size_t i = 0; i < vecB4.size(); i += 4) {
+    std::vector<uint8_t> src{vecB4[i], vecB4[i + 1], vecB4[i + 2],
+                             vecB4[i + 3]};
+    function(src, print);
   }
+}
 
-  std::cout << std::endl << "Check range INT16" << std::endl;
+void fullB4(
+    const ebus::Datatype& datatype, const bool& print,
+    std::function<void(const std::vector<uint8_t>& bytes, const bool& print)>
+        function) {
+  std::cout << std::endl
+            << "Full " << datatype2string(datatype) << std::endl
+            << std::endl;
 
-  for (int high = 0x00; high <= 0xff; high++) {
-    for (int low = 0x00; low <= 0xff; low++) {
-      std::vector<uint8_t> src{uint8_t(low), uint8_t(high)};
-
-      compareINT16(src, false);
+  for (int b3 = 0x00; b3 <= 0xff; b3++) {
+    for (int b2 = 0x00; b2 <= 0xff; b2++) {
+      for (int b1 = 0x00; b1 <= 0xff; b1++) {
+        for (int b0 = 0x00; b0 <= 0xff; b0++) {
+          std::vector<uint8_t> src{uint8_t(b0), uint8_t(b1), uint8_t(b2),
+                                   uint8_t(b3)};
+          function(src, print);
+        }
+      }
     }
   }
+}
 
-  // DATA1B
+void testB4(const ebus::Datatype& datatype, const bool& printExamples,
+            const bool& printFull) {
+  switch (datatype) {
+    case ebus::Datatype::UINT32:
+      examplesB4(datatype, printExamples, compareUINT32);
+      // fullB4(datatype, printFull, compareUINT32);
+      break;
+    case ebus::Datatype::INT32:
+      examplesB4(datatype, printExamples, compareINT32);
+      // fullB4(datatype, printFull, compareINT32);
+      break;
+    default:
+      break;
+  }
+}
+
+void testSTRING() {
+  std::string ehp00_string = "EHP00";
+  std::vector<uint8_t> ehp00_byte = {0x45, 0x48, 0x50, 0x30, 0x30};
+
+  std::cout << std::endl << std::endl << "Examples STRING" << std::endl;
+
   std::cout << std::endl
-            << std::endl
-            << "Examples DATA1B" << std::endl
+            << "from STRING " << ehp00_string << " to BYTE "
+            << ebus::Sequence::to_string(ebus::string_2_byte(ehp00_string))
             << std::endl;
 
-  for (size_t i = 0; i < b1.size(); i++) {
-    std::vector<uint8_t> src(1, b1[i]);
-
-    compareDATA1B(src, true);
-  }
-
-  std::cout << std::endl << "Check range DATA1B" << std::endl;
-
-  for (int low = 0x00; low <= 0xff; low++) {
-    std::vector<uint8_t> src(1, uint8_t(low));
-
-    compareDATA1B(src, false);
-  }
-
-  // DATA1C
   std::cout << std::endl
-            << std::endl
-            << "Examples DATA1C" << std::endl
-            << std::endl;
+            << "from BYTE " << ebus::Sequence::to_string(ehp00_byte)
+            << " to STRING " << ebus::byte_2_string(ehp00_byte) << std::endl;
+}
 
-  for (size_t i = 0; i < b1.size(); i++) {
-    std::vector<uint8_t> src(1, b1[i]);
-
-    compareDATA1C(src, true);
-  }
-
-  std::cout << std::endl << "Check range DATA1C" << std::endl;
-
-  for (int low = 0x00; low <= 0xff; low++) {
-    std::vector<uint8_t> src(1, uint8_t(low));
-
-    compareDATA1C(src, false);
-  }
-
-  // DATA2B
-  std::cout << std::endl
-            << std::endl
-            << "Examples DATA2B" << std::endl
-            << std::endl;
-
-  for (size_t i = 0; i < b2.size(); i += 2) {
-    std::vector<uint8_t> src{b2[i], b2[i + 1]};
-
-    compareDATA2B(src, true);
-  }
-
-  std::cout << std::endl << "Check range DATA2B" << std::endl;
-
-  for (int high = 0x00; high <= 0xff; high++) {
-    for (int low = 0x00; low <= 0xff; low++) {
-      std::vector<uint8_t> src{uint8_t(low), uint8_t(high)};
-
-      compareDATA2B(src, false);
-    }
-  }
-
-  // DATA2C
-  std::cout << std::endl
-            << std::endl
-            << "Examples DATA2C" << std::endl
-            << std::endl;
-
-  for (size_t i = 0; i < b2.size(); i += 2) {
-    std::vector<uint8_t> src{b2[i], b2[i + 1]};
-
-    compareDATA2C(src, true);
-  }
-
-  std::cout << std::endl << "Check range DATA2C" << std::endl;
-
-  for (int high = 0x00; high <= 0xff; high++) {
-    for (int low = 0x00; low <= 0xff; low++) {
-      std::vector<uint8_t> src{uint8_t(low), uint8_t(high)};
-
-      compareDATA2C(src, false);
-    }
-  }
-
-  // FLOAT
-  std::cout << std::endl
-            << std::endl
-            << "Examples FLOAT" << std::endl
-            << std::endl;
-
-  for (size_t i = 0; i < b2.size(); i += 2) {
-    std::vector<uint8_t> src{b2[i], b2[i + 1]};
-
-    compareFLOAT(src, true);
-  }
-
-  std::cout << std::endl << "Check range FLOAT" << std::endl;
-
-  for (int high = 0x00; high <= 0xff; high++) {
-    for (int low = 0x00; low <= 0xff; low++) {
-      std::vector<uint8_t> src{uint8_t(low), uint8_t(high)};
-
-      compareFLOAT(src, false);
-    }
-  }
-
-  // ERROR
+void testERROR() {
   std::cout << std::endl << std::endl << "Examples ERROR" << std::endl;
 
   std::cout << std::endl
@@ -359,6 +337,27 @@ int main() {
                     ? "not definded"
                     : "defined")
             << std::endl;
+}
 
-  return (0);
+int main() {
+  testB1(ebus::Datatype::BCD, false, false);
+  testB1(ebus::Datatype::UINT8, false, false);
+  testB1(ebus::Datatype::INT8, false, false);
+  testB1(ebus::Datatype::DATA1B, false, false);
+  testB1(ebus::Datatype::DATA1C, false, false);
+
+  testB2(ebus::Datatype::UINT16, true, false);
+  testB2(ebus::Datatype::INT16, true, false);
+  testB2(ebus::Datatype::DATA2B, true, false);
+  testB2(ebus::Datatype::DATA2C, true, false);
+  testB2(ebus::Datatype::FLOAT, true, false);
+
+  testB4(ebus::Datatype::UINT32, true, false);
+  testB4(ebus::Datatype::INT32, true, false);
+
+  testSTRING();
+
+  testERROR();
+
+  return EXIT_SUCCESS;
 }

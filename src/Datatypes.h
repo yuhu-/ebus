@@ -89,67 +89,54 @@ double_t round_digits(const double_t &value, const uint8_t &digits);
 
 // BCD
 uint8_t byte_2_bcd(const std::vector<uint8_t> &bytes);
-
 std::vector<uint8_t> bcd_2_byte(const uint8_t &value);
 
 // UINT8
 uint8_t byte_2_uint8(const std::vector<uint8_t> &bytes);
-
 std::vector<uint8_t> uint8_2_byte(const uint8_t &value);
 
 // INT8
 int8_t byte_2_int8(const std::vector<uint8_t> &bytes);
-
 std::vector<uint8_t> int8_2_byte(const int8_t &value);
 
 // UINT16
 uint16_t byte_2_uint16(const std::vector<uint8_t> &bytes);
-
 std::vector<uint8_t> uint16_2_byte(const uint16_t &value);
 
 // INT16
 int16_t byte_2_int16(const std::vector<uint8_t> &bytes);
-
 std::vector<uint8_t> int16_2_byte(const int16_t &value);
 
 // UINT32
 uint32_t byte_2_uint32(const std::vector<uint8_t> &bytes);
-
 std::vector<uint8_t> uint32_2_byte(const uint32_t &value);
 
 // INT32
 int32_t byte_2_int32(const std::vector<uint8_t> &bytes);
-
 std::vector<uint8_t> int32_2_byte(const int32_t &value);
 
 // DATA1B
 double_t byte_2_data1b(const std::vector<uint8_t> &bytes);
-
 std::vector<uint8_t> data1b_2_byte(const double_t &value);
 
 // DATA1C
 double_t byte_2_data1c(const std::vector<uint8_t> &bytes);
-
 std::vector<uint8_t> data1c_2_byte(const double_t &value);
 
 // DATA2B
 double_t byte_2_data2b(const std::vector<uint8_t> &bytes);
-
 std::vector<uint8_t> data2b_2_byte(const double_t &value);
 
 // DATA2C
 double_t byte_2_data2c(const std::vector<uint8_t> &bytes);
-
 std::vector<uint8_t> data2c_2_byte(const double_t &value);
 
 // FLOAT
 double_t byte_2_float(const std::vector<uint8_t> &bytes);
-
 std::vector<uint8_t> float_2_byte(const double_t &value);
 
 // STRING
 const std::string byte_2_string(const std::vector<uint8_t> &vec);
-
 const std::vector<uint8_t> string_2_byte(const std::string &str);
 
 }  // namespace ebus
