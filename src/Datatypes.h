@@ -44,11 +44,19 @@ enum class Datatype {
   DATA2B,
   DATA2C,
   FLOAT,
-  STRING
+  CHAR1,
+  CHAR2,
+  CHAR3,
+  CHAR4,
+  CHAR5,
+  CHAR6,
+  CHAR7,
+  CHAR8
 };
 
-const char *datatype2string(Datatype datatype);
-Datatype string2datatype(const char *str);
+const char *datatype_2_string(const Datatype &datatype);
+const Datatype string_2_datatype(const char *str);
+const size_t sizeof_datetype(const Datatype &datatype);
 
 // templates for byte / integer conversion
 template <typename T>
@@ -57,28 +65,28 @@ struct templateType {
 };
 
 template <typename T>
-void byte2int(T &t, const std::vector<uint8_t> &bytes) {  // NOLINT
+void byte_2_int(T &t, const std::vector<uint8_t> &bytes) {  // NOLINT
   t = 0;
 
   for (size_t i = 0; i < bytes.size(); i++) t |= bytes[i] << (8 * i);
 }
 
 template <typename T>
-typename templateType<T>::type byte2int(const std::vector<uint8_t> &bytes) {
+typename templateType<T>::type byte_2_int(const std::vector<uint8_t> &bytes) {
   T t;
-  byte2int(t, bytes);
+  byte_2_int(t, bytes);
   return t;
 }
 
 template <typename T>
-void int2byte(const T &t, std::vector<uint8_t> &bytes) {  // NOLINT
+void int_2_byte(const T &t, std::vector<uint8_t> &bytes) {  // NOLINT
   for (size_t i = 0; i < sizeof(T); i++) bytes.push_back(uint8_t(t >> (8 * i)));
 }
 
 template <typename T>
-std::vector<uint8_t> int2byte(const T &t) {
+std::vector<uint8_t> int_2_byte(const T &t) {
   std::vector<uint8_t> bytes;
-  int2byte(t, bytes);
+  int_2_byte(t, bytes);
   return bytes;
 }
 

@@ -144,7 +144,7 @@ void examplesB1(
     std::function<void(const std::vector<uint8_t>& bytes, const bool& print)>
         function) {
   std::cout << std::endl
-            << "Examples " << datatype2string(datatype) << std::endl
+            << "Examples " << datatype_2_string(datatype) << std::endl
             << std::endl;
 
   for (size_t i = 0; i < vecB1.size(); i++) {
@@ -158,7 +158,7 @@ void fullB1(
     std::function<void(const std::vector<uint8_t>& bytes, const bool& print)>
         function) {
   std::cout << std::endl
-            << "Full " << datatype2string(datatype) << std::endl
+            << "Full " << datatype_2_string(datatype) << std::endl
             << std::endl;
 
   for (int b0 = 0x00; b0 <= 0xff; b0++) {
@@ -200,7 +200,7 @@ void examplesB2(
     std::function<void(const std::vector<uint8_t>& bytes, const bool& print)>
         function) {
   std::cout << std::endl
-            << "Examples " << datatype2string(datatype) << std::endl
+            << "Examples " << datatype_2_string(datatype) << std::endl
             << std::endl;
 
   for (size_t i = 0; i < vecB2.size(); i += 2) {
@@ -214,7 +214,7 @@ void fullB2(
     std::function<void(const std::vector<uint8_t>& bytes, const bool& print)>
         function) {
   std::cout << std::endl
-            << "Full " << datatype2string(datatype) << std::endl
+            << "Full " << datatype_2_string(datatype) << std::endl
             << std::endl;
 
   for (int b1 = 0x00; b1 <= 0xff; b1++) {
@@ -258,7 +258,7 @@ void examplesB4(
     std::function<void(const std::vector<uint8_t>& bytes, const bool& print)>
         function) {
   std::cout << std::endl
-            << "Examples " << datatype2string(datatype) << std::endl
+            << "Examples " << datatype_2_string(datatype) << std::endl
             << std::endl;
 
   for (size_t i = 0; i < vecB4.size(); i += 4) {
@@ -273,7 +273,7 @@ void fullB4(
     std::function<void(const std::vector<uint8_t>& bytes, const bool& print)>
         function) {
   std::cout << std::endl
-            << "Full " << datatype2string(datatype) << std::endl
+            << "Full " << datatype_2_string(datatype) << std::endl
             << std::endl;
 
   for (int b3 = 0x00; b3 <= 0xff; b3++) {
@@ -326,14 +326,14 @@ void testERROR() {
 
   std::cout << std::endl
             << "DATA2c "
-            << (ebus::string2datatype("DATA2c") == ebus::Datatype::ERROR
+            << (ebus::string_2_datatype("DATA2c") == ebus::Datatype::ERROR
                     ? "not definded"
                     : "defined")
             << std::endl;
 
   std::cout << std::endl
             << "DATA2C "
-            << (ebus::string2datatype("DATA2C") == ebus::Datatype::ERROR
+            << (ebus::string_2_datatype("DATA2C") == ebus::Datatype::ERROR
                     ? "not definded"
                     : "defined")
             << std::endl;

@@ -64,7 +64,8 @@ class Sequence {
   const std::vector<uint8_t> &to_vector() const;
 
   static const std::vector<uint8_t> range(const std::vector<uint8_t> &vec,
-                                          const size_t index, const size_t len);
+                                          const size_t &index,
+                                          const size_t &len);
 
   static const std::vector<uint8_t> to_vector(const std::string &str);
 
