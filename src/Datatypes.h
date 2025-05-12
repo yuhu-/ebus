@@ -56,7 +56,8 @@ enum class Datatype {
 
 const char *datatype_2_string(const Datatype &datatype);
 const Datatype string_2_datatype(const char *str);
-const size_t sizeof_datetype(const Datatype &datatype);
+const size_t sizeof_datatype(const Datatype &datatype);
+const bool typeof_datatype(const Datatype &datatype);
 
 // templates for byte / integer conversion
 template <typename T>

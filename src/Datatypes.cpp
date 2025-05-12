@@ -56,7 +56,7 @@ const ebus::Datatype ebus::string_2_datatype(const char *str) {
   return datatype;
 }
 
-const size_t ebus::sizeof_datetype(const ebus::Datatype &datatype) {
+const size_t ebus::sizeof_datatype(const ebus::Datatype &datatype) {
   size_t length = 0;
 
   switch (datatype) {
@@ -100,6 +100,27 @@ const size_t ebus::sizeof_datetype(const ebus::Datatype &datatype) {
       break;
   }
   return length;
+}
+
+const bool ebus::typeof_datatype(const Datatype &datatype) {
+  bool numeric = true;
+
+  switch (datatype) {
+    case ebus::Datatype::CHAR1:
+    case ebus::Datatype::CHAR2:
+    case ebus::Datatype::CHAR3:
+    case ebus::Datatype::CHAR4:
+    case ebus::Datatype::CHAR5:
+    case ebus::Datatype::CHAR6:
+    case ebus::Datatype::CHAR7:
+    case ebus::Datatype::CHAR8:
+      numeric = false;
+      break;
+    default:
+      break;
+  }
+
+  return numeric;
 }
 
 // helper functions
