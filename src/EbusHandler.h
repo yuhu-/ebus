@@ -126,19 +126,25 @@ static const char *stateString(State state) {
 
 enum class Message { active, passive, reactive };
 
+typedef std::function<void(const uint8_t byte)> OnWriteCallback;
+typedef std::function<int()> IsDataAvailableCallback;
+
+typedef std::function<void(const Message &message, const Type &type,
+                           const std::vector<uint8_t> &master,
+                           std::vector<uint8_t> *const slave)>
+    OnTelegramCallback;
+
+typedef std::function<void(const std::string str)> OnErrorCallback;
+
 class EbusHandler {
  public:
   EbusHandler() = default;
-  EbusHandler(const uint8_t source,
-              std::function<void(const uint8_t byte)> writeFunction,
-              std::function<int()> readBufferFunction,
-              std::function<void(const Message &message, const Type &type,
-                                 const std::vector<uint8_t> &master,
-                                 std::vector<uint8_t> *const slave)>
-                  publishFunction);
+  explicit EbusHandler(const uint8_t source);
 
-  void setErrorCallback(
-      std::function<void(const std::string str)> errorFunction);
+  void onWrite(ebus::OnWriteCallback callback);
+  void isDataAvailable(ebus::IsDataAvailableCallback callback);
+  void onTelegram(ebus::OnTelegramCallback callback);
+  void onError(ebus::OnErrorCallback callback);
 
   void setAddress(const uint8_t source);
   uint8_t getAddress() const;
@@ -161,15 +167,10 @@ class EbusHandler {
   uint8_t address = 0;
   uint8_t slaveAddress = 0;
 
-  std::function<void(const uint8_t byte)> writeCallback = nullptr;
-  std::function<int()> readBufferCallback = nullptr;
-
-  std::function<void(const Message &message, const Type &type,
-                     const std::vector<uint8_t> &master,
-                     std::vector<uint8_t> *const slave)>
-      publishCallback = nullptr;
-
-  std::function<void(const std::string str)> errorCallback = nullptr;
+  ebus::OnWriteCallback onWriteCallback = nullptr;
+  ebus::IsDataAvailableCallback isDataAvailableCallback = nullptr;
+  ebus::OnTelegramCallback onTelegramCallback = nullptr;
+  ebus::OnErrorCallback onErrorCallback = nullptr;
 
   Counters counters;
 

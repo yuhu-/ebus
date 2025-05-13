@@ -57,15 +57,15 @@ void readFunction(const uint8_t &byte) {
   if (printBytes) printByte("->  read: ", byte, getState());
 }
 
-void writeCallback(const uint8_t &byte) {
+void onWriteCallback(const uint8_t &byte) {
   if (printBytes) printByte("<- write: ", byte, getState());
 }
 
-bool readBufferCallback() { return 0; }
+int isDataAvailableCallback() { return 0; }
 
-void publishCallback(const ebus::Message &message, const ebus::Type &type,
-                     const std::vector<uint8_t> &master,
-                     std::vector<uint8_t> *const slave) {
+void onTelegramCallback(const ebus::Message &message, const ebus::Type &type,
+                        const std::vector<uint8_t> &master,
+                        std::vector<uint8_t> *const slave) {
   std::vector<uint8_t> search;
   std::string typeString = "";
   switch (message) {
@@ -109,8 +109,88 @@ void publishCallback(const ebus::Message &message, const ebus::Type &type,
   }
 }
 
-ebus::EbusHandler ebusHandler(0x33, &writeCallback, &readBufferCallback,
-                              &publishCallback);
+void onErrorCallback(const std::string &str) {
+  std::cout << "   error: " << str << std::endl;
+}
+
+ebus::EbusHandler ebusHandler(0x33);
+
+void printCounters() {
+  ebus::Counters counter = ebusHandler.getCounters();
+
+  // messages
+  std::cout << "messagesTotal: " << counter.messagesTotal << std::endl;
+
+  std::cout << "messagesPassiveMasterSlave: "
+            << counter.messagesPassiveMasterSlave << std::endl;
+  std::cout << "messagesPassiveMasterMaster: "
+            << counter.messagesPassiveMasterMaster << std::endl;
+
+  std::cout << "messagesReactiveMasterSlave: "
+            << counter.messagesReactiveMasterSlave << std::endl;
+  std::cout << "messagesReactiveMasterMaster: "
+            << counter.messagesReactiveMasterMaster << std::endl;
+  std::cout << "messagesReactiveBroadcast: "
+            << counter.messagesReactiveBroadcast << std::endl;
+
+  std::cout << "messagesActiveMasterSlave: "
+            << counter.messagesActiveMasterSlave << std::endl;
+  std::cout << "messagesActiveMasterMaster: "
+            << counter.messagesActiveMasterMaster << std::endl;
+  std::cout << "messagesActiveBroadcast: " << counter.messagesActiveBroadcast
+            << std::endl
+            << std::endl;
+
+  // errors
+  std::cout << "errorsTotal: " << counter.errorsTotal << std::endl << std::endl;
+
+  std::cout << "errorsPassive: " << counter.errorsPassive << std::endl;
+  std::cout << "errorsPassiveMaster: " << counter.errorsPassiveMaster
+            << std::endl;
+  std::cout << "errorsPassiveMasterACK: " << counter.errorsPassiveMasterACK
+            << std::endl;
+  std::cout << "errorsPassiveSlave: " << counter.errorsPassiveSlave
+            << std::endl;
+  std::cout << "errorsPassiveSlaveACK: " << counter.errorsPassiveSlaveACK
+            << std::endl
+            << std::endl;
+
+  std::cout << "errorsReactive: " << counter.errorsReactive << std::endl;
+  std::cout << "errorsReactiveMaster: " << counter.errorsReactiveMaster
+            << std::endl;
+  std::cout << "errorsReactiveMasterACK: " << counter.errorsReactiveMasterACK
+            << std::endl;
+  std::cout << "errorsReactiveSlave: " << counter.errorsReactiveSlave
+            << std::endl;
+  std::cout << "errorsReactiveSlaveACK: " << counter.errorsReactiveSlaveACK
+            << std::endl
+            << std::endl;
+
+  std::cout << "errorsActive: " << counter.errorsActive << std::endl;
+  std::cout << "errorsActiveMaster: " << counter.errorsActiveMaster
+            << std::endl;
+  std::cout << "errorsActiveMasterACK: " << counter.errorsActiveMasterACK
+            << std::endl;
+  std::cout << "errorsActiveSlave: " << counter.errorsActiveSlave << std::endl;
+  std::cout << "errorsActiveSlaveACK: " << counter.errorsActiveSlaveACK
+            << std::endl
+            << std::endl;
+
+  // resets
+  std::cout << "resetsTotal: " << counter.resetsTotal << std::endl;
+  std::cout << "resetsPassive00: " << counter.resetsPassive00 << std::endl;
+  std::cout << "resetsPassive0704: " << counter.resetsPassive0704 << std::endl;
+  std::cout << "resetsPassive: " << counter.resetsPassive << std::endl;
+  std::cout << "resetsActive: " << counter.resetsActive << std::endl
+            << std::endl;
+
+  // requests
+  std::cout << "requestsTotal: " << counter.requestsTotal << std::endl;
+  std::cout << "requestsWon: " << counter.requestsWon << std::endl;
+  std::cout << "requestsLost: " << counter.requestsLost << std::endl;
+  std::cout << "requestsRetry: " << counter.requestsRetry << std::endl;
+  std::cout << "requestsError: " << counter.requestsError << std::endl;
+}
 
 const char *getState() { return ebus::stateString(ebusHandler.getState()); }
 
@@ -484,89 +564,11 @@ void activeTest_11(const bool &bytes, const std::string &title) {
            "aaaaaa");
 }
 
-void errorCallback(const std::string &str) {
-  std::cout << "   error: " << str << std::endl;
-}
-
-void printCounters() {
-  ebus::Counters counter = ebusHandler.getCounters();
-
-  // messages
-  std::cout << "messagesTotal: " << counter.messagesTotal << std::endl;
-
-  std::cout << "messagesPassiveMasterSlave: "
-            << counter.messagesPassiveMasterSlave << std::endl;
-  std::cout << "messagesPassiveMasterMaster: "
-            << counter.messagesPassiveMasterMaster << std::endl;
-
-  std::cout << "messagesReactiveMasterSlave: "
-            << counter.messagesReactiveMasterSlave << std::endl;
-  std::cout << "messagesReactiveMasterMaster: "
-            << counter.messagesReactiveMasterMaster << std::endl;
-  std::cout << "messagesReactiveBroadcast: "
-            << counter.messagesReactiveBroadcast << std::endl;
-
-  std::cout << "messagesActiveMasterSlave: "
-            << counter.messagesActiveMasterSlave << std::endl;
-  std::cout << "messagesActiveMasterMaster: "
-            << counter.messagesActiveMasterMaster << std::endl;
-  std::cout << "messagesActiveBroadcast: " << counter.messagesActiveBroadcast
-            << std::endl
-            << std::endl;
-
-  // errors
-  std::cout << "errorsTotal: " << counter.errorsTotal << std::endl << std::endl;
-
-  std::cout << "errorsPassive: " << counter.errorsPassive << std::endl;
-  std::cout << "errorsPassiveMaster: " << counter.errorsPassiveMaster
-            << std::endl;
-  std::cout << "errorsPassiveMasterACK: " << counter.errorsPassiveMasterACK
-            << std::endl;
-  std::cout << "errorsPassiveSlave: " << counter.errorsPassiveSlave
-            << std::endl;
-  std::cout << "errorsPassiveSlaveACK: " << counter.errorsPassiveSlaveACK
-            << std::endl
-            << std::endl;
-
-  std::cout << "errorsReactive: " << counter.errorsReactive << std::endl;
-  std::cout << "errorsReactiveMaster: " << counter.errorsReactiveMaster
-            << std::endl;
-  std::cout << "errorsReactiveMasterACK: " << counter.errorsReactiveMasterACK
-            << std::endl;
-  std::cout << "errorsReactiveSlave: " << counter.errorsReactiveSlave
-            << std::endl;
-  std::cout << "errorsReactiveSlaveACK: " << counter.errorsReactiveSlaveACK
-            << std::endl
-            << std::endl;
-
-  std::cout << "errorsActive: " << counter.errorsActive << std::endl;
-  std::cout << "errorsActiveMaster: " << counter.errorsActiveMaster
-            << std::endl;
-  std::cout << "errorsActiveMasterACK: " << counter.errorsActiveMasterACK
-            << std::endl;
-  std::cout << "errorsActiveSlave: " << counter.errorsActiveSlave << std::endl;
-  std::cout << "errorsActiveSlaveACK: " << counter.errorsActiveSlaveACK
-            << std::endl
-            << std::endl;
-
-  // resets
-  std::cout << "resetsTotal: " << counter.resetsTotal << std::endl;
-  std::cout << "resetsPassive00: " << counter.resetsPassive00 << std::endl;
-  std::cout << "resetsPassive0704: " << counter.resetsPassive0704 << std::endl;
-  std::cout << "resetsPassive: " << counter.resetsPassive << std::endl;
-  std::cout << "resetsActive: " << counter.resetsActive << std::endl
-            << std::endl;
-
-  // requests
-  std::cout << "requestsTotal: " << counter.requestsTotal << std::endl;
-  std::cout << "requestsWon: " << counter.requestsWon << std::endl;
-  std::cout << "requestsLost: " << counter.requestsLost << std::endl;
-  std::cout << "requestsRetry: " << counter.requestsRetry << std::endl;
-  std::cout << "requestsError: " << counter.requestsError << std::endl;
-}
-
 int main() {
-  ebusHandler.setErrorCallback(errorCallback);
+  ebusHandler.onWrite(onWriteCallback);
+  ebusHandler.isDataAvailable(isDataAvailableCallback);
+  ebusHandler.onTelegram(onTelegramCallback);
+  ebusHandler.onError(onErrorCallback);
 
   passiveTest_01(false, "MS: Normal");
   passiveTest_02(false, "MS: Master defect/NAK");
