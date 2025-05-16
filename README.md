@@ -1,38 +1,40 @@
-***C++ library for eBUS communication.***
+# C++ library for eBUS communication
 
-eBUS is a two-wire bus that operates at a speed of 2400 baud and is used in heating systems. 
-The participants (max. 25 masters, 228 slaves) exchange messages (=telegrams) in a byte-oriented
-protocol with byte-oriented arbitration. Implementation with standard UART (8 bits + start and stop bits)
-and a CRC byte (generator polynomial: x8 + x7 + x4 + x3 + x + 1) for data protection.
+This library enables communication with systems based on the eBUS protocol. eBUS is primarily used in the heating industry.
 
-On the bus, a message is sent or received as a sequence of characters. The two main classes of this 
-library, **Sequence** (low-level) and **Telegram** (high-level), can store such a sequence or message.
+### Class Overview
 
-The purpose of the **Sequence** class is to replace or insert special characters and calculate the CRC byte. 
-The **Telegram** class can analyze, generate and evaluate these sequences according to the eBUS specification.
+On the bus, a message is sent or received as a sequence of characters.
 
-The **EbusHandler** has implemented routines for sending and receiving all types of telegrams and the option 
-of collecting statistical data about the eBUS system. To perform this task, the EbusHandler requires a serial 
-bus device.
+- The purpose of the **Sequence** (low-level) class is to replace or insert special characters and calculate the CRC byte. 
+- The **Telegram** (high-level) class can analyze, generate and evaluate a sequence according to the eBUS specification.
+- The **EbusHandler** has routines for sending and receiving all types of telegrams and the option of collecting
+statistical data about the eBUS system. To perform this task, the EbusHandler requires a serial bus device.
+- **Datatypes** offers functions for decoding/encoding of in accordance with the eBUS data types.
 
-**Datatypes** offers various functions for decoding/encoding in accordance with the eBUS data types.
+### Tools
 
-Compilation requires CMake and a C++ compiler with C++14 support. 
+**ebusread** interprets all incoming values ​​as eBUS data. The data is validated and then printed to standard
+output. Reading from files, devices, pipes and TCP sockets is supported. 
 
-***Among tools:***
+**playground** can be used by developers for testing and experimenting with the eBUS classes.  
 
-**ebusread** interprets all incoming values ​​as eBUS data. The data is checked for correctness and output to
-standard output. Reading from files, devices, pipes and TCP sockets is supported. 
+### Build
 
-**playground** a little helper for development.
+Compilation requires CMake and a C++ compiler (tested on GCC) with C++14 support. 
 
-
-***[deprecated]***
+### [Deprecated]
 
  **EbusStack** offers the possibility to act as a fully-fledged eBUS participant. It has been implemented
-as a PIMPL idiom and runs in its own thread. EbusStack also requires ppoll and pthread support.
+as a PIMPL idiom and runs in its own thread. EbusStack also requires [ppoll](https://man7.org/linux/man-pages/man2/ppoll.2.html) and [pthread](https://man7.org/linux/man-pages/man7/pthreads.7.html) support.
+
+### eBUS Overview
+
+- The eBUS works on a two-wire bus with a speed of 2400 baud.
+- Realisation with Standard UART with 8 bits + start bit + stop bit. 
+- A maximum of 25 master and 228 slave participants are possible.
+- The eBUS protocol is byte-oriented with byte-oriented arbitration.
+- Data protection through 8-bit CRC.
 
 
-For bugs and missing features use github issue system.
-
-The author can be contacted at roland.jax@liwest.at.
+For reporting bugs and requesting features, please use the GitHub [Issues](https://github.com/yuhu-/ebus/issues) page.

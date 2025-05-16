@@ -177,7 +177,7 @@ class EbusHandler {
   // control
   State state = State::passiveReceiveMaster;
   uint8_t maxLockCounter = 3;
-  uint8_t lockCoutner = 0;
+  uint8_t lockCounter = 0;
 
   // passive
   Telegram passiveTelegram;
@@ -206,8 +206,8 @@ class EbusHandler {
   void receive(const uint8_t &byte);
   void send();
 
-  void passiveErrors();
-  void activeErrors();
+  void onPassiveErrors();
+  void onActiveErrors();
 
   void resetPassive();
   void resetActive();
