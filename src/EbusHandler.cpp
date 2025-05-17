@@ -606,10 +606,10 @@ void ebus::EbusHandler::onPassiveErrors() {
     else if (passiveMaster.size() == 6 && passiveMaster[2] == 0x07 &&
              passiveMaster[3] == 0x04)
       counters.resetsPassive0704++;
-    else if (passiveMaster.size() >= 4 && passiveMaster.size() == 6 &&
-             passiveMaster[2] == 0x07 && passiveMaster[3] == 0x04)
+    else
+      counters.resetsPassive++;
 
-      resetPassive();
+    resetPassive();
   }
 }
 
