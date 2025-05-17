@@ -23,7 +23,7 @@
 #include <map>
 #include <sstream>
 
-std::map<int, const char *> SequenceErrors = {
+std::map<int, const char *> sequenceErrors = {
     {SEQ_EMPTY, "sequence is empty"},
     {SEQ_ERR_SHORT, "sequence is too short"},
     {SEQ_ERR_LONG, "sequence is too long"},
@@ -101,7 +101,7 @@ void ebus::Telegram::parse(Sequence &seq) {
         return;
       }
 
-      // acknowledge byte is negativ
+      // acknowledge byte is negative
       if (m_masterACK == sym_nak) {
         // sequence is too long
         if (tmp.size() > static_cast<size_t>(5 + m_masterNN + 2))
@@ -372,10 +372,9 @@ const uint8_t ebus::Telegram::getSlaveACK() const { return m_slaveACK; }
 ebus::Type ebus::Telegram::getType() const { return m_type; }
 
 bool ebus::Telegram::isValid() const {
-  if (m_type != Type::masterSlave)
-    return m_masterState == SEQ_OK ? true : false;
+  if (m_type != Type::masterSlave) return m_masterState == SEQ_OK;
 
-  return (m_masterState + m_slaveState) == SEQ_OK ? true : false;
+  return (m_masterState == SEQ_OK && m_slaveState == SEQ_OK);
 }
 
 const std::string ebus::Telegram::to_string() const {
@@ -443,7 +442,10 @@ uint8_t ebus::Telegram::slaveAddress(const uint8_t address) {
 const std::string ebus::Telegram::errorText(const int error) {
   std::ostringstream ostr;
 
-  ostr << SequenceErrors[error];
+  if (sequenceErrors.find(error) != sequenceErrors.end())
+    ostr << sequenceErrors[error];
+  else
+    ostr << "unknown error code";
 
   return ostr.str();
 }
@@ -492,7 +494,7 @@ int ebus::Telegram::checkMasterSequence(const Sequence &seq) {
 
 int ebus::Telegram::checkSlaveSequence(const Sequence &seq) {
   // sequence is too short
-  if (seq.size() < static_cast<size_t>(2)) return SEQ_ERR_SHORT;
+  if (seq.size() < static_cast<size_t>(1)) return SEQ_ERR_SHORT;
 
   // number data byte is invalid
   if (uint8_t(seq[0]) > max_bytes) return SEQ_ERR_NN;
