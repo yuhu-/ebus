@@ -67,8 +67,15 @@ const char *timestamp() {
   struct timeval tv;
   struct tm tm;
 
-  gettimeofday(&tv, nullptr);
-  localtime_r(&tv.tv_sec, &tm);
+  if (gettimeofday(&tv, nullptr) != 0) {
+    std::cerr << "the current time could not be retrieved" << std::endl;
+    exit(EXIT_FAILURE);
+  }
+
+  if (localtime_r(&tv.tv_sec, &tm) == nullptr) {
+    std::cerr << "localtime_r failed" << std::endl;
+    exit(EXIT_FAILURE);
+  }
 
   snprintf(time, sizeof(time), "%04d-%02d-%02d %02d:%02d:%02d.%03ld",
            tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min,
@@ -232,12 +239,15 @@ std::string collect(const uint8_t &byte) {
 void run(const int sfd) {
   char data[1];
 
-  while (1) {
+  while (true) {
     ssize_t datalen = recv(sfd, data, sizeof(data), 0);
 
     if (datalen == -1) {
-      std::cerr << "recv error" << std::endl;
+      std::cerr << "an error occurred while receiving" << std::endl;
       exit(EXIT_FAILURE);
+    } else if (datalen == 0) {
+      std::cerr << "connection closed by peer" << std::endl;
+      break;
     }
 
     for (int i = 0; i < datalen; i++) {
@@ -255,7 +265,9 @@ void run(const int sfd) {
 }
 
 int connect(const char *hostname, const char *port) {
-  struct addrinfo hints = {0}, *addrs;
+  struct addrinfo hints, *addrs;
+  memset(&hints, 0, sizeof(hints));
+
   hints.ai_family = AF_UNSPEC;
   hints.ai_socktype = SOCK_STREAM;
   hints.ai_protocol = IPPROTO_TCP;
@@ -269,7 +281,7 @@ int connect(const char *hostname, const char *port) {
   int sfd = 0, err = 0;
   for (const struct addrinfo *addr = addrs; addr != nullptr;
        addr = addr->ai_next) {
-    sfd = socket(addrs->ai_family, addrs->ai_socktype, addrs->ai_protocol);
+    sfd = socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
     if (sfd > 0) {
       if (connect(sfd, addr->ai_addr, addr->ai_addrlen) == 0) break;
     } else {
@@ -288,7 +300,8 @@ int connect(const char *hostname, const char *port) {
 }
 
 void usage() {
-  std::cout << "Usage: ebusread [options] <device|file|host:port>" << std::endl;
+  std::cout << "Usage: ebusread [options] <stdin|device|file|host:port>";
+  std::cout << std::endl;
   std::cout << "eBUS binary data reader" << std::endl;
   std::cout << "  -b, --bold       bold data bytes" << std::endl;
   std::cout << "  -c, --color      colorized output" << std::endl;
@@ -351,7 +364,7 @@ int main(int argc, char *argv[]) {
         usage();
         exit(EXIT_SUCCESS);
       default:
-        std::cerr << "unknown option" << std::endl;
+        std::cerr << "the specified option is unknown" << std::endl;
         exit(EXIT_FAILURE);
         break;
     }
@@ -363,7 +376,7 @@ int main(int argc, char *argv[]) {
     if (pos == std::string::npos) {
       std::ifstream stream(argv[optind], std::ios::binary);
       if (stream.is_open() == true) {
-        while (stream.eof() == false) {
+        while (stream.peek() != EOF) {
           unsigned char byte = stream.get();
           std::string result = collect(byte);
           if (result.size() > 0) std::cout << result << std::endl;
@@ -376,6 +389,12 @@ int main(int argc, char *argv[]) {
     } else {
       std::string hostname = tmp.substr(0, pos);
       std::string port = tmp.substr(pos + 1);
+
+      if (hostname.empty() || port.empty()) {
+        std::cerr << "hostname or port cannot be empty" << std::endl;
+        exit(EXIT_FAILURE);
+      }
+
       int sfd = connect(hostname.c_str(), port.c_str());
       run(sfd);
       close(sfd);
@@ -384,9 +403,10 @@ int main(int argc, char *argv[]) {
     usage();
     exit(EXIT_SUCCESS);
   } else {
-    while (std::cin.good()) {
-      uint8_t byte = std::cin.get();
-      std::string result = collect(byte);
+    while (std::cin.good() && !std::cin.eof()) {
+      int byte = std::cin.get();
+      if (std::cin.eof()) break;
+      std::string result = collect(static_cast<uint8_t>(byte));
       if (result.size() > 0) std::cout << result << std::endl;
     }
   }
