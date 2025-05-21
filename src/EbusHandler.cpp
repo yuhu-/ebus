@@ -19,6 +19,7 @@
 
 #include "EbusHandler.h"
 
+#include <sstream>
 #include <utility>
 #include <vector>
 
@@ -590,15 +591,16 @@ void ebus::EbusHandler::onPassiveErrors() {
       passiveMasterRepeated || passiveSlave.size() > 0 || passiveSlaveDBx > 0 ||
       passiveSlaveIndex > 0 || passiveSlaveRepeated) {
     if (onErrorCallback != nullptr) {
-      std::string errorMessage =
-          "passive | master: '" + passiveMaster.to_string() +
-          "' DBx: " + std::to_string(passiveMasterDBx) +
-          " repeated: " + (passiveMasterRepeated ? "true" : "false") +
-          " | slave: '" + passiveSlave.to_string() +
-          "' DBx: " + std::to_string(passiveSlaveDBx) +
-          " index: " + std::to_string(passiveSlaveIndex) +
-          " repeated: " + (passiveSlaveRepeated ? "true" : "false");
-      onErrorCallback(errorMessage);
+      std::ostringstream ostr;
+      ostr << "passive";
+      ostr << " | master: '" << passiveMaster.to_string();
+      ostr << "' DBx: " << passiveMasterDBx;
+      ostr << " repeated: " << (passiveMasterRepeated ? "true" : "false");
+      ostr << " | slave: '" << passiveSlave.to_string();
+      ostr << "' DBx: " << passiveSlaveDBx;
+      ostr << " index: " << passiveSlaveIndex;
+      ostr << " repeated: " << (passiveSlaveRepeated ? "true" : "false");
+      onErrorCallback(ostr.str());
     }
 
     if (passiveMaster.size() == 1 && passiveMaster[0] == 0x00)
@@ -618,14 +620,15 @@ void ebus::EbusHandler::onActiveErrors() {
       activeMasterRepeated || activeSlave.size() > 0 || activeSlaveDBx > 0 ||
       activeSlaveRepeated) {
     if (onErrorCallback != nullptr) {
-      std::string errorMessage =
-          "active | master: '" + activeMaster.to_string() +
-          "' index: " + std::to_string(activeMasterIndex) +
-          " repeated: " + (activeMasterRepeated ? "true" : "false") +
-          " | slave: '" + activeSlave.to_string() +
-          "' DBx: " + std::to_string(activeSlaveDBx) +
-          " repeated: " + (activeSlaveRepeated ? "true" : "false");
-      onErrorCallback(errorMessage);
+      std::ostringstream ostr;
+      ostr << "active";
+      ostr << " | master: '" << activeMaster.to_string();
+      ostr << "' index: " << activeMasterIndex;
+      ostr << " repeated: " << (activeMasterRepeated ? "true" : "false");
+      ostr << " | slave: '" << activeSlave.to_string();
+      ostr << "' DBx: " << activeSlaveDBx;
+      ostr << " repeated: " << (activeSlaveRepeated ? "true" : "false");
+      onErrorCallback(ostr.str());
     }
 
     counters.resetsActive++;

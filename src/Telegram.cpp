@@ -19,7 +19,6 @@
 
 #include "Telegram.h"
 
-#include <iomanip>
 #include <map>
 #include <sstream>
 
