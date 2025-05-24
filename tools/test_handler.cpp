@@ -23,10 +23,11 @@
 #include <iostream>
 #include <string>
 
-#include "Datatypes.h"
-#include "EbusHandler.h"
-#include "Sequence.h"
-#include "Telegram.h"
+#include "Common.hpp"
+#include "Datatypes.hpp"
+#include "Handler.hpp"
+#include "Sequence.hpp"
+#include "Telegram.hpp"
 
 #define RESET "\033[0m"
 #define BOLD "\033[1m"
@@ -45,7 +46,7 @@ const char *getState();
 
 // definition
 const std::string to_string(const uint8_t &byte) {
-  return ebus::Sequence::to_string(std::vector<uint8_t>(1, byte));
+  return ebus::to_string(std::vector<uint8_t>(1, byte));
 }
 
 void printByte(const std::string &prefix, const uint8_t &byte,
@@ -63,45 +64,45 @@ void onWriteCallback(const uint8_t &byte) {
 
 int isDataAvailableCallback() { return 0; }
 
-void onTelegramCallback(const ebus::Message &message, const ebus::Type &type,
+void onTelegramCallback(const ebus::MessageType &message,
+                        const ebus::TelegramType &type,
                         const std::vector<uint8_t> &master,
                         std::vector<uint8_t> *const slave) {
   std::vector<uint8_t> search;
   std::string typeString = "";
   switch (message) {
-    case ebus::Message::active:
-      std::cout << "  active: " << ebus::Sequence::to_string(master) << " "
-                << ebus::Sequence::to_string(*slave) << std::endl;
+    case ebus::MessageType::active:
+      std::cout << "  active: " << ebus::to_string(master) << " "
+                << ebus::to_string(*slave) << std::endl;
       break;
-    case ebus::Message::passive:
-      std::cout << " passive: " << ebus::Sequence::to_string(master) << " "
-                << ebus::Sequence::to_string(*slave) << std::endl;
+    case ebus::MessageType::passive:
+      std::cout << " passive: " << ebus::to_string(master) << " "
+                << ebus::to_string(*slave) << std::endl;
       break;
-    case ebus::Message::reactive:
+    case ebus::MessageType::reactive:
 
       switch (type) {
-        case ebus::Type::broadcast:
+        case ebus::TelegramType::broadcast:
           typeString = "broadcast message";
           break;
-        case ebus::Type::masterMaster:
+        case ebus::TelegramType::master_master:
           typeString = "master master message";
           break;
-        case ebus::Type::masterSlave:
+        case ebus::TelegramType::master_slave:
           typeString = "master slave message";
           search = {0x07, 0x04};  // 0008070400
-          if (ebus::Sequence::contains(master, search))
-            *slave = ebus::Sequence::to_vector("0ab5504d53303001074302");
+          if (ebus::contains(master, search))
+            *slave = ebus::to_vector("0ab5504d53303001074302");
           search = {0x07, 0x05};  // 0008070500
-          if (ebus::Sequence::contains(master, search))
-            *slave =
-                ebus::Sequence::to_vector("0ab5504d533030010743");  // defect
+          if (ebus::contains(master, search))
+            *slave = ebus::to_vector("0ab5504d533030010743");  // defect
           break;
         default:
           break;
       }
       std::cout << "    type: " << typeString << std::endl;
-      std::cout << "reactive: " << ebus::Sequence::to_string(master) << " "
-                << ebus::Sequence::to_string(*slave) << std::endl;
+      std::cout << "reactive: " << ebus::to_string(master) << " "
+                << ebus::to_string(*slave) << std::endl;
 
       break;
     default:
@@ -113,7 +114,7 @@ void onErrorCallback(const std::string &str) {
   std::cout << "   error: " << str << std::endl;
 }
 
-ebus::EbusHandler ebusHandler(0x33);
+ebus::Handler ebusHandler(0x33);
 
 void printCounters() {
   ebus::Counters counter = ebusHandler.getCounters();
@@ -192,14 +193,14 @@ void printCounters() {
   std::cout << "requestsError: " << counter.requestsError << std::endl;
 }
 
-const char *getState() { return ebus::stateString(ebusHandler.getState()); }
+const char *getState() { return ebus::getFsmStateText(ebusHandler.getState()); }
 
 void simulate(const std::string &test, const std::string &title,
               const bool &bytes, const std::string &message,
               const std::string &sequence) {
   printBytes = bytes;
   ebus::Sequence seq;
-  seq.assign(ebus::Sequence::to_vector(sequence));
+  seq.assign(ebus::to_vector(sequence));
 
   std::cout << "    test: " << test
             << " - address: " << to_string(ebusHandler.getAddress()) << " / "
@@ -209,7 +210,7 @@ void simulate(const std::string &test, const std::string &title,
     std::cout << " message: " << to_string(ebusHandler.getAddress()) << message
               << std::endl;
 
-    ebusHandler.enque(ebus::Sequence::to_vector(message));
+    ebusHandler.enque(ebus::to_vector(message));
     ebusHandler.setMaxLockCounter(3);
 
   } else {
@@ -217,13 +218,13 @@ void simulate(const std::string &test, const std::string &title,
   }
   for (size_t i = 0; i < seq.size(); i++) {
     switch (ebusHandler.getState()) {
-      case ebus::State::reactiveSendMasterPositiveAcknowledge:
-      case ebus::State::reactiveSendMasterNegativeAcknowledge:
-      case ebus::State::reactiveSendSlave:
-      case ebus::State::activeSendMaster:
-      case ebus::State::activeSendSlavePositiveAcknowledge:
-      case ebus::State::activeSendSlaveNegativeAcknowledge:
-      case ebus::State::releaseBus:
+      case ebus::FsmState::reactiveSendMasterPositiveAcknowledge:
+      case ebus::FsmState::reactiveSendMasterNegativeAcknowledge:
+      case ebus::FsmState::reactiveSendSlave:
+      case ebus::FsmState::activeSendMaster:
+      case ebus::FsmState::activeSendSlavePositiveAcknowledge:
+      case ebus::FsmState::activeSendSlaveNegativeAcknowledge:
+      case ebus::FsmState::releaseBus:
         i--;
         break;
       default:

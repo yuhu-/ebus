@@ -17,22 +17,19 @@
  * along with ebus. If not, see http://www.gnu.org/licenses/.
  */
 
-#include "Telegram.h"
+#include "Telegram.hpp"
 
 #include <map>
 #include <sstream>
 
-std::map<int, const char *> sequenceErrors = {
-    {SEQ_EMPTY, "sequence is empty"},
-    {SEQ_ERR_SHORT, "sequence is too short"},
-    {SEQ_ERR_LONG, "sequence is too long"},
-    {SEQ_ERR_NN, "number data byte is invalid"},
-    {SEQ_ERR_CRC, "sequence has a CRC error"},
-    {SEQ_ERR_ACK, "acknowledge byte is invalid"},
-    {SEQ_ERR_QQ, "source address is invalid"},
-    {SEQ_ERR_ZZ, "target address is invalid"},
-    {SEQ_ERR_ACK_MISS, "acknowledge byte is missing"},
-    {SEQ_ERR_INVALID, "sequence is invalid"}};
+ebus::TelegramType ebus::typeOf(const uint8_t byte) {
+  if (byte == sym_broad)
+    return TelegramType::broadcast;
+  else if (isMaster(byte))
+    return TelegramType::master_master;
+  else
+    return TelegramType::master_slave;
+}
 
 ebus::Telegram::Telegram(Sequence &seq) { parse(seq); }
 
@@ -43,17 +40,17 @@ void ebus::Telegram::parse(Sequence &seq) {
 
   m_masterState = checkMasterSequence(seq);
 
-  if (m_masterState != SEQ_OK) return;
+  if (m_masterState != SequenceState::seq_ok) return;
 
   Sequence master(seq, 0, 5 + uint8_t(seq[4]) + 1);
   createMaster(master);
 
-  if (m_masterState != SEQ_OK) return;
+  if (m_masterState != SequenceState::seq_ok) return;
 
-  if (m_type != Type::broadcast) {
+  if (m_type != TelegramType::broadcast) {
     // acknowledge byte is missing
     if (seq.size() <= static_cast<size_t>(5 + m_masterNN + 1)) {
-      m_masterState = SEQ_ERR_ACK_MISS;
+      m_masterState = SequenceState::err_ack_missing;
       return;
     }
 
@@ -61,15 +58,15 @@ void ebus::Telegram::parse(Sequence &seq) {
 
     // acknowledge byte is invalid
     if (m_masterACK != sym_ack && m_masterACK != sym_nak) {
-      m_masterState = SEQ_ERR_ACK;
+      m_masterState = SequenceState::err_ack_invalid;
       return;
     }
 
-    // handle NAK from slave
+    // handle first NAK from slave
     if (m_masterACK == sym_nak) {
       // sequence is too short
       if (seq.size() < static_cast<size_t>(master.size() + 1)) {
-        m_masterState = SEQ_ERR_SHORT;
+        m_masterState = SequenceState::err_seq_too_short;
         return;
       }
 
@@ -79,16 +76,16 @@ void ebus::Telegram::parse(Sequence &seq) {
       Sequence tmp(seq, offset);
       m_masterState = checkMasterSequence(tmp);
 
-      if (m_masterState != SEQ_OK) return;
+      if (m_masterState != SequenceState::seq_ok) return;
 
       Sequence master2(tmp, 0, 5 + uint8_t(tmp[4]) + 1);
       createMaster(master2);
 
-      if (m_masterState != SEQ_OK) return;
+      if (m_masterState != SequenceState::seq_ok) return;
 
       // acknowledge byte is missing
       if (tmp.size() <= static_cast<size_t>(5 + m_masterNN + 1)) {
-        m_masterState = SEQ_ERR_ACK_MISS;
+        m_masterState = SequenceState::err_ack_missing;
         return;
       }
 
@@ -96,41 +93,41 @@ void ebus::Telegram::parse(Sequence &seq) {
 
       // acknowledge byte is invalid
       if (m_masterACK != sym_ack && m_masterACK != sym_nak) {
-        m_masterState = SEQ_ERR_ACK;
+        m_masterState = SequenceState::err_ack_invalid;
         return;
       }
 
-      // acknowledge byte is negative
+      // handle second NAK from slave
       if (m_masterACK == sym_nak) {
-        // sequence is too long
-        if (tmp.size() > static_cast<size_t>(5 + m_masterNN + 2))
-          m_masterState = SEQ_ERR_LONG;
+        // // sequence is too long
+        // if (tmp.size() > static_cast<size_t>(5 + m_masterNN + 2))
+        //   m_masterState = SequenceState::err_seq_too_long;
+        // else
 
-        // sequence is invalid
-        else
-          m_masterState = SEQ_ERR_INVALID;
+        // acknowledge byte is negative
+        m_masterState = SequenceState::err_ack_negative;
 
         return;
       }
     }
   }
 
-  if (m_type == Type::masterSlave) {
+  if (m_type == TelegramType::master_slave) {
     offset += 5 + m_masterNN + 2;
 
     Sequence seq2(seq, offset);
     m_slaveState = checkSlaveSequence(seq2);
 
-    if (m_slaveState != SEQ_OK) return;
+    if (m_slaveState != SequenceState::seq_ok) return;
 
     Sequence slave(seq2, 0, 1 + uint8_t(seq2[0]) + 1);
     createSlave(slave);
 
-    if (m_slaveState != SEQ_OK) return;
+    if (m_slaveState != SequenceState::seq_ok) return;
 
     // acknowledge byte is missing
     if (seq2.size() <= static_cast<size_t>(1 + m_slaveNN + 1)) {
-      m_slaveState = SEQ_ERR_ACK_MISS;
+      m_slaveState = SequenceState::err_ack_missing;
       return;
     }
 
@@ -138,15 +135,15 @@ void ebus::Telegram::parse(Sequence &seq) {
 
     // acknowledge byte is invalid
     if (m_slaveACK != sym_ack && m_slaveACK != sym_nak) {
-      m_slaveState = SEQ_ERR_ACK;
+      m_slaveState = SequenceState::err_ack_invalid;
       return;
     }
 
-    // handle NAK from master
+    // handle first NAK from master
     if (m_slaveACK == sym_nak) {
       // sequence is too short
       if (seq2.size() < static_cast<size_t>(slave.size() + 2)) {
-        m_slaveState = SEQ_ERR_SHORT;
+        m_slaveState = SequenceState::err_seq_too_short;
         return;
       }
 
@@ -156,14 +153,14 @@ void ebus::Telegram::parse(Sequence &seq) {
       Sequence tmp(seq2, offset);
       m_slaveState = checkSlaveSequence(tmp);
 
-      if (m_slaveState != SEQ_OK) return;
+      if (m_slaveState != SequenceState::seq_ok) return;
 
       Sequence slave2(seq2, offset, 1 + uint8_t(seq2[offset]) + 1);
       createSlave(slave2);
 
       // acknowledge byte is missing
       if (tmp.size() <= static_cast<size_t>(1 + m_slaveNN + 1)) {
-        m_slaveState = SEQ_ERR_ACK_MISS;
+        m_slaveState = SequenceState::err_ack_missing;
         return;
       }
 
@@ -171,21 +168,21 @@ void ebus::Telegram::parse(Sequence &seq) {
 
       // acknowledge byte is invalid
       if (m_slaveACK != sym_ack && m_slaveACK != sym_nak) {
-        m_slaveState = SEQ_ERR_ACK;
+        m_slaveState = SequenceState::err_ack_invalid;
         return;
       }
 
       // sequence is too long
-      if (tmp.size() > static_cast<size_t>(1 + m_slaveNN + 2)) {
-        m_slaveState = SEQ_ERR_LONG;
-        m_slave.clear();
-        return;
-      }
+      // if (tmp.size() > static_cast<size_t>(1 + m_slaveNN + 2)) {
+      //   m_slaveState = SequenceState::err_seq_too_long;
+      //   m_slave.clear();
+      //   return;
+      // }
 
-      // acknowledge byte is negativ
+      // handle second NAK from master
       if (m_slaveACK == sym_nak) {
-        // sequence is invalid
-        m_slaveState = SEQ_ERR_INVALID;
+        // acknowledge byte is negative
+        m_slaveState = SequenceState::err_ack_negative;
         return;
       }
     }
@@ -204,42 +201,42 @@ void ebus::Telegram::createMaster(const uint8_t src,
 }
 
 void ebus::Telegram::createMaster(Sequence &seq) {
-  m_masterState = SEQ_OK;
+  m_masterState = SequenceState::seq_ok;
   seq.reduce();
 
   // sequence is too short
   if (seq.size() < 5) {
-    m_masterState = SEQ_ERR_SHORT;
+    m_masterState = SequenceState::err_seq_too_short;
     return;
   }
 
   // source address is invalid
   if (!isMaster(seq[0])) {
-    m_masterState = SEQ_ERR_QQ;
+    m_masterState = SequenceState::err_source_address;
     return;
   }
 
   // target address is invalid
   if (!isAddressValid(seq[1])) {
-    m_masterState = SEQ_ERR_ZZ;
+    m_masterState = SequenceState::err_target_address;
     return;
   }
 
-  // number data byte is invalid
+  // data byte is invalid
   if (uint8_t(seq[4]) > max_bytes) {
-    m_masterState = SEQ_ERR_NN;
+    m_masterState = SequenceState::err_data_byte;
     return;
   }
 
   // sequence is too short (excl. CRC)
   if (seq.size() < static_cast<size_t>(5 + uint8_t(seq[4]))) {
-    m_masterState = SEQ_ERR_SHORT;
+    m_masterState = SequenceState::err_seq_too_short;
     return;
   }
 
   // sequence is too long (incl. CRC)
   if (seq.size() > static_cast<size_t>(5 + uint8_t(seq[4]) + 1)) {
-    m_masterState = SEQ_ERR_LONG;
+    m_masterState = SequenceState::err_seq_too_long;
     return;
   }
 
@@ -253,8 +250,9 @@ void ebus::Telegram::createMaster(Sequence &seq) {
     m_master = Sequence(seq, 0, 5 + m_masterNN);
     m_masterCRC = seq[5 + m_masterNN];
 
-    // sequence has a CRC error
-    if (m_master.crc() != m_masterCRC) m_masterState = SEQ_ERR_CRC;
+    // CRC byte is invalid
+    if (m_master.crc() != m_masterCRC)
+      m_masterState = SequenceState::err_crc_invalid;
   }
 }
 
@@ -267,30 +265,30 @@ void ebus::Telegram::createSlave(const std::vector<uint8_t> &vec) {
 }
 
 void ebus::Telegram::createSlave(Sequence &seq) {
-  m_slaveState = SEQ_OK;
+  m_slaveState = SequenceState::seq_ok;
   seq.reduce();
 
   // sequence is too short
   if (seq.size() < static_cast<size_t>(2)) {
-    m_slaveState = SEQ_ERR_SHORT;
+    m_slaveState = SequenceState::err_seq_too_short;
     return;
   }
 
-  // number data byte is invalid
+  // data byte is invalid
   if (uint8_t(seq[0]) > max_bytes) {
-    m_slaveState = SEQ_ERR_NN;
+    m_slaveState = SequenceState::err_data_byte;
     return;
   }
 
   // sequence is too short (excl. CRC)
   if (seq.size() < static_cast<size_t>(1 + uint8_t(seq[0]))) {
-    m_slaveState = SEQ_ERR_SHORT;
+    m_slaveState = SequenceState::err_seq_too_short;
     return;
   }
 
   // sequence is too long (incl. CRC)
   if (seq.size() > static_cast<size_t>(1 + uint8_t(seq[0]) + 1)) {
-    m_slaveState = SEQ_ERR_LONG;
+    m_slaveState = SequenceState::err_seq_too_long;
     return;
   }
 
@@ -303,77 +301,80 @@ void ebus::Telegram::createSlave(Sequence &seq) {
     m_slave = Sequence(seq, 0, 1 + m_slaveNN);
     m_slaveCRC = seq[1 + m_slaveNN];
 
-    // sequence has a CRC error
-    if (m_slave.crc() != m_slaveCRC) m_slaveState = SEQ_ERR_CRC;
+    // CRC byte is invalid
+    if (m_slave.crc() != m_slaveCRC)
+      m_slaveState = SequenceState::err_crc_invalid;
   }
 }
 
 void ebus::Telegram::clear() {
-  m_type = Type::undefined;
+  m_type = TelegramType::undefined;
 
   m_master.clear();
   m_masterNN = 0;
   m_masterCRC = sym_zero;
   m_masterACK = sym_zero;
-  m_masterState = SEQ_EMPTY;
+  m_masterState = SequenceState::seq_empty;
 
   m_slave.clear();
   m_slaveNN = 0;
   m_slaveCRC = sym_zero;
   m_slaveACK = sym_zero;
-  m_slaveState = SEQ_EMPTY;
+  m_slaveState = SequenceState::seq_empty;
 }
 
 const ebus::Sequence &ebus::Telegram::getMaster() const { return m_master; }
 
-const uint8_t ebus::Telegram::getSourceAddress() const { return m_master[0]; }
+uint8_t ebus::Telegram::getSourceAddress() const { return m_master[0]; }
 
-const uint8_t ebus::Telegram::getTargetAddress() const { return m_master[1]; }
+uint8_t ebus::Telegram::getTargetAddress() const { return m_master[1]; }
 
-const uint8_t ebus::Telegram::getPrimaryCommand() const { return m_master[2]; }
+uint8_t ebus::Telegram::getPrimaryCommand() const { return m_master[2]; }
 
-const uint8_t ebus::Telegram::getSecondaryCommand() const {
-  return m_master[3];
-}
+uint8_t ebus::Telegram::getSecondaryCommand() const { return m_master[3]; }
 
-const uint8_t ebus::Telegram::getMasterNumberBytes() const {
-  return m_master[4];
-}
+uint8_t ebus::Telegram::getMasterNumberBytes() const { return m_master[4]; }
 
 const std::vector<uint8_t> ebus::Telegram::getMasterDataBytes() const {
   return m_master.range(5, m_master.size() - 5);
 }
 
-const uint8_t ebus::Telegram::getMasterCRC() const { return m_masterCRC; }
+uint8_t ebus::Telegram::getMasterCRC() const { return m_masterCRC; }
 
-int ebus::Telegram::getMasterState() const { return m_masterState; }
+ebus::SequenceState ebus::Telegram::getMasterState() const {
+  return m_masterState;
+}
 
 void ebus::Telegram::setMasterACK(const uint8_t byte) { m_masterACK = byte; }
 
-const uint8_t ebus::Telegram::getMasterACK() const { return m_masterACK; }
+uint8_t ebus::Telegram::getMasterACK() const { return m_masterACK; }
 
 const ebus::Sequence &ebus::Telegram::getSlave() const { return m_slave; }
 
-const uint8_t ebus::Telegram::getSlaveNumberBytes() const { return m_slave[0]; }
+uint8_t ebus::Telegram::getSlaveNumberBytes() const { return m_slave[0]; }
 
 const std::vector<uint8_t> ebus::Telegram::getSlaveDataBytes() const {
   return m_slave.range(1, m_slave.size() - 1);
 }
 
-const uint8_t ebus::Telegram::getSlaveCRC() const { return m_slaveCRC; }
+uint8_t ebus::Telegram::getSlaveCRC() const { return m_slaveCRC; }
 
-int ebus::Telegram::getSlaveState() const { return m_slaveState; }
+ebus::SequenceState ebus::Telegram::getSlaveState() const {
+  return m_slaveState;
+}
 
 void ebus::Telegram::setSlaveACK(const uint8_t byte) { m_slaveACK = byte; }
 
-const uint8_t ebus::Telegram::getSlaveACK() const { return m_slaveACK; }
+uint8_t ebus::Telegram::getSlaveACK() const { return m_slaveACK; }
 
-ebus::Type ebus::Telegram::getType() const { return m_type; }
+ebus::TelegramType ebus::Telegram::getType() const { return m_type; }
 
 bool ebus::Telegram::isValid() const {
-  if (m_type != Type::masterSlave) return m_masterState == SEQ_OK;
+  if (m_type != TelegramType::master_slave)
+    return m_masterState == SequenceState::seq_ok;
 
-  return (m_masterState == SEQ_OK && m_slaveState == SEQ_OK);
+  return (m_masterState == SequenceState::seq_ok &&
+          m_slaveState == SequenceState::seq_ok);
 }
 
 const std::string ebus::Telegram::to_string() const {
@@ -381,7 +382,8 @@ const std::string ebus::Telegram::to_string() const {
 
   ostr << toStringMaster();
 
-  if (m_masterState == SEQ_OK && m_type == Type::masterSlave)
+  if (m_masterState == SequenceState::seq_ok &&
+      m_type == TelegramType::master_slave)
     ostr << " " << toStringSlave();
 
   return ostr.str();
@@ -389,8 +391,8 @@ const std::string ebus::Telegram::to_string() const {
 
 const std::string ebus::Telegram::toStringMaster() const {
   std::ostringstream ostr;
-  if (m_masterState != SEQ_OK)
-    ostr << toStringMasterError();
+  if (m_masterState != SequenceState::seq_ok)
+    ostr << toStringMasterState();
   else
     ostr << m_master.to_string();
 
@@ -399,8 +401,9 @@ const std::string ebus::Telegram::toStringMaster() const {
 
 const std::string ebus::Telegram::toStringSlave() const {
   std::ostringstream ostr;
-  if (m_slaveState != SEQ_OK && m_type != Type::broadcast) {
-    ostr << toStringSlaveError();
+  if (m_slaveState != SequenceState::seq_ok &&
+      m_type != TelegramType::broadcast) {
+    ostr << toStringSlaveState();
   } else {
     ostr << m_slave.to_string();
   }
@@ -408,99 +411,56 @@ const std::string ebus::Telegram::toStringSlave() const {
   return ostr.str();
 }
 
-ebus::Type ebus::Telegram::typeOf(const uint8_t byte) {
-  if (byte == sym_broad)
-    return Type::broadcast;
-  else if (isMaster(byte))
-    return Type::masterMaster;
-  else
-    return Type::masterSlave;
-}
-
-bool ebus::Telegram::isMaster(const uint8_t byte) {
-  uint8_t hi = (byte & uint8_t(0xf0)) >> 4;
-  uint8_t lo = (byte & uint8_t(0x0f));
-
-  return ((hi == uint8_t(0x0)) || (hi == uint8_t(0x1)) ||
-          (hi == uint8_t(0x3)) || (hi == uint8_t(0x7)) ||
-          (hi == uint8_t(0xf))) &&
-         ((lo == uint8_t(0x0)) || (lo == uint8_t(0x1)) ||
-          (lo == uint8_t(0x3)) || (lo == uint8_t(0x7)) || (lo == uint8_t(0xf)));
-}
-
-bool ebus::Telegram::isSlave(const uint8_t byte) {
-  return !isMaster(byte) && byte != sym_syn && byte != sym_exp;
-}
-
-uint8_t ebus::Telegram::slaveAddress(const uint8_t address) {
-  if (isSlave(address)) return (address);
-
-  return uint8_t(address + 5);
-}
-
-const std::string ebus::Telegram::errorText(const int error) {
-  std::ostringstream ostr;
-
-  if (sequenceErrors.find(error) != sequenceErrors.end())
-    ostr << sequenceErrors[error];
-  else
-    ostr << "unknown error code";
-
-  return ostr.str();
-}
-
-const std::string ebus::Telegram::toStringMasterError() const {
+const std::string ebus::Telegram::toStringMasterState() const {
   std::ostringstream ostr;
   if (m_master.size() > 0) ostr << "'" << m_master.to_string() << "' ";
 
-  ostr << "master " << errorText(m_masterState);
+  ostr << "master " << ebus::getSequenceStateText(m_masterState);
 
   return ostr.str();
 }
 
-const std::string ebus::Telegram::toStringSlaveError() const {
+const std::string ebus::Telegram::toStringSlaveState() const {
   std::ostringstream ostr;
   if (m_slave.size() > 0) ostr << "'" << m_slave.to_string() << "' ";
 
-  ostr << "slave " << errorText(m_slaveState);
+  ostr << "slave " << getSequenceStateText(m_slaveState);
 
   return ostr.str();
 }
 
-bool ebus::Telegram::isAddressValid(const uint8_t byte) {
-  return byte != sym_syn && byte != sym_exp;
-}
-
-int ebus::Telegram::checkMasterSequence(const Sequence &seq) {
+ebus::SequenceState ebus::Telegram::checkMasterSequence(const Sequence &seq) {
   // sequence is too short
-  if (seq.size() < static_cast<size_t>(5)) return SEQ_ERR_SHORT;
+  if (seq.size() < static_cast<size_t>(5))
+    return SequenceState::err_seq_too_short;
 
   // source address is invalid
-  if (!isMaster(seq[0])) return SEQ_ERR_QQ;
+  if (!isMaster(seq[0])) return SequenceState::err_source_address;
 
   // target address is invalid
-  if (!isAddressValid(seq[1])) return SEQ_ERR_ZZ;
+  if (!isAddressValid(seq[1])) return SequenceState::err_target_address;
 
-  // number data byte is invalid
-  if (uint8_t(seq[4]) > max_bytes) return SEQ_ERR_NN;
+  // data byte is invalid
+  if (uint8_t(seq[4]) > max_bytes) return SequenceState::err_data_byte;
 
   // sequence is too short (incl. CRC)
   if (seq.size() < static_cast<size_t>(5 + uint8_t(seq[4]) + 1))
-    return SEQ_ERR_SHORT;
+    return SequenceState::err_seq_too_short;
 
-  return SEQ_OK;
+  return SequenceState::seq_ok;
 }
 
-int ebus::Telegram::checkSlaveSequence(const Sequence &seq) {
+ebus::SequenceState ebus::Telegram::checkSlaveSequence(const Sequence &seq) {
   // sequence is too short
-  if (seq.size() < static_cast<size_t>(1)) return SEQ_ERR_SHORT;
+  if (seq.size() < static_cast<size_t>(1))
+    return SequenceState::err_seq_too_short;
 
-  // number data byte is invalid
-  if (uint8_t(seq[0]) > max_bytes) return SEQ_ERR_NN;
+  // data byte is invalid
+  if (uint8_t(seq[0]) > max_bytes) return SequenceState::err_data_byte;
 
   // sequence is too short (incl. CRC)
   if (seq.size() < static_cast<size_t>(1 + uint8_t(seq[0]) + 1))
-    return SEQ_ERR_SHORT;
+    return SequenceState::err_seq_too_short;
 
-  return SEQ_OK;
+  return SequenceState::seq_ok;
 }

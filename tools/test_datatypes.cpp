@@ -28,8 +28,9 @@
 #include <string>
 #include <vector>
 
-#include "Datatypes.h"
-#include "Sequence.h"
+#include "Common.hpp"
+#include "Datatypes.hpp"
+#include "Sequence.hpp"
 
 // Examples 1 byte
 std::vector<uint8_t> vecB1 = {0x00, 0x01, 0x64, 0x7f, 0x80,
@@ -49,9 +50,8 @@ std::vector<uint8_t> vecB4 = {0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
 
 void printLine(const std::vector<uint8_t>& bytes,
                const std::vector<uint8_t>& result, const std::string& value) {
-  std::cout << "bytes " << ebus::Sequence::to_string(bytes) << " encode "
-            << ebus::Sequence::to_string(result) << " decode " << value
-            << std::endl;
+  std::cout << "bytes " << ebus::to_string(bytes) << " encode "
+            << ebus::to_string(result) << " decode " << value << std::endl;
 }
 
 void compareBCD(const std::vector<uint8_t>& bytes, const bool& print) {
@@ -140,7 +140,7 @@ void compareINT32(const std::vector<uint8_t>& bytes, const bool& print) {
 }
 
 void examplesB1(
-    const ebus::Datatype& datatype, const bool& print,
+    const ebus::DataType& datatype, const bool& print,
     std::function<void(const std::vector<uint8_t>& bytes, const bool& print)>
         function) {
   std::cout << std::endl
@@ -154,7 +154,7 @@ void examplesB1(
 }
 
 void fullB1(
-    const ebus::Datatype& datatype, const bool& print,
+    const ebus::DataType& datatype, const bool& print,
     std::function<void(const std::vector<uint8_t>& bytes, const bool& print)>
         function) {
   std::cout << std::endl
@@ -167,26 +167,26 @@ void fullB1(
   }
 }
 
-void testB1(const ebus::Datatype& datatype, const bool& printExamples,
+void testB1(const ebus::DataType& datatype, const bool& printExamples,
             const bool& printFull) {
   switch (datatype) {
-    case ebus::Datatype::BCD:
+    case ebus::DataType::BCD:
       examplesB1(datatype, printExamples, compareBCD);
       fullB1(datatype, printFull, compareBCD);
       break;
-    case ebus::Datatype::UINT8:
+    case ebus::DataType::UINT8:
       examplesB1(datatype, printExamples, compareUINT8);
       fullB1(datatype, printFull, compareUINT8);
       break;
-    case ebus::Datatype::INT8:
+    case ebus::DataType::INT8:
       examplesB1(datatype, printExamples, compareINT8);
       fullB1(datatype, printFull, compareINT8);
       break;
-    case ebus::Datatype::DATA1B:
+    case ebus::DataType::DATA1B:
       examplesB1(datatype, printExamples, compareDATA1B);
       fullB1(datatype, printFull, compareDATA1B);
       break;
-    case ebus::Datatype::DATA1C:
+    case ebus::DataType::DATA1C:
       examplesB1(datatype, printExamples, compareDATA1C);
       fullB1(datatype, printFull, compareDATA1C);
       break;
@@ -196,7 +196,7 @@ void testB1(const ebus::Datatype& datatype, const bool& printExamples,
 }
 
 void examplesB2(
-    const ebus::Datatype& datatype, const bool& print,
+    const ebus::DataType& datatype, const bool& print,
     std::function<void(const std::vector<uint8_t>& bytes, const bool& print)>
         function) {
   std::cout << std::endl
@@ -210,7 +210,7 @@ void examplesB2(
 }
 
 void fullB2(
-    const ebus::Datatype& datatype, const bool& print,
+    const ebus::DataType& datatype, const bool& print,
     std::function<void(const std::vector<uint8_t>& bytes, const bool& print)>
         function) {
   std::cout << std::endl
@@ -225,26 +225,26 @@ void fullB2(
   }
 }
 
-void testB2(const ebus::Datatype& datatype, const bool& printExamples,
+void testB2(const ebus::DataType& datatype, const bool& printExamples,
             const bool& printFull) {
   switch (datatype) {
-    case ebus::Datatype::UINT16:
+    case ebus::DataType::UINT16:
       examplesB2(datatype, printExamples, compareUINT16);
       fullB2(datatype, printFull, compareUINT16);
       break;
-    case ebus::Datatype::INT16:
+    case ebus::DataType::INT16:
       examplesB2(datatype, printExamples, compareINT16);
       fullB2(datatype, printFull, compareINT16);
       break;
-    case ebus::Datatype::DATA2B:
+    case ebus::DataType::DATA2B:
       examplesB2(datatype, printExamples, compareDATA2B);
       fullB2(datatype, printFull, compareDATA2B);
       break;
-    case ebus::Datatype::DATA2C:
+    case ebus::DataType::DATA2C:
       examplesB2(datatype, printExamples, compareDATA2C);
       fullB2(datatype, printFull, compareDATA2C);
       break;
-    case ebus::Datatype::FLOAT:
+    case ebus::DataType::FLOAT:
       examplesB2(datatype, printExamples, compareFLOAT);
       fullB2(datatype, printFull, compareFLOAT);
       break;
@@ -254,7 +254,7 @@ void testB2(const ebus::Datatype& datatype, const bool& printExamples,
 }
 
 void examplesB4(
-    const ebus::Datatype& datatype, const bool& print,
+    const ebus::DataType& datatype, const bool& print,
     std::function<void(const std::vector<uint8_t>& bytes, const bool& print)>
         function) {
   std::cout << std::endl
@@ -269,7 +269,7 @@ void examplesB4(
 }
 
 void fullB4(
-    const ebus::Datatype& datatype, const bool& print,
+    const ebus::DataType& datatype, const bool& print,
     std::function<void(const std::vector<uint8_t>& bytes, const bool& print)>
         function) {
   std::cout << std::endl
@@ -289,14 +289,14 @@ void fullB4(
   }
 }
 
-void testB4(const ebus::Datatype& datatype, const bool& printExamples,
+void testB4(const ebus::DataType& datatype, const bool& printExamples,
             const bool& printFull) {
   switch (datatype) {
-    case ebus::Datatype::UINT32:
+    case ebus::DataType::UINT32:
       examplesB4(datatype, printExamples, compareUINT32);
       // fullB4(datatype, printFull, compareUINT32);
       break;
-    case ebus::Datatype::INT32:
+    case ebus::DataType::INT32:
       examplesB4(datatype, printExamples, compareINT32);
       // fullB4(datatype, printFull, compareINT32);
       break;
@@ -313,12 +313,11 @@ void testSTRING() {
 
   std::cout << std::endl
             << "from STRING " << ehp00_string << " to BYTE "
-            << ebus::Sequence::to_string(ebus::string_2_byte(ehp00_string))
-            << std::endl;
+            << ebus::to_string(ebus::string_2_byte(ehp00_string)) << std::endl;
 
   std::cout << std::endl
-            << "from BYTE " << ebus::Sequence::to_string(ehp00_byte)
-            << " to STRING " << ebus::byte_2_string(ehp00_byte) << std::endl;
+            << "from BYTE " << ebus::to_string(ehp00_byte) << " to STRING "
+            << ebus::byte_2_string(ehp00_byte) << std::endl;
 }
 
 void testERROR() {
@@ -326,34 +325,34 @@ void testERROR() {
 
   std::cout << std::endl
             << "DATA2c "
-            << (ebus::string_2_datatype("DATA2c") == ebus::Datatype::ERROR
+            << (ebus::string_2_datatype("DATA2c") == ebus::DataType::ERROR
                     ? "not definded"
                     : "defined")
             << std::endl;
 
   std::cout << std::endl
             << "DATA2C "
-            << (ebus::string_2_datatype("DATA2C") == ebus::Datatype::ERROR
+            << (ebus::string_2_datatype("DATA2C") == ebus::DataType::ERROR
                     ? "not definded"
                     : "defined")
             << std::endl;
 }
 
 int main() {
-  testB1(ebus::Datatype::BCD, false, false);
-  testB1(ebus::Datatype::UINT8, false, false);
-  testB1(ebus::Datatype::INT8, false, false);
-  testB1(ebus::Datatype::DATA1B, false, false);
-  testB1(ebus::Datatype::DATA1C, false, false);
+  testB1(ebus::DataType::BCD, false, false);
+  testB1(ebus::DataType::UINT8, false, false);
+  testB1(ebus::DataType::INT8, false, false);
+  testB1(ebus::DataType::DATA1B, false, false);
+  testB1(ebus::DataType::DATA1C, false, false);
 
-  testB2(ebus::Datatype::UINT16, true, false);
-  testB2(ebus::Datatype::INT16, true, false);
-  testB2(ebus::Datatype::DATA2B, true, false);
-  testB2(ebus::Datatype::DATA2C, true, false);
-  testB2(ebus::Datatype::FLOAT, true, false);
+  testB2(ebus::DataType::UINT16, true, false);
+  testB2(ebus::DataType::INT16, true, false);
+  testB2(ebus::DataType::DATA2B, true, false);
+  testB2(ebus::DataType::DATA2C, true, false);
+  testB2(ebus::DataType::FLOAT, true, false);
 
-  testB4(ebus::Datatype::UINT32, true, false);
-  testB4(ebus::Datatype::INT32, true, false);
+  testB4(ebus::DataType::UINT32, true, false);
+  testB4(ebus::DataType::INT32, true, false);
 
   testSTRING();
 

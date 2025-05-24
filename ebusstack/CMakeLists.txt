@@ -1,5 +1,5 @@
-include_directories(${ebus_SOURCE_DIR}/src)
-link_directories(${ebus_SOURCE_DIR}/src)
+include_directories(${ebus_SOURCE_DIR}/src/Ebus)
+link_directories(${ebus_SOURCE_DIR}/src/Ebus)
 
 add_library(ebusstack EbusStack.cpp Device.cpp)
 

@@ -23,14 +23,14 @@
 #pragma once
 
 #include <cmath>
-#include <cstddef>
 #include <cstdint>
 #include <string>
 #include <vector>
 
 namespace ebus {
+
 // available data types
-enum class Datatype {
+enum class DataType {
   ERROR = -1,
   BCD,
   UINT8,
@@ -54,10 +54,11 @@ enum class Datatype {
   CHAR8
 };
 
-const char *datatype_2_string(const Datatype &datatype);
-const Datatype string_2_datatype(const char *str);
-const size_t sizeof_datatype(const Datatype &datatype);
-const bool typeof_datatype(const Datatype &datatype);
+const char *datatype_2_string(const DataType &datatype);
+DataType string_2_datatype(const char *str);
+
+size_t sizeof_datatype(const DataType &datatype);
+bool typeof_datatype(const DataType &datatype);
 
 // templates for byte / integer conversion
 template <typename T>

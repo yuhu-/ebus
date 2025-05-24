@@ -28,7 +28,7 @@
 #include <string>
 #include <vector>
 
-#include "Telegram.h"
+#include "Telegram.hpp"
 
 namespace ebus {
 
@@ -83,7 +83,12 @@ struct Counters {
   uint32_t requestsError = 0;
 };
 
-enum class State {
+constexpr uint8_t DEFAULT_ADDRESS = 0xff;
+
+constexpr uint8_t DEFAULT_LOCK_COUNTER = 3;
+constexpr uint8_t MAX_LOCK_COUNTER = 25;
+
+enum class FsmState {
   passiveReceiveMaster,
   passiveReceiveMasterAcknowledge,
   passiveReceiveSlave,
@@ -103,7 +108,7 @@ enum class State {
   releaseBus
 };
 
-static const char *stateString(State state) {
+static const char *getFsmStateText(FsmState state) {
   const char *values[] = {"passiveReceiveMaster",
                           "passiveReceiveMasterAcknowledge",
                           "passiveReceiveSlave",
@@ -124,22 +129,22 @@ static const char *stateString(State state) {
   return values[static_cast<int>(state)];
 }
 
-enum class Message { active, passive, reactive };
+enum class MessageType { undefined, active, passive, reactive };
 
 typedef std::function<void(const uint8_t byte)> OnWriteCallback;
 typedef std::function<int()> IsDataAvailableCallback;
 
-typedef std::function<void(const Message &message, const Type &type,
+typedef std::function<void(const MessageType &message, const TelegramType &type,
                            const std::vector<uint8_t> &master,
                            std::vector<uint8_t> *const slave)>
     OnTelegramCallback;
 
 typedef std::function<void(const std::string str)> OnErrorCallback;
 
-class EbusHandler {
+class Handler {
  public:
-  EbusHandler() = default;
-  explicit EbusHandler(const uint8_t source);
+  Handler() = default;
+  explicit Handler(const uint8_t source);
 
   void onWrite(ebus::OnWriteCallback callback);
   void isDataAvailable(ebus::IsDataAvailableCallback callback);
@@ -152,7 +157,7 @@ class EbusHandler {
 
   void setMaxLockCounter(const uint8_t counter);
 
-  State getState() const;
+  FsmState getState() const;
   bool isActive() const;
 
   void reset();
@@ -175,9 +180,9 @@ class EbusHandler {
   Counters counters;
 
   // control
-  State state = State::passiveReceiveMaster;
-  uint8_t maxLockCounter = 3;
-  uint8_t lockCounter = 0;
+  FsmState state = FsmState::passiveReceiveMaster;
+  uint8_t maxLockCounter = DEFAULT_LOCK_COUNTER;
+  uint8_t lockCounter = DEFAULT_LOCK_COUNTER;
 
   // passive
   Telegram passiveTelegram;
@@ -203,11 +208,26 @@ class EbusHandler {
   size_t activeSlaveDBx = 0;
   bool activeSlaveRepeated = false;
 
-  void receive(const uint8_t &byte);
-  void send();
+  void passiveReceiveMaster(const uint8_t &byte);
+  void passiveReceiveMasterAcknowledge(const uint8_t &byte);
+  void passiveReceiveSlave(const uint8_t &byte);
+  void passiveReceiveSlaveAcknowledge(const uint8_t &byte);
+  void reactiveSendMasterPositiveAcknowledge(const uint8_t &byte);
+  void reactiveSendMasterNegativeAcknowledge(const uint8_t &byte);
+  void reactiveSendSlave(const uint8_t &byte);
+  void reactiveReceiveSlaveAcknowledge(const uint8_t &byte);
+  void requestBusFirstTry(const uint8_t &byte);
+  void requestBusPriorityRetry(const uint8_t &byte);
+  void requestBusSecondTry(const uint8_t &byte);
+  void activeSendMaster(const uint8_t &byte);
+  void activeReceiveMasterAcknowledge(const uint8_t &byte);
+  void activeReceiveSlave(const uint8_t &byte);
+  void activeSendSlavePositiveAcknowledge(const uint8_t &byte);
+  void activeSendSlaveNegativeAcknowledge(const uint8_t &byte);
+  void releaseBus(const uint8_t &byte);
 
-  void onPassiveErrors();
-  void onActiveErrors();
+  void handlePassiveErrors();
+  void handleActiveErrors();
 
   void resetPassive();
   void resetActive();

@@ -17,7 +17,7 @@
  * along with ebus. If not, see http://www.gnu.org/licenses/.
  */
 
-#include "Datatypes.h"
+#include "Datatypes.hpp"
 
 #include <algorithm>
 #include <cstring>
@@ -25,29 +25,29 @@
 #include <sstream>
 #include <utility>
 
-std::map<ebus::Datatype, const char *> DatatypeName = {
-    {ebus::Datatype::ERROR, "ERROR"},   {ebus::Datatype::BCD, "BCD"},
-    {ebus::Datatype::UINT8, "UINT8"},   {ebus::Datatype::INT8, "INT8"},
-    {ebus::Datatype::UINT16, "UINT16"}, {ebus::Datatype::INT16, "INT16"},
-    {ebus::Datatype::UINT32, "UINT32"}, {ebus::Datatype::INT32, "INT32"},
-    {ebus::Datatype::DATA1B, "DATA1B"}, {ebus::Datatype::DATA1C, "DATA1C"},
-    {ebus::Datatype::DATA2B, "DATA2B"}, {ebus::Datatype::DATA2C, "DATA2C"},
-    {ebus::Datatype::FLOAT, "FLOAT"},   {ebus::Datatype::CHAR1, "CHAR1"},
-    {ebus::Datatype::CHAR2, "CHAR2"},   {ebus::Datatype::CHAR3, "CHAR3"},
-    {ebus::Datatype::CHAR4, "CHAR4"},   {ebus::Datatype::CHAR5, "CHAR5"},
-    {ebus::Datatype::CHAR6, "CHAR6"},   {ebus::Datatype::CHAR7, "CHAR7"},
-    {ebus::Datatype::CHAR8, "CHAR8"}};
+std::map<ebus::DataType, const char *> DatatypeName = {
+    {ebus::DataType::ERROR, "ERROR"},   {ebus::DataType::BCD, "BCD"},
+    {ebus::DataType::UINT8, "UINT8"},   {ebus::DataType::INT8, "INT8"},
+    {ebus::DataType::UINT16, "UINT16"}, {ebus::DataType::INT16, "INT16"},
+    {ebus::DataType::UINT32, "UINT32"}, {ebus::DataType::INT32, "INT32"},
+    {ebus::DataType::DATA1B, "DATA1B"}, {ebus::DataType::DATA1C, "DATA1C"},
+    {ebus::DataType::DATA2B, "DATA2B"}, {ebus::DataType::DATA2C, "DATA2C"},
+    {ebus::DataType::FLOAT, "FLOAT"},   {ebus::DataType::CHAR1, "CHAR1"},
+    {ebus::DataType::CHAR2, "CHAR2"},   {ebus::DataType::CHAR3, "CHAR3"},
+    {ebus::DataType::CHAR4, "CHAR4"},   {ebus::DataType::CHAR5, "CHAR5"},
+    {ebus::DataType::CHAR6, "CHAR6"},   {ebus::DataType::CHAR7, "CHAR7"},
+    {ebus::DataType::CHAR8, "CHAR8"}};
 
-const char *ebus::datatype_2_string(const ebus::Datatype &datatype) {
+const char *ebus::datatype_2_string(const ebus::DataType &datatype) {
   return DatatypeName[datatype];
 }
 
-const ebus::Datatype ebus::string_2_datatype(const char *str) {
-  Datatype datatype = Datatype::ERROR;
+ebus::DataType ebus::string_2_datatype(const char *str) {
+  DataType datatype = DataType::ERROR;
 
-  const std::map<ebus::Datatype, const char *>::const_iterator it =
+  const std::map<ebus::DataType, const char *>::const_iterator it =
       std::find_if(DatatypeName.begin(), DatatypeName.end(),
-                   [&str](const std::pair<Datatype, const char *> &item) {
+                   [&str](const std::pair<DataType, const char *> &item) {
                      return strcmp(str, item.second) == 0;
                    });
 
@@ -56,44 +56,44 @@ const ebus::Datatype ebus::string_2_datatype(const char *str) {
   return datatype;
 }
 
-const size_t ebus::sizeof_datatype(const ebus::Datatype &datatype) {
+size_t ebus::sizeof_datatype(const ebus::DataType &datatype) {
   size_t length = 0;
 
   switch (datatype) {
-    case ebus::Datatype::BCD:
-    case ebus::Datatype::UINT8:
-    case ebus::Datatype::INT8:
-    case ebus::Datatype::DATA1B:
-    case ebus::Datatype::DATA1C:
-    case ebus::Datatype::CHAR1:
+    case ebus::DataType::BCD:
+    case ebus::DataType::UINT8:
+    case ebus::DataType::INT8:
+    case ebus::DataType::DATA1B:
+    case ebus::DataType::DATA1C:
+    case ebus::DataType::CHAR1:
       length = 1;
       break;
-    case ebus::Datatype::UINT16:
-    case ebus::Datatype::INT16:
-    case ebus::Datatype::DATA2B:
-    case ebus::Datatype::DATA2C:
-    case ebus::Datatype::FLOAT:
-    case ebus::Datatype::CHAR2:
+    case ebus::DataType::UINT16:
+    case ebus::DataType::INT16:
+    case ebus::DataType::DATA2B:
+    case ebus::DataType::DATA2C:
+    case ebus::DataType::FLOAT:
+    case ebus::DataType::CHAR2:
       length = 2;
       break;
-    case ebus::Datatype::CHAR3:
+    case ebus::DataType::CHAR3:
       length = 3;
       break;
-    case ebus::Datatype::UINT32:
-    case ebus::Datatype::INT32:
-    case ebus::Datatype::CHAR4:
+    case ebus::DataType::UINT32:
+    case ebus::DataType::INT32:
+    case ebus::DataType::CHAR4:
       length = 4;
       break;
-    case ebus::Datatype::CHAR5:
+    case ebus::DataType::CHAR5:
       length = 5;
       break;
-    case ebus::Datatype::CHAR6:
+    case ebus::DataType::CHAR6:
       length = 6;
       break;
-    case ebus::Datatype::CHAR7:
+    case ebus::DataType::CHAR7:
       length = 7;
       break;
-    case ebus::Datatype::CHAR8:
+    case ebus::DataType::CHAR8:
       length = 8;
       break;
     default:
@@ -102,18 +102,18 @@ const size_t ebus::sizeof_datatype(const ebus::Datatype &datatype) {
   return length;
 }
 
-const bool ebus::typeof_datatype(const Datatype &datatype) {
+bool ebus::typeof_datatype(const DataType &datatype) {
   bool numeric = true;
 
   switch (datatype) {
-    case ebus::Datatype::CHAR1:
-    case ebus::Datatype::CHAR2:
-    case ebus::Datatype::CHAR3:
-    case ebus::Datatype::CHAR4:
-    case ebus::Datatype::CHAR5:
-    case ebus::Datatype::CHAR6:
-    case ebus::Datatype::CHAR7:
-    case ebus::Datatype::CHAR8:
+    case ebus::DataType::CHAR1:
+    case ebus::DataType::CHAR2:
+    case ebus::DataType::CHAR3:
+    case ebus::DataType::CHAR4:
+    case ebus::DataType::CHAR5:
+    case ebus::DataType::CHAR6:
+    case ebus::DataType::CHAR7:
+    case ebus::DataType::CHAR8:
       numeric = false;
       break;
     default:

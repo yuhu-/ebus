@@ -29,11 +29,11 @@
 #include <sstream>
 #include <thread>
 
+#include "Common.hpp"
 #include "Device.h"
 #include "NQueue.h"
 #include "Notify.h"
-#include "Sequence.h"
-#include "Telegram.h"
+#include "Telegram.hpp"
 #include "runtime_warning.h"
 
 #define EBUS_ERR_MASTER -1    // sending is only as master possible
@@ -87,7 +87,7 @@ struct Message : public Notify {
   int m_state = 0;
 };
 
-enum class State {
+enum class FsmState {
   IdleSystem,
   OpenDevice,
   MonitorBus,
@@ -190,18 +190,18 @@ class ebus::EbusStack::EbusImpl : private Notify {
 
   void run();
 
-  State idleSystem();
-  State openDevice();
-  State monitorBus();
-  State receiveMessage();
-  State processMessage();
-  State sendResponse();
-  State lockBus();
-  State sendMessage();
-  State receiveResponse();
-  State freeBus();
+  FsmState idleSystem();
+  FsmState openDevice();
+  FsmState monitorBus();
+  FsmState receiveMessage();
+  FsmState processMessage();
+  FsmState sendResponse();
+  FsmState lockBus();
+  FsmState sendMessage();
+  FsmState receiveResponse();
+  FsmState freeBus();
 
-  State handleDeviceError(bool error, const std::string &message);
+  FsmState handleDeviceError(bool error, const std::string &message);
 
   Reaction process(const std::vector<uint8_t> &message,
                    std::vector<uint8_t> &response);
@@ -294,7 +294,7 @@ ebus::EbusStack::EbusImpl::EbusImpl(const uint8_t address,
                                     const std::string &device)
     : Notify(),
       m_address(address),
-      m_slaveAddress(Telegram::slaveAddress(address)),
+      m_slaveAddress(slaveAddressOf(address)),
       m_device(std::make_unique<Device>(device)) {
   m_thread = std::thread(&EbusImpl::run, this);
 }
@@ -377,25 +377,25 @@ void ebus::EbusStack::EbusImpl::set_open_counter_max(
 
 const std::vector<uint8_t> ebus::EbusStack::EbusImpl::range(
     const std::vector<uint8_t> &seq, const size_t index, const size_t len) {
-  return Sequence::range(seq, index, len);
+  return ebus::range(seq, index, len);
 }
 
 const std::vector<uint8_t> ebus::EbusStack::EbusImpl::to_vector(
     const std::string &str) {
-  return ebus::Sequence::to_vector(str);
+  return ebus::to_vector(str);
 }
 
 const std::string ebus::EbusStack::EbusImpl::to_string(
     const std::vector<uint8_t> &vec) {
-  return ebus::Sequence::to_string(vec);
+  return ebus::to_string(vec);
 }
 
 int ebus::EbusStack::EbusImpl::transmit(Telegram &tel) {
-  int result = SEQ_OK;
+  int result = 0;
 
-  if (tel.getMasterState() != SEQ_OK) {
+  if (tel.getMasterState() != SequenceState::seq_ok) {
     result = EBUS_ERR_SEQUENCE;
-  } else if (!Telegram::isMaster(m_address)) {
+  } else if (!isMaster(m_address)) {
     result = EBUS_ERR_MASTER;
   } else if (!online()) {
     result = EBUS_ERR_OFFLINE;
@@ -465,39 +465,39 @@ void ebus::EbusStack::EbusImpl::reset() {
 void ebus::EbusStack::EbusImpl::run() {
   logInfo("Ebus started");
 
-  State state = State::OpenDevice;
+  FsmState state = FsmState::OpenDevice;
 
   while (m_running) {
     try {
       switch (state) {
-        case State::IdleSystem:
+        case FsmState::IdleSystem:
           state = idleSystem();
           break;
-        case State::OpenDevice:
+        case FsmState::OpenDevice:
           state = openDevice();
           break;
-        case State::MonitorBus:
+        case FsmState::MonitorBus:
           state = monitorBus();
           break;
-        case State::ReceiveMessage:
+        case FsmState::ReceiveMessage:
           state = receiveMessage();
           break;
-        case State::ProcessMessage:
+        case FsmState::ProcessMessage:
           state = processMessage();
           break;
-        case State::SendResponse:
+        case FsmState::SendResponse:
           state = sendResponse();
           break;
-        case State::LockBus:
+        case FsmState::LockBus:
           state = lockBus();
           break;
-        case State::SendMessage:
+        case FsmState::SendMessage:
           state = sendMessage();
           break;
-        case State::ReceiveResponse:
+        case FsmState::ReceiveResponse:
           state = receiveResponse();
           break;
-        case State::FreeBus:
+        case FsmState::FreeBus:
           state = freeBus();
           break;
         default:
@@ -509,13 +509,13 @@ void ebus::EbusStack::EbusImpl::run() {
       state = handleDeviceError(true, ex.what());
     }
 
-    if (m_close) state = State::IdleSystem;
+    if (m_close) state = FsmState::IdleSystem;
   }
 
   logInfo("Ebus stopped");
 }
 
-ebus::State ebus::EbusStack::EbusImpl::idleSystem() {
+ebus::FsmState ebus::EbusStack::EbusImpl::idleSystem() {
   logDebug("idleSystem");
 
   if (m_device->isOpen()) {
@@ -534,10 +534,10 @@ ebus::State ebus::EbusStack::EbusImpl::idleSystem() {
 
   wait();
 
-  return State::OpenDevice;
+  return FsmState::OpenDevice;
 }
 
-ebus::State ebus::EbusStack::EbusImpl::openDevice() {
+ebus::FsmState ebus::EbusStack::EbusImpl::openDevice() {
   logDebug("openDevice");
 
   uint8_t byte = sym_zero;
@@ -549,10 +549,10 @@ ebus::State ebus::EbusStack::EbusImpl::openDevice() {
       logWarn(error_open_fail);
 
       m_open_counter++;
-      if (m_open_counter > m_open_counter_max) return (State::IdleSystem);
+      if (m_open_counter > m_open_counter_max) return (FsmState::IdleSystem);
 
       sleep(1);
-      return State::OpenDevice;
+      return FsmState::OpenDevice;
     }
   }
 
@@ -568,10 +568,10 @@ ebus::State ebus::EbusStack::EbusImpl::openDevice() {
 
   logInfo(info_dev_flush);
 
-  return State::MonitorBus;
+  return FsmState::MonitorBus;
 }
 
-ebus::State ebus::EbusStack::EbusImpl::monitorBus() {
+ebus::FsmState ebus::EbusStack::EbusImpl::monitorBus() {
   logDebug("monitorBus");
 
   uint8_t byte = sym_zero;
@@ -606,7 +606,7 @@ ebus::State ebus::EbusStack::EbusImpl::monitorBus() {
 
     // handle Message
     if (m_activeMessage != nullptr && m_lock_counter == 0)
-      return State::LockBus;
+      return FsmState::LockBus;
   } else {
     m_sequence.push_back(byte);
 
@@ -614,13 +614,13 @@ ebus::State ebus::EbusStack::EbusImpl::monitorBus() {
     if (m_sequence.size() == 2 &&
         (m_sequence[1] == sym_broad || m_sequence[1] == m_address ||
          m_sequence[1] == m_slaveAddress))
-      return State::ReceiveMessage;
+      return FsmState::ReceiveMessage;
   }
 
-  return State::MonitorBus;
+  return FsmState::MonitorBus;
 }
 
-ebus::State ebus::EbusStack::EbusImpl::receiveMessage() {
+ebus::FsmState ebus::EbusStack::EbusImpl::receiveMessage() {
   logDebug("receiveMessage");
 
   uint8_t byte;
@@ -641,7 +641,7 @@ ebus::State ebus::EbusStack::EbusImpl::receiveMessage() {
 
     reset();
 
-    return State::MonitorBus;
+    return FsmState::MonitorBus;
   }
 
   // bytes to receive
@@ -655,7 +655,7 @@ ebus::State ebus::EbusStack::EbusImpl::receiveMessage() {
 
     m_sequence.push_back(byte);
 
-    if (byte == sym_exp) bytes++;
+    if (byte == sym_ext) bytes++;
   }
 
   // 1 for CRC
@@ -667,7 +667,7 @@ ebus::State ebus::EbusStack::EbusImpl::receiveMessage() {
 
     m_sequence.push_back(byte);
 
-    if (byte == sym_exp) bytes++;
+    if (byte == sym_ext) bytes++;
   }
 
   logDebug(m_sequence.to_string());
@@ -676,7 +676,7 @@ ebus::State ebus::EbusStack::EbusImpl::receiveMessage() {
   tel.createMaster(m_sequence);
 
   if (m_sequence[1] != sym_broad) {
-    if (tel.getMasterState() == SEQ_OK) {
+    if (tel.getMasterState() == SequenceState::seq_ok) {
       byte = sym_ack;
     } else {
       byte = sym_nak;
@@ -689,21 +689,21 @@ ebus::State ebus::EbusStack::EbusImpl::receiveMessage() {
     tel.setSlaveACK(byte);
   }
 
-  if (tel.getMasterState() == SEQ_OK) {
-    if (tel.getType() != Type::masterSlave) {
+  if (tel.getMasterState() == SequenceState::seq_ok) {
+    if (tel.getType() != TelegramType::master_slave) {
       logInfo(tel.to_string());
       publish(tel.getMaster().to_vector(), tel.getSlave().to_vector());
     }
 
-    return State::ProcessMessage;
+    return FsmState::ProcessMessage;
   }
 
   m_sequence.clear();
 
-  return State::MonitorBus;
+  return FsmState::MonitorBus;
 }
 
-ebus::State ebus::EbusStack::EbusImpl::processMessage() {
+ebus::FsmState ebus::EbusStack::EbusImpl::processMessage() {
   logDebug("processMessage");
 
   Telegram tel;
@@ -724,14 +724,14 @@ ebus::State ebus::EbusStack::EbusImpl::processMessage() {
       logInfo(info_msg_ignore);
       break;
     case Reaction::response:
-      if (tel.getType() == Type::masterSlave) {
+      if (tel.getType() == TelegramType::master_slave) {
         tel.createSlave(response);
 
-        if (tel.getSlaveState() == SEQ_OK) {
+        if (tel.getSlaveState() == SequenceState::seq_ok) {
           logInfo("response: " + tel.toStringSlave());
           m_passiveMessage = std::make_shared<Message>(tel);
 
-          return State::SendResponse;
+          return FsmState::SendResponse;
         } else {
           logWarn(error_resp_crea);
         }
@@ -746,10 +746,10 @@ ebus::State ebus::EbusStack::EbusImpl::processMessage() {
 
   m_sequence.clear();
 
-  return State::MonitorBus;
+  return FsmState::MonitorBus;
 }
 
-ebus::State ebus::EbusStack::EbusImpl::sendResponse() {
+ebus::FsmState ebus::EbusStack::EbusImpl::sendResponse() {
   logDebug("sendResponse");
 
   Telegram &tel = m_passiveMessage->m_telegram;
@@ -790,10 +790,10 @@ ebus::State ebus::EbusStack::EbusImpl::sendResponse() {
 
   reset();
 
-  return State::MonitorBus;
+  return FsmState::MonitorBus;
 }
 
-ebus::State ebus::EbusStack::EbusImpl::lockBus() {
+ebus::FsmState ebus::EbusStack::EbusImpl::lockBus() {
   logDebug("lockBus");
 
   Telegram &tel = m_activeMessage->m_telegram;
@@ -819,15 +819,15 @@ ebus::State ebus::EbusStack::EbusImpl::lockBus() {
       logDebug(warn_pri_fit);
     }
 
-    return State::MonitorBus;
+    return FsmState::MonitorBus;
   }
 
   logDebug(info_ebus_lock);
 
-  return State::SendMessage;
+  return FsmState::SendMessage;
 }
 
-ebus::State ebus::EbusStack::EbusImpl::sendMessage() {
+ebus::FsmState ebus::EbusStack::EbusImpl::sendMessage() {
   logDebug("sendMessage");
 
   Telegram &tel = m_activeMessage->m_telegram;
@@ -843,9 +843,9 @@ ebus::State ebus::EbusStack::EbusImpl::sendMessage() {
     write_read(tel.getMasterCRC(), 0, 0);
 
     // Broadcast ends here
-    if (tel.getType() == Type::broadcast) {
+    if (tel.getType() == TelegramType::broadcast) {
       logInfo(tel.to_string() + " transmitted");
-      return State::FreeBus;
+      return FsmState::FreeBus;
     }
 
     uint8_t byte;
@@ -859,14 +859,14 @@ ebus::State ebus::EbusStack::EbusImpl::sendMessage() {
       logWarn(error_ack_wrong);
       m_activeMessage->m_state = EBUS_ERR_TRANSMIT;
 
-      return State::FreeBus;
+      return FsmState::FreeBus;
     } else if (byte == sym_ack) {
       // Master Master ends here
-      if (tel.getType() == Type::masterMaster) {
+      if (tel.getType() == TelegramType::master_master) {
         logInfo(tel.to_string() + " transmitted");
-        return State::FreeBus;
+        return FsmState::FreeBus;
       } else {
-        return State::ReceiveResponse;
+        return FsmState::ReceiveResponse;
       }
     } else {
       if (retry == 1) {
@@ -878,10 +878,10 @@ ebus::State ebus::EbusStack::EbusImpl::sendMessage() {
     }
   }
 
-  return State::FreeBus;
+  return FsmState::FreeBus;
 }
 
-ebus::State ebus::EbusStack::EbusImpl::receiveResponse() {
+ebus::FsmState ebus::EbusStack::EbusImpl::receiveResponse() {
   logDebug("receiveResponse");
 
   Telegram &tel = m_activeMessage->m_telegram;
@@ -899,7 +899,7 @@ ebus::State ebus::EbusStack::EbusImpl::receiveResponse() {
 
       reset();
 
-      return State::MonitorBus;
+      return FsmState::MonitorBus;
     }
 
     seq.push_back(byte);
@@ -912,13 +912,13 @@ ebus::State ebus::EbusStack::EbusImpl::receiveResponse() {
 
       seq.push_back(byte);
 
-      if (byte == sym_exp) bytes++;
+      if (byte == sym_ext) bytes++;
     }
     // TODO check CRC of sequence
     // create slave data
     tel.createSlave(seq);
 
-    if (tel.getSlaveState() == SEQ_OK)
+    if (tel.getSlaveState() == SequenceState::seq_ok)
       byte = sym_ack;
     else
       byte = sym_nak;
@@ -928,7 +928,7 @@ ebus::State ebus::EbusStack::EbusImpl::receiveResponse() {
 
     tel.setMasterACK(byte);
 
-    if (tel.getSlaveState() == SEQ_OK) {
+    if (tel.getSlaveState() == SequenceState::seq_ok) {
       logInfo(tel.to_string() + " transmitted");
       break;
     }
@@ -942,10 +942,10 @@ ebus::State ebus::EbusStack::EbusImpl::receiveResponse() {
     }
   }
 
-  return State::FreeBus;
+  return FsmState::FreeBus;
 }
 
-ebus::State ebus::EbusStack::EbusImpl::freeBus() {
+ebus::FsmState ebus::EbusStack::EbusImpl::freeBus() {
   logDebug("freeBus");
 
   uint8_t byte = sym_syn;
@@ -956,10 +956,10 @@ ebus::State ebus::EbusStack::EbusImpl::freeBus() {
 
   reset();
 
-  return State::MonitorBus;
+  return FsmState::MonitorBus;
 }
 
-ebus::State ebus::EbusStack::EbusImpl::handleDeviceError(
+ebus::FsmState ebus::EbusStack::EbusImpl::handleDeviceError(
     bool error, const std::string &message) {
   if (m_activeMessage != nullptr) m_activeMessage->m_state = EBUS_ERR_DEVICE;
 
@@ -972,11 +972,11 @@ ebus::State ebus::EbusStack::EbusImpl::handleDeviceError(
 
     if (!m_device->isOpen()) logInfo(info_dev_close);
 
-    return State::OpenDevice;
+    return FsmState::OpenDevice;
   }
 
   logWarn(message);
-  return State::MonitorBus;
+  return FsmState::MonitorBus;
 }
 
 ebus::Reaction ebus::EbusStack::EbusImpl::process(

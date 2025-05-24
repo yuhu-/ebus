@@ -29,23 +29,23 @@
 
 class logger : public ebus::ILogger {
  public:
-  void error(const std::string &message) {
+  void error(const std::string &message) override {
     std::cout << "ERROR:   " << message << std::endl;
   }
 
-  void warn(const std::string &message) {
+  void warn(const std::string &message) override {
     std::cout << "WARN:    " << message << std::endl;
   }
 
-  void info(const std::string &message) {
+  void info(const std::string &message) override {
     std::cout << "INFO:    " << message << std::endl;
   }
 
-  void debug(const std::string &message) {
+  void debug(const std::string &message) override {
     // std::cout << "DEBUG:   " << message << std::endl;
   }
 
-  void trace(const std::string &message) {
+  void trace(const std::string &message) override {
     // std::cout << "TRACE:   " << message << std::endl;
   }
 };

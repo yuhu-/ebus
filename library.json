@@ -12,10 +12,9 @@
     "email": "roland.jax@liwest.at",
     "maintainer": true
   },
-  "license": "GPL-3.0",
-  "frameworks": "arduino",
-  "platforms": [
-    "espressif8266",
-    "espressif32"
-  ]
+    "export": {
+    "include": ["src", "LICENSE"]
+  },
+  "frameworks": "*",
+  "platforms": "*"
 }

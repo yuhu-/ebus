@@ -21,59 +21,58 @@
 #include <iostream>
 #include <string>
 
-#include "Sequence.h"
-#include "Telegram.h"
+#include "Sequence.hpp"
+#include "Telegram.hpp"
 
 int main() {
   ebus::Sequence seq;
 
   // parse sequence
-  seq.assign(ebus::Sequence::to_vector("ff12b509030d0000d700037702006100"));
+  seq.assign(ebus::to_vector("ff12b509030d0000d700037702006100"));
 
   ebus::Telegram parse(seq);
 
   std::cout << "    seq: " << seq.to_string() << std::endl;
   std::cout << "  range: " << parse.to_string() << " slave(1,2) = '"
-            << ebus::Sequence::to_string(parse.getSlave().range(1, 2)) << "'"
-            << std::endl
+            << ebus::to_string(parse.getSlave().range(1, 2)) << "'" << std::endl
             << std::endl;
 
   // parse sequence
-  seq.assign(ebus::Sequence::to_vector("ff0ab509030d0e00830002e0028900"));
+  seq.assign(ebus::to_vector("ff0ab509030d0e00830002e0028900"));
 
   ebus::Telegram parse2(seq);
 
   std::cout << "    seq: " << seq.to_string() << std::endl;
   std::cout << "  range: " << parse2.to_string() << " slave(1,2) = '"
-            << ebus::Sequence::to_string(parse2.getSlave().range(1, 2)) << "'"
+            << ebus::to_string(parse2.getSlave().range(1, 2)) << "'"
             << std::endl
             << std::endl;
 
   // create telegram
   ebus::Telegram tel;
-  tel.createMaster(uint8_t(0xff), ebus::Sequence::to_vector("52b509030d0600"));
+  tel.createMaster(uint8_t(0xff), ebus::to_vector("52b509030d0600"));
   std::cout << "    seq: ff52b509030d0600" << std::endl;
   std::cout << " master: " << tel.toStringMaster() << std::endl << std::endl;
 
-  seq.assign(ebus::Sequence::to_vector("ff52b509030d060043"));
+  seq.assign(ebus::to_vector("ff52b509030d060043"));
 
   tel.createMaster(seq);
   std::cout << "    seq: " << seq.to_string() << std::endl;
   std::cout << " master: " << tel.toStringMaster() << std::endl << std::endl;
 
   // create slave
-  tel.createSlave(ebus::Sequence::to_vector("03b0fbaa"));
+  tel.createSlave(ebus::to_vector("03b0fbaa"));
   std::cout << "    seq: 03b0fbaa" << std::endl;
   std::cout << "  slave: " << tel.toStringSlave() << std::endl << std::endl;
 
-  seq.assign(ebus::Sequence::to_vector("03b0fba901d0"));
+  seq.assign(ebus::to_vector("03b0fba901d0"));
 
   tel.createSlave(seq);
   std::cout << "    seq: " << seq.to_string() << std::endl;
   std::cout << "  slave: " << tel.toStringSlave() << std::endl << std::endl;
 
   // Normal
-  seq.assign(ebus::Sequence::to_vector("ff52b509030d0600430003b0fba901d000"));
+  seq.assign(ebus::to_vector("ff52b509030d0600430003b0fba901d000"));
 
   ebus::Telegram full(seq);
 
@@ -82,7 +81,7 @@ int main() {
             << std::endl;
 
   // NAK from slave
-  seq.assign(ebus::Sequence::to_vector(
+  seq.assign(ebus::to_vector(
       "ff52b509030d060043ffff52b509030d0600430003b0fba901d000"));
 
   ebus::Telegram full2(seq);
@@ -93,8 +92,7 @@ int main() {
             << std::endl;
 
   // twice NAK from slave
-  seq.assign(
-      ebus::Sequence::to_vector("ff52b509030d060043ffff52b509030d060043ff"));
+  seq.assign(ebus::to_vector("ff52b509030d060043ffff52b509030d060043ff"));
 
   ebus::Telegram full22(seq);
 
@@ -104,8 +102,8 @@ int main() {
             << std::endl;
 
   // NAK from master
-  seq.assign(ebus::Sequence::to_vector(
-      "ff52b509030d0600430003b0fba901d0ff03b0fba901d000"));
+  seq.assign(
+      ebus::to_vector("ff52b509030d0600430003b0fba901d0ff03b0fba901d000"));
 
   ebus::Telegram full3(seq);
 
@@ -115,7 +113,7 @@ int main() {
             << std::endl;
 
   // NAK from slave and master
-  seq.assign(ebus::Sequence::to_vector(
+  seq.assign(ebus::to_vector(
       "ff52b509030d060043ffff52b509030d0600430003b0fba901d0ff03b0fba901d000"));
 
   ebus::Telegram full4(seq);
@@ -126,7 +124,7 @@ int main() {
             << std::endl;
 
   // twice NAK from slave and master
-  seq.assign(ebus::Sequence::to_vector(
+  seq.assign(ebus::to_vector(
       "ff52b509030d060043ffff52b509030d0600430003b0fba901d0ff03b0fba901d0ff"));
 
   ebus::Telegram full44(seq);
@@ -137,7 +135,7 @@ int main() {
             << std::endl;
 
   // defect sequence
-  seq.assign(ebus::Sequence::to_vector("107fc2b5100900024000000000000215"));
+  seq.assign(ebus::to_vector("107fc2b5100900024000000000000215"));
 
   ebus::Telegram full5(seq);
 
@@ -145,7 +143,7 @@ int main() {
   std::cout << "  full5: " << full5.to_string() << std::endl << std::endl;
 
   // missing acknowledge byte
-  seq.assign(ebus::Sequence::to_vector(
+  seq.assign(ebus::to_vector(
       "1008b51101028aff1008b51101028a0003b0fba901d0ff0003b0fba901d0"));
 
   ebus::Telegram full6(seq);
@@ -154,12 +152,12 @@ int main() {
   std::cout << "  full6: " << full6.to_string() << std::endl << std::endl;
 
   // extend
-  seq.assign(ebus::Sequence::to_vector("08b509030da900"), false);
+  seq.assign(ebus::to_vector("08b509030da900"), false);
 
   ebus::Telegram ext1;
   ext1.createMaster(uint8_t(0xff), seq.to_vector());
 
-  if (ext1.getMasterState() == SEQ_OK) {
+  if (ext1.getMasterState() == ebus::SequenceState::seq_ok) {
     ebus::Sequence master = ext1.getMaster();
     master.push_back(ext1.getMasterCRC(), false);
     master.extend();
@@ -168,12 +166,12 @@ int main() {
     std::cout << " master: " << master.to_string() << std::endl << std::endl;
   }
 
-  seq.assign(ebus::Sequence::to_vector("08b509030daa00"), false);
+  seq.assign(ebus::to_vector("08b509030daa00"), false);
 
   ebus::Telegram ext2;
   ext2.createMaster(uint8_t(0xff), seq.to_vector());
 
-  if (ext2.getMasterState() == SEQ_OK) {
+  if (ext2.getMasterState() == ebus::SequenceState::seq_ok) {
     ebus::Sequence master = ext2.getMaster();
     master.push_back(ext2.getMasterCRC(), false);
     master.extend();

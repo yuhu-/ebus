@@ -26,18 +26,11 @@
 
 #pragma once
 
-#include <cstddef>
 #include <cstdint>
 #include <string>
 #include <vector>
 
 namespace ebus {
-
-static const uint8_t sym_zero = 0x00;    // zero byte
-static const uint8_t sym_syn = 0xaa;     // synchronization byte
-static const uint8_t sym_exp = 0xa9;     // extend byte
-static const uint8_t sym_synexp = 0x01;  // extended synchronization byte
-static const uint8_t sym_expexp = 0x00;  // extended extend byte
 
 class Sequence {
  public:
@@ -63,25 +56,10 @@ class Sequence {
   const std::string to_string() const;
   const std::vector<uint8_t> &to_vector() const;
 
-  static const std::vector<uint8_t> range(const std::vector<uint8_t> &vec,
-                                          const size_t &index,
-                                          const size_t &len);
-
-  static const std::vector<uint8_t> to_vector(const std::string &str);
-
-  static const std::string to_string(const std::vector<uint8_t> &vec);
-
-  static const std::string to_string(const uint8_t &byte);
-
-  static bool contains(const std::vector<uint8_t> &vec,
-                       const std::vector<uint8_t> &search);
-
  private:
   std::vector<uint8_t> m_seq;
 
   bool m_extended = false;
-
-  static uint8_t calc_crc(const uint8_t byte, const uint8_t init);
 };
 
 }  // namespace ebus

@@ -22,43 +22,40 @@
 #include <iostream>
 #include <string>
 
-#include "Sequence.h"
-#include "Telegram.h"
+#include "Sequence.hpp"
+#include "Telegram.hpp"
 
 void printSequence(const std::string &strSequence) {
   ebus::Sequence sequence;
-  sequence.assign(ebus::Sequence::to_vector(strSequence));
+  sequence.assign(ebus::to_vector(strSequence));
 
   std::cout << "sequence: " << sequence.to_string() << std::endl;
-  std::cout << "     crc: " << ebus::Sequence::to_string(sequence.crc())
-            << std::endl
+  std::cout << "     crc: " << ebus::to_string(sequence.crc()) << std::endl
             << std::endl;
 }
 
 void printMasterSlave(const std::string &strMaster,
                       const std::string &strSlave) {
   ebus::Sequence master;
-  master.assign(ebus::Sequence::to_vector(strMaster));
+  master.assign(ebus::to_vector(strMaster));
 
   ebus::Sequence slave;
-  slave.assign(ebus::Sequence::to_vector(strSlave));
+  slave.assign(ebus::to_vector(strSlave));
 
   ebus::Telegram tel;
   tel.createMaster(master);
   tel.createSlave(slave);
 
   std::cout << "  master: " << tel.toStringMaster() << std::endl;
-  std::cout << "     crc: " << ebus::Sequence::to_string(tel.getMasterCRC())
-            << std::endl;
+  std::cout << "     crc: " << ebus::to_string(tel.getMasterCRC()) << std::endl;
   std::cout << "   slave: " << tel.toStringSlave() << std::endl;
-  std::cout << "     crc: " << ebus::Sequence::to_string(tel.getSlaveCRC())
-            << std::endl
+  std::cout << "     crc: " << ebus::to_string(tel.getSlaveCRC()) << std::endl
             << std::endl;
 }
 
 void createTelegram(const std::string &strSequence) {
   ebus::Sequence sequence;
-  sequence.assign(ebus::Sequence::to_vector(strSequence));
+  sequence.assign(ebus::to_vector(strSequence));
 
   ebus::Telegram tel(sequence);
 

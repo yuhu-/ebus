@@ -39,18 +39,18 @@
 #include <iostream>
 #include <sstream>
 
-#include "Datatypes.h"
-#include "Telegram.h"
+#include "Datatypes.hpp"
+#include "Telegram.hpp"
 
-#define RESET "\033[0m"
-#define BOLD "\033[1m"
+constexpr auto RESET = "\033[0m";
+constexpr auto BOLD = "\033[1m";
 
-#define RED "\033[31m"
-#define GREEN "\033[32m"
-#define YELLOW "\033[33m"
-#define BLUE "\033[34m"
-#define MAGENTA "\033[35m"
-#define CYAN "\033[36m"
+constexpr auto RED = "\033[31m";
+constexpr auto GREEN = "\033[32m";
+constexpr auto YELLOW = "\033[33m";
+constexpr auto BLUE = "\033[34m";
+constexpr auto MAGENTA = "\033[35m";
+constexpr auto CYAN = "\033[36m";
 
 bool bold = false;
 bool color = false;
@@ -89,30 +89,30 @@ std::string services(const std::vector<uint8_t> &master,
   std::ostringstream ostr;
   if (master[2] == 0x07 && master[3] == 0x00) {
     ostr << "0700: 20";
-    ostr << ebus::Sequence::to_string(master[13]);
+    ostr << ebus::to_string(master[13]);
     ostr << "-";
-    ostr << ebus::Sequence::to_string(master[11]);
+    ostr << ebus::to_string(master[11]);
     ostr << "-";
-    ostr << ebus::Sequence::to_string(master[10]);
+    ostr << ebus::to_string(master[10]);
     ostr << " ";
-    ostr << ebus::Sequence::to_string(master[9]);
+    ostr << ebus::to_string(master[9]);
     ostr << ":";
-    ostr << ebus::Sequence::to_string(master[8]);
+    ostr << ebus::to_string(master[8]);
     ostr << ":";
-    ostr << ebus::Sequence::to_string(master[7]);
+    ostr << ebus::to_string(master[7]);
     ostr << " - ";
-    ostr << ebus::byte_2_data2b(ebus::Sequence::range(master, 5, 2));
+    ostr << ebus::byte_2_data2b(ebus::range(master, 5, 2));
     ostr << " °C";
   } else if (master[2] == 0x07 && master[3] == 0x04) {
-    ostr << "0704: " + ebus::Sequence::to_string(master[1]);
+    ostr << "0704: " + ebus::to_string(master[1]);
     ostr << " MF=";
-    ostr << ebus::Sequence::to_string(ebus::Sequence::range(slave, 1, 1));
+    ostr << ebus::to_string(ebus::range(slave, 1, 1));
     ostr << " ID=";
-    ostr << ebus::byte_2_string(ebus::Sequence::range(slave, 2, 5));
+    ostr << ebus::byte_2_string(ebus::range(slave, 2, 5));
     ostr << " SW=";
-    ostr << ebus::Sequence::to_string(ebus::Sequence::range(slave, 7, 2));
+    ostr << ebus::to_string(ebus::range(slave, 7, 2));
     ostr << " HW=";
-    ostr << ebus::Sequence::to_string(ebus::Sequence::range(slave, 9, 2));
+    ostr << ebus::to_string(ebus::range(slave, 9, 2));
   }
   return ostr.str();
 }
@@ -121,7 +121,7 @@ std::string collect(const uint8_t &byte) {
   static ebus::Sequence sequence;
   std::string result = "";
 
-  if (raw) std::cout << ebus::Sequence::to_string(byte) << std::endl;
+  if (raw) std::cout << ebus::to_string(byte) << std::endl;
 
   if (byte == ebus::sym_syn) {
     static bool running = false;
@@ -136,9 +136,9 @@ std::string collect(const uint8_t &byte) {
         }
         if (type) {
           if (color) ostr << CYAN;
-          if (tel.getType() == ebus::Type::masterSlave)
+          if (tel.getType() == ebus::TelegramType::master_slave)
             ostr << "MS";
-          else if (tel.getType() == ebus::Type::masterMaster)
+          else if (tel.getType() == ebus::TelegramType::master_master)
             ostr << "MM";
           else
             ostr << "BC";
@@ -146,49 +146,49 @@ std::string collect(const uint8_t &byte) {
           ostr << " ";
         }
         if (color) ostr << GREEN;
-        ostr << ebus::Sequence::to_string(tel.getSourceAddress());
-        ostr << ebus::Sequence::to_string(tel.getTargetAddress());
+        ostr << ebus::to_string(tel.getSourceAddress());
+        ostr << ebus::to_string(tel.getTargetAddress());
         if (color) ostr << RESET;
         if (split) ostr << " ";
         if (color) ostr << BLUE;
-        ostr << ebus::Sequence::to_string(tel.getPrimaryCommand());
-        ostr << ebus::Sequence::to_string(tel.getSecondaryCommand());
+        ostr << ebus::to_string(tel.getPrimaryCommand());
+        ostr << ebus::to_string(tel.getSecondaryCommand());
         if (color) ostr << RESET;
         if (split) ostr << " ";
         if (color) ostr << YELLOW;
-        ostr << ebus::Sequence::to_string(tel.getMasterNumberBytes());
+        ostr << ebus::to_string(tel.getMasterNumberBytes());
         if (color) ostr << RESET;
         if (tel.getMasterNumberBytes() > 0) {
           if (split) ostr << " ";
 
           if (bold) ostr << BOLD;
-          ostr << ebus::Sequence::to_string(tel.getMasterDataBytes());
+          ostr << ebus::to_string(tel.getMasterDataBytes());
           if (bold) ostr << RESET;
         }
         if (split) ostr << " ";
         if (color) ostr << MAGENTA;
-        ostr << ebus::Sequence::to_string(tel.getMasterCRC());
+        ostr << ebus::to_string(tel.getMasterCRC());
         if (color) ostr << RESET;
-        if (tel.getType() != ebus::Type::broadcast) {
+        if (tel.getType() != ebus::TelegramType::broadcast) {
           if (split) ostr << " ";
-          ostr << ebus::Sequence::to_string(tel.getSlaveACK());
-          if (tel.getType() == ebus::Type::masterSlave) {
+          ostr << ebus::to_string(tel.getSlaveACK());
+          if (tel.getType() == ebus::TelegramType::master_slave) {
             if (split) ostr << " ";
             if (color) ostr << YELLOW;
-            ostr << ebus::Sequence::to_string(tel.getSlaveNumberBytes());
+            ostr << ebus::to_string(tel.getSlaveNumberBytes());
             if (color) ostr << RESET;
             if (tel.getSlaveNumberBytes() > 0) {
               if (split) ostr << " ";
               if (bold) ostr << BOLD;
-              ostr << ebus::Sequence::to_string(tel.getSlaveDataBytes());
+              ostr << ebus::to_string(tel.getSlaveDataBytes());
               if (bold) ostr << RESET;
             }
             if (split) ostr << " ";
             if (color) ostr << MAGENTA;
-            ostr << ebus::Sequence::to_string(tel.getSlaveCRC());
+            ostr << ebus::to_string(tel.getSlaveCRC());
             if (color) ostr << RESET;
             if (split) ostr << " ";
-            ostr << ebus::Sequence::to_string(tel.getMasterACK());
+            ostr << ebus::to_string(tel.getMasterACK());
           }
         }
         if (parse) {
