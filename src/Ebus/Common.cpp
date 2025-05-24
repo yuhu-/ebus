@@ -21,7 +21,6 @@
 
 #include <algorithm>
 #include <iomanip>
-#include <map>
 #include <sstream>
 
 bool ebus::isMaster(const uint8_t &byte) {

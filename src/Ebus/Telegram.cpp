@@ -19,7 +19,6 @@
 
 #include "Telegram.hpp"
 
-#include <map>
 #include <sstream>
 
 ebus::TelegramType ebus::typeOf(const uint8_t byte) {
