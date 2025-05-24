@@ -428,6 +428,8 @@ void ebus::Handler::reactiveSendSlave(const uint8_t &byte) {
   passiveSlaveIndex++;
   if (passiveSlaveIndex >= passiveSlave.size())
     state = FsmState::reactiveReceiveSlaveAcknowledge;
+  else
+    onWriteCallback(passiveSlave[passiveSlaveIndex]);
 }
 
 void ebus::Handler::reactiveReceiveSlaveAcknowledge(const uint8_t &byte) {
@@ -514,6 +516,8 @@ void ebus::Handler::activeSendMaster(const uint8_t &byte) {
     } else {
       state = FsmState::activeReceiveMasterAcknowledge;
     }
+  } else {
+    onWriteCallback(activeMaster[activeMasterIndex]);
   }
 }
 
