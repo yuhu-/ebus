@@ -12,9 +12,7 @@
     "email": "roland.jax@liwest.at",
     "maintainer": true
   },
-    "export": {
-    "include": ["src", "LICENSE"]
-  },
+  "license": "GPL-3.0",
   "frameworks": "*",
   "platforms": "*"
 }
