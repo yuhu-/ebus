@@ -45,10 +45,18 @@ bool ebus::isTarget(const uint8_t &byte) {
   return byte != sym_syn && byte != sym_ext;
 }
 
-uint8_t ebus::slaveOf(const uint8_t &byte) {
-  if (isSlave(byte)) return (byte);
+uint8_t ebus::masterOf(const uint8_t &byte) {
+  if (isMaster(uint8_t(byte - 5)))
+    return uint8_t(byte - 5);
+  else
+    return byte;
+}
 
-  return uint8_t(byte + 5);
+uint8_t ebus::slaveOf(const uint8_t &byte) {
+  if (isMaster(byte))
+    return uint8_t(byte + 5);
+  else
+    return byte;
 }
 
 const std::string ebus::to_string(const uint8_t &byte) {

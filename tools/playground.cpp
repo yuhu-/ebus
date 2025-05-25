@@ -22,6 +22,7 @@
 #include <iostream>
 #include <string>
 
+#include "Datatypes.hpp"
 #include "Sequence.hpp"
 #include "Telegram.hpp"
 
@@ -74,6 +75,25 @@ int main() {
   printMasterSlave("0004070400", "0ab5504d53303001074302");
 
   createTelegram("1008b5110203001e000a0e028709b104032c00007e00");
+
+  for (int b0 = 0x00; b0 <= 0xff; b0++) {
+    std::vector<uint8_t> src(1, uint8_t(b0));
+    std::cout << "i: 0x" << ebus::to_string(b0);
+
+    if (ebus::isTarget(b0)) std::cout << " isTarget";
+
+    if (ebus::isMaster(b0)) std::cout << " isMaster";
+
+    if (ebus::isSlave(b0)) std::cout << " isSlave";
+
+    if (b0 != ebus::slaveOf(b0))
+      std::cout << " ==> slaveOf  = 0x" << ebus::to_string(ebus::slaveOf(b0));
+
+    if (b0 != ebus::masterOf(b0))
+      std::cout << "  ==> masterOf = 0x" << ebus::to_string(ebus::masterOf(b0));
+
+    std::cout << std::endl;
+  }
 
   return EXIT_SUCCESS;
 }

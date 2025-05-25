@@ -45,6 +45,8 @@ bool isMaster(const uint8_t &byte);
 bool isSlave(const uint8_t &byte);
 
 bool isTarget(const uint8_t &byte);
+
+uint8_t masterOf(const uint8_t &byte);
 uint8_t slaveOf(const uint8_t &byte);
 
 const std::string to_string(const uint8_t &byte);
