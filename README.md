@@ -16,8 +16,8 @@ On the bus, a message is sent or received as a sequence of characters.
 
 - The purpose of the **Sequence** (low-level) class is to replace or insert special characters and calculate the CRC byte. 
 - The **Telegram** (high-level) class can analyze, generate and evaluate a sequence according to the eBUS specification.
-- The **EbusHandler** has routines for sending and receiving all types of telegrams and the option of collecting
-statistical data about the eBUS system. To perform this task, the EbusHandler requires a serial bus device.
+- The **Handler** has routines for sending and receiving all types of telegrams and the option of collecting
+statistical data about the eBUS system. To perform this task, the Handler requires a serial bus device.
 - **Datatypes** offers functions for decoding/encoding of in accordance with the eBUS data types.
 
 ### Tools
