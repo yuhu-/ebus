@@ -216,7 +216,7 @@ void ebus::Telegram::createMaster(Sequence &seq) {
   }
 
   // target address is invalid
-  if (!isAddressValid(seq[1])) {
+  if (!isTarget(seq[1])) {
     m_masterState = SequenceState::err_target_address;
     return;
   }
@@ -437,7 +437,7 @@ ebus::SequenceState ebus::Telegram::checkMasterSequence(const Sequence &seq) {
   if (!isMaster(seq[0])) return SequenceState::err_source_address;
 
   // target address is invalid
-  if (!isAddressValid(seq[1])) return SequenceState::err_target_address;
+  if (!isTarget(seq[1])) return SequenceState::err_target_address;
 
   // data byte is invalid
   if (uint8_t(seq[4]) > max_bytes) return SequenceState::err_data_byte;

@@ -44,7 +44,7 @@ constexpr uint8_t max_bytes = 0x10;  // 16 maximum data bytes
 bool isMaster(const uint8_t &byte);
 bool isSlave(const uint8_t &byte);
 
-bool isAddressValid(const uint8_t &byte);
+bool isTarget(const uint8_t &byte);
 uint8_t slaveAddressOf(const uint8_t &byte);
 
 const std::string to_string(const uint8_t &byte);

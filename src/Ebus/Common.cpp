@@ -34,11 +34,14 @@ bool ebus::isMaster(const uint8_t &byte) {
           (lo == uint8_t(0x3)) || (lo == uint8_t(0x7)) || (lo == uint8_t(0xf)));
 }
 
+// except all master, 0xaa, 0xa9, 0xfe
 bool ebus::isSlave(const uint8_t &byte) {
-  return !isMaster(byte) && byte != sym_syn && byte != sym_ext;
+  return !isMaster(byte) && byte != sym_syn && byte != sym_ext &&
+         byte != sym_broad;
 }
 
-bool ebus::isAddressValid(const uint8_t &byte) {
+// except 0xaa, 0xa9
+bool ebus::isTarget(const uint8_t &byte) {
   return byte != sym_syn && byte != sym_ext;
 }
 
