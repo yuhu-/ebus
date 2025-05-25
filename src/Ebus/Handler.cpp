@@ -48,7 +48,7 @@ void ebus::Handler::onError(ebus::OnErrorCallback callback) {
 
 void ebus::Handler::setAddress(const uint8_t source) {
   address = ebus::isMaster(source) ? source : DEFAULT_ADDRESS;
-  slaveAddress = slaveAddressOf(address);
+  slaveAddress = slaveOf(address);
 }
 
 uint8_t ebus::Handler::getAddress() const { return address; }

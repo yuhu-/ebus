@@ -294,7 +294,7 @@ ebus::EbusStack::EbusImpl::EbusImpl(const uint8_t address,
                                     const std::string &device)
     : Notify(),
       m_address(address),
-      m_slaveAddress(slaveAddressOf(address)),
+      m_slaveAddress(slaveOf(address)),
       m_device(std::make_unique<Device>(device)) {
   m_thread = std::thread(&EbusImpl::run, this);
 }

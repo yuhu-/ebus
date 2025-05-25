@@ -45,7 +45,7 @@ bool ebus::isTarget(const uint8_t &byte) {
   return byte != sym_syn && byte != sym_ext;
 }
 
-uint8_t ebus::slaveAddressOf(const uint8_t &byte) {
+uint8_t ebus::slaveOf(const uint8_t &byte) {
   if (isSlave(byte)) return (byte);
 
   return uint8_t(byte + 5);
