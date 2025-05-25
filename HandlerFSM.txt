@@ -17,7 +17,7 @@
  * along with ebus. If not, see http://www.gnu.org/licenses/.
  */
 
-This file describes the finite state machine (FSM) of the EbusHandler.
+This file describes the finite state machine (FSM) of the Handler.
 
 passiveReceiveMaster <-------------------------------------------------------------------------|
 |                                                                                              |
