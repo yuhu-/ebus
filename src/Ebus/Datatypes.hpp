@@ -51,9 +51,7 @@ enum class DataType {
   CHAR5,
   CHAR6,
   CHAR7,
-  CHAR8,
-  CHAR9,
-  CHAR10
+  CHAR8
 };
 
 const char *datatype_2_string(const DataType &datatype);

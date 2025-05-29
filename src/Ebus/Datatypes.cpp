@@ -36,8 +36,7 @@ std::map<ebus::DataType, const char *> DatatypeName = {
     {ebus::DataType::CHAR2, "CHAR2"},   {ebus::DataType::CHAR3, "CHAR3"},
     {ebus::DataType::CHAR4, "CHAR4"},   {ebus::DataType::CHAR5, "CHAR5"},
     {ebus::DataType::CHAR6, "CHAR6"},   {ebus::DataType::CHAR7, "CHAR7"},
-    {ebus::DataType::CHAR8, "CHAR8"},   {ebus::DataType::CHAR9, "CHAR9"},
-    {ebus::DataType::CHAR10, "CHAR10"}};
+    {ebus::DataType::CHAR8, "CHAR8"}};
 
 const char *ebus::datatype_2_string(const ebus::DataType &datatype) {
   return DatatypeName[datatype];
@@ -97,12 +96,6 @@ size_t ebus::sizeof_datatype(const ebus::DataType &datatype) {
     case ebus::DataType::CHAR8:
       length = 8;
       break;
-    case ebus::DataType::CHAR9:
-      length = 9;
-      break;
-    case ebus::DataType::CHAR10:
-      length = 10;
-      break;
     default:
       break;
   }
@@ -121,8 +114,6 @@ bool ebus::typeof_datatype(const DataType &datatype) {
     case ebus::DataType::CHAR6:
     case ebus::DataType::CHAR7:
     case ebus::DataType::CHAR8:
-    case ebus::DataType::CHAR9:
-    case ebus::DataType::CHAR10:
       numeric = false;
       break;
     default:
