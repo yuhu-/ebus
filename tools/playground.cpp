@@ -69,13 +69,7 @@ void createTelegram(const std::string &strSequence) {
   std::cout << ostr.str() << std::endl;
 }
 
-int main() {
-  printSequence("ff52b509030d0600");
-
-  printMasterSlave("0004070400", "0ab5504d53303001074302");
-
-  createTelegram("1008b5110203001e000a0e028709b104032c00007e00");
-
+void checkTargetMasterSlave() {
   for (int b0 = 0x00; b0 <= 0xff; b0++) {
     std::vector<uint8_t> src(1, uint8_t(b0));
     std::cout << "i: 0x" << ebus::to_string(b0);
@@ -94,6 +88,20 @@ int main() {
 
     std::cout << std::endl;
   }
+}
+
+int main() {
+  printSequence("ff52b509030d0600");
+
+  printMasterSlave("0004070400", "0ab5504d53303001074302");
+
+  createTelegram("1008b5110203001e000a0e028709b104032c00007e00");
+
+  // checkTargetMasterSlave();
+
+  printSequence("3010b504020d00");
+
+  printSequence("01feb5050427002d00");
 
   return EXIT_SUCCESS;
 }

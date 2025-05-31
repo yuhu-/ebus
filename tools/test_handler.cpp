@@ -41,17 +41,13 @@
 
 bool printBytes = false;
 
-// declaration
-const char *getState();
+ebus::Handler ebusHandler(0x33);
 
-// definition
-const std::string to_string(const uint8_t &byte) {
-  return ebus::to_string(std::vector<uint8_t>(1, byte));
-}
+const char *getState() { return ebus::getFsmStateText(ebusHandler.getState()); }
 
 void printByte(const std::string &prefix, const uint8_t &byte,
                const std::string &postfix) {
-  std::cout << prefix << to_string(byte) << " " << postfix << std::endl;
+  std::cout << prefix << ebus::to_string(byte) << " " << postfix << std::endl;
 }
 
 void readFunction(const uint8_t &byte) {
@@ -113,8 +109,6 @@ void onTelegramCallback(const ebus::MessageType &message,
 void onErrorCallback(const std::string &str) {
   std::cout << "   error: " << str << std::endl;
 }
-
-ebus::Handler ebusHandler(0x33);
 
 void printCounters() {
   ebus::Counters counter = ebusHandler.getCounters();
@@ -193,8 +187,6 @@ void printCounters() {
   std::cout << "requestsError: " << counter.requestsError << std::endl;
 }
 
-const char *getState() { return ebus::getFsmStateText(ebusHandler.getState()); }
-
 void simulate(const std::string &test, const std::string &title,
               const bool &bytes, const std::string &message,
               const std::string &sequence) {
@@ -203,12 +195,13 @@ void simulate(const std::string &test, const std::string &title,
   seq.assign(ebus::to_vector(sequence));
 
   std::cout << "    test: " << test
-            << " - address: " << to_string(ebusHandler.getAddress()) << " / "
-            << to_string(ebusHandler.getSlaveAddress()) << std::endl;
+            << " - address: " << ebus::to_string(ebusHandler.getAddress())
+            << " / " << ebus::to_string(ebusHandler.getSlaveAddress())
+            << std::endl;
   std::cout << "   title: " << RED << title << RESET << std::endl;
   if (message.size() > 0) {
-    std::cout << " message: " << to_string(ebusHandler.getAddress()) << message
-              << std::endl;
+    std::cout << " message: " << ebus::to_string(ebusHandler.getAddress())
+              << message << std::endl;
 
     ebusHandler.enque(ebus::to_vector(message));
     ebusHandler.setMaxLockCounter(3);
@@ -238,8 +231,10 @@ void simulate(const std::string &test, const std::string &title,
   std::cout << std::endl;
 }
 
-void passiveTest_01(const bool &bytes, const std::string &title) {
+void passiveTest_01(const uint8_t &address, const bool &bytes,
+                    const std::string &title) {
   assert(title == "MS: Normal");
+  ebusHandler.setAddress(address);
   simulate(__FUNCTION__, title, bytes, "",
            "aaaaaa"
            "ff52b509030d060043"
@@ -249,8 +244,10 @@ void passiveTest_01(const bool &bytes, const std::string &title) {
            "aaaaaa");
 }
 
-void passiveTest_02(const bool &bytes, const std::string &title) {
+void passiveTest_02(const uint8_t &address, const bool &bytes,
+                    const std::string &title) {
   assert(title == "MS: Master defect/NAK");
+  ebusHandler.setAddress(address);
   simulate(__FUNCTION__, title, bytes, "",
            "aaaaaa"
            "ff52b509030d060044"  // defect
@@ -262,8 +259,10 @@ void passiveTest_02(const bool &bytes, const std::string &title) {
            "aaaaaa");
 }
 
-void passiveTest_03(const bool &bytes, const std::string &title) {
+void passiveTest_03(const uint8_t &address, const bool &bytes,
+                    const std::string &title) {
   assert(title == "MS: Master NAK/repeat");
+  ebusHandler.setAddress(address);
   simulate(__FUNCTION__, title, bytes, "",
            "aaaaaa"
            "ff52b509030d060043"
@@ -275,8 +274,10 @@ void passiveTest_03(const bool &bytes, const std::string &title) {
            "aaaaaa");
 }
 
-void passiveTest_04(const bool &bytes, const std::string &title) {
+void passiveTest_04(const uint8_t &address, const bool &bytes,
+                    const std::string &title) {
   assert(title == "MS: Master NAK/repeat/NAK");
+  ebusHandler.setAddress(address);
   simulate(__FUNCTION__, title, bytes, "",
            "aaaaaa"
            "ff52b509030d060043"
@@ -286,8 +287,10 @@ void passiveTest_04(const bool &bytes, const std::string &title) {
            "aaaaaa");
 }
 
-void passiveTest_05(const bool &bytes, const std::string &title) {
+void passiveTest_05(const uint8_t &address, const bool &bytes,
+                    const std::string &title) {
   assert(title == "MS: Slave defect/NAK/repeat");
+  ebusHandler.setAddress(address);
   simulate(__FUNCTION__, title, bytes, "",
            "aaaaaa"
            "ff52b509030d060043"
@@ -299,8 +302,10 @@ void passiveTest_05(const bool &bytes, const std::string &title) {
            "aaaaaa");
 }
 
-void passiveTest_06(const bool &bytes, const std::string &title) {
+void passiveTest_06(const uint8_t &address, const bool &bytes,
+                    const std::string &title) {
   assert(title == "MS: Slave NAK/repeat/NAK");
+  ebusHandler.setAddress(address);
   simulate(__FUNCTION__, title, bytes, "",
            "aaaaaa"
            "ff52b509030d060043"
@@ -312,8 +317,10 @@ void passiveTest_06(const bool &bytes, const std::string &title) {
            "aaaaaa");
 }
 
-void passiveTest_07(const bool &bytes, const std::string &title) {
+void passiveTest_07(const uint8_t &address, const bool &bytes,
+                    const std::string &title) {
   assert(title == "MS: Master NAK/repeat - Slave NAK/repeat");
+  ebusHandler.setAddress(address);
   simulate(__FUNCTION__, title, bytes, "",
            "aaaaaa"
            "ff52b509030d060043"
@@ -327,8 +334,10 @@ void passiveTest_07(const bool &bytes, const std::string &title) {
            "aaaaaa");
 }
 
-void passiveTest_08(const bool &bytes, const std::string &title) {
+void passiveTest_08(const uint8_t &address, const bool &bytes,
+                    const std::string &title) {
   assert(title == "MS: Master NAK/repeat/ACK - Slave NAK/repeat/NAK");
+  ebusHandler.setAddress(address);
   simulate(__FUNCTION__, title, bytes, "",
            "aaaaaa"
            "ff52b509030d060043"
@@ -342,16 +351,20 @@ void passiveTest_08(const bool &bytes, const std::string &title) {
            "aaaaaa");
 }
 
-void passiveTest_09(const bool &bytes, const std::string &title) {
+void passiveTest_09(const uint8_t &address, const bool &bytes,
+                    const std::string &title) {
   assert(title == "MM: Normal");
+  ebusHandler.setAddress(address);
   simulate(__FUNCTION__, title, bytes, "",
            "aaaaaa"
            "1000b5050427002400d900"
            "aaaaaa");
 }
 
-void passiveTest_10(const bool &bytes, const std::string &title) {
+void passiveTest_10(const uint8_t &address, const bool &bytes,
+                    const std::string &title) {
   assert(title == "BC: defect");
+  ebusHandler.setAddress(address);
   simulate(__FUNCTION__, title, bytes, "",
            "aaaaaa"
            "00"
@@ -360,24 +373,42 @@ void passiveTest_10(const bool &bytes, const std::string &title) {
            "aaaaaa");
 }
 
-void passiveTest_11(const bool &bytes, const std::string &title) {
+void passiveTest_11(const uint8_t &address, const bool &bytes,
+                    const std::string &title) {
   assert(title == "00: reset");
+  ebusHandler.setAddress(address);
   simulate(__FUNCTION__, title, bytes, "",
            "aaaaaa"
            "00"
            "aaaaaa");
 }
 
-void passiveTest_12(const bool &bytes, const std::string &title) {
+void passiveTest_12(const uint8_t &address, const bool &bytes,
+                    const std::string &title) {
   assert(title == "0704: scan");
+  ebusHandler.setAddress(address);
   simulate(__FUNCTION__, title, bytes, "",
            "aaaaaa"
            "002e0704004e"  // scan
            "aaaaaa");
 }
 
-void reactiveTest_01(const bool &bytes, const std::string &title) {
+void passiveTest_13(const uint8_t &address, const bool &bytes,
+                    const std::string &title) {
+  assert(title == "BC: normal");
+  ebusHandler.setAddress(address);
+  simulate(__FUNCTION__, title, bytes, "",
+           "aaaaaa"
+           "10"
+           "fe"  // broadcast
+           "07000970160443183105052592"
+           "aaaaaa");
+}
+
+void reactiveTest_01(const uint8_t &address, const bool &bytes,
+                     const std::string &title) {
   assert(title == "MS: Slave NAK/ACK");
+  ebusHandler.setAddress(address);
   simulate(__FUNCTION__, title, bytes, "",
            "aaaaaa"
            "00"
@@ -388,8 +419,10 @@ void reactiveTest_01(const bool &bytes, const std::string &title) {
            "aaaaaa");
 }
 
-void reactiveTest_02(const bool &bytes, const std::string &title) {
+void reactiveTest_02(const uint8_t &address, const bool &bytes,
+                     const std::string &title) {
   assert(title == "MS: Slave NAK/NAK");
+  ebusHandler.setAddress(address);
   simulate(__FUNCTION__, title, bytes, "",
            "aaaaaa"
            "00"
@@ -400,8 +433,10 @@ void reactiveTest_02(const bool &bytes, const std::string &title) {
            "aaaaaa");
 }
 
-void reactiveTest_03(const bool &bytes, const std::string &title) {
+void reactiveTest_03(const uint8_t &address, const bool &bytes,
+                     const std::string &title) {
   assert(title == "MS: Master defect/correct");
+  ebusHandler.setAddress(address);
   simulate(__FUNCTION__, title, bytes, "",
            "aaaaaa"
            "00"
@@ -414,8 +449,10 @@ void reactiveTest_03(const bool &bytes, const std::string &title) {
            "aaaaaa");
 }
 
-void reactiveTest_04(const bool &bytes, const std::string &title) {
+void reactiveTest_04(const uint8_t &address, const bool &bytes,
+                     const std::string &title) {
   assert(title == "MS: Master defect/defect");
+  ebusHandler.setAddress(address);
   simulate(__FUNCTION__, title, bytes, "",
            "aaaaaa"
            "00"
@@ -427,8 +464,10 @@ void reactiveTest_04(const bool &bytes, const std::string &title) {
            "aaaaaa");
 }
 
-void reactiveTest_05(const bool &bytes, const std::string &title) {
+void reactiveTest_05(const uint8_t &address, const bool &bytes,
+                     const std::string &title) {
   assert(title == "MS: Slave defect (reactiveCallback)");
+  ebusHandler.setAddress(address);
   simulate(__FUNCTION__, title, bytes, "",
            "aaaaaa"
            "00"
@@ -437,8 +476,10 @@ void reactiveTest_05(const bool &bytes, const std::string &title) {
            "aaaaaa");
 }
 
-void reactiveTest_06(const bool &bytes, const std::string &title) {
+void reactiveTest_06(const uint8_t &address, const bool &bytes,
+                     const std::string &title) {
   assert(title == "MM: Normal");
+  ebusHandler.setAddress(address);
   simulate(__FUNCTION__, title, bytes, "",
            "aaaaaa"
            "00"
@@ -447,8 +488,10 @@ void reactiveTest_06(const bool &bytes, const std::string &title) {
            "aaaaaa");
 }
 
-void reactiveTest_07(const bool &bytes, const std::string &title) {
+void reactiveTest_07(const uint8_t &address, const bool &bytes,
+                     const std::string &title) {
   assert(title == "BC: Normal");
+  ebusHandler.setAddress(address);
   simulate(__FUNCTION__, title, bytes, "",
            "aaaaaa"
            "00"
@@ -457,25 +500,31 @@ void reactiveTest_07(const bool &bytes, const std::string &title) {
            "aaaaaa");
 }
 
-void activeTest_01(const bool &bytes, const std::string &title) {
+void activeTest_01(const uint8_t &address, const bool &bytes,
+                   const std::string &title) {
   assert(title == "BC: Request Bus - Normal");
+  ebusHandler.setAddress(address);
   simulate(__FUNCTION__, title, bytes, "feb5050427002d00",
            "aaaaaa"
            "33"  // own Address == Arbitration won
            "aaaaaa");
 }
 
-void activeTest_02(const bool &bytes, const std::string &title) {
+void activeTest_02(const uint8_t &address, const bool &bytes,
+                   const std::string &title) {
   assert(title == "BC: Request Bus - Priority lost");
-
+  ebusHandler.setAddress(address);
   simulate(__FUNCTION__, title, bytes, "feb5050427002d00",
            "aaaaaa"
            "01"  // other Address == Priority lost
+           "feb5050427002d007b"
            "aaaaaa");
 }
 
-void activeTest_03(const bool &bytes, const std::string &title) {
+void activeTest_03(const uint8_t &address, const bool &bytes,
+                   const std::string &title) {
   assert(title == "BC: Request Bus - Priority lost/wrong byte");
+  ebusHandler.setAddress(address);
   simulate(__FUNCTION__, title, bytes, "feb5050427002d00",
            "aaaaaa"
            "01"  // other Address == Priority lost
@@ -483,28 +532,34 @@ void activeTest_03(const bool &bytes, const std::string &title) {
            "aaaaaa");
 }
 
-void activeTest_04(const bool &bytes, const std::string &title) {
+void activeTest_04(const uint8_t &address, const bool &bytes,
+                   const std::string &title) {
   assert(title == "BC: Request Bus - Priority fit/won");
+  ebusHandler.setAddress(address);
   simulate(__FUNCTION__, title, bytes, "feb5050427002d00",
            "aaaaaa"
-           "73"  // own Address == Priority retry
+           "83"  // own Address == Priority retry
            "aa"
            "33"  // own Address == Arbitration won
            "aaaaaa");
 }
 
-void activeTest_05(const bool &bytes, const std::string &title) {
+void activeTest_05(const uint8_t &address, const bool &bytes,
+                   const std::string &title) {
   assert(title == "BC: Request Bus - Priority fit/lost");
+  ebusHandler.setAddress(address);
   simulate(__FUNCTION__, title, bytes, "feb5050427002d00",
            "aaaaaa"
-           "73"  // own Address == Priority retry
+           "83"  // own Address == Priority retry
            "aa"
            "13"  // other Address == Arbitration lost
            "aaaaaa");
 }
 
-void activeTest_06(const bool &bytes, const std::string &title) {
+void activeTest_06(const uint8_t &address, const bool &bytes,
+                   const std::string &title) {
   assert(title == "BC: Request Bus - Priority retry/error");
+  ebusHandler.setAddress(address);
   simulate(__FUNCTION__, title, bytes, "feb5050427002d00",
            "aaaaaa"
            "73"  // own Address == Priority retry
@@ -512,8 +567,10 @@ void activeTest_06(const bool &bytes, const std::string &title) {
            "aaaaaa");
 }
 
-void activeTest_07(const bool &bytes, const std::string &title) {
+void activeTest_07(const uint8_t &address, const bool &bytes,
+                   const std::string &title) {
   assert(title == "MS: Normal");
+  ebusHandler.setAddress(address);
   simulate(__FUNCTION__, title, bytes, "52b509030d4600",
            "aaaaaa"
            "33"  // own master address == Arbitration won
@@ -522,8 +579,10 @@ void activeTest_07(const bool &bytes, const std::string &title) {
            "aaaaaa");
 }
 
-void activeTest_08(const bool &bytes, const std::string &title) {
+void activeTest_08(const uint8_t &address, const bool &bytes,
+                   const std::string &title) {
   assert(title == "MS: Master NAK/ACK - Slave CRC wrong/correct");
+  ebusHandler.setAddress(address);
   simulate(__FUNCTION__, title, bytes, "52b509030d4600",
            "aaaaaa"
            "33"      // own master address == Arbitration won
@@ -534,8 +593,10 @@ void activeTest_08(const bool &bytes, const std::string &title) {
            "aaaaaa");
 }
 
-void activeTest_09(const bool &bytes, const std::string &title) {
+void activeTest_09(const uint8_t &address, const bool &bytes,
+                   const std::string &title) {
   assert(title == "MS: Master NAK/ACK - Slave CRC wrong/wrong");
+  ebusHandler.setAddress(address);
   simulate(__FUNCTION__, title, bytes, "52b509030d4600",
            "aaaaaa"
            "33"      // own master address == Arbitration won
@@ -545,8 +606,10 @@ void activeTest_09(const bool &bytes, const std::string &title) {
            "aaaaaa");
 }
 
-void activeTest_10(const bool &bytes, const std::string &title) {
+void activeTest_10(const uint8_t &address, const bool &bytes,
+                   const std::string &title) {
   assert(title == "MS: Master NAK/NAK");
+  ebusHandler.setAddress(address);
   simulate(__FUNCTION__, title, bytes, "52b509030d4600",
            "aaaaaa"
            "33"  // own master address == Arbitration won
@@ -555,13 +618,26 @@ void activeTest_10(const bool &bytes, const std::string &title) {
            "aaaaaa");
 }
 
-void activeTest_11(const bool &bytes, const std::string &title) {
+void activeTest_11(const uint8_t &address, const bool &bytes,
+                   const std::string &title) {
   assert(title == "MM: Master NAK/ACK");
+  ebusHandler.setAddress(address);
   simulate(__FUNCTION__, title, bytes, "10b57900",
            "aaaaaa"
            "33"  // own Address == Arbitration won
            "ff"  // Master NAK
            "00"  // Master ACK
+           "aaaaaa");
+}
+
+void activeTest_12(const uint8_t &address, const bool &bytes,
+                   const std::string &title) {
+  assert(title == "BC: Request Bus - Priority lost and Sub lost");
+  ebusHandler.setAddress(address);
+  simulate(__FUNCTION__, title, bytes, "feb5050427002d00",
+           "aaaaaa"
+           "10"                        // other Address == Priority lost
+           "52b50401314b000200002c00"  //
            "aaaaaa");
 }
 
@@ -571,38 +647,41 @@ int main() {
   ebusHandler.onTelegram(onTelegramCallback);
   ebusHandler.onError(onErrorCallback);
 
-  passiveTest_01(false, "MS: Normal");
-  passiveTest_02(false, "MS: Master defect/NAK");
-  passiveTest_03(false, "MS: Master NAK/repeat");
-  passiveTest_04(false, "MS: Master NAK/repeat/NAK");
-  passiveTest_05(false, "MS: Slave defect/NAK/repeat");
-  passiveTest_06(false, "MS: Slave NAK/repeat/NAK");
-  passiveTest_07(false, "MS: Master NAK/repeat - Slave NAK/repeat");
-  passiveTest_08(false, "MS: Master NAK/repeat/ACK - Slave NAK/repeat/NAK");
-  passiveTest_09(false, "MM: Normal");
-  passiveTest_10(false, "BC: defect");
-  passiveTest_11(false, "00: reset");
-  passiveTest_12(false, "0704: scan");
+  passiveTest_01(0x33, true, "MS: Normal");
+  passiveTest_02(0x33, true, "MS: Master defect/NAK");
+  passiveTest_03(0x33, true, "MS: Master NAK/repeat");
+  passiveTest_04(0x33, true, "MS: Master NAK/repeat/NAK");
+  passiveTest_05(0x33, true, "MS: Slave defect/NAK/repeat");
+  passiveTest_06(0x33, true, "MS: Slave NAK/repeat/NAK");
+  passiveTest_07(0x33, true, "MS: Master NAK/repeat - Slave NAK/repeat");
+  passiveTest_08(0x33, true,
+                 "MS: Master NAK/repeat/ACK - Slave NAK/repeat/NAK");
+  passiveTest_09(0x33, true, "MM: Normal");
+  passiveTest_10(0x33, true, "BC: defect");
+  passiveTest_11(0x33, true, "00: reset");
+  passiveTest_12(0x33, true, "0704: scan");
+  passiveTest_13(0x33, true, "BC: normal");
 
-  reactiveTest_01(false, "MS: Slave NAK/ACK");
-  reactiveTest_02(false, "MS: Slave NAK/NAK");
-  reactiveTest_03(false, "MS: Master defect/correct");
-  reactiveTest_04(false, "MS: Master defect/defect");
-  reactiveTest_05(false, "MS: Slave defect (reactiveCallback)");
-  reactiveTest_06(false, "MM: Normal");
-  reactiveTest_07(false, "BC: Normal");
+  reactiveTest_01(0x33, true, "MS: Slave NAK/ACK");
+  reactiveTest_02(0x33, true, "MS: Slave NAK/NAK");
+  reactiveTest_03(0x33, true, "MS: Master defect/correct");
+  reactiveTest_04(0x33, true, "MS: Master defect/defect");
+  reactiveTest_05(0x33, true, "MS: Slave defect (reactiveCallback)");
+  reactiveTest_06(0x33, true, "MM: Normal");
+  reactiveTest_07(0x33, true, "BC: Normal");
 
-  activeTest_01(false, "BC: Request Bus - Normal");
-  activeTest_02(false, "BC: Request Bus - Priority lost");
-  activeTest_03(false, "BC: Request Bus - Priority lost/wrong byte");
-  activeTest_04(false, "BC: Request Bus - Priority fit/won");
-  activeTest_05(false, "BC: Request Bus - Priority fit/lost");
-  activeTest_06(false, "BC: Request Bus - Priority retry/error");
-  activeTest_07(false, "MS: Normal");
-  activeTest_08(false, "MS: Master NAK/ACK - Slave CRC wrong/correct");
-  activeTest_09(false, "MS: Master NAK/ACK - Slave CRC wrong/wrong");
-  activeTest_10(false, "MS: Master NAK/NAK");
-  activeTest_11(false, "MM: Master NAK/ACK");
+  activeTest_01(0x33, true, "BC: Request Bus - Normal");
+  activeTest_02(0x33, true, "BC: Request Bus - Priority lost");
+  activeTest_03(0x33, true, "BC: Request Bus - Priority lost/wrong byte");
+  activeTest_04(0x33, true, "BC: Request Bus - Priority fit/won");
+  activeTest_05(0x33, true, "BC: Request Bus - Priority fit/lost");
+  activeTest_06(0x33, true, "BC: Request Bus - Priority retry/error");
+  activeTest_07(0x33, true, "MS: Normal");
+  activeTest_08(0x33, true, "MS: Master NAK/ACK - Slave CRC wrong/correct");
+  activeTest_09(0x33, true, "MS: Master NAK/ACK - Slave CRC wrong/wrong");
+  activeTest_10(0x33, true, "MS: Master NAK/NAK");
+  activeTest_11(0x33, true, "MM: Master NAK/ACK");
+  activeTest_12(0x30, true, "BC: Request Bus - Priority lost and Sub lost");
 
   printCounters();
 

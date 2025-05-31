@@ -292,7 +292,7 @@ void ebus::Handler::passiveReceiveMaster(const uint8_t &byte) {
             state = FsmState::reactiveSendMasterPositiveAcknowledge;
           } else {
             counters.errorsReactiveSlave++;
-            handlePassiveErrors();
+            handlePassiveErrors(FsmState::passiveReceiveMaster);
             onWriteCallback(sym_syn);
             state = FsmState::releaseBus;
           }
@@ -312,15 +312,18 @@ void ebus::Handler::passiveReceiveMaster(const uint8_t &byte) {
           state = FsmState::passiveReceiveMasterAcknowledge;
         } else {
           counters.errorsPassiveMaster++;
-          handlePassiveErrors();
+          handlePassiveErrors(FsmState::passiveReceiveMaster);
         }
       }
     }
   } else {
-    if (passiveMaster.size() != 1 && lockCounter > 0) lockCounter--;
+    if (passiveMaster.size() == 1 && lockCounter == 0)
+      lockCounter = 1;
+    else if (passiveMaster.size() != 1 && lockCounter > 0)
+      lockCounter--;
 
-    handlePassiveErrors();
-    handleActiveErrors();
+    handlePassiveErrors(FsmState::passiveReceiveMaster);
+    handleActiveErrors(FsmState::passiveReceiveMaster);
 
     int available = 0;
     if (isDataAvailableCallback != nullptr)
@@ -359,7 +362,7 @@ void ebus::Handler::passiveReceiveMasterAcknowledge(const uint8_t &byte) {
     state = FsmState::passiveReceiveMaster;
   } else {
     counters.errorsPassiveMasterACK++;
-    handlePassiveErrors();
+    handlePassiveErrors(FsmState::passiveReceiveMasterAcknowledge);
     state = FsmState::passiveReceiveMaster;
   }
 }
@@ -399,7 +402,7 @@ void ebus::Handler::passiveReceiveSlaveAcknowledge(const uint8_t &byte) {
     state = FsmState::passiveReceiveSlave;
   } else {
     counters.errorsPassiveSlaveACK++;
-    handlePassiveErrors();
+    handlePassiveErrors(FsmState::passiveReceiveSlaveAcknowledge);
     state = FsmState::passiveReceiveMaster;
   }
 }
@@ -420,7 +423,7 @@ void ebus::Handler::reactiveSendMasterNegativeAcknowledge(const uint8_t &byte) {
     passiveMasterRepeated = true;
   } else {
     counters.errorsReactiveMasterACK++;
-    handlePassiveErrors();
+    handlePassiveErrors(FsmState::reactiveSendMasterNegativeAcknowledge);
   }
 }
 
@@ -441,7 +444,7 @@ void ebus::Handler::reactiveReceiveSlaveAcknowledge(const uint8_t &byte) {
   } else {
     if (byte == sym_nak) {
       counters.errorsReactiveSlaveACK++;
-      handlePassiveErrors();
+      handlePassiveErrors(FsmState::reactiveReceiveSlaveAcknowledge);
     } else {
       resetPassive();
     }
@@ -450,22 +453,24 @@ void ebus::Handler::reactiveReceiveSlaveAcknowledge(const uint8_t &byte) {
 }
 
 void ebus::Handler::requestBusFirstTry(const uint8_t &byte) {
-  if (byte != address) {
-    if ((byte & 0x0f) == (address & 0x0f)) {
-      state = FsmState::requestBusPriorityRetry;
+  if (byte != sym_syn) {
+    if (byte != address) {
+      if (!isMaster(byte) && (byte & 0x0f) == (address & 0x0f)) {
+        state = FsmState::requestBusPriorityRetry;
+      } else {
+        counters.requestsLost++;
+        passiveMaster.push_back(byte);
+        active = false;
+        activeTelegram.clear();
+        activeMaster.clear();
+        state = FsmState::passiveReceiveMaster;
+      }
     } else {
-      counters.requestsLost++;
-      passiveMaster.push_back(byte);
-      active = false;
-      activeTelegram.clear();
-      activeMaster.clear();
-      state = FsmState::passiveReceiveMaster;
+      counters.requestsWon++;
+      activeMasterIndex = 1;
+      onWriteCallback(activeMaster[activeMasterIndex]);
+      state = FsmState::activeSendMaster;
     }
-  } else {
-    counters.requestsWon++;
-    activeMasterIndex = 1;
-    onWriteCallback(activeMaster[activeMasterIndex]);
-    state = FsmState::activeSendMaster;
   }
 }
 
@@ -544,7 +549,7 @@ void ebus::Handler::activeReceiveMasterAcknowledge(const uint8_t &byte) {
     state = FsmState::activeSendMaster;
   } else {
     counters.errorsActiveMasterACK++;
-    handleActiveErrors();
+    handleActiveErrors(FsmState::activeReceiveMasterAcknowledge);
     onWriteCallback(sym_syn);
     state = FsmState::releaseBus;
   }
@@ -593,7 +598,7 @@ void ebus::Handler::activeSendSlaveNegativeAcknowledge(const uint8_t &byte) {
     state = FsmState::activeReceiveSlave;
   } else {
     counters.errorsActiveSlaveACK++;
-    handleActiveErrors();
+    handleActiveErrors(FsmState::activeSendSlaveNegativeAcknowledge);
     onWriteCallback(sym_syn);
     state = FsmState::releaseBus;
   }
@@ -611,13 +616,14 @@ void ebus::Handler::releaseBus(const uint8_t &byte) {
  * It logs the error details using the onErrorCallback if available,
  * updates the appropriate counters, and resets the passive state.
  */
-void ebus::Handler::handlePassiveErrors() {
+void ebus::Handler::handlePassiveErrors(const FsmState &lastState) {
   if (passiveMaster.size() > 0 || passiveMasterDBx > 0 ||
       passiveMasterRepeated || passiveSlave.size() > 0 || passiveSlaveDBx > 0 ||
       passiveSlaveIndex > 0 || passiveSlaveRepeated) {
     if (onErrorCallback != nullptr) {
       std::ostringstream ostr;
       ostr << "passive";
+      ostr << " | " << getFsmStateText(lastState);
       ostr << " | master: '" << passiveMaster.to_string();
       ostr << "' DBx: " << passiveMasterDBx;
       ostr << " repeated: " << (passiveMasterRepeated ? "true" : "false");
@@ -650,13 +656,14 @@ void ebus::Handler::handlePassiveErrors() {
  * the active communication state to ensure the system can recover and continue
  * operating.
  */
-void ebus::Handler::handleActiveErrors() {
+void ebus::Handler::handleActiveErrors(const FsmState &lastState) {
   if (activeMaster.size() > 0 || activeMasterIndex > 0 ||
       activeMasterRepeated || activeSlave.size() > 0 || activeSlaveDBx > 0 ||
       activeSlaveRepeated) {
     if (onErrorCallback != nullptr) {
       std::ostringstream ostr;
       ostr << "active";
+      ostr << " | " << getFsmStateText(lastState);
       ostr << " | master: '" << activeMaster.to_string();
       ostr << "' index: " << activeMasterIndex;
       ostr << " repeated: " << (activeMasterRepeated ? "true" : "false");
