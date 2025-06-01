@@ -103,5 +103,9 @@ int main() {
 
   printSequence("01feb5050427002d00");
 
+  printSequence("1050b5040101");
+
+  printSequence("091403000000fe000100b9");
+
   return EXIT_SUCCESS;
 }

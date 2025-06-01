@@ -187,5 +187,12 @@ int main() {
   std::cout << "    seq: " << seq.to_string() << std::endl;
   std::cout << "   ext3: " << ext3.to_string() << std::endl << std::endl;
 
+  seq.assign(ebus::to_vector("1050b5040101fe00091403000000fe000100b9ff09140300000081000100b900"), true);
+
+  ebus::Telegram ext4(seq);
+
+  std::cout << "    seq: " << seq.to_string() << std::endl;
+  std::cout << "   ext4: " << ext4.to_string() << std::endl << std::endl;
+
   return EXIT_SUCCESS;
 }
