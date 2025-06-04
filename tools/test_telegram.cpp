@@ -187,12 +187,29 @@ int main() {
   std::cout << "    seq: " << seq.to_string() << std::endl;
   std::cout << "   ext3: " << ext3.to_string() << std::endl << std::endl;
 
-  seq.assign(ebus::to_vector("1050b5040101fe00091403000000fe000100b9ff09140300000081000100b900"), true);
+  seq.assign(
+      ebus::to_vector(
+          "1050b5040101fe00091403000000fe000100b9ff09140300000081000100b900"),
+      true);
 
   ebus::Telegram ext4(seq);
 
   std::cout << "    seq: " << seq.to_string() << std::endl;
   std::cout << "   ext4: " << ext4.to_string() << std::endl << std::endl;
+
+  seq.assign(ebus::to_vector("0008b5090329b90166"), true);
+
+  ebus::Telegram ext5(seq);
+
+  std::cout << "    seq: " << seq.to_string() << std::endl;
+  std::cout << "   ext5: " << ext5.to_string() << std::endl << std::endl;
+
+  seq.assign(ebus::to_vector("1008b510090001000000000000020c"), true);
+
+  ebus::Telegram ext6(seq);
+
+  std::cout << "    seq: " << seq.to_string() << std::endl;
+  std::cout << "   ext6: " << ext6.to_string() << std::endl << std::endl;
 
   return EXIT_SUCCESS;
 }
