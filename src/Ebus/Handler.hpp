@@ -226,8 +226,8 @@ class Handler {
   void activeSendSlaveNegativeAcknowledge(const uint8_t &byte);
   void releaseBus(const uint8_t &byte);
 
-  void handlePassiveErrors(const FsmState &lastState);
-  void handleActiveErrors(const FsmState &lastState);
+  void checkPassiveBuffers();
+  void checkActiveBuffers();
 
   void resetPassive();
   void resetActive();
