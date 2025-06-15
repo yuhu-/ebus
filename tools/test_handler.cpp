@@ -187,6 +187,18 @@ void printCounters() {
   std::cout << "requestsError: " << counter.requestsError << std::endl;
 }
 
+void printStateTimingResults() {
+  ebus::StateTimingStatsResults stats =
+      ebusHandler.getStateTimingStatsResults();
+  std::cout << std::endl << "State Timing Statistics:" << std::endl;
+  for (const auto &s : stats.states) {
+    std::cout << s.second.name << ": last=" << s.second.last
+              << " us, mean=" << s.second.mean
+              << " us, stddev=" << s.second.stddev
+              << " us, count=" << s.second.count << std::endl;
+  }
+}
+
 void simulate(const std::string &test, const std::string &title,
               const bool &bytes, const std::string &message,
               const std::string &sequence) {
@@ -684,6 +696,8 @@ int main() {
   activeTest_12(0x30, true, "BC: Request Bus - Priority lost and Sub lost");
 
   printCounters();
+
+  printStateTimingResults();
 
   return EXIT_SUCCESS;
 }

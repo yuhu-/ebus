@@ -23,6 +23,9 @@
 
 #pragma once
 
+#include <array>
+#include <chrono>
+#include <cmath>
 #include <functional>
 #include <map>
 #include <string>
@@ -32,61 +35,12 @@
 
 namespace ebus {
 
-struct Counters {
-  // messages
-  uint32_t messagesTotal = 0;
-
-  uint32_t messagesPassiveMasterSlave = 0;
-  uint32_t messagesPassiveMasterMaster = 0;
-
-  uint32_t messagesReactiveMasterSlave = 0;
-  uint32_t messagesReactiveMasterMaster = 0;
-  uint32_t messagesReactiveBroadcast = 0;
-
-  uint32_t messagesActiveMasterSlave = 0;
-  uint32_t messagesActiveMasterMaster = 0;
-  uint32_t messagesActiveBroadcast = 0;
-
-  // errors
-  uint32_t errorsTotal = 0;
-
-  uint32_t errorsPassive = 0;
-  uint32_t errorsPassiveMaster = 0;
-  uint32_t errorsPassiveMasterACK = 0;
-  uint32_t errorsPassiveSlave = 0;
-  uint32_t errorsPassiveSlaveACK = 0;
-
-  uint32_t errorsReactive = 0;
-  uint32_t errorsReactiveMaster = 0;
-  uint32_t errorsReactiveMasterACK = 0;
-  uint32_t errorsReactiveSlave = 0;
-  uint32_t errorsReactiveSlaveACK = 0;
-
-  uint32_t errorsActive = 0;
-  uint32_t errorsActiveMaster = 0;
-  uint32_t errorsActiveMasterACK = 0;
-  uint32_t errorsActiveSlave = 0;
-  uint32_t errorsActiveSlaveACK = 0;
-
-  // resets
-  uint32_t resetsTotal = 0;
-  uint32_t resetsPassive00 = 0;
-  uint32_t resetsPassive0704 = 0;
-  uint32_t resetsPassive = 0;
-  uint32_t resetsActive = 0;
-
-  // requests
-  uint32_t requestsTotal = 0;
-  uint32_t requestsWon = 0;
-  uint32_t requestsLost = 0;
-  uint32_t requestsRetry = 0;
-  uint32_t requestsError = 0;
-};
-
 constexpr uint8_t DEFAULT_ADDRESS = 0xff;
 
 constexpr uint8_t DEFAULT_LOCK_COUNTER = 3;
 constexpr uint8_t MAX_LOCK_COUNTER = 25;
+
+constexpr size_t NUM_FSM_STATES = 17;
 
 enum class FsmState {
   passiveReceiveMaster,
@@ -141,9 +95,103 @@ typedef std::function<void(const MessageType &message, const TelegramType &type,
 
 typedef std::function<void(const std::string str)> OnErrorCallback;
 
+#define EBUS_COUNTERS_LIST        \
+  X(messagesTotal)                \
+  X(messagesPassiveMasterSlave)   \
+  X(messagesPassiveMasterMaster)  \
+  X(messagesReactiveMasterSlave)  \
+  X(messagesReactiveMasterMaster) \
+  X(messagesReactiveBroadcast)    \
+  X(messagesActiveMasterSlave)    \
+  X(messagesActiveMasterMaster)   \
+  X(messagesActiveBroadcast)      \
+  X(requestsTotal)                \
+  X(requestsWon)                  \
+  X(requestsLost)                 \
+  X(requestsRetry)                \
+  X(requestsError)                \
+  X(resetsTotal)                  \
+  X(resetsPassive00)              \
+  X(resetsPassive0704)            \
+  X(resetsPassive)                \
+  X(resetsActive)                 \
+  X(errorsTotal)                  \
+  X(errorsPassive)                \
+  X(errorsPassiveMaster)          \
+  X(errorsPassiveMasterACK)       \
+  X(errorsPassiveSlave)           \
+  X(errorsPassiveSlaveACK)        \
+  X(errorsReactive)               \
+  X(errorsReactiveMaster)         \
+  X(errorsReactiveMasterACK)      \
+  X(errorsReactiveSlave)          \
+  X(errorsReactiveSlaveACK)       \
+  X(errorsActive)                 \
+  X(errorsActiveMaster)           \
+  X(errorsActiveMasterACK)        \
+  X(errorsActiveSlave)            \
+  X(errorsActiveSlaveACK)
+
+struct Counters {
+#define X(name) uint32_t name = 0;
+  EBUS_COUNTERS_LIST
+#undef X
+};
+
+#define EBUS_TIMINGS_LIST \
+  X(sync)                 \
+  X(passiveFirst)         \
+  X(passiveData)          \
+  X(activeFirst)          \
+  X(activeData)
+
+struct Timings {
+#define X(name)             \
+  double name##Last = 0;    \
+  uint64_t name##Count = 0; \
+  double name##Mean = 0;    \
+  double name##StdDev = 0;
+  EBUS_TIMINGS_LIST
+#undef X
+};
+
+struct TimingStats {
+  double last = 0;  // holds the last value added
+  uint64_t count = 0;
+  double mean = 0;
+  double m2 = 0;  // for variance
+
+  void add(double x) {
+    last = x;
+    ++count;
+    double delta = x - mean;
+    mean += delta / count;
+    double delta2 = x - mean;
+    m2 += delta * delta2;
+  }
+  double variance() const { return count > 1 ? m2 / (count - 1) : 0; }
+  double stddev() const { return sqrt(variance()); }
+  void clear() {
+    last = 0;
+    count = 0;
+    mean = 0;
+    m2 = 0;
+  }
+};
+
+struct StateTimingStatsResults {
+  struct StateStats {
+    std::string name;
+    double last;
+    double mean;
+    double stddev;
+    uint64_t count;
+  };
+  std::map<FsmState, StateStats> states;
+};
+
 class Handler {
  public:
-  Handler() = default;
   explicit Handler(const uint8_t source);
 
   void onWrite(ebus::OnWriteCallback callback);
@@ -168,21 +216,42 @@ class Handler {
   void resetCounters();
   const Counters &getCounters();
 
+  void resetTimings();
+  const Timings &getTimings();
+
+  void resetStateTimingStats();
+  const StateTimingStatsResults getStateTimingStatsResults() const;
+
  private:
   uint8_t address = 0;
   uint8_t slaveAddress = 0;
+
+  std::array<void (Handler::*)(const uint8_t &), NUM_FSM_STATES> stateHandlers;
 
   ebus::OnWriteCallback onWriteCallback = nullptr;
   ebus::IsDataAvailableCallback isDataAvailableCallback = nullptr;
   ebus::OnTelegramCallback onTelegramCallback = nullptr;
   ebus::OnErrorCallback onErrorCallback = nullptr;
 
-  Counters counters;
-
   // control
+  FsmState lastState = FsmState::passiveReceiveMaster;
   FsmState state = FsmState::passiveReceiveMaster;
   uint8_t maxLockCounter = DEFAULT_LOCK_COUNTER;
   uint8_t lockCounter = DEFAULT_LOCK_COUNTER;
+
+  // measurement
+  Counters counters;
+  Timings timings;
+  std::array<TimingStats, NUM_FSM_STATES> fsmTimingStats = {};
+
+  std::chrono::steady_clock::time_point lastPoint;
+  bool measureSync = false;
+
+  TimingStats sync;
+  TimingStats passiveFirst;
+  TimingStats passiveData;
+  TimingStats activeFirst;
+  TimingStats activeData;
 
   // passive
   Telegram passiveTelegram;
@@ -231,6 +300,9 @@ class Handler {
 
   void resetPassive();
   void resetActive();
+
+  void calculateDuration(const uint8_t &byte);
+  void calculateDurationFsmState(const uint8_t &byte);
 };
 
 }  // namespace ebus

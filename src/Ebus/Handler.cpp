@@ -28,7 +28,29 @@
 // Constructor initializes the Handler with the given source address.
 // Calls setAddress to validate and set the address as either a master or
 // default value.
-ebus::Handler::Handler(const uint8_t source) { setAddress(source); }
+ebus::Handler::Handler(const uint8_t source) {
+  setAddress(source);
+
+  stateHandlers = {&Handler::passiveReceiveMaster,
+                   &Handler::passiveReceiveMasterAcknowledge,
+                   &Handler::passiveReceiveSlave,
+                   &Handler::passiveReceiveSlaveAcknowledge,
+                   &Handler::reactiveSendMasterPositiveAcknowledge,
+                   &Handler::reactiveSendMasterNegativeAcknowledge,
+                   &Handler::reactiveSendSlave,
+                   &Handler::reactiveReceiveSlaveAcknowledge,
+                   &Handler::requestBusFirstTry,
+                   &Handler::requestBusPriorityRetry,
+                   &Handler::requestBusSecondTry,
+                   &Handler::activeSendMaster,
+                   &Handler::activeReceiveMasterAcknowledge,
+                   &Handler::activeReceiveSlave,
+                   &Handler::activeSendSlavePositiveAcknowledge,
+                   &Handler::activeSendSlaveNegativeAcknowledge,
+                   &Handler::releaseBus};
+
+  lastPoint = std::chrono::steady_clock::now();
+}
 
 void ebus::Handler::onWrite(ebus::OnWriteCallback callback) {
   onWriteCallback = callback;
@@ -89,127 +111,20 @@ bool ebus::Handler::enque(const std::vector<uint8_t> &message) {
 }
 
 void ebus::Handler::run(const uint8_t &byte) {
-  switch (state) {
-    case FsmState::passiveReceiveMaster: {
-      passiveReceiveMaster(byte);
-      break;
-    }
-    case FsmState::passiveReceiveMasterAcknowledge: {
-      passiveReceiveMasterAcknowledge(byte);
-      break;
-    }
-    case FsmState::passiveReceiveSlave: {
-      passiveReceiveSlave(byte);
-      break;
-    }
-    case FsmState::passiveReceiveSlaveAcknowledge: {
-      passiveReceiveSlaveAcknowledge(byte);
-      break;
-    }
-    case FsmState::reactiveSendMasterPositiveAcknowledge: {
-      reactiveSendMasterPositiveAcknowledge(byte);
-      break;
-    }
-    case FsmState::reactiveSendMasterNegativeAcknowledge: {
-      reactiveSendMasterNegativeAcknowledge(byte);
-      break;
-    }
-    case FsmState::reactiveSendSlave: {
-      reactiveSendSlave(byte);
-      break;
-    }
-    case FsmState::reactiveReceiveSlaveAcknowledge: {
-      reactiveReceiveSlaveAcknowledge(byte);
-      break;
-    }
-    case FsmState::requestBusFirstTry: {
-      requestBusFirstTry(byte);
-      break;
-    }
-    case FsmState::requestBusPriorityRetry: {
-      requestBusPriorityRetry(byte);
-      break;
-    }
-    case FsmState::requestBusSecondTry: {
-      requestBusSecondTry(byte);
-      break;
-    }
-    case FsmState::activeSendMaster: {
-      activeSendMaster(byte);
-      break;
-    }
-    case FsmState::activeReceiveMasterAcknowledge: {
-      activeReceiveMasterAcknowledge(byte);
-      break;
-    }
-    case FsmState::activeReceiveSlave: {
-      activeReceiveSlave(byte);
-      break;
-    }
-    case FsmState::activeSendSlavePositiveAcknowledge: {
-      activeSendSlavePositiveAcknowledge(byte);
-      break;
-    }
-    case FsmState::activeSendSlaveNegativeAcknowledge: {
-      activeSendSlaveNegativeAcknowledge(byte);
-      break;
-    }
-    case FsmState::releaseBus: {
-      releaseBus(byte);
-      break;
-    }
+  calculateDuration(byte);
+
+  size_t idx = static_cast<size_t>(state);
+  if (idx < stateHandlers.size() && stateHandlers[idx]) {
+    (this->*stateHandlers[idx])(byte);
   }
+
+  calculateDurationFsmState(byte);
 }
 
 void ebus::Handler::resetCounters() {
-  // messages
-  counters.messagesTotal = 0;
-
-  counters.messagesPassiveMasterSlave = 0;
-  counters.messagesPassiveMasterMaster = 0;
-
-  counters.messagesReactiveMasterSlave = 0;
-  counters.messagesReactiveMasterMaster = 0;
-  counters.messagesReactiveBroadcast = 0;
-
-  counters.messagesActiveMasterSlave = 0;
-  counters.messagesActiveMasterMaster = 0;
-  counters.messagesActiveBroadcast = 0;
-
-  // errors
-  counters.errorsTotal = 0;
-
-  counters.errorsPassive = 0;
-  counters.errorsPassiveMaster = 0;
-  counters.errorsPassiveMasterACK = 0;
-  counters.errorsPassiveSlave = 0;
-  counters.errorsPassiveSlaveACK = 0;
-
-  counters.errorsReactive = 0;
-  counters.errorsReactiveMaster = 0;
-  counters.errorsReactiveMasterACK = 0;
-  counters.errorsReactiveSlave = 0;
-  counters.errorsReactiveSlaveACK = 0;
-
-  counters.errorsActive = 0;
-  counters.errorsActiveMaster = 0;
-  counters.errorsActiveMasterACK = 0;
-  counters.errorsActiveSlave = 0;
-  counters.errorsActiveSlaveACK = 0;
-
-  // resets
-  counters.resetsTotal = 0;
-  counters.resetsPassive00 = 0;
-  counters.resetsPassive0704 = 0;
-  counters.resetsPassive = 0;
-  counters.resetsActive = 0;
-
-  // requests
-  counters.requestsTotal = 0;
-  counters.requestsWon = 0;
-  counters.requestsLost = 0;
-  counters.requestsRetry = 0;
-  counters.requestsError = 0;
+#define X(name) counters.name = 0;
+  EBUS_COUNTERS_LIST
+#undef X
 }
 
 const ebus::Counters &ebus::Handler::getCounters() {
@@ -220,6 +135,12 @@ const ebus::Counters &ebus::Handler::getCounters() {
       counters.messagesReactiveMasterMaster +
       counters.messagesReactiveBroadcast + counters.messagesActiveMasterSlave +
       counters.messagesActiveMasterMaster + counters.messagesActiveBroadcast;
+
+  counters.requestsTotal =
+      counters.requestsWon + counters.requestsLost + counters.requestsError;
+
+  counters.resetsTotal = counters.resetsPassive00 + counters.resetsPassive0704 +
+                         counters.resetsActive + counters.resetsPassive;
 
   counters.errorsPassive =
       counters.errorsPassiveMaster + counters.errorsPassiveMasterACK +
@@ -236,13 +157,42 @@ const ebus::Counters &ebus::Handler::getCounters() {
   counters.errorsTotal =
       counters.errorsPassive + counters.errorsReactive + counters.errorsActive;
 
-  counters.resetsTotal = counters.resetsPassive00 + counters.resetsPassive0704 +
-                         counters.resetsActive + counters.resetsPassive;
-
-  counters.requestsTotal =
-      counters.requestsWon + counters.requestsLost + counters.requestsError;
-
   return counters;
+}
+
+void ebus::Handler::resetTimings() {
+  sync.clear();
+  passiveFirst.clear();
+  passiveData.clear();
+  activeFirst.clear();
+  activeData.clear();
+}
+
+const ebus::Timings &ebus::Handler::getTimings() {
+#define X(name)                     \
+  timings.name##Last = name.last;   \
+  timings.name##Count = name.count; \
+  timings.name##Mean = name.mean;   \
+  timings.name##StdDev = name.stddev();
+  EBUS_TIMINGS_LIST
+#undef X
+  return timings;
+}
+
+void ebus::Handler::resetStateTimingStats() {
+  for (auto &stat : fsmTimingStats) stat.clear();
+}
+
+const ebus::StateTimingStatsResults ebus::Handler::getStateTimingStatsResults()
+    const {
+  StateTimingStatsResults results;
+  for (size_t i = 0; i < fsmTimingStats.size(); ++i) {
+    results.states[static_cast<FsmState>(i)] = {
+        std::string(getFsmStateText(static_cast<FsmState>(i))),
+        fsmTimingStats[i].last, fsmTimingStats[i].mean,
+        fsmTimingStats[i].stddev(), fsmTimingStats[i].count};
+  }
+  return results;
 }
 
 void ebus::Handler::passiveReceiveMaster(const uint8_t &byte) {
@@ -335,6 +285,7 @@ void ebus::Handler::passiveReceiveMaster(const uint8_t &byte) {
       activeMaster.extend();
       onWriteCallback(address);
       state = FsmState::requestBusFirstTry;
+      lastState = FsmState::requestBusFirstTry;
     }
   }
 }
@@ -362,6 +313,10 @@ void ebus::Handler::passiveReceiveMasterAcknowledge(const uint8_t &byte) {
     state = FsmState::passiveReceiveMaster;
   } else {
     counters.errorsPassiveMasterACK++;
+    if (passiveMaster.size() == 6 && passiveMaster[2] == 0x07 &&
+        passiveMaster[3] == 0x04)
+      counters.resetsPassive0704++;
+
     resetPassive();
     state = FsmState::passiveReceiveMaster;
   }
@@ -629,9 +584,6 @@ void ebus::Handler::checkPassiveBuffers() {
 
     if (passiveMaster.size() == 1 && passiveMaster[0] == 0x00)
       counters.resetsPassive00++;
-    else if (passiveMaster.size() == 6 && passiveMaster[2] == 0x07 &&
-             passiveMaster[3] == 0x04)
-      counters.resetsPassive0704++;
     else
       counters.resetsPassive++;
 
@@ -642,12 +594,12 @@ void ebus::Handler::checkPassiveBuffers() {
 /**
  * Handles errors that occur during active communication.
  *
- * This method is invoked when an error is detected in the active communication
- * process. It checks for inconsistencies or issues in the active master and
- * slave data structures, logs the error details using the onErrorCallback
- * if it is set, and increments the active reset counter. Finally, it resets
- * the active communication state to ensure the system can recover and continue
- * operating.
+ * This method is invoked when an error is detected in the active
+ * communication process. It checks for inconsistencies or issues in the
+ * active master and slave data structures, logs the error details using the
+ * onErrorCallback if it is set, and increments the active reset counter.
+ * Finally, it resets the active communication state to ensure the system can
+ * recover and continue operating.
  */
 void ebus::Handler::checkActiveBuffers() {
   if (activeMaster.size() > 0 || activeSlave.size() > 0) {
@@ -694,4 +646,44 @@ void ebus::Handler::resetActive() {
   activeSlave.clear();
   activeSlaveDBx = 0;
   activeSlaveRepeated = false;
+}
+
+void ebus::Handler::calculateDuration(const uint8_t &byte) {
+  std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
+  int64_t duration =
+      std::chrono::duration_cast<std::chrono::microseconds>(now - lastPoint)
+          .count();
+
+  if (byte != sym_syn) {
+    if (active) {
+      if (measureSync)
+        activeFirst.add(duration);
+      else
+        activeData.add(duration);
+    } else {
+      if (measureSync)
+        passiveFirst.add(duration);
+      else
+        passiveData.add(duration);
+    }
+    measureSync = false;
+  } else {
+    if (measureSync) sync.add(duration);
+    measureSync = true;
+  }
+
+  lastPoint = now;
+}
+
+void ebus::Handler::calculateDurationFsmState(const uint8_t &byte) {
+  if (byte != sym_syn || lastState == FsmState::requestBusPriorityRetry) {
+    std::chrono::steady_clock::time_point now =
+        std::chrono::steady_clock::now();
+    int64_t duration =
+        std::chrono::duration_cast<std::chrono::microseconds>(now - lastPoint)
+            .count();
+
+    fsmTimingStats[static_cast<size_t>(lastState)].add(duration);
+    lastState = state;
+  }
 }
