@@ -85,12 +85,9 @@ const std::vector<uint8_t> ebus::to_vector(const std::string &str) {
 
 const std::vector<uint8_t> ebus::range(const std::vector<uint8_t> &vec,
                                        const size_t &index, const size_t &len) {
-  std::vector<uint8_t> result;
-
-  for (size_t i = index; i < vec.size() && result.size() < len; i++)
-    result.push_back(vec.at(i));
-
-  return result;
+  if (index >= vec.size()) return {};
+  size_t end = std::min(index + len, vec.size());
+  return std::vector<uint8_t>(vec.begin() + index, vec.begin() + end);
 }
 
 bool ebus::contains(const std::vector<uint8_t> &vec,
