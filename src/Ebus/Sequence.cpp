@@ -27,7 +27,9 @@
 ebus::Sequence::Sequence(const Sequence &seq, const size_t index, size_t len) {
   if (len == 0) len = seq.size() - index;
 
-  for (size_t i = index; i < index + len; i++) m_seq.push_back(seq.m_seq.at(i));
+  m_seq.resize(len);
+  std::copy(seq.m_seq.begin() + index, seq.m_seq.begin() + index + len,
+            m_seq.begin());
 
   m_extended = seq.m_extended;
 }
@@ -35,8 +37,8 @@ ebus::Sequence::Sequence(const Sequence &seq, const size_t index, size_t len) {
 void ebus::Sequence::assign(const std::vector<uint8_t> &vec,
                             const bool extended) {
   clear();
-
-  for (size_t i = 0; i < vec.size(); i++) push_back(vec[i], extended);
+  m_seq = vec;
+  m_extended = extended;
 }
 
 void ebus::Sequence::push_back(const uint8_t byte, const bool extended) {
@@ -57,7 +59,6 @@ size_t ebus::Sequence::size() const { return m_seq.size(); }
 
 void ebus::Sequence::clear() {
   m_seq.clear();
-  m_seq.shrink_to_fit();
   m_extended = false;
 }
 
@@ -76,55 +77,63 @@ uint8_t ebus::Sequence::crc() {
 void ebus::Sequence::extend() {
   if (m_extended) return;
 
-  std::vector<uint8_t> tmp;
+  // maximum possible size (worst case: every byte expands to 2)
+  size_t max_size = m_seq.size() * 2;
+  std::vector<uint8_t> tmp(max_size);
+  size_t j = 0;
 
   for (size_t i = 0; i < m_seq.size(); i++) {
-    if (m_seq.at(i) == sym_syn) {
-      tmp.push_back(sym_ext);
-      tmp.push_back(sym_syn_ext);
-    } else if (m_seq.at(i) == sym_ext) {
-      tmp.push_back(sym_ext);
-      tmp.push_back(sym_ext_ext);
+    if (m_seq[i] == sym_syn) {
+      tmp[j++] = sym_ext;
+      tmp[j++] = sym_syn_ext;
+    } else if (m_seq[i] == sym_ext) {
+      tmp[j++] = sym_ext;
+      tmp[j++] = sym_ext_ext;
     } else {
-      tmp.push_back(m_seq.at(i));
+      tmp[j++] = m_seq[i];
     }
   }
+  tmp.resize(j);  // shrink to actual size
 
-  m_seq = tmp;
+  m_seq = std::move(tmp);
   m_extended = true;
 }
 
 void ebus::Sequence::reduce() {
   if (!m_extended) return;
 
-  std::vector<uint8_t> tmp;
+  // In the worst case, the reduced sequence is at most as large as m_seq
+  std::vector<uint8_t> tmp(m_seq.size());
+  size_t j = 0;
   bool extended = false;
 
   for (size_t i = 0; i < m_seq.size(); i++) {
-    if (m_seq.at(i) == sym_syn || m_seq.at(i) == sym_ext) {
+    if (m_seq[i] == sym_syn || m_seq[i] == sym_ext) {
       extended = true;
     } else if (extended) {
-      if (m_seq.at(i) == sym_syn_ext)
-        tmp.push_back(sym_syn);
+      if (m_seq[i] == sym_syn_ext)
+        tmp[j++] = sym_syn;
       else
-        tmp.push_back(sym_ext);
-
+        tmp[j++] = sym_ext;
       extended = false;
     } else {
-      tmp.push_back(m_seq.at(i));
+      tmp[j++] = m_seq[i];
     }
   }
+  tmp.resize(j);  // shrink to actual size
 
-  m_seq = tmp;
+  m_seq = std::move(tmp);
   m_extended = false;
 }
 
 const std::string ebus::Sequence::to_string() const {
-  std::ostringstream ostr;
+  if (m_seq.empty()) return {};
 
-  for (size_t i = 0; i < m_seq.size(); i++)
-    ostr << std::nouppercase << std::hex << std::setw(2) << std::setfill('0')
-         << static_cast<unsigned>(m_seq.at(i));
+  std::ostringstream ostr;
+  ostr << std::hex << std::setfill('0');
+
+  for (size_t i = 0; i < m_seq.size(); ++i)
+    ostr << std::nouppercase << std::setw(2) << static_cast<unsigned>(m_seq[i]);
 
   return ostr.str();
 }
