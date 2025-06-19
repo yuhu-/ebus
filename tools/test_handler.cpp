@@ -60,13 +60,13 @@ void onWriteCallback(const uint8_t &byte) {
 
 int isDataAvailableCallback() { return 0; }
 
-void onTelegramCallback(const ebus::MessageType &message,
-                        const ebus::TelegramType &type,
+void onTelegramCallback(const ebus::MessageType &messageType,
+                        const ebus::TelegramType &telegramType,
                         const std::vector<uint8_t> &master,
                         std::vector<uint8_t> *const slave) {
   std::vector<uint8_t> search;
   std::string typeString = "";
-  switch (message) {
+  switch (messageType) {
     case ebus::MessageType::active:
       std::cout << "  active: " << ebus::to_string(master) << " "
                 << ebus::to_string(*slave) << std::endl;
@@ -77,7 +77,7 @@ void onTelegramCallback(const ebus::MessageType &message,
       break;
     case ebus::MessageType::reactive:
 
-      switch (type) {
+      switch (telegramType) {
         case ebus::TelegramType::broadcast:
           typeString = "broadcast message";
           break;
