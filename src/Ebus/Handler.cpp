@@ -751,7 +751,7 @@ void ebus::Handler::callOnTelegram(MessageType messageType,
         break;
       case MessageType::active:
         if (telegramType == TelegramType::master_slave)
-          callbackTelegramActiveMasterMaster.add(duration);
+          callbackTelegramActiveMasterSlave.add(duration);
         else if (telegramType == TelegramType::master_master)
           callbackTelegramActiveMasterMaster.add(duration);
         else
