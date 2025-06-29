@@ -19,8 +19,10 @@
 
 #include "Sequence.hpp"
 
+#include <algorithm>
 #include <iomanip>
 #include <sstream>
+#include <utility>
 
 #include "Common.hpp"
 

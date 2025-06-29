@@ -19,7 +19,7 @@
 
 #pragma once
 
-#if defined(POSIX_TEST) 
+#if defined(POSIX_TEST)
 #include "Posix/BusPosixTest.hpp"
 namespace ebus {
 using Bus = BusPosixTest;
