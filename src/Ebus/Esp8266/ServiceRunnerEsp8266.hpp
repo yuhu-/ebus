@@ -19,11 +19,27 @@
 
 #pragma once
 
-#include "Ebus/Bus.hpp"
-#include "Ebus/Queue.hpp"
-#include "Ebus/Common.hpp"
-#include "Ebus/Datatypes.hpp"
-#include "Ebus/Handler.hpp"
-#include "Ebus/Sequence.hpp"
-#include "Ebus/ServiceRunner.hpp"
-#include "Ebus/Telegram.hpp"
+#include "../Handler.hpp"
+#include "../Queue.hpp"
+
+namespace ebus {
+
+class ServiceRunnerEsp8266 {
+ public:
+  ServiceRunnerEsp8266(Handler& handler, Queue& queue)
+      : handler(handler), queue(queue) {}
+
+  // Call this frequently in the main loop!
+  void poll() {
+    uint8_t byte;
+    while (queue.pop(byte)) {
+      handler.run(byte);
+    }
+  }
+
+ private:
+  Handler& handler;
+  Queue& queue;
+};
+
+}  // namespace ebus

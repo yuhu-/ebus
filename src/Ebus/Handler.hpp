@@ -31,6 +31,8 @@
 #include <string>
 #include <vector>
 
+#include "Bus.hpp"
+#include "Queue.hpp"
 #include "Telegram.hpp"
 
 namespace ebus {
@@ -40,7 +42,7 @@ constexpr uint8_t DEFAULT_ADDRESS = 0xff;
 constexpr uint8_t DEFAULT_LOCK_COUNTER = 3;
 constexpr uint8_t MAX_LOCK_COUNTER = 25;
 
-constexpr size_t NUM_FSM_STATES = 17;
+constexpr size_t NUM_FSM_STATES = 15;
 
 enum class FsmState {
   passiveReceiveMaster,
@@ -51,9 +53,7 @@ enum class FsmState {
   reactiveSendMasterNegativeAcknowledge,
   reactiveSendSlave,
   reactiveReceiveSlaveAcknowledge,
-  requestBusFirstTry,
-  requestBusPriorityRetry,
-  requestBusSecondTry,
+  requestBus,
   activeSendMaster,
   activeReceiveMasterAcknowledge,
   activeReceiveSlave,
@@ -71,9 +71,7 @@ static const char *getFsmStateText(FsmState state) {
                           "reactiveSendMasterNegativeAcknowledge",
                           "reactiveSendSlave",
                           "reactiveReceiveSlaveAcknowledge",
-                          "requestBusFirstTry",
-                          "requestBusPriorityRetry",
-                          "requestBusSecondTry",
+                          "requestBus",
                           "activeSendMaster",
                           "activeReceiveMasterAcknowledge",
                           "activeReceiveSlave",
@@ -85,26 +83,27 @@ static const char *getFsmStateText(FsmState state) {
 
 enum class MessageType { undefined, active, passive, reactive };
 
-typedef std::function<void(const uint8_t &byte)> OnWriteCallback;
-typedef std::function<int()> IsDataAvailableCallback;
+using ReactiveMasterSlaveCallback = std::function<void(
+    const std::vector<uint8_t> &master, std::vector<uint8_t> *const slave)>;
 
-typedef std::function<void(
+using TelegramCallback = std::function<void(
     const MessageType &messageType, const TelegramType &telegramType,
-    const std::vector<uint8_t> &master, std::vector<uint8_t> *const slave)>
-    OnTelegramCallback;
+    const std::vector<uint8_t> &master, const std::vector<uint8_t> &slave)>;
 
-typedef std::function<void(const std::string &str)> OnErrorCallback;
+using ErrorCallback = std::function<void(const std::string &errorMessage,
+                                         const std::vector<uint8_t> &master,
+                                         const std::vector<uint8_t> &slave)>;
 
 #define EBUS_COUNTERS_LIST        \
   X(messagesTotal)                \
   X(messagesPassiveMasterSlave)   \
   X(messagesPassiveMasterMaster)  \
-  X(messagesReactiveMasterSlave)  \
-  X(messagesReactiveMasterMaster) \
-  X(messagesReactiveBroadcast)    \
+  X(messagesPassiveBroadcast)     \
   X(messagesActiveMasterSlave)    \
   X(messagesActiveMasterMaster)   \
   X(messagesActiveBroadcast)      \
+  X(messagesReactiveMasterSlave)  \
+  X(messagesReactiveMasterMaster) \
   X(requestsTotal)                \
   X(requestsWon)                  \
   X(requestsLost)                 \
@@ -138,24 +137,16 @@ struct Counters {
 #undef X
 };
 
-#define EBUS_TIMINGS_LIST                 \
-  X(sync)                                 \
-  X(passiveFirst)                         \
-  X(passiveData)                          \
-  X(activeFirst)                          \
-  X(activeData)                           \
-  X(resetPassive)                         \
-  X(resetActive)                          \
-  X(callbackWrite)                        \
-  X(callbackError)                        \
-  X(callbackTelegramPassiveMasterSlave)   \
-  X(callbackTelegramPassiveMasterMaster)  \
-  X(callbackTelegramReactiveMasterSlave)  \
-  X(callbackTelegramReactiveMasterMaster) \
-  X(callbackTelegramReactiveBroadcast)    \
-  X(callbackTelegramActiveMasterSlave)    \
-  X(callbackTelegramActiveMasterMaster)   \
-  X(callbackTelegramActiveBroadcast)
+#define EBUS_TIMINGS_LIST \
+  X(sync)                 \
+  X(write)                \
+  X(passiveFirst)         \
+  X(passiveData)          \
+  X(activeFirst)          \
+  X(activeData)           \
+  X(callbackReactive)     \
+  X(callbackTelegram)     \
+  X(callbackError)
 
 struct Timings {
 #define X(name)             \
@@ -204,12 +195,11 @@ struct StateTimingStatsResults {
 
 class Handler {
  public:
-  explicit Handler(const uint8_t source);
+  explicit Handler(Bus *device, const uint8_t source);
 
-  void onWrite(ebus::OnWriteCallback callback);
-  void isDataAvailable(ebus::IsDataAvailableCallback callback);
-  void onTelegram(ebus::OnTelegramCallback callback);
-  void onError(ebus::OnErrorCallback callback);
+  void setReactiveMasterSlaveCallback(ReactiveMasterSlaveCallback callback);
+  void setTelegramCallback(TelegramCallback callback);
+  void setErrorCallback(ErrorCallback callback);
 
   void setAddress(const uint8_t source);
   uint8_t getAddress() const;
@@ -219,6 +209,9 @@ class Handler {
 
   FsmState getState() const;
   bool isActive() const;
+
+  bool busRequest() const;
+  void busRequested();
 
   void reset();
   bool enque(const std::vector<uint8_t> &message);
@@ -235,19 +228,25 @@ class Handler {
   const StateTimingStatsResults getStateTimingStatsResults() const;
 
  private:
+  Bus *bus = nullptr;
+
   uint8_t address = 0;
   uint8_t slaveAddress = 0;
 
   std::array<void (Handler::*)(const uint8_t &), NUM_FSM_STATES> stateHandlers;
 
-  ebus::OnWriteCallback onWriteCallback = nullptr;
-  ebus::IsDataAvailableCallback isDataAvailableCallback = nullptr;
-  ebus::OnTelegramCallback onTelegramCallback = nullptr;
-  ebus::OnErrorCallback onErrorCallback = nullptr;
+  ReactiveMasterSlaveCallback reactiveMasterSlaveCallback = nullptr;
+  TelegramCallback telegramCallback = nullptr;
+  ErrorCallback errorCallback = nullptr;
 
-  // control
-  FsmState lastState = FsmState::passiveReceiveMaster;
+  // request
+  bool request = false;
+  enum class RequestBusTry { first, retry, second };
+  RequestBusTry requestBusTry = RequestBusTry::first;
+
   FsmState state = FsmState::passiveReceiveMaster;
+  FsmState lastState = FsmState::passiveReceiveMaster;
+
   uint8_t maxLockCounter = DEFAULT_LOCK_COUNTER;
   uint8_t lockCounter = DEFAULT_LOCK_COUNTER;
 
@@ -260,22 +259,14 @@ class Handler {
   bool measureSync = false;
 
   TimingStats sync;
+  TimingStats write;
   TimingStats passiveFirst;
   TimingStats passiveData;
   TimingStats activeFirst;
   TimingStats activeData;
-  TimingStats resetPassive;
-  TimingStats resetActive;
-  TimingStats callbackWrite;
+  TimingStats callbackReactive;
+  TimingStats callbackTelegram;
   TimingStats callbackError;
-  TimingStats callbackTelegramPassiveMasterSlave;
-  TimingStats callbackTelegramPassiveMasterMaster;
-  TimingStats callbackTelegramReactiveMasterSlave;
-  TimingStats callbackTelegramReactiveMasterMaster;
-  TimingStats callbackTelegramReactiveBroadcast;
-  TimingStats callbackTelegramActiveMasterSlave;
-  TimingStats callbackTelegramActiveMasterMaster;
-  TimingStats callbackTelegramActiveBroadcast;
 
   // passive
   Telegram passiveTelegram;
@@ -309,9 +300,7 @@ class Handler {
   void reactiveSendMasterNegativeAcknowledge(const uint8_t &byte);
   void reactiveSendSlave(const uint8_t &byte);
   void reactiveReceiveSlaveAcknowledge(const uint8_t &byte);
-  void requestBusFirstTry(const uint8_t &byte);
-  void requestBusPriorityRetry(const uint8_t &byte);
-  void requestBusSecondTry(const uint8_t &byte);
+  void requestBus(const uint8_t &byte);
   void activeSendMaster(const uint8_t &byte);
   void activeReceiveMasterAcknowledge(const uint8_t &byte);
   void activeReceiveSlave(const uint8_t &byte);
@@ -328,13 +317,18 @@ class Handler {
   void calculateDuration(const uint8_t &byte);
   void calculateDurationFsmState(const uint8_t &byte);
 
-  void callOnWrite(const uint8_t &byte);
+  void callWrite(const uint8_t &byte);
 
-  void callOnError(const std::string &str);
+  void callReactiveMasterSlave(const std::vector<uint8_t> &master,
+                               std::vector<uint8_t> *const slave);
 
-  void callOnTelegram(MessageType messageType, TelegramType telegramType,
+  void callOnTelegram(const MessageType &messageType,
+                      const TelegramType &telegramType,
                       const std::vector<uint8_t> &master,
-                      std::vector<uint8_t> *slave);
+                      const std::vector<uint8_t> &slave);
+
+  void callOnError(const std::string &error, const std::vector<uint8_t> &master,
+                   const std::vector<uint8_t> &slave);
 };
 
 }  // namespace ebus

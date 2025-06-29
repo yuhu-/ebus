@@ -19,11 +19,24 @@
 
 #pragma once
 
-#include "Ebus/Bus.hpp"
-#include "Ebus/Queue.hpp"
-#include "Ebus/Common.hpp"
-#include "Ebus/Datatypes.hpp"
-#include "Ebus/Handler.hpp"
-#include "Ebus/Sequence.hpp"
-#include "Ebus/ServiceRunner.hpp"
-#include "Ebus/Telegram.hpp"
+#if defined(POSIX_TEST) 
+#include "Posix/BusPosixTest.hpp"
+namespace ebus {
+using Bus = BusPosixTest;
+}
+#elif defined(ESP_PLATFORM) || defined(ESP32)
+#include "FreeRTOS/BusFreeRtos.hpp"
+namespace ebus {
+using Bus = BusFreeRtos;
+}
+#elif defined(ESP8266)
+#include "Esp8266/BusEsp8266.hpp"
+namespace ebus {
+using Bus = BusEsp8266;
+}
+#else
+#include "Posix/BusPosix.hpp"
+namespace ebus {
+using Bus = BusPosix;
+}
+#endif

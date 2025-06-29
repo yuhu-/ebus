@@ -19,11 +19,19 @@
 
 #pragma once
 
-#include "Ebus/Bus.hpp"
-#include "Ebus/Queue.hpp"
-#include "Ebus/Common.hpp"
-#include "Ebus/Datatypes.hpp"
-#include "Ebus/Handler.hpp"
-#include "Ebus/Sequence.hpp"
-#include "Ebus/ServiceRunner.hpp"
-#include "Ebus/Telegram.hpp"
+#if defined(ESP_PLATFORM) || defined(ESP32)
+#include "FreeRTOS/ServiceRunnerFreeRtos.hpp"
+namespace ebus {
+using ServiceRunner = ServiceRunnerFreeRtos;
+}
+#elif defined(ESP8266)
+#include "Esp8266/ServiceRunnerEsp8266.hpp"
+namespace ebus {
+using ServiceRunner = ServiceRunnerEsp8266;
+}
+#else
+#include "Posix/ServiceRunnerPosix.hpp"
+namespace ebus {
+using ServiceRunner = ServiceRunnerPosix;
+}
+#endif

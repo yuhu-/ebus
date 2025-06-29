@@ -19,11 +19,24 @@
 
 #pragma once
 
-#include "Ebus/Bus.hpp"
-#include "Ebus/Queue.hpp"
-#include "Ebus/Common.hpp"
-#include "Ebus/Datatypes.hpp"
-#include "Ebus/Handler.hpp"
-#include "Ebus/Sequence.hpp"
-#include "Ebus/ServiceRunner.hpp"
-#include "Ebus/Telegram.hpp"
+#include <HardwareSerial.h>
+
+#include "../Bus.hpp"
+
+namespace ebus {
+
+class BusFreeRtos {
+ public:
+  explicit BusFreeRtos(HardwareSerial& serial) : serial(serial) {}
+
+  void writeByte(const uint8_t byte) { serial.write(byte); }
+
+  uint8_t readByte() { return serial.read(); }
+
+  size_t available() const { return serial.available(); }
+
+ private:
+  HardwareSerial& serial;
+};
+
+}  // namespace ebus

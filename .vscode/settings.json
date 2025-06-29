@@ -77,7 +77,8 @@
         "valarray": "cpp",
         "set": "cpp",
         "any": "cpp",
-        "source_location": "cpp"
+        "source_location": "cpp",
+        "future": "cpp"
     },
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
     "C_Cpp.autoAddFileAssociations": true

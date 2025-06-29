@@ -19,11 +19,22 @@
 
 #pragma once
 
-#include "Ebus/Bus.hpp"
-#include "Ebus/Queue.hpp"
-#include "Ebus/Common.hpp"
-#include "Ebus/Datatypes.hpp"
-#include "Ebus/Handler.hpp"
-#include "Ebus/Sequence.hpp"
-#include "Ebus/ServiceRunner.hpp"
-#include "Ebus/Telegram.hpp"
+#if defined(ESP_PLATFORM) || defined(ESP32)
+#include "FreeRTOS/QueueFreeRtos.hpp"
+namespace ebus {
+template <typename T>
+using Queue = QueueFreeRtos<T>;
+}  // namespace ebus
+#elif defined(ESP8266)
+#include "Esp8266/QueueEsp8266.hpp"
+namespace ebus {
+template <typename T>
+using Queue = QueueEsp8266<T>;
+}  // namespace ebus
+#else
+#include "Posix/QueuePosix.hpp"
+namespace ebus {
+template <typename T>
+using Queue = QueuePosix<T>;
+}  // namespace ebus
+#endif

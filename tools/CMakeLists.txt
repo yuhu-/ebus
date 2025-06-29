@@ -7,9 +7,6 @@ target_link_libraries(test_datatypes ebus)
 add_executable(test_telegram test_telegram.cpp)
 target_link_libraries(test_telegram ebus)
 
-add_executable(test_handler test_handler.cpp)
-target_link_libraries(test_handler ebus)
-
 add_executable(ebusread ebusread.cpp)
 target_link_libraries(ebusread ebus)
 

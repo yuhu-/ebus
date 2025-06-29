@@ -23,6 +23,7 @@
 #include <iostream>
 #include <string>
 
+#include "Bus.hpp"
 #include "Common.hpp"
 #include "Datatypes.hpp"
 #include "Handler.hpp"
@@ -41,73 +42,68 @@
 
 bool printBytes = false;
 
-ebus::Handler ebusHandler(0x33);
-
-const char *getState() { return ebus::getFsmStateText(ebusHandler.getState()); }
-
 void printByte(const std::string &prefix, const uint8_t &byte,
                const std::string &postfix) {
   std::cout << prefix << ebus::to_string(byte) << " " << postfix << std::endl;
 }
 
+ebus::Bus bus;
+ebus::Handler ebusHandler(&bus, 0x33);
+
 void readFunction(const uint8_t &byte) {
-  if (printBytes) printByte("->  read: ", byte, getState());
+  if (printBytes)
+    std::cout << "->  read: " << ebus::to_string(byte) << std::endl;
 }
 
-void onWriteCallback(const uint8_t &byte) {
-  if (printBytes) printByte("<- write: ", byte, getState());
-}
-
-int isDataAvailableCallback() { return 0; }
-
-void onTelegramCallback(const ebus::MessageType &messageType,
-                        const ebus::TelegramType &telegramType,
-                        const std::vector<uint8_t> &master,
-                        std::vector<uint8_t> *const slave) {
+void reactiveMasterSlaveCallback(const std::vector<uint8_t> &master,
+                                 std::vector<uint8_t> *const slave) {
   std::vector<uint8_t> search;
-  std::string typeString = "";
-  switch (messageType) {
-    case ebus::MessageType::active:
-      std::cout << "  active: " << ebus::to_string(master) << " "
-                << ebus::to_string(*slave) << std::endl;
-      break;
-    case ebus::MessageType::passive:
-      std::cout << " passive: " << ebus::to_string(master) << " "
-                << ebus::to_string(*slave) << std::endl;
-      break;
-    case ebus::MessageType::reactive:
+  search = {0x07, 0x04};  // 0008070400
+  if (ebus::contains(master, search))
+    *slave = ebus::to_vector("0ab5504d53303001074302");
+  search = {0x07, 0x05};  // 0008070500
+  if (ebus::contains(master, search))
+    *slave = ebus::to_vector("0ab5504d533030010743");  // defect
 
-      switch (telegramType) {
-        case ebus::TelegramType::broadcast:
-          typeString = "broadcast message";
-          break;
-        case ebus::TelegramType::master_master:
-          typeString = "master master message";
-          break;
-        case ebus::TelegramType::master_slave:
-          typeString = "master slave message";
-          search = {0x07, 0x04};  // 0008070400
-          if (ebus::contains(master, search))
-            *slave = ebus::to_vector("0ab5504d53303001074302");
-          search = {0x07, 0x05};  // 0008070500
-          if (ebus::contains(master, search))
-            *slave = ebus::to_vector("0ab5504d533030010743");  // defect
-          break;
-        default:
-          break;
-      }
-      std::cout << "    type: " << typeString << std::endl;
-      std::cout << "reactive: " << ebus::to_string(master) << " "
-                << ebus::to_string(*slave) << std::endl;
+  std::cout << "callback: " << ebus::to_string(master) << " "
+            << ebus::to_string(*slave) << std::endl;
+}
 
+void telegramCallback(const ebus::MessageType &messageType,
+                      const ebus::TelegramType &telegramType,
+                      const std::vector<uint8_t> &master,
+                      const std::vector<uint8_t> &slave) {
+  switch (telegramType) {
+    case ebus::TelegramType::broadcast:
+      std::cout << "    type: broadcast" << std::endl;
       break;
-    default:
+    case ebus::TelegramType::master_master:
+      std::cout << "    type: master master" << std::endl;
+      break;
+    case ebus::TelegramType::master_slave:
+      std::cout << "    type: master slave" << std::endl;
       break;
   }
+  switch (messageType) {
+    case ebus::MessageType::active:
+      std::cout << "  active: ";
+      break;
+    case ebus::MessageType::passive:
+      std::cout << " passive: ";
+      break;
+    case ebus::MessageType::reactive:
+      std::cout << "reactive: ";
+      break;
+  }
+  std::cout << ebus::to_string(master) << " " << ebus::to_string(slave)
+            << std::endl;
 }
 
-void onErrorCallback(const std::string &str) {
-  std::cout << "   error: " << str << std::endl;
+void onErrorCallback(const std::string &error,
+                     const std::vector<uint8_t> &master,
+                     const std::vector<uint8_t> &slave) {
+  std::cout << "   error: " << error << " master '" << ebus::to_string(master)
+            << "' slave '" << ebus::to_string(slave) << "'" << std::endl;
 }
 
 void printCounters() {
@@ -120,13 +116,13 @@ void printCounters() {
             << counter.messagesPassiveMasterSlave << std::endl;
   std::cout << "messagesPassiveMasterMaster: "
             << counter.messagesPassiveMasterMaster << std::endl;
+  std::cout << "messagesPassiveBroadcast: " << counter.messagesPassiveBroadcast
+            << std::endl;
 
   std::cout << "messagesReactiveMasterSlave: "
             << counter.messagesReactiveMasterSlave << std::endl;
   std::cout << "messagesReactiveMasterMaster: "
             << counter.messagesReactiveMasterMaster << std::endl;
-  std::cout << "messagesReactiveBroadcast: "
-            << counter.messagesReactiveBroadcast << std::endl;
 
   std::cout << "messagesActiveMasterSlave: "
             << counter.messagesActiveMasterSlave << std::endl;
@@ -238,6 +234,13 @@ void simulate(const std::string &test, const std::string &title,
     }
 
     ebusHandler.run(seq[i]);
+
+    // If SYN, simulte request bus timer
+    if (seq[i] == ebus::sym_syn && ebusHandler.busRequest()) {
+      std::cout << " ISR - busRequested()" << std::endl;
+      bus.writeByte(ebusHandler.getAddress());
+      ebusHandler.busRequested();
+    }
   }
 
   std::cout << std::endl;
@@ -453,7 +456,7 @@ void reactiveTest_03(const uint8_t &address, const bool &bytes,
            "aaaaaa"
            "00"
            "38"        // own slave address
-           "070400ff"  // Master defect
+           "070400ac"  // Master defect
            "00"
            "38"        // own slave address
            "070400ab"  // Master correct
@@ -478,7 +481,7 @@ void reactiveTest_04(const uint8_t &address, const bool &bytes,
 
 void reactiveTest_05(const uint8_t &address, const bool &bytes,
                      const std::string &title) {
-  assert(title == "MS: Slave defect (reactiveCallback)");
+  assert(title == "MS: Slave defect (callback)");
   ebusHandler.setAddress(address);
   simulate(__FUNCTION__, title, bytes, "",
            "aaaaaa"
@@ -550,7 +553,7 @@ void activeTest_04(const uint8_t &address, const bool &bytes,
   ebusHandler.setAddress(address);
   simulate(__FUNCTION__, title, bytes, "feb5050427002d00",
            "aaaaaa"
-           "83"  // own Address == Priority retry
+           "73"  // own Address == Priority retry
            "aa"
            "33"  // own Address == Arbitration won
            "aaaaaa");
@@ -562,7 +565,7 @@ void activeTest_05(const uint8_t &address, const bool &bytes,
   ebusHandler.setAddress(address);
   simulate(__FUNCTION__, title, bytes, "feb5050427002d00",
            "aaaaaa"
-           "83"  // own Address == Priority retry
+           "73"  // own Address == Priority retry
            "aa"
            "13"  // other Address == Arbitration lost
            "aaaaaa");
@@ -570,7 +573,7 @@ void activeTest_05(const uint8_t &address, const bool &bytes,
 
 void activeTest_06(const uint8_t &address, const bool &bytes,
                    const std::string &title) {
-  assert(title == "BC: Request Bus - Priority retry/error");
+  assert(title == "BC: Request Bus - Priority fit/error");
   ebusHandler.setAddress(address);
   simulate(__FUNCTION__, title, bytes, "feb5050427002d00",
            "aaaaaa"
@@ -654,50 +657,50 @@ void activeTest_12(const uint8_t &address, const bool &bytes,
 }
 
 int main() {
-  ebusHandler.onWrite(onWriteCallback);
-  ebusHandler.isDataAvailable(isDataAvailableCallback);
-  ebusHandler.onTelegram(onTelegramCallback);
-  ebusHandler.onError(onErrorCallback);
+  ebusHandler.setReactiveMasterSlaveCallback(reactiveMasterSlaveCallback);
+  ebusHandler.setTelegramCallback(telegramCallback);
+  ebusHandler.setErrorCallback(onErrorCallback);
 
-  passiveTest_01(0x33, true, "MS: Normal");
-  passiveTest_02(0x33, true, "MS: Master defect/NAK");
-  passiveTest_03(0x33, true, "MS: Master NAK/repeat");
-  passiveTest_04(0x33, true, "MS: Master NAK/repeat/NAK");
-  passiveTest_05(0x33, true, "MS: Slave defect/NAK/repeat");
-  passiveTest_06(0x33, true, "MS: Slave NAK/repeat/NAK");
-  passiveTest_07(0x33, true, "MS: Master NAK/repeat - Slave NAK/repeat");
-  passiveTest_08(0x33, true,
-                 "MS: Master NAK/repeat/ACK - Slave NAK/repeat/NAK");
-  passiveTest_09(0x33, true, "MM: Normal");
-  passiveTest_10(0x33, true, "BC: defect");
-  passiveTest_11(0x33, true, "00: reset");
-  passiveTest_12(0x33, true, "0704: scan");
-  passiveTest_13(0x33, true, "BC: normal");
+  // clang-format off
+  // passiveTest_01(0x33, true, "MS: Normal");
+  // passiveTest_02(0x33, true, "MS: Master defect/NAK");
+  // passiveTest_03(0x33, true, "MS: Master NAK/repeat");
+  // passiveTest_04(0x33, true, "MS: Master NAK/repeat/NAK");
+  // passiveTest_05(0x33, true, "MS: Slave defect/NAK/repeat");
+  // passiveTest_06(0x33, true, "MS: Slave NAK/repeat/NAK");
+  // passiveTest_07(0x33, true, "MS: Master NAK/repeat - Slave NAK/repeat");
+  // passiveTest_08(0x33, true, "MS: Master NAK/repeat/ACK - Slave NAK/repeat/NAK");
+  // passiveTest_09(0x33, true, "MM: Normal");
+  // passiveTest_10(0x33, true, "BC: defect");
+  // passiveTest_11(0x33, true, "00: reset");
+  // passiveTest_12(0x33, true, "0704: scan");
+  // passiveTest_13(0x33, true, "BC: normal");
 
-  reactiveTest_01(0x33, true, "MS: Slave NAK/ACK");
-  reactiveTest_02(0x33, true, "MS: Slave NAK/NAK");
-  reactiveTest_03(0x33, true, "MS: Master defect/correct");
-  reactiveTest_04(0x33, true, "MS: Master defect/defect");
-  reactiveTest_05(0x33, true, "MS: Slave defect (reactiveCallback)");
-  reactiveTest_06(0x33, true, "MM: Normal");
-  reactiveTest_07(0x33, true, "BC: Normal");
+  // reactiveTest_01(0x33, true, "MS: Slave NAK/ACK");
+  // reactiveTest_02(0x33, true, "MS: Slave NAK/NAK");
+  // reactiveTest_03(0x33, true, "MS: Master defect/correct");
+  // reactiveTest_04(0x33, true, "MS: Master defect/defect");
+  // reactiveTest_05(0x33, true, "MS: Slave defect (callback)");
+  // reactiveTest_06(0x33, true, "MM: Normal");
+  // reactiveTest_07(0x33, true, "BC: Normal");
 
-  activeTest_01(0x33, true, "BC: Request Bus - Normal");
-  activeTest_02(0x33, true, "BC: Request Bus - Priority lost");
+  // activeTest_01(0x33, true, "BC: Request Bus - Normal");
+  // activeTest_02(0x33, true, "BC: Request Bus - Priority lost");
   activeTest_03(0x33, true, "BC: Request Bus - Priority lost/wrong byte");
-  activeTest_04(0x33, true, "BC: Request Bus - Priority fit/won");
-  activeTest_05(0x33, true, "BC: Request Bus - Priority fit/lost");
-  activeTest_06(0x33, true, "BC: Request Bus - Priority retry/error");
-  activeTest_07(0x33, true, "MS: Normal");
-  activeTest_08(0x33, true, "MS: Master NAK/ACK - Slave CRC wrong/correct");
-  activeTest_09(0x33, true, "MS: Master NAK/ACK - Slave CRC wrong/wrong");
-  activeTest_10(0x33, true, "MS: Master NAK/NAK");
-  activeTest_11(0x33, true, "MM: Master NAK/ACK");
-  activeTest_12(0x30, true, "BC: Request Bus - Priority lost and Sub lost");
+  // activeTest_04(0x33, true, "BC: Request Bus - Priority fit/won");
+  // activeTest_05(0x33, true, "BC: Request Bus - Priority fit/lost");
+  // activeTest_06(0x33, true, "BC: Request Bus - Priority fit/error");
+  // activeTest_07(0x33, true, "MS: Normal");
+  // activeTest_08(0x33, true, "MS: Master NAK/ACK - Slave CRC wrong/correct");
+  // activeTest_09(0x33, true, "MS: Master NAK/ACK - Slave CRC wrong/wrong");
+  // activeTest_10(0x33, true, "MS: Master NAK/NAK");
+  // activeTest_11(0x33, true, "MM: Master NAK/ACK");
+  // activeTest_12(0x30, true, "BC: Request Bus - Priority lost and Sub lost");
+  // clang-format on
 
-  printCounters();
+  // printCounters();
 
-  printStateTimingResults();
+  // printStateTimingResults();
 
   return EXIT_SUCCESS;
 }

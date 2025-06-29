@@ -19,11 +19,22 @@
 
 #pragma once
 
-#include "Ebus/Bus.hpp"
-#include "Ebus/Queue.hpp"
-#include "Ebus/Common.hpp"
-#include "Ebus/Datatypes.hpp"
-#include "Ebus/Handler.hpp"
-#include "Ebus/Sequence.hpp"
-#include "Ebus/ServiceRunner.hpp"
-#include "Ebus/Telegram.hpp"
+#include <Arduino.h>
+
+namespace ebus {
+
+class BusEsp8266 {
+ public:
+  explicit BusEsp8266(HardwareSerial& serial) : serial(serial) {}
+
+  void writeByte(uint8_t byte) { serial.write(byte); }
+
+  uint8_t readByte() { return serial.read(); }
+
+  size_t available() const { return serial.available(); }
+
+ private:
+  HardwareSerial& serial;
+};
+
+}  // namespace ebus
