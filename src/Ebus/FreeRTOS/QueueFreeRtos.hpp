@@ -65,9 +65,9 @@ class QueueFreeRtos {
     return xQueueReceive(queue, &out, 0) == pdTRUE;
   }
 
-  const size_t size() { return uxQueueMessagesWaiting(queue); }
+  const size_t size() const { return uxQueueMessagesWaiting(queue); }
 
-  const size_t capacity() { return m_capacity; }
+  const size_t capacity() const { return m_capacity; }
 
  private:
   QueueHandle_t queue;

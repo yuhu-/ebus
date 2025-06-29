@@ -39,7 +39,7 @@ class BusPosixTest {
   }
 
   // Simulate checking available bytes on the bus
-  size_t available() const {
+  const size_t available() const {
     // std::cout << "Checking available bytes: " << std::endl;
     return 0;
   }

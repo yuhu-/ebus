@@ -71,7 +71,6 @@ void createTelegram(const std::string &strSequence) {
 
 void checkTargetMasterSlave() {
   for (int b0 = 0x00; b0 <= 0xff; b0++) {
-    std::vector<uint8_t> src(1, uint8_t(b0));
     std::cout << "i: 0x" << ebus::to_string(b0);
 
     if (ebus::isTarget(b0)) std::cout << " isTarget";

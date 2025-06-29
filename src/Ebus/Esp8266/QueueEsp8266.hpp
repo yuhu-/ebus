@@ -132,9 +132,9 @@ class QueueEsp8266 {
     return true;
   }
 
-  const size_t size() { return (m_head + m_size - m_tail) % m_size; }
+  const size_t size() const { return (m_head + m_size - m_tail) % m_size; }
 
-  const size_t capacity() { return m_capacity; }
+  const size_t capacity() const { return m_capacity; }
 
  private:
   T* m_buffer;

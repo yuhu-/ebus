@@ -77,12 +77,12 @@ class QueuePosix {
     return true;
   }
 
-  const size_t size() {
+  const size_t size() const {
     std::lock_guard<std::mutex> lock(m_mutex);
     return m_queue.size();
   }
 
-  const size_t capacity() { return m_capacity; }
+  const size_t capacity() const { return m_capacity; }
 
  private:
   std::queue<T> m_queue;
