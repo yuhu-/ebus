@@ -6,8 +6,8 @@ set(CMAKE_CXX_STANDARD 14)
 
 add_subdirectory(src/Ebus)
 
-add_subdirectory(tools)
-
 add_subdirectory(test)
+
+add_subdirectory(tools)
 
 add_subdirectory(ebusstack)
