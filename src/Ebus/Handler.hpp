@@ -105,10 +105,13 @@ using ErrorCallback = std::function<void(const std::string &errorMessage,
   X(messagesReactiveMasterSlave)  \
   X(messagesReactiveMasterMaster) \
   X(requestsTotal)                \
-  X(requestsWon)                  \
-  X(requestsLost)                 \
-  X(requestsRetry)                \
-  X(requestsError)                \
+  X(requestsWon1)                 \
+  X(requestsWon2)                 \
+  X(requestsLost1)                \
+  X(requestsLost2)                \
+  X(requestsError1)               \
+  X(requestsError2)               \
+  X(requestsErrorRetry)           \
   X(resetsTotal)                  \
   X(resetsPassive00)              \
   X(resetsPassive0704)            \

@@ -143,8 +143,10 @@ const ebus::Counters &ebus::Handler::getCounters() {
       counters.messagesActiveBroadcast + counters.messagesReactiveMasterSlave +
       counters.messagesReactiveMasterMaster;
 
-  counters.requestsTotal =
-      counters.requestsWon + counters.requestsLost + counters.requestsError;
+  counters.requestsTotal = counters.requestsWon1 + counters.requestsWon2 +
+                           counters.requestsLost1 + counters.requestsLost2 +
+                           counters.requestsError1 + counters.requestsError2 +
+                           counters.requestsErrorRetry;
 
   counters.resetsTotal = counters.resetsPassive00 + counters.resetsPassive0704 +
                          counters.resetsActive + counters.resetsPassive;
@@ -401,7 +403,6 @@ void ebus::Handler::reactiveReceiveSlaveAcknowledge(const uint8_t &byte) {
 
 void ebus::Handler::requestBus(const uint8_t &byte) {
   auto win = [&]() {
-    counters.requestsWon++;
     activeMaster = activeTelegram.getMaster();
     activeMaster.push_back(activeTelegram.getMasterCRC(), false);
     activeMaster.extend();
@@ -411,7 +412,6 @@ void ebus::Handler::requestBus(const uint8_t &byte) {
   };
 
   auto lose = [&]() {
-    counters.requestsLost++;
     passiveMaster.push_back(byte);
     active = false;
     activeTelegram.clear();
@@ -423,11 +423,18 @@ void ebus::Handler::requestBus(const uint8_t &byte) {
     case RequestBusTry::first:
       if (byte != sym_syn) {
         if (byte == address) {
+          counters.requestsWon1++;
           win();
-        } else if (isMaster(byte) && (byte & 0x0f) == (address & 0x0f)) {
-          requestBusTry = RequestBusTry::retry;
-          request = true;
+        } else if (isMaster(byte)) {
+          if ((byte & 0x0f) == (address & 0x0f)) {
+            requestBusTry = RequestBusTry::retry;
+            request = true;
+          } else {
+            counters.requestsLost1++;
+            lose();
+          }
         } else {
+          counters.requestsError1++;
           lose();
         }
       }
@@ -435,10 +442,9 @@ void ebus::Handler::requestBus(const uint8_t &byte) {
 
     case RequestBusTry::retry:
       if (byte == sym_syn) {
-        counters.requestsRetry++;
         requestBusTry = RequestBusTry::second;
       } else {
-        counters.requestsError++;
+        counters.requestsErrorRetry++;
         request = false;
         active = false;
         activeTelegram.clear();
@@ -449,8 +455,13 @@ void ebus::Handler::requestBus(const uint8_t &byte) {
 
     case RequestBusTry::second:
       if (byte == address) {
+        counters.requestsWon2++;
         win();
+      } else if (isMaster(byte)) {
+        counters.requestsLost2++;
+        lose();
       } else {
+        counters.requestsError2++;
         lose();
       }
       break;
