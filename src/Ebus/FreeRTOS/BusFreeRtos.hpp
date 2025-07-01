@@ -19,24 +19,50 @@
 
 #pragma once
 
-#include <HardwareSerial.h>
+#pragma once
 
-#include "../Bus.hpp"
+#include <HardwareSerial.h>
+#include <driver/timer.h>
+
+#include <atomic>
+
+#include "../Queue.hpp"
+
+// Forward declaration to avoid circular dependency
+namespace ebus {
+class Handler;
+}
 
 namespace ebus {
 
 class BusFreeRtos {
  public:
-  explicit BusFreeRtos(HardwareSerial& serial) : serial(serial) {}
+  BusFreeRtos(HardwareSerial& serial, Queue<uint8_t>& byteQueue)
+      : serial(serial), byteQueue(byteQueue) {}
 
-  void writeByte(const uint8_t byte) { serial.write(byte); }
+  void setHandler(Handler* handler);
 
-  uint8_t readByte() { return serial.read(); }
+  void setRequestWindow(const uint16_t& delay);
 
-  size_t available() const { return serial.available(); }
+  void begin(const uint32_t& baud, const int8_t& rx_pin, const int8_t& tx_pin);
+
+  void writeByte(const uint8_t& byte);
 
  private:
   HardwareSerial& serial;
+  Queue<uint8_t>& byteQueue;
+  Handler* handler = nullptr;
+
+  hw_timer_t* requestBusTimer = nullptr;
+  portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
+
+  volatile uint16_t requestWindow = 4300;  // default 4300us
+  std::atomic<bool> requestBusPending{false};
+  std::atomic<bool> requestBusDone{false};
+
+  static void IRAM_ATTR onRequestBusTimerStatic(void* arg);
+  void IRAM_ATTR onRequestBusTimer();
+  void IRAM_ATTR onUartRx();
 };
 
 }  // namespace ebus
