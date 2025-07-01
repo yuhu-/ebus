@@ -94,13 +94,13 @@ void run_test(const std::string &description, const std::string &read_string,
 
   ebus::Bus bus;
   ebus::Queue<uint8_t> byteQueue(32);
-  ebus::Handler ebusHandler(&bus, 0x33);
+  ebus::Handler handler(&bus, 0x33);
 
-  ebusHandler.setReactiveMasterSlaveCallback(reactiveMasterSlaveCallback);
+  handler.setReactiveMasterSlaveCallback(reactiveMasterSlaveCallback);
 
   ebus::Queue<CallbackEvent> eventQueue(8);
 
-  ebusHandler.setTelegramCallback(
+  handler.setTelegramCallback(
       [&eventQueue](const ebus::MessageType &messageType,
                     const ebus::TelegramType &telegramType,
                     const std::vector<uint8_t> &master,
@@ -114,21 +114,20 @@ void run_test(const std::string &description, const std::string &read_string,
         eventQueue.try_push(event);
       });
 
-  ebusHandler.setErrorCallback(
-      [&eventQueue](const std::string &error,
-                    const std::vector<uint8_t> &master,
-                    const std::vector<uint8_t> &slave) {
-        CallbackEvent event;
-        event.type = CallbackType::error;
-        event.data.error = error;
-        event.data.master = master;
-        event.data.slave = slave;
-        eventQueue.try_push(event);
-      });
+  handler.setErrorCallback([&eventQueue](const std::string &error,
+                                         const std::vector<uint8_t> &master,
+                                         const std::vector<uint8_t> &slave) {
+    CallbackEvent event;
+    event.type = CallbackType::error;
+    event.data.error = error;
+    event.data.master = master;
+    event.data.slave = slave;
+    eventQueue.try_push(event);
+  });
 
-  ebusHandler.setMaxLockCounter(2);
+  handler.setMaxLockCounter(2);
 
-  ebus::ServiceRunner runner(ebusHandler, byteQueue);
+  ebus::ServiceRunner runner(handler, byteQueue);
   runner.enableTesting();
 
   // Register a ByteListener that logs every byte processed by the runner
@@ -145,14 +144,14 @@ void run_test(const std::string &description, const std::string &read_string,
   ebus::Sequence seq;
   seq.assign(ebus::to_vector(tmp));
 
-  ebusHandler.enque(ebus::to_vector(send_string));
+  handler.enque(ebus::to_vector(send_string));
 
   // Simulate ISR: pushes bytes into the byteQueue asynchronously
   // 2400 baud => 1 / 2400 = 416,67 microseconds per bit
   // 10 bits per byte (1 start bit, 8 data bits, 1 stop bit)
   // 1 byte takes 10 * 416,67 microseconds = 4166,67 microseconds
   // 4400 microseconds per byte to account for processing overhead
-  std::thread onUartRx([&seq, &bus, &byteQueue, &ebusHandler]() {
+  std::thread onUartRx([&seq, &bus, &byteQueue, &handler]() {
     for (size_t i = 0; i < seq.size(); ++i) {
       uint8_t byte = seq[i];
 
@@ -161,12 +160,12 @@ void run_test(const std::string &description, const std::string &read_string,
       int64_t delay = 4400;
 
       // If SYN, simulte request bus timer
-      if (seq[i] == ebus::sym_syn && ebusHandler.busRequest()) {
+      if (seq[i] == ebus::sym_syn && handler.busRequest()) {
         std::this_thread::sleep_for(std::chrono::microseconds(200));
         delay -= 200;
         std::cout << " ISR - busRequested()" << std::endl;
-        bus.writeByte(ebusHandler.getAddress());
-        ebusHandler.busRequested();
+        bus.writeByte(handler.getAddress());
+        handler.busRequested();
       }
 
       std::this_thread::sleep_for(std::chrono::microseconds(delay));
