@@ -19,7 +19,7 @@
 
 #pragma once
 
-#if defined(ESP_PLATFORM) || defined(ESP32)
+#if defined(ESP32)
 #include "FreeRTOS/ServiceRunnerFreeRtos.hpp"
 namespace ebus {
 using ServiceRunner = ServiceRunnerFreeRtos;

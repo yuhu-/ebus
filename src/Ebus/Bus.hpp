@@ -24,7 +24,7 @@
 namespace ebus {
 using Bus = BusPosixTest;
 }
-#elif defined(ESP_PLATFORM) || defined(ESP32)
+#elif defined(ESP32)
 #include "FreeRTOS/BusFreeRtos.hpp"
 namespace ebus {
 using Bus = BusFreeRtos;
