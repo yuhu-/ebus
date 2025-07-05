@@ -426,7 +426,8 @@ void ebus::Handler::requestBus(const uint8_t &byte) {
           counters.requestsWon1++;
           win();
         } else if (isMaster(byte)) {
-          if ((byte & 0x0f) == (address & 0x0f)) {
+          if ((byte & 0x0f) == (address & 0x0f) &&  // priority class
+              (byte & 0xf0) > (address & 0xf0)) {   // sub address
             requestBusTry = RequestBusTry::retry;
             request = true;
           } else {

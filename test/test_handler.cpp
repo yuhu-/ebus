@@ -621,6 +621,16 @@ void activeTest_12(const uint8_t &address, const std::string &title) {
            "aaaaaa");
 }
 
+void activeTest_13(const uint8_t &address, const std::string &title) {
+  assert(title == "MS: Request Bus - Priority lost to 0x10");
+  handler.setAddress(address);
+  simulate(__FUNCTION__, title, "feb5050427002d00",
+           "aaaaaa"
+           "10"                        // other Address == Priority lost
+           "52b50401314b000200002c00"  //
+           "aaaaaa");
+}
+
 int main() {
   handler.setReactiveMasterSlaveCallback(reactiveMasterSlaveCallback);
   handler.setTelegramCallback(telegramCallback);
@@ -661,6 +671,7 @@ int main() {
   activeTest_10(0x33, "MS: Master NAK/NAK");
   activeTest_11(0x33, "MM: Master NAK/ACK");
   activeTest_12(0x30, "BC: Request Bus - Priority lost and Sub lost");
+  activeTest_13(0x30, "MS: Request Bus - Priority lost to 0x10");
   // clang-format on
 
   printCounters();
