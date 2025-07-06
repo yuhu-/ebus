@@ -224,7 +224,7 @@ void ebus::Handler::passiveReceiveMaster(const uint8_t &byte) {
       passiveTelegram.createMaster(passiveMaster);
       if (passiveTelegram.getMasterState() == SequenceState::seq_ok) {
         if (passiveTelegram.getType() == TelegramType::broadcast) {
-          callOnTelegram(MessageType::reactive, TelegramType::broadcast,
+          callOnTelegram(MessageType::passive, TelegramType::broadcast,
                          passiveTelegram.getMaster().to_vector(),
                          passiveTelegram.getSlave().to_vector());
           counters.messagesPassiveBroadcast++;
