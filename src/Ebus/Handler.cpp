@@ -111,10 +111,13 @@ bool ebus::Handler::enque(const std::vector<uint8_t> &message) {
   active = false;
 
   activeTelegram.createMaster(address, message);
-  if (activeTelegram.getMasterState() == SequenceState::seq_ok)
+  if (activeTelegram.getMasterState() == SequenceState::seq_ok) {
     active = true;
-  else
+  } else {
     counters.errorsActiveMaster++;
+    callOnError("errorsActiveMaster", activeMaster.to_vector(),
+                activeSlave.to_vector());
+  }
 
   return active;
 }
@@ -245,6 +248,8 @@ void ebus::Handler::passiveReceiveMaster(const uint8_t &byte) {
             state = FsmState::reactiveSendMasterPositiveAcknowledge;
           } else {
             counters.errorsReactiveSlave++;
+            callOnError("errorsReactiveSlave", passiveMaster.to_vector(),
+                        passiveSlave.to_vector());
             callPassiveReset();
             callWrite(sym_syn);
             state = FsmState::releaseBus;
@@ -255,6 +260,8 @@ void ebus::Handler::passiveReceiveMaster(const uint8_t &byte) {
       } else {
         if (passiveMaster[1] == address || passiveMaster[1] == slaveAddress) {
           counters.errorsReactiveMaster++;
+          callOnError("errorsReactiveMaster", passiveMaster.to_vector(),
+                      passiveSlave.to_vector());
           passiveTelegram.clear();
           passiveMaster.clear();
           passiveMasterDBx = 0;
@@ -265,6 +272,8 @@ void ebus::Handler::passiveReceiveMaster(const uint8_t &byte) {
           state = FsmState::passiveReceiveMasterAcknowledge;
         } else {
           counters.errorsPassiveMaster++;
+          callOnError("errorsPassiveMaster", passiveMaster.to_vector(),
+                      passiveSlave.to_vector());
           callPassiveReset();
         }
       }
@@ -307,6 +316,8 @@ void ebus::Handler::passiveReceiveMasterAcknowledge(const uint8_t &byte) {
         passiveMaster[3] == 0x04)
       counters.resetsPassive0704++;
 
+    callOnError("errorsPassiveMasterACK", passiveMaster.to_vector(),
+                passiveSlave.to_vector());
     callPassiveReset();
     state = FsmState::passiveReceiveMaster;
   }
@@ -323,8 +334,11 @@ void ebus::Handler::passiveReceiveSlave(const uint8_t &byte) {
   // size() > NN + DBx + CRC
   if (passiveSlave.size() >= 1 + passiveSlaveDBx + 1) {
     passiveTelegram.createSlave(passiveSlave);
-    if (passiveTelegram.getSlaveState() != SequenceState::seq_ok)
+    if (passiveTelegram.getSlaveState() != SequenceState::seq_ok) {
       counters.errorsPassiveSlave++;
+      callOnError("errorsPassiveSlave", passiveMaster.to_vector(),
+                  passiveSlave.to_vector());
+    }
     state = FsmState::passiveReceiveSlaveAcknowledge;
   }
 }
@@ -344,6 +358,8 @@ void ebus::Handler::passiveReceiveSlaveAcknowledge(const uint8_t &byte) {
     state = FsmState::passiveReceiveSlave;
   } else {
     counters.errorsPassiveSlaveACK++;
+    callOnError("errorsPassiveSlaveACK", passiveMaster.to_vector(),
+                passiveSlave.to_vector());
     callPassiveReset();
     state = FsmState::passiveReceiveMaster;
   }
@@ -369,6 +385,8 @@ void ebus::Handler::reactiveSendMasterNegativeAcknowledge(const uint8_t &byte) {
     passiveMasterRepeated = true;
   } else {
     counters.errorsReactiveMasterACK++;
+    callOnError("errorsReactiveMasterACK", passiveMaster.to_vector(),
+                passiveSlave.to_vector());
     callPassiveReset();
   }
 }
@@ -396,6 +414,8 @@ void ebus::Handler::reactiveReceiveSlaveAcknowledge(const uint8_t &byte) {
     state = FsmState::reactiveSendSlave;
   } else {
     counters.errorsReactiveSlaveACK++;
+    callOnError("errorsReactiveSlaveACK", passiveMaster.to_vector(),
+                passiveSlave.to_vector());
     callPassiveReset();
     state = FsmState::passiveReceiveMaster;
   }
@@ -511,6 +531,8 @@ void ebus::Handler::activeReceiveMasterAcknowledge(const uint8_t &byte) {
     state = FsmState::activeSendMaster;
   } else {
     counters.errorsActiveMasterACK++;
+    callOnError("errorsActiveMasterACK", activeMaster.to_vector(),
+                activeSlave.to_vector());
     callActiveReset();
     callWrite(sym_syn);
     state = FsmState::releaseBus;
@@ -533,6 +555,8 @@ void ebus::Handler::activeReceiveSlave(const uint8_t &byte) {
       state = FsmState::activeSendSlavePositiveAcknowledge;
     } else {
       counters.errorsActiveSlave++;
+      callOnError("errorsActiveSlave", activeMaster.to_vector(),
+                  activeSlave.to_vector());
       activeSlave.clear();
       activeSlaveDBx = 0;
       callWrite(sym_nak);
@@ -557,6 +581,8 @@ void ebus::Handler::activeSendSlaveNegativeAcknowledge(const uint8_t &byte) {
     state = FsmState::activeReceiveSlave;
   } else {
     counters.errorsActiveSlaveACK++;
+    callOnError("errorsActiveSlaveACK", activeMaster.to_vector(),
+                activeSlave.to_vector());
     callActiveReset();
     callWrite(sym_syn);
     state = FsmState::releaseBus;
@@ -577,7 +603,8 @@ void ebus::Handler::releaseBus(const uint8_t &byte) {
  */
 void ebus::Handler::checkPassiveBuffers() {
   if (passiveMaster.size() > 0 || passiveSlave.size() > 0) {
-    callOnError("passive", passiveMaster.to_vector(), passiveSlave.to_vector());
+    callOnError("checkPassiveBuffers", passiveMaster.to_vector(),
+                passiveSlave.to_vector());
 
     if (passiveMaster.size() == 1 && passiveMaster[0] == 0x00)
       counters.resetsPassive00++;
@@ -600,7 +627,8 @@ void ebus::Handler::checkPassiveBuffers() {
  */
 void ebus::Handler::checkActiveBuffers() {
   if (activeMaster.size() > 0 || activeSlave.size() > 0) {
-    callOnError("active", activeMaster.to_vector(), activeSlave.to_vector());
+    callOnError("checkActiveBuffers", activeMaster.to_vector(),
+                activeSlave.to_vector());
     counters.resetsActive++;
     callActiveReset();
   }

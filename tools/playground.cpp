@@ -106,5 +106,9 @@ int main() {
 
   printSequence("091403000000fe000100b9");
 
+  createTelegram("1008b5130304cd017f000acd01000000000100010000");
+
+  printSequence("0acd010000000001000100");
+
   return EXIT_SUCCESS;
 }
