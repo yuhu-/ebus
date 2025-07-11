@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2025 Roland Jax
+ * Copyright (C) 2023-2025 Roland Jax
  *
  * This file is part of ebus.
  *
