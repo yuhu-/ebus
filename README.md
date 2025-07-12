@@ -19,6 +19,7 @@ On the bus, a message is sent or received as a sequence of characters.
 - The **Handler** has routines for sending and receiving all types of telegrams and the option of collecting
 statistical data about the eBUS system. To perform this task, the Handler requires a serial bus device.
 - **Datatypes** offers functions for decoding/encoding of in accordance with the eBUS data types.
+- **Bus**, **BusIsr**, **Queue** and **ServiceRunner** are selector header files that include platform-specific implementations.
 
 ### Tools
 
