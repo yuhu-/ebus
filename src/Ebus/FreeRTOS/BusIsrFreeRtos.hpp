@@ -19,12 +19,16 @@
 
 #pragma once
 
-#include "Ebus/Bus.hpp"
-#include "Ebus/BusIsr.hpp"
-#include "Ebus/Queue.hpp"
-#include "Ebus/Common.hpp"
-#include "Ebus/Datatypes.hpp"
-#include "Ebus/Handler.hpp"
-#include "Ebus/Sequence.hpp"
-#include "Ebus/ServiceRunner.hpp"
-#include "Ebus/Telegram.hpp"
+#include "../Handler.hpp"
+#include "../ServiceRunner.hpp"
+
+namespace ebus {
+
+extern ebus::Handler* handler;
+extern ebus::ServiceRunner* serviceRunner;
+
+void setupBusIsr(HardwareSerial* serial, const int8_t& rxPin,
+                 const int8_t& txPin);
+void setRequestOffset(const uint16_t& offset);
+
+}  // namespace ebus

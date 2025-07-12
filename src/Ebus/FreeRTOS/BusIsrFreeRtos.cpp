@@ -17,7 +17,7 @@
  * along with ebus. If not, see http://www.gnu.org/licenses/.
  */
 
-#include "busisr.hpp"
+#include "BusIsrFreeRtos.hpp"
 
 hw_timer_t* requestBusTimer = nullptr;
 portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
@@ -34,12 +34,12 @@ static HardwareSerial* hwSerial = nullptr;
 
 ebus::Bus* bus = nullptr;
 ebus::Queue<uint8_t>* byteQueue = nullptr;
-ebus::Handler* ebusHandler = nullptr;
-ebus::ServiceRunner* serviceRunner = nullptr;
+ebus::Handler* ebus::handler = nullptr;
+ebus::ServiceRunner* ebus::serviceRunner = nullptr;
 
 // ISR: Fires when a byte is received
 void IRAM_ATTR onUartRx() {
-  if (!byteQueue || !ebusHandler) return;
+  if (!byteQueue || !ebus::handler) return;
 
   // Read all available bytes as quickly as possible
   while (hwSerial->available()) {
@@ -47,7 +47,7 @@ void IRAM_ATTR onUartRx() {
     portENTER_CRITICAL_ISR(&timerMux);
     if (requestBusDone) {
       requestBusDone = false;
-      ebusHandler->busRequested();
+      ebus::handler->busRequested();
     }
     portEXIT_CRITICAL_ISR(&timerMux);
 
@@ -56,7 +56,7 @@ void IRAM_ATTR onUartRx() {
     byteQueue->push(byte);
 
     // Handle bus request logic only if needed
-    if (byte == ebus::sym_syn && ebusHandler->busRequest()) {
+    if (byte == ebus::sym_syn && ebus::handler->busRequest()) {
       uint32_t delay = micros() - microsLastStartBitAutoSyn - requestOffset;
       if (delay < 4300) {
         timerAlarmWrite(requestBusTimer, delay, false);
@@ -67,7 +67,7 @@ void IRAM_ATTR onUartRx() {
           portENTER_CRITICAL_ISR(&timerMux);
           requestBusDone = true;
           portEXIT_CRITICAL_ISR(&timerMux);
-          hwSerial->write(ebusHandler->getAddress());
+          hwSerial->write(ebus::handler->getAddress());
         }
       }
     }
@@ -79,7 +79,7 @@ void IRAM_ATTR onRequestBusTimer() {
   portENTER_CRITICAL_ISR(&timerMux);
   if (!hwSerial->available()) {
     requestBusDone = true;
-    hwSerial->write(ebusHandler->getAddress());
+    hwSerial->write(ebus::handler->getAddress());
   }
   portEXIT_CRITICAL_ISR(&timerMux);
   timerAlarmDisable(requestBusTimer);
@@ -94,16 +94,16 @@ void IRAM_ATTR onFallingEdge() {
   microsLastFallingEdge = now;
 }
 
-void setupBusIsr(HardwareSerial* serial, const int8_t& rxPin,
-                 const int8_t& txPin) {
+void ebus::setupBusIsr(HardwareSerial* serial, const int8_t& rxPin,
+                       const int8_t& txPin) {
   if (serial) {
     hwSerial = serial;
     hwSerial->begin(2400, SERIAL_8N1, rxPin, txPin);
 
     bus = new ebus::Bus(*(hwSerial));
     byteQueue = new ebus::Queue<uint8_t>();
-    ebusHandler = new ebus::Handler(bus, ebus::DEFAULT_ADDRESS);
-    serviceRunner = new ebus::ServiceRunner(*ebusHandler, *byteQueue);
+    ebus::handler = new ebus::Handler(bus, ebus::DEFAULT_ADDRESS);
+    ebus::serviceRunner = new ebus::ServiceRunner(*ebus::handler, *byteQueue);
 
     // Attach the ISR to the UART receive event
     hwSerial->onReceive(&onUartRx);
@@ -121,4 +121,4 @@ void setupBusIsr(HardwareSerial* serial, const int8_t& rxPin,
   }
 }
 
-void setRequestOffset(const uint16_t& offset) { requestOffset = offset; }
+void ebus::setRequestOffset(const uint16_t& offset) { requestOffset = offset; }
