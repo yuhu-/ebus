@@ -84,6 +84,10 @@ ebus::FsmState ebus::Handler::getState() const { return state; }
 
 bool ebus::Handler::isActive() const { return active; }
 
+void ebus::Handler::busRequestDelay(const int64_t &requestDelay) {
+  delay.add(requestDelay);
+}
+
 bool ebus::Handler::busRequest() const { return request; }
 
 void ebus::Handler::busRequested() {
@@ -174,6 +178,7 @@ const ebus::Counters &ebus::Handler::getCounters() {
 
 void ebus::Handler::resetTimings() {
   sync.clear();
+  delay.clear();
   write.clear();
   passiveFirst.clear();
   passiveData.clear();

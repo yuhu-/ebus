@@ -142,6 +142,7 @@ struct Counters {
 
 #define EBUS_TIMINGS_LIST \
   X(sync)                 \
+  X(delay)                \
   X(write)                \
   X(passiveFirst)         \
   X(passiveData)          \
@@ -213,6 +214,7 @@ class Handler {
   FsmState getState() const;
   bool isActive() const;
 
+  void busRequestDelay(const int64_t &requestDelay);
   bool busRequest() const;
   void busRequested();
 
@@ -262,6 +264,7 @@ class Handler {
   bool measureSync = false;
 
   TimingStats sync;
+  TimingStats delay;
   TimingStats write;
   TimingStats passiveFirst;
   TimingStats passiveData;
