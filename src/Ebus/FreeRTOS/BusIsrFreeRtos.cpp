@@ -59,7 +59,7 @@ void IRAM_ATTR onUartRx() {
     if (byte == ebus::sym_syn && ebus::handler->busRequest()) {
       uint32_t microsSinceLastStartBit = micros() - microsLastStartBitAutoSyn;
       int64_t delay = 4300 - microsSinceLastStartBit - requestOffset;
-      if (delay > 0) {
+      if (delay > 0 && delay < 156) {
         timerAlarmWrite(requestBusTimer, delay, false);
         timerAlarmEnable(requestBusTimer);
         ebus::handler->busRequestDelay(delay);
