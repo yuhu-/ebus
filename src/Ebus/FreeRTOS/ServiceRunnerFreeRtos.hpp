@@ -29,6 +29,8 @@
 
 namespace ebus {
 
+extern void processBusIsrEvents();
+
 class ServiceRunnerFreeRtos {
  public:
   // Define a listener type for byte events
@@ -64,6 +66,7 @@ class ServiceRunnerFreeRtos {
     uint8_t byte;
     for (;;) {
       if (self->queue.pop(byte)) {
+        processBusIsrEvents();
         self->handler.run(byte);
         for (const ByteListener& listener : self->listeners) listener(byte);
       }

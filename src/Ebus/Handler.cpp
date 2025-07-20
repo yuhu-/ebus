@@ -84,8 +84,36 @@ ebus::FsmState ebus::Handler::getState() const { return state; }
 
 bool ebus::Handler::isActive() const { return active; }
 
-void ebus::Handler::busRequestDelay(const int64_t &requestDelay) {
-  delay.add(requestDelay);
+void ebus::Handler::microsBusIsrDelay(const int64_t &delay) {
+  busIsrDelay.add(delay);
+}
+
+void ebus::Handler::microsBusIsrWindow(const int64_t &window) {
+  busIsrWindow.add(window);
+}
+
+void ebus::Handler::busIsrDelayMin() {
+  if (request) {
+    request = false;
+    counters.busIsrsDelayMin++;
+    callActiveReset();
+  }
+}
+
+void ebus::Handler::busIsrDelayMax() {
+  if (request) {
+    request = false;
+    counters.busIsrsDelayMax++;
+    callActiveReset();
+  }
+}
+
+void ebus::Handler::busIsrTimer() {
+  if (request) {
+    request = false;
+    counters.busIsrsTimer++;
+    callActiveReset();
+  }
 }
 
 bool ebus::Handler::busRequest() const { return request; }
@@ -150,6 +178,9 @@ const ebus::Counters &ebus::Handler::getCounters() {
       counters.messagesActiveBroadcast + counters.messagesReactiveMasterSlave +
       counters.messagesReactiveMasterMaster;
 
+  counters.busIsrsTotal = counters.busIsrsDelayMin + counters.busIsrsDelayMax +
+                          counters.busIsrsTimer;
+
   counters.requestsTotal = counters.requestsWon1 + counters.requestsWon2 +
                            counters.requestsLost1 + counters.requestsLost2 +
                            counters.requestsError1 + counters.requestsError2 +
@@ -178,8 +209,9 @@ const ebus::Counters &ebus::Handler::getCounters() {
 
 void ebus::Handler::resetTimings() {
   sync.clear();
-  delay.clear();
   write.clear();
+  busIsrDelay.clear();
+  busIsrWindow.clear();
   passiveFirst.clear();
   passiveData.clear();
   activeFirst.clear();
@@ -529,7 +561,7 @@ void ebus::Handler::activeReceiveMasterAcknowledge(const uint8_t &byte) {
     } else {
       state = FsmState::activeReceiveSlave;
     }
-  } else if (!activeMasterRepeated) {
+  } else if (byte == sym_nak && !activeMasterRepeated) {
     activeMasterRepeated = true;
     activeMasterIndex = 0;
     callWrite(activeMaster[activeMasterIndex]);

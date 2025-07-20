@@ -104,6 +104,10 @@ using ErrorCallback = std::function<void(const std::string &errorMessage,
   X(messagesActiveBroadcast)      \
   X(messagesReactiveMasterSlave)  \
   X(messagesReactiveMasterMaster) \
+  X(busIsrsTotal)                 \
+  X(busIsrsDelayMin)              \
+  X(busIsrsDelayMax)              \
+  X(busIsrsTimer)                 \
   X(requestsTotal)                \
   X(requestsWon1)                 \
   X(requestsWon2)                 \
@@ -142,8 +146,9 @@ struct Counters {
 
 #define EBUS_TIMINGS_LIST \
   X(sync)                 \
-  X(delay)                \
   X(write)                \
+  X(busIsrDelay)          \
+  X(busIsrWindow)         \
   X(passiveFirst)         \
   X(passiveData)          \
   X(activeFirst)          \
@@ -214,7 +219,13 @@ class Handler {
   FsmState getState() const;
   bool isActive() const;
 
-  void busRequestDelay(const int64_t &requestDelay);
+  void microsBusIsrDelay(const int64_t &delay);
+  void microsBusIsrWindow(const int64_t &window);
+
+  void busIsrDelayMin();
+  void busIsrDelayMax();
+  void busIsrTimer();
+
   bool busRequest() const;
   void busRequested();
 
@@ -264,8 +275,9 @@ class Handler {
   bool measureSync = false;
 
   TimingStats sync;
-  TimingStats delay;
   TimingStats write;
+  TimingStats busIsrDelay;
+  TimingStats busIsrWindow;
   TimingStats passiveFirst;
   TimingStats passiveData;
   TimingStats activeFirst;

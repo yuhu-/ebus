@@ -28,7 +28,11 @@ extern ebus::Handler* handler;
 extern ebus::ServiceRunner* serviceRunner;
 
 void setupBusIsr(HardwareSerial* serial, const int8_t& rxPin,
-                 const int8_t& txPin);
-void setRequestOffset(const uint16_t& offset);
+                 const int8_t& txPin, const uint8_t& timer);
+
+void setBusIsrWindow(const uint16_t& window);
+void setBusIsrOffset(const uint16_t& offset);
+
+void processBusIsrEvents();
 
 }  // namespace ebus

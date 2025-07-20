@@ -19,16 +19,30 @@
 
 #include "BusIsrFreeRtos.hpp"
 
-hw_timer_t* requestBusTimer = nullptr;
+hw_timer_t* busIsrTimer = nullptr;
 portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
 
-// This value can be adjusted if the bus request is not working as expected.
-volatile uint16_t requestOffset = 100;
 
-volatile bool requestBusDone = false;
+// This value can be adjusted if the bus isr is not working as expected.
+volatile uint16_t busIsrWindow = 4300;  // usually between 4300-4456 us
+volatile uint16_t busIsrOffset = 80;    // mainly for context switch and write
+
+volatile bool rxActivitySinceTimerArmedFlag = false;
 
 volatile uint32_t microsLastFallingEdge = 0;
 volatile uint32_t microsLastStartBitAutoSyn = 0;
+
+volatile bool busRequestedFlag = false;
+
+volatile bool busIsrDelayMinFlag = false;
+volatile bool busIsrDelayMaxFlag = false;
+volatile bool busIsrTimerFlag = false;
+
+volatile bool microsBusIsrDelayFlag = false;
+volatile bool microsBusIsrWindowFlag = false;
+
+volatile int64_t microsLastDelay = 0;
+volatile int64_t microsLastWindow = 0;
 
 static HardwareSerial* hwSerial = nullptr;
 
@@ -37,59 +51,71 @@ ebus::Queue<uint8_t>* byteQueue = nullptr;
 ebus::Handler* ebus::handler = nullptr;
 ebus::ServiceRunner* ebus::serviceRunner = nullptr;
 
+// ISR: Save the timestamp of the first bit (falling edge) from AutoSyn
+void IRAM_ATTR onFallingEdge() {
+  uint32_t now = micros();
+  portENTER_CRITICAL_ISR(&timerMux);
+  uint32_t duration = now - microsLastFallingEdge;
+  if (duration > 35000)  // AutoSyn usually takes ~43000-45000us
+    microsLastStartBitAutoSyn = now;
+  microsLastFallingEdge = now;
+  portEXIT_CRITICAL_ISR(&timerMux);
+}
+
 // ISR: Fires when a byte is received
 void IRAM_ATTR onUartRx() {
   if (!byteQueue || !ebus::handler) return;
 
+  rxActivitySinceTimerArmedFlag = true;
+
   // Read all available bytes as quickly as possible
   while (hwSerial->available()) {
-    // Handle bus request done flag
-    portENTER_CRITICAL_ISR(&timerMux);
-    if (requestBusDone) {
-      requestBusDone = false;
-      ebus::handler->busRequested();
-    }
-    portEXIT_CRITICAL_ISR(&timerMux);
-
     uint8_t byte = hwSerial->read();
-    // Push byte to queue (should be lock-free or ISR-safe)
-    byteQueue->push(byte);
 
     // Handle bus request logic only if needed
     if (byte == ebus::sym_syn && ebus::handler->busRequest()) {
+      portENTER_CRITICAL_ISR(&timerMux);
       uint32_t microsSinceLastStartBit = micros() - microsLastStartBitAutoSyn;
-      int64_t delay = 4300 - microsSinceLastStartBit - requestOffset;
-      if (delay > 0 && delay < 156) {
-        timerAlarmWrite(requestBusTimer, delay, false);
-        timerAlarmEnable(requestBusTimer);
-        ebus::handler->busRequestDelay(delay);
+      int64_t delay = busIsrWindow - microsSinceLastStartBit - busIsrOffset;
+      portEXIT_CRITICAL_ISR(&timerMux);
+      if (delay < 0) {
+        busIsrDelayMinFlag = true;
+      } else if (delay < 500) {
+        rxActivitySinceTimerArmedFlag = false;
+        timerAlarmDisable(busIsrTimer);
+        timerWrite(busIsrTimer, 0);
+        timerAlarmWrite(busIsrTimer, delay, false);
+        timerAlarmEnable(busIsrTimer);
+        portENTER_CRITICAL_ISR(&timerMux);
+        microsLastDelay = delay;
+        portEXIT_CRITICAL_ISR(&timerMux);
+        microsBusIsrDelayFlag = true;
+      } else {
+        busIsrDelayMaxFlag = true;
       }
     }
+
+    // Push byte to queue (should be lock-free or ISR-safe)
+    byteQueue->pushFromISR(byte);
   }
 }
 
 // ISR: Write request byte at the exact time
-void IRAM_ATTR onRequestBusTimer() {
-  portENTER_CRITICAL_ISR(&timerMux);
-  if (!hwSerial->available()) {
-    requestBusDone = true;
+void IRAM_ATTR onBusIsrTimer() {
+  if (!rxActivitySinceTimerArmedFlag) {
     hwSerial->write(ebus::handler->getAddress());
+    busRequestedFlag = true;
+    portENTER_CRITICAL_ISR(&timerMux);
+    microsLastWindow = micros() - microsLastStartBitAutoSyn;
+    portEXIT_CRITICAL_ISR(&timerMux);
+    microsBusIsrWindowFlag = true;
+  } else {
+    busIsrTimerFlag = true;
   }
-  portEXIT_CRITICAL_ISR(&timerMux);
-  timerAlarmDisable(requestBusTimer);
-}
-
-// ISR: Save the timestamp of the first bit (falling edge) from AutoSyn
-void IRAM_ATTR onFallingEdge() {
-  uint32_t now = micros();
-  uint32_t duration = now - microsLastFallingEdge;
-  if (duration > 35000)  // AutoSyn usually ~43000-45000us
-    microsLastStartBitAutoSyn = now;
-  microsLastFallingEdge = now;
 }
 
 void ebus::setupBusIsr(HardwareSerial* serial, const int8_t& rxPin,
-                       const int8_t& txPin) {
+                       const int8_t& txPin, const uint8_t& timer) {
   if (serial) {
     hwSerial = serial;
     hwSerial->begin(2400, SERIAL_8N1, rxPin, txPin);
@@ -102,12 +128,11 @@ void ebus::setupBusIsr(HardwareSerial* serial, const int8_t& rxPin,
     // Attach the ISR to the UART receive event
     hwSerial->onReceive(&onUartRx);
 
-    // Request bus timer: one-shot, armed as needed
-    uint32_t timer_clk = APB_CLK_FREQ;       // Usually 80 MHz
-    uint16_t divider = timer_clk / 1000000;  // For 1us tick
-    requestBusTimer = timerBegin(0, divider, true);
-    timerAttachInterrupt(requestBusTimer, &onRequestBusTimer, true);
-    timerAlarmDisable(requestBusTimer);
+    // BusIsr timer: one-shot, armed as needed
+    uint16_t divider = getApbFrequency() / 1000000;  // For 1us tick
+    busIsrTimer = timerBegin(timer, divider, true);
+    timerAttachInterrupt(busIsrTimer, &onBusIsrTimer, true);
+    timerAlarmDisable(busIsrTimer);
 
     // Attach the ISR to the GPIO event
     pinMode(rxPin, INPUT_PULLUP);
@@ -115,4 +140,54 @@ void ebus::setupBusIsr(HardwareSerial* serial, const int8_t& rxPin,
   }
 }
 
-void ebus::setRequestOffset(const uint16_t& offset) { requestOffset = offset; }
+void ebus::setBusIsrWindow(const uint16_t& window) {
+  portENTER_CRITICAL_ISR(&timerMux);
+  busIsrWindow = window;
+  portEXIT_CRITICAL_ISR(&timerMux);
+}
+
+void ebus::setBusIsrOffset(const uint16_t& offset) {
+  portENTER_CRITICAL_ISR(&timerMux);
+  busIsrOffset = offset;
+  portEXIT_CRITICAL_ISR(&timerMux);
+}
+
+void ebus::processBusIsrEvents() {
+  if (microsBusIsrDelayFlag) {
+    microsBusIsrDelayFlag = false;
+    int64_t safeDelay;
+    portENTER_CRITICAL_ISR(&timerMux);
+    safeDelay = microsLastDelay;
+    portEXIT_CRITICAL_ISR(&timerMux);
+    ebus::handler->microsBusIsrDelay(safeDelay);
+  }
+
+  if (microsBusIsrWindowFlag) {
+    microsBusIsrWindowFlag = false;
+    int64_t safeWindow;
+    portENTER_CRITICAL_ISR(&timerMux);
+    safeWindow = microsLastWindow;
+    portEXIT_CRITICAL_ISR(&timerMux);
+    ebus::handler->microsBusIsrWindow(safeWindow);
+  }
+
+  if (busIsrDelayMinFlag) {
+    busIsrDelayMinFlag = false;
+    ebus::handler->busIsrDelayMin();
+  }
+
+  if (busIsrDelayMaxFlag) {
+    busIsrDelayMaxFlag = false;
+    ebus::handler->busIsrDelayMax();
+  }
+
+  if (busIsrTimerFlag) {
+    busIsrTimerFlag = false;
+    ebus::handler->busIsrTimer();
+  }
+
+  if (busRequestedFlag) {
+    busRequestedFlag = false;
+    ebus::handler->busRequested();
+  }
+}
