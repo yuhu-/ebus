@@ -50,6 +50,25 @@ class QueueFreeRtos {
     return xQueueSend(queue, &item, 0) == pdTRUE;
   }
 
+  // ISR-safe push (from ISR context)
+  bool pushFromISR(const T& item) {
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+    bool result =
+        xQueueSendFromISR(queue, &item, &xHigherPriorityTaskWoken) == pdTRUE;
+    // Optionally yield if a higher priority task was woken
+    if (xHigherPriorityTaskWoken) portYIELD_FROM_ISR();
+    return result;
+  }
+
+  // ISR-safe, non-blocking push (returns immediately)
+  bool try_pushFromISR(const T& item) {
+    BaseType_t xTaskWoken = pdFALSE;
+    // 0 timeout means non-blocking
+    bool result = xQueueSendFromISR(queue, &item, &xTaskWoken) == pdTRUE;
+    // Do NOT yield here for try variant
+    return result;
+  }
+
   // Blocking pop with timeout (timeout in milliseconds)
   bool pop(T& out, uint32_t timeout_ms = portMAX_DELAY) {
     if (size() == 0) return false;  // Empty check
@@ -63,6 +82,23 @@ class QueueFreeRtos {
   bool try_pop(T& out) {
     if (size() == 0) return false;  // Empty check
     return xQueueReceive(queue, &out, 0) == pdTRUE;
+  }
+
+  // ISR-safe pop (from ISR context)
+  bool popFromISR(T& out) {
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+    bool result =
+        xQueueReceiveFromISR(queue, &out, &xHigherPriorityTaskWoken) == pdTRUE;
+    if (xHigherPriorityTaskWoken) portYIELD_FROM_ISR();
+    return result;
+  }
+
+  // ISR-safe, non-blocking pop (returns immediately)
+  bool try_popFromISR(T& out) {
+    BaseType_t xTaskWoken = pdFALSE;
+    bool result = xQueueReceiveFromISR(queue, &out, &xTaskWoken) == pdTRUE;
+    // Do NOT yield here for try variant
+    return result;
   }
 
   const size_t size() const { return uxQueueMessagesWaiting(queue); }
