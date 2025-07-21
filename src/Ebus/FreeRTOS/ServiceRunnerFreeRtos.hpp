@@ -41,7 +41,7 @@ class ServiceRunnerFreeRtos {
 
   void start() {
     xTaskCreatePinnedToCore(&ServiceRunnerFreeRtos::taskFunc,
-                            "ebusServiceRunner", 4096, this, 1, &taskHandle,
+                            "ebusServiceRunner", 8192, this, 1, &taskHandle,
                             tskNO_AFFINITY);
   }
 
