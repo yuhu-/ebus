@@ -27,7 +27,7 @@ namespace ebus {
 extern ebus::Handler* handler;
 extern ebus::ServiceRunner* serviceRunner;
 
-void setupBusIsr(HardwareSerial* serial, const int8_t& rxPin,
+void setupBusIsr(const uart_port_t& uartNum, const int8_t& rxPin,
                  const int8_t& txPin, const uint8_t& timer);
 
 void setBusIsrWindow(const uint16_t& window);

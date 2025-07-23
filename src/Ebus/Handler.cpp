@@ -92,18 +92,10 @@ void ebus::Handler::microsBusIsrWindow(const int64_t &window) {
   busIsrWindow.add(window);
 }
 
-void ebus::Handler::busIsrDelayMin() {
+void ebus::Handler::busIsrExpected() {
   if (request) {
     request = false;
-    counters.busIsrsDelayMin++;
-    callActiveReset();
-  }
-}
-
-void ebus::Handler::busIsrDelayMax() {
-  if (request) {
-    request = false;
-    counters.busIsrsDelayMax++;
+    counters.busIsrsExpected++;
     callActiveReset();
   }
 }
@@ -178,8 +170,7 @@ const ebus::Counters &ebus::Handler::getCounters() {
       counters.messagesActiveBroadcast + counters.messagesReactiveMasterSlave +
       counters.messagesReactiveMasterMaster;
 
-  counters.busIsrsTotal = counters.busIsrsDelayMin + counters.busIsrsDelayMax +
-                          counters.busIsrsTimer;
+  counters.busIsrsTotal = counters.busIsrsExpected + counters.busIsrsTimer;
 
   counters.requestsTotal = counters.requestsWon1 + counters.requestsWon2 +
                            counters.requestsLost1 + counters.requestsLost2 +

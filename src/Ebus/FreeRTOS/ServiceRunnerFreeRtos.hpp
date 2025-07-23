@@ -41,7 +41,7 @@ class ServiceRunnerFreeRtos {
 
   void start() {
     xTaskCreatePinnedToCore(&ServiceRunnerFreeRtos::taskFunc,
-                            "ebusServiceRunner", 8192, this, 1, &taskHandle,
+                            "ebusServiceRunner", 4096, this, 1, &taskHandle,
                             tskNO_AFFINITY);
   }
 
@@ -65,11 +65,21 @@ class ServiceRunnerFreeRtos {
     ServiceRunnerFreeRtos* self = static_cast<ServiceRunnerFreeRtos*>(arg);
     uint8_t byte;
     for (;;) {
+      // Blocking
+      // Comment out the following line if you want non-blocking behavior
       if (self->queue.pop(byte)) {
         processBusIsrEvents();
         self->handler.run(byte);
         for (const ByteListener& listener : self->listeners) listener(byte);
       }
+      // Non-blocking 
+      // Uncomment the following lines if you want non-blocking behavior
+      // while (self->queue.try_pop(byte)) {  // non-blocking
+      //   processBusIsrEvents();
+      //   self->handler.run(byte);
+      //   for (const ByteListener& listener : self->listeners) listener(byte);
+      // }
+      // vTaskDelay(pdMS_TO_TICKS(1));  // short delay to yield CPU
     }
   }
 };

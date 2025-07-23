@@ -19,24 +19,20 @@
 
 #pragma once
 
-#include <HardwareSerial.h>
-
-#include "../Bus.hpp"
+#include "driver/uart.h"
 
 namespace ebus {
 
 class BusFreeRtos {
  public:
-  explicit BusFreeRtos(HardwareSerial& serial) : serial(serial) {}
+  explicit BusFreeRtos(uart_port_t uartNum) : uartNum(uartNum) {}
 
-  void writeByte(const uint8_t byte) { serial.write(byte); }
-
-  uint8_t readByte() { return serial.read(); }
-
-  size_t available() const { return serial.available(); }
+  void writeByte(const uint8_t byte) {
+    uart_write_bytes(uartNum, (const char*)&byte, 1);
+  }
 
  private:
-  HardwareSerial& serial;
+  uart_port_t uartNum;
 };
 
 }  // namespace ebus

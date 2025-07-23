@@ -105,8 +105,7 @@ using ErrorCallback = std::function<void(const std::string &errorMessage,
   X(messagesReactiveMasterSlave)  \
   X(messagesReactiveMasterMaster) \
   X(busIsrsTotal)                 \
-  X(busIsrsDelayMin)              \
-  X(busIsrsDelayMax)              \
+  X(busIsrsExpected)              \
   X(busIsrsTimer)                 \
   X(requestsTotal)                \
   X(requestsWon1)                 \
@@ -222,8 +221,7 @@ class Handler {
   void microsBusIsrDelay(const int64_t &delay);
   void microsBusIsrWindow(const int64_t &window);
 
-  void busIsrDelayMin();
-  void busIsrDelayMax();
+  void busIsrExpected();
   void busIsrTimer();
 
   bool busRequest() const;
