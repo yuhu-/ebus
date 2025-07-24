@@ -35,9 +35,7 @@ volatile int64_t microsEdgeBuffer[FALLING_EDGE_BUFFER_SIZE] = {0};
 volatile int64_t microsStartBit = 0;  // estimated start bit time
 
 volatile bool busRequestedFlag = false;
-
 volatile bool busIsrStartBitFlag = false;
-volatile bool busIsrActivityFlag = false;
 
 volatile bool microsBusIsrDelayFlag = false;
 volatile bool microsBusIsrWindowFlag = false;
@@ -217,6 +215,16 @@ void ebus::setBusIsrOffset(const uint16_t& offset) {
 }
 
 void ebus::processBusIsrEvents() {
+  if (busRequestedFlag) {
+    busRequestedFlag = false;
+    ebus::handler->busRequested();
+  }
+
+  if (busIsrStartBitFlag) {
+    busIsrStartBitFlag = false;
+    ebus::handler->busIsrStartBit();
+  }
+
   if (microsBusIsrDelayFlag) {
     microsBusIsrDelayFlag = false;
     int64_t safeDelay;
@@ -233,15 +241,5 @@ void ebus::processBusIsrEvents() {
     safeWindow = microsLastWindow;
     portEXIT_CRITICAL_ISR(&timerMux);
     ebus::handler->microsBusIsrWindow(safeWindow);
-  }
-
-  if (busIsrStartBitFlag) {
-    busIsrStartBitFlag = false;
-    ebus::handler->busIsrStartBit();
-  }
-
-  if (busRequestedFlag) {
-    busRequestedFlag = false;
-    ebus::handler->busRequested();
   }
 }
