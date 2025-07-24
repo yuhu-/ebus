@@ -28,7 +28,7 @@ class BusFreeRtos {
   explicit BusFreeRtos(uart_port_t uartNum) : uartNum(uartNum) {}
 
   void writeByte(const uint8_t byte) {
-    uart_write_bytes(uartNum, (const char*)&byte, 1);
+    uart_write_bytes(uartNum, static_cast<const void*>(&byte), 1);
   }
 
  private:
