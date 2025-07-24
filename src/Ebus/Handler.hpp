@@ -104,9 +104,6 @@ using ErrorCallback = std::function<void(const std::string &errorMessage,
   X(messagesActiveBroadcast)      \
   X(messagesReactiveMasterSlave)  \
   X(messagesReactiveMasterMaster) \
-  X(busIsrsTotal)                 \
-  X(busIsrsExpected)              \
-  X(busIsrsTimer)                 \
   X(requestsTotal)                \
   X(requestsWon1)                 \
   X(requestsWon2)                 \
@@ -115,6 +112,7 @@ using ErrorCallback = std::function<void(const std::string &errorMessage,
   X(requestsError1)               \
   X(requestsError2)               \
   X(requestsErrorRetry)           \
+  X(requestsStartBit)             \
   X(resetsTotal)                  \
   X(resetsPassive00)              \
   X(resetsPassive0704)            \
@@ -221,11 +219,9 @@ class Handler {
   void microsBusIsrDelay(const int64_t &delay);
   void microsBusIsrWindow(const int64_t &window);
 
-  void busIsrExpected();
-  void busIsrTimer();
-
   bool busRequest() const;
   void busRequested();
+  void busIsrStartBit();
 
   void reset();
   bool enque(const std::vector<uint8_t> &message);

@@ -92,22 +92,6 @@ void ebus::Handler::microsBusIsrWindow(const int64_t &window) {
   busIsrWindow.add(window);
 }
 
-void ebus::Handler::busIsrExpected() {
-  if (request) {
-    request = false;
-    counters.busIsrsExpected++;
-    callActiveReset();
-  }
-}
-
-void ebus::Handler::busIsrTimer() {
-  if (request) {
-    request = false;
-    counters.busIsrsTimer++;
-    callActiveReset();
-  }
-}
-
 bool ebus::Handler::busRequest() const { return request; }
 
 void ebus::Handler::busRequested() {
@@ -120,6 +104,14 @@ void ebus::Handler::busRequested() {
     } else {
       requestBusTry = RequestBusTry::second;
     }
+  }
+}
+
+void ebus::Handler::busIsrStartBit() {
+  if (request) {
+    request = false;
+    counters.requestsStartBit++;
+    callActiveReset();
   }
 }
 
@@ -170,12 +162,11 @@ const ebus::Counters &ebus::Handler::getCounters() {
       counters.messagesActiveBroadcast + counters.messagesReactiveMasterSlave +
       counters.messagesReactiveMasterMaster;
 
-  counters.busIsrsTotal = counters.busIsrsExpected + counters.busIsrsTimer;
-
   counters.requestsTotal = counters.requestsWon1 + counters.requestsWon2 +
                            counters.requestsLost1 + counters.requestsLost2 +
                            counters.requestsError1 + counters.requestsError2 +
-                           counters.requestsErrorRetry;
+                           counters.requestsErrorRetry +
+                           counters.requestsStartBit;
 
   counters.resetsTotal = counters.resetsPassive00 + counters.resetsPassive0704 +
                          counters.resetsActive + counters.resetsPassive;
