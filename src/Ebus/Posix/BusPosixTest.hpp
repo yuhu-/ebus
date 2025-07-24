@@ -39,12 +39,6 @@ class BusPosixTest {
     std::cout << "<- write: " << ebus::to_string(byte) << std::endl;
   }
 
-  // Simulate checking available bytes on the bus
-  const size_t available() const {
-    // std::cout << "Checking available bytes: " << std::endl;
-    return 0;
-  }
-
   // Get all written bytes as a hex string
   std::string getWrittenBytesString() const {
     return ebus::to_string(written_bytes);
