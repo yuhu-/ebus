@@ -161,8 +161,8 @@ void ebus::setupBusIsr(const uart_port_t& uartNum, const int8_t& rxPin,
 
   bus = new ebus::Bus(busUartNum);
   byteQueue = new ebus::Queue<uint8_t>();
-  ebus::handler = new ebus::Handler(bus, ebus::DEFAULT_ADDRESS);
-  ebus::serviceRunner = new ebus::ServiceRunner(*ebus::handler, *byteQueue);
+  handler = new ebus::Handler(bus, DEFAULT_ADDRESS);
+  serviceRunner = new ebus::ServiceRunner(*handler, *byteQueue);
 
   // UART configuration
   uart_config_t uart_config = {.baud_rate = 2400,
