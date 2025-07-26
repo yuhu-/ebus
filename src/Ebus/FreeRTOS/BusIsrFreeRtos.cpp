@@ -20,10 +20,10 @@
 #include "BusIsrFreeRtos.hpp"
 
 #include "driver/gpio.h"
+#include "driver/timer.h"
 #include "driver/uart.h"
-#include "esp32-hal.h"
 
-#define FALLING_EDGE_BUFFER_SIZE 5
+constexpr uint8_t FALLING_EDGE_BUFFER_SIZE = 5;
 
 // This value can be adjusted if the bus isr is not working as expected.
 volatile uint16_t busIsrWindow = 4300;  // usually between 4300-4456 us
@@ -43,11 +43,13 @@ volatile bool microsBusIsrWindowFlag = false;
 volatile int64_t microsLastDelay = 0;
 volatile int64_t microsLastWindow = 0;
 
-hw_timer_t* busIsrTimer = nullptr;
 portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
 
-static uart_port_t busUartNum;
+static uart_port_t uartPortNum = UART_NUM_1;
 static QueueHandle_t uartEventQueue = nullptr;
+
+static timer_group_t timerGroupNum = TIMER_GROUP_1;
+static timer_idx_t timerIdxNum = TIMER_0;
 
 ebus::Bus* bus = nullptr;
 ebus::Queue<uint8_t>* byteQueue = nullptr;
@@ -61,7 +63,7 @@ void ebusUartEventTask(void* arg) {
   for (;;) {
     if (xQueueReceive(uartEventQueue, &event, portMAX_DELAY)) {
       if (event.type == UART_DATA) {
-        int len = uart_read_bytes(busUartNum, data, event.size, 0);
+        int len = uart_read_bytes(uartPortNum, data, event.size, 0);
         for (int i = 0; i < len; ++i) {
           uint8_t byte = data[i];
 
@@ -111,10 +113,12 @@ void ebusUartEventTask(void* arg) {
 
               if (delay < 0) delay = 0;
 
-              timerAlarmDisable(busIsrTimer);
-              timerWrite(busIsrTimer, 0);
-              timerAlarmWrite(busIsrTimer, delay, false);
-              timerAlarmEnable(busIsrTimer);
+              timer_set_alarm(timerGroupNum, timerIdxNum, TIMER_ALARM_DIS);
+              timer_set_counter_value(timerGroupNum, timerIdxNum, 0);
+              timer_set_alarm_value(timerGroupNum, timerIdxNum, delay);
+              timer_set_auto_reload(timerGroupNum, timerIdxNum,
+                                    TIMER_AUTORELOAD_DIS);
+              timer_set_alarm(timerGroupNum, timerIdxNum, TIMER_ALARM_EN);
 
               portENTER_CRITICAL_ISR(&timerMux);
               microsLastDelay = delay;
@@ -145,21 +149,25 @@ void IRAM_ATTR onFallingEdge(void* arg) {
 }
 
 // ISR: Write request byte at the exact time
-void IRAM_ATTR onBusIsrTimer() {
+bool IRAM_ATTR onBusIsrTimer(void* arg) {
   uint8_t byte = ebus::handler->getAddress();
-  uart_write_bytes(busUartNum, static_cast<const void*>(&byte), 1);
+  uart_write_bytes(uartPortNum, static_cast<const void*>(&byte), 1);
   busRequestedFlag = true;
   portENTER_CRITICAL_ISR(&timerMux);
   microsLastWindow = esp_timer_get_time() - microsStartBit;
   portEXIT_CRITICAL_ISR(&timerMux);
   microsBusIsrWindowFlag = true;
+  return false;  // Do not yield
 }
 
-void ebus::setupBusIsr(const uart_port_t& uartNum, const int8_t& rxPin,
-                       const int8_t& txPin, const uint8_t& timer) {
-  busUartNum = uartNum;
+void ebus::setupBusIsr(const uint8_t& uartPort, const uint8_t& rxPin,
+                       const uint8_t& txPin, const uint8_t& timerGroup,
+                       const uint8_t& timerIdx) {
+  uartPortNum = uartPort;
+  timerGroupNum = static_cast<timer_group_t>(timerGroup);
+  timerIdxNum = static_cast<timer_idx_t>(timerIdx);
 
-  bus = new ebus::Bus(busUartNum);
+  bus = new ebus::Bus(uartPortNum);
   byteQueue = new ebus::Queue<uint8_t>();
   handler = new ebus::Handler(bus, DEFAULT_ADDRESS);
   serviceRunner = new ebus::ServiceRunner(*handler, *byteQueue);
@@ -170,14 +178,14 @@ void ebus::setupBusIsr(const uart_port_t& uartNum, const int8_t& rxPin,
                                .parity = UART_PARITY_DISABLE,
                                .stop_bits = UART_STOP_BITS_1,
                                .flow_ctrl = UART_HW_FLOWCTRL_DISABLE};
-  uart_param_config(busUartNum, &uart_config);
-  uart_set_pin(busUartNum, txPin, rxPin, UART_PIN_NO_CHANGE,
+  uart_param_config(uartPortNum, &uart_config);
+  uart_set_pin(uartPortNum, txPin, rxPin, UART_PIN_NO_CHANGE,
                UART_PIN_NO_CHANGE);
 
   // Install UART driver with event queue
-  uart_driver_install(busUartNum, 256, 256, 1, &uartEventQueue, 0);
-  uart_set_rx_full_threshold(busUartNum, 1);
-  uart_set_rx_timeout(busUartNum, 1);
+  uart_driver_install(uartPortNum, 256, 256, 1, &uartEventQueue, 0);
+  uart_set_rx_full_threshold(uartPortNum, 1);
+  uart_set_rx_timeout(uartPortNum, 1);
 
   // Create the UART event task
   xTaskCreate(ebusUartEventTask, "ebusUartEventTask", 2048, NULL,
@@ -195,11 +203,25 @@ void ebus::setupBusIsr(const uart_port_t& uartNum, const int8_t& rxPin,
   gpio_install_isr_service(0);
   gpio_isr_handler_add((gpio_num_t)rxPin, onFallingEdge, nullptr);
 
-  // BusIsr timer: one-shot, armed as needed
-  uint16_t divider = getApbFrequency() / 1000000;  // For 1us tick
-  busIsrTimer = timerBegin(timer, divider, true);
-  timerAttachInterrupt(busIsrTimer, &onBusIsrTimer, true);
-  timerAlarmDisable(busIsrTimer);
+  // Create a Timer configuration for the one-shot timer
+  timer_config_t timer_config = {
+      .alarm_en = TIMER_ALARM_DIS,
+      .counter_en = TIMER_PAUSE,
+      .intr_type = TIMER_INTR_LEVEL,
+      .counter_dir = TIMER_COUNT_UP,
+      .auto_reload = TIMER_AUTORELOAD_DIS,
+      .divider = TIMER_BASE_CLK / 1000000,  // 80 for 1us tick at 80MHz
+  };
+
+  // Initialize the timer
+  timer_init(timerGroupNum, timerIdxNum, &timer_config);
+  timer_set_counter_value(timerGroupNum, timerIdxNum, 0);
+  timer_start(timerGroupNum, timerIdxNum);
+
+  // Register the timer ISR callback
+  timer_isr_callback_add(timerGroupNum, timerIdxNum, onBusIsrTimer, nullptr,
+                         ESP_INTR_FLAG_IRAM);
+  timer_set_alarm(timerGroupNum, timerIdxNum, TIMER_ALARM_DIS);
 }
 
 void ebus::setBusIsrWindow(const uint16_t& window) {

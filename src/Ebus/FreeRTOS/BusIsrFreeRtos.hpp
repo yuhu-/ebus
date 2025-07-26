@@ -27,8 +27,9 @@ namespace ebus {
 extern ebus::Handler* handler;
 extern ebus::ServiceRunner* serviceRunner;
 
-void setupBusIsr(const uart_port_t& uartNum, const int8_t& rxPin,
-                 const int8_t& txPin, const uint8_t& timer);
+void setupBusIsr(const uint8_t& uartPort, const uint8_t& rxPin,
+                 const uint8_t& txPin, const uint8_t& timerGroup,
+                 const uint8_t& timerIdx);
 
 void setBusIsrWindow(const uint16_t& window);
 void setBusIsrOffset(const uint16_t& offset);
