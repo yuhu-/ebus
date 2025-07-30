@@ -98,11 +98,8 @@ void ebus::Handler::busRequested() {
   if (request) {
     request = false;
     if (state != FsmState::requestBus) {
-      requestBusTry = RequestBusTry::first;
       state = FsmState::requestBus;
       lastState = FsmState::requestBus;
-    } else {
-      requestBusTry = RequestBusTry::second;
     }
   }
 }
@@ -458,52 +455,48 @@ void ebus::Handler::requestBus(const uint8_t &byte) {
     state = FsmState::passiveReceiveMaster;
   };
 
-  switch (requestBusTry) {
-    case RequestBusTry::first:
-      if (byte != sym_syn) {
-        if (byte == address) {
-          counters.requestsWon1++;
-          win();
-        } else if (isMaster(byte)) {
-          if ((byte & 0x0f) == (address & 0x0f) &&  // priority class
-              (byte & 0xf0) > (address & 0xf0)) {   // sub address
-            requestBusTry = RequestBusTry::retry;
-            request = true;
-          } else {
-            counters.requestsLost1++;
-            lose();
-          }
-        } else {
-          counters.requestsError1++;
-          lose();
-        }
-      }
-      break;
+  auto error = [&]() {
+    request = false;
+    active = false;
+    activeTelegram.clear();
+    activeMaster.clear();
+    state = FsmState::passiveReceiveMaster;
+  };
 
-    case RequestBusTry::retry:
-      if (byte == sym_syn) {
-        requestBusTry = RequestBusTry::second;
-      } else {
-        counters.requestsErrorRetry++;
-        request = false;
-        active = false;
-        activeTelegram.clear();
-        activeMaster.clear();
-        state = FsmState::passiveReceiveMaster;
-      }
+  switch (requestHandler.run(address, byte)) {
+    case RequestResult::firstSyn:
       break;
-
-    case RequestBusTry::second:
-      if (byte == address) {
-        counters.requestsWon2++;
-        win();
-      } else if (isMaster(byte)) {
-        counters.requestsLost2++;
-        lose();
-      } else {
-        counters.requestsError2++;
-        lose();
-      }
+    case RequestResult::firstWon:
+      counters.requestsWon1++;
+      win();
+      break;
+    case RequestResult::firstLost:
+      counters.requestsLost1++;
+      lose();
+      break;
+    case RequestResult::firstRetry:
+      break;
+    case RequestResult::firstError:
+      counters.requestsError1++;
+      lose();
+      break;
+    case RequestResult::retrySyn:
+      break;
+    case RequestResult::retryError:
+      counters.requestsErrorRetry++;
+      error();
+      break;
+    case RequestResult::secondWon:
+      counters.requestsWon2++;
+      win();
+      break;
+    case RequestResult::secondLost:
+      counters.requestsLost2++;
+      lose();
+      break;
+    case RequestResult::secondError:
+      counters.requestsError2++;
+      lose();
       break;
 
     default:
@@ -709,8 +702,7 @@ void ebus::Handler::calculateDuration(const uint8_t &byte) {
 }
 
 void ebus::Handler::calculateDurationFsmState(const uint8_t &byte) {
-  if (byte != sym_syn || (lastState == FsmState::requestBus &&
-                          requestBusTry == RequestBusTry::retry)) {
+  if (byte != sym_syn) {
     std::chrono::steady_clock::time_point now =
         std::chrono::steady_clock::now();
     int64_t duration =

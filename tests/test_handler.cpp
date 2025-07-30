@@ -646,41 +646,41 @@ int main() {
   handler.setErrorCallback(onErrorCallback);
 
   // clang-format off
-  // passiveTest_01(0x33, "MS: Normal");
-  // passiveTest_02(0x33, "MS: Master defect/NAK");
-  // passiveTest_03(0x33, "MS: Master NAK/repeat");
-  // passiveTest_04(0x33, "MS: Master NAK/repeat/NAK");
-  // passiveTest_05(0x33, "MS: Slave defect/NAK/repeat");
-  // passiveTest_06(0x33, "MS: Slave NAK/repeat/NAK");
-  // passiveTest_07(0x33, "MS: Master NAK/repeat - Slave NAK/repeat");
-  // passiveTest_08(0x33, "MS: Master NAK/repeat/ACK - Slave NAK/repeat/NAK");
-  // passiveTest_09(0x33, "MM: Normal");
-  // passiveTest_10(0x33, "BC: defect");
-  // passiveTest_11(0x33, "00: reset");
-  // passiveTest_12(0x33, "0704: scan");
-  // passiveTest_13(0x33, "BC: normal");
-  // passiveTest_14(0x33, "MS: slave CRC byte is invalid");
+  passiveTest_01(0x33, "MS: Normal");
+  passiveTest_02(0x33, "MS: Master defect/NAK");
+  passiveTest_03(0x33, "MS: Master NAK/repeat");
+  passiveTest_04(0x33, "MS: Master NAK/repeat/NAK");
+  passiveTest_05(0x33, "MS: Slave defect/NAK/repeat");
+  passiveTest_06(0x33, "MS: Slave NAK/repeat/NAK");
+  passiveTest_07(0x33, "MS: Master NAK/repeat - Slave NAK/repeat");
+  passiveTest_08(0x33, "MS: Master NAK/repeat/ACK - Slave NAK/repeat/NAK");
+  passiveTest_09(0x33, "MM: Normal");
+  passiveTest_10(0x33, "BC: defect");
+  passiveTest_11(0x33, "00: reset");
+  passiveTest_12(0x33, "0704: scan");
+  passiveTest_13(0x33, "BC: normal");
+  passiveTest_14(0x33, "MS: slave CRC byte is invalid");
 
-  // reactiveTest_01(0x33, "MS: Slave NAK/ACK");
-  // reactiveTest_02(0x33, "MS: Slave NAK/NAK");
-  // reactiveTest_03(0x33, "MS: Master defect/correct");
-  // reactiveTest_04(0x33, "MS: Master defect/defect");
-  // reactiveTest_05(0x33, "MS: Slave defect (callback)");
-  // reactiveTest_06(0x33, "MM: Normal");
-  // reactiveTest_07(0x33, "BC: Normal");
+  reactiveTest_01(0x33, "MS: Slave NAK/ACK");
+  reactiveTest_02(0x33, "MS: Slave NAK/NAK");
+  reactiveTest_03(0x33, "MS: Master defect/correct");
+  reactiveTest_04(0x33, "MS: Master defect/defect");
+  reactiveTest_05(0x33, "MS: Slave defect (callback)");
+  reactiveTest_06(0x33, "MM: Normal");
+  reactiveTest_07(0x33, "BC: Normal");
 
-  // activeTest_01(0x33, "BC: Request Bus - Normal");
-  // activeTest_02(0x33, "BC: Request Bus - Priority lost");
-  // activeTest_03(0x33, "BC: Request Bus - Priority lost/wrong byte");
-  // activeTest_04(0x33, "BC: Request Bus - Priority fit/won");
-  // activeTest_05(0x33, "BC: Request Bus - Priority fit/lost");
-  // activeTest_06(0x33, "BC: Request Bus - Priority fit/error");
-  // activeTest_07(0x33, "MS: Normal");
-  // activeTest_08(0x33, "MS: Master NAK/ACK - Slave CRC wrong/correct");
-  // activeTest_09(0x33, "MS: Master NAK/ACK - Slave CRC wrong/wrong");
-  // activeTest_10(0x33, "MS: Master NAK/NAK");
-  // activeTest_11(0x33, "MM: Master NAK/ACK");
-  // activeTest_12(0x30, "BC: Request Bus - Priority lost and Sub lost");
+  activeTest_01(0x33, "BC: Request Bus - Normal");
+  activeTest_02(0x33, "BC: Request Bus - Priority lost");
+  activeTest_03(0x33, "BC: Request Bus - Priority lost/wrong byte");
+  activeTest_04(0x33, "BC: Request Bus - Priority fit/won");
+  activeTest_05(0x33, "BC: Request Bus - Priority fit/lost");
+  activeTest_06(0x33, "BC: Request Bus - Priority fit/error");
+  activeTest_07(0x33, "MS: Normal");
+  activeTest_08(0x33, "MS: Master NAK/ACK - Slave CRC wrong/correct");
+  activeTest_09(0x33, "MS: Master NAK/ACK - Slave CRC wrong/wrong");
+  activeTest_10(0x33, "MS: Master NAK/NAK");
+  activeTest_11(0x33, "MM: Master NAK/ACK");
+  activeTest_12(0x30, "BC: Request Bus - Priority lost and Sub lost");
   activeTest_13(0x30, "MS: Request Bus - Priority lost to 0x10");
   // clang-format on
 

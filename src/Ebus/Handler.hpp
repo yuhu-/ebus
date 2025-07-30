@@ -33,6 +33,7 @@
 
 #include "Bus.hpp"
 #include "Queue.hpp"
+#include "Request.hpp"
 #include "Telegram.hpp"
 
 namespace ebus {
@@ -251,8 +252,7 @@ class Handler {
 
   // request
   bool request = false;
-  enum class RequestBusTry { first, retry, second };
-  RequestBusTry requestBusTry = RequestBusTry::first;
+  Request requestHandler;
 
   FsmState state = FsmState::passiveReceiveMaster;
   FsmState lastState = FsmState::passiveReceiveMaster;
