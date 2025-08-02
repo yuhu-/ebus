@@ -18,14 +18,13 @@
  */
 
 // Implementation of the send and receive routines for all types of telegrams on
-// the basis of a finite state machine. A large number of counters and
+// the basis of a finite state machine. A large number of counter and
 // statistical data about the eBUS system are collected.
 
 #pragma once
 
 #include <array>
 #include <chrono>
-#include <cmath>
 #include <functional>
 #include <map>
 #include <string>
@@ -34,6 +33,7 @@
 #include "Bus.hpp"
 #include "Queue.hpp"
 #include "Request.hpp"
+#include "Statistic.hpp"
 #include "Telegram.hpp"
 
 namespace ebus {
@@ -43,9 +43,9 @@ constexpr uint8_t DEFAULT_ADDRESS = 0xff;
 constexpr uint8_t DEFAULT_LOCK_COUNTER = 3;
 constexpr uint8_t MAX_LOCK_COUNTER = 25;
 
-constexpr size_t NUM_FSM_STATES = 15;
+constexpr size_t NUM_HANDLER_STATES = 15;
 
-enum class FsmState {
+enum class HandlerState {
   passiveReceiveMaster,
   passiveReceiveMasterAcknowledge,
   passiveReceiveSlave,
@@ -63,7 +63,7 @@ enum class FsmState {
   releaseBus
 };
 
-static const char *getFsmStateText(FsmState state) {
+static const char *getHandlerStateText(HandlerState state) {
   const char *values[] = {"passiveReceiveMaster",
                           "passiveReceiveMasterAcknowledge",
                           "passiveReceiveSlave",
@@ -95,8 +95,8 @@ using ErrorCallback = std::function<void(const std::string &errorMessage,
                                          const std::vector<uint8_t> &master,
                                          const std::vector<uint8_t> &slave)>;
 
-#define EBUS_COUNTERS_LIST        \
-  X(messagesTotal)                \
+#define EBUS_HANDLER_COUNTER_LIST \
+  X(messagesTotal)                 \
   X(messagesPassiveMasterSlave)   \
   X(messagesPassiveMasterMaster)  \
   X(messagesPassiveBroadcast)     \
@@ -105,104 +105,70 @@ using ErrorCallback = std::function<void(const std::string &errorMessage,
   X(messagesActiveBroadcast)      \
   X(messagesReactiveMasterSlave)  \
   X(messagesReactiveMasterMaster) \
-  X(requestsTotal)                \
-  X(requestsWon1)                 \
-  X(requestsWon2)                 \
-  X(requestsLost1)                \
-  X(requestsLost2)                \
-  X(requestsError1)               \
-  X(requestsError2)               \
-  X(requestsErrorRetry)           \
-  X(requestsStartBit)             \
-  X(resetsTotal)                  \
-  X(resetsPassive00)              \
-  X(resetsPassive0704)            \
-  X(resetsPassive)                \
-  X(resetsActive)                 \
-  X(errorsTotal)                  \
-  X(errorsPassive)                \
-  X(errorsPassiveMaster)          \
-  X(errorsPassiveMasterACK)       \
-  X(errorsPassiveSlave)           \
-  X(errorsPassiveSlaveACK)        \
-  X(errorsReactive)               \
-  X(errorsReactiveMaster)         \
-  X(errorsReactiveMasterACK)      \
-  X(errorsReactiveSlave)          \
-  X(errorsReactiveSlaveACK)       \
-  X(errorsActive)                 \
-  X(errorsActiveMaster)           \
-  X(errorsActiveMasterACK)        \
-  X(errorsActiveSlave)            \
-  X(errorsActiveSlaveACK)
+  X(resetTotal)                   \
+  X(resetPassive00)               \
+  X(resetPassive0704)             \
+  X(resetPassive)                 \
+  X(resetActive)                  \
+  X(errorTotal)                   \
+  X(errorPassive)                 \
+  X(errorPassiveMaster)           \
+  X(errorPassiveMasterACK)        \
+  X(errorPassiveSlave)            \
+  X(errorPassiveSlaveACK)         \
+  X(errorReactive)                \
+  X(errorReactiveMaster)          \
+  X(errorReactiveMasterACK)       \
+  X(errorReactiveSlave)           \
+  X(errorReactiveSlaveACK)        \
+  X(errorActive)                  \
+  X(errorActiveMaster)            \
+  X(errorActiveMasterACK)         \
+  X(errorActiveSlave)             \
+  X(errorActiveSlaveACK)
 
-struct Counters {
-#define X(name) uint32_t name = 0;
-  EBUS_COUNTERS_LIST
-#undef X
-};
-
-#define EBUS_TIMINGS_LIST \
-  X(sync)                 \
-  X(write)                \
-  X(busIsrDelay)          \
-  X(busIsrWindow)         \
-  X(passiveFirst)         \
-  X(passiveData)          \
-  X(activeFirst)          \
-  X(activeData)           \
-  X(callbackReactive)     \
-  X(callbackTelegram)     \
+#define EBUS_HANDLER_TIMING_LIST \
+  X(sync)                        \
+  X(write)                       \
+  X(passiveFirst)                \
+  X(passiveData)                 \
+  X(activeFirst)                 \
+  X(activeData)                  \
+  X(callbackReactive)            \
+  X(callbackTelegram)            \
   X(callbackError)
 
-struct Timings {
+class Handler {
+ public:
+  // measurement
+  struct Counter {
+#define X(name) uint32_t name = 0;
+    EBUS_HANDLER_COUNTER_LIST
+#undef X
+  };
+
+  struct Timing {
 #define X(name)             \
   double name##Last = 0;    \
   uint64_t name##Count = 0; \
   double name##Mean = 0;    \
   double name##StdDev = 0;
-  EBUS_TIMINGS_LIST
+    EBUS_HANDLER_TIMING_LIST
 #undef X
-};
-
-struct TimingStats {
-  double last = 0;  // holds the last value added
-  uint64_t count = 0;
-  double mean = 0;
-  double m2 = 0;  // for variance
-
-  void add(double x) {
-    last = x;
-    ++count;
-    double delta = x - mean;
-    mean += delta / count;
-    double delta2 = x - mean;
-    m2 += delta * delta2;
-  }
-  double variance() const { return count > 1 ? m2 / (count - 1) : 0; }
-  double stddev() const { return sqrt(variance()); }
-  void clear() {
-    last = 0;
-    count = 0;
-    mean = 0;
-    m2 = 0;
-  }
-};
-
-struct StateTimingStatsResults {
-  struct StateStats {
-    std::string name;
-    double last;
-    double mean;
-    double stddev;
-    uint64_t count;
   };
-  std::map<FsmState, StateStats> states;
-};
 
-class Handler {
- public:
-  explicit Handler(Bus *device, const uint8_t source);
+  struct StateTiming {
+    struct Timing {
+      std::string name;
+      double last;
+      double mean;
+      double stddev;
+      uint64_t count;
+    };
+    std::map<HandlerState, Timing> timing;
+  };
+
+  explicit Handler(Bus *bus, Request *request, const uint8_t source);
 
   void setReactiveMasterSlaveCallback(ReactiveMasterSlaveCallback callback);
   void setTelegramCallback(TelegramCallback callback);
@@ -214,11 +180,8 @@ class Handler {
 
   void setMaxLockCounter(const uint8_t counter);
 
-  FsmState getState() const;
+  HandlerState getState() const;
   bool isActive() const;
-
-  void microsBusIsrDelay(const int64_t &delay);
-  void microsBusIsrWindow(const int64_t &window);
 
   bool busRequest() const;
   void busRequested();
@@ -229,49 +192,47 @@ class Handler {
 
   void run(const uint8_t &byte);
 
-  void resetCounters();
-  const Counters &getCounters();
+  void resetCounter();
+  const Counter &getCounter();
 
-  void resetTimings();
-  const Timings &getTimings();
+  void resetTiming();
+  const Timing &getTiming();
 
-  void resetStateTimingStats();
-  const StateTimingStatsResults getStateTimingStatsResults() const;
+  void resetStateTiming();
+  const StateTiming getStateTiming() const;
 
  private:
   Bus *bus = nullptr;
+  Request *request = nullptr;
 
   uint8_t address = 0;
   uint8_t slaveAddress = 0;
 
-  std::array<void (Handler::*)(const uint8_t &), NUM_FSM_STATES> stateHandlers;
+  std::array<void (Handler::*)(const uint8_t &), NUM_HANDLER_STATES>
+      stateHandlers;
 
   ReactiveMasterSlaveCallback reactiveMasterSlaveCallback = nullptr;
   TelegramCallback telegramCallback = nullptr;
   ErrorCallback errorCallback = nullptr;
 
-  // request
-  bool request = false;
-  Request requestHandler;
+  bool requestFlag = false;
 
-  FsmState state = FsmState::passiveReceiveMaster;
-  FsmState lastState = FsmState::passiveReceiveMaster;
+  HandlerState state = HandlerState::passiveReceiveMaster;
+  HandlerState lastState = HandlerState::passiveReceiveMaster;
 
   uint8_t maxLockCounter = DEFAULT_LOCK_COUNTER;
   uint8_t lockCounter = DEFAULT_LOCK_COUNTER;
 
   // measurement
-  Counters counters;
-  Timings timings;
-  std::array<TimingStats, NUM_FSM_STATES> fsmTimingStats = {};
+  Counter counter;
+  Timing timing;
+  std::array<TimingStats, NUM_HANDLER_STATES> handlerTiming = {};
 
   std::chrono::steady_clock::time_point lastPoint;
   bool measureSync = false;
 
   TimingStats sync;
   TimingStats write;
-  TimingStats busIsrDelay;
-  TimingStats busIsrWindow;
   TimingStats passiveFirst;
   TimingStats passiveData;
   TimingStats activeFirst;

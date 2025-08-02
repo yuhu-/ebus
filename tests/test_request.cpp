@@ -33,6 +33,8 @@ struct TestCase {
   ebus::RequestResult expectedResult;
 };
 
+ebus::Request request;
+
 // Helper to run a test with a given hex string and description
 void run_test(const TestCase &tc) {
   std::cout << std::endl
@@ -43,9 +45,8 @@ void run_test(const TestCase &tc) {
   ebus::Sequence seq;
   seq.assign(ebus::to_vector(tmp));
 
-  ebus::Request request;
   uint8_t lockCounter = 3;
-  bool requestActive = true;
+  bool requestFlag = true;
 
   ebus::RequestResult testResult;
 
@@ -58,7 +59,7 @@ void run_test(const TestCase &tc) {
     std::cout << "->  read: " << ebus::to_string(byte)
               << " lockCounter: " << static_cast<int>(lockCounter) << std::endl;
 
-    if (lockCounter == 0 && requestActive) {
+    if (lockCounter == 0 && requestFlag) {
       ebus::RequestState state = request.getState();
       std::cout << " request: " << ebus::getRequestStateText(state)
                 << " address: " << ebus::to_string(tc.address)
@@ -82,7 +83,7 @@ void run_test(const TestCase &tc) {
         case ebus::RequestResult::secondWon:
         case ebus::RequestResult::secondLost:
         case ebus::RequestResult::secondError:
-          requestActive = false;  // Stop further requests
+          requestFlag = false;  // Stop further requests
           break;
 
         default:
@@ -107,6 +108,25 @@ void run_test(const TestCase &tc) {
   std::cout << "--- Test: " << resultText << " ---" << std::endl;
 }
 
+void printCounter() {
+  ebus::Request::Counter counter = request.getCounter();
+
+  std::cout << std::endl
+            << "requestsTotal:       " << counter.requestsTotal << std::endl;
+  std::cout << "requestsStartBit:    " << counter.requestsStartBit << std::endl;
+  std::cout << "requestsFirstSyn:    " << counter.requestsFirstSyn << std::endl;
+  std::cout << "requestsFirstWon:    " << counter.requestsFirstWon << std::endl;
+  std::cout << "requestsFirstRetry:  " << counter.requestsFirstRetry << std::endl;
+  std::cout << "requestsFirstLost:   " << counter.requestsFirstLost << std::endl;
+  std::cout << "requestsFirstError:  " << counter.requestsFirstError << std::endl;
+  std::cout << "requestsRetrySyn:    " << counter.requestsRetrySyn << std::endl;
+  std::cout << "requestsRetryError:  " << counter.requestsRetryError << std::endl;
+  std::cout << "requestsSecondWon:   " << counter.requestsSecondWon << std::endl;
+  std::cout << "requestsSecondLost:  " << counter.requestsSecondLost << std::endl;
+  std::cout << "requestsSecondError: " << counter.requestsSecondError
+            << std::endl;
+}
+
 // clang-format off
 std::vector<TestCase> test_cases = {
     {true, 0x33, "Normal", "33feb5050427002d00", ebus::RequestResult::firstWon},
@@ -125,6 +145,8 @@ std::vector<TestCase> test_cases = {
 int main() {
   for (const TestCase &tc : test_cases)
     if (tc.enabled) run_test(tc);
+
+  printCounter();
 
   return EXIT_SUCCESS;
 }

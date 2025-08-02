@@ -28,6 +28,7 @@
 #include "Common.hpp"
 #include "Handler.hpp"
 #include "Queue.hpp"
+#include "Request.hpp"
 #include "Sequence.hpp"
 #include "ServiceRunner.hpp"
 
@@ -112,8 +113,9 @@ void run_test(const uint8_t &address, const std::string &description,
   std::cout << std::endl << "=== Test: " << description << " ===" << std::endl;
 
   ebus::Bus bus;
+  ebus::Request request;
   ebus::Queue<uint8_t> byteQueue(32);
-  ebus::Handler handler(&bus, address);
+  ebus::Handler handler(&bus, &request, address);
 
   handler.setReactiveMasterSlaveCallback(reactiveMasterSlaveCallback);
 

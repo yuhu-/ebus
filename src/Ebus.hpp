@@ -19,12 +19,16 @@
 
 #pragma once
 
+// Selector includes
 #include "Ebus/Bus.hpp"
 #include "Ebus/BusIsr.hpp"
 #include "Ebus/Queue.hpp"
+#include "Ebus/ServiceRunner.hpp"
+
+// Common includes
 #include "Ebus/Common.hpp"
 #include "Ebus/Datatypes.hpp"
 #include "Ebus/Handler.hpp"
+#include "Ebus/Request.hpp"
 #include "Ebus/Sequence.hpp"
-#include "Ebus/ServiceRunner.hpp"
 #include "Ebus/Telegram.hpp"

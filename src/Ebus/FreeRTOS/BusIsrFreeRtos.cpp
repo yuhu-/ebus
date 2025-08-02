@@ -25,6 +25,13 @@
 
 constexpr uint8_t FALLING_EDGE_BUFFER_SIZE = 5;
 
+// The bit time at 2400 baud is approximately 416.67 us
+constexpr float bit_time = 1000000.0 / 2400.0;  // ~416.67 us
+
+// The byte time at 2400 baud for 10 bits with a 0.5-bit offset is approximately
+// 9.5 * bit_time = 9.5 * 416.67 us = 3958.33 us
+constexpr int64_t byte_time = 9.5 * bit_time;  // ~3958.33 us
+
 // This value can be adjusted if the bus isr is not working as expected.
 volatile uint16_t busIsrWindow = 4300;  // usually between 4300-4456 us
 volatile uint16_t busIsrOffset = 80;    // mainly for context switch and write
@@ -53,6 +60,8 @@ static timer_idx_t timerIdxNum = TIMER_0;
 
 ebus::Bus* bus = nullptr;
 ebus::Queue<uint8_t>* byteQueue = nullptr;
+
+ebus::Request* ebus::request = nullptr;
 ebus::Handler* ebus::handler = nullptr;
 ebus::ServiceRunner* ebus::serviceRunner = nullptr;
 
@@ -73,13 +82,12 @@ void ebusUartEventTask(void* arg) {
           // Handle bus request logic only if needed
           if (byte == ebus::sym_syn && ebus::handler->busRequest()) {
             int64_t now = esp_timer_get_time();
-            float bit_time = 1000000.0 / 2400.0;  // ~416.67 us
 
             // Calculation of the expected start bit time based on the current
             // time and the bit time with a 0.5-bit offset. The expected start
             // bit time is calculated as follows:
             // now - (10 * 416.67) + (0.5 * 416.67) or: now - 9.5 * 416.67
-            int64_t expected_start_bit_time = now - (int64_t)(9.5 * bit_time);
+            int64_t expected_start_bit_time = now - byte_time;
 
             // Retrieving the start time of the last sync byte. Due to the
             // nature of the sync byte (0xAA), the buffer size used, and
@@ -168,8 +176,9 @@ void ebus::setupBusIsr(const uint8_t& uartPort, const uint8_t& rxPin,
   timerIdxNum = static_cast<timer_idx_t>(timerIdx);
 
   bus = new ebus::Bus(uartPortNum);
+  request = new ebus::Request();
   byteQueue = new ebus::Queue<uint8_t>();
-  handler = new ebus::Handler(bus, DEFAULT_ADDRESS);
+  handler = new ebus::Handler(bus, request, DEFAULT_ADDRESS);
   serviceRunner = new ebus::ServiceRunner(*handler, *byteQueue);
 
   // UART configuration
@@ -244,6 +253,8 @@ void ebus::processBusIsrEvents() {
 
   if (busIsrStartBitFlag) {
     busIsrStartBitFlag = false;
+    request->startBit();
+    // TODO - check if this is needed
     ebus::handler->busIsrStartBit();
   }
 
@@ -253,7 +264,7 @@ void ebus::processBusIsrEvents() {
     portENTER_CRITICAL_ISR(&timerMux);
     safeDelay = microsLastDelay;
     portEXIT_CRITICAL_ISR(&timerMux);
-    ebus::handler->microsBusIsrDelay(safeDelay);
+    request->microsBusIsrDelay(safeDelay);
   }
 
   if (microsBusIsrWindowFlag) {
@@ -262,6 +273,6 @@ void ebus::processBusIsrEvents() {
     portENTER_CRITICAL_ISR(&timerMux);
     safeWindow = microsLastWindow;
     portEXIT_CRITICAL_ISR(&timerMux);
-    ebus::handler->microsBusIsrWindow(safeWindow);
+    request->microsBusIsrWindow(safeWindow);
   }
 }

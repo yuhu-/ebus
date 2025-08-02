@@ -27,6 +27,20 @@ ebus::Request::Request() {
 
 ebus::RequestState ebus::Request::getState() const { return state; }
 
+void ebus::Request::startBit() {
+  counter.requestsStartBit++;
+  state = RequestState::firstTry;
+  result = RequestResult::firstSyn;
+}
+
+void ebus::Request::microsBusIsrDelay(const int64_t &delay) {
+  busIsrDelay.add(delay);
+}
+
+void ebus::Request::microsBusIsrWindow(const int64_t &window) {
+  busIsrWindow.add(window);
+}
+
 ebus::RequestResult ebus::Request::run(const uint8_t &address,
                                        const uint8_t &byte) {
   size_t idx = static_cast<size_t>(state);
@@ -36,42 +50,86 @@ ebus::RequestResult ebus::Request::run(const uint8_t &address,
   return result;
 }
 
+void ebus::Request::resetCounter() {
+#define X(name) counter.name = 0;
+  EBUS_REQUEST_COUNTER_LIST
+#undef X
+}
+
+const ebus::Request::Counter &ebus::Request::getCounter() {
+  counter.requestsTotal =
+      counter.requestsStartBit + counter.requestsFirstSyn +
+      counter.requestsFirstWon + counter.requestsFirstRetry +
+      counter.requestsFirstLost + counter.requestsFirstError +
+      counter.requestsRetrySyn + +counter.requestsRetryError +
+      counter.requestsSecondWon + counter.requestsSecondLost +
+      counter.requestsSecondError;
+
+  return counter;
+}
+
+void ebus::Request::resetTiming() {
+  busIsrDelay.clear();
+  busIsrWindow.clear();
+}
+
+const ebus::Request::Timing &ebus::Request::getTiming() {
+#define X(name)                    \
+  timing.name##Last = name.last;   \
+  timing.name##Count = name.count; \
+  timing.name##Mean = name.mean;   \
+  timing.name##StdDev = name.stddev();
+  EBUS_REQUEST_TIMING_LIST
+#undef X
+  return timing;
+}
+
 void ebus::Request::firstTry(const uint8_t &address, const uint8_t &byte) {
   if (byte == sym_syn) {
+    counter.requestsFirstSyn++;
     result = RequestResult::firstSyn;
   } else if (byte == address) {
+    counter.requestsFirstWon++;
     result = RequestResult::firstWon;
   } else if (isMaster(byte)) {
     if (checkPriorityClassSubAddress(address, byte)) {
-      state = RequestState::retrySyn;
+      counter.requestsFirstRetry++;
+      state = RequestState::retrySyn;  // switch to retry state
       result = RequestResult::firstRetry;
     } else {
+      counter.requestsFirstLost++;
       result = RequestResult::firstLost;
     }
   } else {
+    counter.requestsFirstError++;
     result = RequestResult::firstError;
   }
 }
 
 void ebus::Request::retrySyn(const uint8_t &address, const uint8_t &byte) {
   if (byte == sym_syn) {
-    state = RequestState::secondTry;
+    counter.requestsRetrySyn++;
+    state = RequestState::secondTry;  // switch to second try state
     result = RequestResult::retrySyn;
   } else {
-    state = RequestState::firstTry;
+    counter.requestsRetryError++;
+    state = RequestState::firstTry;  // reset to first try state
     result = RequestResult::retryError;
   }
 }
 
 void ebus::Request::secondTry(const uint8_t &address, const uint8_t &byte) {
   if (byte == address) {
+    counter.requestsSecondWon++;
     result = RequestResult::secondWon;
   } else if (isMaster(byte)) {
+    counter.requestsSecondLost++;
     result = RequestResult::secondLost;
   } else {
+    counter.requestsSecondError++;
     result = RequestResult::secondError;
   }
-  state = RequestState::firstTry;
+  state = RequestState::firstTry;  // reset to first try state
 }
 
 // check priority class (lower nibble) and sub address (higher nibble)

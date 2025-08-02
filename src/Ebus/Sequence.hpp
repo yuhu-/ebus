@@ -18,8 +18,7 @@
  */
 
 // This class implements basic routines for sequence handling in accordance with
-// the ebus specification, in particular the reduction, extension and
-// crc-calculation.
+// the ebus specification, in particular the reduction and extension
 //
 // (reduced) 0xaa <-> 0xa9 0x01 (extended)
 // (reduced) 0xa9 <-> 0xa9 0x00 (extended)

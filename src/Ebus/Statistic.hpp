@@ -19,23 +19,37 @@
 
 #pragma once
 
-#include "../Handler.hpp"
-#include "../Request.hpp"
-#include "../ServiceRunner.hpp"
+#include <cmath>
+#include <cstdint>
 
 namespace ebus {
 
-extern ebus::Request* request;
-extern ebus::Handler* handler;
-extern ebus::ServiceRunner* serviceRunner;
+// Timing statistics for measuring durations (in microseconds).
+struct TimingStats {
+  double last = 0;  // the most recently added value
+  uint64_t count = 0;
+  double mean = 0;
+  double m2 = 0;  // for variance
 
-void setupBusIsr(const uint8_t& uartPort, const uint8_t& rxPin,
-                 const uint8_t& txPin, const uint8_t& timerGroup,
-                 const uint8_t& timerIdx);
+  void add(double x) {
+    last = x;
+    ++count;
+    double delta = x - mean;
+    mean += delta / count;
+    double delta2 = x - mean;
+    m2 += delta * delta2;
+  }
 
-void setBusIsrWindow(const uint16_t& window);
-void setBusIsrOffset(const uint16_t& offset);
+  double variance() const { return count > 1 ? m2 / (count - 1) : 0; }
 
-void processBusIsrEvents();
+  double stddev() const { return sqrt(variance()); }
+
+  void clear() {
+    last = 0;
+    count = 0;
+    mean = 0;
+    m2 = 0;
+  }
+};
 
 }  // namespace ebus

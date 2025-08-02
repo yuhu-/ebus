@@ -27,6 +27,7 @@
 #include "Common.hpp"
 #include "Datatypes.hpp"
 #include "Handler.hpp"
+#include "Request.hpp"
 #include "Sequence.hpp"
 #include "Telegram.hpp"
 
@@ -46,7 +47,8 @@ void printByte(const std::string &prefix, const uint8_t &byte,
 }
 
 ebus::Bus bus;
-ebus::Handler handler(&bus, 0x33);
+ebus::Request request;
+ebus::Handler handler(&bus, &request, 0x33);
 
 void readFunction(const uint8_t &byte) {
   std::cout << "->  read: " << ebus::to_string(byte) << std::endl;
@@ -104,90 +106,110 @@ void onErrorCallback(const std::string &error,
 }
 
 void printCounters() {
-  ebus::Counters counter = handler.getCounters();
+  ebus::Handler::Counter handlerCounter = handler.getCounter();
 
   // messages
-  std::cout << "messagesTotal: " << counter.messagesTotal << std::endl;
+  std::cout << "messagesTotal: " << handlerCounter.messagesTotal << std::endl;
 
   std::cout << "messagesPassiveMasterSlave: "
-            << counter.messagesPassiveMasterSlave << std::endl;
+            << handlerCounter.messagesPassiveMasterSlave << std::endl;
   std::cout << "messagesPassiveMasterMaster: "
-            << counter.messagesPassiveMasterMaster << std::endl;
-  std::cout << "messagesPassiveBroadcast: " << counter.messagesPassiveBroadcast
-            << std::endl;
+            << handlerCounter.messagesPassiveMasterMaster << std::endl;
+  std::cout << "messagesPassiveBroadcast: "
+            << handlerCounter.messagesPassiveBroadcast << std::endl;
 
   std::cout << "messagesReactiveMasterSlave: "
-            << counter.messagesReactiveMasterSlave << std::endl;
+            << handlerCounter.messagesReactiveMasterSlave << std::endl;
   std::cout << "messagesReactiveMasterMaster: "
-            << counter.messagesReactiveMasterMaster << std::endl;
+            << handlerCounter.messagesReactiveMasterMaster << std::endl;
 
   std::cout << "messagesActiveMasterSlave: "
-            << counter.messagesActiveMasterSlave << std::endl;
+            << handlerCounter.messagesActiveMasterSlave << std::endl;
   std::cout << "messagesActiveMasterMaster: "
-            << counter.messagesActiveMasterMaster << std::endl;
-  std::cout << "messagesActiveBroadcast: " << counter.messagesActiveBroadcast
+            << handlerCounter.messagesActiveMasterMaster << std::endl;
+  std::cout << "messagesActiveBroadcast: "
+            << handlerCounter.messagesActiveBroadcast << std::endl
+            << std::endl;
+
+  // error
+  std::cout << "errorTotal: " << handlerCounter.errorTotal << std::endl
+            << std::endl;
+
+  std::cout << "errorPassive: " << handlerCounter.errorPassive << std::endl;
+  std::cout << "errorPassiveMaster: " << handlerCounter.errorPassiveMaster
+            << std::endl;
+  std::cout << "errorPassiveMasterACK: " << handlerCounter.errorPassiveMasterACK
+            << std::endl;
+  std::cout << "errorPassiveSlave: " << handlerCounter.errorPassiveSlave
+            << std::endl;
+  std::cout << "errorPassiveSlaveACK: " << handlerCounter.errorPassiveSlaveACK
             << std::endl
             << std::endl;
 
-  // errors
-  std::cout << "errorsTotal: " << counter.errorsTotal << std::endl << std::endl;
-
-  std::cout << "errorsPassive: " << counter.errorsPassive << std::endl;
-  std::cout << "errorsPassiveMaster: " << counter.errorsPassiveMaster
+  std::cout << "errorReactive: " << handlerCounter.errorReactive << std::endl;
+  std::cout << "errorReactiveMaster: " << handlerCounter.errorReactiveMaster
             << std::endl;
-  std::cout << "errorsPassiveMasterACK: " << counter.errorsPassiveMasterACK
+  std::cout << "errorReactiveMasterACK: "
+            << handlerCounter.errorReactiveMasterACK << std::endl;
+  std::cout << "errorReactiveSlave: " << handlerCounter.errorReactiveSlave
             << std::endl;
-  std::cout << "errorsPassiveSlave: " << counter.errorsPassiveSlave
-            << std::endl;
-  std::cout << "errorsPassiveSlaveACK: " << counter.errorsPassiveSlaveACK
+  std::cout << "errorReactiveSlaveACK: " << handlerCounter.errorReactiveSlaveACK
             << std::endl
             << std::endl;
 
-  std::cout << "errorsReactive: " << counter.errorsReactive << std::endl;
-  std::cout << "errorsReactiveMaster: " << counter.errorsReactiveMaster
+  std::cout << "errorActive: " << handlerCounter.errorActive << std::endl;
+  std::cout << "errorActiveMaster: " << handlerCounter.errorActiveMaster
             << std::endl;
-  std::cout << "errorsReactiveMasterACK: " << counter.errorsReactiveMasterACK
+  std::cout << "errorActiveMasterACK: " << handlerCounter.errorActiveMasterACK
             << std::endl;
-  std::cout << "errorsReactiveSlave: " << counter.errorsReactiveSlave
+  std::cout << "errorActiveSlave: " << handlerCounter.errorActiveSlave
             << std::endl;
-  std::cout << "errorsReactiveSlaveACK: " << counter.errorsReactiveSlaveACK
+  std::cout << "errorActiveSlaveACK: " << handlerCounter.errorActiveSlaveACK
             << std::endl
             << std::endl;
 
-  std::cout << "errorsActive: " << counter.errorsActive << std::endl;
-  std::cout << "errorsActiveMaster: " << counter.errorsActiveMaster
+  // reset
+  std::cout << "resetTotal: " << handlerCounter.resetTotal << std::endl;
+  std::cout << "resetPassive00: " << handlerCounter.resetPassive00 << std::endl;
+  std::cout << "resetPassive0704: " << handlerCounter.resetPassive0704
             << std::endl;
-  std::cout << "errorsActiveMasterACK: " << counter.errorsActiveMasterACK
-            << std::endl;
-  std::cout << "errorsActiveSlave: " << counter.errorsActiveSlave << std::endl;
-  std::cout << "errorsActiveSlaveACK: " << counter.errorsActiveSlaveACK
-            << std::endl
+  std::cout << "resetPassive: " << handlerCounter.resetPassive << std::endl;
+  std::cout << "resetActive: " << handlerCounter.resetActive << std::endl
             << std::endl;
 
-  // resets
-  std::cout << "resetsTotal: " << counter.resetsTotal << std::endl;
-  std::cout << "resetsPassive00: " << counter.resetsPassive00 << std::endl;
-  std::cout << "resetsPassive0704: " << counter.resetsPassive0704 << std::endl;
-  std::cout << "resetsPassive: " << counter.resetsPassive << std::endl;
-  std::cout << "resetsActive: " << counter.resetsActive << std::endl
-            << std::endl;
+  ebus::Request::Counter requestCounter = request.getCounter();
 
   // requests
-  std::cout << "requestsTotal:      " << counter.requestsTotal << std::endl;
-  std::cout << "requestsWon1:       " << counter.requestsWon1 << std::endl;
-  std::cout << "requestsWon2:       " << counter.requestsWon2 << std::endl;
-  std::cout << "requestsLost1:      " << counter.requestsLost1 << std::endl;
-  std::cout << "requestsLost2:      " << counter.requestsLost2 << std::endl;
-  std::cout << "requestsError1:     " << counter.requestsError1 << std::endl;
-  std::cout << "requestsError2:     " << counter.requestsError2 << std::endl;
-  std::cout << "requestsErrorRetry: " << counter.requestsErrorRetry
+  std::cout << "requestsTotal:       " << requestCounter.requestsTotal
+            << std::endl;
+  std::cout << "requestsStartBit:    " << requestCounter.requestsStartBit
+            << std::endl;
+  std::cout << "requestsFirstSyn:    " << requestCounter.requestsFirstSyn
+            << std::endl;
+  std::cout << "requestsFirstWon:    " << requestCounter.requestsFirstWon
+            << std::endl;
+  std::cout << "requestsFirstRetry:  " << requestCounter.requestsFirstRetry
+            << std::endl;
+  std::cout << "requestsFirstLost:   " << requestCounter.requestsFirstLost
+            << std::endl;
+  std::cout << "requestsFirstError:  " << requestCounter.requestsFirstError
+            << std::endl;
+  std::cout << "requestsRetrySyn:    " << requestCounter.requestsRetrySyn
+            << std::endl;
+  std::cout << "requestsRetryError:  " << requestCounter.requestsRetryError
+            << std::endl;
+  std::cout << "requestsSecondWon:   " << requestCounter.requestsSecondWon
+            << std::endl;
+  std::cout << "requestsSecondLost:  " << requestCounter.requestsSecondLost
+            << std::endl;
+  std::cout << "requestsSecondError: " << requestCounter.requestsSecondError
             << std::endl;
 }
 
 void printStateTimingResults() {
-  ebus::StateTimingStatsResults stats = handler.getStateTimingStatsResults();
-  std::cout << std::endl << "State Timing Statistics:" << std::endl;
-  for (const auto &s : stats.states) {
+  ebus::Handler::StateTiming stateTiming = handler.getStateTiming();
+  std::cout << std::endl << "State timing statistics:" << std::endl;
+  for (const auto &s : stateTiming.timing) {
     std::cout << s.second.name << ": last=" << s.second.last
               << " us, mean=" << s.second.mean
               << " us, stddev=" << s.second.stddev
@@ -201,8 +223,9 @@ void simulate(const std::string &test, const std::string &title,
   seq.assign(ebus::to_vector(sequence));
 
   std::cout << "    test: " << test
-            << " - address: " << ebus::to_string(handler.getAddress()) << " / "
-            << ebus::to_string(handler.getSlaveAddress()) << std::endl;
+            << " - address: " << ebus::to_string(handler.getAddress())
+            << " / " << ebus::to_string(handler.getSlaveAddress())
+            << std::endl;
   std::cout << "   title: " << RED << title << RESET << std::endl;
   if (message.size() > 0) {
     std::cout << " message: " << ebus::to_string(handler.getAddress())
@@ -216,13 +239,13 @@ void simulate(const std::string &test, const std::string &title,
   }
   for (size_t i = 0; i < seq.size(); i++) {
     switch (handler.getState()) {
-      case ebus::FsmState::reactiveSendMasterPositiveAcknowledge:
-      case ebus::FsmState::reactiveSendMasterNegativeAcknowledge:
-      case ebus::FsmState::reactiveSendSlave:
-      case ebus::FsmState::activeSendMaster:
-      case ebus::FsmState::activeSendSlavePositiveAcknowledge:
-      case ebus::FsmState::activeSendSlaveNegativeAcknowledge:
-      case ebus::FsmState::releaseBus:
+      case ebus::HandlerState::reactiveSendMasterPositiveAcknowledge:
+      case ebus::HandlerState::reactiveSendMasterNegativeAcknowledge:
+      case ebus::HandlerState::reactiveSendSlave:
+      case ebus::HandlerState::activeSendMaster:
+      case ebus::HandlerState::activeSendSlavePositiveAcknowledge:
+      case ebus::HandlerState::activeSendSlaveNegativeAcknowledge:
+      case ebus::HandlerState::releaseBus:
         i--;
         break;
       default:
@@ -684,7 +707,7 @@ int main() {
   activeTest_13(0x30, "MS: Request Bus - Priority lost to 0x10");
   // clang-format on
 
-  // printCounters();
+  printCounters();
 
   // printStateTimingResults();
 
