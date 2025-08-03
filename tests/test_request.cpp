@@ -45,7 +45,7 @@ void run_test(const TestCase &tc) {
   ebus::Sequence seq;
   seq.assign(ebus::to_vector(tmp));
 
-  uint8_t lockCounter = 3;
+  request.setLockCounter(3);
   bool requestFlag = true;
 
   ebus::RequestResult testResult;
@@ -57,9 +57,10 @@ void run_test(const TestCase &tc) {
     uint8_t byte = seq[i];
 
     std::cout << "->  read: " << ebus::to_string(byte)
-              << " lockCounter: " << static_cast<int>(lockCounter) << std::endl;
+              << " lockCounter: " << static_cast<int>(request.getLockCounter())
+              << std::endl;
 
-    if (lockCounter == 0 && requestFlag) {
+    if (request.getLockCounter() == 0 && requestFlag) {
       ebus::RequestState state = request.getState();
       std::cout << " request: " << ebus::getRequestStateText(state)
                 << " address: " << ebus::to_string(tc.address)
@@ -91,7 +92,7 @@ void run_test(const TestCase &tc) {
       }
     }
 
-    lockCounter = lockCounter > 0 ? lockCounter - 1 : 0;
+    // request.handleLockCounter(byte);
   }
 
   std::string resultText;
@@ -116,13 +117,19 @@ void printCounter() {
   std::cout << "requestsStartBit:    " << counter.requestsStartBit << std::endl;
   std::cout << "requestsFirstSyn:    " << counter.requestsFirstSyn << std::endl;
   std::cout << "requestsFirstWon:    " << counter.requestsFirstWon << std::endl;
-  std::cout << "requestsFirstRetry:  " << counter.requestsFirstRetry << std::endl;
-  std::cout << "requestsFirstLost:   " << counter.requestsFirstLost << std::endl;
-  std::cout << "requestsFirstError:  " << counter.requestsFirstError << std::endl;
+  std::cout << "requestsFirstRetry:  " << counter.requestsFirstRetry
+            << std::endl;
+  std::cout << "requestsFirstLost:   " << counter.requestsFirstLost
+            << std::endl;
+  std::cout << "requestsFirstError:  " << counter.requestsFirstError
+            << std::endl;
   std::cout << "requestsRetrySyn:    " << counter.requestsRetrySyn << std::endl;
-  std::cout << "requestsRetryError:  " << counter.requestsRetryError << std::endl;
-  std::cout << "requestsSecondWon:   " << counter.requestsSecondWon << std::endl;
-  std::cout << "requestsSecondLost:  " << counter.requestsSecondLost << std::endl;
+  std::cout << "requestsRetryError:  " << counter.requestsRetryError
+            << std::endl;
+  std::cout << "requestsSecondWon:   " << counter.requestsSecondWon
+            << std::endl;
+  std::cout << "requestsSecondLost:  " << counter.requestsSecondLost
+            << std::endl;
   std::cout << "requestsSecondError: " << counter.requestsSecondError
             << std::endl;
 }

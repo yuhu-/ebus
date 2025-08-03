@@ -31,15 +31,13 @@
 #include "Sequence.hpp"
 #include "Telegram.hpp"
 
-#define RESET "\033[0m"
-#define BOLD "\033[1m"
-
-#define RED "\033[31m"
-#define GREEN "\033[32m"
-#define YELLOW "\033[33m"
-#define BLUE "\033[34m"
-#define MAGENTA "\033[35m"
-#define CYAN "\033[36m"
+struct TestCase {
+  bool enabled;
+  uint8_t address;
+  std::string description;
+  std::string read_string;
+  std::string send_string = "";
+};
 
 void printByte(const std::string &prefix, const uint8_t &byte,
                const std::string &postfix) {
@@ -109,7 +107,8 @@ void printCounters() {
   ebus::Handler::Counter handlerCounter = handler.getCounter();
 
   // messages
-  std::cout << "messagesTotal: " << handlerCounter.messagesTotal << std::endl;
+  std::cout << std::endl
+            << "messagesTotal: " << handlerCounter.messagesTotal << std::endl;
 
   std::cout << "messagesPassiveMasterSlave: "
             << handlerCounter.messagesPassiveMasterSlave << std::endl;
@@ -206,37 +205,20 @@ void printCounters() {
             << std::endl;
 }
 
-void printStateTimingResults() {
-  ebus::Handler::StateTiming stateTiming = handler.getStateTiming();
-  std::cout << std::endl << "State timing statistics:" << std::endl;
-  for (const auto &s : stateTiming.timing) {
-    std::cout << s.second.name << ": last=" << s.second.last
-              << " us, mean=" << s.second.mean
-              << " us, stddev=" << s.second.stddev
-              << " us, count=" << s.second.count << std::endl;
-  }
-}
+void run_test(const TestCase &tc) {
+  std::cout << std::endl
+            << "=== Test: " << tc.description << " ===" << std::endl;
 
-void simulate(const std::string &test, const std::string &title,
-              const std::string &message, const std::string &sequence) {
+  // Prepare test sequence from the provided hex string
+  std::string tmp = "aaaaaa" + tc.read_string + "aaaaaa";
   ebus::Sequence seq;
-  seq.assign(ebus::to_vector(sequence));
+  seq.assign(ebus::to_vector(tmp));
 
-  std::cout << "    test: " << test
-            << " - address: " << ebus::to_string(handler.getAddress())
-            << " / " << ebus::to_string(handler.getSlaveAddress())
-            << std::endl;
-  std::cout << "   title: " << RED << title << RESET << std::endl;
-  if (message.size() > 0) {
-    std::cout << " message: " << ebus::to_string(handler.getAddress())
-              << message << std::endl;
+  if (tc.send_string.size() > 0) {
+    handler.enque(ebus::to_vector(tc.send_string));
+    request.setLockCounter(3);
+  } 
 
-    handler.enque(ebus::to_vector(message));
-    handler.setMaxLockCounter(3);
-
-  } else {
-    std::cout << "sequence: " << sequence << std::endl;
-  }
   for (size_t i = 0; i < seq.size(); i++) {
     switch (handler.getState()) {
       case ebus::HandlerState::reactiveSendMasterPositiveAcknowledge:
@@ -253,6 +235,7 @@ void simulate(const std::string &test, const std::string &title,
         break;
     }
 
+    // request.handleLockCounter(seq[i]);
     handler.run(seq[i]);
 
     // If SYN, simulte request bus timer
@@ -263,404 +246,66 @@ void simulate(const std::string &test, const std::string &title,
     }
   }
 
-  std::cout << std::endl;
+  std::cout << "--- Test complete for: " << tc.description << " ---"
+            << std::endl;
 }
 
-void passiveTest_01(const uint8_t &address, const std::string &title) {
-  assert(title == "MS: Normal");
-  handler.setAddress(address);
-  simulate(__FUNCTION__, title, "",
-           "aaaaaa"
-           "ff52b509030d060043"
-           "00"
-           "03b0fba901d0"  // extended a901 >> aa
-           "00"
-           "aaaaaa");
-}
+// clang-format off
+std::vector<TestCase> test_cases = {
+  {false, 0x33, "passive MS: Normal", "ff52b509030d0600430003b0fba901d000"},
+  {false, 0x33, "passive MS: Master defect/NAK", "ff52b509030d060044ffff52b509030d0600430003b0fba901d000"},
+  {false, 0x33, "passive MS: Master NAK/repeat", "ff52b509030d060043ffff52b509030d0600430003b0fba901d000"},
+  {false, 0x33, "passive MS: Master NAK/repeat/NAK", "ff52b509030d060043ffff52b509030d060043ff"},
+  {false, 0x33, "passive MS: Slave defect/NAK/repeat", "ff52b509030d0600430003b0fba902d0ff03b0fba901d000"},
+  {false, 0x33, "passive MS: Slave NAK/repeat/NAK", "ff52b509030d0600430003b0fba901d0ff03b0fba901d0ff"},
+  {false, 0x33, "passive MS: Master NAK/repeat - Slave NAK/repeat", "ff52b509030d060043ffff52b509030d0600430003b0fba901d0ff03b0fba901d000"},
+  {false, 0x33, "passive MS: Master NAK/repeat/ACK - Slave NAK/repeat/NAK", "ff52b509030d060043ffff52b509030d0600430003b0fba901d0ff03b0fba901d0ff"},
+  {false, 0x33, "passive MM: Normal", "1000b5050427002400d900"},
+  {false, 0x33, "passive BC: defect", "00fe0704003c"},
+  {false, 0x33, "passive 00: reset", "00"},
+  {false, 0x33, "passive 0704: scan", "002e0704004e"},
+  {false, 0x33, "passive BC: normal", "10fe07000970160443183105052592"},
+  {false, 0x33, "passive MS: slave CRC byte is invalid", "1008b5130304cd017f000acd01000000000100010000"},
 
-void passiveTest_02(const uint8_t &address, const std::string &title) {
-  assert(title == "MS: Master defect/NAK");
-  handler.setAddress(address);
-  simulate(__FUNCTION__, title, "",
-           "aaaaaa"
-           "ff52b509030d060044"  // defect
-           "ff"                  // NAK
-           "ff52b509030d060043"
-           "00"
-           "03b0fba901d0"
-           "00"
-           "aaaaaa");
-}
+  // {false, 0x33, "reactive MS: Slave NAK/ACK", "0038070400ab000ab5504d5330300107430246ff0ab5504d533030010743024600"},
+  {false, 0x33, "reactive MS: Slave NAK/ACK", "0038070400abff00"},
+  // {false, 0x33, "reactive MS: Slave NAK/NAK", "0038070400ab000ab5504d5330300107430246ff0ab5504d5330300107430246ff"},
+  {false, 0x33, "reactive MS: Slave NAK/NAK", "0038070400abffff"},
+  // {false, 0x33, "reactive MS: Master defect/correct", "0038070400acff0038070400ab000ab5504d533030010743024600"},
+  {false, 0x33, "reactive MS: Master defect/correct", "0038070400ac0038070400ab00"},
+  // {false, 0x33, "reactive MS: Master defect/defect", "0038070400acff0038070400acff"},
+  {false, 0x33, "reactive MS: Master defect/defect", "0038070400ff0038070400ac"},
+  // {false, 0x33, "reactive MS: Slave defect (callback)", "003807050030aa"},
+  {false, 0x33, "reactive MS: Slave defect (callback)", "003807050030"},
+  {false, 0x33, "reactive MM: Normal", "003307040014"},
+  {false, 0x33, "reactive BC: Normal", "00fe0704003b"},
 
-void passiveTest_03(const uint8_t &address, const std::string &title) {
-  assert(title == "MS: Master NAK/repeat");
-  handler.setAddress(address);
-  simulate(__FUNCTION__, title, "",
-           "aaaaaa"
-           "ff52b509030d060043"
-           "ff"                  // Master NAK
-           "ff52b509030d060043"  // Master repeat
-           "00"
-           "03b0fba901d0"
-           "00"
-           "aaaaaa");
-}
+  // {false, 0x33, "active BC: Request Bus - Normal", "33feb5050427002d00", "feb5050427002d00"},
+  {false, 0x33, "active BC: Request Bus - Normal", "33", "feb5050427002d00"},
+  {false, 0x33, "active BC: Request Bus - Priority lost", "01feb5050427002d007b", "feb5050427002d00"},
+  {false, 0x33, "active BC: Request Bus - Priority lost/wrong byte", "01ab", "feb5050427002d00"},
+  // {false, 0x33, "active BC: Request Bus - Priority fit/won", "73aa33feb5050427002d00", "feb5050427002d00"},
+  {false, 0x33, "active BC: Request Bus - Priority fit/won", "73aa33", "feb5050427002d00"},
+  {false, 0x33, "active BC: Request Bus - Priority fit/lost", "73aa13", "feb5050427002d00"},
+  {false, 0x33, "active BC: Request Bus - Priority retry/error", "73a0", "feb5050427002d00"},
+  // {false, 0x33, "active MS: Normal", "3352b509030d46003600013fa4", "52b509030d4600"},
+  {false, 0x33, "active MS: Normal", "3300013fa4", "52b509030d4600"},
+// {false, 0x33, "active MS: Master NAK/ACK - Slave CRC wrong/correct", "3352b509030d460036ff3352b509030d46003600013fa3ff013fa4", "52b509030d4600"},
+  {false, 0x33, "active MS: Master NAK/ACK - Slave CRC wrong/correct", "33ff00013fa3013fa4", "52b509030d4600"},
+  // {false, 0x33, "active MS: Master NAK/ACK - Slave CRC wrong/wrong", "3352b509030d460036ff3352b509030d46003600013fa3ff013fa3ff", "52b509030d4600"},
+  {false, 0x33, "active MS: Master NAK/ACK - Slave CRC wrong/wrong", "3300013fa3013fa3", "52b509030d4600"},
+  // {false, 0x33, "active MS: Master NAK/NAK", "3352b509030d460036ff3352b509030d460036ff", "52b509030d4600"},
+  {false, 0x33, "active MS: Master NAK/NAK", "33ffff", "52b509030d4600"},
+  // {false, 0x33, "active MM: Master NAK/ACK", "3310b57900fbff3310b57900fb00", "10b57900"},
+  {false, 0x33, "active MM: Master NAK/ACK", "33ff00", "10b57900"},
+  {false, 0x30, "active BC: Request Bus - Priority lost and Sub lost", "1052b50401314b000200002c00", "feb5050427002d00"},
+  {false, 0x30, "active MS: Request Bus - Priority lost to 0x10", "1052b50401314b000200002c00","feb5050427002d00"}
+};
+// clang-format on
 
-void passiveTest_04(const uint8_t &address, const std::string &title) {
-  assert(title == "MS: Master NAK/repeat/NAK");
-  handler.setAddress(address);
-  simulate(__FUNCTION__, title, "",
-           "aaaaaa"
-           "ff52b509030d060043"
-           "ff"                  // Master NAK
-           "ff52b509030d060043"  // Master repeat
-           "ff"                  // Master NAK
-           "aaaaaa");
-}
-
-void passiveTest_05(const uint8_t &address, const std::string &title) {
-  assert(title == "MS: Slave defect/NAK/repeat");
-  handler.setAddress(address);
-  simulate(__FUNCTION__, title, "",
-           "aaaaaa"
-           "ff52b509030d060043"
-           "00"
-           "03b0fba902d0"  // Slave defect
-           "ff"            // Slave NAK
-           "03b0fba901d0"  // Slave repeat
-           "00"
-           "aaaaaa");
-}
-
-void passiveTest_06(const uint8_t &address, const std::string &title) {
-  assert(title == "MS: Slave NAK/repeat/NAK");
-  handler.setAddress(address);
-  simulate(__FUNCTION__, title, "",
-           "aaaaaa"
-           "ff52b509030d060043"
-           "00"
-           "03b0fba901d0"
-           "ff"            // Slave NAK
-           "03b0fba901d0"  // Slave repeat
-           "ff"            // Slave NAK
-           "aaaaaa");
-}
-
-void passiveTest_07(const uint8_t &address, const std::string &title) {
-  assert(title == "MS: Master NAK/repeat - Slave NAK/repeat");
-  handler.setAddress(address);
-  simulate(__FUNCTION__, title, "",
-           "aaaaaa"
-           "ff52b509030d060043"
-           "ff"                  // Master NAK
-           "ff52b509030d060043"  // Master repeat
-           "00"
-           "03b0fba901d0"
-           "ff"            // Slave NAK
-           "03b0fba901d0"  // Slave repeat
-           "00"
-           "aaaaaa");
-}
-
-void passiveTest_08(const uint8_t &address, const std::string &title) {
-  assert(title == "MS: Master NAK/repeat/ACK - Slave NAK/repeat/NAK");
-  handler.setAddress(address);
-  simulate(__FUNCTION__, title, "",
-           "aaaaaa"
-           "ff52b509030d060043"
-           "ff"                  // Master NAK
-           "ff52b509030d060043"  // Master repeat
-           "00"                  // Master ACK
-           "03b0fba901d0"
-           "ff"            // Slave NAK
-           "03b0fba901d0"  // Slave repeat
-           "ff"            // Slave NAK
-           "aaaaaa");
-}
-
-void passiveTest_09(const uint8_t &address, const std::string &title) {
-  assert(title == "MM: Normal");
-  handler.setAddress(address);
-  simulate(__FUNCTION__, title, "",
-           "aaaaaa"
-           "1000b5050427002400d900"
-           "aaaaaa");
-}
-
-void passiveTest_10(const uint8_t &address, const std::string &title) {
-  assert(title == "BC: defect");
-  handler.setAddress(address);
-  simulate(__FUNCTION__, title, "",
-           "aaaaaa"
-           "00"
-           "fe"        // broadcast
-           "0704003c"  // defect
-           "aaaaaa");
-}
-
-void passiveTest_11(const uint8_t &address, const std::string &title) {
-  assert(title == "00: reset");
-  handler.setAddress(address);
-  simulate(__FUNCTION__, title, "",
-           "aaaaaa"
-           "00"
-           "aaaaaa");
-}
-
-void passiveTest_12(const uint8_t &address, const std::string &title) {
-  assert(title == "0704: scan");
-  handler.setAddress(address);
-  simulate(__FUNCTION__, title, "",
-           "aaaaaa"
-           "002e0704004e"  // scan
-           "aaaaaa");
-}
-
-void passiveTest_13(const uint8_t &address, const std::string &title) {
-  assert(title == "BC: normal");
-  handler.setAddress(address);
-  simulate(__FUNCTION__, title, "",
-           "aaaaaa"
-           "10"
-           "fe"  // broadcast
-           "07000970160443183105052592"
-           "aaaaaa");
-}
-
-void passiveTest_14(const uint8_t &address, const std::string &title) {
-  assert(title == "MS: slave CRC byte is invalid");
-  handler.setAddress(address);
-  simulate(__FUNCTION__, title, "",
-           "aaaaaa"
-           "1008b5130304cd017f000acd01000000000100010000"
-           "aaaaaa");
-}
-
-void reactiveTest_01(const uint8_t &address, const std::string &title) {
-  assert(title == "MS: Slave NAK/ACK");
-  handler.setAddress(address);
-  simulate(__FUNCTION__, title, "",
-           "aaaaaa"
-           "00"
-           "38"  // own slave address
-           "070400ab"
-           "ff"  // Slave NAK
-           "00"  // Slave ACK
-           "aaaaaa");
-}
-
-void reactiveTest_02(const uint8_t &address, const std::string &title) {
-  assert(title == "MS: Slave NAK/NAK");
-  handler.setAddress(address);
-  simulate(__FUNCTION__, title, "",
-           "aaaaaa"
-           "00"
-           "38"  // own slave address
-           "070400ab"
-           "ff"  // Slave NAK
-           "ff"  // Slave NAK
-           "aaaaaa");
-}
-
-void reactiveTest_03(const uint8_t &address, const std::string &title) {
-  assert(title == "MS: Master defect/correct");
-  handler.setAddress(address);
-  simulate(__FUNCTION__, title, "",
-           "aaaaaa"
-           "00"
-           "38"        // own slave address
-           "070400ac"  // Master defect
-           "00"
-           "38"        // own slave address
-           "070400ab"  // Master correct
-           "00"
-           "aaaaaa");
-}
-
-void reactiveTest_04(const uint8_t &address, const std::string &title) {
-  assert(title == "MS: Master defect/defect");
-  handler.setAddress(address);
-  simulate(__FUNCTION__, title, "",
-           "aaaaaa"
-           "00"
-           "38"        // own slave address
-           "070400ff"  // Master defect
-           "00"
-           "38"        // own slave address
-           "070400ac"  // Master defect
-           "aaaaaa");
-}
-
-void reactiveTest_05(const uint8_t &address, const std::string &title) {
-  assert(title == "MS: Slave defect (callback)");
-  handler.setAddress(address);
-  simulate(__FUNCTION__, title, "",
-           "aaaaaa"
-           "00"
-           "38"  // own slave address
-           "07050030"
-           "aaaaaa");
-}
-
-void reactiveTest_06(const uint8_t &address, const std::string &title) {
-  assert(title == "MM: Normal");
-  handler.setAddress(address);
-  simulate(__FUNCTION__, title, "",
-           "aaaaaa"
-           "00"
-           "33"  // own master address
-           "07040014"
-           "aaaaaa");
-}
-
-void reactiveTest_07(const uint8_t &address, const std::string &title) {
-  assert(title == "BC: Normal");
-  handler.setAddress(address);
-  simulate(__FUNCTION__, title, "",
-           "aaaaaa"
-           "00"
-           "fe"  // broadcast
-           "0704003b"
-           "aaaaaa");
-}
-
-void activeTest_01(const uint8_t &address, const std::string &title) {
-  assert(title == "BC: Request Bus - Normal");
-  handler.setAddress(address);
-  simulate(__FUNCTION__, title, "feb5050427002d00",
-           "aaaaaa"
-           "33"  // own Address == Arbitration won
-           "aaaaaa");
-}
-
-void activeTest_02(const uint8_t &address, const std::string &title) {
-  assert(title == "BC: Request Bus - Priority lost");
-  handler.setAddress(address);
-  simulate(__FUNCTION__, title, "feb5050427002d00",
-           "aaaaaa"
-           "01"  // other Address == Priority lost
-           "feb5050427002d007b"
-           "aaaaaa");
-}
-
-void activeTest_03(const uint8_t &address, const std::string &title) {
-  assert(title == "BC: Request Bus - Priority lost/wrong byte");
-  handler.setAddress(address);
-  simulate(__FUNCTION__, title, "feb5050427002d00",
-           "aaaaaa"
-           "01"  // other Address == Priority lost
-           "ab"  // wrong byte
-           "aaaaaa");
-}
-
-void activeTest_04(const uint8_t &address, const std::string &title) {
-  assert(title == "BC: Request Bus - Priority fit/won");
-  handler.setAddress(address);
-  simulate(__FUNCTION__, title, "feb5050427002d00",
-           "aaaaaa"
-           "73"  // own Address == Priority retry
-           "aa"
-           "33"  // own Address == Arbitration won
-           "aaaaaa");
-}
-
-void activeTest_05(const uint8_t &address, const std::string &title) {
-  assert(title == "BC: Request Bus - Priority fit/lost");
-  handler.setAddress(address);
-  simulate(__FUNCTION__, title, "feb5050427002d00",
-           "aaaaaa"
-           "73"  // own Address == Priority retry
-           "aa"
-           "13"  // other Address == Arbitration lost
-           "aaaaaa");
-}
-
-void activeTest_06(const uint8_t &address, const std::string &title) {
-  assert(title == "BC: Request Bus - Priority fit/error");
-  handler.setAddress(address);
-  simulate(__FUNCTION__, title, "feb5050427002d00",
-           "aaaaaa"
-           "73"  // own Address == Priority retry
-           "a0"  // error
-           "aaaaaa");
-}
-
-void activeTest_07(const uint8_t &address, const std::string &title) {
-  assert(title == "MS: Normal");
-  handler.setAddress(address);
-  simulate(__FUNCTION__, title, "52b509030d4600",
-           "aaaaaa"
-           "33"  // own master address == Arbitration won
-           "00"  // Master ACK
-           "013fa4"
-           "aaaaaa");
-}
-
-void activeTest_08(const uint8_t &address, const std::string &title) {
-  assert(title == "MS: Master NAK/ACK - Slave CRC wrong/correct");
-  handler.setAddress(address);
-  simulate(__FUNCTION__, title, "52b509030d4600",
-           "aaaaaa"
-           "33"      // own master address == Arbitration won
-           "ff"      // Master NAK
-           "00"      // Master ACK
-           "013fa3"  // Slave CRC wrong
-           "013fa4"  // Slave CRC correct
-           "aaaaaa");
-}
-
-void activeTest_09(const uint8_t &address, const std::string &title) {
-  assert(title == "MS: Master NAK/ACK - Slave CRC wrong/wrong");
-  handler.setAddress(address);
-  simulate(__FUNCTION__, title, "52b509030d4600",
-           "aaaaaa"
-           "33"      // own master address == Arbitration won
-           "00"      // Master ACK
-           "013fa3"  // Slave CRC wrong
-           "013fa3"  // Slave CRC wrong
-           "aaaaaa");
-}
-
-void activeTest_10(const uint8_t &address, const std::string &title) {
-  assert(title == "MS: Master NAK/NAK");
-  handler.setAddress(address);
-  simulate(__FUNCTION__, title, "52b509030d4600",
-           "aaaaaa"
-           "33"  // own master address == Arbitration won
-           "ff"  // Master NAK
-           "ff"  // Master NAK
-           "aaaaaa");
-}
-
-void activeTest_11(const uint8_t &address, const std::string &title) {
-  assert(title == "MM: Master NAK/ACK");
-  handler.setAddress(address);
-  simulate(__FUNCTION__, title, "10b57900",
-           "aaaaaa"
-           "33"  // own Address == Arbitration won
-           "ff"  // Master NAK
-           "00"  // Master ACK
-           "aaaaaa");
-}
-
-void activeTest_12(const uint8_t &address, const std::string &title) {
-  assert(title == "BC: Request Bus - Priority lost and Sub lost");
-  handler.setAddress(address);
-  simulate(__FUNCTION__, title, "feb5050427002d00",
-           "aaaaaa"
-           "10"                        // other Address == Priority lost
-           "52b50401314b000200002c00"  //
-           "aaaaaa");
-}
-
-void activeTest_13(const uint8_t &address, const std::string &title) {
-  assert(title == "MS: Request Bus - Priority lost to 0x10");
-  handler.setAddress(address);
-  simulate(__FUNCTION__, title, "feb5050427002d00",
-           "aaaaaa"
-           "10"                        // other Address == Priority lost
-           "52b50401314b000200002c00"  //
-           "aaaaaa");
+void enable_group(const std::string &group_prefix) {
+  for (auto &tc : test_cases)
+    if (tc.description.find(group_prefix) == 0) tc.enabled = true;
 }
 
 int main() {
@@ -668,48 +313,14 @@ int main() {
   handler.setTelegramCallback(telegramCallback);
   handler.setErrorCallback(onErrorCallback);
 
-  // clang-format off
-  passiveTest_01(0x33, "MS: Normal");
-  passiveTest_02(0x33, "MS: Master defect/NAK");
-  passiveTest_03(0x33, "MS: Master NAK/repeat");
-  passiveTest_04(0x33, "MS: Master NAK/repeat/NAK");
-  passiveTest_05(0x33, "MS: Slave defect/NAK/repeat");
-  passiveTest_06(0x33, "MS: Slave NAK/repeat/NAK");
-  passiveTest_07(0x33, "MS: Master NAK/repeat - Slave NAK/repeat");
-  passiveTest_08(0x33, "MS: Master NAK/repeat/ACK - Slave NAK/repeat/NAK");
-  passiveTest_09(0x33, "MM: Normal");
-  passiveTest_10(0x33, "BC: defect");
-  passiveTest_11(0x33, "00: reset");
-  passiveTest_12(0x33, "0704: scan");
-  passiveTest_13(0x33, "BC: normal");
-  passiveTest_14(0x33, "MS: slave CRC byte is invalid");
+  enable_group("passive");
+  enable_group("reactive");
+  enable_group("active");
 
-  reactiveTest_01(0x33, "MS: Slave NAK/ACK");
-  reactiveTest_02(0x33, "MS: Slave NAK/NAK");
-  reactiveTest_03(0x33, "MS: Master defect/correct");
-  reactiveTest_04(0x33, "MS: Master defect/defect");
-  reactiveTest_05(0x33, "MS: Slave defect (callback)");
-  reactiveTest_06(0x33, "MM: Normal");
-  reactiveTest_07(0x33, "BC: Normal");
-
-  activeTest_01(0x33, "BC: Request Bus - Normal");
-  activeTest_02(0x33, "BC: Request Bus - Priority lost");
-  activeTest_03(0x33, "BC: Request Bus - Priority lost/wrong byte");
-  activeTest_04(0x33, "BC: Request Bus - Priority fit/won");
-  activeTest_05(0x33, "BC: Request Bus - Priority fit/lost");
-  activeTest_06(0x33, "BC: Request Bus - Priority fit/error");
-  activeTest_07(0x33, "MS: Normal");
-  activeTest_08(0x33, "MS: Master NAK/ACK - Slave CRC wrong/correct");
-  activeTest_09(0x33, "MS: Master NAK/ACK - Slave CRC wrong/wrong");
-  activeTest_10(0x33, "MS: Master NAK/NAK");
-  activeTest_11(0x33, "MM: Master NAK/ACK");
-  activeTest_12(0x30, "BC: Request Bus - Priority lost and Sub lost");
-  activeTest_13(0x30, "MS: Request Bus - Priority lost to 0x10");
-  // clang-format on
+  for (const TestCase &tc : test_cases)
+    if (tc.enabled) run_test(tc);
 
   printCounters();
-
-  // printStateTimingResults();
 
   return EXIT_SUCCESS;
 }

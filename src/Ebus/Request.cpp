@@ -25,19 +25,41 @@ ebus::Request::Request() {
   stateRequests = {&Request::firstTry, &Request::retrySyn, &Request::secondTry};
 }
 
+void ebus::Request::setMaxLockCounter(const uint8_t counter) {
+  if (counter > MAX_LOCK_COUNTER)
+    maxLockCounter = DEFAULT_LOCK_COUNTER;
+  else
+    maxLockCounter = counter;
+}
+
+void ebus::Request::setLockCounter(const uint8_t counter) {
+  if (counter > maxLockCounter)
+    lockCounter = DEFAULT_LOCK_COUNTER;
+  else
+    lockCounter = counter;
+}
+
+const uint8_t ebus::Request::getLockCounter() const { return lockCounter; }
+
+void ebus::Request::resetLockCounter() { lockCounter = maxLockCounter; }
+
+void ebus::Request::handleLockCounter(const uint8_t byte) {
+  if (byte == sym_syn && lockCounter > 0) lockCounter--;
+}
+
 ebus::RequestState ebus::Request::getState() const { return state; }
 
-void ebus::Request::startBit() {
+void ebus::Request::countStartBit() {
   counter.requestsStartBit++;
   state = RequestState::firstTry;
   result = RequestResult::firstSyn;
 }
 
-void ebus::Request::microsBusIsrDelay(const int64_t &delay) {
+void ebus::Request::microsLastDelay(const int64_t &delay) {
   busIsrDelay.add(delay);
 }
 
-void ebus::Request::microsBusIsrWindow(const int64_t &window) {
+void ebus::Request::microsLastWindow(const int64_t &window) {
   busIsrWindow.add(window);
 }
 
@@ -90,6 +112,7 @@ void ebus::Request::firstTry(const uint8_t &address, const uint8_t &byte) {
     result = RequestResult::firstSyn;
   } else if (byte == address) {
     counter.requestsFirstWon++;
+    lockCounter = maxLockCounter;
     result = RequestResult::firstWon;
   } else if (isMaster(byte)) {
     if (checkPriorityClassSubAddress(address, byte)) {
@@ -121,6 +144,7 @@ void ebus::Request::retrySyn(const uint8_t &address, const uint8_t &byte) {
 void ebus::Request::secondTry(const uint8_t &address, const uint8_t &byte) {
   if (byte == address) {
     counter.requestsSecondWon++;
+    lockCounter = maxLockCounter;
     result = RequestResult::secondWon;
   } else if (isMaster(byte)) {
     counter.requestsSecondLost++;

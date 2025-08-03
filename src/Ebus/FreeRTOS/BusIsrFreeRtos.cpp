@@ -253,7 +253,7 @@ void ebus::processBusIsrEvents() {
 
   if (busIsrStartBitFlag) {
     busIsrStartBitFlag = false;
-    request->startBit();
+    request->countStartBit();
     // TODO - check if this is needed
     ebus::handler->busIsrStartBit();
   }
@@ -264,7 +264,7 @@ void ebus::processBusIsrEvents() {
     portENTER_CRITICAL_ISR(&timerMux);
     safeDelay = microsLastDelay;
     portEXIT_CRITICAL_ISR(&timerMux);
-    request->microsBusIsrDelay(safeDelay);
+    request->microsLastDelay(safeDelay);
   }
 
   if (microsBusIsrWindowFlag) {
@@ -273,6 +273,6 @@ void ebus::processBusIsrEvents() {
     portENTER_CRITICAL_ISR(&timerMux);
     safeWindow = microsLastWindow;
     portEXIT_CRITICAL_ISR(&timerMux);
-    request->microsBusIsrWindow(safeWindow);
+    request->microsLastWindow(safeWindow);
   }
 }

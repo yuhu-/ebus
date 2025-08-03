@@ -27,6 +27,9 @@
 
 namespace ebus {
 
+constexpr uint8_t DEFAULT_LOCK_COUNTER = 3;
+constexpr uint8_t MAX_LOCK_COUNTER = 25;
+
 constexpr size_t NUM_REQUEST_STATES = 3;
 
 enum class RequestState { firstTry, retrySyn, secondTry };
@@ -95,12 +98,18 @@ class Request {
 
   explicit Request();
 
+  void setMaxLockCounter(const uint8_t counter);
+  void setLockCounter(const uint8_t counter);
+  const uint8_t getLockCounter() const;
+  void resetLockCounter();
+  void handleLockCounter(const uint8_t byte);
+
   RequestState getState() const;
 
-  void startBit();
+  void countStartBit();
 
-  void microsBusIsrDelay(const int64_t &delay);
-  void microsBusIsrWindow(const int64_t &window);
+  void microsLastDelay(const int64_t &delay);
+  void microsLastWindow(const int64_t &window);
 
   RequestResult run(const uint8_t &address, const uint8_t &byte);
 
@@ -117,6 +126,9 @@ class Request {
 
   RequestState state = RequestState::firstTry;
   RequestResult result = RequestResult::firstSyn;
+
+  uint8_t maxLockCounter = DEFAULT_LOCK_COUNTER;
+  uint8_t lockCounter = DEFAULT_LOCK_COUNTER;
 
   // measurement
   Counter counter;

@@ -40,9 +40,6 @@ namespace ebus {
 
 constexpr uint8_t DEFAULT_ADDRESS = 0xff;
 
-constexpr uint8_t DEFAULT_LOCK_COUNTER = 3;
-constexpr uint8_t MAX_LOCK_COUNTER = 25;
-
 constexpr size_t NUM_HANDLER_STATES = 15;
 
 enum class HandlerState {
@@ -96,7 +93,7 @@ using ErrorCallback = std::function<void(const std::string &errorMessage,
                                          const std::vector<uint8_t> &slave)>;
 
 #define EBUS_HANDLER_COUNTER_LIST \
-  X(messagesTotal)                 \
+  X(messagesTotal)                \
   X(messagesPassiveMasterSlave)   \
   X(messagesPassiveMasterMaster)  \
   X(messagesPassiveBroadcast)     \
@@ -178,8 +175,6 @@ class Handler {
   uint8_t getAddress() const;
   uint8_t getSlaveAddress() const;
 
-  void setMaxLockCounter(const uint8_t counter);
-
   HandlerState getState() const;
   bool isActive() const;
 
@@ -219,9 +214,6 @@ class Handler {
 
   HandlerState state = HandlerState::passiveReceiveMaster;
   HandlerState lastState = HandlerState::passiveReceiveMaster;
-
-  uint8_t maxLockCounter = DEFAULT_LOCK_COUNTER;
-  uint8_t lockCounter = DEFAULT_LOCK_COUNTER;
 
   // measurement
   Counter counter;
