@@ -21,18 +21,18 @@
 
 #include "Common.hpp"
 
-ebus::Request::Request() {
-  stateRequests = {&Request::firstTry, &Request::retrySyn, &Request::secondTry};
-}
+ebus::Request::Request()
+    : stateRequests(
+          {&Request::firstTry, &Request::retrySyn, &Request::secondTry}) {}
 
-void ebus::Request::setMaxLockCounter(const uint8_t counter) {
+void ebus::Request::setMaxLockCounter(const uint8_t &counter) {
   if (counter > MAX_LOCK_COUNTER)
     maxLockCounter = DEFAULT_LOCK_COUNTER;
   else
     maxLockCounter = counter;
 }
 
-void ebus::Request::setLockCounter(const uint8_t counter) {
+void ebus::Request::setLockCounter(const uint8_t &counter) {
   if (counter > maxLockCounter)
     lockCounter = DEFAULT_LOCK_COUNTER;
   else
@@ -43,7 +43,7 @@ const uint8_t ebus::Request::getLockCounter() const { return lockCounter; }
 
 void ebus::Request::resetLockCounter() { lockCounter = maxLockCounter; }
 
-void ebus::Request::handleLockCounter(const uint8_t byte) {
+void ebus::Request::handleLockCounter(const uint8_t &byte) {
   if (byte == sym_syn && lockCounter > 0) lockCounter--;
 }
 
