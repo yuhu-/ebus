@@ -98,11 +98,11 @@ class Request {
 
   explicit Request();
 
-  void setMaxLockCounter(const uint8_t counter);
-  void setLockCounter(const uint8_t counter);
+  void setMaxLockCounter(const uint8_t &counter);
+  void setLockCounter(const uint8_t &counter);
   const uint8_t getLockCounter() const;
   void resetLockCounter();
-  void handleLockCounter(const uint8_t byte);
+  void handleLockCounter(const uint8_t &byte);
 
   RequestState getState() const;
 
