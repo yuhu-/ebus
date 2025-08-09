@@ -26,6 +26,7 @@
 
 #include "../Handler.hpp"
 #include "../Queue.hpp"
+#include "../Request.hpp"
 
 namespace ebus {
 
@@ -34,8 +35,8 @@ class ServiceRunnerPosix {
   // Define a listener type for byte events
   using ByteListener = std::function<void(const uint8_t&)>;
 
-  ServiceRunnerPosix(Handler& handler, Queue<uint8_t>& queue)
-      : handler(handler), queue(queue), running(false) {}
+  ServiceRunnerPosix(Request& request, Handler& handler, Queue<uint8_t>& queue)
+      : request(request), handler(handler), queue(queue), running(false) {}
 
   void start() {
     running = true;
@@ -53,6 +54,7 @@ class ServiceRunnerPosix {
   void addByteListener(ByteListener listener) { listeners.push_back(listener); }
 
  private:
+  Request& request;
   Handler& handler;
   Queue<uint8_t>& queue;
   std::atomic<bool> running;
@@ -62,11 +64,17 @@ class ServiceRunnerPosix {
 
   void run() {
     while (running) {
-      uint8_t value;
-      if (queue.pop(value)) {
-        if (!testing) handler.run(value);
-        for (const ByteListener& listener : listeners) listener(value);
-        if (testing) handler.run(value);
+      uint8_t byte;
+      if (queue.pop(byte)) {
+        if (!testing) {
+          request.run(byte);
+          handler.run(byte);
+        }
+        for (const ByteListener& listener : listeners) listener(byte);
+        if (testing) {
+          request.run(byte);
+          handler.run(byte);
+        }
       }
     }
   }

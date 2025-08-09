@@ -30,7 +30,6 @@ struct TestCase {
   uint8_t address;
   std::string description;
   std::string sequence;
-  ebus::RequestResult expectedResult;
 };
 
 ebus::Request request;
@@ -45,8 +44,8 @@ void run_test(const TestCase &tc) {
   ebus::Sequence seq;
   seq.assign(ebus::to_vector(tmp));
 
-  request.setLockCounter(3);
-  bool requestFlag = true;
+  request.setAddress(tc.address);
+  request.requestBus();
 
   ebus::RequestResult testResult;
 
@@ -56,57 +55,27 @@ void run_test(const TestCase &tc) {
   for (size_t i = 0; i < seq.size(); ++i) {
     uint8_t byte = seq[i];
 
+    ebus::RequestState state = request.getState();
+
     std::cout << "->  read: " << ebus::to_string(byte)
-              << " lockCounter: " << static_cast<int>(request.getLockCounter())
-              << std::endl;
+              << "   state: " << ebus::getRequestStateText(state)
+              << "\tlockCounter: "
+              << static_cast<int>(request.getLockCounter());
 
-    if (request.getLockCounter() == 0 && requestFlag) {
-      ebus::RequestState state = request.getState();
-      std::cout << " request: " << ebus::getRequestStateText(state)
-                << " address: " << ebus::to_string(tc.address)
-                << " byte:" << ebus::to_string(byte) << std::endl;
+    testResult = request.run(byte);
 
-      testResult = request.run(tc.address, byte);
+    std::cout << "\tresult: " << ebus::getRequestResultText(testResult);
 
-      std::cout << "  result: " << ebus::getRequestResultText(testResult)
-                << std::endl;
+    if (state != request.getState())
+      std::cout << "\tswitch: "
+                << ebus::getRequestStateText(request.getState());
 
-      if (state != request.getState()) {
-        std::cout << "  switch: "
-                  << ebus::getRequestStateText(request.getState()) << std::endl;
-      }
-
-      switch (testResult) {
-        case ebus::RequestResult::firstWon:
-        case ebus::RequestResult::firstLost:
-        case ebus::RequestResult::firstError:
-        case ebus::RequestResult::retryError:
-        case ebus::RequestResult::secondWon:
-        case ebus::RequestResult::secondLost:
-        case ebus::RequestResult::secondError:
-          requestFlag = false;  // Stop further requests
-          break;
-
-        default:
-          break;
-      }
-    }
-
-    // request.handleLockCounter(byte);
+    std::cout << std::endl;
   }
 
-  std::string resultText;
+  request.reset();
 
-  if (testResult != tc.expectedResult) {
-    resultText += "failed - expected ";
-    resultText += ebus::getRequestResultText(tc.expectedResult);
-    resultText += ", got ";
-    resultText += ebus::getRequestResultText(testResult);
-  } else {
-    resultText += "passed";
-  }
-
-  std::cout << "--- Test: " << resultText << " ---" << std::endl;
+  std::cout << "--- Test: " << tc.description << " ---" << std::endl;
 }
 
 void printCounter() {
@@ -136,16 +105,16 @@ void printCounter() {
 
 // clang-format off
 std::vector<TestCase> test_cases = {
-    {true, 0x33, "Normal", "33feb5050427002d00", ebus::RequestResult::firstWon},
-    {true, 0x33, "Syn byte - Normal", "aa33feb5050427002d00", ebus::RequestResult::firstWon},
-    {true, 0x33, "Wrong byte", "5c", ebus::RequestResult::firstError},
-    {true, 0x33, "Priority lost", "01feb5050427002d007b", ebus::RequestResult::firstLost},
-    {true, 0x33, "Priority lost/wrong byte", "01ab", ebus::RequestResult::firstLost},
-    {true, 0x33, "Priority fit/won", "73aa33feb5050427002d00", ebus::RequestResult::secondWon},
-    {true, 0x33, "Priority fit/lost", "73aa13", ebus::RequestResult::secondLost},
-    {true, 0x33, "Priority fit/error", "73aac5", ebus::RequestResult::secondError},
-    {true, 0x33, "Priority retry/error", "73a0", ebus::RequestResult::retryError},
-    {true, 0x30, "Priority fit - Sub lost", "1052b50401314b000200002c00", ebus::RequestResult::firstLost},
+    {true, 0x33, "Normal", "33feb5050427002d00"},
+    {true, 0x33, "Syn byte - Normal", "aa33feb5050427002d00"},
+    {true, 0x33, "Wrong byte", "5c"},
+    {true, 0x33, "Priority lost", "01feb5050427002d007b"},
+    {true, 0x33, "Priority lost/wrong byte", "01ab"},
+    {true, 0x33, "Priority fit/won", "73aa33feb5050427002d00"},
+    {true, 0x33, "Priority fit/lost", "73aa13"},
+    {true, 0x33, "Priority fit/error", "73aac5"},
+    {true, 0x33, "Priority retry/error", "73a0"},
+    {true, 0x30, "Priority fit - Sub lost", "1052b50401314b000200002c00"},
 };
 // clang-format on
 

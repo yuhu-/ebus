@@ -26,6 +26,7 @@
 
 #include "../Handler.hpp"
 #include "../Queue.hpp"
+#include "../Request.hpp"
 
 namespace ebus {
 
@@ -36,8 +37,9 @@ class ServiceRunnerFreeRtos {
   // Define a listener type for byte events
   using ByteListener = std::function<void(uint8_t)>;
 
-  ServiceRunnerFreeRtos(Handler& handler, Queue<uint8_t>& queue)
-      : handler(handler), queue(queue), taskHandle(nullptr) {}
+  ServiceRunnerFreeRtos(Request& request, Handler& handler,
+                        Queue<uint8_t>& queue)
+      : request(request), handler(handler), queue(queue), taskHandle(nullptr) {}
 
   void start() {
     xTaskCreatePinnedToCore(&ServiceRunnerFreeRtos::taskFunc,
@@ -56,6 +58,7 @@ class ServiceRunnerFreeRtos {
   void addByteListener(ByteListener listener) { listeners.push_back(listener); }
 
  private:
+  Request& request;
   Handler& handler;
   Queue<uint8_t>& queue;
   TaskHandle_t taskHandle;
@@ -69,13 +72,15 @@ class ServiceRunnerFreeRtos {
       // Comment out the following line if you want non-blocking behavior
       if (self->queue.pop(byte)) {
         processBusIsrEvents();
+        self->request.run(byte);
         self->handler.run(byte);
         for (const ByteListener& listener : self->listeners) listener(byte);
       }
-      // Non-blocking 
+      // Non-blocking
       // Uncomment the following lines if you want non-blocking behavior
       // while (self->queue.try_pop(byte)) {  // non-blocking
       //   processBusIsrEvents();
+      //   self->request.run(byte);
       //   self->handler.run(byte);
       //   for (const ByteListener& listener : self->listeners) listener(byte);
       // }

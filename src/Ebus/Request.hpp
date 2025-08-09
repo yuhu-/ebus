@@ -17,29 +17,38 @@
  * along with ebus. If not, see http://www.gnu.org/licenses/.
  */
 
+// Implementation of eBUS arbitration logic for internal (handler) and external
+// bus access.
+
 #pragma once
 
 #include <array>
 #include <cmath>
 #include <cstdint>
+#include <functional>
 
 #include "Statistic.hpp"
 
 namespace ebus {
 
+constexpr uint8_t DEFAULT_ADDRESS = 0xff;
+
 constexpr uint8_t DEFAULT_LOCK_COUNTER = 3;
 constexpr uint8_t MAX_LOCK_COUNTER = 25;
 
-constexpr size_t NUM_REQUEST_STATES = 3;
+constexpr size_t NUM_REQUEST_STATES = 4;
 
-enum class RequestState { firstTry, retrySyn, secondTry };
+enum class RequestState { observe, first, retry, second };
 
 static const char *getRequestStateText(RequestState state) {
-  const char *values[] = {"firstTry", "retrySyn", "secondTry"};
+  const char *values[] = {"observe", "first", "retry", "second"};
   return values[static_cast<int>(state)];
 }
 
 enum class RequestResult {
+  observeSyn,
+  observeData,
+  observeWrite,
   firstSyn,
   firstWon,
   firstRetry,
@@ -53,11 +62,14 @@ enum class RequestResult {
 };
 
 static const char *getRequestResultText(RequestResult result) {
-  const char *values[] = {"firstSyn",   "firstWon",   "firstRetry", "firstLost",
-                          "firstError", "retrySyn",   "retryError", "secondWon",
-                          "secondLost", "secondError"};
+  const char *values[] = {
+      "observeSyn", "observeData", "observeWrite", "firstSyn", "firstWon",
+      "firstRetry", "firstLost",   "firstError",   "retrySyn", "retryError",
+      "secondWon",  "secondLost",  "secondError"};
   return values[static_cast<int>(result)];
 }
+
+using BusRequestedCallback = std::function<void()>;
 
 #define EBUS_REQUEST_COUNTER_LIST \
   X(requestsTotal)                \
@@ -98,20 +110,35 @@ class Request {
 
   explicit Request();
 
+  void setAddress(const uint8_t &source);
+  uint8_t getAddress() const;
+  uint8_t getSlaveAddress() const;
+
   void setMaxLockCounter(const uint8_t &counter);
-  void setLockCounter(const uint8_t &counter);
   const uint8_t getLockCounter() const;
-  void resetLockCounter();
-  void handleLockCounter(const uint8_t &byte);
+
+  bool isBusAvailable() const;
+
+  // Request the bus from handler or external
+  void requestBus(const bool &external = false);
+
+  void setHandlerBusRequestedCallback(BusRequestedCallback callback);
+  void setExternalBusRequestedCallback(BusRequestedCallback callback);
+
+  bool writeSource() const;
+  void sourceWritten();
 
   RequestState getState() const;
+  RequestResult getResult() const;
+
+  void reset();
+
+  RequestResult run(const uint8_t &byte);
 
   void countStartBit();
 
   void microsLastDelay(const int64_t &delay);
   void microsLastWindow(const int64_t &window);
-
-  RequestResult run(const uint8_t &address, const uint8_t &byte);
 
   void resetCounter();
   const Counter &getCounter();
@@ -120,15 +147,29 @@ class Request {
   const Timing &getTiming();
 
  private:
-  std::array<void (Request::*)(const uint8_t &, const uint8_t &),
-             NUM_REQUEST_STATES>
-      stateRequests;
-
-  RequestState state = RequestState::firstTry;
-  RequestResult result = RequestResult::firstSyn;
+  uint8_t address = 0;
+  uint8_t slaveAddress = 0;
 
   uint8_t maxLockCounter = DEFAULT_LOCK_COUNTER;
   uint8_t lockCounter = DEFAULT_LOCK_COUNTER;
+
+  // Indicates whether a bus request is present
+  bool busRequest = false;
+
+  // Indicates whether the bus request is internal or external
+  bool externalBusRequest = false;
+
+  BusRequestedCallback busRequestedCallback = nullptr;
+  BusRequestedCallback externalBusRequestedCallback = nullptr;
+
+  // Indicates whether the source byte should be written
+  bool sourceWrite = false;
+
+  std::array<void (Request::*)(const uint8_t &), NUM_REQUEST_STATES>
+      stateRequests;
+
+  RequestState state = RequestState::observe;
+  RequestResult result = RequestResult::observeSyn;
 
   // measurement
   Counter counter;
@@ -137,12 +178,12 @@ class Request {
   TimingStats busIsrDelay;
   TimingStats busIsrWindow;
 
-  void firstTry(const uint8_t &address, const uint8_t &byte);
-  void retrySyn(const uint8_t &address, const uint8_t &byte);
-  void secondTry(const uint8_t &address, const uint8_t &byte);
+  void observe(const uint8_t &byte);
+  void first(const uint8_t &byte);
+  void retry(const uint8_t &byte);
+  void second(const uint8_t &byte);
 
-  bool checkPriorityClassSubAddress(const uint8_t &address,
-                                    const uint8_t &byte);
+  bool checkPriorityClassSubAddress(const uint8_t &byte);
 };
 
 }  // namespace ebus

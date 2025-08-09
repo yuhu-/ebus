@@ -19,27 +19,40 @@
 
 #pragma once
 
+#include <vector>
+
 #include "../Handler.hpp"
 #include "../Queue.hpp"
+#include "../Request.hpp"
 
 namespace ebus {
 
 class ServiceRunnerEsp8266 {
  public:
-  ServiceRunnerEsp8266(Handler& handler, Queue& queue)
-      : handler(handler), queue(queue) {}
+  // Define a listener type for byte events
+  using ByteListener = std::function<void(const uint8_t&)>;
+
+  ServiceRunnerEsp8266(Request& request, Handler& handler, Queue& queue)
+      : request(request), handler(handler), queue(queue) {}
 
   // Call this frequently in the main loop!
   void poll() {
     uint8_t byte;
     while (queue.pop(byte)) {
+      request.run(byte);
       handler.run(byte);
+      for (const ByteListener& listener : listeners) listener(byte);
     }
   }
 
+  // Register a listener for incoming bytes
+  void addByteListener(ByteListener listener) { listeners.push_back(listener); }
+
  private:
+  Request& request;
   Handler& handler;
   Queue& queue;
+  std::vector<ByteListener> listeners;
 };
 
 }  // namespace ebus

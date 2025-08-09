@@ -38,8 +38,6 @@
 
 namespace ebus {
 
-constexpr uint8_t DEFAULT_ADDRESS = 0xff;
-
 constexpr size_t NUM_HANDLER_STATES = 15;
 
 enum class HandlerState {
@@ -165,25 +163,17 @@ class Handler {
     std::map<HandlerState, Timing> timing;
   };
 
-  explicit Handler(Bus *bus, Request *request, const uint8_t source);
+  explicit Handler(Bus *bus, Request *request);
 
   void setReactiveMasterSlaveCallback(ReactiveMasterSlaveCallback callback);
   void setTelegramCallback(TelegramCallback callback);
   void setErrorCallback(ErrorCallback callback);
 
-  void setAddress(const uint8_t source);
-  uint8_t getAddress() const;
-  uint8_t getSlaveAddress() const;
-
   HandlerState getState() const;
-  bool isActive() const;
 
-  bool busRequest() const;
-  void busRequested();
-  void busIsrStartBit();
+  bool enqueueActiveMessage(const std::vector<uint8_t> &message);
 
   void reset();
-  bool enque(const std::vector<uint8_t> &message);
 
   void run(const uint8_t &byte);
 
@@ -200,17 +190,12 @@ class Handler {
   Bus *bus = nullptr;
   Request *request = nullptr;
 
-  uint8_t address = 0;
-  uint8_t slaveAddress = 0;
-
-  std::array<void (Handler::*)(const uint8_t &), NUM_HANDLER_STATES>
-      stateHandlers;
-
   ReactiveMasterSlaveCallback reactiveMasterSlaveCallback = nullptr;
   TelegramCallback telegramCallback = nullptr;
   ErrorCallback errorCallback = nullptr;
 
-  bool requestFlag = false;
+  std::array<void (Handler::*)(const uint8_t &), NUM_HANDLER_STATES>
+      stateHandlers;
 
   HandlerState state = HandlerState::passiveReceiveMaster;
   HandlerState lastState = HandlerState::passiveReceiveMaster;
@@ -246,7 +231,7 @@ class Handler {
   bool passiveSlaveRepeated = false;
 
   // active
-  bool active = false;
+  bool activeMessage = false;
   Telegram activeTelegram;
 
   Sequence activeMaster;

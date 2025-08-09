@@ -37,6 +37,7 @@
 
 struct TestCase {
   bool enabled;
+  ebus::MessageType messageType;
   uint8_t address;
   std::string description;
   std::string read_string;
@@ -123,7 +124,7 @@ void run_test(const TestCase &tc) {
   ebus::Bus bus;
   ebus::Request request;
   ebus::Queue<uint8_t> byteQueue(32);
-  ebus::Handler handler(&bus, &request, tc.address);
+  ebus::Handler handler(&bus, &request);
 
   handler.setReactiveMasterSlaveCallback(reactiveMasterSlaveCallback);
 
@@ -154,51 +155,50 @@ void run_test(const TestCase &tc) {
     eventQueue.try_push(event);
   });
 
-  request.setLockCounter(2);
+  request.setAddress(tc.address);
+  // request.setMaxLockCounter(2);
+  if (tc.messageType == ebus::MessageType::active) request.requestBus();
 
-  ebus::ServiceRunner serviceRunner(handler, byteQueue);
-  serviceRunner.enableTesting();
+  ebus::ServiceRunner serviceRunner(request, handler, byteQueue);
 
   // Register a ByteListener that logs every byte processed by the serviceRunner
   serviceRunner.addByteListener([](const uint8_t &byte) {
     std::cout << "->  read: " << ebus::to_string(byte) << std::endl;
   });
 
+  serviceRunner.enableTesting();
   serviceRunner.start();
 
-  std::thread cb_thread(callbackRunnerTask, &eventQueue, std::ref(running));
+  std::thread handlerEventTask(callbackRunnerTask, &eventQueue,
+                               std::ref(running));
 
   // Prepare test sequence from the provided hex string
   std::string tmp = "aaaaaa" + tc.read_string + "aaaaaa";
   ebus::Sequence seq;
   seq.assign(ebus::to_vector(tmp));
 
-  handler.enque(ebus::to_vector(tc.send_string));
+  handler.enqueueActiveMessage(ebus::to_vector(tc.send_string));
 
   // Simulate ISR: pushes bytes into the byteQueue asynchronously
   // 2400 baud => 1 / 2400 = 416,67 microseconds per bit
   // 10 bits per byte (1 start bit, 8 data bits, 1 stop bit)
   // 1 byte takes 10 * 416,67 microseconds = 4166,67 microseconds
-  // 4400 microseconds per byte to account for processing overhead
   std::thread ebusUartEventTask([&seq, &bus, &request, &byteQueue, &handler]() {
     for (size_t i = 0; i < seq.size(); ++i) {
       uint8_t byte = seq[i];
 
-      // request.handleLockCounter(seq[i]);
       byteQueue.push(byte);
 
-      int64_t delay = 4400;
-
-      // If SYN, simulte request bus timer
-      if (seq[i] == ebus::sym_syn && handler.busRequest()) {
-        std::this_thread::sleep_for(std::chrono::microseconds(200));
-        delay -= 200;
-        std::cout << " ISR - busRequested()" << std::endl;
-        bus.writeByte(handler.getAddress());
-        handler.busRequested();
+      // simulate request bus timer
+      std::this_thread::sleep_for(std::chrono::microseconds(200));
+      if (seq[i] == ebus::sym_syn && request.writeSource()) {
+        std::cout << " ISR - source written" << std::endl;
+        bus.writeByte(request.getAddress());
+        request.sourceWritten();
       }
 
-      std::this_thread::sleep_for(std::chrono::microseconds(delay));
+      // simulate transmission time 4166,67 ~ 4200 microseconds
+      std::this_thread::sleep_for(std::chrono::microseconds(4200));
     }
   });
 
@@ -209,66 +209,64 @@ void run_test(const TestCase &tc) {
   if (ebusUartEventTask.joinable()) ebusUartEventTask.join();
 
   running = false;
-  if (cb_thread.joinable()) cb_thread.join();
+  if (handlerEventTask.joinable()) handlerEventTask.join();
 
-  std::string hex = bus.getWrittenBytesString();
-  std::cout << " written: " << hex << std::endl;
+  std::cout << " written: " << bus.getWrittenBytesString() << std::endl;
 
-  std::cout << "--- Test complete for: " << tc.description << " ---"
-            << std::endl;
+  std::cout << "--- Test: " << tc.description << " ---" << std::endl;
 }
 
 // clang-format off
 std::vector<TestCase> test_cases = {
-    {false, 0x33, "passive MS: Normal", "ff52b509030d0600430003b0fba901d000"},
-    {false, 0x33, "passive MS: Master defect/NAK", "ff52b509030d060044ffff52b509030d0600430003b0fba901d000"},
-    {false, 0x33, "passive MS: Master NAK/repeat", "ff52b509030d060043ffff52b509030d0600430003b0fba901d000"},
-    {false, 0x33, "passive MS: Master NAK/repeat/NAK", "ff52b509030d060043ffff52b509030d060043ffff52b509030d060043ff"},
-    {false, 0x33, "passive MS: Slave defect/NAK/repeat", "ff52b509030d060044ffff52b509030d0600430003b0fba901d000"},
-    {false, 0x33, "passive MS: Slave NAK/repeat/NAK", "ff52b509030d0600430003b0fba901d0ff03b0fba901d0ff"},
-    {false, 0x33, "passive MS: Master NAK/repeat - Slave NAK/repeat", "ff52b509030d060043ffff52b509030d0600430003b0fba901d0ff03b0fba901d000"},
-    {false, 0x33, "passive MS: Master NAK/repeat/ACK - Slave NAK/repeat/NAK", "ff52b509030d060043ffff52b509030d0600430003b0fba901d0ff03b0fba901d0ff"},
-    {false, 0x33, "passive MM: Normal", "1000b5050427002400d900"},
-    {false, 0x33, "passive BC: defect", "00fe0704003c"},
-    {false, 0x33, "passive 00: reset", "00"},
-    {false, 0x33, "passive 0704: scan", "002e0704004e"},
-    {false, 0x33, "passive BC: normal", "10fe07000970160443183105052592"},
-    {false, 0x33, "passive MS: slave CRC byte is invalid", "1008b5130304cd017f000acd01000000000100010000"},
+    {false, ebus::MessageType::passive, 0x33, "passive MS: Normal", "ff52b509030d0600430003b0fba901d000"},
+    {false, ebus::MessageType::passive, 0x33, "passive MS: Master defect/NAK", "ff52b509030d060044ffff52b509030d0600430003b0fba901d000"},
+    {false, ebus::MessageType::passive, 0x33, "passive MS: Master NAK/repeat", "ff52b509030d060043ffff52b509030d0600430003b0fba901d000"},
+    {false, ebus::MessageType::passive, 0x33, "passive MS: Master NAK/repeat/NAK", "ff52b509030d060043ffff52b509030d060043ffff52b509030d060043ff"},
+    {false, ebus::MessageType::passive, 0x33, "passive MS: Slave defect/NAK/repeat", "ff52b509030d060044ffff52b509030d0600430003b0fba901d000"},
+    {false, ebus::MessageType::passive, 0x33, "passive MS: Slave NAK/repeat/NAK", "ff52b509030d0600430003b0fba901d0ff03b0fba901d0ff"},
+    {false, ebus::MessageType::passive, 0x33, "passive MS: Master NAK/repeat - Slave NAK/repeat", "ff52b509030d060043ffff52b509030d0600430003b0fba901d0ff03b0fba901d000"},
+    {false, ebus::MessageType::passive, 0x33, "passive MS: Master NAK/repeat/ACK - Slave NAK/repeat/NAK", "ff52b509030d060043ffff52b509030d0600430003b0fba901d0ff03b0fba901d0ff"},
+    {false, ebus::MessageType::passive, 0x33, "passive MM: Normal", "1000b5050427002400d900"},
+    {false, ebus::MessageType::passive, 0x33, "passive BC: defect", "00fe0704003c"},
+    {false, ebus::MessageType::passive, 0x33, "passive 00: reset", "00"},
+    {false, ebus::MessageType::passive, 0x33, "passive 0704: scan", "002e0704004e"},
+    {false, ebus::MessageType::passive, 0x33, "passive BC: normal", "10fe07000970160443183105052592"},
+    {false, ebus::MessageType::passive, 0x33, "passive MS: slave CRC byte is invalid", "1008b5130304cd017f000acd01000000000100010000"},
 
-    {false, 0x33, "reactive MS: Slave NAK/ACK", "0038070400ab000ab5504d5330300107430246ff0ab5504d533030010743024600"},
-    {false, 0x33, "reactive MS: Slave NAK/NAK", "0038070400ab000ab5504d5330300107430246ff0ab5504d5330300107430246ff"},
-    {false, 0x33, "reactive MS: Master defect/correct", "0038070400acff0038070400ab000ab5504d533030010743024600"},
-    {false, 0x33, "reactive MS: Master defect/defect", "0038070400acff0038070400acff"},
-    {false, 0x33, "reactive MS: Slave defect (callback)", "003807050030aa"},
-    {false, 0x33, "reactive MM: Normal", "003307040014"},
-    {false, 0x33, "reactive BC: Normal", "00fe0704003b"},
+    {false, ebus::MessageType::reactive, 0x33, "reactive MS: Slave NAK/ACK", "0038070400ab000ab5504d5330300107430246ff0ab5504d533030010743024600"},
+    {false, ebus::MessageType::reactive, 0x33, "reactive MS: Slave NAK/NAK", "0038070400ab000ab5504d5330300107430246ff0ab5504d5330300107430246ff"},
+    {false, ebus::MessageType::reactive, 0x33, "reactive MS: Master defect/correct", "0038070400acff0038070400ab000ab5504d533030010743024600"},
+    {false, ebus::MessageType::reactive, 0x33, "reactive MS: Master defect/defect", "0038070400acff0038070400acff"},
+    {false, ebus::MessageType::reactive, 0x33, "reactive MS: Slave defect (callback)", "003807050030aa"},
+    {false, ebus::MessageType::reactive, 0x33, "reactive MM: Normal", "003307040014"},
+    {false, ebus::MessageType::reactive, 0x33, "reactive BC: Normal", "00fe0704003b"},
 
-    {false, 0x33, "active BC: Request Bus - Normal", "33feb5050427002d00", "feb5050427002d00"},
-    {false, 0x33, "active BC: Request Bus - Priority lost", "01feb5050427002d007b", "feb5050427002d00"},
-    {false, 0x33, "active BC: Request Bus - Priority lost/wrong byte", "01ab", "feb5050427002d00"},
-    {false, 0x33, "active BC: Request Bus - Priority fit/won", "73aa33feb5050427002d00", "feb5050427002d00"},
-    {false, 0x33, "active BC: Request Bus - Priority fit/lost", "73aa13", "feb5050427002d00"},
-    {false, 0x33, "active BC: Request Bus - Priority retry/error", "73a0", "feb5050427002d00"},
-    {false, 0x33, "active MS: Normal", "3352b509030d46003600013fa4", "52b509030d4600"},
-    {false, 0x33, "active MS: Master NAK/ACK - Slave CRC wrong/correct", "3352b509030d460036ff3352b509030d46003600013fa3ff013fa4", "52b509030d4600"},
-    {false, 0x33, "active MS: Master NAK/ACK - Slave CRC wrong/wrong", "3352b509030d460036ff3352b509030d46003600013fa3ff013fa3ff", "52b509030d4600"},
-    {false, 0x33, "active MS: Master NAK/NAK", "3352b509030d460036ff3352b509030d460036ff", "52b509030d4600"},
-    {false, 0x33, "active MM: Master NAK/ACK", "3310b57900fbff3310b57900fb00", "10b57900"},
-    {false, 0x30, "active BC: Request Bus - Priority lost and Sub lost", "1052b50401314b000200002c00", "feb5050427002d00"},
-    {false, 0x30, "active MS: Request Bus - Priority lost to 0x10", "1052b50401314b000200002c00","feb5050427002d00"}
+    {false, ebus::MessageType::active, 0x33, "active BC: Request Bus - Normal", "33feb5050427002d00", "feb5050427002d00"},
+    {false, ebus::MessageType::active, 0x33, "active BC: Request Bus - Priority lost", "01feb5050427002d007b", "feb5050427002d00"},
+    {false, ebus::MessageType::active, 0x33, "active BC: Request Bus - Priority lost/wrong byte", "01ab", "feb5050427002d00"},
+    {false, ebus::MessageType::active, 0x33, "active BC: Request Bus - Priority fit/won", "73aa33feb5050427002d00", "feb5050427002d00"},
+    {false, ebus::MessageType::active, 0x33, "active BC: Request Bus - Priority fit/lost", "73aa13", "feb5050427002d00"},
+    {false, ebus::MessageType::active, 0x33, "active BC: Request Bus - Priority retry/error", "73a0", "feb5050427002d00"},
+    {false, ebus::MessageType::active, 0x33, "active MS: Normal", "3352b509030d46003600013fa4", "52b509030d4600"},
+    {false, ebus::MessageType::active, 0x33, "active MS: Master NAK/ACK - Slave CRC wrong/correct", "3352b509030d460036ff3352b509030d46003600013fa3ff013fa4", "52b509030d4600"},
+    {false, ebus::MessageType::active, 0x33, "active MS: Master NAK/ACK - Slave CRC wrong/wrong", "3352b509030d460036ff3352b509030d46003600013fa3ff013fa3ff", "52b509030d4600"},
+    {false, ebus::MessageType::active, 0x33, "active MS: Master NAK/NAK", "3352b509030d460036ff3352b509030d460036ff", "52b509030d4600"},
+    {false, ebus::MessageType::active, 0x33, "active MM: Master NAK/ACK", "3310b57900fbff3310b57900fb00", "10b57900"},
+    {false, ebus::MessageType::active, 0x30, "active BC: Request Bus - Priority lost and Sub lost", "1052b50401314b000200002c00", "feb5050427002d00"},
+    {false, ebus::MessageType::active, 0x30, "active MS: Request Bus - Priority lost to 0x10", "1052b50401314b000200002c00","feb5050427002d00"}
 
 };
 // clang-format on
 
-void enable_group(const std::string &group_prefix) {
+void enable_group(const ebus::MessageType &messageType) {
   for (auto &tc : test_cases)
-    if (tc.description.find(group_prefix) == 0) tc.enabled = true;
+    if (tc.messageType == messageType) tc.enabled = true;
 }
 
 int main() {
-  // enable_group("passive");
-  // enable_group("reactive");
-  enable_group("active");
+  enable_group(ebus::MessageType::passive);
+  enable_group(ebus::MessageType::reactive);
+  enable_group(ebus::MessageType::active);
 
   for (const TestCase &tc : test_cases)
     if (tc.enabled) run_test(tc);

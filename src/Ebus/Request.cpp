@@ -21,38 +21,85 @@
 
 #include "Common.hpp"
 
-ebus::Request::Request()
-    : stateRequests(
-          {&Request::firstTry, &Request::retrySyn, &Request::secondTry}) {}
+ebus::Request::Request() {
+  setAddress(DEFAULT_ADDRESS);
 
-void ebus::Request::setMaxLockCounter(const uint8_t &counter) {
-  if (counter > MAX_LOCK_COUNTER)
-    maxLockCounter = DEFAULT_LOCK_COUNTER;
-  else
-    maxLockCounter = counter;
+  stateRequests = {&Request::observe, &Request::first, &Request::retry,
+                   &Request::second};
 }
 
-void ebus::Request::setLockCounter(const uint8_t &counter) {
-  if (counter > maxLockCounter)
-    lockCounter = DEFAULT_LOCK_COUNTER;
+void ebus::Request::setAddress(const uint8_t &source) {
+  address = ebus::isMaster(source) ? source : DEFAULT_ADDRESS;
+  slaveAddress = slaveOf(address);
+}
+
+uint8_t ebus::Request::getAddress() const { return address; }
+
+uint8_t ebus::Request::getSlaveAddress() const { return slaveAddress; }
+
+void ebus::Request::setMaxLockCounter(const uint8_t &maxCounter) {
+  if (maxCounter > MAX_LOCK_COUNTER)
+    maxLockCounter = MAX_LOCK_COUNTER;
   else
-    lockCounter = counter;
+    maxLockCounter = maxCounter;
+
+  if (lockCounter > maxLockCounter) lockCounter = maxLockCounter;
 }
 
 const uint8_t ebus::Request::getLockCounter() const { return lockCounter; }
 
-void ebus::Request::resetLockCounter() { lockCounter = maxLockCounter; }
+bool ebus::Request::isBusAvailable() const {
+  return state == RequestState::observe && !busRequest;
+}
 
-void ebus::Request::handleLockCounter(const uint8_t &byte) {
-  if (byte == sym_syn && lockCounter > 0) lockCounter--;
+void ebus::Request::requestBus(const bool &external) {
+  busRequest = true;
+  externalBusRequest = external;
+}
+
+void ebus::Request::setHandlerBusRequestedCallback(
+    BusRequestedCallback callback) {
+  busRequestedCallback = std::move(callback);
+}
+
+void ebus::Request::setExternalBusRequestedCallback(
+    BusRequestedCallback callback) {
+  externalBusRequestedCallback = std::move(callback);
+}
+
+bool ebus::Request::writeSource() const { return sourceWrite; }
+
+void ebus::Request::sourceWritten() {
+  sourceWrite = false;
+  if (externalBusRequest) {
+    if (externalBusRequestedCallback) externalBusRequestedCallback();
+  } else {
+    if (busRequestedCallback) busRequestedCallback();
+  }
 }
 
 ebus::RequestState ebus::Request::getState() const { return state; }
+ebus::RequestResult ebus::Request::getResult() const { return result; }
+
+void ebus::Request::reset() {
+  lockCounter = maxLockCounter;
+  busRequest = false;
+  sourceWrite = false;
+  state = RequestState::observe;
+}
+
+ebus::RequestResult ebus::Request::run(const uint8_t &byte) {
+  size_t idx = static_cast<size_t>(state);
+  if (idx < stateRequests.size() && stateRequests[idx])
+    (this->*stateRequests[idx])(byte);
+
+  return result;
+}
 
 void ebus::Request::countStartBit() {
   counter.requestsStartBit++;
-  state = RequestState::firstTry;
-  result = RequestResult::firstSyn;
+  state = RequestState::observe;
+  result = RequestResult::observeSyn;
 }
 
 void ebus::Request::microsLastDelay(const int64_t &delay) {
@@ -61,15 +108,6 @@ void ebus::Request::microsLastDelay(const int64_t &delay) {
 
 void ebus::Request::microsLastWindow(const int64_t &window) {
   busIsrWindow.add(window);
-}
-
-ebus::RequestResult ebus::Request::run(const uint8_t &address,
-                                       const uint8_t &byte) {
-  size_t idx = static_cast<size_t>(state);
-  if (idx < stateRequests.size() && stateRequests[idx])
-    (this->*stateRequests[idx])(address, byte);
-
-  return result;
 }
 
 void ebus::Request::resetCounter() {
@@ -106,59 +144,79 @@ const ebus::Request::Timing &ebus::Request::getTiming() {
   return timing;
 }
 
-void ebus::Request::firstTry(const uint8_t &address, const uint8_t &byte) {
+void ebus::Request::observe(const uint8_t &byte) {
+  if (byte == sym_syn) {
+    if (lockCounter > 0) lockCounter--;
+    if (busRequest && lockCounter == 0) {
+      busRequest = false;
+      sourceWrite = true;
+      state = RequestState::first;
+      result = RequestResult::observeWrite;
+    } else {
+      result = RequestResult::observeSyn;
+    }
+  } else {
+    result = RequestResult::observeData;
+  }
+}
+
+void ebus::Request::first(const uint8_t &byte) {
   if (byte == sym_syn) {
     counter.requestsFirstSyn++;
     result = RequestResult::firstSyn;
   } else if (byte == address) {
     counter.requestsFirstWon++;
     lockCounter = maxLockCounter;
+    state = RequestState::observe;
     result = RequestResult::firstWon;
   } else if (isMaster(byte)) {
-    if (checkPriorityClassSubAddress(address, byte)) {
+    if (checkPriorityClassSubAddress(byte)) {
       counter.requestsFirstRetry++;
-      state = RequestState::retrySyn;  // switch to retry state
+      state = RequestState::retry;
       result = RequestResult::firstRetry;
     } else {
       counter.requestsFirstLost++;
+      state = RequestState::observe;
       result = RequestResult::firstLost;
     }
   } else {
     counter.requestsFirstError++;
+    state = RequestState::observe;
     result = RequestResult::firstError;
   }
 }
 
-void ebus::Request::retrySyn(const uint8_t &address, const uint8_t &byte) {
+void ebus::Request::retry(const uint8_t &byte) {
   if (byte == sym_syn) {
     counter.requestsRetrySyn++;
-    state = RequestState::secondTry;  // switch to second try state
+    state = RequestState::second;
     result = RequestResult::retrySyn;
   } else {
     counter.requestsRetryError++;
-    state = RequestState::firstTry;  // reset to first try state
+    state = RequestState::observe;
     result = RequestResult::retryError;
   }
 }
 
-void ebus::Request::secondTry(const uint8_t &address, const uint8_t &byte) {
+void ebus::Request::second(const uint8_t &byte) {
   if (byte == address) {
     counter.requestsSecondWon++;
     lockCounter = maxLockCounter;
+    state = RequestState::observe;
     result = RequestResult::secondWon;
   } else if (isMaster(byte)) {
     counter.requestsSecondLost++;
+    state = RequestState::observe;
     result = RequestResult::secondLost;
   } else {
     counter.requestsSecondError++;
+    state = RequestState::observe;
     result = RequestResult::secondError;
   }
-  state = RequestState::firstTry;  // reset to first try state
 }
 
 // check priority class (lower nibble) and sub address (higher nibble)
-bool ebus::Request::checkPriorityClassSubAddress(const uint8_t &address,
-                                                 const uint8_t &byte) {
+bool ebus::Request::checkPriorityClassSubAddress(const uint8_t &byte) {
   return (byte & 0x0f) == (address & 0x0f) &&  // priority class
          (byte & 0xf0) > (address & 0xf0);     // sub address
 }
