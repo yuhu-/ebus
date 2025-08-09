@@ -78,7 +78,19 @@ void ebus::Request::sourceWritten() {
   }
 }
 
+void ebus::Request::startBit() {
+  counter.requestsStartBit++;
+  state = RequestState::observe;
+  result = RequestResult::observeSyn;
+  if (startBitCallback) startBitCallback();
+}
+
+void ebus::Request::setStartBitCallback(StartBitCallback callback) {
+  startBitCallback = std::move(callback);
+}
+
 ebus::RequestState ebus::Request::getState() const { return state; }
+
 ebus::RequestResult ebus::Request::getResult() const { return result; }
 
 void ebus::Request::reset() {
@@ -94,12 +106,6 @@ ebus::RequestResult ebus::Request::run(const uint8_t &byte) {
     (this->*stateRequests[idx])(byte);
 
   return result;
-}
-
-void ebus::Request::countStartBit() {
-  counter.requestsStartBit++;
-  state = RequestState::observe;
-  result = RequestResult::observeSyn;
 }
 
 void ebus::Request::microsLastDelay(const int64_t &delay) {

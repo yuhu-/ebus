@@ -70,6 +70,7 @@ static const char *getRequestResultText(RequestResult result) {
 }
 
 using BusRequestedCallback = std::function<void()>;
+using StartBitCallback = std::function<void()>;
 
 #define EBUS_REQUEST_COUNTER_LIST \
   X(requestsTotal)                \
@@ -114,7 +115,7 @@ class Request {
   uint8_t getAddress() const;
   uint8_t getSlaveAddress() const;
 
-  void setMaxLockCounter(const uint8_t &counter);
+  void setMaxLockCounter(const uint8_t &maxCounter);
   const uint8_t getLockCounter() const;
 
   bool isBusAvailable() const;
@@ -128,14 +129,15 @@ class Request {
   bool writeSource() const;
   void sourceWritten();
 
+  void startBit();
+  void setStartBitCallback(StartBitCallback callback);
+
   RequestState getState() const;
   RequestResult getResult() const;
 
   void reset();
 
   RequestResult run(const uint8_t &byte);
-
-  void countStartBit();
 
   void microsLastDelay(const int64_t &delay);
   void microsLastWindow(const int64_t &window);
@@ -164,6 +166,8 @@ class Request {
 
   // Indicates whether the source byte should be written
   bool sourceWrite = false;
+
+  StartBitCallback startBitCallback = nullptr;
 
   std::array<void (Request::*)(const uint8_t &), NUM_REQUEST_STATES>
       stateRequests;

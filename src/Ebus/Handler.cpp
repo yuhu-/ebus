@@ -27,10 +27,16 @@
 ebus::Handler::Handler(Bus *bus, Request *request)
     : bus(bus), request(request) {
   request->setHandlerBusRequestedCallback([this]() {
-    if (state != HandlerState::requestBus) {
-      state = HandlerState::requestBus;
-      lastState = HandlerState::requestBus;
+    if (activeMessage) {
+      if (state != HandlerState::requestBus) {
+        state = HandlerState::requestBus;
+        lastState = HandlerState::requestBus;
+      }
     }
+  });
+
+  request->setStartBitCallback([this]() {
+    if (activeMessage) callActiveReset();
   });
 
   stateHandlers = {&Handler::passiveReceiveMaster,
@@ -405,6 +411,15 @@ void ebus::Handler::requestBus(const uint8_t &byte) {
   };
 
   switch (request->getResult()) {
+    case RequestResult::observeSyn:
+      error();
+      break;
+    case RequestResult::observeWrite:
+      error();
+      break;
+    case RequestResult::observeData:
+      error();
+      break;
     case RequestResult::firstSyn:
       break;
     case RequestResult::firstWon:

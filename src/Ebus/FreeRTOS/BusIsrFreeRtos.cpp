@@ -42,7 +42,7 @@ volatile int64_t microsEdgeBuffer[FALLING_EDGE_BUFFER_SIZE] = {0};
 volatile int64_t microsStartBit = 0;  // estimated start bit time
 
 volatile bool sourceWrittenFlag = false;
-volatile bool countStartBitFlag = false;
+volatile bool startBitFlag = false;
 
 volatile bool microsBusIsrDelayFlag = false;
 volatile bool microsBusIsrWindowFlag = false;
@@ -109,7 +109,7 @@ void ebusUartEventTask(void* arg) {
             // for slight variations in timing due to processing delays or
             // other factors. If the difference is larger than 1.5 bit times, we
             // consider it an unexpected start bit, and we set the
-            // countStartBitFlag to true.
+            // startBitFlag to true.
             int64_t delta = (expected_start_bit_time > microsStartBit)
                                 ? (expected_start_bit_time - microsStartBit)
                                 : (microsStartBit - expected_start_bit_time);
@@ -133,7 +133,7 @@ void ebusUartEventTask(void* arg) {
               portEXIT_CRITICAL_ISR(&timerMux);
               microsBusIsrDelayFlag = true;
             } else {
-              countStartBitFlag = true;
+              startBitFlag = true;
             }
           }
 
@@ -251,9 +251,9 @@ void ebus::processBusIsrEvents() {
     request->sourceWritten();
   }
 
-  if (countStartBitFlag) {
-    countStartBitFlag = false;
-    request->countStartBit();
+  if (startBitFlag) {
+    startBitFlag = false;
+    request->startBit();
   }
 
   if (microsBusIsrDelayFlag) {
