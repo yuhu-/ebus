@@ -44,8 +44,8 @@ volatile int64_t microsStartBit = 0;  // estimated start bit time
 volatile bool sourceWrittenFlag = false;
 volatile bool startBitFlag = false;
 
-volatile bool microsBusIsrDelayFlag = false;
-volatile bool microsBusIsrWindowFlag = false;
+volatile bool microsDelayFlag = false;
+volatile bool microsWindowFlag = false;
 
 volatile int64_t microsLastDelay = 0;
 volatile int64_t microsLastWindow = 0;
@@ -131,7 +131,7 @@ void ebusUartEventTask(void* arg) {
               portENTER_CRITICAL_ISR(&timerMux);
               microsLastDelay = delay;
               portEXIT_CRITICAL_ISR(&timerMux);
-              microsBusIsrDelayFlag = true;
+              microsDelayFlag = true;
             } else {
               startBitFlag = true;
             }
@@ -164,7 +164,7 @@ bool IRAM_ATTR onBusIsrTimer(void* arg) {
   portENTER_CRITICAL_ISR(&timerMux);
   microsLastWindow = esp_timer_get_time() - microsStartBit;
   portEXIT_CRITICAL_ISR(&timerMux);
-  microsBusIsrWindowFlag = true;
+  microsWindowFlag = true;
   return false;  // Do not yield
 }
 
@@ -256,8 +256,8 @@ void ebus::processBusIsrEvents() {
     request->startBit();
   }
 
-  if (microsBusIsrDelayFlag) {
-    microsBusIsrDelayFlag = false;
+  if (microsDelayFlag) {
+    microsDelayFlag = false;
     int64_t safeDelay;
     portENTER_CRITICAL_ISR(&timerMux);
     safeDelay = microsLastDelay;
@@ -265,8 +265,8 @@ void ebus::processBusIsrEvents() {
     request->microsLastDelay(safeDelay);
   }
 
-  if (microsBusIsrWindowFlag) {
-    microsBusIsrWindowFlag = false;
+  if (microsWindowFlag) {
+    microsWindowFlag = false;
     int64_t safeWindow;
     portENTER_CRITICAL_ISR(&timerMux);
     safeWindow = microsLastWindow;
