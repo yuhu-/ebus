@@ -49,7 +49,7 @@ void ebus::Request::setMaxLockCounter(const uint8_t &maxCounter) {
 const uint8_t ebus::Request::getLockCounter() const { return lockCounter; }
 
 bool ebus::Request::isBusAvailable() const {
-  return state == RequestState::observe && !busRequest;
+  return state == RequestState::observe && !busRequest && !sourceWrite;
 }
 
 void ebus::Request::requestBus(const bool &external) {
