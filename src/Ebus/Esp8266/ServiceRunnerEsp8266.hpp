@@ -30,7 +30,7 @@ namespace ebus {
 class ServiceRunnerEsp8266 {
  public:
   // Define a listener type for byte events
-  using ByteListener = std::function<void(const uint8_t&)>;
+  using ByteListener = std::function<void(const uint8_t& byte)>;
 
   ServiceRunnerEsp8266(Request& request, Handler& handler, Queue& queue)
       : request(request), handler(handler), queue(queue) {}

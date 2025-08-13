@@ -33,7 +33,7 @@ namespace ebus {
 class ServiceRunnerPosix {
  public:
   // Define a listener type for byte events
-  using ByteListener = std::function<void(const uint8_t&)>;
+  using ByteListener = std::function<void(const uint8_t& byte)>;
 
   ServiceRunnerPosix(Request& request, Handler& handler, Queue<uint8_t>& queue)
       : request(request), handler(handler), queue(queue), running(false) {}

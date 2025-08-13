@@ -35,7 +35,7 @@ extern void processBusIsrEvents();
 class ServiceRunnerFreeRtos {
  public:
   // Define a listener type for byte events
-  using ByteListener = std::function<void(uint8_t)>;
+  using ByteListener = std::function<void(const uint8_t& byte)>;
 
   ServiceRunnerFreeRtos(Request& request, Handler& handler,
                         Queue<uint8_t>& queue)
