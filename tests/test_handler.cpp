@@ -314,14 +314,14 @@ int main() {
   handler.setTelegramCallback(telegramCallback);
   handler.setErrorCallback(onErrorCallback);
 
-  // enable_group(ebus::MessageType::passive);
-  // enable_group(ebus::MessageType::reactive);
+  enable_group(ebus::MessageType::passive);
+  enable_group(ebus::MessageType::reactive);
   enable_group(ebus::MessageType::active);
 
   for (const TestCase &tc : test_cases)
     if (tc.enabled) run_test(tc);
 
-  // printCounters();
+  printCounters();
 
   return EXIT_SUCCESS;
 }

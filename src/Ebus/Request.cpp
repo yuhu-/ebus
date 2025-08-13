@@ -41,7 +41,6 @@ bool ebus::Request::requestBus(const uint8_t &address, const bool &external) {
     busRequest = true;
     sourceAddress = address;
     externalBusRequest = external;
-    state = RequestState::first;
   }
   return busRequest;
 }
@@ -60,6 +59,8 @@ bool ebus::Request::busRequestPending() const { return busRequest; }
 
 void ebus::Request::busRequestCompleted() {
   busRequest = false;
+  if (state == RequestState::observe) state = RequestState::first;
+
   if (externalBusRequest) {
     if (externalBusRequestedCallback) externalBusRequestedCallback();
   } else {
