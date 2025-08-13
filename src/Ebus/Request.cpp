@@ -21,10 +21,9 @@
 
 #include "Common.hpp"
 
-ebus::Request::Request() {
-  stateRequests = {&Request::observe, &Request::first, &Request::retry,
-                   &Request::second};
-}
+ebus::Request::Request()
+    : stateRequests({&Request::observe, &Request::first, &Request::retry,
+                     &Request::second}) {}
 
 void ebus::Request::setMaxLockCounter(const uint8_t &maxCounter) {
   if (maxCounter > MAX_LOCK_COUNTER)
@@ -111,7 +110,9 @@ void ebus::Request::resetCounter() {
 #undef X
 }
 
-const ebus::Request::Counter &ebus::Request::getCounter() { return counter; }
+const ebus::Request::Counter &ebus::Request::getCounter() const {
+  return counter;
+}
 
 void ebus::Request::resetTiming() {
   busIsrDelay.clear();

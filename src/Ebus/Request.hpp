@@ -133,7 +133,7 @@ class Request {
   void microsLastWindow(const int64_t &window);
 
   void resetCounter();
-  const Counter &getCounter();
+  const Counter &getCounter() const;
 
   void resetTiming();
   const Timing &getTiming();
