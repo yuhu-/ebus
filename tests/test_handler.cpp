@@ -47,7 +47,7 @@ void printByte(const std::string &prefix, const uint8_t &byte,
 
 ebus::Bus bus;
 ebus::Request request;
-ebus::Handler handler(&bus, &request);
+ebus::Handler handler(ebus::DEFAULT_ADDRESS, &bus, &request);
 
 void readFunction(const uint8_t &byte) {
   std::cout << "->  read: " << ebus::to_string(byte) << std::endl;
@@ -180,8 +180,6 @@ void printCounters() {
   ebus::Request::Counter requestCounter = request.getCounter();
 
   // requests
-  std::cout << "requestsTotal:       " << requestCounter.requestsTotal
-            << std::endl;
   std::cout << "requestsStartBit:    " << requestCounter.requestsStartBit
             << std::endl;
   std::cout << "requestsFirstSyn:    " << requestCounter.requestsFirstSyn
@@ -210,8 +208,7 @@ void run_test(const TestCase &tc) {
   std::cout << std::endl
             << "=== Test: " << tc.description << " ===" << std::endl;
 
-  request.setAddress(tc.address);
-  if (tc.messageType == ebus::MessageType::active) request.requestBus();
+  handler.setSourceAddress(tc.address);
 
   // Prepare test sequence from the provided hex string
   std::string tmp = "aaaaaa" + tc.read_string + "aaaaaa";
@@ -240,11 +237,11 @@ void run_test(const TestCase &tc) {
     request.run(seq[i]);
     handler.run(seq[i]);
 
-    // If SYN, simulte request bus timer
-    if (seq[i] == ebus::sym_syn && request.writeSource()) {
-      std::cout << " ISR - source written" << std::endl;
-      bus.writeByte(request.getAddress());
-      request.sourceWritten();
+    // simulte request bus timer
+    if (seq[i] == ebus::sym_syn && request.busRequestPending()) {
+      std::cout << " ISR - write address" << std::endl;
+      bus.writeByte(handler.getSourceAddress());
+      request.busRequestCompleted();
     }
   }
 
@@ -317,8 +314,8 @@ int main() {
   handler.setTelegramCallback(telegramCallback);
   handler.setErrorCallback(onErrorCallback);
 
-  enable_group(ebus::MessageType::passive);
-  enable_group(ebus::MessageType::reactive);
+  // enable_group(ebus::MessageType::passive);
+  // enable_group(ebus::MessageType::reactive);
   enable_group(ebus::MessageType::active);
 
   for (const TestCase &tc : test_cases)

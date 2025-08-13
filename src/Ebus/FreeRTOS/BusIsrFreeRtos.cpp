@@ -41,7 +41,7 @@ volatile int64_t microsEdgeBuffer[FALLING_EDGE_BUFFER_SIZE] = {0};
 
 volatile int64_t microsStartBit = 0;  // estimated start bit time
 
-volatile bool sourceWrittenFlag = false;
+volatile bool busRequestFlag = false;
 volatile bool startBitFlag = false;
 
 volatile bool microsDelayFlag = false;
@@ -80,7 +80,7 @@ void ebusUartEventTask(void* arg) {
           if (!byteQueue || !ebus::request) continue;
 
           // Handle bus request logic only if needed
-          if (byte == ebus::sym_syn && ebus::request->writeSource()) {
+          if (byte == ebus::sym_syn && ebus::request->busRequestPending()) {
             int64_t now = esp_timer_get_time();
 
             // Calculation of the expected start bit time based on the current
@@ -158,9 +158,9 @@ void IRAM_ATTR onFallingEdge(void* arg) {
 
 // ISR: Write request byte at the exact time
 bool IRAM_ATTR onBusIsrTimer(void* arg) {
-  uint8_t byte = ebus::request->getAddress();
+  uint8_t byte = ebus::handler->getSourceAddress();
   uart_write_bytes(uartPortNum, static_cast<const void*>(&byte), 1);
-  sourceWrittenFlag = true;
+  busRequestFlag = true;
   portENTER_CRITICAL_ISR(&timerMux);
   microsLastWindow = esp_timer_get_time() - microsStartBit;
   portEXIT_CRITICAL_ISR(&timerMux);
@@ -178,7 +178,7 @@ void ebus::setupBusIsr(const uint8_t& uartPort, const uint8_t& rxPin,
   bus = new ebus::Bus(uartPortNum);
   request = new ebus::Request();
   byteQueue = new ebus::Queue<uint8_t>();
-  handler = new ebus::Handler(bus, request);
+  handler = new ebus::Handler(ebus::DEFAULT_ADDRESS, bus, request);
   serviceRunner = new ebus::ServiceRunner(*request, *handler, *byteQueue);
 
   // UART configuration
@@ -246,9 +246,9 @@ void ebus::setBusIsrOffset(const uint16_t& offset) {
 }
 
 void ebus::processBusIsrEvents() {
-  if (sourceWrittenFlag) {
-    sourceWrittenFlag = false;
-    request->sourceWritten();
+  if (busRequestFlag) {
+    busRequestFlag = false;
+    request->busRequestCompleted();
   }
 
   if (startBitFlag) {

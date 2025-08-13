@@ -44,8 +44,7 @@ void run_test(const TestCase &tc) {
   ebus::Sequence seq;
   seq.assign(ebus::to_vector(tmp));
 
-  request.setAddress(tc.address);
-  request.requestBus();
+  bool requestPending = true;
 
   ebus::RequestResult testResult;
 
@@ -66,9 +65,18 @@ void run_test(const TestCase &tc) {
 
     std::cout << "\tresult: " << ebus::getRequestResultText(testResult);
 
+    if (requestPending && request.requestBus(tc.address))
+      requestPending = false;
+
     if (state != request.getState())
       std::cout << "\tswitch: "
                 << ebus::getRequestStateText(request.getState());
+
+    // simulate request bus timer
+    if (request.busRequestPending()) {
+      std::cout << "\tISR - write address";
+      request.busRequestCompleted();
+    }
 
     std::cout << std::endl;
   }
@@ -81,8 +89,6 @@ void run_test(const TestCase &tc) {
 void printCounter() {
   ebus::Request::Counter counter = request.getCounter();
 
-  std::cout << std::endl
-            << "requestsTotal:       " << counter.requestsTotal << std::endl;
   std::cout << "requestsStartBit:    " << counter.requestsStartBit << std::endl;
   std::cout << "requestsFirstSyn:    " << counter.requestsFirstSyn << std::endl;
   std::cout << "requestsFirstWon:    " << counter.requestsFirstWon << std::endl;

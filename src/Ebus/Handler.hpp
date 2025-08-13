@@ -38,6 +38,8 @@
 
 namespace ebus {
 
+constexpr uint8_t DEFAULT_ADDRESS = 0xff;
+
 constexpr size_t NUM_HANDLER_STATES = 15;
 
 enum class HandlerState {
@@ -163,7 +165,11 @@ class Handler {
     std::map<HandlerState, Timing> timing;
   };
 
-  explicit Handler(Bus *bus, Request *request);
+  explicit Handler(const uint8_t &address, Bus *bus, Request *request);
+
+  void setSourceAddress(const uint8_t &address);
+  uint8_t getSourceAddress() const;
+  uint8_t getTargetAddress() const;
 
   void setReactiveMasterSlaveCallback(ReactiveMasterSlaveCallback callback);
   void setTelegramCallback(TelegramCallback callback);
@@ -189,6 +195,9 @@ class Handler {
  private:
   Bus *bus = nullptr;
   Request *request = nullptr;
+
+  uint8_t sourceAddress = 0;
+  uint8_t targetAddress = 0;
 
   ReactiveMasterSlaveCallback reactiveMasterSlaveCallback = nullptr;
   TelegramCallback telegramCallback = nullptr;

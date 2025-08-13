@@ -24,8 +24,10 @@
 
 #include "Common.hpp"
 
-ebus::Handler::Handler(Bus *bus, Request *request)
+ebus::Handler::Handler(const uint8_t &address, Bus *bus, Request *request)
     : bus(bus), request(request) {
+  setSourceAddress(address);
+
   request->setHandlerBusRequestedCallback([this]() {
     if (activeMessage) {
       if (state != HandlerState::requestBus) {
@@ -58,6 +60,15 @@ ebus::Handler::Handler(Bus *bus, Request *request)
   lastPoint = std::chrono::steady_clock::now();
 }
 
+void ebus::Handler::setSourceAddress(const uint8_t &address) {
+  sourceAddress = ebus::isMaster(address) ? address : DEFAULT_ADDRESS;
+  targetAddress = slaveOf(sourceAddress);
+}
+
+uint8_t ebus::Handler::getSourceAddress() const { return sourceAddress; }
+
+uint8_t ebus::Handler::getTargetAddress() const { return targetAddress; }
+
 void ebus::Handler::setReactiveMasterSlaveCallback(
     ReactiveMasterSlaveCallback callback) {
   reactiveMasterSlaveCallback = std::move(callback);
@@ -78,7 +89,7 @@ bool ebus::Handler::enqueueActiveMessage(const std::vector<uint8_t> &message) {
 
   activeMessage = false;
 
-  activeTelegram.createMaster(request->getAddress(), message);
+  activeTelegram.createMaster(sourceAddress, message);
   if (activeTelegram.getMasterState() == SequenceState::seq_ok) {
     activeMessage = true;
   } else {
@@ -200,10 +211,10 @@ void ebus::Handler::passiveReceiveMaster(const uint8_t &byte) {
                          passiveTelegram.getSlave().to_vector());
           counter.messagesPassiveBroadcast++;
           callPassiveReset();
-        } else if (passiveMaster[1] == request->getAddress()) {
+        } else if (passiveMaster[1] == sourceAddress) {
           callWrite(sym_ack);
           state = HandlerState::reactiveSendMasterPositiveAcknowledge;
-        } else if (passiveMaster[1] == request->getSlaveAddress()) {
+        } else if (passiveMaster[1] == targetAddress) {
           std::vector<uint8_t> response;
           callReactiveMasterSlave(passiveTelegram.getMaster().to_vector(),
                                   &response);
@@ -226,8 +237,8 @@ void ebus::Handler::passiveReceiveMaster(const uint8_t &byte) {
           state = HandlerState::passiveReceiveMasterAcknowledge;
         }
       } else {
-        if (passiveMaster[1] == request->getAddress() ||
-            passiveMaster[1] == request->getSlaveAddress()) {
+        if (passiveMaster[1] == sourceAddress ||
+            passiveMaster[1] == targetAddress) {
           counter.errorReactiveMaster++;
           callOnError("errorReactiveMaster", passiveMaster.to_vector(),
                       passiveSlave.to_vector());
@@ -252,7 +263,7 @@ void ebus::Handler::passiveReceiveMaster(const uint8_t &byte) {
     checkActiveBuffers();
 
     // Initiate request bus
-    if (activeMessage && request->isBusAvailable()) request->requestBus();
+    if (activeMessage) request->requestBus(sourceAddress);
   }
 }
 
@@ -412,9 +423,6 @@ void ebus::Handler::requestBus(const uint8_t &byte) {
 
   switch (request->getResult()) {
     case RequestResult::observeSyn:
-      error();
-      break;
-    case RequestResult::observeWrite:
       error();
       break;
     case RequestResult::observeData:

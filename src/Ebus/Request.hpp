@@ -31,8 +31,6 @@
 
 namespace ebus {
 
-constexpr uint8_t DEFAULT_ADDRESS = 0xff;
-
 constexpr uint8_t DEFAULT_LOCK_COUNTER = 3;
 constexpr uint8_t MAX_LOCK_COUNTER = 25;
 
@@ -48,7 +46,6 @@ static const char *getRequestStateText(RequestState state) {
 enum class RequestResult {
   observeSyn,
   observeData,
-  observeWrite,
   firstSyn,
   firstWon,
   firstRetry,
@@ -62,10 +59,10 @@ enum class RequestResult {
 };
 
 static const char *getRequestResultText(RequestResult result) {
-  const char *values[] = {
-      "observeSyn", "observeData", "observeWrite", "firstSyn", "firstWon",
-      "firstRetry", "firstLost",   "firstError",   "retrySyn", "retryError",
-      "secondWon",  "secondLost",  "secondError"};
+  const char *values[] = {"observeSyn", "observeData", "firstSyn",
+                          "firstWon",   "firstRetry",  "firstLost",
+                          "firstError", "retrySyn",    "retryError",
+                          "secondWon",  "secondLost",  "secondError"};
   return values[static_cast<int>(result)];
 }
 
@@ -73,7 +70,6 @@ using BusRequestedCallback = std::function<void()>;
 using StartBitCallback = std::function<void()>;
 
 #define EBUS_REQUEST_COUNTER_LIST \
-  X(requestsTotal)                \
   X(requestsStartBit)             \
   X(requestsFirstSyn)             \
   X(requestsFirstWon)             \
@@ -111,23 +107,17 @@ class Request {
 
   explicit Request();
 
-  void setAddress(const uint8_t &source);
-  uint8_t getAddress() const;
-  uint8_t getSlaveAddress() const;
-
   void setMaxLockCounter(const uint8_t &maxCounter);
   const uint8_t getLockCounter() const;
 
-  bool isBusAvailable() const;
-
   // Request the bus from handler or external
-  void requestBus(const bool &external = false);
+  bool requestBus(const uint8_t &address, const bool &external = false);
 
   void setHandlerBusRequestedCallback(BusRequestedCallback callback);
   void setExternalBusRequestedCallback(BusRequestedCallback callback);
 
-  bool writeSource() const;
-  void sourceWritten();
+  bool busRequestPending() const;
+  void busRequestCompleted();
 
   void startBit();
   void setStartBitCallback(StartBitCallback callback);
@@ -149,8 +139,7 @@ class Request {
   const Timing &getTiming();
 
  private:
-  uint8_t address = 0;
-  uint8_t slaveAddress = 0;
+  uint8_t sourceAddress = 0;
 
   uint8_t maxLockCounter = DEFAULT_LOCK_COUNTER;
   uint8_t lockCounter = DEFAULT_LOCK_COUNTER;
@@ -163,9 +152,6 @@ class Request {
 
   BusRequestedCallback busRequestedCallback = nullptr;
   BusRequestedCallback externalBusRequestedCallback = nullptr;
-
-  // Indicates whether the source byte should be written
-  bool sourceWrite = false;
 
   StartBitCallback startBitCallback = nullptr;
 

@@ -124,7 +124,7 @@ void run_test(const TestCase &tc) {
   ebus::Bus bus;
   ebus::Request request;
   ebus::Queue<uint8_t> byteQueue(32);
-  ebus::Handler handler(&bus, &request);
+  ebus::Handler handler(tc.address, &bus, &request);
 
   handler.setReactiveMasterSlaveCallback(reactiveMasterSlaveCallback);
 
@@ -155,9 +155,8 @@ void run_test(const TestCase &tc) {
     eventQueue.try_push(event);
   });
 
-  request.setAddress(tc.address);
-  // request.setMaxLockCounter(2);
-  if (tc.messageType == ebus::MessageType::active) request.requestBus();
+  // if (tc.messageType == ebus::MessageType::active)
+  //   request.requestBus(tc.address);
 
   ebus::ServiceRunner serviceRunner(request, handler, byteQueue);
 
@@ -191,10 +190,10 @@ void run_test(const TestCase &tc) {
 
       // simulate request bus timer
       std::this_thread::sleep_for(std::chrono::microseconds(200));
-      if (seq[i] == ebus::sym_syn && request.writeSource()) {
-        std::cout << " ISR - source written" << std::endl;
-        bus.writeByte(request.getAddress());
-        request.sourceWritten();
+      if (seq[i] == ebus::sym_syn && request.busRequestPending()) {
+        std::cout << " ISR - write address" << std::endl;
+        bus.writeByte(handler.getSourceAddress());
+        request.busRequestCompleted();
       }
 
       // simulate transmission time 4166,67 ~ 4200 microseconds
