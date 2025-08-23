@@ -192,7 +192,7 @@ void run_test(const TestCase &tc) {
       std::this_thread::sleep_for(std::chrono::microseconds(200));
       if (seq[i] == ebus::sym_syn && request.busRequestPending()) {
         std::cout << " ISR - write address" << std::endl;
-        bus.writeByte(handler.getSourceAddress());
+        bus.writeByte(request.getAddress());
         request.busRequestCompleted();
       }
 

@@ -19,12 +19,14 @@
 
 #pragma once
 
+#include "../Bus.hpp"
 #include "../Handler.hpp"
 #include "../Request.hpp"
 #include "../ServiceRunner.hpp"
 
 namespace ebus {
 
+extern ebus::Bus* bus;
 extern ebus::Request* request;
 extern ebus::Handler* handler;
 extern ebus::ServiceRunner* serviceRunner;

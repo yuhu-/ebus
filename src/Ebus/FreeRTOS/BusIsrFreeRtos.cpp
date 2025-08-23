@@ -58,15 +58,15 @@ static QueueHandle_t uartEventQueue = nullptr;
 static timer_group_t timerGroupNum = TIMER_GROUP_1;
 static timer_idx_t timerIdxNum = TIMER_0;
 
-ebus::Bus* bus = nullptr;
 ebus::Queue<uint8_t>* byteQueue = nullptr;
 
+ebus::Bus* ebus::bus = nullptr;
 ebus::Request* ebus::request = nullptr;
 ebus::Handler* ebus::handler = nullptr;
 ebus::ServiceRunner* ebus::serviceRunner = nullptr;
 
 // UART event task: reads UART events and pushes bytes to byteQueue
-void ebusUartEventTask(void* arg) {
+void ebusUartEventRunner(void* arg) {
   uart_event_t event;
   uint8_t data[128];
   for (;;) {
@@ -158,7 +158,7 @@ void IRAM_ATTR onFallingEdge(void* arg) {
 
 // ISR: Write request byte at the exact time
 bool IRAM_ATTR onBusIsrTimer(void* arg) {
-  uint8_t byte = ebus::handler->getSourceAddress();
+  uint8_t byte = ebus::request->getAddress();
   uart_write_bytes(uartPortNum, static_cast<const void*>(&byte), 1);
   busRequestFlag = true;
   portENTER_CRITICAL_ISR(&timerMux);
@@ -175,9 +175,10 @@ void ebus::setupBusIsr(const uint8_t& uartPort, const uint8_t& rxPin,
   timerGroupNum = static_cast<timer_group_t>(timerGroup);
   timerIdxNum = static_cast<timer_idx_t>(timerIdx);
 
+  byteQueue = new ebus::Queue<uint8_t>();
+
   bus = new ebus::Bus(uartPortNum);
   request = new ebus::Request();
-  byteQueue = new ebus::Queue<uint8_t>();
   handler = new ebus::Handler(ebus::DEFAULT_ADDRESS, bus, request);
   serviceRunner = new ebus::ServiceRunner(*request, *handler, *byteQueue);
 
@@ -197,7 +198,7 @@ void ebus::setupBusIsr(const uint8_t& uartPort, const uint8_t& rxPin,
   uart_set_rx_timeout(uartPortNum, 1);
 
   // Create the UART event task
-  xTaskCreate(ebusUartEventTask, "ebusUartEventTask", 2048, NULL,
+  xTaskCreate(ebusUartEventRunner, "ebusUartEventRunner", 2048, NULL,
               configMAX_PRIORITIES - 1, NULL);
 
   // Attach the ISR to the GPIO event

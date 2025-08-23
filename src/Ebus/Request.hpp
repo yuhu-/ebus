@@ -110,6 +110,10 @@ class Request {
   void setMaxLockCounter(const uint8_t &maxCounter);
   const uint8_t getLockCounter() const;
 
+  uint8_t getAddress() const;
+
+  bool busAvailable() const;
+
   // Request the bus from handler or external
   bool requestBus(const uint8_t &address, const bool &external = false);
 
@@ -150,7 +154,7 @@ class Request {
   // Indicates whether the bus request is internal or external
   bool externalBusRequest = false;
 
-  BusRequestedCallback busRequestedCallback = nullptr;
+  BusRequestedCallback handlerBusRequestedCallback = nullptr;
   BusRequestedCallback externalBusRequestedCallback = nullptr;
 
   StartBitCallback startBitCallback = nullptr;
