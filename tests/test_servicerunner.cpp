@@ -258,7 +258,7 @@ std::vector<TestCase> test_cases = {
 // clang-format on
 
 void enable_group(const ebus::MessageType &messageType) {
-  for (auto &tc : test_cases)
+  for (TestCase &tc : test_cases)
     if (tc.messageType == messageType) tc.enabled = true;
 }
 

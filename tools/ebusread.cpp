@@ -42,15 +42,15 @@
 #include "Datatypes.hpp"
 #include "Telegram.hpp"
 
-constexpr auto RESET = "\033[0m";
-constexpr auto BOLD = "\033[1m";
+constexpr const char *RESET = "\033[0m";
+constexpr const char *BOLD = "\033[1m";
 
-constexpr auto RED = "\033[31m";
-constexpr auto GREEN = "\033[32m";
-constexpr auto YELLOW = "\033[33m";
-constexpr auto BLUE = "\033[34m";
-constexpr auto MAGENTA = "\033[35m";
-constexpr auto CYAN = "\033[36m";
+constexpr const char *RED = "\033[31m";
+constexpr const char *GREEN = "\033[32m";
+constexpr const char *YELLOW = "\033[33m";
+constexpr const char *BLUE = "\033[34m";
+constexpr const char *MAGENTA = "\033[35m";
+constexpr const char *CYAN = "\033[36m";
 
 bool bold = false;
 bool color = false;
