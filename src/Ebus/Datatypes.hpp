@@ -60,41 +60,26 @@ DataType string_2_datatype(const char *str);
 size_t sizeof_datatype(const DataType &datatype);
 bool typeof_datatype(const DataType &datatype);
 
-// templates for byte / integer conversion
-template <typename T>
-struct templateType {
-  using type = T;
-};
+// rounding helper
+double_t round_digits(const double_t &value, const uint8_t &digits);
 
+// Generic integer conversion helpers
 template <typename T>
-void byte_2_int(T &t, const std::vector<uint8_t> &bytes) {  // NOLINT
-  t = 0;
-
-  for (size_t i = 0; i < bytes.size(); i++) t |= bytes[i] << (8 * i);
+T byte_2_int(const std::vector<uint8_t> &bytes) {
+  if (bytes.size() != sizeof(T)) return 0;
+  T value = 0;
+  for (size_t i = 0; i < sizeof(T); ++i)
+    value |= static_cast<T>(bytes[i]) << (8 * i);
+  return value;
 }
 
 template <typename T>
-typename templateType<T>::type byte_2_int(const std::vector<uint8_t> &bytes) {
-  T t;
-  byte_2_int(t, bytes);
-  return t;
-}
-
-template <typename T>
-void int_2_byte(const T &t, std::vector<uint8_t> &bytes) {  // NOLINT
-  for (size_t i = 0; i < sizeof(T); i++) bytes.push_back(uint8_t(t >> (8 * i)));
-}
-
-template <typename T>
-std::vector<uint8_t> int_2_byte(const T &t) {
-  std::vector<uint8_t> bytes;
-  int_2_byte(t, bytes);
+std::vector<uint8_t> int_2_byte(const T &value) {
+  std::vector<uint8_t> bytes(sizeof(T));
+  for (size_t i = 0; i < sizeof(T); ++i)
+    bytes[i] = static_cast<uint8_t>((value >> (8 * i)) & 0xff);
   return bytes;
 }
-
-// helper functions
-uint convert_base(uint value, const uint &oldBase, const uint &newBase);
-double_t round_digits(const double_t &value, const uint8_t &digits);
 
 // BCD
 uint8_t byte_2_bcd(const std::vector<uint8_t> &bytes);
@@ -140,7 +125,7 @@ std::vector<uint8_t> data2b_2_byte(const double_t &value);
 double_t byte_2_data2c(const std::vector<uint8_t> &bytes);
 std::vector<uint8_t> data2c_2_byte(const double_t &value);
 
-// FLOAT
+// FLOAT (IEEE 754 single precision)
 double_t byte_2_float(const std::vector<uint8_t> &bytes);
 std::vector<uint8_t> float_2_byte(const double_t &value);
 

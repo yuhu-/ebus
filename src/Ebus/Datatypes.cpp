@@ -20,9 +20,12 @@
 #include "Datatypes.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <cstring>
+#include <limits>
 #include <map>
 #include <sstream>
+#include <type_traits>
 #include <utility>
 
 std::map<ebus::DataType, const char *> DatatypeName = {
@@ -72,7 +75,6 @@ size_t ebus::sizeof_datatype(const ebus::DataType &datatype) {
     case ebus::DataType::INT16:
     case ebus::DataType::DATA2B:
     case ebus::DataType::DATA2C:
-    case ebus::DataType::FLOAT:
     case ebus::DataType::CHAR2:
       length = 2;
       break;
@@ -81,6 +83,7 @@ size_t ebus::sizeof_datatype(const ebus::DataType &datatype) {
       break;
     case ebus::DataType::UINT32:
     case ebus::DataType::INT32:
+    case ebus::DataType::FLOAT:
     case ebus::DataType::CHAR4:
       length = 4;
       break;
@@ -123,158 +126,160 @@ bool ebus::typeof_datatype(const DataType &datatype) {
   return numeric;
 }
 
-// helper functions
-uint ebus::convert_base(uint value, const uint &oldBase, const uint &newBase) {
-  uint result = 0;
-  for (uint i = 0; value > 0; i++) {
-    result += value % oldBase * pow(newBase, i);
-    value /= oldBase;
-  }
-  return result;
-}
-
 double_t ebus::round_digits(const double_t &value, const uint8_t &digits) {
   double_t fractpart, intpart;
-  fractpart = modf(value, &intpart);
+  fractpart = std::modf(value, &intpart);
 
-  double_t decimals = pow(10, digits);
+  double_t decimals = std::pow(10, digits);
 
   return static_cast<double_t>(intpart) +
-         round(fractpart * decimals) / decimals;
+         std::round(fractpart * decimals) / decimals;
 }
 
 // BCD
 uint8_t ebus::byte_2_bcd(const std::vector<uint8_t> &bytes) {
+  if (bytes.size() != 1) return 0xff;
   uint8_t value = bytes[0];
-  uint8_t result = convert_base(value, 16, 10);
-
-  if ((value & 0x0f) > 9 || ((value >> 4) & 0x0f) > 9) result = 0xff;
-
-  return result;
+  if ((value & 0x0f) > 9 || ((value >> 4) & 0x0f) > 9) return 0xff;
+  return (value >> 4) * 10 + (value & 0x0f);
 }
 
 std::vector<uint8_t> ebus::bcd_2_byte(const uint8_t &value) {
-  uint8_t byte = convert_base(value, 10, 16);
-  std::vector<uint8_t> result(1, byte);
-
-  if (value > 99) result[0] = 0xff;
-
-  return result;
+  if (value > 99) return {0xff};
+  uint8_t bcd = ((value / 10) << 4) | (value % 10);
+  return {bcd};
 }
 
 // UINT8
 uint8_t ebus::byte_2_uint8(const std::vector<uint8_t> &bytes) {
-  return byte_2_int<uint8_t>(bytes);
+  if (bytes.size() != 1) return 0;
+  return bytes[0];
 }
 
 std::vector<uint8_t> ebus::uint8_2_byte(const uint8_t &value) {
-  return int_2_byte<uint8_t>(value);
+  return {value};
 }
 
 // INT8
 int8_t ebus::byte_2_int8(const std::vector<uint8_t> &bytes) {
-  return byte_2_int<int8_t>(bytes);
+  if (bytes.size() != 1) return 0;
+  return static_cast<int8_t>(bytes[0]);
 }
 
 std::vector<uint8_t> ebus::int8_2_byte(const int8_t &value) {
-  return int_2_byte<int8_t>(value);
+  return {static_cast<uint8_t>(value)};
 }
 
 // UINT16
 uint16_t ebus::byte_2_uint16(const std::vector<uint8_t> &bytes) {
-  return byte_2_int<uint16_t>(bytes);
+  if (bytes.size() != 2) return 0;
+  return static_cast<uint16_t>(bytes[0]) |
+         (static_cast<uint16_t>(bytes[1]) << 8);
 }
 
 std::vector<uint8_t> ebus::uint16_2_byte(const uint16_t &value) {
-  return int_2_byte<uint16_t>(value);
+  return {static_cast<uint8_t>(value & 0xff),
+          static_cast<uint8_t>((value >> 8) & 0xff)};
 }
 
 // INT16
 int16_t ebus::byte_2_int16(const std::vector<uint8_t> &bytes) {
-  return byte_2_int<int16_t>(bytes);
+  if (bytes.size() != 2) return 0;
+  return static_cast<int16_t>(static_cast<uint16_t>(bytes[0]) |
+                              (static_cast<uint16_t>(bytes[1]) << 8));
 }
 
 std::vector<uint8_t> ebus::int16_2_byte(const int16_t &value) {
-  return int_2_byte<int16_t>(value);
+  uint16_t uval = static_cast<uint16_t>(value);
+  return {static_cast<uint8_t>(uval & 0xff),
+          static_cast<uint8_t>((uval >> 8) & 0xff)};
 }
 
 // UINT32
 uint32_t ebus::byte_2_uint32(const std::vector<uint8_t> &bytes) {
-  return byte_2_int<uint32_t>(bytes);
+  if (bytes.size() != 4) return 0;
+  return static_cast<uint32_t>(bytes[0]) |
+         (static_cast<uint32_t>(bytes[1]) << 8) |
+         (static_cast<uint32_t>(bytes[2]) << 16) |
+         (static_cast<uint32_t>(bytes[3]) << 24);
 }
 
 std::vector<uint8_t> ebus::uint32_2_byte(const uint32_t &value) {
-  return int_2_byte<uint32_t>(value);
+  return {static_cast<uint8_t>(value & 0xff),
+          static_cast<uint8_t>((value >> 8) & 0xff),
+          static_cast<uint8_t>((value >> 16) & 0xff),
+          static_cast<uint8_t>((value >> 24) & 0xff)};
 }
 
 // INT32
 int32_t ebus::byte_2_int32(const std::vector<uint8_t> &bytes) {
-  return byte_2_int<int32_t>(bytes);
+  if (bytes.size() != 4) return 0;
+  uint32_t uval = ebus::byte_2_uint32(bytes);
+  return static_cast<int32_t>(uval);
 }
 
 std::vector<uint8_t> ebus::int32_2_byte(const int32_t &value) {
-  return int_2_byte<int32_t>(value);
+  uint32_t uval = static_cast<uint32_t>(value);
+  return ebus::uint32_2_byte(uval);
 }
 
 // DATA1B
 double_t ebus::byte_2_data1b(const std::vector<uint8_t> &bytes) {
-  return static_cast<double_t>(byte_2_int<int8_t>(bytes));
+  return static_cast<double_t>(ebus::byte_2_int8(bytes));
 }
 
 std::vector<uint8_t> ebus::data1b_2_byte(const double_t &value) {
-  return int_2_byte(static_cast<int8_t>(value));
+  return ebus::int8_2_byte(static_cast<int8_t>(value));
 }
 
 // DATA1C
 double_t ebus::byte_2_data1c(const std::vector<uint8_t> &bytes) {
-  return static_cast<double_t>(byte_2_int<uint8_t>(bytes)) / 2;
+  return static_cast<double_t>(ebus::byte_2_uint8(bytes)) / 2.0;
 }
 
 std::vector<uint8_t> ebus::data1c_2_byte(const double_t &value) {
-  return int_2_byte(static_cast<uint8_t>(value * 2));
+  return ebus::uint8_2_byte(static_cast<uint8_t>(value * 2.0));
 }
 
 // DATA2B
 double_t ebus::byte_2_data2b(const std::vector<uint8_t> &bytes) {
-  return static_cast<double_t>(byte_2_int<int16_t>(bytes)) / 256;
+  return static_cast<double_t>(ebus::byte_2_int16(bytes)) / 256.0;
 }
 
 std::vector<uint8_t> ebus::data2b_2_byte(const double_t &value) {
-  return int_2_byte(static_cast<int16_t>(value * 256));
+  return ebus::int16_2_byte(static_cast<int16_t>(value * 256.0));
 }
 
 // DATA2C
 double_t ebus::byte_2_data2c(const std::vector<uint8_t> &bytes) {
-  return static_cast<double_t>(byte_2_int<int16_t>(bytes)) / 16;
+  return static_cast<double_t>(ebus::byte_2_int16(bytes)) / 16.0;
 }
 
 std::vector<uint8_t> ebus::data2c_2_byte(const double_t &value) {
-  return int_2_byte(static_cast<int16_t>(value * 16));
+  return ebus::int16_2_byte(static_cast<int16_t>(value * 16.0));
 }
 
-// FLOAT
+// FLOAT (IEEE 754 single precision)
 double_t ebus::byte_2_float(const std::vector<uint8_t> &bytes) {
-  return round_digits(static_cast<double_t>(byte_2_int<int16_t>(bytes)) / 1000,
-                      3);
+  if (bytes.size() != 4) return 0.0;
+  uint32_t raw = ebus::byte_2_uint32(bytes);
+  float value;
+  std::memcpy(&value, &raw, sizeof(float));
+  return static_cast<double_t>(value);
 }
 
 std::vector<uint8_t> ebus::float_2_byte(const double_t &value) {
-  return int_2_byte(static_cast<int16_t>(round_digits(value * 1000, 3)));
+  float f = static_cast<float>(value);
+  uint32_t raw;
+  std::memcpy(&raw, &f, sizeof(float));
+  return ebus::uint32_2_byte(raw);
 }
 
 // STRING
 const std::string ebus::byte_2_string(const std::vector<uint8_t> &vec) {
-  std::ostringstream ostr;
-
-  for (size_t i = 0; i < vec.size(); i++) ostr << static_cast<char>(vec[i]);
-
-  return ostr.str();
+  return std::string(vec.begin(), vec.end());
 }
 
 const std::vector<uint8_t> ebus::string_2_byte(const std::string &str) {
-  std::vector<uint8_t> result;
-
-  for (size_t i = 0; i < str.size(); i++) result.push_back(uint8_t(str[i]));
-
-  return result;
+  return std::vector<uint8_t>(str.begin(), str.end());
 }
