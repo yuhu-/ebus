@@ -113,6 +113,24 @@ std::string services(const std::vector<uint8_t> &master,
     ostr << ebus::to_string(ebus::range(slave, 7, 2));
     ostr << " HW=";
     ostr << ebus::to_string(ebus::range(slave, 9, 2));
+  } else if (master[2] == 0xb5 && master[3] == 0x16 && master[4] == 0x08) {
+    ostr << "b51608: 20";
+    ostr << ebus::to_string(master[12]);
+    ostr << "-";
+    ostr << ebus::to_string(master[10]);
+    ostr << "-";
+    ostr << ebus::to_string(master[9]);
+    ostr << " ";
+    ostr << ebus::to_string(master[8]);
+    ostr << ":";
+    ostr << ebus::to_string(master[7]);
+    ostr << ":";
+    ostr << ebus::to_string(master[6]);
+  } else if (master[2] == 0xb5 && master[3] == 0x16 &&
+             master[4] == 0x03 && master[5] == 0x01) {
+    ostr << "b5160301: ";
+    ostr << ebus::byte_2_data2b(ebus::range(master, 6, 2));
+    ostr << " °C";
   }
   return ostr.str();
 }
