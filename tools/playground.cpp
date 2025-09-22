@@ -89,6 +89,48 @@ void checkTargetMasterSlave() {
   }
 }
 
+void encode(uint8_t c, uint8_t d, uint8_t (&data)[2]) {
+  data[0] = 0xC0 | (c << 2) | ((d & 0xC0) >> 6);
+  data[1] = 0x80 | (d & 0x3F);
+}
+
+void decode(uint8_t c, uint8_t d, uint8_t (&data)[2]) {
+  data[0] = (c >> 2) & 0x0F;
+  data[1] = ((c & 0x03) << 6) | (d & 0x3F);
+}
+
+void printDecodeEncode(uint8_t c, uint8_t d) {
+  std::cout << "Original: 0x" << ebus::to_string(c) << " 0x"
+            << ebus::to_string(d) << std::endl;
+
+  uint8_t decoded[2];
+  decode(c, d, decoded);
+  std::cout << "Decoded:  0x" << ebus::to_string(decoded[0]) << " 0x"
+            << ebus::to_string(decoded[1]) << std::endl;
+
+  uint8_t encoded[2];
+  encode(decoded[0], decoded[1], encoded);
+  std::cout << "Encoded:  0x" << ebus::to_string(encoded[0]) << " 0x"
+            << ebus::to_string(encoded[1]) << std::endl
+            << std::endl;
+}
+
+void printEncodeDecode(uint8_t c, uint8_t d) {
+  std::cout << "Original: 0x" << ebus::to_string(c) << " 0x"
+            << ebus::to_string(d) << std::endl;
+
+  uint8_t encoded[2];
+  encode(c, d, encoded);
+  std::cout << "Encoded:  0x" << ebus::to_string(encoded[0]) << " 0x"
+            << ebus::to_string(encoded[1]) << std::endl;
+
+  uint8_t decoded[2];
+  decode(encoded[0], encoded[1], decoded);
+  std::cout << "Decoded:  0x" << ebus::to_string(decoded[0]) << " 0x"
+            << ebus::to_string(decoded[1]) << std::endl
+            << std::endl;
+}
+
 int main() {
   printSequence("ff52b509030d0600");
 
@@ -109,6 +151,22 @@ int main() {
   createTelegram("1008b5130304cd017f000acd01000000000100010000");
 
   printSequence("0acd010000000001000100");
+
+  printEncodeDecode(0x1, 0xb5);
+
+  printDecodeEncode(0xc6, 0xb5);
+
+  printEncodeDecode(0x1, 0x11);
+
+  printDecodeEncode(0xc4, 0x91);
+
+  printEncodeDecode(0x1, 0xfc);
+
+  printDecodeEncode(0xc7, 0xbc);
+
+  printEncodeDecode(0x2, 0x77);
+
+  printDecodeEncode(0xc9, 0xb7);
 
   return EXIT_SUCCESS;
 }
