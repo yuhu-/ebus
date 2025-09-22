@@ -51,7 +51,15 @@ enum class DataType {
   CHAR5,
   CHAR6,
   CHAR7,
-  CHAR8
+  CHAR8,
+  HEX1,
+  HEX2,
+  HEX3,
+  HEX4,
+  HEX5,
+  HEX6,
+  HEX7,
+  HEX8
 };
 
 const char *datatype_2_string(const DataType &datatype);
@@ -129,8 +137,12 @@ std::vector<uint8_t> data2c_2_byte(const double_t &value);
 double_t byte_2_float(const std::vector<uint8_t> &bytes);
 std::vector<uint8_t> float_2_byte(const double_t &value);
 
-// STRING
-const std::string byte_2_string(const std::vector<uint8_t> &vec);
-const std::vector<uint8_t> string_2_byte(const std::string &str);
+// CHAR
+std::string byte_2_char(const std::vector<uint8_t> &vec);
+std::vector<uint8_t> char_2_byte(const std::string &str);
+
+// HEX
+std::string byte_2_hex(const std::vector<uint8_t> &vec);
+std::vector<uint8_t> hex_2_byte(const std::string &str);
 
 }  // namespace ebus

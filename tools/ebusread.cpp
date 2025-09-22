@@ -108,7 +108,7 @@ std::string services(const std::vector<uint8_t> &master,
     ostr << " MF=";
     ostr << ebus::to_string(ebus::range(slave, 1, 1));
     ostr << " ID=";
-    ostr << ebus::byte_2_string(ebus::range(slave, 2, 5));
+    ostr << ebus::byte_2_char(ebus::range(slave, 2, 5));
     ostr << " SW=";
     ostr << ebus::to_string(ebus::range(slave, 7, 2));
     ostr << " HW=";

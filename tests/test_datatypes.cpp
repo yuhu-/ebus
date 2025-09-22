@@ -17,7 +17,9 @@
  * along with ebus. If not, see http://www.gnu.org/licenses/.
  */
 
+#include <algorithm>
 #include <cassert>
+#include <cctype>
 #include <cmath>
 #include <iostream>
 #include <limits>
@@ -158,13 +160,26 @@ void test_data2c() {
   }
 }
 
-void test_string() {
+void test_char() {
   std::vector<std::string> test_strings = {"", "A", "Hello", "ebus123",
                                            std::string(8, 'Z')};
-  for (const auto& str : test_strings) {
-    std::vector<uint8_t> bytes = string_2_byte(str);
-    std::string decoded = byte_2_string(bytes);
+  for (const std::string& str : test_strings) {
+    std::vector<uint8_t> bytes = char_2_byte(str);
+    std::string decoded = byte_2_char(bytes);
     assert(decoded == str);
+  }
+}
+
+void test_hex() {
+  std::vector<std::string> test_strings = {
+      "", "00", "FF", "1234", "abcdef", "ABCDEF", "deadbeef"};
+  for (const std::string& str : test_strings) {
+    std::vector<uint8_t> bytes = hex_2_byte(str);
+    std::string decoded = byte_2_hex(bytes);
+    std::string str_lower = str;
+    std::transform(str_lower.begin(), str_lower.end(), str_lower.begin(),
+                   ::tolower);
+    assert(decoded == str_lower);
   }
 }
 
@@ -181,7 +196,8 @@ int main() {
   test_data1c();
   test_data2b();
   test_data2c();
-  test_string();
+  test_char();
+  test_hex();
 
   std::cout << "All datatype conversion tests passed!" << std::endl;
   return 0;

@@ -28,6 +28,8 @@
 #include <type_traits>
 #include <utility>
 
+#include "Common.hpp"
+
 std::map<ebus::DataType, const char *> DatatypeName = {
     {ebus::DataType::ERROR, "ERROR"},   {ebus::DataType::BCD, "BCD"},
     {ebus::DataType::UINT8, "UINT8"},   {ebus::DataType::INT8, "INT8"},
@@ -39,7 +41,11 @@ std::map<ebus::DataType, const char *> DatatypeName = {
     {ebus::DataType::CHAR2, "CHAR2"},   {ebus::DataType::CHAR3, "CHAR3"},
     {ebus::DataType::CHAR4, "CHAR4"},   {ebus::DataType::CHAR5, "CHAR5"},
     {ebus::DataType::CHAR6, "CHAR6"},   {ebus::DataType::CHAR7, "CHAR7"},
-    {ebus::DataType::CHAR8, "CHAR8"}};
+    {ebus::DataType::CHAR8, "CHAR8"},   {ebus::DataType::HEX1, "HEX1"},
+    {ebus::DataType::HEX2, "HEX2"},     {ebus::DataType::HEX3, "HEX3"},
+    {ebus::DataType::HEX4, "HEX4"},     {ebus::DataType::HEX5, "HEX5"},
+    {ebus::DataType::HEX6, "HEX6"},     {ebus::DataType::HEX7, "HEX7"},
+    {ebus::DataType::HEX8, "HEX8"}};
 
 const char *ebus::datatype_2_string(const ebus::DataType &datatype) {
   return DatatypeName[datatype];
@@ -69,6 +75,7 @@ size_t ebus::sizeof_datatype(const ebus::DataType &datatype) {
     case ebus::DataType::DATA1B:
     case ebus::DataType::DATA1C:
     case ebus::DataType::CHAR1:
+    case ebus::DataType::HEX1:
       length = 1;
       break;
     case ebus::DataType::UINT16:
@@ -76,27 +83,34 @@ size_t ebus::sizeof_datatype(const ebus::DataType &datatype) {
     case ebus::DataType::DATA2B:
     case ebus::DataType::DATA2C:
     case ebus::DataType::CHAR2:
+    case ebus::DataType::HEX2:
       length = 2;
       break;
     case ebus::DataType::CHAR3:
+    case ebus::DataType::HEX3:
       length = 3;
       break;
     case ebus::DataType::UINT32:
     case ebus::DataType::INT32:
     case ebus::DataType::FLOAT:
     case ebus::DataType::CHAR4:
+    case ebus::DataType::HEX4:
       length = 4;
       break;
     case ebus::DataType::CHAR5:
+    case ebus::DataType::HEX5:
       length = 5;
       break;
     case ebus::DataType::CHAR6:
+    case ebus::DataType::HEX6:
       length = 6;
       break;
     case ebus::DataType::CHAR7:
+    case ebus::DataType::HEX7:
       length = 7;
       break;
     case ebus::DataType::CHAR8:
+    case ebus::DataType::HEX8:
       length = 8;
       break;
     default:
@@ -117,6 +131,14 @@ bool ebus::typeof_datatype(const DataType &datatype) {
     case ebus::DataType::CHAR6:
     case ebus::DataType::CHAR7:
     case ebus::DataType::CHAR8:
+    case ebus::DataType::HEX1:
+    case ebus::DataType::HEX2:
+    case ebus::DataType::HEX3:
+    case ebus::DataType::HEX4:
+    case ebus::DataType::HEX5:
+    case ebus::DataType::HEX6:
+    case ebus::DataType::HEX7:
+    case ebus::DataType::HEX8:
       numeric = false;
       break;
     default:
@@ -275,11 +297,20 @@ std::vector<uint8_t> ebus::float_2_byte(const double_t &value) {
   return ebus::uint32_2_byte(raw);
 }
 
-// STRING
-const std::string ebus::byte_2_string(const std::vector<uint8_t> &vec) {
+// CHAR
+std::string ebus::byte_2_char(const std::vector<uint8_t> &vec) {
   return std::string(vec.begin(), vec.end());
 }
 
-const std::vector<uint8_t> ebus::string_2_byte(const std::string &str) {
+std::vector<uint8_t> ebus::char_2_byte(const std::string &str) {
   return std::vector<uint8_t>(str.begin(), str.end());
+}
+
+// HEX
+std::string ebus::byte_2_hex(const std::vector<uint8_t> &vec) {
+  return ebus::to_string(vec);
+}
+
+std::vector<uint8_t> ebus::hex_2_byte(const std::string &str) {
+  return ebus::to_vector(str);
 }
