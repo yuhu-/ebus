@@ -131,6 +131,26 @@ void printEncodeDecode(uint8_t c, uint8_t d) {
             << std::endl;
 }
 
+void printFloatTest() {
+  float f = 21.0375f;
+  std::vector<uint8_t> bytes = ebus::float_2_byte(static_cast<double_t>(f));
+  std::cout << "float: " << f << " to bytes: " << ebus::to_string(bytes)
+            << std::endl;
+  double_t df = ebus::byte_2_float(bytes);
+  std::cout << "bytes: " << ebus::to_string(bytes) << " to float: " << df
+            << std::endl
+            << std::endl;
+
+  std::vector<uint8_t> h = {0xcd, 0x4c, 0xb2, 0x41};
+  double_t dh = ebus::byte_2_float(h);
+  std::cout << "bytes: " << ebus::to_string(h) << " to float: " << dh
+            << std::endl;
+  std::vector<uint8_t> bh = ebus::float_2_byte(dh);
+  std::cout << "float: " << dh << " to bytes: " << ebus::to_string(bh)
+            << std::endl
+            << std::endl;
+}
+
 int main() {
   printSequence("ff52b509030d0600");
 
@@ -167,6 +187,8 @@ int main() {
   printEncodeDecode(0x2, 0x77);
 
   printDecodeEncode(0xc9, 0xb7);
+
+  printFloatTest();
 
   return EXIT_SUCCESS;
 }
