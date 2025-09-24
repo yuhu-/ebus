@@ -172,6 +172,8 @@ int main() {
 
   printSequence("0acd010000000001000100");
 
+  printSequence("7705b509010a");
+
   printEncodeDecode(0x1, 0xb5);
 
   printDecodeEncode(0xc6, 0xb5);
