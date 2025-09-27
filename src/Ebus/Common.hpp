@@ -58,7 +58,7 @@ const std::vector<uint8_t> range(const std::vector<uint8_t> &vec,
                                  const size_t &index, const size_t &len);
 
 bool contains(const std::vector<uint8_t> &vec,
-              const std::vector<uint8_t> &search);
+              const std::vector<uint8_t> &search, int index = -1);
 
 uint8_t calc_crc(const uint8_t &byte, const uint8_t &init);
 

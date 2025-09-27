@@ -91,9 +91,16 @@ const std::vector<uint8_t> ebus::range(const std::vector<uint8_t> &vec,
 }
 
 bool ebus::contains(const std::vector<uint8_t> &vec,
-                    const std::vector<uint8_t> &search) {
-  return std::search(vec.begin(), vec.end(), search.begin(), search.end()) !=
-         vec.end();
+                    const std::vector<uint8_t> &search, int index) {
+  std::vector<uint8_t>::const_iterator it =
+      std::search(vec.begin(), vec.end(), search.begin(), search.end());
+  if (it != vec.end()) {
+    if (index >= 0)
+      return std::distance(vec.begin(), it) == index;
+    else
+      return true;
+  }
+  return false;
 }
 
 // CRC8 table of the polynom 0x9b = x^8 + x^7 + x^4 + x^3 + x^1 + 1.
