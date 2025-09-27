@@ -165,7 +165,7 @@ class Handler {
     std::map<HandlerState, Timing> timing;
   };
 
-  explicit Handler(const uint8_t &address, Bus *bus, Request *request);
+  Handler(const uint8_t &address, Bus *bus, Request *request);
 
   void setSourceAddress(const uint8_t &address);
   uint8_t getSourceAddress() const;
