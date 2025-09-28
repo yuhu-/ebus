@@ -17,6 +17,7 @@
  * along with ebus. If not, see http://www.gnu.org/licenses/.
  */
 
+#include <algorithm>
 #include <cstddef>
 #include <iomanip>
 #include <iostream>
@@ -151,6 +152,27 @@ void printFloatTest() {
             << std::endl;
 }
 
+void checkContains() {
+  const std::vector<uint8_t> search = {0x07, 0x04, 0x00};
+  const std::vector<uint8_t> vec =
+      ebus::to_vector("3005070400be07040063030021875017d00");
+
+  ebus::contains(vec, search) ? std::cout << "contains" << std::endl
+                              : std::cout << "not contains" << std::endl;
+
+  ebus::contains(vec, search, 2)
+      ? std::cout << "contains at index 2" << std::endl
+      : std::cout << "not contains at index 2" << std::endl;
+
+  ebus::contains(vec, search, 4)
+      ? std::cout << "contains at index 4" << std::endl
+      : std::cout << "not contains at index 4" << std::endl;
+
+  ebus::contains(vec, search, 6)
+      ? std::cout << "contains at index 6" << std::endl
+      : std::cout << "not contains at index 6" << std::endl;
+}
+
 int main() {
   printSequence("ff52b509030d0600");
 
@@ -191,6 +213,8 @@ int main() {
   printDecodeEncode(0xc9, 0xb7);
 
   printFloatTest();
+
+  checkContains();
 
   return EXIT_SUCCESS;
 }
