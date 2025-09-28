@@ -24,9 +24,11 @@
 // attractive output. Dumping of binary values ​​is also supported.
 
 #include <arpa/inet.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <getopt.h>
 #include <netdb.h>
+#include <sys/select.h>
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <time.h>
@@ -51,6 +53,9 @@ constexpr const char *YELLOW = "\033[33m";
 constexpr const char *BLUE = "\033[34m";
 constexpr const char *MAGENTA = "\033[35m";
 constexpr const char *CYAN = "\033[36m";
+
+constexpr uint8_t ENHANCED_SYM = 0xC6;
+constexpr int ENHANCED_THRESHOLD = 5;
 
 bool bold = false;
 bool color = false;
@@ -126,8 +131,8 @@ std::string services(const std::vector<uint8_t> &master,
     ostr << ebus::to_string(master[7]);
     ostr << ":";
     ostr << ebus::to_string(master[6]);
-  } else if (master[2] == 0xb5 && master[3] == 0x16 &&
-             master[4] == 0x03 && master[5] == 0x01) {
+  } else if (master[2] == 0xb5 && master[3] == 0x16 && master[4] == 0x03 &&
+             master[5] == 0x01) {
     ostr << "b5160301: ";
     ostr << ebus::byte_2_data2b(ebus::range(master, 6, 2));
     ostr << " °C";
@@ -254,67 +259,158 @@ std::string collect(const uint8_t &byte) {
   return result;
 }
 
-void run(const int sfd) {
-  char data[1];
+int connect(const char *hostname, const char *port, int max_retries = 5,
+            int delay_seconds = 10) {
+  int attempt = 0;
+  while (attempt < max_retries) {
+    int sfd = -1, err = 0;
+    struct addrinfo hints, *addrs;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_protocol = IPPROTO_TCP;
 
-  while (true) {
-    ssize_t datalen = recv(sfd, data, sizeof(data), 0);
-
-    if (datalen == -1) {
-      std::cerr << "an error occurred while receiving" << std::endl;
-      exit(EXIT_FAILURE);
-    } else if (datalen == 0) {
-      std::cerr << "connection closed by peer" << std::endl;
-      break;
+    const int status = getaddrinfo(hostname, port, &hints, &addrs);
+    if (status != 0) {
+      std::cerr << gai_strerror(status) << std::endl;
+      return -1;
     }
 
-    for (int i = 0; i < datalen; i++) {
-      if (dump) {
-        std::cout << data[i];
+    for (const struct addrinfo *addr = addrs; addr != nullptr;
+         addr = addr->ai_next) {
+      sfd = socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
+      if (sfd > 0) {
+        if (::connect(sfd, addr->ai_addr, addr->ai_addrlen) == 0) {
+          freeaddrinfo(addrs);
+          return sfd;
+        }
+        close(sfd);
       } else {
-        std::string result = collect(data[i]);
-        if (result.size() > 0) std::cout << result << std::endl;
+        err = errno;
       }
     }
+    freeaddrinfo(addrs);
 
-    fflush(stdout);
-    memset(&data[0], 0, sizeof(data));
-  }
-}
-
-int connect(const char *hostname, const char *port) {
-  struct addrinfo hints, *addrs;
-  memset(&hints, 0, sizeof(hints));
-
-  hints.ai_family = AF_UNSPEC;
-  hints.ai_socktype = SOCK_STREAM;
-  hints.ai_protocol = IPPROTO_TCP;
-
-  const int status = getaddrinfo(hostname, port, &hints, &addrs);
-  if (status != 0) {
-    std::cerr << gai_strerror(status) << std::endl;
-    exit(EXIT_FAILURE);
-  }
-
-  int sfd = 0, err = 0;
-  for (const struct addrinfo *addr = addrs; addr != nullptr;
-       addr = addr->ai_next) {
-    sfd = socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
-    if (sfd > 0) {
-      if (connect(sfd, addr->ai_addr, addr->ai_addrlen) == 0) break;
+    ++attempt;
+    std::cerr << "Connection failed (attempt " << attempt << " of "
+              << max_retries << ").";
+    if (attempt < max_retries) {
+      std::cerr << " Retrying in " << delay_seconds << " seconds..."
+                << std::endl;
+      sleep(delay_seconds);
     } else {
-      err = errno;
+      std::cerr << " Giving up." << std::endl;
     }
   }
+  return -1;
+}
 
-  freeaddrinfo(addrs);
+void run(const char *hostname, const char *port, int max_retries = 5) {
+  while (true) {
+    int sfd = connect(hostname, port, max_retries);
+    if (sfd < 0) {
+      std::cerr << "Could not connect to " << hostname << ":" << port
+                << std::endl;
+      exit(EXIT_FAILURE);
+    }
+    std::cerr << "Connected to " << hostname << ":" << port << std::endl;
 
-  if (sfd < 0) {
-    std::cerr << strerror(err) << std::endl;
-    exit(EXIT_FAILURE);
+    char data[2];
+    bool connection_ok = true;
+    bool mode_enhanced = false;
+    int enhanced_seq_count = 0;
+    uint8_t last_byte = 0;
+
+    while (connection_ok) {
+      fd_set readfds;
+      FD_ZERO(&readfds);
+      FD_SET(sfd, &readfds);
+
+      struct timeval tv;
+      tv.tv_sec = 10;  // 10 second timeout (adjust as needed)
+      tv.tv_usec = 0;
+
+      int ret = select(sfd + 1, &readfds, nullptr, nullptr, &tv);
+      if (ret < 0) {
+        std::cerr << "select() error: " << strerror(errno) << std::endl;
+        connection_ok = false;
+      } else if (ret == 0) {
+        std::cerr << "Timeout: no data received for 10 seconds." << std::endl;
+        connection_ok = false;
+      } else if (FD_ISSET(sfd, &readfds)) {
+        if (!mode_enhanced) {
+          ssize_t datalen = recv(sfd, data, 1, 0);
+          if (datalen == -1) {
+            std::cerr << "An error occurred while receiving: "
+                      << strerror(errno) << std::endl;
+            connection_ok = false;
+          } else if (datalen == 0) {
+            std::cerr << "Connection closed by peer" << std::endl;
+            connection_ok = false;
+          } else {
+            uint8_t byte = static_cast<uint8_t>(data[0]);
+            if (last_byte == ENHANCED_SYM && byte == ebus::sym_syn) {
+              enhanced_seq_count++;
+              if (enhanced_seq_count >= ENHANCED_THRESHOLD) {
+                mode_enhanced = true;
+                std::cerr << "*** Switching to ENHANCED mode! ***" << std::endl;
+              }
+            }
+            // Do NOT reset enhanced_seq_count here!
+            last_byte = byte;
+            if (dump) {
+              std::cout << byte;
+            } else {
+              std::string result = collect(byte);
+              if (result.size() > 0) std::cout << result << std::endl;
+            }
+            fflush(stdout);
+          }
+        } else {
+          uint8_t enhanced_byte;
+          ssize_t datalen = recv(sfd, data, 2, MSG_PEEK);
+          if (datalen < 2) {
+            // Not enough data, treat as disconnect or wait for more
+            connection_ok = true;
+          } else {
+            int b1 = static_cast<uint8_t>(data[0]);
+            int b2 = static_cast<uint8_t>(data[1]);
+            if ((b1 & 0xc0) == 0xc0 && (b2 & 0xc0) == 0x80) {
+              // Valid enhanced protocol
+              recv(sfd, data, 2, 0);  // consume bytes
+              uint8_t cmd = (b1 >> 2) & 0x0f;
+              uint8_t val = ((b1 & 0x03) << 6) | (b2 & 0x3f);
+              enhanced_byte = val;
+              if (dump) {
+                std::cout << enhanced_byte;
+              } else {
+                std::string result = collect(enhanced_byte);
+                if (result.size() > 0) std::cout << result << std::endl;
+              }
+              fflush(stdout);
+            } else if (b1 < 0x80) {
+              // Short form: just a data byte, no prefix
+              recv(sfd, data, 1, 0);  // consume one byte
+              enhanced_byte = static_cast<uint8_t>(data[0]);
+              if (dump) {
+                std::cout << enhanced_byte;
+              } else {
+                std::string result = collect(enhanced_byte);
+                if (result.size() > 0) std::cout << result << std::endl;
+              }
+              fflush(stdout);
+            } else {
+              // Invalid signature, skip one byte
+              recv(sfd, data, 1, 0);
+            }
+          }
+        }
+      }
+    }
+    close(sfd);
+    std::cerr << "Disconnected. Attempting to reconnect..." << std::endl;
+    sleep(2);  // Wait before reconnecting
   }
-
-  return sfd;
 }
 
 void usage() {
@@ -413,9 +509,7 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
       }
 
-      int sfd = connect(hostname.c_str(), port.c_str());
-      run(sfd);
-      close(sfd);
+      run(hostname.c_str(), port.c_str(), 5);  // 5 retries per disconnect
     }
   } else if (argv[optind] == nullptr && isatty(STDIN_FILENO)) {
     usage();
