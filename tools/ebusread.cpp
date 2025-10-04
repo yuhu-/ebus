@@ -55,7 +55,7 @@ constexpr const char *MAGENTA = "\033[35m";
 constexpr const char *CYAN = "\033[36m";
 
 constexpr uint8_t ENHANCED_SYM = 0xC6;
-constexpr int ENHANCED_THRESHOLD = 5;
+constexpr int ENHANCED_THRESHOLD = 2;
 
 bool bold = false;
 bool color = false;
@@ -319,7 +319,7 @@ void run(const char *hostname, const char *port, int max_retries = 5) {
     bool connection_ok = true;
     bool mode_enhanced = false;
     int enhanced_seq_count = 0;
-    uint8_t last_byte = 0;
+    bool waiting_for_c6 = true;  // true: expect 0xC6, false: expect 0xAA
 
     while (connection_ok) {
       fd_set readfds;
@@ -349,15 +349,27 @@ void run(const char *hostname, const char *port, int max_retries = 5) {
             connection_ok = false;
           } else {
             uint8_t byte = static_cast<uint8_t>(data[0]);
-            if (last_byte == ENHANCED_SYM && byte == ebus::sym_syn) {
-              enhanced_seq_count++;
-              if (enhanced_seq_count >= ENHANCED_THRESHOLD) {
-                mode_enhanced = true;
-                std::cerr << "*** Switching to ENHANCED mode! ***" << std::endl;
+            if (waiting_for_c6) {
+              if (byte == ENHANCED_SYM) {
+                waiting_for_c6 = false;  // now expect 0xAA
+              } else {
+                enhanced_seq_count = 0;
+                waiting_for_c6 = true;
+              }
+            } else {  // waiting for 0xAA
+              if (byte == ebus::sym_syn) {
+                enhanced_seq_count++;
+                if (enhanced_seq_count >= ENHANCED_THRESHOLD) {
+                  mode_enhanced = true;
+                  std::cerr << "*** Switching to ENHANCED mode! ***"
+                            << std::endl;
+                }
+                waiting_for_c6 = true;  // next, expect 0xC6 again
+              } else {
+                enhanced_seq_count = 0;
+                waiting_for_c6 = true;
               }
             }
-            // Do NOT reset enhanced_seq_count here!
-            last_byte = byte;
             if (dump) {
               std::cout << byte;
             } else {
