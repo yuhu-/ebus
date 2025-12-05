@@ -469,7 +469,6 @@ void ebus::Handler::activeSendMaster(const uint8_t &byte) {
                      activeTelegram.getMaster().to_vector(),
                      activeTelegram.getSlave().to_vector());
       counter.messagesActiveBroadcast++;
-      // request->resetLockCounter();
       callActiveReset();
       callWrite(sym_syn);
       state = HandlerState::releaseBus;
@@ -488,7 +487,6 @@ void ebus::Handler::activeReceiveMasterAcknowledge(const uint8_t &byte) {
                      activeTelegram.getMaster().to_vector(),
                      activeTelegram.getSlave().to_vector());
       counter.messagesActiveMasterMaster++;
-      // request->resetLockCounter();
       callActiveReset();
       callWrite(sym_syn);
       state = HandlerState::releaseBus;
