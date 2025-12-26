@@ -23,7 +23,7 @@
 #include <iomanip>
 #include <sstream>
 
-bool ebus::isMaster(const uint8_t &byte) {
+bool ebus::isMaster(const uint8_t& byte) {
   uint8_t hi = (byte & uint8_t(0xf0)) >> 4;
   uint8_t lo = (byte & uint8_t(0x0f));
 
@@ -35,35 +35,35 @@ bool ebus::isMaster(const uint8_t &byte) {
 }
 
 // except all master, 0xaa, 0xa9, 0xfe
-bool ebus::isSlave(const uint8_t &byte) {
+bool ebus::isSlave(const uint8_t& byte) {
   return !isMaster(byte) && byte != sym_syn && byte != sym_ext &&
          byte != sym_broad;
 }
 
 // except 0xaa, 0xa9
-bool ebus::isTarget(const uint8_t &byte) {
+bool ebus::isTarget(const uint8_t& byte) {
   return byte != sym_syn && byte != sym_ext;
 }
 
-uint8_t ebus::masterOf(const uint8_t &byte) {
+uint8_t ebus::masterOf(const uint8_t& byte) {
   if (isMaster(uint8_t(byte - 5)))
     return uint8_t(byte - 5);
   else
     return byte;
 }
 
-uint8_t ebus::slaveOf(const uint8_t &byte) {
+uint8_t ebus::slaveOf(const uint8_t& byte) {
   if (isMaster(byte))
     return uint8_t(byte + 5);
   else
     return byte;
 }
 
-const std::string ebus::to_string(const uint8_t &byte) {
+const std::string ebus::to_string(const uint8_t& byte) {
   return to_string(std::vector<uint8_t>(1, byte));
 }
 
-const std::string ebus::to_string(const std::vector<uint8_t> &vec) {
+const std::string ebus::to_string(const std::vector<uint8_t>& vec) {
   std::ostringstream ostr;
 
   for (size_t i = 0; i < vec.size(); i++)
@@ -73,7 +73,7 @@ const std::string ebus::to_string(const std::vector<uint8_t> &vec) {
   return ostr.str();
 }
 
-const std::vector<uint8_t> ebus::to_vector(const std::string &str) {
+const std::vector<uint8_t> ebus::to_vector(const std::string& str) {
   std::vector<uint8_t> result;
 
   for (size_t i = 0; i + 1 < str.size(); i += 2)
@@ -83,15 +83,15 @@ const std::vector<uint8_t> ebus::to_vector(const std::string &str) {
   return result;
 }
 
-const std::vector<uint8_t> ebus::range(const std::vector<uint8_t> &vec,
-                                       const size_t &index, const size_t &len) {
+const std::vector<uint8_t> ebus::range(const std::vector<uint8_t>& vec,
+                                       const size_t& index, const size_t& len) {
   if (index >= vec.size()) return {};
   size_t end = std::min(index + len, vec.size());
   return std::vector<uint8_t>(vec.begin() + index, vec.begin() + end);
 }
 
-bool ebus::contains(const std::vector<uint8_t> &vec,
-                    const std::vector<uint8_t> &search, int index /* = -1 */) {
+bool ebus::contains(const std::vector<uint8_t>& vec,
+                    const std::vector<uint8_t>& search, int index /* = -1 */) {
   if (search.empty() || vec.empty() || search.size() > vec.size()) return false;
 
   // If index == -1, search the whole vector for the sequence
@@ -136,6 +136,6 @@ static const uint8_t crc_table[] = {
     0x95, 0x0e, 0x38, 0xa3, 0x54, 0xcf, 0xf9, 0x62, 0x8c, 0x17, 0x21, 0xba,
     0x4d, 0xd6, 0xe0, 0x7b};
 
-uint8_t ebus::calc_crc(const uint8_t &byte, const uint8_t &init) {
+uint8_t ebus::calc_crc(const uint8_t& byte, const uint8_t& init) {
   return uint8_t(crc_table[init] ^ byte);
 }

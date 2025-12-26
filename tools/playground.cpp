@@ -27,7 +27,7 @@
 #include "Sequence.hpp"
 #include "Telegram.hpp"
 
-void printSequence(const std::string &strSequence) {
+void printSequence(const std::string& strSequence) {
   ebus::Sequence sequence;
   sequence.assign(ebus::to_vector(strSequence));
 
@@ -36,8 +36,8 @@ void printSequence(const std::string &strSequence) {
             << std::endl;
 }
 
-void printMasterSlave(const std::string &strMaster,
-                      const std::string &strSlave) {
+void printMasterSlave(const std::string& strMaster,
+                      const std::string& strSlave) {
   ebus::Sequence master;
   master.assign(ebus::to_vector(strMaster));
 
@@ -55,7 +55,7 @@ void printMasterSlave(const std::string &strMaster,
             << std::endl;
 }
 
-void createTelegram(const std::string &strSequence) {
+void createTelegram(const std::string& strSequence) {
   ebus::Sequence sequence;
   sequence.assign(ebus::to_vector(strSequence));
 

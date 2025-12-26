@@ -30,9 +30,9 @@ ebus::TelegramType ebus::typeOf(const uint8_t byte) {
     return TelegramType::master_slave;
 }
 
-ebus::Telegram::Telegram(Sequence &seq) { parse(seq); }
+ebus::Telegram::Telegram(Sequence& seq) { parse(seq); }
 
-void ebus::Telegram::parse(Sequence &seq) {
+void ebus::Telegram::parse(Sequence& seq) {
   clear();
   seq.reduce();
   int offset = 0;
@@ -189,7 +189,7 @@ void ebus::Telegram::parse(Sequence &seq) {
 }
 
 void ebus::Telegram::createMaster(const uint8_t src,
-                                  const std::vector<uint8_t> &vec) {
+                                  const std::vector<uint8_t>& vec) {
   Sequence seq;
 
   seq.push_back(src, false);
@@ -199,7 +199,7 @@ void ebus::Telegram::createMaster(const uint8_t src,
   createMaster(seq);
 }
 
-void ebus::Telegram::createMaster(Sequence &seq) {
+void ebus::Telegram::createMaster(Sequence& seq) {
   m_masterState = SequenceState::seq_ok;
   seq.reduce();
 
@@ -255,7 +255,7 @@ void ebus::Telegram::createMaster(Sequence &seq) {
   }
 }
 
-void ebus::Telegram::createSlave(const std::vector<uint8_t> &vec) {
+void ebus::Telegram::createSlave(const std::vector<uint8_t>& vec) {
   Sequence seq;
 
   for (size_t i = 0; i < vec.size(); i++) seq.push_back(vec.at(i), false);
@@ -263,7 +263,7 @@ void ebus::Telegram::createSlave(const std::vector<uint8_t> &vec) {
   createSlave(seq);
 }
 
-void ebus::Telegram::createSlave(Sequence &seq) {
+void ebus::Telegram::createSlave(Sequence& seq) {
   m_slaveState = SequenceState::seq_ok;
   seq.reduce();
 
@@ -322,7 +322,7 @@ void ebus::Telegram::clear() {
   m_slaveState = SequenceState::seq_empty;
 }
 
-const ebus::Sequence &ebus::Telegram::getMaster() const { return m_master; }
+const ebus::Sequence& ebus::Telegram::getMaster() const { return m_master; }
 
 uint8_t ebus::Telegram::getSourceAddress() const { return m_master[0]; }
 
@@ -348,7 +348,7 @@ void ebus::Telegram::setMasterACK(const uint8_t byte) { m_masterACK = byte; }
 
 uint8_t ebus::Telegram::getMasterACK() const { return m_masterACK; }
 
-const ebus::Sequence &ebus::Telegram::getSlave() const { return m_slave; }
+const ebus::Sequence& ebus::Telegram::getSlave() const { return m_slave; }
 
 uint8_t ebus::Telegram::getSlaveNumberBytes() const { return m_slave[0]; }
 
@@ -428,7 +428,7 @@ const std::string ebus::Telegram::toStringSlaveState() const {
   return ostr.str();
 }
 
-ebus::SequenceState ebus::Telegram::checkMasterSequence(const Sequence &seq) {
+ebus::SequenceState ebus::Telegram::checkMasterSequence(const Sequence& seq) {
   // sequence is too short
   if (seq.size() < static_cast<size_t>(5))
     return SequenceState::err_seq_too_short;
@@ -449,7 +449,7 @@ ebus::SequenceState ebus::Telegram::checkMasterSequence(const Sequence &seq) {
   return SequenceState::seq_ok;
 }
 
-ebus::SequenceState ebus::Telegram::checkSlaveSequence(const Sequence &seq) {
+ebus::SequenceState ebus::Telegram::checkSlaveSequence(const Sequence& seq) {
   // sequence is too short
   if (seq.size() < static_cast<size_t>(1))
     return SequenceState::err_seq_too_short;

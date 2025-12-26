@@ -60,8 +60,8 @@ enum class HandlerState {
   releaseBus
 };
 
-static const char *getHandlerStateText(HandlerState state) {
-  const char *values[] = {"passiveReceiveMaster",
+static const char* getHandlerStateText(HandlerState state) {
+  const char* values[] = {"passiveReceiveMaster",
                           "passiveReceiveMasterAcknowledge",
                           "passiveReceiveSlave",
                           "passiveReceiveSlaveAcknowledge",
@@ -82,15 +82,15 @@ static const char *getHandlerStateText(HandlerState state) {
 enum class MessageType { undefined, active, passive, reactive };
 
 using ReactiveMasterSlaveCallback = std::function<void(
-    const std::vector<uint8_t> &master, std::vector<uint8_t> *const slave)>;
+    const std::vector<uint8_t>& master, std::vector<uint8_t>* const slave)>;
 
 using TelegramCallback = std::function<void(
-    const MessageType &messageType, const TelegramType &telegramType,
-    const std::vector<uint8_t> &master, const std::vector<uint8_t> &slave)>;
+    const MessageType& messageType, const TelegramType& telegramType,
+    const std::vector<uint8_t>& master, const std::vector<uint8_t>& slave)>;
 
-using ErrorCallback = std::function<void(const std::string &errorMessage,
-                                         const std::vector<uint8_t> &master,
-                                         const std::vector<uint8_t> &slave)>;
+using ErrorCallback = std::function<void(const std::string& errorMessage,
+                                         const std::vector<uint8_t>& master,
+                                         const std::vector<uint8_t>& slave)>;
 
 #define EBUS_HANDLER_COUNTER_LIST \
   X(messagesTotal)                \
@@ -165,9 +165,9 @@ class Handler {
     std::map<HandlerState, Timing> timing;
   };
 
-  Handler(const uint8_t &address, Bus *bus, Request *request);
+  Handler(const uint8_t& address, Bus* bus, Request* request);
 
-  void setSourceAddress(const uint8_t &address);
+  void setSourceAddress(const uint8_t& address);
   uint8_t getSourceAddress() const;
   uint8_t getTargetAddress() const;
 
@@ -177,24 +177,24 @@ class Handler {
 
   HandlerState getState() const;
 
-  bool enqueueActiveMessage(const std::vector<uint8_t> &message);
+  bool enqueueActiveMessage(const std::vector<uint8_t>& message);
 
   void reset();
 
-  void run(const uint8_t &byte);
+  void run(const uint8_t& byte);
 
   void resetCounter();
-  const Counter &getCounter();
+  const Counter& getCounter();
 
   void resetTiming();
-  const Timing &getTiming();
+  const Timing& getTiming();
 
   void resetStateTiming();
   const StateTiming getStateTiming() const;
 
  private:
-  Bus *bus = nullptr;
-  Request *request = nullptr;
+  Bus* bus = nullptr;
+  Request* request = nullptr;
 
   uint8_t sourceAddress = 0;
   uint8_t targetAddress = 0;
@@ -203,7 +203,7 @@ class Handler {
   TelegramCallback telegramCallback = nullptr;
   ErrorCallback errorCallback = nullptr;
 
-  std::array<void (Handler::*)(const uint8_t &), NUM_HANDLER_STATES>
+  std::array<void (Handler::*)(const uint8_t&), NUM_HANDLER_STATES>
       stateHandlers;
 
   HandlerState state = HandlerState::passiveReceiveMaster;
@@ -251,21 +251,21 @@ class Handler {
   size_t activeSlaveDBx = 0;
   bool activeSlaveRepeated = false;
 
-  void passiveReceiveMaster(const uint8_t &byte);
-  void passiveReceiveMasterAcknowledge(const uint8_t &byte);
-  void passiveReceiveSlave(const uint8_t &byte);
-  void passiveReceiveSlaveAcknowledge(const uint8_t &byte);
-  void reactiveSendMasterPositiveAcknowledge(const uint8_t &byte);
-  void reactiveSendMasterNegativeAcknowledge(const uint8_t &byte);
-  void reactiveSendSlave(const uint8_t &byte);
-  void reactiveReceiveSlaveAcknowledge(const uint8_t &byte);
-  void requestBus(const uint8_t &byte);
-  void activeSendMaster(const uint8_t &byte);
-  void activeReceiveMasterAcknowledge(const uint8_t &byte);
-  void activeReceiveSlave(const uint8_t &byte);
-  void activeSendSlavePositiveAcknowledge(const uint8_t &byte);
-  void activeSendSlaveNegativeAcknowledge(const uint8_t &byte);
-  void releaseBus(const uint8_t &byte);
+  void passiveReceiveMaster(const uint8_t& byte);
+  void passiveReceiveMasterAcknowledge(const uint8_t& byte);
+  void passiveReceiveSlave(const uint8_t& byte);
+  void passiveReceiveSlaveAcknowledge(const uint8_t& byte);
+  void reactiveSendMasterPositiveAcknowledge(const uint8_t& byte);
+  void reactiveSendMasterNegativeAcknowledge(const uint8_t& byte);
+  void reactiveSendSlave(const uint8_t& byte);
+  void reactiveReceiveSlaveAcknowledge(const uint8_t& byte);
+  void requestBus(const uint8_t& byte);
+  void activeSendMaster(const uint8_t& byte);
+  void activeReceiveMasterAcknowledge(const uint8_t& byte);
+  void activeReceiveSlave(const uint8_t& byte);
+  void activeSendSlavePositiveAcknowledge(const uint8_t& byte);
+  void activeSendSlaveNegativeAcknowledge(const uint8_t& byte);
+  void releaseBus(const uint8_t& byte);
 
   void checkPassiveBuffers();
   void checkActiveBuffers();
@@ -273,21 +273,21 @@ class Handler {
   void callPassiveReset();
   void callActiveReset();
 
-  void calculateDuration(const uint8_t &byte);
-  void calculateDurationFsmState(const uint8_t &byte);
+  void calculateDuration(const uint8_t& byte);
+  void calculateDurationFsmState(const uint8_t& byte);
 
-  void callWrite(const uint8_t &byte);
+  void callWrite(const uint8_t& byte);
 
-  void callReactiveMasterSlave(const std::vector<uint8_t> &master,
-                               std::vector<uint8_t> *const slave);
+  void callReactiveMasterSlave(const std::vector<uint8_t>& master,
+                               std::vector<uint8_t>* const slave);
 
-  void callOnTelegram(const MessageType &messageType,
-                      const TelegramType &telegramType,
-                      const std::vector<uint8_t> &master,
-                      const std::vector<uint8_t> &slave);
+  void callOnTelegram(const MessageType& messageType,
+                      const TelegramType& telegramType,
+                      const std::vector<uint8_t>& master,
+                      const std::vector<uint8_t>& slave);
 
-  void callOnError(const std::string &error, const std::vector<uint8_t> &master,
-                   const std::vector<uint8_t> &slave);
+  void callOnError(const std::string& error, const std::vector<uint8_t>& master,
+                   const std::vector<uint8_t>& slave);
 };
 
 }  // namespace ebus

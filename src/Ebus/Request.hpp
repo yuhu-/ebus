@@ -38,8 +38,8 @@ constexpr size_t NUM_REQUEST_STATES = 4;
 
 enum class RequestState { observe, first, retry, second };
 
-static const char *getRequestStateText(RequestState state) {
-  const char *values[] = {"observe", "first", "retry", "second"};
+static const char* getRequestStateText(RequestState state) {
+  const char* values[] = {"observe", "first", "retry", "second"};
   return values[static_cast<int>(state)];
 }
 
@@ -58,8 +58,8 @@ enum class RequestResult {
   secondError
 };
 
-static const char *getRequestResultText(RequestResult result) {
-  const char *values[] = {"observeSyn", "observeData", "firstSyn",
+static const char* getRequestResultText(RequestResult result) {
+  const char* values[] = {"observeSyn", "observeData", "firstSyn",
                           "firstWon",   "firstRetry",  "firstLost",
                           "firstError", "retrySyn",    "retryError",
                           "secondWon",  "secondLost",  "secondError"};
@@ -107,7 +107,7 @@ class Request {
 
   explicit Request();
 
-  void setMaxLockCounter(const uint8_t &maxCounter);
+  void setMaxLockCounter(const uint8_t& maxCounter);
   const uint8_t getLockCounter() const;
 
   uint8_t getAddress() const;
@@ -115,7 +115,7 @@ class Request {
   bool busAvailable() const;
 
   // Request the bus from handler or external
-  bool requestBus(const uint8_t &address, const bool &external = false);
+  bool requestBus(const uint8_t& address, const bool& external = false);
 
   void setHandlerBusRequestedCallback(BusRequestedCallback callback);
   void setExternalBusRequestedCallback(BusRequestedCallback callback);
@@ -131,16 +131,16 @@ class Request {
 
   void reset();
 
-  RequestResult run(const uint8_t &byte);
+  RequestResult run(const uint8_t& byte);
 
-  void microsLastDelay(const int64_t &delay);
-  void microsLastWindow(const int64_t &window);
+  void microsLastDelay(const int64_t& delay);
+  void microsLastWindow(const int64_t& window);
 
   void resetCounter();
-  const Counter &getCounter() const;
+  const Counter& getCounter() const;
 
   void resetTiming();
-  const Timing &getTiming();
+  const Timing& getTiming();
 
  private:
   uint8_t sourceAddress = 0;
@@ -159,7 +159,7 @@ class Request {
 
   StartBitCallback startBitCallback = nullptr;
 
-  std::array<void (Request::*)(const uint8_t &), NUM_REQUEST_STATES>
+  std::array<void (Request::*)(const uint8_t&), NUM_REQUEST_STATES>
       stateRequests;
 
   RequestState state = RequestState::observe;
@@ -172,12 +172,12 @@ class Request {
   TimingStats busIsrDelay;
   TimingStats busIsrWindow;
 
-  void observe(const uint8_t &byte);
-  void first(const uint8_t &byte);
-  void retry(const uint8_t &byte);
-  void second(const uint8_t &byte);
+  void observe(const uint8_t& byte);
+  void first(const uint8_t& byte);
+  void retry(const uint8_t& byte);
+  void second(const uint8_t& byte);
 
-  bool checkPriorityClassSubAddress(const uint8_t &byte);
+  bool checkPriorityClassSubAddress(const uint8_t& byte);
 };
 
 }  // namespace ebus

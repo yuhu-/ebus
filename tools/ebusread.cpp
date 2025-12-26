@@ -44,15 +44,15 @@
 #include "Datatypes.hpp"
 #include "Telegram.hpp"
 
-constexpr const char *RESET = "\033[0m";
-constexpr const char *BOLD = "\033[1m";
+constexpr const char* RESET = "\033[0m";
+constexpr const char* BOLD = "\033[1m";
 
-constexpr const char *RED = "\033[31m";
-constexpr const char *GREEN = "\033[32m";
-constexpr const char *YELLOW = "\033[33m";
-constexpr const char *BLUE = "\033[34m";
-constexpr const char *MAGENTA = "\033[35m";
-constexpr const char *CYAN = "\033[36m";
+constexpr const char* RED = "\033[31m";
+constexpr const char* GREEN = "\033[32m";
+constexpr const char* YELLOW = "\033[33m";
+constexpr const char* BLUE = "\033[34m";
+constexpr const char* MAGENTA = "\033[35m";
+constexpr const char* CYAN = "\033[36m";
 
 constexpr uint8_t ENHANCED_SYM = 0xC6;
 constexpr int ENHANCED_THRESHOLD = 2;
@@ -67,7 +67,7 @@ bool raw = false;
 bool split = false;
 bool type = false;
 
-const char *timestamp() {
+const char* timestamp() {
   static char time[24];
   struct timeval tv;
   struct tm tm;
@@ -89,8 +89,8 @@ const char *timestamp() {
   return time;
 }
 
-std::string services(const std::vector<uint8_t> &master,
-                     const std::vector<uint8_t> &slave) {
+std::string services(const std::vector<uint8_t>& master,
+                     const std::vector<uint8_t>& slave) {
   std::ostringstream ostr;
   if (master[2] == 0x07 && master[3] == 0x00) {
     ostr << "0700: 20";
@@ -140,7 +140,7 @@ std::string services(const std::vector<uint8_t> &master,
   return ostr.str();
 }
 
-std::string collect(const uint8_t &byte) {
+std::string collect(const uint8_t& byte) {
   static ebus::Sequence sequence;
   std::string result = "";
 
@@ -259,7 +259,7 @@ std::string collect(const uint8_t &byte) {
   return result;
 }
 
-int connect(const char *hostname, const char *port, int max_retries = 5,
+int connect(const char* hostname, const char* port, int max_retries = 5,
             int delay_seconds = 10) {
   int attempt = 0;
   while (attempt < max_retries) {
@@ -276,7 +276,7 @@ int connect(const char *hostname, const char *port, int max_retries = 5,
       return -1;
     }
 
-    for (const struct addrinfo *addr = addrs; addr != nullptr;
+    for (const struct addrinfo* addr = addrs; addr != nullptr;
          addr = addr->ai_next) {
       sfd = socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
       if (sfd > 0) {
@@ -305,7 +305,7 @@ int connect(const char *hostname, const char *port, int max_retries = 5,
   return -1;
 }
 
-void run(const char *hostname, const char *port, int max_retries = 5) {
+void run(const char* hostname, const char* port, int max_retries = 5) {
   while (true) {
     int sfd = connect(hostname, port, max_retries);
     if (sfd < 0) {
@@ -441,7 +441,7 @@ void usage() {
   std::cout << "  -h, --help       show this page" << std::endl;
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
   static struct option options[] = {{"bold", no_argument, nullptr, 'b'},
                                     {"color", no_argument, nullptr, 'c'},
                                     {"dump", no_argument, nullptr, 'd'},

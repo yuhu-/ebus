@@ -25,7 +25,7 @@ ebus::Request::Request()
     : stateRequests({&Request::observe, &Request::first, &Request::retry,
                      &Request::second}) {}
 
-void ebus::Request::setMaxLockCounter(const uint8_t &maxCounter) {
+void ebus::Request::setMaxLockCounter(const uint8_t& maxCounter) {
   if (maxCounter > MAX_LOCK_COUNTER)
     maxLockCounter = MAX_LOCK_COUNTER;
   else
@@ -42,7 +42,7 @@ bool ebus::Request::busAvailable() const {
   return result == RequestResult::observeSyn && lockCounter == 0 && !busRequest;
 }
 
-bool ebus::Request::requestBus(const uint8_t &address, const bool &external) {
+bool ebus::Request::requestBus(const uint8_t& address, const bool& external) {
   if (busAvailable()) {
     busRequest = true;
     sourceAddress = address;
@@ -95,7 +95,7 @@ void ebus::Request::reset() {
   state = RequestState::observe;
 }
 
-ebus::RequestResult ebus::Request::run(const uint8_t &byte) {
+ebus::RequestResult ebus::Request::run(const uint8_t& byte) {
   size_t idx = static_cast<size_t>(state);
   if (idx < stateRequests.size() && stateRequests[idx])
     (this->*stateRequests[idx])(byte);
@@ -103,11 +103,11 @@ ebus::RequestResult ebus::Request::run(const uint8_t &byte) {
   return result;
 }
 
-void ebus::Request::microsLastDelay(const int64_t &delay) {
+void ebus::Request::microsLastDelay(const int64_t& delay) {
   busIsrDelay.add(delay);
 }
 
-void ebus::Request::microsLastWindow(const int64_t &window) {
+void ebus::Request::microsLastWindow(const int64_t& window) {
   busIsrWindow.add(window);
 }
 
@@ -117,7 +117,7 @@ void ebus::Request::resetCounter() {
 #undef X
 }
 
-const ebus::Request::Counter &ebus::Request::getCounter() const {
+const ebus::Request::Counter& ebus::Request::getCounter() const {
   return counter;
 }
 
@@ -126,7 +126,7 @@ void ebus::Request::resetTiming() {
   busIsrWindow.clear();
 }
 
-const ebus::Request::Timing &ebus::Request::getTiming() {
+const ebus::Request::Timing& ebus::Request::getTiming() {
 #define X(name)                    \
   timing.name##Last = name.last;   \
   timing.name##Count = name.count; \
@@ -137,7 +137,7 @@ const ebus::Request::Timing &ebus::Request::getTiming() {
   return timing;
 }
 
-void ebus::Request::observe(const uint8_t &byte) {
+void ebus::Request::observe(const uint8_t& byte) {
   if (byte == sym_syn) {
     if (lockCounter > 0) lockCounter--;
     result = RequestResult::observeSyn;
@@ -146,7 +146,7 @@ void ebus::Request::observe(const uint8_t &byte) {
   }
 }
 
-void ebus::Request::first(const uint8_t &byte) {
+void ebus::Request::first(const uint8_t& byte) {
   if (byte == sym_syn) {
     counter.requestsFirstSyn++;
     result = RequestResult::firstSyn;
@@ -172,7 +172,7 @@ void ebus::Request::first(const uint8_t &byte) {
   }
 }
 
-void ebus::Request::retry(const uint8_t &byte) {
+void ebus::Request::retry(const uint8_t& byte) {
   if (byte == sym_syn) {
     counter.requestsRetrySyn++;
     busRequest = true;
@@ -185,7 +185,7 @@ void ebus::Request::retry(const uint8_t &byte) {
   }
 }
 
-void ebus::Request::second(const uint8_t &byte) {
+void ebus::Request::second(const uint8_t& byte) {
   if (byte == sourceAddress) {
     counter.requestsSecondWon++;
     lockCounter = maxLockCounter;
@@ -203,7 +203,7 @@ void ebus::Request::second(const uint8_t &byte) {
 }
 
 // check priority class (lower nibble) and sub address (higher nibble)
-bool ebus::Request::checkPriorityClassSubAddress(const uint8_t &byte) {
+bool ebus::Request::checkPriorityClassSubAddress(const uint8_t& byte) {
   return (byte & 0x0f) == (sourceAddress & 0x0f) &&  // priority class
          (byte & 0xf0) > (sourceAddress & 0xf0);     // sub address
 }

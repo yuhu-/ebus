@@ -67,8 +67,8 @@ enum class SequenceState {
   err_ack_negative     // acknowledge byte is negative
 };
 
-static const char *getSequenceStateText(SequenceState state) {
-  const char *values[] = {
+static const char* getSequenceStateText(SequenceState state) {
+  const char* values[] = {
       "sequence is empty",           "sequence is ok",
       "sequence is too short",       "sequence is too long",
       "source address is invalid",   "target address is invalid",
@@ -85,20 +85,20 @@ ebus::TelegramType typeOf(const uint8_t byte);
 class Telegram {
  public:
   Telegram() = default;
-  explicit Telegram(Sequence &seq);
+  explicit Telegram(Sequence& seq);
 
-  void parse(Sequence &seq);
+  void parse(Sequence& seq);
 
-  void createMaster(const uint8_t src, const std::vector<uint8_t> &vec);
-  void createMaster(Sequence &seq);
+  void createMaster(const uint8_t src, const std::vector<uint8_t>& vec);
+  void createMaster(Sequence& seq);
 
-  void createSlave(const std::vector<uint8_t> &vec);
-  void createSlave(Sequence &seq);
+  void createSlave(const std::vector<uint8_t>& vec);
+  void createSlave(Sequence& seq);
 
   void clear();
 
   // returns the master sequence [QQ ZZ PB SB NN DBx] without CRC byte
-  const Sequence &getMaster() const;
+  const Sequence& getMaster() const;
 
   uint8_t getSourceAddress() const;
   uint8_t getTargetAddress() const;
@@ -116,7 +116,7 @@ class Telegram {
   uint8_t getMasterACK() const;
 
   // returns the slave sequence [NN DBx] without CRC byte
-  const Sequence &getSlave() const;
+  const Sequence& getSlave() const;
 
   uint8_t getSlaveNumberBytes() const;
   const std::vector<uint8_t> getSlaveDataBytes() const;
@@ -138,8 +138,8 @@ class Telegram {
   const std::string toStringMasterState() const;
   const std::string toStringSlaveState() const;
 
-  static ebus::SequenceState checkMasterSequence(const Sequence &seq);
-  static ebus::SequenceState checkSlaveSequence(const Sequence &seq);
+  static ebus::SequenceState checkMasterSequence(const Sequence& seq);
+  static ebus::SequenceState checkSlaveSequence(const Sequence& seq);
 
  private:
   TelegramType m_type = TelegramType::undefined;

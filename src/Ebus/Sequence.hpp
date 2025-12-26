@@ -34,13 +34,13 @@ namespace ebus {
 class Sequence {
  public:
   Sequence() = default;
-  Sequence(const Sequence &seq, const size_t index, size_t len = 0);
+  Sequence(const Sequence& seq, const size_t index, size_t len = 0);
 
-  void assign(const std::vector<uint8_t> &vec, const bool extended = true);
+  void assign(const std::vector<uint8_t>& vec, const bool extended = true);
 
   void push_back(const uint8_t byte, const bool extended = true);
 
-  const uint8_t &operator[](const size_t index) const;
+  const uint8_t& operator[](const size_t index) const;
   const std::vector<uint8_t> range(const size_t index, const size_t len) const;
 
   size_t size() const;
@@ -53,7 +53,7 @@ class Sequence {
   void reduce();
 
   const std::string to_string() const;
-  const std::vector<uint8_t> &to_vector() const;
+  const std::vector<uint8_t>& to_vector() const;
 
  private:
   std::vector<uint8_t> m_seq;

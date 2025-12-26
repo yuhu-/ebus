@@ -26,7 +26,7 @@
 
 #include "Common.hpp"
 
-ebus::Sequence::Sequence(const Sequence &seq, const size_t index, size_t len) {
+ebus::Sequence::Sequence(const Sequence& seq, const size_t index, size_t len) {
   if (len == 0) len = seq.size() - index;
 
   m_seq.resize(len);
@@ -36,7 +36,7 @@ ebus::Sequence::Sequence(const Sequence &seq, const size_t index, size_t len) {
   m_extended = seq.m_extended;
 }
 
-void ebus::Sequence::assign(const std::vector<uint8_t> &vec,
+void ebus::Sequence::assign(const std::vector<uint8_t>& vec,
                             const bool extended) {
   clear();
   m_seq = vec;
@@ -48,7 +48,7 @@ void ebus::Sequence::push_back(const uint8_t byte, const bool extended) {
   m_extended = extended;
 }
 
-const uint8_t &ebus::Sequence::operator[](const size_t index) const {
+const uint8_t& ebus::Sequence::operator[](const size_t index) const {
   return m_seq.at(index);
 }
 
@@ -140,4 +140,4 @@ const std::string ebus::Sequence::to_string() const {
   return ostr.str();
 }
 
-const std::vector<uint8_t> &ebus::Sequence::to_vector() const { return m_seq; }
+const std::vector<uint8_t>& ebus::Sequence::to_vector() const { return m_seq; }
