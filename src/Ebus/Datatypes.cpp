@@ -54,7 +54,7 @@ const char* ebus::datatype_2_string(const ebus::DataType& datatype) {
 ebus::DataType ebus::string_2_datatype(const char* str) {
   DataType datatype = DataType::ERROR;
 
-  const std::map<ebus::DataType, const char*>::const_iterator it =
+  const auto it =
       std::find_if(DatatypeName.begin(), DatatypeName.end(),
                    [&str](const std::pair<DataType, const char*>& item) {
                      return strcmp(str, item.second) == 0;
