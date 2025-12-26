@@ -79,7 +79,8 @@
         "any": "cpp",
         "source_location": "cpp",
         "future": "cpp",
-        "ranges": "cpp"
+        "ranges": "cpp",
+        "bitset": "cpp"
     },
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
     "C_Cpp.autoAddFileAssociations": true
