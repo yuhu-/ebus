@@ -29,36 +29,36 @@
 
 class logger : public ebus::ILogger {
  public:
-  void error(const std::string &message) override {
+  void error(const std::string& message) override {
     std::cout << "ERROR:   " << message << std::endl;
   }
 
-  void warn(const std::string &message) override {
+  void warn(const std::string& message) override {
     std::cout << "WARN:    " << message << std::endl;
   }
 
-  void info(const std::string &message) override {
+  void info(const std::string& message) override {
     std::cout << "INFO:    " << message << std::endl;
   }
 
-  void debug(const std::string &message) override {
+  void debug(const std::string& message) override {
     // std::cout << "DEBUG:   " << message << std::endl;
   }
 
-  void trace(const std::string &message) override {
+  void trace(const std::string& message) override {
     // std::cout << "TRACE:   " << message << std::endl;
   }
 };
 
-ebus::Reaction process(const std::vector<uint8_t> &message,
-                       std::vector<uint8_t> &response) {
+ebus::Reaction process(const std::vector<uint8_t>& message,
+                       std::vector<uint8_t>& response) {
   std::cout << "process: " << ebus::EbusStack::to_string(message) << std::endl;
 
   return (ebus::Reaction::undefined);
 }
 
-void publish(const std::vector<uint8_t> &message,
-             const std::vector<uint8_t> &response) {
+void publish(const std::vector<uint8_t>& message,
+             const std::vector<uint8_t>& response) {
   std::cout << "publish: " << ebus::EbusStack::to_string(message) << " "
             << ebus::EbusStack::to_string(response) << std::endl;
 }

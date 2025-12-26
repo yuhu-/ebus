@@ -28,7 +28,7 @@ namespace ebus {
 
 class Device {
  public:
-  explicit Device(const std::string &device);
+  explicit Device(const std::string& device);
   ~Device();
 
   void open();
@@ -37,7 +37,7 @@ class Device {
   bool isOpen() const;
 
   void send(const uint8_t byte);
-  void recv(uint8_t &byte, const uint8_t sec, const uint16_t nsec);
+  void recv(uint8_t& byte, const uint8_t sec, const uint16_t nsec);
 
  private:
   const std::string m_device;

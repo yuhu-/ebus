@@ -20,6 +20,7 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 #include <experimental/propagate_const>
 #include <functional>
 #include <memory>
@@ -35,11 +36,11 @@ class ILogger {
  public:
   virtual ~ILogger() = default;
 
-  virtual void error(const std::string &message) = 0;
-  virtual void warn(const std::string &message) = 0;
-  virtual void info(const std::string &message) = 0;
-  virtual void debug(const std::string &message) = 0;
-  virtual void trace(const std::string &message) = 0;
+  virtual void error(const std::string& message) = 0;
+  virtual void warn(const std::string& message) = 0;
+  virtual void info(const std::string& message) = 0;
+  virtual void debug(const std::string& message) = 0;
+  virtual void trace(const std::string& message) = 0;
 };
 
 /**
@@ -63,19 +64,19 @@ class EbusStack {
    * @param address - own address byte
    * @param device - serial device string
    */
-  EbusStack(const uint8_t address, const std::string &device);
+  EbusStack(const uint8_t address, const std::string& device);
 
   /**
    * move functions
    */
-  EbusStack &operator=(EbusStack &&);
-  EbusStack(EbusStack &&);
+  EbusStack& operator=(EbusStack&&);
+  EbusStack(EbusStack&&);
 
   /**
    * copy functions
    */
-  EbusStack &operator=(const EbusStack &) = delete;
-  EbusStack(const EbusStack &) = delete;
+  EbusStack& operator=(const EbusStack&) = delete;
+  EbusStack(const EbusStack&) = delete;
 
   /**
    * destructor
@@ -107,8 +108,8 @@ class EbusStack {
    *
    * @return error number if an error occurred
    */
-  int transmit(const std::vector<uint8_t> &message,
-               std::vector<uint8_t> &response);
+  int transmit(const std::vector<uint8_t>& message,
+               std::vector<uint8_t>& response);
 
   /**
    * error description
@@ -131,8 +132,8 @@ class EbusStack {
    * @param process callback function
    */
   void register_process(
-      std::function<Reaction(const std::vector<uint8_t> &message,
-                             std::vector<uint8_t> &response)>
+      std::function<Reaction(const std::vector<uint8_t>& message,
+                             std::vector<uint8_t>& response)>
           process);
 
   /**
@@ -142,8 +143,8 @@ class EbusStack {
    * @param publish callback function
    */
   void register_publish(
-      std::function<void(const std::vector<uint8_t> &message,
-                         const std::vector<uint8_t> &response)>
+      std::function<void(const std::vector<uint8_t>& message,
+                         const std::vector<uint8_t>& response)>
           publish);
 
   /**
@@ -151,21 +152,21 @@ class EbusStack {
    *
    * @param rawdata callback function
    */
-  void register_rawdata(std::function<void(const uint8_t &byte)> rawdata);
+  void register_rawdata(std::function<void(const uint8_t& byte)> rawdata);
 
   /**
    * timeout for bus access
    *
    * @param access_timeout [default: 4400 us]
    */
-  void set_access_timeout(const uint16_t &access_timeout);
+  void set_access_timeout(const uint16_t& access_timeout);
 
   /**
    * number of skipped characters after a successful ebus access
    *
    * @param lock_counter_max [default: 5 max: 25]
    */
-  void set_lock_counter_max(const uint8_t &lock_counter_max);
+  void set_lock_counter_max(const uint8_t& lock_counter_max);
 
   /**
    * number of attempts to open the ebus device (one second pause between two
@@ -173,7 +174,7 @@ class EbusStack {
    *
    * @param open_counter_max [default: 10]
    */
-  void set_open_counter_max(const uint8_t &open_counter_max);
+  void set_open_counter_max(const uint8_t& open_counter_max);
 
   /**
    * returns a part of given byte vector
@@ -184,7 +185,7 @@ class EbusStack {
    *
    * @return byte vector
    */
-  static const std::vector<uint8_t> range(const std::vector<uint8_t> &vec,
+  static const std::vector<uint8_t> range(const std::vector<uint8_t>& vec,
                                           const size_t index, const size_t len);
 
   /**
@@ -194,7 +195,7 @@ class EbusStack {
    *
    * @return byte vector
    */
-  static const std::vector<uint8_t> to_vector(const std::string &str);
+  static const std::vector<uint8_t> to_vector(const std::string& str);
 
   /**
    * convert a given byte vector into a string
@@ -203,7 +204,7 @@ class EbusStack {
    *
    * @return string
    */
-  static const std::string to_string(const std::vector<uint8_t> &vec);
+  static const std::string to_string(const std::vector<uint8_t>& vec);
 
  private:
   class EbusImpl;

@@ -25,7 +25,7 @@ namespace ebus {
 
 class runtime_warning : public std::runtime_error {
  public:
-  explicit runtime_warning(const char *what) : std::runtime_error(what) {}
+  explicit runtime_warning(const char* what) : std::runtime_error(what) {}
 };
 
 }  // namespace ebus

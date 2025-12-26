@@ -28,7 +28,7 @@
 
 #include "runtime_warning.h"
 
-ebus::Device::Device(const std::string &device) : m_device(device) {}
+ebus::Device::Device(const std::string& device) : m_device(device) {}
 
 ebus::Device::~Device() { close(); }
 
@@ -99,7 +99,7 @@ void ebus::Device::send(const uint8_t byte) {
     throw std::runtime_error("An device error occurred while sending data");
 }
 
-void ebus::Device::recv(uint8_t &byte, const uint8_t sec, const uint16_t nsec) {
+void ebus::Device::recv(uint8_t& byte, const uint8_t sec, const uint16_t nsec) {
   isValid();
 
   if (sec > 0 || nsec > 0) {
