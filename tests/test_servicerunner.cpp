@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Roland Jax
+ * Copyright (C) 2025-2026 Roland Jax
  *
  * This file is part of ebus.
  *
@@ -176,7 +176,7 @@ void run_test(const TestCase &tc) {
   ebus::Sequence seq;
   seq.assign(ebus::to_vector(tmp));
 
-  handler.enqueueActiveMessage(ebus::to_vector(tc.send_string));
+  handler.sendActiveMessage(ebus::to_vector(tc.send_string));
 
   // Simulate ISR: pushes bytes into the byteQueue asynchronously
   // 2400 baud => 1 / 2400 = 416,67 microseconds per bit

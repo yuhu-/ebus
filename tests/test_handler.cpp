@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2025 Roland Jax
+ * Copyright (C) 2023-2026 Roland Jax
  *
  * This file is part of ebus.
  *
@@ -216,7 +216,7 @@ void run_test(const TestCase &tc) {
   seq.assign(ebus::to_vector(tmp));
 
   if (tc.send_string.size() > 0)
-    handler.enqueueActiveMessage(ebus::to_vector(tc.send_string));
+    handler.sendActiveMessage(ebus::to_vector(tc.send_string));
 
   for (size_t i = 0; i < seq.size(); i++) {
     switch (handler.getState()) {

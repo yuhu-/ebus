@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2025 Roland Jax
+ * Copyright (C) 2023-2026 Roland Jax
  *
  * This file is part of ebus.
  *
@@ -84,10 +84,8 @@ void ebus::Handler::setErrorCallback(ErrorCallback callback) {
 
 ebus::HandlerState ebus::Handler::getState() const { return state; }
 
-bool ebus::Handler::enqueueActiveMessage(const std::vector<uint8_t>& message) {
-  if (message.empty()) return false;
-
-  activeMessage = false;
+bool ebus::Handler::sendActiveMessage(const std::vector<uint8_t>& message) {
+  if (message.empty() || activeMessage) return false;
 
   activeTelegram.createMaster(sourceAddress, message);
   if (activeTelegram.getMasterState() == SequenceState::seq_ok) {
@@ -100,6 +98,8 @@ bool ebus::Handler::enqueueActiveMessage(const std::vector<uint8_t>& message) {
 
   return activeMessage;
 }
+
+bool ebus::Handler::isActiveMessagePending() const { return activeMessage; }
 
 void ebus::Handler::reset() {
   state = HandlerState::passiveReceiveMaster;

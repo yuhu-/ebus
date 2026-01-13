@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2025 Roland Jax
+ * Copyright (C) 2023-2026 Roland Jax
  *
  * This file is part of ebus.
  *
@@ -177,7 +177,8 @@ class Handler {
 
   HandlerState getState() const;
 
-  bool enqueueActiveMessage(const std::vector<uint8_t>& message);
+  bool sendActiveMessage(const std::vector<uint8_t>& message);
+  bool isActiveMessagePending() const;
 
   void reset();
 
