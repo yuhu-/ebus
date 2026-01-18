@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Roland Jax
+ * Copyright (C) 2025-2026 Roland Jax
  *
  * This file is part of ebus.
  *
@@ -104,11 +104,11 @@ ebus::RequestResult ebus::Request::run(const uint8_t& byte) {
 }
 
 void ebus::Request::microsLastDelay(const int64_t& delay) {
-  busIsrDelay.add(delay);
+  busIsrDelay.addDuration(delay);
 }
 
 void ebus::Request::microsLastWindow(const int64_t& window) {
-  busIsrWindow.add(window);
+  busIsrWindow.addDuration(window);
 }
 
 void ebus::Request::resetCounter() {
@@ -127,11 +127,14 @@ void ebus::Request::resetTiming() {
 }
 
 const ebus::Request::Timing& ebus::Request::getTiming() {
-#define X(name)                    \
-  timing.name##Last = name.last;   \
-  timing.name##Count = name.count; \
-  timing.name##Mean = name.mean;   \
-  timing.name##StdDev = name.stddev();
+#define X(name)                          \
+  {                                      \
+    auto values = name.getValues();            \
+    timing.name##Last = values.last;     \
+    timing.name##Count = values.count;   \
+    timing.name##Mean = values.mean;     \
+    timing.name##StdDev = values.stddev; \
+  }
   EBUS_REQUEST_TIMING_LIST
 #undef X
   return timing;

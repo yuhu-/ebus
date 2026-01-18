@@ -29,12 +29,8 @@ ebus::Handler::Handler(const uint8_t& address, Bus* bus, Request* request)
   setSourceAddress(address);
 
   request->setHandlerBusRequestedCallback([this]() {
-    if (activeMessage) {
-      if (state != HandlerState::requestBus) {
-        state = HandlerState::requestBus;
-        lastState = HandlerState::requestBus;
-      }
-    }
+    if (activeMessage && state != HandlerState::requestBus)
+      state = HandlerState::requestBus;
   });
 
   request->setStartBitCallback([this]() {
@@ -108,13 +104,33 @@ void ebus::Handler::reset() {
 }
 
 void ebus::Handler::run(const uint8_t& byte) {
-  calculateDuration(byte);
+  // record timing
+  if (byte != sym_syn) {
+    if (activeMessage) {
+      if (measureSync)
+        activeFirst.addDurationWithTime(lastPoint);
+      else
+        activeData.addDurationWithTime(lastPoint);
+    } else {
+      if (measureSync)
+        passiveFirst.addDurationWithTime(lastPoint);
+      else
+        passiveData.addDurationWithTime(lastPoint);
+    }
+    measureSync = false;
+  } else {
+    if (measureSync) sync.addDurationWithTime(lastPoint);
+    measureSync = true;
+  }
+
+  lastPoint = std::chrono::steady_clock::now();
 
   size_t idx = static_cast<size_t>(state);
-  if (idx < stateHandlers.size() && stateHandlers[idx])
-    (this->*stateHandlers[idx])(byte);
-
-  calculateDurationFsmState(byte);
+  if (idx < stateHandlers.size() && stateHandlers[idx]) {
+    (this->*stateHandlers[idx])(byte);  // handle byte
+    if (byte != sym_syn || idx == static_cast<size_t>(HandlerState::releaseBus))
+      handlerTiming[static_cast<size_t>(idx)].addDurationWithTime(lastPoint);
+  }
 }
 
 void ebus::Handler::resetCounter() {
@@ -167,11 +183,14 @@ void ebus::Handler::resetTiming() {
 }
 
 const ebus::Handler::Timing& ebus::Handler::getTiming() {
-#define X(name)                    \
-  timing.name##Last = name.last;   \
-  timing.name##Count = name.count; \
-  timing.name##Mean = name.mean;   \
-  timing.name##StdDev = name.stddev();
+#define X(name)                          \
+  {                                      \
+    auto values = name.getValues();      \
+    timing.name##Last = values.last;     \
+    timing.name##Count = values.count;   \
+    timing.name##Mean = values.mean;     \
+    timing.name##StdDev = values.stddev; \
+  }
   EBUS_HANDLER_TIMING_LIST
 #undef X
   return timing;
@@ -184,10 +203,10 @@ void ebus::Handler::resetStateTiming() {
 const ebus::Handler::StateTiming ebus::Handler::getStateTiming() const {
   StateTiming stateTiming;
   for (size_t i = 0; i < handlerTiming.size(); ++i) {
+    auto values = handlerTiming[i].getValues();
     stateTiming.timing[static_cast<HandlerState>(i)] = {
         std::string(getHandlerStateText(static_cast<HandlerState>(i))),
-        handlerTiming[i].last, handlerTiming[i].mean, handlerTiming[i].stddev(),
-        handlerTiming[i].count};
+        values.last, values.count, values.mean, values.stddev};
   }
   return stateTiming;
 }
@@ -629,78 +648,20 @@ void ebus::Handler::callActiveReset() {
   activeSlaveRepeated = false;
 }
 
-void ebus::Handler::calculateDuration(const uint8_t& byte) {
-  std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
-  int64_t duration =
-      std::chrono::duration_cast<std::chrono::microseconds>(now - lastPoint)
-          .count();
-
-  if (byte != sym_syn) {
-    if (activeMessage) {
-      if (measureSync)
-        activeFirst.add(duration);
-      else
-        activeData.add(duration);
-    } else {
-      if (measureSync)
-        passiveFirst.add(duration);
-      else
-        passiveData.add(duration);
-    }
-    measureSync = false;
-  } else {
-    if (measureSync) sync.add(duration);
-    measureSync = true;
-  }
-
-  lastPoint = now;
-}
-
-void ebus::Handler::calculateDurationFsmState(const uint8_t& byte) {
-  if (byte != sym_syn) {
-    std::chrono::steady_clock::time_point now =
-        std::chrono::steady_clock::now();
-    int64_t duration =
-        std::chrono::duration_cast<std::chrono::microseconds>(now - lastPoint)
-            .count();
-
-    handlerTiming[static_cast<size_t>(lastState)].add(duration);
-    lastState = state;
-  }
-}
-
 void ebus::Handler::callWrite(const uint8_t& byte) {
   if (bus) {
-    std::chrono::steady_clock::time_point t_start =
-        std::chrono::steady_clock::now();
-
+    write.markBegin();
     bus->writeByte(byte);
-
-    std::chrono::steady_clock::time_point t_end =
-        std::chrono::steady_clock::now();
-    int64_t duration =
-        std::chrono::duration_cast<std::chrono::microseconds>(t_end - t_start)
-            .count();
-
-    write.add(duration);
+    write.markEnd();
   }
 }
 
 void ebus::Handler::callReactiveMasterSlave(const std::vector<uint8_t>& master,
                                             std::vector<uint8_t>* const slave) {
   if (reactiveMasterSlaveCallback) {
-    std::chrono::steady_clock::time_point t_start =
-        std::chrono::steady_clock::now();
-
+    callbackReactive.markBegin();
     reactiveMasterSlaveCallback(master, slave);
-
-    std::chrono::steady_clock::time_point t_end =
-        std::chrono::steady_clock::now();
-    int64_t duration =
-        std::chrono::duration_cast<std::chrono::microseconds>(t_end - t_start)
-            .count();
-
-    callbackReactive.add(duration);
+    callbackReactive.markEnd();
   }
 }
 
@@ -709,18 +670,9 @@ void ebus::Handler::callOnTelegram(const MessageType& messageType,
                                    const std::vector<uint8_t>& master,
                                    const std::vector<uint8_t>& slave) {
   if (telegramCallback) {
-    std::chrono::steady_clock::time_point t_start =
-        std::chrono::steady_clock::now();
-
+    callbackTelegram.markBegin();
     telegramCallback(messageType, telegramType, master, slave);
-
-    std::chrono::steady_clock::time_point t_end =
-        std::chrono::steady_clock::now();
-    int64_t duration =
-        std::chrono::duration_cast<std::chrono::microseconds>(t_end - t_start)
-            .count();
-
-    callbackTelegram.add(duration);
+    callbackTelegram.markEnd();
   }
 }
 
@@ -728,17 +680,8 @@ void ebus::Handler::callOnError(const std::string& error,
                                 const std::vector<uint8_t>& master,
                                 const std::vector<uint8_t>& slave) {
   if (errorCallback) {
-    std::chrono::steady_clock::time_point t_start =
-        std::chrono::steady_clock::now();
-
+    callbackError.markBegin();
     errorCallback(error, master, slave);
-
-    std::chrono::steady_clock::time_point t_end =
-        std::chrono::steady_clock::now();
-    int64_t duration =
-        std::chrono::duration_cast<std::chrono::microseconds>(t_end - t_start)
-            .count();
-
-    callbackError.add(duration);
+    callbackError.markEnd();
   }
 }

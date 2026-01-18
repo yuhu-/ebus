@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Roland Jax
+ * Copyright (C) 2025-2026 Roland Jax
  *
  * This file is part of ebus.
  *
@@ -27,7 +27,7 @@
 #include <cstdint>
 #include <functional>
 
-#include "Statistic.hpp"
+#include "TimingStats.hpp"
 
 namespace ebus {
 

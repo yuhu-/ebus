@@ -24,7 +24,6 @@
 #pragma once
 
 #include <array>
-#include <chrono>
 #include <functional>
 #include <map>
 #include <string>
@@ -33,8 +32,8 @@
 #include "Bus.hpp"
 #include "Queue.hpp"
 #include "Request.hpp"
-#include "Statistic.hpp"
 #include "Telegram.hpp"
+#include "TimingStats.hpp"
 
 namespace ebus {
 
@@ -158,9 +157,9 @@ class Handler {
     struct Timing {
       std::string name;
       double last;
+      uint64_t count;
       double mean;
       double stddev;
-      uint64_t count;
     };
     std::map<HandlerState, Timing> timing;
   };
@@ -273,9 +272,6 @@ class Handler {
 
   void callPassiveReset();
   void callActiveReset();
-
-  void calculateDuration(const uint8_t& byte);
-  void calculateDurationFsmState(const uint8_t& byte);
 
   void callWrite(const uint8_t& byte);
 
