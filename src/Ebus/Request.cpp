@@ -129,7 +129,7 @@ void ebus::Request::resetTiming() {
 const ebus::Request::Timing& ebus::Request::getTiming() {
 #define X(name)                          \
   {                                      \
-    auto values = name.getValues();            \
+    auto values = name.getValues();      \
     timing.name##Last = values.last;     \
     timing.name##Count = values.count;   \
     timing.name##Mean = values.mean;     \
