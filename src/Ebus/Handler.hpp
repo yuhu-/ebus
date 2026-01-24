@@ -80,6 +80,9 @@ static const char* getHandlerStateText(HandlerState state) {
 
 enum class MessageType { undefined, active, passive, reactive };
 
+using BusRequestWonCallback = std::function<void()>;
+using BusRequestLostCallback = std::function<void()>;
+
 using ReactiveMasterSlaveCallback = std::function<void(
     const std::vector<uint8_t>& master, std::vector<uint8_t>* const slave)>;
 
@@ -130,6 +133,8 @@ using ErrorCallback = std::function<void(const std::string& errorMessage,
   X(passiveData)                 \
   X(activeFirst)                 \
   X(activeData)                  \
+  X(callbackWon)                 \
+  X(callbackLost)                \
   X(callbackReactive)            \
   X(callbackTelegram)            \
   X(callbackError)
@@ -170,6 +175,8 @@ class Handler {
   uint8_t getSourceAddress() const;
   uint8_t getTargetAddress() const;
 
+  void setBusRequestWonCallback(BusRequestWonCallback callback);
+  void setBusRequestLostCallback(BusRequestLostCallback callback);
   void setReactiveMasterSlaveCallback(ReactiveMasterSlaveCallback callback);
   void setTelegramCallback(TelegramCallback callback);
   void setErrorCallback(ErrorCallback callback);
@@ -199,6 +206,8 @@ class Handler {
   uint8_t sourceAddress = 0;
   uint8_t targetAddress = 0;
 
+  BusRequestWonCallback busRequestWonCallback = nullptr;
+  BusRequestLostCallback busRequestLostCallback = nullptr;
   ReactiveMasterSlaveCallback reactiveMasterSlaveCallback = nullptr;
   TelegramCallback telegramCallback = nullptr;
   ErrorCallback errorCallback = nullptr;
@@ -223,6 +232,8 @@ class Handler {
   TimingStats passiveData;
   TimingStats activeFirst;
   TimingStats activeData;
+  TimingStats callbackWon;
+  TimingStats callbackLost;
   TimingStats callbackReactive;
   TimingStats callbackTelegram;
   TimingStats callbackError;
@@ -275,8 +286,11 @@ class Handler {
 
   void callWrite(const uint8_t& byte);
 
-  void callReactiveMasterSlave(const std::vector<uint8_t>& master,
-                               std::vector<uint8_t>* const slave);
+  void callOnBusRequestWon();
+  void callOnBusRequestLost();
+
+  void callOnReactiveMasterSlave(const std::vector<uint8_t>& master,
+                                 std::vector<uint8_t>* const slave);
 
   void callOnTelegram(const MessageType& messageType,
                       const TelegramType& telegramType,

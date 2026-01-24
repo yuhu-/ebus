@@ -40,8 +40,8 @@ struct TestCase {
   std::string send_string = "";
 };
 
-void printByte(const std::string &prefix, const uint8_t &byte,
-               const std::string &postfix) {
+void printByte(const std::string& prefix, const uint8_t& byte,
+               const std::string& postfix) {
   std::cout << prefix << ebus::to_string(byte) << " " << postfix << std::endl;
 }
 
@@ -49,12 +49,16 @@ ebus::Bus bus;
 ebus::Request request;
 ebus::Handler handler(ebus::DEFAULT_ADDRESS, &bus, &request);
 
-void readFunction(const uint8_t &byte) {
+void readFunction(const uint8_t& byte) {
   std::cout << "->  read: " << ebus::to_string(byte) << std::endl;
 }
 
-void reactiveMasterSlaveCallback(const std::vector<uint8_t> &master,
-                                 std::vector<uint8_t> *const slave) {
+void busRequestWonCallback() { std::cout << " request: won" << std::endl; }
+
+void busRequestLostCallback() { std::cout << " request: lost" << std::endl; }
+
+void reactiveMasterSlaveCallback(const std::vector<uint8_t>& master,
+                                 std::vector<uint8_t>* const slave) {
   std::vector<uint8_t> search;
   search = {0x07, 0x04};  // 0008070400
   if (ebus::contains(master, search))
@@ -63,14 +67,14 @@ void reactiveMasterSlaveCallback(const std::vector<uint8_t> &master,
   if (ebus::contains(master, search))
     *slave = ebus::to_vector("0ab5504d533030010743");  // defect
 
-  std::cout << "callback: " << ebus::to_string(master) << " "
+  std::cout << "reactive: " << ebus::to_string(master) << " "
             << ebus::to_string(*slave) << std::endl;
 }
 
-void telegramCallback(const ebus::MessageType &messageType,
-                      const ebus::TelegramType &telegramType,
-                      const std::vector<uint8_t> &master,
-                      const std::vector<uint8_t> &slave) {
+void telegramCallback(const ebus::MessageType& messageType,
+                      const ebus::TelegramType& telegramType,
+                      const std::vector<uint8_t>& master,
+                      const std::vector<uint8_t>& slave) {
   switch (telegramType) {
     case ebus::TelegramType::broadcast:
       std::cout << "    type: broadcast" << std::endl;
@@ -97,9 +101,8 @@ void telegramCallback(const ebus::MessageType &messageType,
             << std::endl;
 }
 
-void onErrorCallback(const std::string &error,
-                     const std::vector<uint8_t> &master,
-                     const std::vector<uint8_t> &slave) {
+void errorCallback(const std::string& error, const std::vector<uint8_t>& master,
+                   const std::vector<uint8_t>& slave) {
   std::cout << "   error: " << error << " master '" << ebus::to_string(master)
             << "' slave '" << ebus::to_string(slave) << "'" << std::endl;
 }
@@ -204,7 +207,7 @@ void printCounters() {
             << std::endl;
 }
 
-void run_test(const TestCase &tc) {
+void run_test(const TestCase& tc) {
   std::cout << std::endl
             << "=== Test: " << tc.description << " ===" << std::endl;
 
@@ -268,57 +271,47 @@ std::vector<TestCase> test_cases = {
   {false, ebus::MessageType::passive, 0x33, "passive BC: normal", "10fe07000970160443183105052592"},
   {false, ebus::MessageType::passive, 0x33, "passive MS: slave CRC byte is invalid", "1008b5130304cd017f000acd01000000000100010000"},
 
-  // {false, ebus::MessageType::reactive, 0x33, "reactive MS: Slave NAK/ACK", "0038070400ab000ab5504d5330300107430246ff0ab5504d533030010743024600"},
   {false, ebus::MessageType::reactive, 0x33, "reactive MS: Slave NAK/ACK", "0038070400abff00"},
-  // {false, ebus::MessageType::reactive, 0x33, "reactive MS: Slave NAK/NAK", "0038070400ab000ab5504d5330300107430246ff0ab5504d5330300107430246ff"},
   {false, ebus::MessageType::reactive, 0x33, "reactive MS: Slave NAK/NAK", "0038070400abffff"},
-  // {false, ebus::MessageType::reactive, 0x33, "reactive MS: Master defect/correct", "0038070400acff0038070400ab000ab5504d533030010743024600"},
   {false, ebus::MessageType::reactive, 0x33, "reactive MS: Master defect/correct", "0038070400ac0038070400ab00"},
-  // {false, ebus::MessageType::reactive, 0x33, "reactive MS: Master defect/defect", "0038070400acff0038070400acff"},
   {false, ebus::MessageType::reactive, 0x33, "reactive MS: Master defect/defect", "0038070400ff0038070400ac"},
-  // {false, ebus::MessageType::reactive, 0x33, "reactive MS: Slave defect (callback)", "003807050030aa"},
   {false, ebus::MessageType::reactive, 0x33, "reactive MS: Slave defect (callback)", "003807050030"},
   {false, ebus::MessageType::reactive, 0x33, "reactive MM: Normal", "003307040014"},
   {false, ebus::MessageType::reactive, 0x33, "reactive BC: Normal", "00fe0704003b"},
 
-  // {false, ebus::MessageType::active, 0x33, "active BC: Request Bus - Normal", "33feb5050427002d00", "feb5050427002d00"},
   {false, ebus::MessageType::active, 0x33, "active BC: Request Bus - Normal", "33", "feb5050427002d00"},
   {false, ebus::MessageType::active, 0x33, "active BC: Request Bus - Priority lost", "01feb5050427002d007b", "feb5050427002d00"},
   {false, ebus::MessageType::active, 0x33, "active BC: Request Bus - Priority lost/wrong byte", "01ab", "feb5050427002d00"},
-  // {false, ebus::MessageType::active, 0x33, "active BC: Request Bus - Priority fit/won", "73aa33feb5050427002d00", "feb5050427002d00"},
   {false, ebus::MessageType::active, 0x33, "active BC: Request Bus - Priority fit/won", "73aa33", "feb5050427002d00"},
   {false, ebus::MessageType::active, 0x33, "active BC: Request Bus - Priority fit/lost", "73aa13", "feb5050427002d00"},
   {false, ebus::MessageType::active, 0x33, "active BC: Request Bus - Priority retry/error", "73a0", "feb5050427002d00"},
-  // {false, ebus::MessageType::active, 0x33, "active MS: Normal", "3352b509030d46003600013fa4", "52b509030d4600"},
   {false, ebus::MessageType::active, 0x33, "active MS: Normal", "3300013fa4", "52b509030d4600"},
-// {false, ebus::MessageType::active, 0x33, "active MS: Master NAK/ACK - Slave CRC wrong/correct", "3352b509030d460036ff3352b509030d46003600013fa3ff013fa4", "52b509030d4600"},
   {false, ebus::MessageType::active, 0x33, "active MS: Master NAK/ACK - Slave CRC wrong/correct", "33ff00013fa3013fa4", "52b509030d4600"},
-  // {false, ebus::MessageType::active, 0x33, "active MS: Master NAK/ACK - Slave CRC wrong/wrong", "3352b509030d460036ff3352b509030d46003600013fa3ff013fa3ff", "52b509030d4600"},
   {false, ebus::MessageType::active, 0x33, "active MS: Master NAK/ACK - Slave CRC wrong/wrong", "3300013fa3013fa3", "52b509030d4600"},
-  // {false, ebus::MessageType::active, 0x33, "active MS: Master NAK/NAK", "3352b509030d460036ff3352b509030d460036ff", "52b509030d4600"},
   {false, ebus::MessageType::active, 0x33, "active MS: Master NAK/NAK", "33ffff", "52b509030d4600"},
-  // {false, ebus::MessageType::active, 0x33, "active MM: Master NAK/ACK", "3310b57900fbff3310b57900fb00", "10b57900"},
   {false, ebus::MessageType::active, 0x33, "active MM: Master NAK/ACK", "33ff00", "10b57900"},
   {false, ebus::MessageType::active, 0x30, "active BC: Request Bus - Priority lost and Sub lost", "1052b50401314b000200002c00", "feb5050427002d00"},
   {false, ebus::MessageType::active, 0x30, "active MS: Request Bus - Priority lost to 0x10", "1052b50401314b000200002c00","feb5050427002d00"}
 };
 // clang-format on
 
-void enable_group(const ebus::MessageType &messageType) {
-  for (TestCase &tc : test_cases)
+void enable_group(const ebus::MessageType& messageType) {
+  for (TestCase& tc : test_cases)
     if (tc.messageType == messageType) tc.enabled = true;
 }
 
 int main() {
+  handler.setBusRequestWonCallback(busRequestWonCallback);
+  handler.setBusRequestLostCallback(busRequestLostCallback);
   handler.setReactiveMasterSlaveCallback(reactiveMasterSlaveCallback);
   handler.setTelegramCallback(telegramCallback);
-  handler.setErrorCallback(onErrorCallback);
+  handler.setErrorCallback(errorCallback);
 
   enable_group(ebus::MessageType::passive);
   enable_group(ebus::MessageType::reactive);
   enable_group(ebus::MessageType::active);
 
-  for (const TestCase &tc : test_cases)
+  for (const TestCase& tc : test_cases)
     if (tc.enabled) run_test(tc);
 
   printCounters();

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Roland Jax
+ * Copyright (C) 2025-2026 Roland Jax
  *
  * This file is part of ebus.
  *
@@ -35,7 +35,7 @@ struct TestCase {
 ebus::Request request;
 
 // Helper to run a test with a given hex string and description
-void run_test(const TestCase &tc) {
+void run_test(const TestCase& tc) {
   std::cout << std::endl
             << "=== Test: " << tc.description << " ===" << std::endl;
 
@@ -88,7 +88,7 @@ void run_test(const TestCase &tc) {
 
 void printCounter() {
   ebus::Request::Counter counter = request.getCounter();
-  
+
   std::cout << std::endl;
   std::cout << "requestsStartBit:    " << counter.requestsStartBit << std::endl;
   std::cout << "requestsFirstSyn:    " << counter.requestsFirstSyn << std::endl;
@@ -126,7 +126,7 @@ std::vector<TestCase> test_cases = {
 // clang-format on
 
 int main() {
-  for (const TestCase &tc : test_cases)
+  for (const TestCase& tc : test_cases)
     if (tc.enabled) run_test(tc);
 
   printCounter();

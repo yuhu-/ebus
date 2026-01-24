@@ -46,7 +46,7 @@ struct TestCase {
 
 std::atomic<bool> running(true);
 
-enum class CallbackType { telegram, error };
+enum class CallbackType { won, lost, telegram, error };
 
 struct CallbackEvent {
   CallbackType type;
@@ -55,37 +55,24 @@ struct CallbackEvent {
     ebus::TelegramType telegramType;
     std::vector<uint8_t> master;
     std::vector<uint8_t> slave;
-    std::string error;
+    std::string message;
   } data;
 };
 
 using EventQueue = ebus::Queue<CallbackEvent>;
 
-void reactiveMasterSlaveCallback(const std::vector<uint8_t> &master,
-                                 std::vector<uint8_t> *const slave) {
-  std::vector<uint8_t> search;
-  search = {0x07, 0x04};  // 0008070400
-  if (ebus::contains(master, search))
-    *slave = ebus::to_vector("0ab5504d53303001074302");
-  search = {0x07, 0x05};  // 0008070500
-  if (ebus::contains(master, search))
-    *slave = ebus::to_vector("0ab5504d533030010743");  // defect
-
-  std::cout << "reactive: " << ebus::to_string(master) << " "
-            << ebus::to_string(*slave) << std::endl;
-}
-
-void callbackRunnerTask(EventQueue *evenQueue, std::atomic<bool> &running) {
+void handleEventRunner(EventQueue* evenQueue, std::atomic<bool>& running) {
   CallbackEvent event;
   while (running) {
     if (evenQueue && evenQueue->pop(event)) {
       switch (event.type) {
-        case CallbackType::error:
-          std::cout << "   error: " << event.data.error << " : master '"
-                    << ebus::to_string(event.data.master) << "' slave '"
-                    << ebus::to_string(event.data.slave) << "'" << std::endl;
-          break;
-        case CallbackType::telegram:
+        case CallbackType::won: {
+          std::cout << " request: won" << std::endl;
+        } break;
+        case CallbackType::lost: {
+          std::cout << " request: lost" << std::endl;
+        } break;
+        case CallbackType::telegram: {
           switch (event.data.telegramType) {
             case ebus::TelegramType::broadcast:
               std::cout << "    type: broadcast" << std::endl;
@@ -110,31 +97,63 @@ void callbackRunnerTask(EventQueue *evenQueue, std::atomic<bool> &running) {
           }
           std::cout << ebus::to_string(event.data.master) << " "
                     << ebus::to_string(event.data.slave) << std::endl;
-          break;
+        } break;
+        case CallbackType::error: {
+          std::cout << "   error: " << event.data.message << " : master '"
+                    << ebus::to_string(event.data.master) << "' slave '"
+                    << ebus::to_string(event.data.slave) << "'" << std::endl;
+        } break;
       }
     }
   }
 }
 
+void reactiveMasterSlaveCallback(const std::vector<uint8_t>& master,
+                                 std::vector<uint8_t>* const slave) {
+  std::vector<uint8_t> search;
+  search = {0x07, 0x04};  // 0008070400
+  if (ebus::contains(master, search))
+    *slave = ebus::to_vector("0ab5504d53303001074302");
+  search = {0x07, 0x05};  // 0008070500
+  if (ebus::contains(master, search))
+    *slave = ebus::to_vector("0ab5504d533030010743");  // defect
+
+  std::cout << "reactive: " << ebus::to_string(master) << " "
+            << ebus::to_string(*slave) << std::endl;
+}
+
 // Helper to run a test with a given hex string and description
-void run_test(const TestCase &tc) {
+void run_test(const TestCase& tc) {
   std::cout << std::endl
             << "=== Test: " << tc.description << " ===" << std::endl;
 
+  running = true;
   ebus::Bus bus;
   ebus::Request request;
   ebus::Queue<uint8_t> byteQueue(32);
   ebus::Handler handler(tc.address, &bus, &request);
 
-  handler.setReactiveMasterSlaveCallback(reactiveMasterSlaveCallback);
-
   ebus::Queue<CallbackEvent> eventQueue(8);
 
+  handler.setBusRequestWonCallback([&eventQueue]() {
+    CallbackEvent event;
+    event.type = CallbackType::won;
+    eventQueue.try_push(event);
+  });
+
+  handler.setBusRequestLostCallback([&eventQueue]() {
+    CallbackEvent event;
+    event.type = CallbackType::lost;
+    eventQueue.try_push(event);
+  });
+
+  handler.setReactiveMasterSlaveCallback(reactiveMasterSlaveCallback);
+
   handler.setTelegramCallback(
-      [&eventQueue](const ebus::MessageType &messageType,
-                    const ebus::TelegramType &telegramType,
-                    const std::vector<uint8_t> &master,
-                    const std::vector<uint8_t> &slave) {
+      [&eventQueue](const ebus::MessageType& messageType,
+                    const ebus::TelegramType& telegramType,
+                    const std::vector<uint8_t>& master,
+                    const std::vector<uint8_t>& slave) {
         CallbackEvent event;
         event.type = CallbackType::telegram;
         event.data.messageType = messageType;
@@ -144,31 +163,31 @@ void run_test(const TestCase &tc) {
         eventQueue.try_push(event);
       });
 
-  handler.setErrorCallback([&eventQueue](const std::string &error,
-                                         const std::vector<uint8_t> &master,
-                                         const std::vector<uint8_t> &slave) {
+  handler.setErrorCallback([&eventQueue](const std::string& error,
+                                         const std::vector<uint8_t>& master,
+                                         const std::vector<uint8_t>& slave) {
     CallbackEvent event;
     event.type = CallbackType::error;
-    event.data.error = error;
+    event.data.message = error;
     event.data.master = master;
     event.data.slave = slave;
     eventQueue.try_push(event);
   });
 
-  // if (tc.messageType == ebus::MessageType::active)
-  //   request.requestBus(tc.address);
+  if (tc.messageType == ebus::MessageType::active)
+    request.requestBus(tc.address);
 
   ebus::ServiceRunner serviceRunner(request, handler, byteQueue);
 
   // Register a ByteListener that logs every byte processed by the serviceRunner
-  serviceRunner.addByteListener([](const uint8_t &byte) {
+  serviceRunner.addByteListener([](const uint8_t& byte) {
     std::cout << "->  read: " << ebus::to_string(byte) << std::endl;
   });
 
   serviceRunner.enableTesting();
   serviceRunner.start();
 
-  std::thread handlerEventTask(callbackRunnerTask, &eventQueue,
+  std::thread handlerEventTask(handleEventRunner, &eventQueue,
                                std::ref(running));
 
   // Prepare test sequence from the provided hex string
@@ -253,12 +272,11 @@ std::vector<TestCase> test_cases = {
     {false, ebus::MessageType::active, 0x33, "active MM: Master NAK/ACK", "3310b57900fbff3310b57900fb00", "10b57900"},
     {false, ebus::MessageType::active, 0x30, "active BC: Request Bus - Priority lost and Sub lost", "1052b50401314b000200002c00", "feb5050427002d00"},
     {false, ebus::MessageType::active, 0x30, "active MS: Request Bus - Priority lost to 0x10", "1052b50401314b000200002c00","feb5050427002d00"}
-
 };
 // clang-format on
 
-void enable_group(const ebus::MessageType &messageType) {
-  for (TestCase &tc : test_cases)
+void enable_group(const ebus::MessageType& messageType) {
+  for (TestCase& tc : test_cases)
     if (tc.messageType == messageType) tc.enabled = true;
 }
 
@@ -267,7 +285,7 @@ int main() {
   enable_group(ebus::MessageType::reactive);
   enable_group(ebus::MessageType::active);
 
-  for (const TestCase &tc : test_cases)
+  for (const TestCase& tc : test_cases)
     if (tc.enabled) run_test(tc);
 
   return EXIT_SUCCESS;

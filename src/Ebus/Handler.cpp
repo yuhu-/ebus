@@ -65,6 +65,14 @@ uint8_t ebus::Handler::getSourceAddress() const { return sourceAddress; }
 
 uint8_t ebus::Handler::getTargetAddress() const { return targetAddress; }
 
+void ebus::Handler::setBusRequestWonCallback(BusRequestWonCallback callback) {
+  busRequestWonCallback = std::move(callback);
+}
+
+void ebus::Handler::setBusRequestLostCallback(BusRequestLostCallback callback) {
+  busRequestLostCallback = std::move(callback);
+}
+
 void ebus::Handler::setReactiveMasterSlaveCallback(
     ReactiveMasterSlaveCallback callback) {
   reactiveMasterSlaveCallback = std::move(callback);
@@ -235,8 +243,8 @@ void ebus::Handler::passiveReceiveMaster(const uint8_t& byte) {
           state = HandlerState::reactiveSendMasterPositiveAcknowledge;
         } else if (passiveMaster[1] == targetAddress) {
           std::vector<uint8_t> response;
-          callReactiveMasterSlave(passiveTelegram.getMaster().to_vector(),
-                                  &response);
+          callOnReactiveMasterSlave(passiveTelegram.getMaster().to_vector(),
+                                    &response);
           passiveTelegram.createSlave(response);
           if (passiveTelegram.getSlaveState() == SequenceState::seq_ok) {
             passiveSlave = passiveTelegram.getSlave();
@@ -417,6 +425,7 @@ void ebus::Handler::reactiveReceiveSlaveAcknowledge(const uint8_t& byte) {
 
 void ebus::Handler::requestBus(const uint8_t& byte) {
   auto won = [&]() {
+    callOnBusRequestWon();
     activeMaster = activeTelegram.getMaster();
     activeMaster.push_back(activeTelegram.getMasterCRC(), false);
     activeMaster.extend();
@@ -426,6 +435,7 @@ void ebus::Handler::requestBus(const uint8_t& byte) {
   };
 
   auto lost = [&]() {
+    callOnBusRequestLost();
     passiveMaster.push_back(byte);
     activeMessage = false;
     activeTelegram.clear();
@@ -434,6 +444,7 @@ void ebus::Handler::requestBus(const uint8_t& byte) {
   };
 
   auto error = [&]() {
+    callOnBusRequestLost();
     activeMessage = false;
     activeTelegram.clear();
     activeMaster.clear();
@@ -656,8 +667,24 @@ void ebus::Handler::callWrite(const uint8_t& byte) {
   }
 }
 
-void ebus::Handler::callReactiveMasterSlave(const std::vector<uint8_t>& master,
-                                            std::vector<uint8_t>* const slave) {
+void ebus::Handler::callOnBusRequestWon() {
+  if (busRequestWonCallback) {
+    callbackWon.markBegin();
+    busRequestWonCallback();
+    callbackWon.markEnd();
+  }
+}
+
+void ebus::Handler::callOnBusRequestLost() {
+  if (busRequestLostCallback) {
+    callbackLost.markBegin();
+    busRequestLostCallback();
+    callbackLost.markEnd();
+  }
+}
+
+void ebus::Handler::callOnReactiveMasterSlave(
+    const std::vector<uint8_t>& master, std::vector<uint8_t>* const slave) {
   if (reactiveMasterSlaveCallback) {
     callbackReactive.markBegin();
     reactiveMasterSlaveCallback(master, slave);
