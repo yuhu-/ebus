@@ -89,7 +89,8 @@ void ebus::Handler::setErrorCallback(ErrorCallback callback) {
 ebus::HandlerState ebus::Handler::getState() const { return state; }
 
 bool ebus::Handler::sendActiveMessage(const std::vector<uint8_t>& message) {
-  if (message.empty() || activeMessage) return false;
+  if (activeMessage) return false;
+  if (message.empty()) return false;
 
   activeTelegram.createMaster(sourceAddress, message);
   if (activeTelegram.getMasterState() == SequenceState::seq_ok) {
@@ -425,13 +426,23 @@ void ebus::Handler::reactiveReceiveSlaveAcknowledge(const uint8_t& byte) {
 
 void ebus::Handler::requestBus(const uint8_t& byte) {
   auto won = [&]() {
-    callOnBusRequestWon();
     activeMaster = activeTelegram.getMaster();
     activeMaster.push_back(activeTelegram.getMasterCRC(), false);
     activeMaster.extend();
-    activeMasterIndex = 1;
-    callWrite(activeMaster[activeMasterIndex]);
-    state = HandlerState::activeSendMaster;
+    if (activeMaster.size() < 2) {
+      callOnBusRequestLost();
+      counter.errorActiveMaster++;
+      callOnError("errorActiveMaster", activeMaster.to_vector(),
+                  activeSlave.to_vector());
+      callActiveReset();
+      callWrite(sym_syn);
+      state = HandlerState::releaseBus;
+    } else {
+      callOnBusRequestWon();
+      activeMasterIndex = 1;
+      callWrite(activeMaster[activeMasterIndex]);
+      state = HandlerState::activeSendMaster;
+    }
   };
 
   auto lost = [&]() {
