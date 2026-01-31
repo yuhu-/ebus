@@ -158,7 +158,7 @@ const ebus::Handler::Counter& ebus::Handler::getCounter() {
 
   counter.resetTotal = counter.resetPassive00 + counter.resetPassive0704 +
                        counter.resetPassive + counter.resetActive00 +
-                       counter.resetActive;
+                       counter.resetActive0704 + counter.resetActive;
 
   counter.errorPassive =
       counter.errorPassiveMaster + counter.errorPassiveMasterACK +
@@ -316,6 +316,10 @@ void ebus::Handler::passiveReceiveMasterAcknowledge(const uint8_t& byte) {
     state = HandlerState::passiveReceiveMaster;
   } else {
     counter.errorPassiveMasterACK++;
+    if (passiveMaster.size() == 6 && passiveMaster[2] == 0x07 &&
+        passiveMaster[3] == 0x04)
+      counter.resetPassive0704++;
+
     callOnError("errorPassiveMasterACK", passiveMaster.to_vector(),
                 passiveSlave.to_vector());
     callPassiveReset();
@@ -426,17 +430,19 @@ void ebus::Handler::requestBus(const uint8_t& byte) {
     activeMaster = activeTelegram.getMaster();
     activeMaster.push_back(activeTelegram.getMasterCRC(), false);
     activeMaster.extend();
-    if (activeMaster.size() < 2) {
-      callOnBusRequestLost();
-      counter.errorActiveMaster++;
-      checkActiveBuffers();
-      callWrite(sym_syn);
-      state = HandlerState::releaseBus;
-    } else {
+    if (activeMaster.size() > 1) {
       callOnBusRequestWon();
       activeMasterIndex = 1;
       callWrite(activeMaster[activeMasterIndex]);
       state = HandlerState::activeSendMaster;
+    } else {
+      callOnBusRequestLost();
+      counter.resetActive00++;
+      activeMessage = false;
+      activeTelegram.clear();
+      activeMaster.clear();
+      callWrite(sym_syn);
+      state = HandlerState::releaseBus;
     }
   };
 
@@ -536,6 +542,10 @@ void ebus::Handler::activeReceiveMasterAcknowledge(const uint8_t& byte) {
     state = HandlerState::activeSendMaster;
   } else {
     counter.errorActiveMasterACK++;
+    if (activeMaster.size() == 6 && activeMaster[2] == 0x07 &&
+        activeMaster[3] == 0x04)
+      counter.resetActive0704++;
+
     callOnError("errorActiveMasterACK", activeMaster.to_vector(),
                 activeSlave.to_vector());
     callActiveReset();
@@ -613,9 +623,6 @@ void ebus::Handler::checkPassiveBuffers() {
 
     if (passiveMaster.size() == 1 && passiveMaster[0] == 0x00)
       counter.resetPassive00++;
-    else if (passiveMaster.size() == 6 && passiveMaster[2] == 0x07 &&
-             passiveMaster[3] == 0x04)
-      counter.resetPassive0704++;
     else
       counter.resetPassive++;
 
@@ -638,10 +645,7 @@ void ebus::Handler::checkActiveBuffers() {
     callOnError("checkActiveBuffers", activeMaster.to_vector(),
                 activeSlave.to_vector());
 
-    if (activeMaster.size() == 1 && activeMaster[0] == 0x00)
-      counter.resetActive00++;
-    else
-      counter.resetActive++;
+    counter.resetActive++;
 
     callActiveReset();
   }

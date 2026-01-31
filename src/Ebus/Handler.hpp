@@ -109,6 +109,7 @@ using ErrorCallback = std::function<void(const std::string& errorMessage,
   X(resetPassive0704)             \
   X(resetPassive)                 \
   X(resetActive00)                \
+  X(resetActive0704)              \
   X(resetActive)                  \
   X(errorTotal)                   \
   X(errorPassive)                 \

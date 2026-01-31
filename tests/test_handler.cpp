@@ -178,6 +178,8 @@ void printCounters() {
             << std::endl;
   std::cout << "resetPassive: " << handlerCounter.resetPassive << std::endl;
   std::cout << "resetActive00: " << handlerCounter.resetActive00 << std::endl;
+  std::cout << "resetActive0704: " << handlerCounter.resetActive0704
+            << std::endl;
   std::cout << "resetActive: " << handlerCounter.resetActive << std::endl
             << std::endl;
 
