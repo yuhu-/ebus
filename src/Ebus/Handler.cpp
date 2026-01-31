@@ -157,7 +157,8 @@ const ebus::Handler::Counter& ebus::Handler::getCounter() {
       counter.messagesReactiveMasterMaster;
 
   counter.resetTotal = counter.resetPassive00 + counter.resetPassive0704 +
-                       counter.resetActive + counter.resetPassive;
+                       counter.resetPassive + counter.resetActive00 +
+                       counter.resetActive;
 
   counter.errorPassive =
       counter.errorPassiveMaster + counter.errorPassiveMasterACK +
@@ -315,10 +316,6 @@ void ebus::Handler::passiveReceiveMasterAcknowledge(const uint8_t& byte) {
     state = HandlerState::passiveReceiveMaster;
   } else {
     counter.errorPassiveMasterACK++;
-    if (passiveMaster.size() == 6 && passiveMaster[2] == 0x07 &&
-        passiveMaster[3] == 0x04)
-      counter.resetPassive0704++;
-
     callOnError("errorPassiveMasterACK", passiveMaster.to_vector(),
                 passiveSlave.to_vector());
     callPassiveReset();
@@ -432,9 +429,7 @@ void ebus::Handler::requestBus(const uint8_t& byte) {
     if (activeMaster.size() < 2) {
       callOnBusRequestLost();
       counter.errorActiveMaster++;
-      callOnError("errorActiveMaster", activeMaster.to_vector(),
-                  activeSlave.to_vector());
-      callActiveReset();
+      checkActiveBuffers();
       callWrite(sym_syn);
       state = HandlerState::releaseBus;
     } else {
@@ -618,6 +613,9 @@ void ebus::Handler::checkPassiveBuffers() {
 
     if (passiveMaster.size() == 1 && passiveMaster[0] == 0x00)
       counter.resetPassive00++;
+    else if (passiveMaster.size() == 6 && passiveMaster[2] == 0x07 &&
+             passiveMaster[3] == 0x04)
+      counter.resetPassive0704++;
     else
       counter.resetPassive++;
 
@@ -639,7 +637,12 @@ void ebus::Handler::checkActiveBuffers() {
   if (activeMaster.size() > 0 || activeSlave.size() > 0) {
     callOnError("checkActiveBuffers", activeMaster.to_vector(),
                 activeSlave.to_vector());
-    counter.resetActive++;
+
+    if (activeMaster.size() == 1 && activeMaster[0] == 0x00)
+      counter.resetActive00++;
+    else
+      counter.resetActive++;
+
     callActiveReset();
   }
 }
