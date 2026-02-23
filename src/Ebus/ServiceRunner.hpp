@@ -24,11 +24,6 @@
 namespace ebus {
 using ServiceRunner = ServiceRunnerFreeRtos;
 }
-#elif defined(ESP8266)
-#include "Esp8266/ServiceRunnerEsp8266.hpp"
-namespace ebus {
-using ServiceRunner = ServiceRunnerEsp8266;
-}
 #else
 #include "Posix/ServiceRunnerPosix.hpp"
 namespace ebus {

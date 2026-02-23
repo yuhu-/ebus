@@ -24,17 +24,11 @@
 namespace ebus {
 template <typename T>
 using Queue = QueueFreeRtos<T>;
-}  // namespace ebus
-#elif defined(ESP8266)
-#include "Esp8266/QueueEsp8266.hpp"
-namespace ebus {
-template <typename T>
-using Queue = QueueEsp8266<T>;
-}  // namespace ebus
+}
 #else
 #include "Posix/QueuePosix.hpp"
 namespace ebus {
 template <typename T>
 using Queue = QueuePosix<T>;
-}  // namespace ebus
+}
 #endif

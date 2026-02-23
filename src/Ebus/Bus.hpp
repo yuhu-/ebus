@@ -29,11 +29,6 @@ using Bus = BusPosixTest;
 namespace ebus {
 using Bus = BusFreeRtos;
 }
-#elif defined(ESP8266)
-#include "Esp8266/BusEsp8266.hpp"
-namespace ebus {
-using Bus = BusEsp8266;
-}
 #else
 #include "Posix/BusPosix.hpp"
 namespace ebus {
