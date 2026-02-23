@@ -201,7 +201,7 @@ void run_test(const TestCase& tc) {
   // 2400 baud => 1 / 2400 = 416,67 microseconds per bit
   // 10 bits per byte (1 start bit, 8 data bits, 1 stop bit)
   // 1 byte takes 10 * 416,67 microseconds = 4166,67 microseconds
-  std::thread ebusUartEventTask([&seq, &bus, &request, &byteQueue, &handler]() {
+  std::thread ebusUartEventTask([&seq, &bus, &request, &byteQueue]() {
     for (size_t i = 0; i < seq.size(); ++i) {
       uint8_t byte = seq[i];
 
