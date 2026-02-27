@@ -68,23 +68,12 @@ class ServiceRunnerFreeRtos {
     ServiceRunnerFreeRtos* self = static_cast<ServiceRunnerFreeRtos*>(arg);
     uint8_t byte;
     for (;;) {
-      // Blocking
-      // Comment out the following line if you want non-blocking behavior
       if (self->queue.pop(byte)) {
         processBusIsrEvents();
         self->request.run(byte);
         self->handler.run(byte);
         for (const ByteListener& listener : self->listeners) listener(byte);
       }
-      // Non-blocking
-      // Uncomment the following lines if you want non-blocking behavior
-      // while (self->queue.try_pop(byte)) {  // non-blocking
-      //   processBusIsrEvents();
-      //   self->request.run(byte);
-      //   self->handler.run(byte);
-      //   for (const ByteListener& listener : self->listeners) listener(byte);
-      // }
-      // vTaskDelay(pdMS_TO_TICKS(1));  // short delay to yield CPU
     }
   }
 };
