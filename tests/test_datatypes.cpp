@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2025 Roland Jax
+ * Copyright (C) 2017-2026 Roland Jax
  *
  * This file is part of ebus.
  *
@@ -62,8 +62,17 @@ void test_int8() {
 void test_uint16() {
   for (uint32_t v = 0; v <= 0xFFFF; v += 257) {  // step to keep test fast
     uint16_t value = static_cast<uint16_t>(v);
-    std::vector<uint8_t> bytes = uint16_2_byte(value);
-    uint16_t decoded = byte_2_uint16(bytes);
+    std::vector<uint8_t> bytes = uint16_2_byte(value, Endian::Little);
+    uint16_t decoded = byte_2_uint16(bytes, Endian::Little);
+    assert(decoded == value);
+  }
+}
+
+void test_uint16r() {
+  for (uint32_t v = 0; v <= 0xFFFF; v += 257) {  // step to keep test fast
+    uint16_t value = static_cast<uint16_t>(v);
+    std::vector<uint8_t> bytes = uint16_2_byte(value, Endian::Big);
+    uint16_t decoded = byte_2_uint16(bytes, Endian::Big);
     assert(decoded == value);
   }
 }
@@ -71,8 +80,17 @@ void test_uint16() {
 void test_int16() {
   for (int32_t v = -32768; v <= 32767; v += 513) {
     int16_t value = static_cast<int16_t>(v);
-    std::vector<uint8_t> bytes = int16_2_byte(value);
-    int16_t decoded = byte_2_int16(bytes);
+    std::vector<uint8_t> bytes = int16_2_byte(value, Endian::Little);
+    int16_t decoded = byte_2_int16(bytes, Endian::Little);
+    assert(decoded == value);
+  }
+}
+
+void test_int16r() {
+  for (int32_t v = -32768; v <= 32767; v += 513) {
+    int16_t value = static_cast<int16_t>(v);
+    std::vector<uint8_t> bytes = int16_2_byte(value, Endian::Big);
+    int16_t decoded = byte_2_int16(bytes, Endian::Big);
     assert(decoded == value);
   }
 }
@@ -81,8 +99,18 @@ void test_uint32() {
   std::vector<uint32_t> test_values = {0, 1, 0xFFFFFFFF, 0x12345678,
                                        0x80000000};
   for (uint32_t value : test_values) {
-    std::vector<uint8_t> bytes = uint32_2_byte(value);
-    uint32_t decoded = byte_2_uint32(bytes);
+    std::vector<uint8_t> bytes = uint32_2_byte(value, Endian::Little);
+    uint32_t decoded = byte_2_uint32(bytes, Endian::Little);
+    assert(decoded == value);
+  }
+}
+
+void test_uint32r() {
+  std::vector<uint32_t> test_values = {0, 1, 0xFFFFFFFF, 0x12345678,
+                                       0x80000000};
+  for (uint32_t value : test_values) {
+    std::vector<uint8_t> bytes = uint32_2_byte(value, Endian::Big);
+    uint32_t decoded = byte_2_uint32(bytes, Endian::Big);
     assert(decoded == value);
   }
 }
@@ -95,8 +123,22 @@ void test_int32() {
                                       std::numeric_limits<int32_t>::min(),
                                       0x12345678};
   for (int32_t value : test_values) {
-    std::vector<uint8_t> bytes = int32_2_byte(value);
-    int32_t decoded = byte_2_int32(bytes);
+    std::vector<uint8_t> bytes = int32_2_byte(value, Endian::Little);
+    int32_t decoded = byte_2_int32(bytes, Endian::Little);
+    assert(decoded == value);
+  }
+}
+
+void test_int32r() {
+  std::vector<int32_t> test_values = {0,
+                                      1,
+                                      -1,
+                                      std::numeric_limits<int32_t>::max(),
+                                      std::numeric_limits<int32_t>::min(),
+                                      0x12345678};
+  for (int32_t value : test_values) {
+    std::vector<uint8_t> bytes = int32_2_byte(value, Endian::Big);
+    int32_t decoded = byte_2_int32(bytes, Endian::Big);
     assert(decoded == value);
   }
 }
@@ -111,8 +153,31 @@ void test_float() {
                                     -std::numeric_limits<float>::infinity(),
                                     std::nanf("")};
   for (float value : test_values) {
-    std::vector<uint8_t> bytes = float_2_byte(value);
-    double_t decoded = byte_2_float(bytes);
+    std::vector<uint8_t> bytes = float_2_byte(value, Endian::Little);
+    double_t decoded = byte_2_float(bytes, Endian::Little);
+    if (std::isnan(value)) {
+      assert(std::isnan(decoded));
+    } else if (std::isinf(value)) {
+      assert(std::isinf(decoded) &&
+             (std::signbit(value) == std::signbit(decoded)));
+    } else {
+      assert(std::fabs(decoded - value) < 1e-5);
+    }
+  }
+}
+
+void test_floatr() {
+  std::vector<float> test_values = {0.0f,
+                                    1.0f,
+                                    -1.0f,
+                                    123.456f,
+                                    -789.123f,
+                                    std::numeric_limits<float>::infinity(),
+                                    -std::numeric_limits<float>::infinity(),
+                                    std::nanf("")};
+  for (float value : test_values) {
+    std::vector<uint8_t> bytes = float_2_byte(value, Endian::Big);
+    double_t decoded = byte_2_float(bytes, Endian::Big);
     if (std::isnan(value)) {
       assert(std::isnan(decoded));
     } else if (std::isinf(value)) {
@@ -188,10 +253,15 @@ int main() {
   test_uint8();
   test_int8();
   test_uint16();
+  test_uint16r();
   test_int16();
+  test_int16r();
   test_uint32();
+  test_uint32r();
   test_int32();
+  test_int32r();
   test_float();
+  test_floatr();
   test_data1b();
   test_data1c();
   test_data2b();

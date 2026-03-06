@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2025 Roland Jax
+ * Copyright (C) 2023-2026 Roland Jax
  *
  * This file is part of ebus.
  *
@@ -132,21 +132,43 @@ void printEncodeDecode(uint8_t c, uint8_t d) {
             << std::endl;
 }
 
-void printFloatTest() {
+void printFloatTestLittleEndian() {
   float f = 21.0375f;
-  std::vector<uint8_t> bytes = ebus::float_2_byte(static_cast<double_t>(f));
+  std::vector<uint8_t> bytes =
+      ebus::float_2_byte(static_cast<double_t>(f), ebus::Endian::Little);
   std::cout << "float: " << f << " to bytes: " << ebus::to_string(bytes)
             << std::endl;
-  double_t df = ebus::byte_2_float(bytes);
+  double_t df = ebus::byte_2_float(bytes, ebus::Endian::Little);
   std::cout << "bytes: " << ebus::to_string(bytes) << " to float: " << df
             << std::endl
             << std::endl;
 
   std::vector<uint8_t> h = {0xcd, 0x4c, 0xb2, 0x41};
-  double_t dh = ebus::byte_2_float(h);
+  double_t dh = ebus::byte_2_float(h, ebus::Endian::Little);
   std::cout << "bytes: " << ebus::to_string(h) << " to float: " << dh
             << std::endl;
-  std::vector<uint8_t> bh = ebus::float_2_byte(dh);
+  std::vector<uint8_t> bh = ebus::float_2_byte(dh, ebus::Endian::Little);
+  std::cout << "float: " << dh << " to bytes: " << ebus::to_string(bh)
+            << std::endl
+            << std::endl;
+}
+
+void printFloatTestBigEndian() {
+  float f = 21.0375f;
+  std::vector<uint8_t> bytes =
+      ebus::float_2_byte(static_cast<double_t>(f), ebus::Endian::Big);
+  std::cout << "float: " << f << " to bytes: " << ebus::to_string(bytes)
+            << std::endl;
+  double_t df = ebus::byte_2_float(bytes, ebus::Endian::Big);
+  std::cout << "bytes: " << ebus::to_string(bytes) << " to float: " << df
+            << std::endl
+            << std::endl;
+
+  std::vector<uint8_t> h = {0x41, 0xa8, 0x4c, 0x7f};
+  double_t dh = ebus::byte_2_float(h, ebus::Endian::Big);
+  std::cout << "bytes: " << ebus::to_string(h) << " to float: " << dh
+            << std::endl;
+  std::vector<uint8_t> bh = ebus::float_2_byte(dh, ebus::Endian::Big);
   std::cout << "float: " << dh << " to bytes: " << ebus::to_string(bh)
             << std::endl
             << std::endl;
@@ -212,7 +234,9 @@ int main() {
 
   printDecodeEncode(0xc9, 0xb7);
 
-  printFloatTest();
+  printFloatTestLittleEndian();
+
+  printFloatTestBigEndian();
 
   checkContains();
 

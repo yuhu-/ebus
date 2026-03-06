@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2025 Roland Jax
+ * Copyright (C) 2017-2026 Roland Jax
  *
  * This file is part of ebus.
  *
@@ -29,6 +29,8 @@
 
 namespace ebus {
 
+enum class Endian { Little, Big };
+
 // available data types
 enum class DataType {
   ERROR = -1,
@@ -36,14 +38,19 @@ enum class DataType {
   UINT8,
   INT8,
   UINT16,
+  UINT16R,
   INT16,
+  INT16R,
   UINT32,
+  UINT32R,
   INT32,
+  INT32R,
   DATA1B,
   DATA1C,
   DATA2B,
   DATA2C,
   FLOAT,
+  FLOATR,
   CHAR1,
   CHAR2,
   CHAR3,
@@ -102,20 +109,20 @@ int8_t byte_2_int8(const std::vector<uint8_t>& bytes);
 std::vector<uint8_t> int8_2_byte(const int8_t& value);
 
 // UINT16
-uint16_t byte_2_uint16(const std::vector<uint8_t>& bytes);
-std::vector<uint8_t> uint16_2_byte(const uint16_t& value);
+uint16_t byte_2_uint16(const std::vector<uint8_t>& bytes, Endian e);
+std::vector<uint8_t> uint16_2_byte(const uint16_t& value, Endian e);
 
 // INT16
-int16_t byte_2_int16(const std::vector<uint8_t>& bytes);
-std::vector<uint8_t> int16_2_byte(const int16_t& value);
+int16_t byte_2_int16(const std::vector<uint8_t>& bytes, Endian e);
+std::vector<uint8_t> int16_2_byte(const int16_t& value, Endian e);
 
 // UINT32
-uint32_t byte_2_uint32(const std::vector<uint8_t>& bytes);
-std::vector<uint8_t> uint32_2_byte(const uint32_t& value);
+uint32_t byte_2_uint32(const std::vector<uint8_t>& bytes, Endian e);
+std::vector<uint8_t> uint32_2_byte(const uint32_t& value, Endian e);
 
 // INT32
-int32_t byte_2_int32(const std::vector<uint8_t>& bytes);
-std::vector<uint8_t> int32_2_byte(const int32_t& value);
+int32_t byte_2_int32(const std::vector<uint8_t>& bytes, Endian e);
+std::vector<uint8_t> int32_2_byte(const int32_t& value, Endian e);
 
 // DATA1B
 double_t byte_2_data1b(const std::vector<uint8_t>& bytes);
@@ -134,8 +141,8 @@ double_t byte_2_data2c(const std::vector<uint8_t>& bytes);
 std::vector<uint8_t> data2c_2_byte(const double_t& value);
 
 // FLOAT (IEEE 754 single precision)
-double_t byte_2_float(const std::vector<uint8_t>& bytes);
-std::vector<uint8_t> float_2_byte(const double_t& value);
+double_t byte_2_float(const std::vector<uint8_t>& bytes, Endian e);
+std::vector<uint8_t> float_2_byte(const double_t& value, Endian e);
 
 // CHAR
 std::string byte_2_char(const std::vector<uint8_t>& vec);
