@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Roland Jax
+ * Copyright (C) 2025-2026 Roland Jax
  *
  * This file is part of ebus.
  *
@@ -19,17 +19,12 @@
 
 #pragma once
 
-#if defined(POSIX_TEST)
-#include "Posix/BusPosixTest.hpp"
-namespace ebus {
-using Bus = BusPosixTest;
-}
-#elif defined(ESP32)
+#if defined(ESP32)
 #include "FreeRTOS/BusFreeRtos.hpp"
 namespace ebus {
 using Bus = BusFreeRtos;
 }
-#else
+#elif defined(POSIX)
 #include "Posix/BusPosix.hpp"
 namespace ebus {
 using Bus = BusPosix;
