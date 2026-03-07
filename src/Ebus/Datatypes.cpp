@@ -33,12 +33,13 @@
 std::map<ebus::DataType, const char*> DatatypeName = {
     {ebus::DataType::ERROR, "ERROR"},   {ebus::DataType::BCD, "BCD"},
     {ebus::DataType::UINT8, "UINT8"},   {ebus::DataType::INT8, "INT8"},
+    {ebus::DataType::DATA1B, "DATA1B"}, {ebus::DataType::DATA1C, "DATA1C"},
     {ebus::DataType::UINT16, "UINT16"}, {ebus::DataType::UINT16R, "UINT16R"},
     {ebus::DataType::INT16, "INT16"},   {ebus::DataType::INT16R, "INT16R"},
+    {ebus::DataType::DATA2B, "DATA2B"}, {ebus::DataType::DATA2BR, "DATA2BR"},
+    {ebus::DataType::DATA2C, "DATA2C"}, {ebus::DataType::DATA2CR, "DATA2CR"},
     {ebus::DataType::UINT32, "UINT32"}, {ebus::DataType::UINT32R, "UINT32R"},
     {ebus::DataType::INT32, "INT32"},   {ebus::DataType::INT32R, "INT32R"},
-    {ebus::DataType::DATA1B, "DATA1B"}, {ebus::DataType::DATA1C, "DATA1C"},
-    {ebus::DataType::DATA2B, "DATA2B"}, {ebus::DataType::DATA2C, "DATA2C"},
     {ebus::DataType::FLOAT, "FLOAT"},   {ebus::DataType::FLOATR, "FLOATR"},
     {ebus::DataType::CHAR1, "CHAR1"},   {ebus::DataType::CHAR2, "CHAR2"},
     {ebus::DataType::CHAR3, "CHAR3"},   {ebus::DataType::CHAR4, "CHAR4"},
@@ -81,11 +82,13 @@ size_t ebus::sizeof_datatype(const ebus::DataType& datatype) {
       length = 1;
       break;
     case ebus::DataType::UINT16:
-    case ebus::DataType::INT16:
     case ebus::DataType::UINT16R:
+    case ebus::DataType::INT16:
     case ebus::DataType::INT16R:
     case ebus::DataType::DATA2B:
+    case ebus::DataType::DATA2BR:
     case ebus::DataType::DATA2C:
+    case ebus::DataType::DATA2CR:
     case ebus::DataType::CHAR2:
     case ebus::DataType::HEX2:
       length = 2;
@@ -95,8 +98,8 @@ size_t ebus::sizeof_datatype(const ebus::DataType& datatype) {
       length = 3;
       break;
     case ebus::DataType::UINT32:
-    case ebus::DataType::INT32:
     case ebus::DataType::UINT32R:
+    case ebus::DataType::INT32:
     case ebus::DataType::INT32R:
     case ebus::DataType::FLOAT:
     case ebus::DataType::FLOATR:
@@ -204,6 +207,24 @@ std::vector<uint8_t> ebus::int8_2_byte(const int8_t& value) {
   return {static_cast<uint8_t>(value)};
 }
 
+// DATA1B
+double_t ebus::byte_2_data1b(const std::vector<uint8_t>& bytes) {
+  return static_cast<double_t>(ebus::byte_2_int8(bytes));
+}
+
+std::vector<uint8_t> ebus::data1b_2_byte(const double_t& value) {
+  return ebus::int8_2_byte(static_cast<int8_t>(value));
+}
+
+// DATA1C
+double_t ebus::byte_2_data1c(const std::vector<uint8_t>& bytes) {
+  return static_cast<double_t>(ebus::byte_2_uint8(bytes)) / 2.0;
+}
+
+std::vector<uint8_t> ebus::data1c_2_byte(const double_t& value) {
+  return ebus::uint8_2_byte(static_cast<uint8_t>(value * 2.0));
+}
+
 // UINT16 + UINT16R
 uint16_t ebus::byte_2_uint16(const std::vector<uint8_t>& bytes, Endian e) {
   validate_2bytes_or_throw(bytes);
@@ -236,6 +257,24 @@ int16_t ebus::byte_2_int16(const std::vector<uint8_t>& bytes, Endian e) {
 std::vector<uint8_t> ebus::int16_2_byte(const int16_t& value, Endian e) {
   uint32_t uval = static_cast<uint32_t>(value);
   return ebus::uint16_2_byte(uval, e);
+}
+
+// DATA2B + DATA2BR
+double_t ebus::byte_2_data2b(const std::vector<uint8_t>& bytes, Endian e) {
+  return static_cast<double_t>(ebus::byte_2_int16(bytes, e)) / 256.0;
+}
+
+std::vector<uint8_t> ebus::data2b_2_byte(const double_t& value, Endian e) {
+  return ebus::int16_2_byte(static_cast<int16_t>(value * 256.0), e);
+}
+
+// DATA2C + DATA2CR
+double_t ebus::byte_2_data2c(const std::vector<uint8_t>& bytes, Endian e) {
+  return static_cast<double_t>(ebus::byte_2_int16(bytes, e)) / 16.0;
+}
+
+std::vector<uint8_t> ebus::data2c_2_byte(const double_t& value, Endian e) {
+  return ebus::int16_2_byte(static_cast<int16_t>(value * 16.0), e);
 }
 
 // UINT32 + UINT32R
@@ -278,45 +317,6 @@ int32_t ebus::byte_2_int32(const std::vector<uint8_t>& bytes, Endian e) {
 std::vector<uint8_t> ebus::int32_2_byte(const int32_t& value, Endian e) {
   uint32_t uval = static_cast<uint32_t>(value);
   return ebus::uint32_2_byte(uval, e);
-}
-
-// DATA1B
-double_t ebus::byte_2_data1b(const std::vector<uint8_t>& bytes) {
-  return static_cast<double_t>(ebus::byte_2_int8(bytes));
-}
-
-std::vector<uint8_t> ebus::data1b_2_byte(const double_t& value) {
-  return ebus::int8_2_byte(static_cast<int8_t>(value));
-}
-
-// DATA1C
-double_t ebus::byte_2_data1c(const std::vector<uint8_t>& bytes) {
-  return static_cast<double_t>(ebus::byte_2_uint8(bytes)) / 2.0;
-}
-
-std::vector<uint8_t> ebus::data1c_2_byte(const double_t& value) {
-  return ebus::uint8_2_byte(static_cast<uint8_t>(value * 2.0));
-}
-
-// DATA2B
-double_t ebus::byte_2_data2b(const std::vector<uint8_t>& bytes) {
-  return static_cast<double_t>(ebus::byte_2_int16(bytes, Endian::Little)) /
-         256.0;
-}
-
-std::vector<uint8_t> ebus::data2b_2_byte(const double_t& value) {
-  return ebus::int16_2_byte(static_cast<int16_t>(value * 256.0),
-                            Endian::Little);
-}
-
-// DATA2C
-double_t ebus::byte_2_data2c(const std::vector<uint8_t>& bytes) {
-  return static_cast<double_t>(ebus::byte_2_int16(bytes, Endian::Little)) /
-         16.0;
-}
-
-std::vector<uint8_t> ebus::data2c_2_byte(const double_t& value) {
-  return ebus::int16_2_byte(static_cast<int16_t>(value * 16.0), Endian::Little);
 }
 
 // FLOAT (IEEE 754 single precision)

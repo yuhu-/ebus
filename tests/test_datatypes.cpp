@@ -59,6 +59,24 @@ void test_int8() {
   }
 }
 
+void test_data1b() {
+  for (int16_t v = -128; v <= 127; v += 17) {
+    double_t value = static_cast<double_t>(v);
+    std::vector<uint8_t> bytes = data1b_2_byte(value);
+    double_t decoded = byte_2_data1b(bytes);
+    assert(std::fabs(decoded - value) < 1e-5);
+  }
+}
+
+void test_data1c() {
+  for (uint16_t v = 0; v <= 255; v += 17) {
+    double_t value = static_cast<double_t>(v) / 2.0;
+    std::vector<uint8_t> bytes = data1c_2_byte(value);
+    double_t decoded = byte_2_data1c(bytes);
+    assert(std::fabs(decoded - value) < 1e-5);
+  }
+}
+
 void test_uint16() {
   for (uint32_t v = 0; v <= 0xFFFF; v += 257) {  // step to keep test fast
     uint16_t value = static_cast<uint16_t>(v);
@@ -92,6 +110,42 @@ void test_int16r() {
     std::vector<uint8_t> bytes = int16_2_byte(value, Endian::Big);
     int16_t decoded = byte_2_int16(bytes, Endian::Big);
     assert(decoded == value);
+  }
+}
+
+void test_data2b() {
+  for (int32_t v = -32768; v <= 32767; v += 4096) {
+    double_t value = static_cast<double_t>(v) / 256.0;
+    std::vector<uint8_t> bytes = data2b_2_byte(value, Endian::Little);
+    double_t decoded = byte_2_data2b(bytes, Endian::Little);
+    assert(std::fabs(decoded - value) < 1e-3);
+  }
+}
+
+void test_data2br() {
+  for (int32_t v = -32768; v <= 32767; v += 4096) {
+    double_t value = static_cast<double_t>(v) / 256.0;
+    std::vector<uint8_t> bytes = data2b_2_byte(value, Endian::Big);
+    double_t decoded = byte_2_data2b(bytes, Endian::Big);
+    assert(std::fabs(decoded - value) < 1e-3);
+  }
+}
+
+void test_data2c() {
+  for (int32_t v = -32768; v <= 32767; v += 4096) {
+    double_t value = static_cast<double_t>(v) / 16.0;
+    std::vector<uint8_t> bytes = data2c_2_byte(value, Endian::Little);
+    double_t decoded = byte_2_data2c(bytes, Endian::Little);
+    assert(std::fabs(decoded - value) < 1e-3);
+  }
+}
+
+void test_data2cr() {
+  for (int32_t v = -32768; v <= 32767; v += 4096) {
+    double_t value = static_cast<double_t>(v) / 16.0;
+    std::vector<uint8_t> bytes = data2c_2_byte(value, Endian::Big);
+    double_t decoded = byte_2_data2c(bytes, Endian::Big);
+    assert(std::fabs(decoded - value) < 1e-3);
   }
 }
 
@@ -189,42 +243,6 @@ void test_floatr() {
   }
 }
 
-void test_data1b() {
-  for (int16_t v = -128; v <= 127; v += 17) {
-    double_t value = static_cast<double_t>(v);
-    std::vector<uint8_t> bytes = data1b_2_byte(value);
-    double_t decoded = byte_2_data1b(bytes);
-    assert(std::fabs(decoded - value) < 1e-5);
-  }
-}
-
-void test_data1c() {
-  for (uint16_t v = 0; v <= 255; v += 17) {
-    double_t value = static_cast<double_t>(v) / 2.0;
-    std::vector<uint8_t> bytes = data1c_2_byte(value);
-    double_t decoded = byte_2_data1c(bytes);
-    assert(std::fabs(decoded - value) < 1e-5);
-  }
-}
-
-void test_data2b() {
-  for (int32_t v = -32768; v <= 32767; v += 4096) {
-    double_t value = static_cast<double_t>(v) / 256.0;
-    std::vector<uint8_t> bytes = data2b_2_byte(value);
-    double_t decoded = byte_2_data2b(bytes);
-    assert(std::fabs(decoded - value) < 1e-3);
-  }
-}
-
-void test_data2c() {
-  for (int32_t v = -32768; v <= 32767; v += 4096) {
-    double_t value = static_cast<double_t>(v) / 16.0;
-    std::vector<uint8_t> bytes = data2c_2_byte(value);
-    double_t decoded = byte_2_data2c(bytes);
-    assert(std::fabs(decoded - value) < 1e-3);
-  }
-}
-
 void test_char() {
   std::vector<std::string> test_strings = {"", "A", "Hello", "ebus123",
                                            std::string(8, 'Z')};
@@ -252,20 +270,22 @@ int main() {
   test_bcd();
   test_uint8();
   test_int8();
+  test_data1b();
+  test_data1c();
   test_uint16();
   test_uint16r();
   test_int16();
   test_int16r();
+  test_data2b();
+  test_data2br();
+  test_data2c();
+  test_data2cr();
   test_uint32();
   test_uint32r();
   test_int32();
   test_int32r();
   test_float();
   test_floatr();
-  test_data1b();
-  test_data1c();
-  test_data2b();
-  test_data2c();
   test_char();
   test_hex();
 

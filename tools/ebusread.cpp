@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2025 Roland Jax
+ * Copyright (C) 2012-2026 Roland Jax
  *
  * This file is part of ebus.
  *
@@ -106,7 +106,8 @@ std::string services(const std::vector<uint8_t>& master,
     ostr << ":";
     ostr << ebus::to_string(master[7]);
     ostr << " - ";
-    ostr << ebus::byte_2_data2b(ebus::range(master, 5, 2));
+    ostr << ebus::byte_2_data2b(ebus::range(master, 5, 2),
+                                ebus::Endian::Little);
     ostr << " °C";
   } else if (master[2] == 0x07 && master[3] == 0x04) {
     ostr << "0704: " + ebus::to_string(master[1]);
@@ -134,7 +135,8 @@ std::string services(const std::vector<uint8_t>& master,
   } else if (master[2] == 0xb5 && master[3] == 0x16 && master[4] == 0x03 &&
              master[5] == 0x01) {
     ostr << "b5160301: ";
-    ostr << ebus::byte_2_data2b(ebus::range(master, 6, 2));
+    ostr << ebus::byte_2_data2b(ebus::range(master, 6, 2),
+                                ebus::Endian::Little);
     ostr << " °C";
   }
   return ostr.str();

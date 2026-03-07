@@ -37,18 +37,20 @@ enum class DataType {
   BCD,
   UINT8,
   INT8,
+  DATA1B,
+  DATA1C,
   UINT16,
   UINT16R,
   INT16,
   INT16R,
+  DATA2B,
+  DATA2BR,
+  DATA2C,
+  DATA2CR,
   UINT32,
   UINT32R,
   INT32,
   INT32R,
-  DATA1B,
-  DATA1C,
-  DATA2B,
-  DATA2C,
   FLOAT,
   FLOATR,
   CHAR1,
@@ -108,22 +110,6 @@ std::vector<uint8_t> uint8_2_byte(const uint8_t& value);
 int8_t byte_2_int8(const std::vector<uint8_t>& bytes);
 std::vector<uint8_t> int8_2_byte(const int8_t& value);
 
-// UINT16
-uint16_t byte_2_uint16(const std::vector<uint8_t>& bytes, Endian e);
-std::vector<uint8_t> uint16_2_byte(const uint16_t& value, Endian e);
-
-// INT16
-int16_t byte_2_int16(const std::vector<uint8_t>& bytes, Endian e);
-std::vector<uint8_t> int16_2_byte(const int16_t& value, Endian e);
-
-// UINT32
-uint32_t byte_2_uint32(const std::vector<uint8_t>& bytes, Endian e);
-std::vector<uint8_t> uint32_2_byte(const uint32_t& value, Endian e);
-
-// INT32
-int32_t byte_2_int32(const std::vector<uint8_t>& bytes, Endian e);
-std::vector<uint8_t> int32_2_byte(const int32_t& value, Endian e);
-
 // DATA1B
 double_t byte_2_data1b(const std::vector<uint8_t>& bytes);
 std::vector<uint8_t> data1b_2_byte(const double_t& value);
@@ -132,13 +118,29 @@ std::vector<uint8_t> data1b_2_byte(const double_t& value);
 double_t byte_2_data1c(const std::vector<uint8_t>& bytes);
 std::vector<uint8_t> data1c_2_byte(const double_t& value);
 
-// DATA2B
-double_t byte_2_data2b(const std::vector<uint8_t>& bytes);
-std::vector<uint8_t> data2b_2_byte(const double_t& value);
+// UINT16
+uint16_t byte_2_uint16(const std::vector<uint8_t>& bytes, Endian e);
+std::vector<uint8_t> uint16_2_byte(const uint16_t& value, Endian e);
 
-// DATA2C
-double_t byte_2_data2c(const std::vector<uint8_t>& bytes);
-std::vector<uint8_t> data2c_2_byte(const double_t& value);
+// INT16
+int16_t byte_2_int16(const std::vector<uint8_t>& bytes, Endian e);
+std::vector<uint8_t> int16_2_byte(const int16_t& value, Endian e);
+
+// DATA2B + DATA2BR
+double_t byte_2_data2b(const std::vector<uint8_t>& bytes, Endian e);
+std::vector<uint8_t> data2b_2_byte(const double_t& value, Endian e);
+
+// DATA2C + DATA2CR
+double_t byte_2_data2c(const std::vector<uint8_t>& bytes, Endian e);
+std::vector<uint8_t> data2c_2_byte(const double_t& value, Endian e);
+
+// UINT32
+uint32_t byte_2_uint32(const std::vector<uint8_t>& bytes, Endian e);
+std::vector<uint8_t> uint32_2_byte(const uint32_t& value, Endian e);
+
+// INT32
+int32_t byte_2_int32(const std::vector<uint8_t>& bytes, Endian e);
+std::vector<uint8_t> int32_2_byte(const int32_t& value, Endian e);
 
 // FLOAT (IEEE 754 single precision)
 double_t byte_2_float(const std::vector<uint8_t>& bytes, Endian e);
