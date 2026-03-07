@@ -1,4 +1,7 @@
-add_library(ebus Common.cpp Datatypes.cpp  Handler.cpp Request.cpp Sequence.cpp Telegram.cpp TimingStats.cpp) 
+file(GLOB SOURCES "*.cpp")
 
-add_library(ebus_posix_test Common.cpp Datatypes.cpp Handler.cpp Request.cpp Sequence.cpp Telegram.cpp TimingStats.cpp)
-target_compile_definitions(ebus_posix_test PRIVATE -DPOSIX_TEST)
+file(GLOB POSIX_SOURCES "Posix/*.cpp")
+
+list(APPEND SOURCES ${POSIX_SOURCES})
+
+add_library(ebus ${SOURCES})
