@@ -168,11 +168,6 @@ double_t ebus::round_digits(const double_t& value, const uint8_t& digits) {
          std::round(fractpart * decimals) / decimals;
 }
 
-static void validate_2bytes_or_throw(const std::vector<uint8_t>& b) {
-  if (b.size() != 2)
-    throw std::invalid_argument("buffer must be exactly 2 bytes");
-}
-
 // BCD
 uint8_t ebus::byte_2_bcd(const std::vector<uint8_t>& bytes) {
   if (bytes.size() != 1) return 0xff;
@@ -227,7 +222,7 @@ std::vector<uint8_t> ebus::data1c_2_byte(const double_t& value) {
 
 // UINT16 + UINT16R
 uint16_t ebus::byte_2_uint16(const std::vector<uint8_t>& bytes, Endian e) {
-  validate_2bytes_or_throw(bytes);
+  if (bytes.size() != 2) return 0;
   if (e == Endian::Little) {
     return static_cast<uint16_t>(bytes[0]) |
            (static_cast<uint16_t>(bytes[1]) << 8);
