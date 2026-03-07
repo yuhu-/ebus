@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Roland Jax
+ * Copyright (C) 2025-2026 Roland Jax
  *
  * This file is part of ebus.
  *
@@ -20,5 +20,13 @@
 #pragma once
 
 #if defined(ESP32)
-#include "FreeRTOS/BusIsrFreeRtos.hpp"
+#include "FreeRTOS/ByteHandlerFreeRtos.hpp"
+namespace ebus {
+using ByteHandler = ByteHandlerFreeRtos;
+}
+#elif defined(POSIX)
+#include "Posix/ByteHandlerPosix.hpp"
+namespace ebus {
+using ByteHandler = ByteHandlerPosix;
+}
 #endif

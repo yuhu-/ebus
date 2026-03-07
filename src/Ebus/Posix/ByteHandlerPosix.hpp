@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Roland Jax
+ * Copyright (C) 2025-2026 Roland Jax
  *
  * This file is part of ebus.
  *
@@ -19,9 +19,10 @@
 
 #pragma once
 
-#include <freertos/FreeRTOS.h>
-#include <freertos/task.h>
-
+#if defined(POSIX)
+#include <atomic>
+#include <functional>
+#include <thread>
 #include <vector>
 
 #include "../Handler.hpp"
@@ -30,29 +31,25 @@
 
 namespace ebus {
 
-extern void processBusIsrEvents();
-
-class ServiceRunnerFreeRtos {
+class ByteHandlerPosix {
  public:
   // Define a listener type for byte events
   using ByteListener = std::function<void(const uint8_t& byte)>;
 
-  ServiceRunnerFreeRtos(Request& request, Handler& handler,
-                        Queue<uint8_t>& queue)
-      : request(request), handler(handler), queue(queue), taskHandle(nullptr) {}
+  ByteHandlerPosix(Request& request, Handler& handler, Queue<uint8_t>& queue)
+      : request(request), handler(handler), queue(queue), running(false) {}
 
   void start() {
-    xTaskCreatePinnedToCore(&ServiceRunnerFreeRtos::taskFunc,
-                            "ebusServiceRunner", 4096, this, 1, &taskHandle,
-                            tskNO_AFFINITY);
+    running = true;
+    thread = std::thread([this]() { this->run(); });
   }
 
   void stop() {
-    if (taskHandle) {
-      vTaskDelete(taskHandle);
-      taskHandle = nullptr;
-    }
+    running = false;
+    if (thread.joinable()) thread.join();
   }
+
+  void enableTesting() { testing = true; }
 
   // Register a listener for incoming bytes
   void addByteListener(ByteListener listener) { listeners.push_back(listener); }
@@ -61,21 +58,29 @@ class ServiceRunnerFreeRtos {
   Request& request;
   Handler& handler;
   Queue<uint8_t>& queue;
-  TaskHandle_t taskHandle;
+  std::atomic<bool> running;
+  std::thread thread;
+  bool testing = false;
   std::vector<ByteListener> listeners;
 
-  static void taskFunc(void* arg) {
-    ServiceRunnerFreeRtos* self = static_cast<ServiceRunnerFreeRtos*>(arg);
-    uint8_t byte;
-    for (;;) {
-      if (self->queue.pop(byte)) {
-        processBusIsrEvents();
-        self->request.run(byte);
-        self->handler.run(byte);
-        for (const ByteListener& listener : self->listeners) listener(byte);
+  void run() {
+    while (running) {
+      uint8_t byte;
+      if (queue.pop(byte)) {
+        if (!testing) {
+          request.run(byte);
+          handler.run(byte);
+        }
+        for (const ByteListener& listener : listeners) listener(byte);
+        if (testing) {
+          request.run(byte);
+          handler.run(byte);
+        }
       }
     }
   }
 };
 
 }  // namespace ebus
+
+#endif

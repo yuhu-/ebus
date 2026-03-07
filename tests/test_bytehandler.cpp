@@ -25,12 +25,12 @@
 #include <vector>
 
 #include "Bus.hpp"
+#include "ByteHandler.hpp"
 #include "Common.hpp"
 #include "Handler.hpp"
 #include "Queue.hpp"
 #include "Request.hpp"
 #include "Sequence.hpp"
-#include "ServiceRunner.hpp"
 
 #define DELAY_10_BIT 4167   // 4167us = 2400 baud, 10 bit
 #define DELAY_REQUEST 4300  // 4300us
@@ -128,7 +128,8 @@ void run_test(const TestCase& tc) {
             << "=== Test: " << tc.description << " ===" << std::endl;
 
   running = true;
-  ebus::Bus bus;
+  ebus::bus_config_t config = {.device = "/dev/simulation", .simulate = true};
+  ebus::Bus bus(config);
   ebus::Request request;
   ebus::Queue<uint8_t> byteQueue(32);
   ebus::Handler handler(tc.address, &bus, &request);
@@ -177,15 +178,15 @@ void run_test(const TestCase& tc) {
   if (tc.messageType == ebus::MessageType::active)
     request.requestBus(tc.address);
 
-  ebus::ServiceRunner serviceRunner(request, handler, byteQueue);
+  ebus::ByteHandler byteHandler(request, handler, byteQueue);
 
-  // Register a ByteListener that logs every byte processed by the serviceRunner
-  serviceRunner.addByteListener([](const uint8_t& byte) {
+  // Register a ByteListener that logs every byte processed by the byteHandler
+  byteHandler.addByteListener([](const uint8_t& byte) {
     std::cout << "->  read: " << ebus::to_string(byte) << std::endl;
   });
 
-  serviceRunner.enableTesting();
-  serviceRunner.start();
+  byteHandler.enableTesting();
+  byteHandler.start();
 
   std::thread handlerEventTask(handleEventRunner, &eventQueue,
                                std::ref(running));
@@ -211,7 +212,7 @@ void run_test(const TestCase& tc) {
       std::this_thread::sleep_for(std::chrono::microseconds(200));
       if (seq[i] == ebus::sym_syn && request.busRequestPending()) {
         std::cout << " ISR - write address" << std::endl;
-        bus.writeByte(request.getAddress());
+        bus.writeByte(request.busRequestAddress());
         request.busRequestCompleted();
       }
 
@@ -220,16 +221,16 @@ void run_test(const TestCase& tc) {
     }
   });
 
-  // Let the serviceRunner process for a short while
+  // Let the byteHandler process for a short while
   std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
-  serviceRunner.stop();
+  byteHandler.stop();
   if (ebusUartEventTask.joinable()) ebusUartEventTask.join();
 
   running = false;
   if (handlerEventTask.joinable()) handlerEventTask.join();
 
-  std::cout << " written: " << bus.getWrittenBytesString() << std::endl;
+  std::cout << " written: " << bus.getSimulatedWrittenBytes() << std::endl;
 
   std::cout << "--- Test: " << tc.description << " ---" << std::endl;
 }

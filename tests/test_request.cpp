@@ -90,7 +90,6 @@ void printCounter() {
   ebus::Request::Counter counter = request.getCounter();
 
   std::cout << std::endl;
-  std::cout << "requestsStartBit:    " << counter.requestsStartBit << std::endl;
   std::cout << "requestsFirstSyn:    " << counter.requestsFirstSyn << std::endl;
   std::cout << "requestsFirstWon:    " << counter.requestsFirstWon << std::endl;
   std::cout << "requestsFirstRetry:  " << counter.requestsFirstRetry

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Roland Jax
+ * Copyright (C) 2025-2026 Roland Jax
  *
  * This file is part of ebus.
  *
@@ -19,110 +19,79 @@
 
 #pragma once
 
+#if defined(POSIX)
 #include <fcntl.h>
 #include <poll.h>
 #include <sys/ioctl.h>
 #include <termios.h>
 #include <unistd.h>
 
+#include <atomic>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <memory>
 #include <stdexcept>
 #include <string>
+#include <thread>
+#include <vector>
 
-// Example
-// ebus::BusPosix bus("/dev/ttyUSB0");
-// bus.open();
-// bus.writeByte(0x42);
-// if (bus.available()) {
-//     uint8_t b = bus.readByte();
-//     // process b
-// }
-// bus.close();
+#include "../Queue.hpp"
 
 namespace ebus {
 
+typedef struct {
+  const char* device;
+  bool simulate;
+} bus_config_t;
+
 class BusPosix {
  public:
-  explicit BusPosix(const std::string& device)
-      : m_device(device), m_fd(-1), m_open(false) {}
+  explicit BusPosix(bus_config_t& config);
+  ~BusPosix();
 
-  ~BusPosix() { close(); }
-
-  void open() {
-    if (m_open) return;
-
-    struct termios newSettings;
-    m_fd = ::open(m_device.c_str(), O_RDWR | O_NOCTTY);
-    if (m_fd < 0 || isatty(m_fd) == 0)
-      throw std::runtime_error("Failed to open ebus device: " + m_device);
-
-    tcgetattr(m_fd, &m_oldSettings);
-    ::memset(&newSettings, 0, sizeof(newSettings));
-    newSettings.c_cflag |= (B2400 | CS8 | CLOCAL | CREAD);
-    newSettings.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG);
-    newSettings.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG);
-    newSettings.c_iflag |= IGNPAR;
-    newSettings.c_oflag &= ~OPOST;
-    newSettings.c_cc[VMIN] = 1;
-    newSettings.c_cc[VTIME] = 0;
-
-    tcflush(m_fd, TCIFLUSH);
-    tcsetattr(m_fd, TCSAFLUSH, &newSettings);
-    fcntl(m_fd, F_SETFL, fcntl(m_fd, F_GETFL) & ~O_NONBLOCK);
-
-    m_open = true;
-  }
-
-  void close() {
-    if (m_open) {
-      tcflush(m_fd, TCIOFLUSH);
-      tcsetattr(m_fd, TCSANOW, &m_oldSettings);
-      ::close(m_fd);
-      m_fd = -1;
-      m_open = false;
-    }
-  }
-
-  bool isOpen() const { return m_open; }
+  void start();
+  void stop();
 
   // Write a single byte to the bus
-  void writeByte(const uint8_t byte) {
-    ensureOpen();
-    int ret = ::write(m_fd, &byte, 1);
-    if (ret == -1) throw std::runtime_error("BusPosix: write error");
-  }
+  void writeByte(const uint8_t byte);
 
-  // Read a single byte from the bus (blocking)
-  uint8_t readByte() {
-    ensureOpen();
-    uint8_t byte;
-    ssize_t nbytes = ::read(m_fd, &byte, 1);
-    if (nbytes < 0) throw std::runtime_error("BusPosix: read error");
-    if (nbytes == 0) throw std::runtime_error("BusPosix: EOF on read");
-    return byte;
-  }
+  // Read a single byte from the bus (blocking) - kept for API compatibility
+  uint8_t readByte();
 
   // Returns the number of bytes available to read (non-blocking)
-  size_t available() const {
-    ensureOpen();
-    int bytes = 0;
-    if (ioctl(m_fd, FIONREAD, &bytes) == -1)
-      throw std::runtime_error("BusPosix: ioctl FIONREAD failed");
-    return static_cast<size_t>(bytes);
-  }
+  size_t available() const;
+
+  // Access to the internal byte queue (matches BusFreeRtos::getQueue)
+  Queue<uint8_t>* getQueue() const;
+
+  // Get all simulated written bytes as a hex string
+  std::string getSimulatedWrittenBytes() const;
 
  private:
+  BusPosix(const BusPosix&) = delete;
+  BusPosix& operator=(const BusPosix&) = delete;
+
   std::string m_device;
+  bool m_simulate;
+
   int m_fd;
   bool m_open;
   struct termios m_oldSettings{};
 
-  void ensureOpen() const {
-    if (!m_open || m_fd < 0)
-      throw std::runtime_error("BusPosix: device not open");
-  }
+  std::unique_ptr<Queue<uint8_t>> m_byteQueue;
+  std::thread m_thread;
+  std::atomic<bool> m_running;
+
+  // simulated written bytes
+  std::vector<uint8_t> m_writtenBytes;
+
+  void ensureOpen() const;
+
+  // Thread function: read bytes and push them into the queue
+  void readerThread();
 };
 
 }  // namespace ebus
+
+#endif

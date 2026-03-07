@@ -70,7 +70,6 @@ using BusRequestedCallback = std::function<void()>;
 using StartBitCallback = std::function<void()>;
 
 #define EBUS_REQUEST_COUNTER_LIST \
-  X(requestsStartBit)             \
   X(requestsFirstSyn)             \
   X(requestsFirstWon)             \
   X(requestsFirstRetry)           \
@@ -82,10 +81,6 @@ using StartBitCallback = std::function<void()>;
   X(requestsSecondLost)           \
   X(requestsSecondError)
 
-#define EBUS_REQUEST_TIMING_LIST \
-  X(busIsrDelay)                 \
-  X(busIsrWindow)
-
 class Request {
  public:
   // measurement
@@ -95,22 +90,10 @@ class Request {
 #undef X
   };
 
-  struct Timing {
-#define X(name)             \
-  double name##Last = 0;    \
-  uint64_t name##Count = 0; \
-  double name##Mean = 0;    \
-  double name##StdDev = 0;
-    EBUS_REQUEST_TIMING_LIST
-#undef X
-  };
-
   explicit Request();
 
   void setMaxLockCounter(const uint8_t& maxCounter);
   const uint8_t getLockCounter() const;
-
-  uint8_t getAddress() const;
 
   bool busAvailable() const;
 
@@ -119,6 +102,8 @@ class Request {
 
   void setHandlerBusRequestedCallback(BusRequestedCallback callback);
   void setExternalBusRequestedCallback(BusRequestedCallback callback);
+
+  const uint8_t busRequestAddress() const;
 
   bool busRequestPending() const;
   void busRequestCompleted();
@@ -133,20 +118,14 @@ class Request {
 
   RequestResult run(const uint8_t& byte);
 
-  void microsLastDelay(const int64_t& delay);
-  void microsLastWindow(const int64_t& window);
-
   void resetCounter();
   const Counter& getCounter() const;
 
-  void resetTiming();
-  const Timing& getTiming();
-
  private:
-  uint8_t sourceAddress = 0;
-
   uint8_t maxLockCounter = DEFAULT_LOCK_COUNTER;
   uint8_t lockCounter = DEFAULT_LOCK_COUNTER;
+
+  uint8_t requestAddress = 0;
 
   // Indicates whether a bus request is present
   bool busRequest = false;
@@ -167,10 +146,6 @@ class Request {
 
   // measurement
   Counter counter;
-  Timing timing;
-
-  TimingStats busIsrDelay;
-  TimingStats busIsrWindow;
 
   void observe(const uint8_t& byte);
   void first(const uint8_t& byte);

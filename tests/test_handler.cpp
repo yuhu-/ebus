@@ -45,7 +45,8 @@ void printByte(const std::string& prefix, const uint8_t& byte,
   std::cout << prefix << ebus::to_string(byte) << " " << postfix << std::endl;
 }
 
-ebus::Bus bus;
+ebus::bus_config_t config = {.device = "/dev/simulation", .simulate = true};
+ebus::Bus bus(config);
 ebus::Request request;
 ebus::Handler handler(ebus::DEFAULT_ADDRESS, &bus, &request);
 
@@ -186,8 +187,6 @@ void printCounters() {
   ebus::Request::Counter requestCounter = request.getCounter();
 
   // requests
-  std::cout << "requestsStartBit:    " << requestCounter.requestsStartBit
-            << std::endl;
   std::cout << "requestsFirstSyn:    " << requestCounter.requestsFirstSyn
             << std::endl;
   std::cout << "requestsFirstWon:    " << requestCounter.requestsFirstWon
@@ -246,7 +245,7 @@ void run_test(const TestCase& tc) {
     // simulte request bus timer
     if (seq[i] == ebus::sym_syn && request.busRequestPending()) {
       std::cout << " ISR - write address" << std::endl;
-      bus.writeByte(request.getAddress());
+      bus.writeByte(request.busRequestAddress());
       request.busRequestCompleted();
     }
   }
