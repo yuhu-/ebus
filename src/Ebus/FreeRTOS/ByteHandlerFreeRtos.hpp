@@ -36,8 +36,8 @@ class ByteHandlerFreeRtos {
   // Define a listener type for byte events
   using ByteListener = std::function<void(const uint8_t& byte)>;
 
-  ByteHandlerFreeRtos(Request& request, Handler& handler,
-                      Queue<BusEvent>& queue)
+  ByteHandlerFreeRtos(Request* request, Handler* handler,
+                      Queue<BusEvent>* queue)
       : request(request), handler(handler), queue(queue), taskHandle(nullptr) {}
 
   void start() {
@@ -57,9 +57,9 @@ class ByteHandlerFreeRtos {
   void addByteListener(ByteListener listener) { listeners.push_back(listener); }
 
  private:
-  Request& request;
-  Handler& handler;
-  Queue<BusEvent>& queue;
+  Request* request;
+  Handler* handler;
+  Queue<BusEvent>* queue;
   TaskHandle_t taskHandle;
   std::vector<ByteListener> listeners;
 
@@ -67,16 +67,11 @@ class ByteHandlerFreeRtos {
     ByteHandlerFreeRtos* self = static_cast<ByteHandlerFreeRtos*>(arg);
     BusEvent event;
     for (;;) {
-      if (self->queue.pop(event)) {
-        if (event.busRequest) self->request.busRequestCompleted();
-        if (event.startBit) self->request.startBit();
-        // if (event.microsDelay)
-        //   self->request.microsLastDelay(event.microsLastDelay);
-        // if (event.microsWindow)
-        //   self->request.microsLastWindow(event.microsLastWindow);
-
-        self->request.run(event.byte);
-        self->handler.run(event.byte);
+      if (self->queue->pop(event)) {
+        if (event.busRequest) self->request->busRequestCompleted();
+        if (event.startBit) self->request->startBit();
+        self->request->run(event.byte);
+        self->handler->run(event.byte);
         for (const ByteListener& listener : self->listeners)
           listener(event.byte);
       }

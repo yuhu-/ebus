@@ -26,6 +26,7 @@
 
 // Common includes
 #include "Ebus/Common.hpp"
+#include "Ebus/Controller.hpp"
 #include "Ebus/Datatypes.hpp"
 #include "Ebus/Handler.hpp"
 #include "Ebus/Request.hpp"

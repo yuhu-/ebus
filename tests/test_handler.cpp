@@ -44,10 +44,11 @@ void printByte(const std::string& prefix, const uint8_t& byte,
                const std::string& postfix) {
   std::cout << prefix << ebus::to_string(byte) << " " << postfix << std::endl;
 }
+ebus::Request request = ebus::Request();
 
-ebus::bus_config_t config = {.device = "/dev/simulation", .simulate = true};
-ebus::Bus bus(config);
-ebus::Request request;
+ebus::busConfig config = {.device = "/dev/simulation", .simulate = true};
+ebus::Bus bus(config, &request);
+
 ebus::Handler handler(ebus::DEFAULT_ADDRESS, &bus, &request);
 
 void readFunction(const uint8_t& byte) {

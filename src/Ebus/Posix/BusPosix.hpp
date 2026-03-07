@@ -37,33 +37,34 @@
 #include <vector>
 
 #include "../Queue.hpp"
+#include "../Request.hpp"
 
 namespace ebus {
 
-typedef struct {
+struct busConfig {
   const char* device;
   bool simulate;
-} bus_config_t;
+};
 
 class BusPosix {
  public:
-  explicit BusPosix(bus_config_t& config);
+  explicit BusPosix(const busConfig& config, Request* request);
   ~BusPosix();
 
   void start();
   void stop();
 
-  // Write a single byte to the bus
+  Queue<uint8_t>* getQueue() const;
+
   void writeByte(const uint8_t byte);
 
-  // Read a single byte from the bus (blocking) - kept for API compatibility
+  // kept for BusFreeRtos compatibility, but not used in Posix implementation
+  void setWindow(const uint16_t window);
+  void setOffset(const uint16_t offset);
+
+  // Posix specific
   uint8_t readByte();
-
-  // Returns the number of bytes available to read (non-blocking)
   size_t available() const;
-
-  // Access to the internal byte queue (matches BusFreeRtos::getQueue)
-  Queue<uint8_t>* getQueue() const;
 
   // Get all simulated written bytes as a hex string
   std::string getSimulatedWrittenBytes() const;
@@ -75,9 +76,14 @@ class BusPosix {
   std::string m_device;
   bool m_simulate;
 
+  Request* m_request = nullptr;
+
   int m_fd;
   bool m_open;
   struct termios m_oldSettings{};
+
+  volatile uint16_t m_busIsrWindow = 4300;  // usually between 4300-4456 us
+  volatile uint16_t m_busIsrOffset = 80;  // mainly for context switch and write
 
   std::unique_ptr<Queue<uint8_t>> m_byteQueue;
   std::thread m_thread;

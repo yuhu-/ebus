@@ -36,7 +36,7 @@ class ByteHandlerPosix {
   // Define a listener type for byte events
   using ByteListener = std::function<void(const uint8_t& byte)>;
 
-  ByteHandlerPosix(Request& request, Handler& handler, Queue<uint8_t>& queue)
+  ByteHandlerPosix(Request* request, Handler* handler, Queue<uint8_t>* queue)
       : request(request), handler(handler), queue(queue), running(false) {}
 
   void start() {
@@ -55,9 +55,9 @@ class ByteHandlerPosix {
   void addByteListener(ByteListener listener) { listeners.push_back(listener); }
 
  private:
-  Request& request;
-  Handler& handler;
-  Queue<uint8_t>& queue;
+  Request* request;
+  Handler* handler;
+  Queue<uint8_t>* queue;
   std::atomic<bool> running;
   std::thread thread;
   bool testing = false;
@@ -66,15 +66,15 @@ class ByteHandlerPosix {
   void run() {
     while (running) {
       uint8_t byte;
-      if (queue.pop(byte)) {
+      if (queue->pop(byte)) {
         if (!testing) {
-          request.run(byte);
-          handler.run(byte);
+          request->run(byte);
+          handler->run(byte);
         }
         for (const ByteListener& listener : listeners) listener(byte);
         if (testing) {
-          request.run(byte);
-          handler.run(byte);
+          request->run(byte);
+          handler->run(byte);
         }
       }
     }

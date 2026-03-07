@@ -24,9 +24,10 @@
 
 #include "../Common.hpp"
 
-ebus::BusPosix::BusPosix(bus_config_t& config)
+ebus::BusPosix::BusPosix(const busConfig& config, Request* request)
     : m_device(config.device),
       m_simulate(config.simulate),
+      m_request(request),
       m_fd(-1),
       m_open(false),
       m_byteQueue(new Queue<uint8_t>()),
@@ -74,7 +75,10 @@ void ebus::BusPosix::stop() {
   }
 }
 
-// Write a single byte to the bus
+ebus::Queue<uint8_t>* ebus::BusPosix::getQueue() const {
+  return m_byteQueue.get();
+}
+
 void ebus::BusPosix::writeByte(const uint8_t byte) {
   if (m_simulate) {
     m_writtenBytes.push_back(byte);
@@ -86,7 +90,14 @@ void ebus::BusPosix::writeByte(const uint8_t byte) {
   if (ret == -1) throw std::runtime_error("BusPosix: write error");
 }
 
-// Read a single byte from the bus (blocking) - kept for API compatibility
+void ebus::BusPosix::setWindow(const uint16_t window) {
+  m_busIsrWindow = window;
+}
+
+void ebus::BusPosix::setOffset(const uint16_t offset) {
+  m_busIsrOffset = offset;
+}
+
 uint8_t ebus::BusPosix::readByte() {
   ensureOpen();
   uint8_t byte;
@@ -96,18 +107,12 @@ uint8_t ebus::BusPosix::readByte() {
   return byte;
 }
 
-// Returns the number of bytes available to read (non-blocking)
 size_t ebus::BusPosix::available() const {
   ensureOpen();
   int bytes = 0;
   if (ioctl(m_fd, FIONREAD, &bytes) == -1)
     throw std::runtime_error("BusPosix: ioctl FIONREAD failed");
   return static_cast<size_t>(bytes);
-}
-
-// Access to the internal byte queue (matches BusFreeRtos::getQueue)
-ebus::Queue<uint8_t>* ebus::BusPosix::getQueue() const {
-  return m_byteQueue.get();
 }
 
 std::string ebus::BusPosix::getSimulatedWrittenBytes() const {
@@ -119,7 +124,6 @@ void ebus::BusPosix::ensureOpen() const {
     throw std::runtime_error("BusPosix: device not open");
 }
 
-// Thread function: read bytes and push them into the queue
 void ebus::BusPosix::readerThread() {
   while (m_running.load()) {
     uint8_t byte;

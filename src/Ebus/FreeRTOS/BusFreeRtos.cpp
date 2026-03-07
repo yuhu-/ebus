@@ -26,7 +26,7 @@
 
 #include "../Common.hpp"
 
-ebus::BusFreeRtos::BusFreeRtos(bus_config_t& config, Request& request)
+ebus::BusFreeRtos::BusFreeRtos(const busConfig& config, Request* request)
     : m_uartPortNum(config.uart_port),
       m_rxPin(config.rx_pin),
       m_txPin(config.tx_pin),
@@ -194,7 +194,7 @@ void ebus::BusFreeRtos::ebusUartEventRunner() {
 
           if (!m_byteQueue) continue;
 
-          if (byte == ebus::sym_syn && m_request.busRequestPending()) {
+          if (byte == ebus::sym_syn && m_request->busRequestPending()) {
             int64_t now = esp_timer_get_time();
 
             // Calculation of the expected start bit time based on the current
@@ -259,17 +259,9 @@ void ebus::BusFreeRtos::ebusUartEventRunner() {
           busEvent.startBit = m_startBitFlag;
           if (m_microsDelayFlag) busIsrDelay.addDuration(m_microsLastDelay);
           if (m_microsWindowFlag) busIsrWindow.addDuration(m_microsLastWindow);
-          // busEvent.microsDelay = m_microsDelayFlag;
-          // busEvent.microsLastDelay = m_microsLastDelay;
-          // busEvent.microsWindow = m_microsWindowFlag;
-          // busEvent.microsLastWindow = m_microsLastWindow;
           // clear the global flags we consumed
           m_busRequestFlag = false;
           m_startBitFlag = false;
-          // m_microsDelayFlag = false;
-          // m_microsWindowFlag = false;
-          // m_microsLastDelay = 0;
-          // m_microsLastWindow = 0;
           portEXIT_CRITICAL_ISR(&m_timerMux);
 
           if (m_byteQueue) m_byteQueue->push(busEvent);
@@ -300,7 +292,7 @@ bool IRAM_ATTR ebus::BusFreeRtos::s_onBusIsrTimer(void* arg) {
 }
 
 bool IRAM_ATTR ebus::BusFreeRtos::onBusIsrTimer() {
-  uint8_t byte = m_request.busRequestAddress();
+  uint8_t byte = m_request->busRequestAddress();
   uart_write_bytes(m_uartPortNum, static_cast<const void*>(&byte), 1);
   portENTER_CRITICAL_ISR(&m_timerMux);
   m_microsLastWindow = esp_timer_get_time() - m_microsStartBit;

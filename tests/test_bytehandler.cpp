@@ -128,11 +128,14 @@ void run_test(const TestCase& tc) {
             << "=== Test: " << tc.description << " ===" << std::endl;
 
   running = true;
-  ebus::bus_config_t config = {.device = "/dev/simulation", .simulate = true};
-  ebus::Bus bus(config);
-  ebus::Request request;
-  ebus::Queue<uint8_t> byteQueue(32);
+  ebus::Request request = ebus::Request();
+
+  ebus::busConfig config = {.device = "/dev/simulation", .simulate = true};
+  ebus::Bus bus(config, &request);
+
   ebus::Handler handler(tc.address, &bus, &request);
+
+  ebus::Queue<uint8_t> byteQueue(32);
 
   ebus::Queue<CallbackEvent> eventQueue(8);
 
@@ -178,7 +181,7 @@ void run_test(const TestCase& tc) {
   if (tc.messageType == ebus::MessageType::active)
     request.requestBus(tc.address);
 
-  ebus::ByteHandler byteHandler(request, handler, byteQueue);
+  ebus::ByteHandler byteHandler(&request, &handler, &byteQueue);
 
   // Register a ByteListener that logs every byte processed by the byteHandler
   byteHandler.addByteListener([](const uint8_t& byte) {

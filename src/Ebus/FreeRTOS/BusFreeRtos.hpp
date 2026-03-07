@@ -32,22 +32,18 @@
 
 namespace ebus {
 
-typedef struct {
+struct busConfig {
   uint8_t uart_port;
   uint8_t rx_pin;
   uint8_t tx_pin;
   uint8_t timer_group;
   uint8_t timer_idx;
-} bus_config_t;
+};
 
 struct BusEvent {
   uint8_t byte;
   bool busRequest{false};
   bool startBit{false};
-  // bool microsDelay{false};
-  // int64_t microsLastDelay{0};
-  // bool microsWindow{false};
-  // int64_t microsLastWindow{0};
 };
 
 using BusRequestPendingCallback = std::function<bool()>;
@@ -56,7 +52,7 @@ using RequestAddressCallback = std::function<const uint8_t&()>;
 #define EBUS_BUS_COUNTER_LIST X(busStartBit)
 
 #define EBUS_BUS_TIMING_LIST \
-  X(busIsrDelay)                \
+  X(busIsrDelay)             \
   X(busIsrWindow)
 
 class BusFreeRtos {
@@ -78,7 +74,7 @@ class BusFreeRtos {
 #undef X
   };
 
-  explicit BusFreeRtos(bus_config_t& config, Request& request);
+  explicit BusFreeRtos(const busConfig& config, Request* request);
   ~BusFreeRtos();
 
   void start();
@@ -88,10 +84,10 @@ class BusFreeRtos {
 
   void writeByte(const uint8_t byte);
 
-  // FreeRtos specific
   void setWindow(const uint16_t window);
   void setOffset(const uint16_t offset);
 
+  // FreeRtos specific
   void resetCounter();
   const Counter& getCounter() const;
 
@@ -109,7 +105,7 @@ class BusFreeRtos {
   timer_group_t m_timerGroupNum = TIMER_GROUP_1;
   timer_idx_t m_timerIdxNum = TIMER_0;
 
-  Request& m_request;
+  Request* m_request = nullptr;
 
   // owned queue
   Queue<BusEvent>* m_byteQueue = nullptr;
