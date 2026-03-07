@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Roland Jax
+ * Copyright (C) 2025-2026 Roland Jax
  *
  * This file is part of ebus.
  *
@@ -25,7 +25,7 @@ namespace ebus {
 template <typename T>
 using Queue = QueueFreeRtos<T>;
 }
-#else
+#elif defined(POSIX)
 #include "Posix/QueuePosix.hpp"
 namespace ebus {
 template <typename T>

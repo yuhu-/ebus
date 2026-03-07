@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Roland Jax
+ * Copyright (C) 2025-2026 Roland Jax
  *
  * This file is part of ebus.
  *
@@ -19,6 +19,7 @@
 
 #pragma once
 
+#if defined(ESP32)
 #include <freertos/FreeRTOS.h>
 #include <freertos/queue.h>
 
@@ -110,3 +111,5 @@ class QueueFreeRtos {
 };
 
 }  // namespace ebus
+
+#endif

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Roland Jax
+ * Copyright (C) 2025-2026 Roland Jax
  *
  * This file is part of ebus.
  *
@@ -19,6 +19,7 @@
 
 #pragma once
 
+#if defined(POSIX)
 #include <chrono>
 #include <condition_variable>
 #include <mutex>
@@ -29,7 +30,7 @@ namespace ebus {
 template <typename T>
 class QueuePosix {
  public:
-  explicit QueuePosix(size_t capacity = 0) : m_capacity(capacity) {}
+  explicit QueuePosix(size_t capacity = 32) : m_capacity(capacity) {}
 
   // Blocking push with optional timeout (returns false on timeout/full)
   bool push(const T& item, std::chrono::milliseconds timeout =
@@ -93,3 +94,5 @@ class QueuePosix {
 };
 
 }  // namespace ebus
+
+#endif
