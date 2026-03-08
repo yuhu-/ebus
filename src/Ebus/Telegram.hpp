@@ -142,19 +142,19 @@ class Telegram {
   static ebus::SequenceState checkSlaveSequence(const Sequence& seq);
 
  private:
-  TelegramType m_type = TelegramType::undefined;
+  TelegramType type = TelegramType::undefined;
 
-  Sequence m_master;
-  size_t m_masterNN = 0;
-  uint8_t m_masterCRC = sym_zero;
-  uint8_t m_masterACK = sym_zero;
-  SequenceState m_masterState = SequenceState::seq_empty;
+  Sequence master;
+  size_t masterNN = 0;
+  uint8_t masterCRC = sym_zero;
+  uint8_t masterACK = sym_zero;
+  SequenceState masterState = SequenceState::seq_empty;
 
-  Sequence m_slave;
-  size_t m_slaveNN = 0;
-  uint8_t m_slaveCRC = sym_zero;
-  uint8_t m_slaveACK = sym_zero;
-  SequenceState m_slaveState = SequenceState::seq_empty;
+  Sequence slave;
+  size_t slaveNN = 0;
+  uint8_t slaveCRC = sym_zero;
+  uint8_t slaveACK = sym_zero;
+  SequenceState slaveState = SequenceState::seq_empty;
 };
 
 }  // namespace ebus

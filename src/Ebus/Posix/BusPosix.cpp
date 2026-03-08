@@ -25,26 +25,26 @@
 #include "../Common.hpp"
 
 ebus::BusPosix::BusPosix(const busConfig& config, Request* request)
-    : m_device(config.device),
-      m_simulate(config.simulate),
-      m_request(request),
-      m_fd(-1),
-      m_open(false),
-      m_byteQueue(new Queue<uint8_t>()),
-      m_thread(),
-      m_running(false) {}
+    : device(config.device),
+      simulate(config.simulate),
+      request(request),
+      fd(-1),
+      open(false),
+      byteQueue(new Queue<uint8_t>()),
+      thread(),
+      running(false) {}
 
 ebus::BusPosix::~BusPosix() { stop(); }
 
 void ebus::BusPosix::start() {
-  if (m_open) return;
+  if (open) return;
 
   struct termios newSettings;
-  m_fd = ::open(m_device.c_str(), O_RDWR | O_NOCTTY);
-  if (m_fd < 0 || isatty(m_fd) == 0)
-    throw std::runtime_error("Failed to open ebus device: " + m_device);
+  fd = ::open(device.c_str(), O_RDWR | O_NOCTTY);
+  if (fd < 0 || isatty(fd) == 0)
+    throw std::runtime_error("Failed to open ebus device: " + device);
 
-  tcgetattr(m_fd, &m_oldSettings);
+  tcgetattr(fd, &oldSettings);
   ::memset(&newSettings, 0, sizeof(newSettings));
   newSettings.c_cflag |= (B2400 | CS8 | CLOCAL | CREAD);
   newSettings.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG);
@@ -53,55 +53,51 @@ void ebus::BusPosix::start() {
   newSettings.c_cc[VMIN] = 1;
   newSettings.c_cc[VTIME] = 0;
 
-  tcflush(m_fd, TCIFLUSH);
-  tcsetattr(m_fd, TCSAFLUSH, &newSettings);
-  fcntl(m_fd, F_SETFL, fcntl(m_fd, F_GETFL) & ~O_NONBLOCK);
+  tcflush(fd, TCIFLUSH);
+  tcsetattr(fd, TCSAFLUSH, &newSettings);
+  fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) & ~O_NONBLOCK);
 
-  m_open = true;
-  m_running.store(true);
-  m_thread = std::thread(&BusPosix::readerThread, this);
+  open = true;
+  running.store(true);
+  thread = std::thread(&BusPosix::readerThread, this);
 }
 
 void ebus::BusPosix::stop() {
-  if (m_open) {
-    m_running.store(false);
-    if (m_thread.joinable()) m_thread.join();
+  if (open) {
+    running.store(false);
+    if (thread.joinable()) thread.join();
 
-    tcflush(m_fd, TCIOFLUSH);
-    tcsetattr(m_fd, TCSANOW, &m_oldSettings);
-    ::close(m_fd);
-    m_fd = -1;
-    m_open = false;
+    tcflush(fd, TCIOFLUSH);
+    tcsetattr(fd, TCSANOW, &oldSettings);
+    ::close(fd);
+    fd = -1;
+    open = false;
   }
 }
 
 ebus::Queue<uint8_t>* ebus::BusPosix::getQueue() const {
-  return m_byteQueue.get();
+  return byteQueue.get();
 }
 
 void ebus::BusPosix::writeByte(const uint8_t byte) {
-  if (m_simulate) {
-    m_writtenBytes.push_back(byte);
+  if (simulate) {
+    writtenBytes.push_back(byte);
     std::cout << "<- write: " << ebus::to_string(byte) << std::endl;
     return;
   }
   ensureOpen();
-  int ret = ::write(m_fd, &byte, 1);
+  int ret = ::write(fd, &byte, 1);
   if (ret == -1) throw std::runtime_error("BusPosix: write error");
 }
 
-void ebus::BusPosix::setWindow(const uint16_t window) {
-  m_busIsrWindow = window;
-}
+void ebus::BusPosix::setWindow(const uint16_t window) { this->window = window; }
 
-void ebus::BusPosix::setOffset(const uint16_t offset) {
-  m_busIsrOffset = offset;
-}
+void ebus::BusPosix::setOffset(const uint16_t offset) { this->offset = offset; }
 
 uint8_t ebus::BusPosix::readByte() {
   ensureOpen();
   uint8_t byte;
-  ssize_t nbytes = ::read(m_fd, &byte, 1);
+  ssize_t nbytes = ::read(fd, &byte, 1);
   if (nbytes < 0) throw std::runtime_error("BusPosix: read error");
   if (nbytes == 0) throw std::runtime_error("BusPosix: EOF on read");
   return byte;
@@ -110,26 +106,25 @@ uint8_t ebus::BusPosix::readByte() {
 size_t ebus::BusPosix::available() const {
   ensureOpen();
   int bytes = 0;
-  if (ioctl(m_fd, FIONREAD, &bytes) == -1)
+  if (ioctl(fd, FIONREAD, &bytes) == -1)
     throw std::runtime_error("BusPosix: ioctl FIONREAD failed");
   return static_cast<size_t>(bytes);
 }
 
 std::string ebus::BusPosix::getSimulatedWrittenBytes() const {
-  return ebus::to_string(m_writtenBytes);
+  return ebus::to_string(writtenBytes);
 }
 
 void ebus::BusPosix::ensureOpen() const {
-  if (!m_open || m_fd < 0)
-    throw std::runtime_error("BusPosix: device not open");
+  if (!open || fd < 0) throw std::runtime_error("BusPosix: device not open");
 }
 
 void ebus::BusPosix::readerThread() {
-  while (m_running.load()) {
+  while (running.load()) {
     uint8_t byte;
-    ssize_t n = ::read(m_fd, &byte, 1);
+    ssize_t n = ::read(fd, &byte, 1);
     if (n == 1) {
-      if (m_byteQueue) m_byteQueue->push(byte);
+      if (byteQueue) byteQueue->push(byte);
     } else if (n == 0) {
       // EOF - stop thread
       break;
@@ -139,7 +134,7 @@ void ebus::BusPosix::readerThread() {
       break;
     }
   }
-  m_running.store(false);
+  running.store(false);
 }
 
 #endif

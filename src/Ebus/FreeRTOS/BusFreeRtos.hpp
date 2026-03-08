@@ -52,8 +52,8 @@ using RequestAddressCallback = std::function<const uint8_t&()>;
 #define EBUS_BUS_COUNTER_LIST X(busStartBit)
 
 #define EBUS_BUS_TIMING_LIST \
-  X(busIsrDelay)             \
-  X(busIsrWindow)
+  X(busDelay)                \
+  X(busWindow)
 
 class BusFreeRtos {
  public:
@@ -99,16 +99,16 @@ class BusFreeRtos {
   BusFreeRtos& operator=(const BusFreeRtos&) = delete;
 
   // configuration
-  uart_port_t m_uartPortNum;
-  uint8_t m_rxPin;
-  uint8_t m_txPin;
-  timer_group_t m_timerGroupNum = TIMER_GROUP_1;
-  timer_idx_t m_timerIdxNum = TIMER_0;
+  uart_port_t uartPortNum;
+  uint8_t rxPin;
+  uint8_t txPin;
+  timer_group_t timerGroupNum = TIMER_GROUP_1;
+  timer_idx_t timerIdxNum = TIMER_0;
 
-  Request* m_request = nullptr;
+  Request* request = nullptr;
 
   // owned queue
-  Queue<BusEvent>* m_byteQueue = nullptr;
+  Queue<BusEvent>* byteQueue = nullptr;
 
   // ISR/state
   static constexpr uint8_t FALLING_EDGE_BUFFER_SIZE = 5;
@@ -121,33 +121,33 @@ class BusFreeRtos {
   static constexpr int64_t byte_time = 9.5 * bit_time;  // ~3958.33 us
 
   // This value can be adjusted if the bus ISR is not working as expected.
-  volatile uint16_t m_busIsrWindow = 4300;  // usually between 4300-4456 us
-  volatile uint16_t m_busIsrOffset = 80;  // mainly for context switch and write
+  volatile uint16_t window = 4300;  // usually between 4300-4456 us
+  volatile uint16_t offset = 80;    // mainly for context switch and write
 
-  volatile uint8_t m_bufferIndex = 0;  // index for falling edge buffer
-  volatile int64_t m_microsEdgeBuffer[FALLING_EDGE_BUFFER_SIZE] = {0};
+  volatile uint8_t bufferIndex = 0;  // index for falling edge buffer
+  volatile int64_t microsEdgeBuffer[FALLING_EDGE_BUFFER_SIZE] = {0};
 
-  volatile int64_t m_microsStartBit = 0;  // estimated start bit time
+  volatile int64_t microsStartBit = 0;  // estimated start bit time
 
-  volatile bool m_busRequestFlag = false;
-  volatile bool m_startBitFlag = false;
+  volatile bool busRequestFlag = false;
+  volatile bool startBitFlag = false;
 
-  volatile bool m_microsDelayFlag = false;
-  volatile bool m_microsWindowFlag = false;
+  volatile bool microsDelayFlag = false;
+  volatile bool microsWindowFlag = false;
 
-  volatile int64_t m_microsLastDelay = 0;
-  volatile int64_t m_microsLastWindow = 0;
+  volatile int64_t microsLastDelay = 0;
+  volatile int64_t microsLastWindow = 0;
 
   // platform handles
-  QueueHandle_t m_uartEventQueue = nullptr;
-  portMUX_TYPE m_timerMux = portMUX_INITIALIZER_UNLOCKED;
+  QueueHandle_t uartEventQueue = nullptr;
+  portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
 
   // measurement
   Counter counter;
   Timing timing;
 
-  TimingStats busIsrDelay;
-  TimingStats busIsrWindow;
+  TimingStats busDelay;
+  TimingStats busWindow;
 
   // setup helpers
   void configureUart();

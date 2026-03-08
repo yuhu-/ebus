@@ -81,22 +81,22 @@ bool typeof_datatype(const DataType& datatype);
 double_t round_digits(const double_t& value, const uint8_t& digits);
 
 // Generic integer conversion helpers
-template <typename T>
-T byte_2_int(const std::vector<uint8_t>& bytes) {
-  if (bytes.size() != sizeof(T)) return 0;
-  T value = 0;
-  for (size_t i = 0; i < sizeof(T); ++i)
-    value |= static_cast<T>(bytes[i]) << (8 * i);
-  return value;
-}
+// template <typename T>
+// T byte_2_int(const std::vector<uint8_t>& bytes) {
+//   if (bytes.size() != sizeof(T)) return 0;
+//   T value = 0;
+//   for (size_t i = 0; i < sizeof(T); ++i)
+//     value |= static_cast<T>(bytes[i]) << (8 * i);
+//   return value;
+// }
 
-template <typename T>
-std::vector<uint8_t> int_2_byte(const T& value) {
-  std::vector<uint8_t> bytes(sizeof(T));
-  for (size_t i = 0; i < sizeof(T); ++i)
-    bytes[i] = static_cast<uint8_t>((value >> (8 * i)) & 0xff);
-  return bytes;
-}
+// template <typename T>
+// std::vector<uint8_t> int_2_byte(const T& value) {
+//   std::vector<uint8_t> bytes(sizeof(T));
+//   for (size_t i = 0; i < sizeof(T); ++i)
+//     bytes[i] = static_cast<uint8_t>((value >> (8 * i)) & 0xff);
+//   return bytes;
+// }
 
 // BCD
 uint8_t byte_2_bcd(const std::vector<uint8_t>& bytes);

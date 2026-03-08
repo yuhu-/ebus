@@ -73,24 +73,24 @@ class BusPosix {
   BusPosix(const BusPosix&) = delete;
   BusPosix& operator=(const BusPosix&) = delete;
 
-  std::string m_device;
-  bool m_simulate;
+  std::string device;
+  bool simulate;
 
-  Request* m_request = nullptr;
+  Request* request = nullptr;
 
-  int m_fd;
-  bool m_open;
-  struct termios m_oldSettings{};
+  int fd;
+  bool open;
+  struct termios oldSettings{};
 
-  volatile uint16_t m_busIsrWindow = 4300;  // usually between 4300-4456 us
-  volatile uint16_t m_busIsrOffset = 80;  // mainly for context switch and write
+  volatile uint16_t window = 4300;  // usually between 4300-4456 us
+  volatile uint16_t offset = 80;    // mainly for context switch and write
 
-  std::unique_ptr<Queue<uint8_t>> m_byteQueue;
-  std::thread m_thread;
-  std::atomic<bool> m_running;
+  std::unique_ptr<Queue<uint8_t>> byteQueue;
+  std::thread thread;
+  std::atomic<bool> running;
 
   // simulated written bytes
-  std::vector<uint8_t> m_writtenBytes;
+  std::vector<uint8_t> writtenBytes;
 
   void ensureOpen() const;
 
