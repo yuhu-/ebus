@@ -31,19 +31,17 @@
 
 namespace ebus {
 
-class ByteHandlerFreeRtos {
+class BusHandlerFreeRtos {
  public:
   // Define a listener type for byte events
   using ByteListener = std::function<void(const uint8_t& byte)>;
 
-  ByteHandlerFreeRtos(Request* request, Handler* handler,
-                      Queue<BusEvent>* queue)
+  BusHandlerFreeRtos(Request* request, Handler* handler, Queue<BusEvent>* queue)
       : request(request), handler(handler), queue(queue), taskHandle(nullptr) {}
 
   void start() {
-    xTaskCreatePinnedToCore(&ByteHandlerFreeRtos::taskFunc,
-                            "ebusByteQueueRunner", 4096, this, 1, &taskHandle,
-                            tskNO_AFFINITY);
+    xTaskCreatePinnedToCore(&BusHandlerFreeRtos::taskFunc, "ebusBusQueueRunner",
+                            4096, this, 1, &taskHandle, tskNO_AFFINITY);
   }
 
   void stop() {
@@ -64,7 +62,7 @@ class ByteHandlerFreeRtos {
   std::vector<ByteListener> listeners;
 
   static void taskFunc(void* arg) {
-    ByteHandlerFreeRtos* self = static_cast<ByteHandlerFreeRtos*>(arg);
+    BusHandlerFreeRtos* self = static_cast<BusHandlerFreeRtos*>(arg);
     BusEvent event;
     for (;;) {
       if (self->queue->pop(event)) {

@@ -25,7 +25,7 @@
 #include <memory>
 
 #include "Bus.hpp"
-#include "ByteHandler.hpp"
+#include "BusHandler.hpp"
 #include "Handler.hpp"
 #include "Queue.hpp"
 #include "Request.hpp"
@@ -63,8 +63,8 @@ class Controller {
   Bus* getBus();
   const Bus* getBus() const;
 
-  ByteHandler* getByteHandler();
-  const ByteHandler* getByteHandler() const;
+  BusHandler* getBusHandler();
+  const BusHandler* getBusHandler() const;
 
   Handler* getHandler();
   const Handler* getHandler() const;
@@ -79,8 +79,8 @@ class Controller {
 
   std::unique_ptr<Request> request;
   std::unique_ptr<Bus> bus;
+  std::unique_ptr<BusHandler> busHandler;
   std::unique_ptr<Handler> handler;
-  std::unique_ptr<ByteHandler> byteHandler;
 
   bool configured = false;
   bool running = false;

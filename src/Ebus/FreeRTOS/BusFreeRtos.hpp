@@ -46,9 +46,6 @@ struct BusEvent {
   bool startBit{false};
 };
 
-using BusRequestPendingCallback = std::function<bool()>;
-using RequestAddressCallback = std::function<const uint8_t&()>;
-
 #define EBUS_BUS_COUNTER_LIST X(busStartBit)
 
 #define EBUS_BUS_TIMING_LIST \
@@ -77,6 +74,9 @@ class BusFreeRtos {
   explicit BusFreeRtos(const busConfig& config, Request* request);
   ~BusFreeRtos();
 
+  BusFreeRtos(const BusFreeRtos&) = delete;
+  BusFreeRtos& operator=(const BusFreeRtos&) = delete;
+
   void start();
   void stop();
 
@@ -95,10 +95,6 @@ class BusFreeRtos {
   const Timing& getTiming();
 
  private:
-  BusFreeRtos(const BusFreeRtos&) = delete;
-  BusFreeRtos& operator=(const BusFreeRtos&) = delete;
-
-  // configuration
   uart_port_t uartPortNum;
   uint8_t rxPin;
   uint8_t txPin;

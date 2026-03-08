@@ -21,7 +21,7 @@
 
 // Selector includes
 #include "Ebus/Bus.hpp"
-#include "Ebus/ByteHandler.hpp"
+#include "Ebus/BusHandler.hpp"
 #include "Ebus/Queue.hpp"
 
 // Common includes

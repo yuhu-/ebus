@@ -193,7 +193,7 @@ void ebus::BusFreeRtos::ebusUartEventRunner() {
 
           if (!byteQueue) continue;
 
-          if (byte == ebus::sym_syn && request->busRequestPending()) {
+          if (byte == sym_syn && request->busRequestPending()) {
             int64_t now = esp_timer_get_time();
 
             // Calculation of the expected start bit time based on the current
@@ -249,7 +249,7 @@ void ebus::BusFreeRtos::ebusUartEventRunner() {
           }
 
           // capture ISR flags and timing atomically and clear globals
-          ebus::BusEvent busEvent;
+          BusEvent busEvent;
           busEvent.byte = byte;
           portENTER_CRITICAL_ISR(&timerMux);
           busEvent.busRequest = busRequestFlag;

@@ -25,7 +25,7 @@
 #include <vector>
 
 #include "Bus.hpp"
-#include "ByteHandler.hpp"
+#include "BusHandler.hpp"
 #include "Common.hpp"
 #include "Handler.hpp"
 #include "Queue.hpp"
@@ -135,7 +135,7 @@ void run_test(const TestCase& tc) {
 
   ebus::Handler handler(tc.address, &bus, &request);
 
-  ebus::Queue<uint8_t> byteQueue(32);
+  ebus::Queue<ebus::BusEvent> byteQueue(32);
 
   ebus::Queue<CallbackEvent> eventQueue(8);
 
@@ -181,15 +181,15 @@ void run_test(const TestCase& tc) {
   if (tc.messageType == ebus::MessageType::active)
     request.requestBus(tc.address);
 
-  ebus::ByteHandler byteHandler(&request, &handler, &byteQueue);
+  ebus::BusHandler busHandler(&request, &handler, &byteQueue);
 
-  // Register a ByteListener that logs every byte processed by the byteHandler
-  byteHandler.addByteListener([](const uint8_t& byte) {
+  // Register a ByteListener that logs every byte processed by the busHandler
+  busHandler.addByteListener([](const uint8_t& byte) {
     std::cout << "->  read: " << ebus::to_string(byte) << std::endl;
   });
 
-  byteHandler.enableTesting();
-  byteHandler.start();
+  busHandler.enableTesting();
+  busHandler.start();
 
   std::thread handlerEventTask(handleEventRunner, &eventQueue,
                                std::ref(running));
@@ -206,17 +206,25 @@ void run_test(const TestCase& tc) {
   // 10 bits per byte (1 start bit, 8 data bits, 1 stop bit)
   // 1 byte takes 10 * 416,67 microseconds = 4166,67 microseconds
   std::thread ebusUartEventTask([&seq, &bus, &request, &byteQueue]() {
+    bool busRequestFlag = false;
     for (size_t i = 0; i < seq.size(); ++i) {
       uint8_t byte = seq[i];
+      ebus::BusEvent event;
+      event.byte = byte;
+      event.busRequest = busRequestFlag;
+      busRequestFlag = false;
+      // startBit indicates if the start bit wasn't in the expected window
+      // event.startBit = true;
 
-      byteQueue.push(byte);
+      byteQueue.push(event);
 
       // simulate request bus timer
       std::this_thread::sleep_for(std::chrono::microseconds(200));
       if (seq[i] == ebus::sym_syn && request.busRequestPending()) {
         std::cout << " ISR - write address" << std::endl;
         bus.writeByte(request.busRequestAddress());
-        request.busRequestCompleted();
+        // request.busRequestCompleted();
+        busRequestFlag = true;
       }
 
       // simulate transmission time 4166,67 ~ 4200 microseconds
@@ -224,10 +232,10 @@ void run_test(const TestCase& tc) {
     }
   });
 
-  // Let the byteHandler process for a short while
+  // Let the busHandler process for a short while
   std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
-  byteHandler.stop();
+  busHandler.stop();
   if (ebusUartEventTask.joinable()) ebusUartEventTask.join();
 
   running = false;

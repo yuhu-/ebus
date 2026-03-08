@@ -224,6 +224,7 @@ void run_test(const TestCase& tc) {
   if (tc.send_string.size() > 0)
     handler.sendActiveMessage(ebus::to_vector(tc.send_string));
 
+  bool busRequestFlag = false;
   for (size_t i = 0; i < seq.size(); i++) {
     switch (handler.getState()) {
       case ebus::HandlerState::reactiveSendMasterPositiveAcknowledge:
@@ -240,6 +241,10 @@ void run_test(const TestCase& tc) {
         break;
     }
 
+    if (busRequestFlag) {
+      request.busRequestCompleted();
+      busRequestFlag = false;
+    }
     request.run(seq[i]);
     handler.run(seq[i]);
 
@@ -247,7 +252,7 @@ void run_test(const TestCase& tc) {
     if (seq[i] == ebus::sym_syn && request.busRequestPending()) {
       std::cout << " ISR - write address" << std::endl;
       bus.writeByte(request.busRequestAddress());
-      request.busRequestCompleted();
+      busRequestFlag = true;
     }
   }
 
@@ -310,8 +315,8 @@ int main() {
   handler.setTelegramCallback(telegramCallback);
   handler.setErrorCallback(errorCallback);
 
-  enable_group(ebus::MessageType::passive);
-  enable_group(ebus::MessageType::reactive);
+  // enable_group(ebus::MessageType::passive);
+  // enable_group(ebus::MessageType::reactive);
   enable_group(ebus::MessageType::active);
 
   for (const TestCase& tc : test_cases)

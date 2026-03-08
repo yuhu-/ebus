@@ -31,12 +31,12 @@
 
 namespace ebus {
 
-class ByteHandlerPosix {
+class BusHandlerPosix {
  public:
   // Define a listener type for byte events
   using ByteListener = std::function<void(const uint8_t& byte)>;
 
-  ByteHandlerPosix(Request* request, Handler* handler, Queue<uint8_t>* queue)
+  BusHandlerPosix(Request* request, Handler* handler, Queue<BusEvent>* queue)
       : request(request), handler(handler), queue(queue), running(false) {}
 
   void start() {
@@ -57,24 +57,28 @@ class ByteHandlerPosix {
  private:
   Request* request;
   Handler* handler;
-  Queue<uint8_t>* queue;
+  Queue<BusEvent>* queue;
   std::atomic<bool> running;
   std::thread thread;
   bool testing = false;
   std::vector<ByteListener> listeners;
 
   void run() {
+    BusEvent event;
     while (running) {
-      uint8_t byte;
-      if (queue->pop(byte)) {
-        if (!testing) {
-          request->run(byte);
-          handler->run(byte);
-        }
-        for (const ByteListener& listener : listeners) listener(byte);
+      if (queue->pop(event)) {
         if (testing) {
-          request->run(byte);
-          handler->run(byte);
+          for (const ByteListener& listener : listeners) listener(event.byte);
+          if (event.busRequest) request->busRequestCompleted();
+          if (event.startBit) request->startBit();
+          request->run(event.byte);
+          handler->run(event.byte);
+        } else {
+          if (event.busRequest) request->busRequestCompleted();
+          if (event.startBit) request->startBit();
+          request->run(event.byte);
+          handler->run(event.byte);
+          for (const ByteListener& listener : listeners) listener(event.byte);
         }
       }
     }

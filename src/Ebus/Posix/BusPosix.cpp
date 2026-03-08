@@ -30,7 +30,7 @@ ebus::BusPosix::BusPosix(const busConfig& config, Request* request)
       request(request),
       fd(-1),
       open(false),
-      byteQueue(new Queue<uint8_t>()),
+      byteQueue(new Queue<BusEvent>()),
       thread(),
       running(false) {}
 
@@ -75,14 +75,15 @@ void ebus::BusPosix::stop() {
   }
 }
 
-ebus::Queue<uint8_t>* ebus::BusPosix::getQueue() const {
+ebus::Queue<ebus::BusEvent>* ebus::BusPosix::getQueue() const {
   return byteQueue.get();
 }
 
 void ebus::BusPosix::writeByte(const uint8_t byte) {
   if (simulate) {
     writtenBytes.push_back(byte);
-    std::cout << "<- write: " << ebus::to_string(byte) << std::endl;
+    std::string msg = "<- write: " + ebus::to_string(byte) + "\n";
+    std::cout << msg;
     return;
   }
   ensureOpen();
@@ -93,23 +94,6 @@ void ebus::BusPosix::writeByte(const uint8_t byte) {
 void ebus::BusPosix::setWindow(const uint16_t window) { this->window = window; }
 
 void ebus::BusPosix::setOffset(const uint16_t offset) { this->offset = offset; }
-
-uint8_t ebus::BusPosix::readByte() {
-  ensureOpen();
-  uint8_t byte;
-  ssize_t nbytes = ::read(fd, &byte, 1);
-  if (nbytes < 0) throw std::runtime_error("BusPosix: read error");
-  if (nbytes == 0) throw std::runtime_error("BusPosix: EOF on read");
-  return byte;
-}
-
-size_t ebus::BusPosix::available() const {
-  ensureOpen();
-  int bytes = 0;
-  if (ioctl(fd, FIONREAD, &bytes) == -1)
-    throw std::runtime_error("BusPosix: ioctl FIONREAD failed");
-  return static_cast<size_t>(bytes);
-}
 
 std::string ebus::BusPosix::getSimulatedWrittenBytes() const {
   return ebus::to_string(writtenBytes);
@@ -124,7 +108,15 @@ void ebus::BusPosix::readerThread() {
     uint8_t byte;
     ssize_t n = ::read(fd, &byte, 1);
     if (n == 1) {
-      if (byteQueue) byteQueue->push(byte);
+      BusEvent busEvent;
+      busEvent.byte = byte;
+      if (byte == sym_syn && request->busRequestPending()) {
+        writeByte(request->busRequestAddress());
+        busEvent.busRequest = true;
+        // startBit indicates if the start bit wasn't in the expected window
+        // busEvent.startBit = true;
+      }
+      if (byteQueue) byteQueue->push(busEvent);
     } else if (n == 0) {
       // EOF - stop thread
       break;

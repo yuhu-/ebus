@@ -37,14 +37,14 @@ void ebus::Controller::start() {
   if (!configured) return;
   if (running) return;
   bus->start();
-  byteHandler->start();
+  busHandler->start();
   running = true;
 }
 
 void ebus::Controller::stop() {
   if (!configured) return;
   if (!running) return;
-  byteHandler->stop();
+  busHandler->stop();
   bus->stop();
   running = false;
 }
@@ -92,12 +92,12 @@ const ebus::Bus* ebus::Controller::getBus() const {
   return configured ? bus.get() : nullptr;
 }
 
-ebus::ByteHandler* ebus::Controller::getByteHandler() {
-  return configured ? byteHandler.get() : nullptr;
+ebus::BusHandler* ebus::Controller::getBusHandler() {
+  return configured ? busHandler.get() : nullptr;
 }
 
-const ebus::ByteHandler* ebus::Controller::getByteHandler() const {
-  return configured ? byteHandler.get() : nullptr;
+const ebus::BusHandler* ebus::Controller::getBusHandler() const {
+  return configured ? busHandler.get() : nullptr;
 }
 
 ebus::Handler* ebus::Controller::getHandler() {
@@ -116,8 +116,8 @@ void ebus::Controller::constructMembers() {
   request.reset(new Request());
   bus.reset(new Bus(config.bus, request.get()));
   handler.reset(new Handler(config.address, bus.get(), request.get()));
-  byteHandler.reset(
-      new ByteHandler(request.get(), handler.get(), bus->getQueue()));
+  busHandler.reset(
+      new BusHandler(request.get(), handler.get(), bus->getQueue()));
 
   bus->setWindow(config.window);
   bus->setOffset(config.offset);

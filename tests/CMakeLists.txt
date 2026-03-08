@@ -13,6 +13,6 @@ target_link_libraries(test_request ebus)
 add_executable(test_handler test_handler.cpp)
 target_link_libraries(test_handler ebus)
 
-add_executable(test_bytehandler test_bytehandler.cpp)
-target_link_libraries(test_bytehandler ebus)
+add_executable(test_bushandler test_bushandler.cpp)
+target_link_libraries(test_bushandler ebus)
 

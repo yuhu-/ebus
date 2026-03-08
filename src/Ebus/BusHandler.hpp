@@ -20,13 +20,13 @@
 #pragma once
 
 #if defined(ESP32)
-#include "FreeRTOS/ByteHandlerFreeRtos.hpp"
+#include "FreeRTOS/BusHandlerFreeRtos.hpp"
 namespace ebus {
-using ByteHandler = ByteHandlerFreeRtos;
+using BusHandler = BusHandlerFreeRtos;
 }
 #elif defined(POSIX)
-#include "Posix/ByteHandlerPosix.hpp"
+#include "Posix/BusHandlerPosix.hpp"
 namespace ebus {
-using ByteHandler = ByteHandlerPosix;
+using BusHandler = BusHandlerPosix;
 }
 #endif

@@ -46,15 +46,24 @@ struct busConfig {
   bool simulate;
 };
 
+struct BusEvent {
+  uint8_t byte;
+  bool busRequest{false};
+  bool startBit{false};
+};
+
 class BusPosix {
  public:
   explicit BusPosix(const busConfig& config, Request* request);
   ~BusPosix();
 
+  BusPosix(const BusPosix&) = delete;
+  BusPosix& operator=(const BusPosix&) = delete;
+
   void start();
   void stop();
 
-  Queue<uint8_t>* getQueue() const;
+  Queue<BusEvent>* getQueue() const;
 
   void writeByte(const uint8_t byte);
 
@@ -62,17 +71,10 @@ class BusPosix {
   void setWindow(const uint16_t window);
   void setOffset(const uint16_t offset);
 
-  // Posix specific
-  uint8_t readByte();
-  size_t available() const;
-
   // Get all simulated written bytes as a hex string
   std::string getSimulatedWrittenBytes() const;
 
  private:
-  BusPosix(const BusPosix&) = delete;
-  BusPosix& operator=(const BusPosix&) = delete;
-
   std::string device;
   bool simulate;
 
@@ -85,7 +87,7 @@ class BusPosix {
   volatile uint16_t window = 4300;  // usually between 4300-4456 us
   volatile uint16_t offset = 80;    // mainly for context switch and write
 
-  std::unique_ptr<Queue<uint8_t>> byteQueue;
+  std::unique_ptr<Queue<BusEvent>> byteQueue;
   std::thread thread;
   std::atomic<bool> running;
 

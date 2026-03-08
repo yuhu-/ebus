@@ -79,8 +79,6 @@ void ebus::Request::busRequestCompleted() {
 void ebus::Request::startBit() {
   state = RequestState::observe;
   result = RequestResult::observeSyn;
-  // TODO call inside of byteHandler
-  // if (startBitCallback) startBitCallback();
 }
 
 void ebus::Request::setStartBitCallback(StartBitCallback callback) {
