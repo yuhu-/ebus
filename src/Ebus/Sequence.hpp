@@ -58,7 +58,7 @@ class Sequence {
  private:
   std::vector<uint8_t> sequence;
 
-  bool extended = false;
+  bool isExtended = false;
 };
 
 }  // namespace ebus

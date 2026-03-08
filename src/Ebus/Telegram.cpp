@@ -41,8 +41,8 @@ void ebus::Telegram::parse(Sequence& seq) {
 
   if (masterState != SequenceState::seq_ok) return;
 
-  Sequence master(seq, 0, 5 + uint8_t(seq[4]) + 1);
-  createMaster(master);
+  Sequence masterSeq(seq, 0, 5 + uint8_t(seq[4]) + 1);
+  createMaster(masterSeq);
 
   if (masterState != SequenceState::seq_ok) return;
 
@@ -77,8 +77,8 @@ void ebus::Telegram::parse(Sequence& seq) {
 
       if (masterState != SequenceState::seq_ok) return;
 
-      Sequence master2(tmp, 0, 5 + uint8_t(tmp[4]) + 1);
-      createMaster(master2);
+      Sequence masterSeq2(tmp, 0, 5 + uint8_t(tmp[4]) + 1);
+      createMaster(masterSeq2);
 
       if (masterState != SequenceState::seq_ok) return;
 
@@ -119,8 +119,8 @@ void ebus::Telegram::parse(Sequence& seq) {
 
     if (slaveState != SequenceState::seq_ok) return;
 
-    Sequence slave(seq2, 0, 1 + uint8_t(seq2[0]) + 1);
-    createSlave(slave);
+    Sequence slaveSeq(seq2, 0, 1 + uint8_t(seq2[0]) + 1);
+    createSlave(slaveSeq);
 
     if (slaveState != SequenceState::seq_ok) return;
 
@@ -154,8 +154,8 @@ void ebus::Telegram::parse(Sequence& seq) {
 
       if (slaveState != SequenceState::seq_ok) return;
 
-      Sequence slave2(seq2, offset, 1 + uint8_t(seq2[offset]) + 1);
-      createSlave(slave2);
+      Sequence slaveSeq2(seq2, offset, 1 + uint8_t(seq2[offset]) + 1);
+      createSlave(slaveSeq2);
 
       // acknowledge byte is missing
       if (tmp.size() <= static_cast<size_t>(1 + slaveNN + 1)) {

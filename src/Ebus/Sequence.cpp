@@ -33,19 +33,19 @@ ebus::Sequence::Sequence(const Sequence& seq, const size_t index, size_t len) {
   std::copy(seq.sequence.begin() + index, seq.sequence.begin() + index + len,
             sequence.begin());
 
-  extended = seq.extended;
+  isExtended = seq.isExtended;
 }
 
 void ebus::Sequence::assign(const std::vector<uint8_t>& vec,
                             const bool extended) {
   clear();
   sequence = vec;
-  this->extended = extended;
+  isExtended = extended;
 }
 
 void ebus::Sequence::push_back(const uint8_t byte, const bool extended) {
   sequence.push_back(byte);
-  this->extended = extended;
+  isExtended = extended;
 }
 
 const uint8_t& ebus::Sequence::operator[](const size_t index) const {
@@ -61,11 +61,11 @@ size_t ebus::Sequence::size() const { return sequence.size(); }
 
 void ebus::Sequence::clear() {
   sequence.clear();
-  extended = false;
+  isExtended = false;
 }
 
 uint8_t ebus::Sequence::crc() {
-  if (!extended) extend();
+  if (!isExtended) extend();
 
   uint8_t crc = sym_zero;
 
@@ -78,7 +78,7 @@ uint8_t ebus::Sequence::crc() {
 }
 
 void ebus::Sequence::extend() {
-  if (extended) return;
+  if (isExtended) return;
 
   // maximum possible size (worst case: every byte expands to 2)
   size_t max_size = sequence.size() * 2;
@@ -99,11 +99,11 @@ void ebus::Sequence::extend() {
   tmp.resize(j);  // shrink to actual size
 
   sequence = std::move(tmp);
-  extended = true;
+  isExtended = true;
 }
 
 void ebus::Sequence::reduce() {
-  if (!extended) return;
+  if (!isExtended) return;
 
   // In the worst case, the reduced sequence is at most as large as sequence
   std::vector<uint8_t> tmp(sequence.size());
@@ -126,7 +126,7 @@ void ebus::Sequence::reduce() {
   tmp.resize(j);  // shrink to actual size
 
   sequence = std::move(tmp);
-  extended = false;
+  isExtended = false;
 }
 
 const std::string ebus::Sequence::to_string() const {
