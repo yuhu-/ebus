@@ -142,7 +142,7 @@ class Telegram {
   static ebus::SequenceState checkSlaveSequence(const Sequence& seq);
 
  private:
-  TelegramType type = TelegramType::undefined;
+  TelegramType telegramType = TelegramType::undefined;
 
   Sequence master;
   size_t masterNN = 0;

@@ -46,7 +46,7 @@ void ebus::Telegram::parse(Sequence& seq) {
 
   if (masterState != SequenceState::seq_ok) return;
 
-  if (type != TelegramType::broadcast) {
+  if (telegramType != TelegramType::broadcast) {
     // acknowledge byte is missing
     if (seq.size() <= static_cast<size_t>(5 + masterNN + 1)) {
       masterState = SequenceState::err_ack_missing;
@@ -111,7 +111,7 @@ void ebus::Telegram::parse(Sequence& seq) {
     }
   }
 
-  if (type == TelegramType::master_slave) {
+  if (telegramType == TelegramType::master_slave) {
     offset += 5 + masterNN + 2;
 
     Sequence seq2(seq, offset);
@@ -239,7 +239,7 @@ void ebus::Telegram::createMaster(Sequence& seq) {
     return;
   }
 
-  type = typeOf(seq[1]);
+  telegramType = typeOf(seq[1]);
   masterNN = static_cast<size_t>(uint8_t(seq[4]));
 
   if (seq.size() == static_cast<size_t>(5 + masterNN)) {
@@ -305,7 +305,7 @@ void ebus::Telegram::createSlave(Sequence& seq) {
 }
 
 void ebus::Telegram::clear() {
-  type = TelegramType::undefined;
+  telegramType = TelegramType::undefined;
 
   master.clear();
   masterNN = 0;
@@ -362,10 +362,10 @@ void ebus::Telegram::setSlaveACK(const uint8_t byte) { slaveACK = byte; }
 
 uint8_t ebus::Telegram::getSlaveACK() const { return slaveACK; }
 
-ebus::TelegramType ebus::Telegram::getType() const { return type; }
+ebus::TelegramType ebus::Telegram::getType() const { return telegramType; }
 
 bool ebus::Telegram::isValid() const {
-  if (type != TelegramType::master_slave)
+  if (telegramType != TelegramType::master_slave)
     return masterState == SequenceState::seq_ok;
 
   return (masterState == SequenceState::seq_ok &&
@@ -378,7 +378,7 @@ const std::string ebus::Telegram::to_string() const {
   ostr << toStringMaster();
 
   if (masterState == SequenceState::seq_ok &&
-      type == TelegramType::master_slave)
+      telegramType == TelegramType::master_slave)
     ostr << " " << toStringSlave();
 
   return ostr.str();
@@ -396,7 +396,8 @@ const std::string ebus::Telegram::toStringMaster() const {
 
 const std::string ebus::Telegram::toStringSlave() const {
   std::ostringstream ostr;
-  if (slaveState != SequenceState::seq_ok && type != TelegramType::broadcast) {
+  if (slaveState != SequenceState::seq_ok &&
+      telegramType != TelegramType::broadcast) {
     ostr << toStringSlaveState();
   } else {
     ostr << slave.to_string();
