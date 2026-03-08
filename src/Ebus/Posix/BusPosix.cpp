@@ -104,19 +104,27 @@ void ebus::BusPosix::ensureOpen() const {
 }
 
 void ebus::BusPosix::readerThread() {
+  bool busRequestFlag = false;
   while (running.load()) {
     uint8_t byte;
     ssize_t n = ::read(fd, &byte, 1);
     if (n == 1) {
-      BusEvent busEvent;
-      busEvent.byte = byte;
+      BusEvent event;
+      event.byte = byte;
+      event.busRequest = busRequestFlag;
+      busRequestFlag = false;
+      // startBit indicates if the start bit wasn't in the expected window
+      // event.startBit = true;
+
+      if (byteQueue) byteQueue->push(event);
+
+      // TODO calculate timing to write address at the right time, currently
+      // just write immediately after receiving SYN
       if (byte == sym_syn && request->busRequestPending()) {
         writeByte(request->busRequestAddress());
-        busEvent.busRequest = true;
-        // startBit indicates if the start bit wasn't in the expected window
-        // busEvent.startBit = true;
+        busRequestFlag = true;
       }
-      if (byteQueue) byteQueue->push(busEvent);
+
     } else if (n == 0) {
       // EOF - stop thread
       break;
