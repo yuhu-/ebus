@@ -37,7 +37,6 @@ class QueueFreeRtos {
 
   // Blocking push with timeout (timeout in milliseconds)
   bool push(const T& item, uint32_t timeout_ms = portMAX_DELAY) {
-    if (capacity > 0 && size() >= capacity) return false;  // Capacity check
     TickType_t ticks = (timeout_ms == portMAX_DELAY)
                            ? portMAX_DELAY
                            : pdMS_TO_TICKS(timeout_ms);
@@ -45,17 +44,13 @@ class QueueFreeRtos {
   }
 
   // Non-blocking push
-  bool try_push(const T& item) {
-    if (capacity > 0 && size() >= capacity) return false;  // Capacity check
-    return xQueueSend(queue, &item, 0) == pdTRUE;
-  }
+  bool try_push(const T& item) { return xQueueSend(queue, &item, 0) == pdTRUE; }
 
   // ISR-safe push (from ISR context)
   bool pushFromISR(const T& item) {
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     bool result =
         xQueueSendFromISR(queue, &item, &xHigherPriorityTaskWoken) == pdTRUE;
-    // Optionally yield if a higher priority task was woken
     if (xHigherPriorityTaskWoken) portYIELD_FROM_ISR();
     return result;
   }
@@ -63,15 +58,11 @@ class QueueFreeRtos {
   // ISR-safe, non-blocking push (returns immediately)
   bool try_pushFromISR(const T& item) {
     BaseType_t xTaskWoken = pdFALSE;
-    // 0 timeout means non-blocking
-    bool result = xQueueSendFromISR(queue, &item, &xTaskWoken) == pdTRUE;
-    // Do NOT yield here for try variant
-    return result;
+    return xQueueSendFromISR(queue, &item, &xTaskWoken) == pdTRUE;
   }
 
   // Blocking pop with timeout (timeout in milliseconds)
   bool pop(T& out, uint32_t timeout_ms = portMAX_DELAY) {
-    if (size() == 0) return false;  // Empty check
     TickType_t ticks = (timeout_ms == portMAX_DELAY)
                            ? portMAX_DELAY
                            : pdMS_TO_TICKS(timeout_ms);
@@ -79,10 +70,7 @@ class QueueFreeRtos {
   }
 
   // Non-blocking pop
-  bool try_pop(T& out) {
-    if (size() == 0) return false;  // Empty check
-    return xQueueReceive(queue, &out, 0) == pdTRUE;
-  }
+  bool try_pop(T& out) { return xQueueReceive(queue, &out, 0) == pdTRUE; }
 
   // ISR-safe pop (from ISR context)
   bool popFromISR(T& out) {
@@ -96,9 +84,7 @@ class QueueFreeRtos {
   // ISR-safe, non-blocking pop (returns immediately)
   bool try_popFromISR(T& out) {
     BaseType_t xTaskWoken = pdFALSE;
-    bool result = xQueueReceiveFromISR(queue, &out, &xTaskWoken) == pdTRUE;
-    // Do NOT yield here for try variant
-    return result;
+    return xQueueReceiveFromISR(queue, &out, &xTaskWoken) == pdTRUE;
   }
 
   const size_t size() const { return uxQueueMessagesWaiting(queue); }

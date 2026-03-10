@@ -20,6 +20,7 @@
 #if defined(ESP32)
 #include "BusFreeRtos.hpp"
 
+#include <esp_private/esp_clk.h>
 #include <esp_timer.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
@@ -27,7 +28,7 @@
 #include "../Common.hpp"
 
 ebus::BusFreeRtos::BusFreeRtos(const busConfig& config, Request* request)
-    : uartPortNum(config.uart_port),
+    : uartPortNum(static_cast<uart_port_t>(config.uart_port)),
       rxPin(config.rx_pin),
       txPin(config.tx_pin),
       timerGroupNum(static_cast<timer_group_t>(config.timer_group)),
@@ -161,7 +162,7 @@ void ebus::BusFreeRtos::configureTimer() {
       .intr_type = TIMER_INTR_LEVEL,
       .counter_dir = TIMER_COUNT_UP,
       .auto_reload = TIMER_AUTORELOAD_DIS,
-      .divider = TIMER_BASE_CLK / 1000000,  // 80 for 1us tick at 80MHz
+      .divider = static_cast<uint32_t>(esp_clk_apb_freq() / 1000000U),
   };
 
   // Initialize the timer
