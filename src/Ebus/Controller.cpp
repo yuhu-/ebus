@@ -19,15 +19,13 @@
 
 #include "Controller.hpp"
 
-#include <stdexcept>
-
 ebus::Controller::Controller(const ebusConfig& cfg) : config(cfg) {
   configured = true;
   constructMembers();
 }
 
 void ebus::Controller::configure(const ebusConfig& cfg) {
-  if (running) throw std::runtime_error("Cannot configure while running");
+  if (running) return;
   config = cfg;
   configured = true;
   constructMembers();
