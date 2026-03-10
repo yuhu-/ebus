@@ -87,7 +87,7 @@ class QueueFreeRtos {
     return xQueueReceiveFromISR(queue, &out, &xTaskWoken) == pdTRUE;
   }
 
-  const size_t size() const { return uxQueueMessagesWaiting(queue); }
+  size_t size() const { return uxQueueMessagesWaiting(queue); }
 
  private:
   QueueHandle_t queue;

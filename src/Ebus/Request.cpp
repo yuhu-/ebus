@@ -34,7 +34,7 @@ void ebus::Request::setMaxLockCounter(const uint8_t& maxCounter) {
   if (lockCounter > maxLockCounter) lockCounter = maxLockCounter;
 }
 
-const uint8_t ebus::Request::getLockCounter() const { return lockCounter; }
+uint8_t ebus::Request::getLockCounter() const { return lockCounter; }
 
 bool ebus::Request::busAvailable() const {
   return result == RequestResult::observeSyn && lockCounter == 0 && !busRequest;
@@ -59,9 +59,7 @@ void ebus::Request::setExternalBusRequestedCallback(
   externalBusRequestedCallback = std::move(callback);
 }
 
-const uint8_t ebus::Request::busRequestAddress() const {
-  return requestAddress;
-}
+uint8_t ebus::Request::busRequestAddress() const { return requestAddress; }
 
 bool ebus::Request::busRequestPending() const { return busRequest; }
 
