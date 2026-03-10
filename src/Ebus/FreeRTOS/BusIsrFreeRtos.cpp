@@ -22,6 +22,8 @@
 #include "driver/gpio.h"
 #include "driver/timer.h"
 #include "driver/uart.h"
+#include "esp_timer.h"
+#include "esp_private/esp_clk.h"
 
 constexpr uint8_t FALLING_EDGE_BUFFER_SIZE = 5;
 
@@ -171,7 +173,7 @@ bool IRAM_ATTR onBusIsrTimer(void* arg) {
 void ebus::setupBusIsr(const uint8_t& uartPort, const uint8_t& rxPin,
                        const uint8_t& txPin, const uint8_t& timerGroup,
                        const uint8_t& timerIdx) {
-  uartPortNum = uartPort;
+  uartPortNum = static_cast<uart_port_t>(uartPort);
   timerGroupNum = static_cast<timer_group_t>(timerGroup);
   timerIdxNum = static_cast<timer_idx_t>(timerIdx);
 
@@ -220,7 +222,7 @@ void ebus::setupBusIsr(const uint8_t& uartPort, const uint8_t& rxPin,
       .intr_type = TIMER_INTR_LEVEL,
       .counter_dir = TIMER_COUNT_UP,
       .auto_reload = TIMER_AUTORELOAD_DIS,
-      .divider = TIMER_BASE_CLK / 1000000,  // 80 for 1us tick at 80MHz
+      .divider = static_cast<uint32_t>(esp_clk_apb_freq() / 1000000U),
   };
 
   // Initialize the timer
