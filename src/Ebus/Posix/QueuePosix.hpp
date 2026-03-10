@@ -77,7 +77,7 @@ class QueuePosix {
     return true;
   }
 
-  const size_t size() const {
+  size_t size() const {
     std::lock_guard<std::mutex> lock(mutex);
     return queue.size();
   }
