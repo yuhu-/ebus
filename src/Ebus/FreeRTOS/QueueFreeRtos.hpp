@@ -70,7 +70,6 @@ class QueueFreeRtos {
 
   // Blocking pop with timeout (timeout in milliseconds)
   bool pop(T& out, uint32_t timeout_ms = portMAX_DELAY) {
-    if (size() == 0) return false;  // Empty check
     TickType_t ticks = (timeout_ms == portMAX_DELAY)
                            ? portMAX_DELAY
                            : pdMS_TO_TICKS(timeout_ms);
