@@ -20,19 +20,27 @@
 #if defined(ESP32)
 #include "BusFreeRtos.hpp"
 
-#include <esp_private/esp_clk.h>
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+#include "esp_clk_tree.h"
+#else
+#include "esp32c3/clk.h"
+#endif
+
 #include <esp_timer.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
 #include "../Common.hpp"
+#include "driver/gpio.h"
 
 ebus::BusFreeRtos::BusFreeRtos(const busConfig& config, Request* request)
     : uartPortNum(static_cast<uart_port_t>(config.uart_port)),
       rxPin(config.rx_pin),
       txPin(config.tx_pin),
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)
       timerGroupNum(static_cast<timer_group_t>(config.timer_group)),
       timerIdxNum(static_cast<timer_idx_t>(config.timer_idx)),
+#endif
       request(request) {
   byteQueue = new ebus::Queue<ebus::BusEvent>();
 
@@ -57,7 +65,17 @@ void ebus::BusFreeRtos::start() {
 }
 
 void ebus::BusFreeRtos::stop() {
-  // best-effort cleanup
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+  if (gptimer) {
+    gptimer_stop(gptimer);
+    gptimer_disable(gptimer);
+    gptimer_del_timer(gptimer);
+    gptimer = nullptr;
+  }
+#else
+  timer_pause(timerGroupNum, timerIdxNum);
+#endif
+
   if (uartEventQueue) {
     uart_driver_delete(uartPortNum);
     uartEventQueue = nullptr;
@@ -124,6 +142,23 @@ void ebus::BusFreeRtos::configureUart() {
       .parity = UART_PARITY_DISABLE,
       .stop_bits = UART_STOP_BITS_1,
       .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(3, 0, 0)
+      .rx_flow_ctrl_thresh = 0,
+#endif
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 0, 0)
+#ifdef UART_SCLK_DEFAULT
+      .source_clk = UART_SCLK_DEFAULT,
+#else
+      .source_clk = UART_SCLK_APB,
+#endif
+#endif
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+      .flags =
+          {
+              .allow_pd = true,
+              .backup_before_sleep = true,
+          },
+#endif
   };
 
   // Setup UART configuration
@@ -148,14 +183,35 @@ void ebus::BusFreeRtos::configureGpio() {
 
   gpio_config(&gpio_conf);
 
-  // Install GPIO ISR service
-  gpio_install_isr_service(0);
+  // Install GPIO ISR service with flags for IRAM and high priority (level 3)
+  gpio_install_isr_service(ESP_INTR_FLAG_IRAM | ESP_INTR_FLAG_LEVEL3);
 
   // Register the ISR handler
   gpio_isr_handler_add(static_cast<gpio_num_t>(rxPin), &s_onFallingEdge, this);
 }
 
 void ebus::BusFreeRtos::configureTimer() {
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+  gptimer_config_t gpt_config = {
+      .clk_src = GPTIMER_CLK_SRC_DEFAULT,
+      .direction = GPTIMER_COUNT_UP,
+      .resolution_hz = 1000000,  // 1 Tick = 1 µs
+      .intr_priority = 3,        //  high priority (1-3)
+      .flags = {
+          .intr_shared = false,  // do not share interrupt - reduce jitter
+          .allow_pd = true,
+          .backup_before_sleep = true,
+      }};
+
+  ESP_ERROR_CHECK(gptimer_new_timer(&gpt_config, &gptimer));
+
+  gptimer_event_callbacks_t cbs = {
+      .on_alarm = s_onBusIsrTimer,
+  };
+  ESP_ERROR_CHECK(gptimer_register_event_callbacks(gptimer, &cbs, this));
+  ESP_ERROR_CHECK(gptimer_enable(gptimer));
+
+#else
   timer_config_t timer_config = {
       .alarm_en = TIMER_ALARM_DIS,
       .counter_en = TIMER_PAUSE,
@@ -163,17 +219,25 @@ void ebus::BusFreeRtos::configureTimer() {
       .counter_dir = TIMER_COUNT_UP,
       .auto_reload = TIMER_AUTORELOAD_DIS,
       .divider = static_cast<uint32_t>(esp_clk_apb_freq() / 1000000U),
+
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 0, 0)
+#ifdef TIMER_SRC_CLK_DEFAULT
+      .clk_src = TIMER_SRC_CLK_DEFAULT,
+#else
+      .clk_src = TIMER_SRC_CLK_APB,
+#endif
+#endif
   };
 
   // Initialize the timer
   timer_init(timerGroupNum, timerIdxNum, &timer_config);
   timer_set_counter_value(timerGroupNum, timerIdxNum, 0);
-  timer_start(timerGroupNum, timerIdxNum);
 
-  // Register the ISR callback
-  timer_isr_callback_add(timerGroupNum, timerIdxNum, &s_onBusIsrTimer, this,
-                         ESP_INTR_FLAG_IRAM);
-  timer_set_alarm(timerGroupNum, timerIdxNum, TIMER_ALARM_DIS);
+  // Register the ISR callback with flags for IRAM and high priority (level 3)
+  timer_isr_callback_add(timerGroupNum, timerIdxNum, s_onBusIsrTimer, this,
+                         ESP_INTR_FLAG_IRAM | ESP_INTR_FLAG_LEVEL3);
+  timer_start(timerGroupNum, timerIdxNum);
+#endif
 }
 
 // static trampoline for FreeRTOS task
@@ -231,12 +295,21 @@ void ebus::BusFreeRtos::ebusUartEventRunner() {
               int64_t delay = window - microsSinceStartBit - offset;
               if (delay < 0) delay = 0;
 
-              timer_set_alarm(timerGroupNum, timerIdxNum, TIMER_ALARM_DIS);
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+              gptimer_alarm_config_t alarm_config = {
+                  .alarm_count = (uint64_t)delay,
+                  .reload_count = 0,
+                  .flags = {.auto_reload_on_alarm = false}};
+              gptimer_stop(gptimer);
+              gptimer_set_raw_count(gptimer, 0);
+              gptimer_set_alarm_action(gptimer, &alarm_config);
+              gptimer_start(gptimer);
+#else
+              // Legacy Timer Alarm setzen (v4.x)
               timer_set_counter_value(timerGroupNum, timerIdxNum, 0);
-              timer_set_alarm_value(timerGroupNum, timerIdxNum, delay);
-              timer_set_auto_reload(timerGroupNum, timerIdxNum,
-                                    TIMER_AUTORELOAD_DIS);
+              timer_set_alarm_value(timerGroupNum, timerIdxNum, (double)delay);
               timer_set_alarm(timerGroupNum, timerIdxNum, TIMER_ALARM_EN);
+#endif
 
               portENTER_CRITICAL_ISR(&timerMux);
               microsLastDelay = delay;
@@ -275,7 +348,7 @@ void IRAM_ATTR ebus::BusFreeRtos::s_onFallingEdge(void* arg) {
   if (inst) inst->onFallingEdge();
 }
 
-void IRAM_ATTR ebus::BusFreeRtos::onFallingEdge() {
+void ebus::BusFreeRtos::onFallingEdge() {
   int64_t now = esp_timer_get_time();
   portENTER_CRITICAL_ISR(&timerMux);
   bufferIndex = (bufferIndex + 1) % FALLING_EDGE_BUFFER_SIZE;
@@ -284,12 +357,21 @@ void IRAM_ATTR ebus::BusFreeRtos::onFallingEdge() {
 }
 
 // static ISR trampoline -> instance method
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+bool IRAM_ATTR ebus::BusFreeRtos::s_onBusIsrTimer(
+    gptimer_handle_t timer, const gptimer_alarm_event_data_t* edata,
+    void* user_ctx) {
+  BusFreeRtos* inst = reinterpret_cast<BusFreeRtos*>(user_ctx);
+  return inst ? inst->onBusIsrTimer() : false;
+}
+#else
 bool IRAM_ATTR ebus::BusFreeRtos::s_onBusIsrTimer(void* arg) {
   BusFreeRtos* inst = reinterpret_cast<BusFreeRtos*>(arg);
   return inst ? inst->onBusIsrTimer() : false;
 }
+#endif
 
-bool IRAM_ATTR ebus::BusFreeRtos::onBusIsrTimer() {
+bool ebus::BusFreeRtos::onBusIsrTimer() {
   uint8_t byte = request->busRequestAddress();
   uart_write_bytes(uartPortNum, static_cast<const void*>(&byte), 1);
   portENTER_CRITICAL_ISR(&timerMux);

@@ -26,9 +26,14 @@
 #include "../Queue.hpp"
 #include "../Request.hpp"
 #include "../TimingStats.hpp"
-#include "driver/gpio.h"
-#include "driver/timer.h"
 #include "driver/uart.h"
+#include "esp_idf_version.h"
+
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+#include "driver/gptimer.h"
+#else
+#include "driver/timer.h"
+#endif
 
 namespace ebus {
 
@@ -98,8 +103,13 @@ class BusFreeRtos {
   uart_port_t uartPortNum;
   uint8_t rxPin;
   uint8_t txPin;
+
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+  gptimer_handle_t gptimer = nullptr;
+#else
   timer_group_t timerGroupNum = TIMER_GROUP_1;
   timer_idx_t timerIdxNum = TIMER_0;
+#endif
 
   Request* request = nullptr;
 
@@ -156,11 +166,17 @@ class BusFreeRtos {
 
   // ISR: Save the falling edges in order to estimate the sync byte
   static void IRAM_ATTR s_onFallingEdge(void* arg);
-  void IRAM_ATTR onFallingEdge();
+  void onFallingEdge();
 
   // ISR: Write request byte at the exact time
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+  static bool IRAM_ATTR s_onBusIsrTimer(gptimer_handle_t timer,
+                                        const gptimer_alarm_event_data_t* edata,
+                                        void* user_ctx);
+#else
   static bool IRAM_ATTR s_onBusIsrTimer(void* arg);
-  bool IRAM_ATTR onBusIsrTimer();
+#endif
+  bool onBusIsrTimer();
 };
 
 }  // namespace ebus
