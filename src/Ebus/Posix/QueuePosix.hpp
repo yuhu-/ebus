@@ -30,64 +30,64 @@ namespace ebus {
 template <typename T>
 class QueuePosix {
  public:
-  explicit QueuePosix(size_t size = 32) : capacity(size) {}
+  explicit QueuePosix(size_t capacity = 32) : capacity_(capacity) {}
 
   // Blocking push with optional timeout (returns false on timeout/full)
   bool push(const T& item, std::chrono::milliseconds timeout =
                                std::chrono::milliseconds::max()) {
-    std::unique_lock<std::mutex> lock(mutex);
-    if (capacity > 0) {
-      if (!notFull.wait_for(lock, timeout,
-                            [this] { return queue.size() < capacity; }))
+    std::unique_lock<std::mutex> lock(mutex_);
+    if (capacity_ > 0) {
+      if (!notFull_.wait_for(lock, timeout,
+                             [this] { return queue_.size() < capacity_; }))
         return false;  // timeout
     }
-    queue.push(item);
-    notEmpty.notify_one();
+    queue_.push(item);
+    notEmpty_.notify_one();
     return true;
   }
 
   // Non-blocking push (returns false if full)
   bool try_push(const T& item) {
-    std::lock_guard<std::mutex> lock(mutex);
-    if (capacity > 0 && queue.size() >= capacity) return false;
-    queue.push(item);
-    notEmpty.notify_one();
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (capacity_ > 0 && queue_.size() >= capacity_) return false;
+    queue_.push(item);
+    notEmpty_.notify_one();
     return true;
   }
 
   // Blocking pop with optional timeout (returns false on timeout/empty)
   bool pop(T& out, std::chrono::milliseconds timeout =
                        std::chrono::milliseconds::max()) {
-    std::unique_lock<std::mutex> lock(mutex);
-    if (!notEmpty.wait_for(lock, timeout, [this] { return !queue.empty(); }))
+    std::unique_lock<std::mutex> lock(mutex_);
+    if (!notEmpty_.wait_for(lock, timeout, [this] { return !queue_.empty(); }))
       return false;  // timeout
-    out = queue.front();
-    queue.pop();
-    if (capacity > 0) notFull.notify_one();
+    out = queue_.front();
+    queue_.pop();
+    if (capacity_ > 0) notFull_.notify_one();
     return true;
   }
 
   // Non-blocking pop (returns false if empty)
   bool try_pop(T& out) {
-    std::lock_guard<std::mutex> lock(mutex);
-    if (queue.empty()) return false;
-    out = queue.front();
-    queue.pop();
-    if (capacity > 0) notFull.notify_one();
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (queue_.empty()) return false;
+    out = queue_.front();
+    queue_.pop();
+    if (capacity_ > 0) notFull_.notify_one();
     return true;
   }
 
   size_t size() const {
-    std::lock_guard<std::mutex> lock(mutex);
-    return queue.size();
+    std::lock_guard<std::mutex> lock(mutex_);
+    return queue_.size();
   }
 
  private:
-  std::queue<T> queue;
-  mutable std::mutex mutex;
-  std::condition_variable notEmpty;
-  std::condition_variable notFull;
-  size_t capacity;
+  std::queue<T> queue_;
+  mutable std::mutex mutex_;
+  std::condition_variable notEmpty_;
+  std::condition_variable notFull_;
+  size_t capacity_;
 };
 
 }  // namespace ebus
