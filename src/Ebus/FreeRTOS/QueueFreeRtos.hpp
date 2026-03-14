@@ -28,11 +28,11 @@ namespace ebus {
 template <typename T>
 class QueueFreeRtos {
  public:
-  explicit QueueFreeRtos(size_t size = 32)
-      : queue(xQueueCreate(size, sizeof(T))), capacity(size) {}
+  explicit QueueFreeRtos(size_t capacity = 32)
+      : queue_(xQueueCreate(capacity, sizeof(T))), capacity_(capacity) {}
 
   ~QueueFreeRtos() {
-    if (queue) vQueueDelete(queue);
+    if (queue_) vQueueDelete(queue_);
   }
 
   // Blocking push with timeout (timeout in milliseconds)
@@ -40,17 +40,19 @@ class QueueFreeRtos {
     TickType_t ticks = (timeout_ms == portMAX_DELAY)
                            ? portMAX_DELAY
                            : pdMS_TO_TICKS(timeout_ms);
-    return xQueueSend(queue, &item, ticks) == pdTRUE;
+    return xQueueSend(queue_, &item, ticks) == pdTRUE;
   }
 
   // Non-blocking push
-  bool try_push(const T& item) { return xQueueSend(queue, &item, 0) == pdTRUE; }
+  bool try_push(const T& item) {
+    return xQueueSend(queue_, &item, 0) == pdTRUE;
+  }
 
   // ISR-safe push (from ISR context)
   bool pushFromISR(const T& item) {
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     bool result =
-        xQueueSendFromISR(queue, &item, &xHigherPriorityTaskWoken) == pdTRUE;
+        xQueueSendFromISR(queue_, &item, &xHigherPriorityTaskWoken) == pdTRUE;
     if (xHigherPriorityTaskWoken) portYIELD_FROM_ISR();
     return result;
   }
@@ -58,7 +60,7 @@ class QueueFreeRtos {
   // ISR-safe, non-blocking push (returns immediately)
   bool try_pushFromISR(const T& item) {
     BaseType_t xTaskWoken = pdFALSE;
-    return xQueueSendFromISR(queue, &item, &xTaskWoken) == pdTRUE;
+    return xQueueSendFromISR(queue_, &item, &xTaskWoken) == pdTRUE;
   }
 
   // Blocking pop with timeout (timeout in milliseconds)
@@ -66,17 +68,17 @@ class QueueFreeRtos {
     TickType_t ticks = (timeout_ms == portMAX_DELAY)
                            ? portMAX_DELAY
                            : pdMS_TO_TICKS(timeout_ms);
-    return xQueueReceive(queue, &out, ticks) == pdTRUE;
+    return xQueueReceive(queue_, &out, ticks) == pdTRUE;
   }
 
   // Non-blocking pop
-  bool try_pop(T& out) { return xQueueReceive(queue, &out, 0) == pdTRUE; }
+  bool try_pop(T& out) { return xQueueReceive(queue_, &out, 0) == pdTRUE; }
 
   // ISR-safe pop (from ISR context)
   bool popFromISR(T& out) {
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     bool result =
-        xQueueReceiveFromISR(queue, &out, &xHigherPriorityTaskWoken) == pdTRUE;
+        xQueueReceiveFromISR(queue_, &out, &xHigherPriorityTaskWoken) == pdTRUE;
     if (xHigherPriorityTaskWoken) portYIELD_FROM_ISR();
     return result;
   }
@@ -84,14 +86,14 @@ class QueueFreeRtos {
   // ISR-safe, non-blocking pop (returns immediately)
   bool try_popFromISR(T& out) {
     BaseType_t xTaskWoken = pdFALSE;
-    return xQueueReceiveFromISR(queue, &out, &xTaskWoken) == pdTRUE;
+    return xQueueReceiveFromISR(queue_, &out, &xTaskWoken) == pdTRUE;
   }
 
-  size_t size() const { return uxQueueMessagesWaiting(queue); }
+  size_t size() const { return uxQueueMessagesWaiting(queue_); }
 
  private:
-  QueueHandle_t queue;
-  size_t capacity;
+  QueueHandle_t queue_;
+  size_t capacity_;
 };
 
 }  // namespace ebus

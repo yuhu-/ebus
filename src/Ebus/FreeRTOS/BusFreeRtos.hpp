@@ -54,8 +54,8 @@ struct BusEvent {
 #define EBUS_BUS_COUNTER_LIST X(busStartBit)
 
 #define EBUS_BUS_TIMING_LIST \
-  X(busDelay)                \
-  X(busWindow)
+  X(busDelay_)               \
+  X(busWindow_)
 
 class BusFreeRtos {
  public:
@@ -100,60 +100,60 @@ class BusFreeRtos {
   const Timing& getTiming();
 
  private:
-  uart_port_t uartPortNum;
-  uint8_t rxPin;
-  uint8_t txPin;
+  uart_port_t uartPortNum_;
+  uint8_t rxPin_;
+  uint8_t txPin_;
 
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
-  gptimer_handle_t gptimer = nullptr;
+  gptimer_handle_t gptimer_ = nullptr;
 #else
-  timer_group_t timerGroupNum = TIMER_GROUP_1;
-  timer_idx_t timerIdxNum = TIMER_0;
+  timer_group_t timerGroupNum_ = TIMER_GROUP_1;
+  timer_idx_t timerIdxNum_ = TIMER_0;
 #endif
 
-  Request* request = nullptr;
+  Request* request_ = nullptr;
 
   // owned queue
-  Queue<BusEvent>* byteQueue = nullptr;
+  Queue<BusEvent>* byteQueue_ = nullptr;
 
   // ISR/state
   static constexpr uint8_t FALLING_EDGE_BUFFER_SIZE = 5;
 
   // The bit time at 2400 baud is approximately 416.67 us
-  static constexpr float bit_time = 1000000.0 / 2400.0;  // ~416.67 us
+  static constexpr float bitTime_ = 1000000.0 / 2400.0;  // ~416.67 us
 
   // The byte time at 2400 baud for 10 bits with a 0.5-bit offset is
-  // approximately 9.5 * bit_time = 9.5 * 416.67 us = 3958.33 us
-  static constexpr int64_t byte_time = 9.5 * bit_time;  // ~3958.33 us
+  // approximately 9.5 * bitTime_ = 9.5 * 416.67 us = 3958.33 us
+  static constexpr int64_t byteTime_ = 9.5 * bitTime_;  // ~3958.33 us
 
   // This value can be adjusted if the bus ISR is not working as expected.
-  volatile uint16_t window = 4300;  // usually between 4300-4456 us
-  volatile uint16_t offset = 80;    // mainly for context switch and write
+  volatile uint16_t window_ = 4300;  // usually between 4300-4456 us
+  volatile uint16_t offset_ = 80;    // mainly for context switch and write
 
-  volatile uint8_t bufferIndex = 0;  // index for falling edge buffer
-  volatile int64_t microsEdgeBuffer[FALLING_EDGE_BUFFER_SIZE] = {0};
+  volatile uint8_t bufferIndex_ = 0;  // index for falling edge buffer
+  volatile int64_t microsEdgeBuffer_[FALLING_EDGE_BUFFER_SIZE] = {0};
 
-  volatile int64_t microsStartBit = 0;  // estimated start bit time
+  volatile int64_t microsStartBit_ = 0;  // estimated start bit time
 
-  volatile bool busRequestFlag = false;
-  volatile bool startBitFlag = false;
+  volatile bool busRequestFlag_ = false;
+  volatile bool startBitFlag_ = false;
 
-  volatile bool microsDelayFlag = false;
-  volatile bool microsWindowFlag = false;
+  volatile bool microsDelayFlag_ = false;
+  volatile bool microsWindowFlag_ = false;
 
-  volatile int64_t microsLastDelay = 0;
-  volatile int64_t microsLastWindow = 0;
+  volatile int64_t microsLastDelay_ = 0;
+  volatile int64_t microsLastWindow_ = 0;
 
   // platform handles
-  QueueHandle_t uartEventQueue = nullptr;
-  portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
+  QueueHandle_t uartEventQueue_ = nullptr;
+  portMUX_TYPE timerMux_ = portMUX_INITIALIZER_UNLOCKED;
 
   // measurement
-  Counter counter;
-  Timing timing;
+  Counter counter_;
+  Timing timing_;
 
-  TimingStats busDelay;
-  TimingStats busWindow;
+  TimingStats busDelay_;
+  TimingStats busWindow_;
 
   // setup helpers
   void configureUart();

@@ -37,40 +37,45 @@ class BusHandlerFreeRtos {
   using ByteListener = std::function<void(const uint8_t& byte)>;
 
   BusHandlerFreeRtos(Request* request, Handler* handler, Queue<BusEvent>* queue)
-      : request(request), handler(handler), queue(queue), taskHandle(nullptr) {}
+      : request_(request),
+        handler_(handler),
+        queue_(queue),
+        taskHandle_(nullptr) {}
 
   void start() {
     xTaskCreatePinnedToCore(&BusHandlerFreeRtos::taskFunc, "ebusBusQueueRunner",
-                            4096, this, 1, &taskHandle, tskNO_AFFINITY);
+                            4096, this, 1, &taskHandle_, tskNO_AFFINITY);
   }
 
   void stop() {
-    if (taskHandle) {
-      vTaskDelete(taskHandle);
-      taskHandle = nullptr;
+    if (taskHandle_) {
+      vTaskDelete(taskHandle_);
+      taskHandle_ = nullptr;
     }
   }
 
   // Register a listener for incoming bytes
-  void addByteListener(ByteListener listener) { listeners.push_back(listener); }
+  void addByteListener(ByteListener listener) {
+    listeners_.push_back(listener);
+  }
 
  private:
-  Request* request;
-  Handler* handler;
-  Queue<BusEvent>* queue;
-  TaskHandle_t taskHandle;
-  std::vector<ByteListener> listeners;
+  Request* request_;
+  Handler* handler_;
+  Queue<BusEvent>* queue_;
+  TaskHandle_t taskHandle_;
+  std::vector<ByteListener> listeners_;
 
   static void taskFunc(void* arg) {
     BusHandlerFreeRtos* self = static_cast<BusHandlerFreeRtos*>(arg);
     BusEvent event;
     for (;;) {
-      if (self->queue->pop(event)) {
-        if (event.busRequest) self->request->busRequestCompleted();
-        if (event.startBit) self->request->startBit();
-        self->request->run(event.byte);
-        self->handler->run(event.byte);
-        for (const ByteListener& listener : self->listeners)
+      if (self->queue_->pop(event)) {
+        if (event.busRequest) self->request_->busRequestCompleted();
+        if (event.startBit) self->request_->startBit();
+        self->request_->run(event.byte);
+        self->handler_->run(event.byte);
+        for (const ByteListener& listener : self->listeners_)
           listener(event.byte);
       }
     }
