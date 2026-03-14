@@ -30,7 +30,7 @@ namespace ebus {
 template <typename T>
 class QueuePosix {
  public:
-  explicit QueuePosix(size_t capacity = 32) : capacity(capacity) {}
+  explicit QueuePosix(size_t size = 32) : capacity(size) {}
 
   // Blocking push with optional timeout (returns false on timeout/full)
   bool push(const T& item, std::chrono::milliseconds timeout =

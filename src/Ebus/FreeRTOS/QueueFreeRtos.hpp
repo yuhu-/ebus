@@ -28,8 +28,8 @@ namespace ebus {
 template <typename T>
 class QueueFreeRtos {
  public:
-  explicit QueueFreeRtos(size_t capacity = 32)
-      : queue(xQueueCreate(capacity, sizeof(T))), capacity(capacity) {}
+  explicit QueueFreeRtos(size_t size = 32)
+      : queue(xQueueCreate(size, sizeof(T))), capacity(size) {}
 
   ~QueueFreeRtos() {
     if (queue) vQueueDelete(queue);
