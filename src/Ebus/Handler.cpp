@@ -28,12 +28,12 @@ ebus::Handler::Handler(const uint8_t& address, Bus* bus, Request* request)
     : bus_(bus), request_(request) {
   setSourceAddress(address);
 
-  this->request_->setHandlerBusRequestedCallback([this]() {
+  request_->setHandlerBusRequestedCallback([this]() {
     if (activeMessage_ && state_ != HandlerState::requestBus)
       state_ = HandlerState::requestBus;
   });
 
-  this->request_->setStartBitCallback([this]() {
+  request_->setStartBitCallback([this]() {
     if (activeMessage_) callActiveReset();
   });
 
