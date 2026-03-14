@@ -22,26 +22,26 @@
 namespace ebus {
 
 TimingStats::TimingStats()
-    : last(0),
-      count(0),
-      mean(0),
-      m2(0),
-      is_marked(false),
-      begin_time(std::chrono::steady_clock::time_point()) {}
+    : last_(0),
+      count_(0),
+      mean_(0),
+      m2_(0),
+      marked_(false),
+      beginTime_(std::chrono::steady_clock::time_point()) {}
 
 void TimingStats::markBegin(
     const std::chrono::steady_clock::time_point& begin) {
-  begin_time = begin;
-  is_marked = true;
+  beginTime_ = begin;
+  marked_ = true;
 }
 
 void TimingStats::markEnd(const std::chrono::steady_clock::time_point& end) {
-  if (is_marked) {
+  if (marked_) {
     int64_t duration =
-        std::chrono::duration_cast<std::chrono::microseconds>(end - begin_time)
+        std::chrono::duration_cast<std::chrono::microseconds>(end - beginTime_)
             .count();
     calc(duration);
-    is_marked = false;
+    marked_ = false;
   }
 }
 
@@ -58,33 +58,33 @@ void TimingStats::addDurationWithTime(
 
 TimingStats::Values TimingStats::getValues() const {
   Values values;
-  values.last = last;
-  values.mean = mean;
+  values.last = last_;
+  values.mean = mean_;
   values.stddev = stddev();
-  values.count = count;
+  values.count = count_;
   return values;
 }
 
 void TimingStats::clear() {
-  last = 0;
-  count = 0;
-  mean = 0;
-  m2 = 0;
-  is_marked = false;
-  begin_time = std::chrono::steady_clock::time_point();
+  last_ = 0;
+  count_ = 0;
+  mean_ = 0;
+  m2_ = 0;
+  marked_ = false;
+  beginTime_ = std::chrono::steady_clock::time_point();
 }
 
 void TimingStats::calc(double value) {
-  last = value;
-  ++count;
-  double delta = value - mean;
-  mean += delta / count;
-  double delta2 = value - mean;
-  m2 += delta * delta2;
+  last_ = value;
+  ++count_;
+  double delta = value - mean_;
+  mean_ += delta / count_;
+  double delta2 = value - mean_;
+  m2_ += delta * delta2;
 }
 
 double TimingStats::variance() const {
-  return count > 1 ? m2 / (count - 1) : 0;
+  return count_ > 1 ? m2_ / (count_ - 1) : 0;
 }
 
 double TimingStats::stddev() const { return sqrt(variance()); }

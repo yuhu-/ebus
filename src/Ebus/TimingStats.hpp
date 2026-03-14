@@ -53,12 +53,12 @@ class TimingStats {
   void clear();
 
  private:
-  double last;
-  uint64_t count;
-  double mean;
-  double m2;
-  bool is_marked;
-  std::chrono::steady_clock::time_point begin_time;
+  double last_;
+  uint64_t count_;
+  double mean_;
+  double m2_;
+  bool marked_;
+  std::chrono::steady_clock::time_point beginTime_;
 
   void calc(double value);
   double variance() const;
