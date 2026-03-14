@@ -34,7 +34,7 @@ namespace ebus {
 class Sequence {
  public:
   Sequence() = default;
-  Sequence(const Sequence& seq, const size_t index, size_t len = 0);
+  Sequence(const Sequence& sequence, const size_t index, size_t len = 0);
 
   void assign(const std::vector<uint8_t>& vec, const bool extended = true);
 
@@ -57,7 +57,6 @@ class Sequence {
 
  private:
   std::vector<uint8_t> sequence_;
-
   bool extended_ = false;
 };
 

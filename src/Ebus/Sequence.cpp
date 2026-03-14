@@ -26,14 +26,15 @@
 
 #include "Common.hpp"
 
-ebus::Sequence::Sequence(const Sequence& seq, const size_t index, size_t len) {
-  if (len == 0) len = seq.size() - index;
+ebus::Sequence::Sequence(const Sequence& sequence, const size_t index,
+                         size_t len) {
+  if (len == 0) len = sequence.size() - index;
 
   sequence_.resize(len);
-  std::copy(seq.sequence_.begin() + index, seq.sequence_.begin() + index + len,
-            sequence_.begin());
+  std::copy(sequence.sequence_.begin() + index,
+            sequence.sequence_.begin() + index + len, sequence_.begin());
 
-  extended_ = seq.extended_;
+  extended_ = sequence.extended_;
 }
 
 void ebus::Sequence::assign(const std::vector<uint8_t>& vec,
