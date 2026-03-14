@@ -66,11 +66,11 @@ void ebus::BusFreeRtos::start() {
 
 void ebus::BusFreeRtos::stop() {
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
-  if (gptimer) {
-    gptimer_stop(gptimer);
-    gptimer_disable(gptimer);
-    gptimer_del_timer(gptimer);
-    gptimer = nullptr;
+  if (gptimer_) {
+    gptimer_stop(gptimer_);
+    gptimer_disable(gptimer_);
+    gptimer_del_timer(gptimer_);
+    gptimer_ = nullptr;
   }
 #else
   timer_pause(timerGroupNum_, timerIdxNum_);
@@ -203,13 +203,13 @@ void ebus::BusFreeRtos::configureTimer() {
           .backup_before_sleep = false,
       }};
 
-  ESP_ERROR_CHECK(gptimer_new_timer(&gpt_config, &gptimer));
+  ESP_ERROR_CHECK(gptimer_new_timer(&gpt_config, &gptimer_));
 
   gptimer_event_callbacks_t cbs = {
       .on_alarm = s_onBusIsrTimer,
   };
-  ESP_ERROR_CHECK(gptimer_register_event_callbacks(gptimer, &cbs, this));
-  ESP_ERROR_CHECK(gptimer_enable(gptimer));
+  ESP_ERROR_CHECK(gptimer_register_event_callbacks(gptimer_, &cbs, this));
+  ESP_ERROR_CHECK(gptimer_enable(gptimer_));
 
 #else
   timer_config_t timer_config = {
