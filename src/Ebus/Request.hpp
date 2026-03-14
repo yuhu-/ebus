@@ -122,30 +122,30 @@ class Request {
   const Counter& getCounter() const;
 
  private:
-  uint8_t maxLockCounter = DEFAULT_LOCK_COUNTER;
-  uint8_t lockCounter = DEFAULT_LOCK_COUNTER;
+  uint8_t maxLockCounter_ = DEFAULT_LOCK_COUNTER;
+  uint8_t lockCounter_ = DEFAULT_LOCK_COUNTER;
 
-  uint8_t requestAddress = 0;
+  uint8_t requestAddress_ = 0;
 
   // Indicates whether a bus request is present
-  bool busRequest = false;
+  bool busRequest_ = false;
 
   // Indicates whether the bus request is internal or external
-  bool externalBusRequest = false;
+  bool externalBusRequest_ = false;
 
-  BusRequestedCallback handlerBusRequestedCallback = nullptr;
-  BusRequestedCallback externalBusRequestedCallback = nullptr;
+  BusRequestedCallback handlerBusRequestedCallback_ = nullptr;
+  BusRequestedCallback externalBusRequestedCallback_ = nullptr;
 
-  StartBitCallback startBitCallback = nullptr;
+  StartBitCallback startBitCallback_ = nullptr;
 
   std::array<void (Request::*)(const uint8_t&), NUM_REQUEST_STATES>
-      stateRequests;
+      stateRequests_;
 
-  RequestState state = RequestState::observe;
-  RequestResult result = RequestResult::observeSyn;
+  RequestState state_ = RequestState::observe;
+  RequestResult result_ = RequestResult::observeSyn;
 
   // measurement
-  Counter counter;
+  Counter counter_;
 
   void observe(const uint8_t& byte);
   void first(const uint8_t& byte);
