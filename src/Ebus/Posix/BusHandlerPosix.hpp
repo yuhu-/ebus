@@ -37,48 +37,50 @@ class BusHandlerPosix {
   using ByteListener = std::function<void(const uint8_t& byte)>;
 
   BusHandlerPosix(Request* request, Handler* handler, Queue<BusEvent>* queue)
-      : request(request), handler(handler), queue(queue), running(false) {}
+      : request_(request), handler_(handler), queue_(queue), running_(false) {}
 
   void start() {
-    running = true;
-    thread = std::thread([this]() { this->run(); });
+    running_ = true;
+    thread_ = std::thread([this]() { this->run(); });
   }
 
   void stop() {
-    running = false;
-    if (thread.joinable()) thread.join();
+    running_ = false;
+    if (thread_.joinable()) thread_.join();
   }
 
-  void enableTesting() { testing = true; }
+  void enableTesting() { testing_ = true; }
 
   // Register a listener for incoming bytes
-  void addByteListener(ByteListener listener) { listeners.push_back(listener); }
+  void addByteListener(ByteListener listener) {
+    listeners_.push_back(listener);
+  }
 
  private:
-  Request* request;
-  Handler* handler;
-  Queue<BusEvent>* queue;
-  std::atomic<bool> running;
-  std::thread thread;
-  bool testing = false;
-  std::vector<ByteListener> listeners;
+  Request* request_;
+  Handler* handler_;
+  Queue<BusEvent>* queue_;
+  std::atomic<bool> running_;
+  std::thread thread_;
+  bool testing_ = false;
+  std::vector<ByteListener> listeners_;
 
   void run() {
     BusEvent event;
-    while (running) {
-      if (queue->pop(event)) {
-        if (testing) {
-          for (const ByteListener& listener : listeners) listener(event.byte);
-          if (event.busRequest) request->busRequestCompleted();
-          if (event.startBit) request->startBit();
-          request->run(event.byte);
-          handler->run(event.byte);
+    while (running_) {
+      if (queue_->pop(event)) {
+        if (testing_) {
+          for (const ByteListener& listener : listeners_) listener(event.byte);
+          if (event.busRequest) request_->busRequestCompleted();
+          if (event.startBit) request_->startBit();
+          request_->run(event.byte);
+          handler_->run(event.byte);
         } else {
-          if (event.busRequest) request->busRequestCompleted();
-          if (event.startBit) request->startBit();
-          request->run(event.byte);
-          handler->run(event.byte);
-          for (const ByteListener& listener : listeners) listener(event.byte);
+          if (event.busRequest) request_->busRequestCompleted();
+          if (event.startBit) request_->startBit();
+          request_->run(event.byte);
+          handler_->run(event.byte);
+          for (const ByteListener& listener : listeners_) listener(event.byte);
         }
       }
     }
