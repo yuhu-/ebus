@@ -75,24 +75,24 @@ class BusPosix {
   std::string getSimulatedWrittenBytes() const;
 
  private:
-  std::string device;
-  bool simulate;
+  std::string device_;
+  bool simulate_;
 
-  Request* request = nullptr;
+  Request* request_ = nullptr;
 
-  int fd;
-  bool open;
-  struct termios oldSettings{};
+  int fd_;
+  bool open_;
+  struct termios oldSettings_{};
 
-  volatile uint16_t window = 4300;  // usually between 4300-4456 us
-  volatile uint16_t offset = 80;    // mainly for context switch and write
+  volatile uint16_t window_ = 4300;  // usually between 4300-4456 us
+  volatile uint16_t offset_ = 80;    // mainly for context switch and write
 
-  std::unique_ptr<Queue<BusEvent>> byteQueue;
-  std::thread thread;
-  std::atomic<bool> running;
+  std::unique_ptr<Queue<BusEvent>> byteQueue_;
+  std::thread thread_;
+  std::atomic<bool> running_;
 
   // simulated written bytes
-  std::vector<uint8_t> writtenBytes;
+  std::vector<uint8_t> writtenBytes_;
 
   void ensureOpen() const;
 
