@@ -19,104 +19,104 @@
 
 #include "Controller.hpp"
 
-ebus::Controller::Controller(const ebusConfig& cfg) : config(cfg) {
-  configured = true;
+ebus::Controller::Controller(const ebusConfig& config) : config_(config) {
+  configured_ = true;
   constructMembers();
 }
 
-void ebus::Controller::configure(const ebusConfig& cfg) {
-  if (running) return;
-  config = cfg;
-  configured = true;
+void ebus::Controller::configure(const ebusConfig& config) {
+  if (running_) return;
+  config_ = config;
+  configured_ = true;
   constructMembers();
 }
 
 void ebus::Controller::start() {
-  if (!configured) return;
-  if (running) return;
-  bus->start();
-  busHandler->start();
-  running = true;
+  if (!configured_) return;
+  if (running_) return;
+  bus_->start();
+  busHandler_->start();
+  running_ = true;
 }
 
 void ebus::Controller::stop() {
-  if (!configured) return;
-  if (!running) return;
-  busHandler->stop();
-  bus->stop();
-  running = false;
+  if (!configured_) return;
+  if (!running_) return;
+  busHandler_->stop();
+  bus_->stop();
+  running_ = false;
 }
 
 void ebus::Controller::setAddress(const uint8_t& address) {
-  if (!configured) {
-    config.address = address;
+  if (!configured_) {
+    config_.address = address;
     return;
   }
-  config.address = address;
-  handler->setSourceAddress(address);
+  config_.address = address;
+  handler_->setSourceAddress(address);
 }
 
 void ebus::Controller::setWindow(const uint16_t& window) {
-  if (!configured) {
-    config.window = window;
+  if (!configured_) {
+    config_.window = window;
     return;
   }
-  config.window = window;
-  bus->setWindow(window);
+  config_.window = window;
+  bus_->setWindow(window);
 }
 
 void ebus::Controller::setOffset(const uint16_t& offset) {
-  if (!configured) {
-    config.offset = offset;
+  if (!configured_) {
+    config_.offset = offset;
     return;
   }
-  config.offset = offset;
-  bus->setOffset(offset);
+  config_.offset = offset;
+  bus_->setOffset(offset);
 }
 
 ebus::Request* ebus::Controller::getRequest() {
-  return configured ? request.get() : nullptr;
+  return configured_ ? request_.get() : nullptr;
 }
 
 const ebus::Request* ebus::Controller::getRequest() const {
-  return configured ? request.get() : nullptr;
+  return configured_ ? request_.get() : nullptr;
 }
 
 ebus::Bus* ebus::Controller::getBus() {
-  return configured ? bus.get() : nullptr;
+  return configured_ ? bus_.get() : nullptr;
 }
 
 const ebus::Bus* ebus::Controller::getBus() const {
-  return configured ? bus.get() : nullptr;
+  return configured_ ? bus_.get() : nullptr;
 }
 
 ebus::BusHandler* ebus::Controller::getBusHandler() {
-  return configured ? busHandler.get() : nullptr;
+  return configured_ ? busHandler_.get() : nullptr;
 }
 
 const ebus::BusHandler* ebus::Controller::getBusHandler() const {
-  return configured ? busHandler.get() : nullptr;
+  return configured_ ? busHandler_.get() : nullptr;
 }
 
 ebus::Handler* ebus::Controller::getHandler() {
-  return configured ? handler.get() : nullptr;
+  return configured_ ? handler_.get() : nullptr;
 }
 
 const ebus::Handler* ebus::Controller::getHandler() const {
-  return configured ? handler.get() : nullptr;
+  return configured_ ? handler_.get() : nullptr;
 }
 
-bool ebus::Controller::isConfigured() const noexcept { return configured; }
+bool ebus::Controller::isConfigured() const noexcept { return configured_; }
 
-bool ebus::Controller::isRunning() const noexcept { return running; }
+bool ebus::Controller::isRunning() const noexcept { return running_; }
 
 void ebus::Controller::constructMembers() {
-  request.reset(new Request());
-  bus.reset(new Bus(config.bus, request.get()));
-  handler.reset(new Handler(config.address, bus.get(), request.get()));
-  busHandler.reset(
-      new BusHandler(request.get(), handler.get(), bus->getQueue()));
+  request_.reset(new Request());
+  bus_.reset(new Bus(config_.bus, request_.get()));
+  handler_.reset(new Handler(config_.address, bus_.get(), request_.get()));
+  busHandler_.reset(
+      new BusHandler(request_.get(), handler_.get(), bus_.get()->getQueue()));
 
-  bus->setWindow(config.window);
-  bus->setOffset(config.offset);
+  bus_.get()->setWindow(config_.window);
+  bus_.get()->setOffset(config_.offset);
 }

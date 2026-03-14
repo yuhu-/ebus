@@ -42,13 +42,13 @@ struct ebusConfig {
 class Controller {
  public:
   Controller() = default;
-  explicit Controller(const ebusConfig& cfg);
+  explicit Controller(const ebusConfig& config);
   ~Controller() = default;
 
   Controller(const Controller&) = delete;
   Controller& operator=(const Controller&) = delete;
 
-  void configure(const ebusConfig& cfg);
+  void configure(const ebusConfig& config);
 
   void start();
   void stop();
@@ -73,17 +73,17 @@ class Controller {
   bool isRunning() const noexcept;
 
  private:
+  ebusConfig config_;
+
+  std::unique_ptr<Request> request_;
+  std::unique_ptr<Bus> bus_;
+  std::unique_ptr<BusHandler> busHandler_;
+  std::unique_ptr<Handler> handler_;
+
+  bool configured_ = false;
+  bool running_ = false;
+
   void constructMembers();
-
-  ebusConfig config;
-
-  std::unique_ptr<Request> request;
-  std::unique_ptr<Bus> bus;
-  std::unique_ptr<BusHandler> busHandler;
-  std::unique_ptr<Handler> handler;
-
-  bool configured = false;
-  bool running = false;
 };
 
 }  // namespace ebus
