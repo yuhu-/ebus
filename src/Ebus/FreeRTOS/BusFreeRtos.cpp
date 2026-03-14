@@ -155,8 +155,8 @@ void ebus::BusFreeRtos::configureUart() {
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
       .flags =
           {
-              .allow_pd = true,
-              .backup_before_sleep = true,
+              .allow_pd = false,
+              .backup_before_sleep = false,
           },
 #endif
   };
@@ -199,8 +199,8 @@ void ebus::BusFreeRtos::configureTimer() {
       .intr_priority = 3,        //  high priority (1-3)
       .flags = {
           .intr_shared = false,  // do not share interrupt - reduce jitter
-          .allow_pd = true,
-          .backup_before_sleep = true,
+          .allow_pd = false,
+          .backup_before_sleep = false,
       }};
 
   ESP_ERROR_CHECK(gptimer_new_timer(&gpt_config, &gptimer));
