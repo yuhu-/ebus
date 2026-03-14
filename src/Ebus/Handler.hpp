@@ -129,17 +129,17 @@ using ErrorCallback = std::function<void(const std::string& errorMessage,
   X(errorActiveSlaveACK)
 
 #define EBUS_HANDLER_TIMING_LIST \
-  X(sync)                        \
-  X(write)                       \
-  X(passiveFirst)                \
-  X(passiveData)                 \
-  X(activeFirst)                 \
-  X(activeData)                  \
-  X(callbackWon)                 \
-  X(callbackLost)                \
-  X(callbackReactive)            \
-  X(callbackTelegram)            \
-  X(callbackError)
+  X(sync_)                       \
+  X(write_)                      \
+  X(passiveFirst_)               \
+  X(passiveData_)                \
+  X(activeFirst_)                \
+  X(activeData_)                 \
+  X(callbackWon_)                \
+  X(callbackLost_)               \
+  X(callbackReactive_)           \
+  X(callbackTelegram_)           \
+  X(callbackError_)
 
 class Handler {
  public:
@@ -202,67 +202,67 @@ class Handler {
   const StateTiming getStateTiming() const;
 
  private:
-  Bus* bus = nullptr;
-  Request* request = nullptr;
+  Bus* bus_ = nullptr;
+  Request* request_ = nullptr;
 
-  uint8_t sourceAddress = 0;
-  uint8_t targetAddress = 0;
+  uint8_t sourceAddress_ = 0;
+  uint8_t targetAddress_ = 0;
 
-  BusRequestWonCallback busRequestWonCallback = nullptr;
-  BusRequestLostCallback busRequestLostCallback = nullptr;
-  ReactiveMasterSlaveCallback reactiveMasterSlaveCallback = nullptr;
-  TelegramCallback telegramCallback = nullptr;
-  ErrorCallback errorCallback = nullptr;
+  BusRequestWonCallback busRequestWonCallback_ = nullptr;
+  BusRequestLostCallback busRequestLostCallback_ = nullptr;
+  ReactiveMasterSlaveCallback reactiveMasterSlaveCallback_ = nullptr;
+  TelegramCallback telegramCallback_ = nullptr;
+  ErrorCallback errorCallback_ = nullptr;
 
   std::array<void (Handler::*)(const uint8_t&), NUM_HANDLER_STATES>
-      stateHandlers;
+      stateHandlers_ = {};
 
-  HandlerState state = HandlerState::passiveReceiveMaster;
-  HandlerState lastState = HandlerState::passiveReceiveMaster;
+  HandlerState state_ = HandlerState::passiveReceiveMaster;
+  HandlerState lastState_ = HandlerState::passiveReceiveMaster;
 
   // measurement
-  Counter counter;
-  Timing timing;
-  std::array<TimingStats, NUM_HANDLER_STATES> handlerTiming = {};
+  Counter counter_;
+  Timing timing_;
+  std::array<TimingStats, NUM_HANDLER_STATES> handlerTiming_ = {};
 
-  std::chrono::steady_clock::time_point lastPoint;
-  bool measureSync = false;
+  std::chrono::steady_clock::time_point lastPoint_;
+  bool measureSync_ = false;
 
-  TimingStats sync;
-  TimingStats write;
-  TimingStats passiveFirst;
-  TimingStats passiveData;
-  TimingStats activeFirst;
-  TimingStats activeData;
-  TimingStats callbackWon;
-  TimingStats callbackLost;
-  TimingStats callbackReactive;
-  TimingStats callbackTelegram;
-  TimingStats callbackError;
+  TimingStats sync_;
+  TimingStats write_;
+  TimingStats passiveFirst_;
+  TimingStats passiveData_;
+  TimingStats activeFirst_;
+  TimingStats activeData_;
+  TimingStats callbackWon_;
+  TimingStats callbackLost_;
+  TimingStats callbackReactive_;
+  TimingStats callbackTelegram_;
+  TimingStats callbackError_;
 
   // passive
-  Telegram passiveTelegram;
+  Telegram passiveTelegram_;
 
-  Sequence passiveMaster;
-  size_t passiveMasterDBx = 0;
-  bool passiveMasterRepeated = false;
+  Sequence passiveMaster_;
+  size_t passiveMasterDBx_ = 0;
+  bool passiveMasterRepeated_ = false;
 
-  Sequence passiveSlave;
-  size_t passiveSlaveDBx = 0;
-  size_t passiveSlaveIndex = 0;
-  bool passiveSlaveRepeated = false;
+  Sequence passiveSlave_;
+  size_t passiveSlaveDBx_ = 0;
+  size_t passiveSlaveIndex_ = 0;
+  bool passiveSlaveRepeated_ = false;
 
   // active
-  bool activeMessage = false;
-  Telegram activeTelegram;
+  bool activeMessage_ = false;
+  Telegram activeTelegram_;
 
   Sequence activeMaster;
-  size_t activeMasterIndex = 0;
-  bool activeMasterRepeated = false;
+  size_t activeMasterIndex_ = 0;
+  bool activeMasterRepeated_ = false;
 
-  Sequence activeSlave;
-  size_t activeSlaveDBx = 0;
-  bool activeSlaveRepeated = false;
+  Sequence activeSlave_;
+  size_t activeSlaveDBx_ = 0;
+  bool activeSlaveRepeated_ = false;
 
   void passiveReceiveMaster(const uint8_t& byte);
   void passiveReceiveMasterAcknowledge(const uint8_t& byte);

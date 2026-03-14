@@ -139,7 +139,7 @@ class Request {
   StartBitCallback startBitCallback_ = nullptr;
 
   std::array<void (Request::*)(const uint8_t&), NUM_REQUEST_STATES>
-      stateRequests_;
+      stateRequests_ = {};
 
   RequestState state_ = RequestState::observe;
   RequestResult result_ = RequestResult::observeSyn;
