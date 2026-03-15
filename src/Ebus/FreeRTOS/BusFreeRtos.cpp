@@ -29,6 +29,7 @@
 #include <esp_timer.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
+#include <hal/uart_ll.h>
 
 #include "../Common.hpp"
 #include "driver/gpio.h"
@@ -374,7 +375,7 @@ bool IRAM_ATTR ebus::BusFreeRtos::s_onBusIsrTimer(void* arg) {
 
 bool ebus::BusFreeRtos::onBusIsrTimer() {
   uint8_t byte = request_->busRequestAddress();
-  uart_write_bytes(uartPortNum_, static_cast<const void*>(&byte), 1);
+  uart_ll_write_txfifo(UART_LL_GET_HW(uartPortNum_), &byte, 1);
   portENTER_CRITICAL_ISR(&timerMux_);
   microsLastWindow_ = esp_timer_get_time() - microsStartBit_;
   busRequestFlag_ = true;
