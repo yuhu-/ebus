@@ -81,6 +81,7 @@ ebus::Queue<ebus::BusEvent>* ebus::BusPosix::getQueue() const {
 
 void ebus::BusPosix::writeByte(const uint8_t byte) {
   if (simulate_) {
+    lastWrittenByte_ = byte;
     writtenBytes_.push_back(byte);
     std::string msg = "<- write: " + ebus::to_string(byte) + "\n";
     std::cout << msg;
@@ -94,6 +95,8 @@ void ebus::BusPosix::writeByte(const uint8_t byte) {
 void ebus::BusPosix::setWindow(const uint16_t window) { window_ = window; }
 
 void ebus::BusPosix::setOffset(const uint16_t offset) { offset_ = offset; }
+
+uint8_t ebus::BusPosix::getLastWrittenByte() const { return lastWrittenByte_; }
 
 std::string ebus::BusPosix::getSimulatedWrittenBytes() const {
   return ebus::to_string(writtenBytes_);

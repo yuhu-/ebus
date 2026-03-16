@@ -71,7 +71,8 @@ class BusPosix {
   void setWindow(const uint16_t window);
   void setOffset(const uint16_t offset);
 
-  // Get all simulated written bytes as a hex string
+  // get the last written byte or the full history of written bytes
+  uint8_t getLastWrittenByte() const;
   std::string getSimulatedWrittenBytes() const;
 
  private:
@@ -92,6 +93,7 @@ class BusPosix {
   std::atomic<bool> running_;
 
   // simulated written bytes
+  uint8_t lastWrittenByte_ = 0x00;
   std::vector<uint8_t> writtenBytes_;
 
   void ensureOpen() const;
