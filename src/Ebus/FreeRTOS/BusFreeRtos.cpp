@@ -66,6 +66,10 @@ void ebus::BusFreeRtos::start() {
 }
 
 void ebus::BusFreeRtos::stop() {
+  gpio_isr_handler_remove(static_cast<gpio_num_t>(rxPin_));
+  gpio_intr_disable(static_cast<gpio_num_t>(rxPin_));
+  gpio_set_intr_type(static_cast<gpio_num_t>(rxPin_), GPIO_INTR_DISABLE);
+
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
   if (gptimer_) {
     gptimer_stop(gptimer_);
