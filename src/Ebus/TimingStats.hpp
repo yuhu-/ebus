@@ -20,7 +20,6 @@
 #pragma once
 
 #include <chrono>
-#include <cmath>
 #include <cstdint>
 
 namespace ebus {
@@ -29,6 +28,8 @@ class TimingStats {
  public:
   struct Values {
     double last;
+    double min;
+    double max;
     double mean;
     double stddev;
     uint64_t count;
@@ -54,6 +55,8 @@ class TimingStats {
 
  private:
   double last_;
+  double min_;
+  double max_;
   uint64_t count_;
   double mean_;
   double m2_;

@@ -19,10 +19,14 @@
 
 #include "TimingStats.hpp"
 
+#include <cmath>
+
 namespace ebus {
 
 TimingStats::TimingStats()
     : last_(0),
+      min_(0),
+      max_(0),
       count_(0),
       mean_(0),
       m2_(0),
@@ -59,6 +63,8 @@ void TimingStats::addDurationWithTime(
 TimingStats::Values TimingStats::getValues() const {
   Values values;
   values.last = last_;
+  values.min = min_;
+  values.max = max_;
   values.mean = mean_;
   values.stddev = stddev();
   values.count = count_;
@@ -67,6 +73,8 @@ TimingStats::Values TimingStats::getValues() const {
 
 void TimingStats::clear() {
   last_ = 0;
+  min_ = 0;
+  max_ = 0;
   count_ = 0;
   mean_ = 0;
   m2_ = 0;
@@ -76,6 +84,15 @@ void TimingStats::clear() {
 
 void TimingStats::calc(double value) {
   last_ = value;
+
+  if (count_ == 0) {
+    min_ = value;
+    max_ = value;
+  } else {
+    if (value < min_) min_ = value;
+    if (value > max_) max_ = value;
+  }
+
   ++count_;
   double delta = value - mean_;
   mean_ += delta / count_;
