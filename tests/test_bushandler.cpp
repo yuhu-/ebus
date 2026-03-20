@@ -135,8 +135,6 @@ void run_test(const TestCase& tc) {
 
   ebus::Handler handler(tc.address, &bus, &request);
 
-  ebus::Queue<ebus::BusEvent> byteQueue(32);
-
   ebus::Queue<CallbackEvent> eventQueue(8);
 
   handler.setBusRequestWonCallback([&eventQueue]() {
@@ -181,7 +179,7 @@ void run_test(const TestCase& tc) {
   if (tc.messageType == ebus::MessageType::active)
     request.requestBus(tc.address);
 
-  ebus::BusHandler busHandler(&request, &handler, &byteQueue);
+  ebus::BusHandler busHandler(&request, &handler, bus.getQueue());
 
   // Register a ByteListener that logs every byte processed by the busHandler
   busHandler.addByteListener([](const uint8_t& byte) {
@@ -205,7 +203,7 @@ void run_test(const TestCase& tc) {
   // 2400 baud => 1 / 2400 = 416,67 microseconds per bit
   // 10 bits per byte (1 start bit, 8 data bits, 1 stop bit)
   // 1 byte takes 10 * 416,67 microseconds = 4166,67 microseconds
-  std::thread ebusUartEventTask([&seq, &bus, &request, &byteQueue]() {
+  std::thread ebusUartEventTask([&seq, &bus, &request]() {
     bool busRequestFlag = false;
     for (size_t i = 0; i < seq.size(); ++i) {
       uint8_t byte = seq[i];
@@ -216,7 +214,7 @@ void run_test(const TestCase& tc) {
       // startBit indicates if the start bit wasn't in the expected window
       // event.startBit = true;
 
-      byteQueue.push(event);
+      bus.getQueue()->push(event);
 
       // simulate request bus timer
       std::this_thread::sleep_for(std::chrono::microseconds(200));
