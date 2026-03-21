@@ -23,15 +23,17 @@
 #include <iomanip>
 #include <sstream>
 
+// According to eBUS spec 6.2.2.1, master addresses are formed from a
+// priority class (lower nibble) and a sub-address (higher nibble).
+// There are 5 valid values for each nibble: 0x0, 0x1, 0x3, 0x7, 0xF.
+// This results in 5 * 5 = 25 possible master addresses.
+// This function checks if a given byte conforms to this rule.
+// Optimization: Valid values x satisfy ((x + 1) & x) == 0 for x <= 15.
 bool ebus::isMaster(const uint8_t& byte) {
-  uint8_t hi = (byte & uint8_t(0xf0)) >> 4;
-  uint8_t lo = (byte & uint8_t(0x0f));
+  uint8_t hi = (byte >> 4) & 0x0f;
+  uint8_t lo = byte & 0x0f;
 
-  return ((hi == uint8_t(0x0)) || (hi == uint8_t(0x1)) ||
-          (hi == uint8_t(0x3)) || (hi == uint8_t(0x7)) ||
-          (hi == uint8_t(0xf))) &&
-         ((lo == uint8_t(0x0)) || (lo == uint8_t(0x1)) ||
-          (lo == uint8_t(0x3)) || (lo == uint8_t(0x7)) || (lo == uint8_t(0xf)));
+  return (((hi + 1) & hi) == 0) && (((lo + 1) & lo) == 0);
 }
 
 // except all master, 0xaa, 0xa9, 0xfe
@@ -60,7 +62,10 @@ uint8_t ebus::slaveOf(const uint8_t& byte) {
 }
 
 const std::string ebus::to_string(const uint8_t& byte) {
-  return to_string(std::vector<uint8_t>(1, byte));
+  std::ostringstream ostr;
+  ostr << std::nouppercase << std::hex << std::setw(2) << std::setfill('0')
+       << static_cast<unsigned>(byte);
+  return ostr.str();
 }
 
 const std::string ebus::to_string(const std::vector<uint8_t>& vec) {
@@ -91,27 +96,24 @@ const std::vector<uint8_t> ebus::range(const std::vector<uint8_t>& vec,
 }
 
 bool ebus::contains(const std::vector<uint8_t>& vec,
-                    const std::vector<uint8_t>& search, int index /* = -1 */) {
+                    const std::vector<uint8_t>& search) {
   if (search.empty() || vec.empty() || search.size() > vec.size()) return false;
+  return std::search(vec.begin(), vec.end(), search.begin(), search.end()) !=
+         vec.end();
+}
 
-  // If index == -1, search the whole vector for the sequence
-  if (index == -1) {
-    return (std::search(vec.begin(), vec.end(), search.begin(), search.end()) !=
-            vec.end());
-  }
+bool ebus::matches(const std::vector<uint8_t>& vec,
+                   const std::vector<uint8_t>& search, size_t index) {
+  if (search.empty()) return true;
+  if (index + search.size() > vec.size()) return false;
 
-  // Clamp index to valid range
-  if (index < 0) index = 0;
-  if (static_cast<size_t>(index) > vec.size() - search.size()) return false;
-
-  // Only check at the exact index
-  for (size_t i = 0; i < search.size(); ++i)
-    if (vec[index + i] != search[i]) return false;
+  if (!std::equal(search.begin(), search.end(), vec.begin() + index))
+    return false;
 
   return true;
 }
 
-// CRC8 table of the polynom 0x9b = x^8 + x^7 + x^4 + x^3 + x^1 + 1.
+// CRC8 table of the polynomial 0x9b = x^8 + x^7 + x^4 + x^3 + x^1 + 1.
 static const uint8_t crc_table[] = {
     0x00, 0x9b, 0xad, 0x36, 0xc1, 0x5a, 0x6c, 0xf7, 0x19, 0x82, 0xb4, 0x2f,
     0xd8, 0x43, 0x75, 0xee, 0x32, 0xa9, 0x9f, 0x04, 0xf3, 0x68, 0x5e, 0xc5,

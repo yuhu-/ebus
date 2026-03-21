@@ -1,2 +1,6 @@
 /build
 .wiki/
+/doc
+launch.json
+tasks.json
+GEMINI.md

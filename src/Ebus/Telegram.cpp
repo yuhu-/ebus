@@ -69,7 +69,12 @@ void ebus::Telegram::parse(Sequence& seq) {
         return;
       }
 
-      offset = master_.size() + 1;
+      // The master sequence (master_) contains the payload [QQ ZZ PB SB NN
+      // Data]. It does NOT include the CRC. The raw sequence 'seq' structure
+      // is: [ ... master_ ... ] [CRC] [ACK] [Next Attempt...] To jump to the
+      // next attempt, we skip the payload (master_.size()), plus 1 byte for CRC
+      // and 1 byte for ACK.
+      offset = master_.size() + 2;
       master_.clear();
 
       Sequence tmp(seq, offset);
@@ -112,6 +117,9 @@ void ebus::Telegram::parse(Sequence& seq) {
   }
 
   if (telegramType_ == TelegramType::master_slave) {
+    // If this is a Master-Slave telegram, the Slave response follows the Master
+    // ACK. Offset calculation: 5 (Header: QQ ZZ PB SB NN) + masterNN_ (Data) +
+    // 1 (CRC) + 1 (ACK) = 5 + masterNN_ + 2
     offset += 5 + masterNN_ + 2;
 
     Sequence seq2(seq, offset);
@@ -146,7 +154,11 @@ void ebus::Telegram::parse(Sequence& seq) {
         return;
       }
 
-      offset = slave_.size() + 1;
+      // Same logic as for Master retry:
+      // The slave sequence (slave_) contains [NN Data].
+      // We skip the payload (slave_.size()), plus 1 byte for CRC and 1 byte for
+      // ACK to find the start of the retry sequence.
+      offset = slave_.size() + 2;
       slave_.clear();
 
       Sequence tmp(seq2, offset);

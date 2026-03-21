@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2025 Roland Jax
+ * Copyright (C) 2012-2026 Roland Jax
  *
  * This file is part of ebus.
  *
@@ -17,199 +17,122 @@
  * along with ebus. If not, see http://www.gnu.org/licenses/.
  */
 
+#include <cassert>
 #include <cstddef>
 #include <iostream>
 #include <string>
 
+#include "Common.hpp"
 #include "Sequence.hpp"
 #include "Telegram.hpp"
 
-int main() {
-  ebus::Sequence seq;
-
-  // parse sequence
-  seq.assign(ebus::to_vector("ff12b509030d0000d700037702006100"));
-
-  ebus::Telegram parse(seq);
-
-  std::cout << "    seq: " << seq.to_string() << std::endl;
-  std::cout << "  range: " << parse.to_string() << " slave(1,2) = '"
-            << ebus::to_string(parse.getSlave().range(1, 2)) << "'" << std::endl
+void run_test(const std::string& name, bool condition) {
+  std::cout << "[TEST] " << name << ": " << (condition ? "PASSED" : "FAILED")
             << std::endl;
+  if (!condition) std::exit(1);
+}
 
-  // parse sequence
-  seq.assign(ebus::to_vector("ff0ab509030d0e00830002e0028900"));
-
-  ebus::Telegram parse2(seq);
-
-  std::cout << "    seq: " << seq.to_string() << std::endl;
-  std::cout << "  range: " << parse2.to_string() << " slave(1,2) = '"
-            << ebus::to_string(parse2.getSlave().range(1, 2)) << "'"
-            << std::endl
-            << std::endl;
-
-  // create telegram
+void test_creation() {
+  std::cout << "\n=== Test: Telegram Creation ===" << std::endl;
   ebus::Telegram tel;
-  tel.createMaster(uint8_t(0xff), ebus::to_vector("52b509030d0600"));
-  std::cout << "    seq: ff52b509030d0600" << std::endl;
-  std::cout << " master: " << tel.toStringMaster() << std::endl << std::endl;
 
-  seq.assign(ebus::to_vector("ff52b509030d060043"));
+  // Create Master
+  // Data: 10 (Src) 08 (Dst) b5 09 (Cmd) 03 (Len) 0d 06 00 (Payload)
+  // Expected CRC: 0xe1
+  tel.createMaster(0x10, ebus::to_vector("08b509030d0600"));
+  run_test("Create Master State OK",
+           tel.getMasterState() == ebus::SequenceState::seq_ok);
+  run_test("Create Master Source", tel.getSourceAddress() == 0x10);
+  run_test("Create Master Target", tel.getTargetAddress() == 0x08);
+  run_test("Create Master CRC", tel.getMasterCRC() == 0xe1);
 
-  tel.createMaster(seq);
-  std::cout << "    seq: " << seq.to_string() << std::endl;
-  std::cout << " master: " << tel.toStringMaster() << std::endl << std::endl;
-
-  // create slave
+  // Create Slave
+  // Data: 03 (Len) b0 fb aa (Payload)
+  // Expected CRC: 0xd0
   tel.createSlave(ebus::to_vector("03b0fbaa"));
-  std::cout << "    seq: 03b0fbaa" << std::endl;
-  std::cout << "  slave: " << tel.toStringSlave() << std::endl << std::endl;
+  run_test("Create Slave State OK",
+           tel.getSlaveState() == ebus::SequenceState::seq_ok);
+  run_test("Create Slave Num Bytes", tel.getSlaveNumberBytes() == 0x03);
+  run_test("Create Slave Data",
+           tel.getSlaveDataBytes() == ebus::to_vector("b0fbaa"));
+  run_test("Create Slave CRC", tel.getSlaveCRC() == 0xd0);
+}
 
-  seq.assign(ebus::to_vector("03b0fba901d0"));
+void test_parsing() {
+  std::cout << "\n=== Test: Telegram Parsing ===" << std::endl;
+  ebus::Sequence seq;
+  ebus::Telegram tel;
 
-  tel.createSlave(seq);
-  std::cout << "    seq: " << seq.to_string() << std::endl;
-  std::cout << "  slave: " << tel.toStringSlave() << std::endl << std::endl;
+  // Test 1: Normal Master-Slave
+  // 10 08 b5 09 03 0d 06 00 [Master Payload]
+  // e1                      [Master CRC]
+  // 00                      [Master ACK]
+  // 03 b0 fb aa             [Slave Payload]
+  // d0 00                   [Slave CRC + ACK]
+  seq.assign(ebus::to_vector("1008b509030d0600e10003b0fbaad000"), true);
+  tel.parse(seq);
+  run_test("Parse MS: Master State OK",
+           tel.getMasterState() == ebus::SequenceState::seq_ok);
+  run_test("Parse MS: Slave State OK",
+           tel.getSlaveState() == ebus::SequenceState::seq_ok);
+  run_test("Parse MS: Type", tel.getType() == ebus::TelegramType::master_slave);
+  run_test("Parse MS: Master ACK", tel.getMasterACK() == 0x00);
+  run_test("Parse MS: Slave ACK", tel.getSlaveACK() == 0x00);
+  run_test("Parse MS: Master Data",
+           tel.getMasterDataBytes() == ebus::to_vector("0d0600"));
+  run_test("Parse MS: Slave Data",
+           tel.getSlaveDataBytes() == ebus::to_vector("b0fbaa"));
 
-  // Normal
-  seq.assign(ebus::to_vector("ff52b509030d0600430003b0fba901d000"));
+  // Test 2: Master-Master
+  seq.assign(ebus::to_vector("1000b5050427002400d900"), true);
+  tel.parse(seq);
+  run_test("Parse MM: Master State OK",
+           tel.getMasterState() == ebus::SequenceState::seq_ok);
+  run_test("Parse MM: Type",
+           tel.getType() == ebus::TelegramType::master_master);
+  run_test("Parse MM: Master ACK", tel.getMasterACK() == 0x00);
+  run_test("Parse MM: Slave State Empty",
+           tel.getSlaveState() == ebus::SequenceState::seq_empty);
 
-  ebus::Telegram full(seq);
+  // Test 3: Broadcast
+  seq.assign(ebus::to_vector("10fe07000970160443183105052592"), true);
+  tel.parse(seq);
+  run_test("Parse BC: Master State OK",
+           tel.getMasterState() == ebus::SequenceState::seq_ok);
+  run_test("Parse BC: Type", tel.getType() == ebus::TelegramType::broadcast);
+  run_test("Parse BC: Slave State Empty",
+           tel.getSlaveState() == ebus::SequenceState::seq_empty);
 
-  std::cout << "    seq: " << seq.to_string() << std::endl;
-  std::cout << "   full: " << full.to_string() << " ==> Normal" << std::endl
-            << std::endl;
-
-  // NAK from slave
-  seq.assign(ebus::to_vector(
-      "ff52b509030d060043ffff52b509030d0600430003b0fba901d000"));
-
-  ebus::Telegram full2(seq);
-
-  std::cout << "    seq: " << seq.to_string() << std::endl;
-  std::cout << "  full2: " << full2.to_string() << " ==> NAK from slave"
-            << std::endl
-            << std::endl;
-
-  // twice NAK from slave
-  seq.assign(ebus::to_vector("ff52b509030d060043ffff52b509030d060043ff"));
-
-  ebus::Telegram full22(seq);
-
-  std::cout << "    seq: " << seq.to_string() << std::endl;
-  std::cout << " full22: " << full22.to_string() << " ==> twice NAK from slave"
-            << std::endl
-            << std::endl;
-
-  // NAK from master
+  // Test 4: NAK from slave, then retry, NAK from master, then retry
+  // Master 1: ... 8a (CRC) ff (NAK)
+  // Master 2: ... 8a (CRC) 00 (ACK) -> Success
+  // Slave 1:  ... a7 (CRC) ff (NAK)
+  // Slave 2:  ... a7 (CRC) 00 (ACK) -> Success
   seq.assign(
-      ebus::to_vector("ff52b509030d0600430003b0fba901d0ff03b0fba901d000"));
-
-  ebus::Telegram full3(seq);
-
-  std::cout << "    seq: " << seq.to_string() << std::endl;
-  std::cout << "  full3: " << full3.to_string() << " ==> NAK from master"
-            << std::endl
-            << std::endl;
-
-  // NAK from slave and master
-  seq.assign(ebus::to_vector(
-      "ff52b509030d060043ffff52b509030d0600430003b0fba901d0ff03b0fba901d000"));
-
-  ebus::Telegram full4(seq);
-
-  std::cout << "    seq: " << seq.to_string() << std::endl;
-  std::cout << "  full4:  " << full4.to_string()
-            << " ==> NAK from slave and master" << std::endl
-            << std::endl;
-
-  // twice NAK from slave and master
-  seq.assign(ebus::to_vector(
-      "ff52b509030d060043ffff52b509030d0600430003b0fba901d0ff03b0fba901d0ff"));
-
-  ebus::Telegram full44(seq);
-
-  std::cout << "    seq: " << seq.to_string() << std::endl;
-  std::cout << " full44: " << full44.to_string()
-            << " ==> twice NAK from slave and master" << std::endl
-            << std::endl;
-
-  // defect sequence
-  seq.assign(ebus::to_vector("107fc2b5100900024000000000000215"));
-
-  ebus::Telegram full5(seq);
-
-  std::cout << "    seq: " << seq.to_string() << std::endl;
-  std::cout << "  full5: " << full5.to_string() << std::endl << std::endl;
-
-  // missing acknowledge byte
-  seq.assign(ebus::to_vector(
-      "1008b51101028aff1008b51101028a0003b0fba901d0ff0003b0fba901d0"));
-
-  ebus::Telegram full6(seq);
-
-  std::cout << "    seq: " << seq.to_string() << std::endl;
-  std::cout << "  full6: " << full6.to_string() << std::endl << std::endl;
-
-  // extend
-  seq.assign(ebus::to_vector("08b509030da900"), false);
-
-  ebus::Telegram ext1;
-  ext1.createMaster(uint8_t(0xff), seq.to_vector());
-
-  if (ext1.getMasterState() == ebus::SequenceState::seq_ok) {
-    ebus::Sequence master = ext1.getMaster();
-    master.push_back(ext1.getMasterCRC(), false);
-    master.extend();
-
-    std::cout << "    seq: " << seq.to_string() << std::endl;
-    std::cout << " master: " << master.to_string() << std::endl << std::endl;
-  }
-
-  seq.assign(ebus::to_vector("08b509030daa00"), false);
-
-  ebus::Telegram ext2;
-  ext2.createMaster(uint8_t(0xff), seq.to_vector());
-
-  if (ext2.getMasterState() == ebus::SequenceState::seq_ok) {
-    ebus::Sequence master = ext2.getMaster();
-    master.push_back(ext2.getMasterCRC(), false);
-    master.extend();
-
-    std::cout << "    seq: " << seq.to_string() << std::endl;
-    std::cout << " master: " << master.to_string() << std::endl << std::endl;
-  }
-
-  seq.assign(ebus::to_vector("1008b510fe0001000000000000020c"), true);
-
-  ebus::Telegram ext3(seq);
-
-  std::cout << "    seq: " << seq.to_string() << std::endl;
-  std::cout << "   ext3: " << ext3.to_string() << std::endl << std::endl;
-
-  seq.assign(
-      ebus::to_vector(
-          "1050b5040101fe00091403000000fe000100b9ff09140300000081000100b900"),
+      ebus::to_vector("1008b51101028aff1008b51101028a00013ca7ff013ca700"),
       true);
+  tel.parse(seq);
+  run_test("Parse NAK: Master State OK",
+           tel.getMasterState() == ebus::SequenceState::seq_ok);
+  run_test("Parse NAK: Slave State OK",
+           tel.getSlaveState() == ebus::SequenceState::seq_ok);
+  run_test("Parse NAK: Master Data (final)",
+           tel.getMasterDataBytes() == ebus::to_vector("02"));
+  run_test("Parse NAK: Slave Data (final)",
+           tel.getSlaveDataBytes() == ebus::to_vector("3c"));
 
-  ebus::Telegram ext4(seq);
+  // Test 5: Invalid CRC
+  seq.assign(ebus::to_vector("1008b509030d06009f"), true);  // Correct CRC is e1
+  tel.parse(seq);
+  run_test("Parse Invalid CRC",
+           tel.getMasterState() == ebus::SequenceState::err_crc_invalid);
+}
 
-  std::cout << "    seq: " << seq.to_string() << std::endl;
-  std::cout << "   ext4: " << ext4.to_string() << std::endl << std::endl;
+int main() {
+  test_creation();
+  test_parsing();
 
-  seq.assign(ebus::to_vector("0008b5090329b90166"), true);
-
-  ebus::Telegram ext5(seq);
-
-  std::cout << "    seq: " << seq.to_string() << std::endl;
-  std::cout << "   ext5: " << ext5.to_string() << std::endl << std::endl;
-
-  seq.assign(ebus::to_vector("1008b510090001000000000000020c"), true);
-
-  ebus::Telegram ext6(seq);
-
-  std::cout << "    seq: " << seq.to_string() << std::endl;
-  std::cout << "   ext6: " << ext6.to_string() << std::endl << std::endl;
+  std::cout << "\nAll telegram tests passed!" << std::endl;
 
   return EXIT_SUCCESS;
 }

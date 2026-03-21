@@ -28,7 +28,12 @@
 
 ebus::Sequence::Sequence(const Sequence& sequence, const size_t index,
                          size_t len) {
-  if (len == 0) len = sequence.size() - index;
+  if (index >= sequence.size()) {
+    extended_ = sequence.extended_;
+    return;
+  }
+
+  if (len == 0 || index + len > sequence.size()) len = sequence.size() - index;
 
   sequence_.resize(len);
   std::copy(sequence.sequence_.begin() + index,
@@ -49,6 +54,27 @@ void ebus::Sequence::push_back(const uint8_t byte, const bool extended) {
   extended_ = extended;
 }
 
+bool ebus::Sequence::operator==(const Sequence& other) const {
+  return sequence_ == other.sequence_ && extended_ == other.extended_;
+}
+
+bool ebus::Sequence::operator!=(const Sequence& other) const {
+  return !(*this == other);
+}
+
+void ebus::Sequence::append(const Sequence& other) {
+  // Ensure the appended sequence matches the current state (extended vs reduced)
+  // before merging the data.
+  Sequence temp = other;
+  if (extended_) {
+    temp.extend();
+  } else {
+    temp.reduce();
+  }
+  sequence_.insert(sequence_.end(), temp.sequence_.begin(),
+                   temp.sequence_.end());
+}
+
 const uint8_t& ebus::Sequence::operator[](const size_t index) const {
   return sequence_.at(index);
 }
@@ -65,15 +91,18 @@ void ebus::Sequence::clear() {
   extended_ = false;
 }
 
-uint8_t ebus::Sequence::crc() {
-  if (!extended_) extend();
+uint8_t ebus::Sequence::crc() const {
+  // According to eBUS spec 5.7
+  // the CRC is calculated over the "expanded transmission sequence".
+  Sequence temp = *this;
+  temp.extend();  // Make sure we are calculating over the stuffed sequence
 
   uint8_t crc = sym_zero;
 
-  for (size_t i = 0; i < sequence_.size(); i++)
-    crc = calc_crc(sequence_.at(i), crc);
-
-  reduce();
+  const auto& vec = temp.to_vector();
+  for (const auto& byte : vec) {
+    crc = calc_crc(byte, crc);
+  }
 
   return crc;
 }
@@ -81,6 +110,9 @@ uint8_t ebus::Sequence::crc() {
 void ebus::Sequence::extend() {
   if (extended_) return;
 
+  // Perform byte stuffing (escaping) for reserved symbols according to spec.
+  // 0xAA (SYN) -> 0xA9 0x01
+  // 0xA9 (ESC) -> 0xA9 0x00
   // maximum possible size (worst case: every byte expands to 2)
   size_t max_size = sequence_.size() * 2;
   std::vector<uint8_t> tmp(max_size);
@@ -106,25 +138,31 @@ void ebus::Sequence::extend() {
 void ebus::Sequence::reduce() {
   if (!extended_) return;
 
-  // In the worst case, the reduced sequence is at most as large as sequence
-  std::vector<uint8_t> tmp(sequence_.size());
-  size_t j = 0;
-  bool extended = false;
+  // Reverse byte stuffing to get original raw data.
+  std::vector<uint8_t> tmp;
+  tmp.reserve(sequence_.size());  // Avoid reallocations
 
-  for (size_t i = 0; i < sequence_.size(); i++) {
-    if (sequence_[i] == sym_syn || sequence_[i] == sym_ext) {
-      extended = true;
-    } else if (extended) {
-      if (sequence_[i] == sym_syn_ext)
-        tmp[j++] = sym_syn;
-      else
-        tmp[j++] = sym_ext;
-      extended = false;
+  for (size_t i = 0; i < sequence_.size(); ++i) {
+    if (sequence_[i] == sym_ext) {
+      if (i + 1 < sequence_.size()) {
+        ++i;  // Consume escape character and move to the next byte
+        if (sequence_[i] == sym_syn_ext) {
+          tmp.push_back(sym_syn);  // 0xA9 0x01 -> 0xAA
+        } else if (sequence_[i] == sym_ext_ext) {
+          tmp.push_back(sym_ext);  // 0xA9 0x00 -> 0xA9
+        } else {
+          // This is an invalid escape sequence. To be safe and not lose
+          // data, push the original bytes for later inspection.
+          tmp.push_back(sym_ext);
+          tmp.push_back(sequence_[i]);
+        }
+      } else {
+        tmp.push_back(sym_ext);  // Dangling escape char at the end
+      }
     } else {
-      tmp[j++] = sequence_[i];
+      tmp.push_back(sequence_[i]);
     }
   }
-  tmp.resize(j);  // shrink to actual size
 
   sequence_ = std::move(tmp);
   extended_ = false;

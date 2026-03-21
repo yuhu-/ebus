@@ -182,15 +182,15 @@ void checkContains() {
   ebus::contains(vec, search) ? std::cout << "contains" << std::endl
                               : std::cout << "not contains" << std::endl;
 
-  ebus::contains(vec, search, 2)
+  ebus::matches(vec, search, 2)
       ? std::cout << "contains at index 2" << std::endl
       : std::cout << "not contains at index 2" << std::endl;
 
-  ebus::contains(vec, search, 4)
+  ebus::matches(vec, search, 4)
       ? std::cout << "contains at index 4" << std::endl
       : std::cout << "not contains at index 4" << std::endl;
 
-  ebus::contains(vec, search, 6)
+  ebus::matches(vec, search, 6)
       ? std::cout << "contains at index 6" << std::endl
       : std::cout << "not contains at index 6" << std::endl;
 }

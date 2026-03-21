@@ -40,6 +40,10 @@ class Sequence {
 
   void push_back(const uint8_t byte, const bool extended = true);
 
+  bool operator==(const Sequence& other) const;
+  bool operator!=(const Sequence& other) const;
+  void append(const Sequence& other);
+
   const uint8_t& operator[](const size_t index) const;
   const std::vector<uint8_t> range(const size_t index, const size_t len) const;
 
@@ -47,7 +51,7 @@ class Sequence {
 
   void clear();
 
-  uint8_t crc();
+  uint8_t crc() const;
 
   void extend();
   void reduce();
