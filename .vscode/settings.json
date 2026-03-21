@@ -82,7 +82,9 @@
         "ranges": "cpp",
         "bitset": "cpp",
         "queue": "cpp",
-        "stack": "cpp"
+        "stack": "cpp",
+        "csignal": "cpp",
+        "cassert": "cpp"
     },
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
     "C_Cpp.autoAddFileAssociations": true
