@@ -17,12 +17,14 @@
  * along with ebus. If not, see http://www.gnu.org/licenses/.
  */
 
-// Implementation of eBUS arbitration logic for internal (handler) and external
-// bus access.
+// Implementation of the eBUS arbitration state machine.
+// Handles "Wire-AND" collision detection, Priority Class checks, and the
+// automatic retry mechanism (Auto-SYN) as defined in Spec 6.2.2.
 
 #pragma once
 
 #include <array>
+#include <atomic>
 #include <cmath>
 #include <cstdint>
 #include <functional>
@@ -103,9 +105,13 @@ class Request {
   void setHandlerBusRequestedCallback(BusRequestedCallback callback);
   void setExternalBusRequestedCallback(BusRequestedCallback callback);
 
-  uint8_t busRequestAddress() const;
+  // Inline and non-virtual for ESP32 ISR safety (IRAM) and performance
+  inline uint8_t busRequestAddress() const { return requestAddress_; }
 
-  bool busRequestPending() const;
+  inline bool busRequestPending() const {
+    return busRequest_.load(std::memory_order_acquire);
+  }
+
   void busRequestCompleted();
 
   void startBit();
@@ -128,7 +134,7 @@ class Request {
   uint8_t requestAddress_ = 0;
 
   // Indicates whether a bus request is present
-  bool busRequest_ = false;
+  std::atomic<bool> busRequest_ = {false};
 
   // Indicates whether the bus request is internal or external
   bool externalBusRequest_ = false;
@@ -151,8 +157,6 @@ class Request {
   void first(const uint8_t& byte);
   void retry(const uint8_t& byte);
   void second(const uint8_t& byte);
-
-  bool checkPriorityClassSubAddress(const uint8_t& byte);
 };
 
 }  // namespace ebus

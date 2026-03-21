@@ -43,9 +43,10 @@ bool ebus::Request::busAvailable() const {
 
 bool ebus::Request::requestBus(const uint8_t& address, const bool& external) {
   if (busAvailable()) {
-    busRequest_ = true;
     requestAddress_ = address;
     externalBusRequest_ = external;
+    // Set flag after data is ready (Release semantics)
+    busRequest_.store(true, std::memory_order_release);
   }
   return busRequest_;
 }
@@ -60,12 +61,8 @@ void ebus::Request::setExternalBusRequestedCallback(
   externalBusRequestedCallback_ = std::move(callback);
 }
 
-uint8_t ebus::Request::busRequestAddress() const { return requestAddress_; }
-
-bool ebus::Request::busRequestPending() const { return busRequest_; }
-
 void ebus::Request::busRequestCompleted() {
-  busRequest_ = false;
+  busRequest_.store(false, std::memory_order_release);
   if (state_ == RequestState::observe) state_ = RequestState::first;
 
   if (externalBusRequest_) {
@@ -76,6 +73,11 @@ void ebus::Request::busRequestCompleted() {
 }
 
 void ebus::Request::startBit() {
+  // This is typically called on a bus error, like a framing error, which could
+  // be caused by a spurious start bit from an interference impulse. We can no
+  // longer trust the bus state, so we abort any pending request and return to
+  // the safest state: observing the bus for a clean SYN.
+  busRequest_.store(false, std::memory_order_release);
   state_ = RequestState::observe;
   result_ = RequestResult::observeSyn;
 }
@@ -90,7 +92,7 @@ ebus::RequestResult ebus::Request::getResult() const { return result_; }
 
 void ebus::Request::reset() {
   lockCounter_ = maxLockCounter_;
-  busRequest_ = false;
+  busRequest_.store(false, std::memory_order_release);
   state_ = RequestState::observe;
 }
 
@@ -124,6 +126,7 @@ void ebus::Request::observe(const uint8_t& byte) {
 void ebus::Request::first(const uint8_t& byte) {
   if (byte == sym_syn) {
     counter_.requestsFirstSyn++;
+    state_ = RequestState::first;
     result_ = RequestResult::firstSyn;
   } else if (byte == requestAddress_) {
     counter_.requestsFirstWon++;
@@ -131,9 +134,21 @@ void ebus::Request::first(const uint8_t& byte) {
     state_ = RequestState::observe;
     result_ = RequestResult::firstWon;
   } else if (isMaster(byte)) {
-    if (checkPriorityClassSubAddress(byte)) {
+    // ARBITRATION LOSS (Wire-AND Logic):
+    // We sent our address, but read back a different master address.
+    // Since '0' dominates '1', we know we lost to a higher priority (lower
+    // value) address or a peer with the same bits set to '0'.
+    //
+    // SPECIAL RETRY CASE (Spec 6.2.2.2):
+    // If the Priority Class (Bits 0-3) matches our own, we are allowed
+    // to retry immediately at the next SYN (Auto-SYN).
+    if ((byte & 0x0f) == (requestAddress_ & 0x0f)) {
       counter_.requestsFirstRetry++;
       state_ = RequestState::retry;
+      // CRITICAL: We must re-arm the bus request immediately here.
+      // If we wait until we see the next SYN in 'retry()', the Bus thread
+      // will have already passed the write window for that SYN.
+      busRequest_.store(true, std::memory_order_release);
       result_ = RequestResult::firstRetry;
     } else {
       counter_.requestsFirstLost++;
@@ -150,7 +165,6 @@ void ebus::Request::first(const uint8_t& byte) {
 void ebus::Request::retry(const uint8_t& byte) {
   if (byte == sym_syn) {
     counter_.requestsRetrySyn++;
-    busRequest_ = true;
     state_ = RequestState::second;
     result_ = RequestResult::retrySyn;
   } else {
@@ -175,10 +189,4 @@ void ebus::Request::second(const uint8_t& byte) {
     state_ = RequestState::observe;
     result_ = RequestResult::secondError;
   }
-}
-
-// check priority class (lower nibble) and sub address (higher nibble)
-bool ebus::Request::checkPriorityClassSubAddress(const uint8_t& byte) {
-  return (byte & 0x0f) == (requestAddress_ & 0x0f) &&  // priority class
-         (byte & 0xf0) > (requestAddress_ & 0xf0);     // sub address
 }

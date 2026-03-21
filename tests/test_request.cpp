@@ -112,14 +112,35 @@ void printCounter() {
 // clang-format off
 std::vector<TestCase> test_cases = {
     {true, 0x33, "Normal", "33feb5050427002d00"},
+    // Immediate SYN (Auto-SYN) scenario
     {true, 0x33, "Syn byte - Normal", "aa33feb5050427002d00"},
+
+    // Reading 0x5c while sending 0x33.
+    // 0x33 = 0011 0011
+    // 0x5c = 0101 1100
+    // This implies we sent '0' (bit 4) but read '1', which is impossible on
+    // a Wire-AND bus (0 dominates). Treated as electrical error/wrong byte.
     {true, 0x33, "Wrong byte", "5c"},
+
+    // Priority Loss:
+    // We sent 0x33 (Prio Class 3). Read 0x01 (Prio Class 1).
+    // Classes differ (3 != 1), so we withdraw (standard loss).
     {true, 0x33, "Priority lost", "01feb5050427002d007b"},
     {true, 0x33, "Priority lost/wrong byte", "01ab"},
-    {true, 0x33, "Priority fit/won", "73aa33feb5050427002d00"},
-    {true, 0x33, "Priority fit/lost", "73aa13"},
-    {true, 0x33, "Priority fit/error", "73aac5"},
-    {true, 0x33, "Priority retry/error", "73a0"},
+
+    // Priority Fit (Retry Allowed):
+    // We sent 0x33. Bus reads 0x13.
+    // 0x33 = 0011 0011 (Class 3)
+    // 0x13 = 0001 0011 (Class 3)
+    // We lost (read 0x13 != 0x33), but Priority Class matches.
+    // 0x13 and 0x33 share Priority Class 3. We enter retry.
+    // We expect immediate SYN (aa) to retry.
+    {true, 0x33, "Priority fit/won", "13aa33feb5050427002d00"},
+    // Priority Fit/Lost: We retry at SYN, but lose again to 0x13.
+    {true, 0x33, "Priority fit/lost", "13aa13"},
+    // Priority Fit/Error: We retry at SYN, but see garbage (C5).
+    {true, 0x33, "Priority fit/error", "13aac5"},
+    // Sub lost: We are 0x30. Bus is 0x10. Prio 0 match.
     {true, 0x30, "Priority fit - Sub lost", "1052b50401314b000200002c00"},
 };
 // clang-format on
