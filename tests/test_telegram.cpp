@@ -67,9 +67,9 @@ void test_parsing() {
   // 10 08 b5 09 03 0d 06 00 [Master Payload]
   // e1                      [Master CRC]
   // 00                      [Master ACK]
-  // 03 b0 fb aa             [Slave Payload]
+  // 03 b0 fb aa             [Slave Payload] -> Wire: 03 b0 fb a9 01
   // d0 00                   [Slave CRC + ACK]
-  seq.assign(ebus::to_vector("1008b509030d0600e10003b0fbaad000"), true);
+  seq.assign(ebus::to_vector("1008b509030d0600e10003b0fba901d000"), true);
   tel.parse(seq);
   run_test("Parse MS: Master State OK",
            tel.getMasterState() == ebus::SequenceState::seq_ok);
@@ -126,6 +126,54 @@ void test_parsing() {
   tel.parse(seq);
   run_test("Parse Invalid CRC",
            tel.getMasterState() == ebus::SequenceState::err_crc_invalid);
+
+  // Test 6: Extended Bytes (A9, AA)
+  // Master: 10 08 b5 04 02 a9 aa (Logical)
+  // Wire:   10 08 b5 04 02 a9 00 a9 01
+  // Slave:  ... empty ...
+
+  // Calculate CRC for verification
+  ebus::Sequence tempSeq;
+  tempSeq.assign(ebus::to_vector("1008b50402a9aa"), false);
+  uint8_t expectedCrc = tempSeq.crc();
+
+  std::string wireStr =
+      "1008b50402a900a901" + ebus::to_string(expectedCrc) + "00";
+  seq.assign(ebus::to_vector(wireStr), true);
+  tel.parse(seq);
+  run_test("Parse Ext: Master State OK",
+           tel.getMasterState() == ebus::SequenceState::seq_ok);
+  run_test("Parse Ext: Master Data",
+           tel.getMasterDataBytes() == ebus::to_vector("a9aa"));
+
+  // Test 7: Complex Retry (Master NAK/Retry/ACK, Slave NAK/Retry/ACK)
+  // Master: ff 52 b5 09 03 0d 06 a9 (Logical)
+  // Slave:  03 b0 fb aa (Logical)
+
+  // Calculate Master CRC dynamically for the new payload
+  ebus::Sequence masterSeqRetry;
+  masterSeqRetry.assign(ebus::to_vector("ff52b509030d06a9"), false);
+  uint8_t masterCrcRetry = masterSeqRetry.crc();
+  std::string masterCrcHex = ebus::to_string(masterCrcRetry);
+
+  // Wire: ff 52 b5 09 03 0d 06 a9 00 [CRC] ...
+  std::string masterWire = "ff52b509030d06a900";
+  std::string slaveWirePart = "03b0fba901d0";  // d0 is known CRC for 03b0fbaa
+
+  std::string complexSeq = masterWire + masterCrcHex + "ff" + masterWire +
+                           masterCrcHex + "00" + slaveWirePart + "ff" +
+                           slaveWirePart + "00";
+
+  seq.assign(ebus::to_vector(complexSeq), true);
+  tel.parse(seq);
+  run_test("Parse Complex Retry: Master State OK",
+           tel.getMasterState() == ebus::SequenceState::seq_ok);
+  run_test("Parse Complex Retry: Slave State OK",
+           tel.getSlaveState() == ebus::SequenceState::seq_ok);
+  run_test("Parse Complex Retry: Master Data",
+           tel.getMasterDataBytes() == ebus::to_vector("0d06a9"));
+  run_test("Parse Complex Retry: Slave Data",
+           tel.getSlaveDataBytes() == ebus::to_vector("b0fbaa"));
 }
 
 int main() {
