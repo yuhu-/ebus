@@ -36,7 +36,7 @@
 // ZZ...Target address (254 possible addresses)
 // PB...Primary command
 // SB...Secondary command
-// NN...Number of data bytes (0 < NN < 16)
+// NN...Number of data bytes (0 <= NN <= 16)
 // DBx..Data bytes (payload)
 // CRC..8-Bit CRC byte
 // ACK..Acknowledgement byte (0x00 OK, 0xff NOK)
