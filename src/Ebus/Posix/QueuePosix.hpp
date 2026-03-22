@@ -22,8 +22,10 @@
 #if defined(POSIX)
 #include <chrono>
 #include <condition_variable>
+#include <cstddef>
 #include <mutex>
 #include <queue>
+#include <utility>
 
 namespace ebus {
 
@@ -35,22 +37,61 @@ class QueuePosix {
   // Blocking push with optional timeout (returns false on timeout/full)
   bool push(const T& item, std::chrono::milliseconds timeout =
                                std::chrono::milliseconds::max()) {
-    std::unique_lock<std::mutex> lock(mutex_);
-    if (capacity_ > 0) {
-      if (!notFull_.wait_for(lock, timeout,
-                             [this] { return queue_.size() < capacity_; }))
-        return false;  // timeout
+    {
+      std::unique_lock<std::mutex> lock(mutex_);
+      if (capacity_ > 0) {
+        if (timeout == std::chrono::milliseconds::max()) {
+          notFull_.wait(lock, [this] { return queue_.size() < capacity_; });
+        } else {
+          if (!notFull_.wait_for(lock, timeout,
+                                 [this] { return queue_.size() < capacity_; }))
+            return false;  // timeout
+        }
+      }
+      queue_.push(item);
     }
-    queue_.push(item);
+    notEmpty_.notify_one();
+    return true;
+  }
+
+  // Blocking push (move semantics)
+  bool push(T&& item, std::chrono::milliseconds timeout =
+                          std::chrono::milliseconds::max()) {
+    {
+      std::unique_lock<std::mutex> lock(mutex_);
+      if (capacity_ > 0) {
+        if (timeout == std::chrono::milliseconds::max()) {
+          notFull_.wait(lock, [this] { return queue_.size() < capacity_; });
+        } else {
+          if (!notFull_.wait_for(lock, timeout,
+                                 [this] { return queue_.size() < capacity_; }))
+            return false;  // timeout
+        }
+      }
+      queue_.push(std::move(item));
+    }
     notEmpty_.notify_one();
     return true;
   }
 
   // Non-blocking push (returns false if full)
   bool try_push(const T& item) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    if (capacity_ > 0 && queue_.size() >= capacity_) return false;
-    queue_.push(item);
+    {
+      std::lock_guard<std::mutex> lock(mutex_);
+      if (capacity_ > 0 && queue_.size() >= capacity_) return false;
+      queue_.push(item);
+    }
+    notEmpty_.notify_one();
+    return true;
+  }
+
+  // Non-blocking push (move semantics)
+  bool try_push(T&& item) {
+    {
+      std::lock_guard<std::mutex> lock(mutex_);
+      if (capacity_ > 0 && queue_.size() >= capacity_) return false;
+      queue_.push(std::move(item));
+    }
     notEmpty_.notify_one();
     return true;
   }
@@ -58,21 +99,30 @@ class QueuePosix {
   // Blocking pop with optional timeout (returns false on timeout/empty)
   bool pop(T& out, std::chrono::milliseconds timeout =
                        std::chrono::milliseconds::max()) {
-    std::unique_lock<std::mutex> lock(mutex_);
-    if (!notEmpty_.wait_for(lock, timeout, [this] { return !queue_.empty(); }))
-      return false;  // timeout
-    out = queue_.front();
-    queue_.pop();
+    {
+      std::unique_lock<std::mutex> lock(mutex_);
+      if (timeout == std::chrono::milliseconds::max()) {
+        notEmpty_.wait(lock, [this] { return !queue_.empty(); });
+      } else {
+        if (!notEmpty_.wait_for(lock, timeout,
+                                [this] { return !queue_.empty(); }))
+          return false;  // timeout
+      }
+      out = std::move(queue_.front());
+      queue_.pop();
+    }
     if (capacity_ > 0) notFull_.notify_one();
     return true;
   }
 
   // Non-blocking pop (returns false if empty)
   bool try_pop(T& out) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    if (queue_.empty()) return false;
-    out = queue_.front();
-    queue_.pop();
+    {
+      std::lock_guard<std::mutex> lock(mutex_);
+      if (queue_.empty()) return false;
+      out = std::move(queue_.front());
+      queue_.pop();
+    }
     if (capacity_ > 0) notFull_.notify_one();
     return true;
   }
@@ -80,6 +130,13 @@ class QueuePosix {
   size_t size() const {
     std::lock_guard<std::mutex> lock(mutex_);
     return queue_.size();
+  }
+
+  void clear() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    std::queue<T> empty;
+    std::swap(queue_, empty);
+    if (capacity_ > 0) notFull_.notify_all();
   }
 
  private:
