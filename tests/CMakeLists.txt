@@ -13,6 +13,9 @@ target_link_libraries(test_telegram ebus)
 add_executable(test_request test_request.cpp)
 target_link_libraries(test_request ebus)
 
+add_executable(test_bus test_bus.cpp)
+target_link_libraries(test_bus ebus)
+
 add_executable(test_handler test_handler.cpp)
 target_link_libraries(test_handler ebus)
 
