@@ -27,10 +27,13 @@
 #include <unistd.h>
 
 #include <atomic>
+#include <chrono>
+#include <condition_variable>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <memory>
+#include <mutex>
 #include <stdexcept>
 #include <string>
 #include <thread>
@@ -43,7 +46,12 @@ namespace ebus {
 
 struct busConfig {
   const char* device;
-  bool simulate;
+  bool simulate = false;
+  bool enable_syn = false;
+  uint8_t master_addr = 0x00;
+  std::chrono::milliseconds syn_base{50};
+  std::chrono::milliseconds syn_tolerance{5};
+  bool syn_deterministic = true;
 };
 
 struct BusEvent {
@@ -78,10 +86,17 @@ class BusPosix {
  private:
   std::string device_;
   bool simulate_;
+  bool enableSyn_;
+  uint8_t masterAddr_;
+  std::chrono::milliseconds synBase_;
+  std::chrono::milliseconds synTolerance_;
+  bool synDeterministic_;
 
   Request* request_ = nullptr;
 
   int fd_;
+  int pipeFds_[2] = {-1, -1};  // [0] = Read, [1] = Write for simulation
+
   bool open_;
   struct termios oldSettings_{};
 
@@ -96,10 +111,26 @@ class BusPosix {
   uint8_t lastWrittenByte_ = 0x00;
   std::vector<uint8_t> writtenBytes_;
 
+  // SYN generator members
+  std::thread synThread_;
+  std::atomic<bool> synRunning_{false};
+  std::mutex synMutex_;
+  std::condition_variable synCv_;
+
+  std::chrono::steady_clock::time_point nextSynExpiry_;
+  std::chrono::milliseconds currentTunique_;
+  bool synActive_{false};
+
   void ensureOpen() const;
 
   // Thread function: read bytes and push them into the queue
   void readerThread();
+
+  // SYN generator (optional)
+  void synThread();
+
+  // called when a symbol (end-of-byte) is recognised
+  void resetSynTimer(uint8_t byte);
 };
 
 }  // namespace ebus
