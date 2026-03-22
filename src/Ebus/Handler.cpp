@@ -504,6 +504,18 @@ void ebus::Handler::requestBus(const uint8_t& byte) {
 }
 
 void ebus::Handler::activeSendMaster(const uint8_t& byte) {
+  // Verify that the byte we just read from the bus matches what we sent
+  // (Echo check). The index hasn't been incremented yet, so it points to
+  // the byte we sent in the previous step.
+  // If the check fails, we abort immediately to prevent bus contention.
+  if (byte != activeMaster[activeMasterIndex_]) {
+    counter_.errorActiveMaster++;
+    callOnError("errorActiveMasterEcho", activeMaster.to_vector(),
+                activeSlave_.to_vector());
+    callActiveReset();
+    // Do not increment; abort and release bus or retry logic could trigger here
+  }
+
   activeMasterIndex_++;
   if (activeMasterIndex_ >= activeMaster.size()) {
     if (activeTelegram_.getType() == TelegramType::broadcast) {

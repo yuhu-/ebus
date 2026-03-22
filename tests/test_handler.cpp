@@ -32,19 +32,27 @@
 #include "Telegram.hpp"
 
 struct TestCase {
-  bool enabled;
   ebus::MessageType messageType;
   uint8_t address;
   std::string description;
   std::string read_string;
   std::string send_string = "";
+  struct ExpectedResult {
+    int telegram;
+    int errors;
+  } expected;
 };
+
+std::atomic<int> g_error_count(0);
+std::atomic<int> g_telegram_count(0);
+bool g_detailed_output = false;
 
 void printByte(const std::string& prefix, const uint8_t& byte,
                const std::string& postfix) {
+  if (!g_detailed_output) return;
   std::cout << prefix << ebus::to_string(byte) << " " << postfix << std::endl;
 }
-ebus::Request request = ebus::Request();
+ebus::Request request;
 
 ebus::busConfig config = {.device = "/dev/simulation", .simulate = true};
 ebus::Bus bus(config, &request);
@@ -52,12 +60,17 @@ ebus::Bus bus(config, &request);
 ebus::Handler handler(ebus::DEFAULT_ADDRESS, &bus, &request);
 
 void readFunction(const uint8_t& byte) {
+  if (!g_detailed_output) return;
   std::cout << "->  read: " << ebus::to_string(byte) << std::endl;
 }
 
-void busRequestWonCallback() { std::cout << " request: won" << std::endl; }
+void busRequestWonCallback() {
+  if (g_detailed_output) std::cout << " request: won" << std::endl;
+}
 
-void busRequestLostCallback() { std::cout << " request: lost" << std::endl; }
+void busRequestLostCallback() {
+  if (g_detailed_output) std::cout << " request: lost" << std::endl;
+}
 
 void reactiveMasterSlaveCallback(const std::vector<uint8_t>& master,
                                  std::vector<uint8_t>* const slave) {
@@ -69,6 +82,7 @@ void reactiveMasterSlaveCallback(const std::vector<uint8_t>& master,
   if (ebus::contains(master, search))
     *slave = ebus::to_vector("0ab5504d533030010743");  // defect
 
+  if (!g_detailed_output) return;
   std::cout << "reactive: " << ebus::to_string(master) << " "
             << ebus::to_string(*slave) << std::endl;
 }
@@ -77,6 +91,8 @@ void telegramCallback(const ebus::MessageType& messageType,
                       const ebus::TelegramType& telegramType,
                       const std::vector<uint8_t>& master,
                       const std::vector<uint8_t>& slave) {
+  g_telegram_count++;
+  if (!g_detailed_output) return;
   switch (telegramType) {
     case ebus::TelegramType::broadcast:
       std::cout << "    type: broadcast" << std::endl;
@@ -105,6 +121,8 @@ void telegramCallback(const ebus::MessageType& messageType,
 
 void errorCallback(const std::string& error, const std::vector<uint8_t>& master,
                    const std::vector<uint8_t>& slave) {
+  g_error_count++;
+  if (!g_detailed_output) return;
   std::cout << "   error: " << error << " master '" << ebus::to_string(master)
             << "' slave '" << ebus::to_string(slave) << "'" << std::endl;
 }
@@ -210,9 +228,15 @@ void printCounters() {
             << std::endl;
 }
 
-void run_test(const TestCase& tc) {
-  std::cout << std::endl
-            << "=== Test: " << tc.description << " ===" << std::endl;
+bool run_test(const TestCase& tc) {
+  if (g_detailed_output)
+    std::cout << std::endl
+              << "=== Test: " << tc.description << " ===" << std::endl;
+  g_error_count = 0;
+  g_telegram_count = 0;
+
+  request.reset();
+  handler.reset();
 
   handler.setSourceAddress(tc.address);
 
@@ -224,15 +248,13 @@ void run_test(const TestCase& tc) {
   if (tc.send_string.size() > 0)
     handler.sendActiveMessage(ebus::to_vector(tc.send_string));
 
+  // Remember last written bytes to detect new ones
+  size_t written_count = bus.getWrittenByteCount();
+
   bool busRequestFlag = false;
   for (size_t i = 0; i < seq.size(); i++) {
     switch (handler.getState()) {
-      case ebus::HandlerState::reactiveSendMasterPositiveAcknowledge:
-      case ebus::HandlerState::reactiveSendMasterNegativeAcknowledge:
-      case ebus::HandlerState::reactiveSendSlave:
-      case ebus::HandlerState::activeSendMaster:
-      case ebus::HandlerState::activeSendSlavePositiveAcknowledge:
-      case ebus::HandlerState::activeSendSlaveNegativeAcknowledge:
+      // These states consume the echoed byte of what was just written
       case ebus::HandlerState::releaseBus:
         i--;
         break;
@@ -248,65 +270,91 @@ void run_test(const TestCase& tc) {
     request.run(seq[i]);
     handler.run(seq[i]);
 
+    // Check if anything was written and log it
+    if (bus.getWrittenByteCount() > written_count) {
+      if (g_detailed_output)
+        std::cout << "<- write: " << ebus::to_string(bus.getLastWrittenByte())
+                  << std::endl;
+      written_count = bus.getWrittenByteCount();
+    }
+
     // simulte request bus timer
     if (seq[i] == ebus::sym_syn && request.busRequestPending()) {
-      std::cout << " ISR - write address" << std::endl;
+      if (g_detailed_output) std::cout << " ISR - write address" << std::endl;
       bus.writeByte(request.busRequestAddress());
       busRequestFlag = true;
+
+      if (bus.getWrittenByteCount() > written_count) {
+        if (g_detailed_output)
+          std::cout << "<- write: " << ebus::to_string(bus.getLastWrittenByte())
+                    << std::endl;
+        written_count = bus.getWrittenByteCount();
+      }
     }
   }
 
   request.reset();
   handler.reset();
 
-  std::cout << "--- Test: " << tc.description << " ---" << std::endl;
+  bool pass = (g_error_count == tc.expected.errors &&
+               g_telegram_count == tc.expected.telegram);
+
+  if (g_detailed_output) {
+    std::cout << "--- Test: " << tc.description << " ---" << std::endl
+              << "[RESULT] ";
+    if (pass) {
+      std::cout << "PASSED" << std::endl;
+    } else {
+      std::cout << "FAILED. Expected " << tc.expected.telegram
+                << " telegram and " << tc.expected.errors << " errors, but got "
+                << g_telegram_count << " and " << g_error_count << "."
+                << std::endl;
+    }
+  } else {
+    std::cout << "[TEST] " << tc.description << ": "
+              << (pass ? "PASSED" : "FAILED") << std::endl;
+  }
+  return pass;
 }
 
 // clang-format off
 std::vector<TestCase> test_cases = {
-  {false, ebus::MessageType::passive, 0x33, "passive MS: Normal", "ff52b509030d0600430003b0fba901d000"},
-  {false, ebus::MessageType::passive, 0x33, "passive MS: Master defect/NAK", "ff52b509030d060044ffff52b509030d0600430003b0fba901d000"},
-  {false, ebus::MessageType::passive, 0x33, "passive MS: Master NAK/repeat", "ff52b509030d060043ffff52b509030d0600430003b0fba901d000"},
-  {false, ebus::MessageType::passive, 0x33, "passive MS: Master NAK/repeat/NAK", "ff52b509030d060043ffff52b509030d060043ff"},
-  {false, ebus::MessageType::passive, 0x33, "passive MS: Slave defect/NAK/repeat", "ff52b509030d0600430003b0fba902d0ff03b0fba901d000"},
-  {false, ebus::MessageType::passive, 0x33, "passive MS: Slave NAK/repeat/NAK", "ff52b509030d0600430003b0fba901d0ff03b0fba901d0ff"},
-  {false, ebus::MessageType::passive, 0x33, "passive MS: Master NAK/repeat - Slave NAK/repeat", "ff52b509030d060043ffff52b509030d0600430003b0fba901d0ff03b0fba901d000"},
-  {false, ebus::MessageType::passive, 0x33, "passive MS: Master NAK/repeat/ACK - Slave NAK/repeat/NAK", "ff52b509030d060043ffff52b509030d0600430003b0fba901d0ff03b0fba901d0ff"},
-  {false, ebus::MessageType::passive, 0x33, "passive MM: Normal", "1000b5050427002400d900"},
-  {false, ebus::MessageType::passive, 0x33, "passive BC: defect", "00fe0704003c"},
-  {false, ebus::MessageType::passive, 0x33, "passive 00: reset", "00"},
-  {false, ebus::MessageType::passive, 0x33, "passive 0704: scan", "002e0704004e"},
-  {false, ebus::MessageType::passive, 0x33, "passive BC: normal", "10fe07000970160443183105052592"},
-  {false, ebus::MessageType::passive, 0x33, "passive MS: slave CRC byte is invalid", "1008b5130304cd017f000acd01000000000100010000"},
+  {ebus::MessageType::passive, 0x33, "passive MS: Normal", "ff52b509030d0600430003b0fba901d000", "", {1, 0}},
+  {ebus::MessageType::passive, 0x33, "passive MS: Master CRC error -> NAK -> Retry OK", "ff52b509030d060044ffff52b509030d0600430003b0fba901d000", "", {1, 0}},
+  {ebus::MessageType::passive, 0x33, "passive MS: Master valid -> NAK -> Retry OK", "ff52b509030d060043ffff52b509030d0600430003b0fba901d000", "", {1, 0}},
+  {ebus::MessageType::passive, 0x33, "passive MS: Master valid -> NAK -> Retry valid -> NAK", "ff52b509030d060043ffff52b509030d060043ff", "", {0, 1}},
+  {ebus::MessageType::passive, 0x33, "passive MS: Slave CRC error -> NAK -> Retry OK", "ff52b509030d0600430003b0fba902d0ff03b0fba901d000", "", {1, 1}},
+  {ebus::MessageType::passive, 0x33, "passive MS: Slave valid -> NAK -> Retry valid -> NAK", "ff52b509030d0600430003b0fba901d0ff03b0fba901d0ff", "", {0, 1}},
+  {ebus::MessageType::passive, 0x33, "passive MS: Master NAK/Retry OK - Slave NAK/Retry OK", "ff52b509030d060043ffff52b509030d0600430003b0fba901d0ff03b0fba901d000", "", {1, 0}},
+  {ebus::MessageType::passive, 0x33, "passive MS: Master NAK/Retry OK - Slave NAK/Retry NAK", "ff52b509030d060043ffff52b509030d0600430003b0fba901d0ff03b0fba901d0ff", "", {0, 1}},
+  {ebus::MessageType::passive, 0x33, "passive MM: Normal", "1000b5050427002400d900", "", {1, 0}},
+  {ebus::MessageType::passive, 0x33, "passive BC: Malformed sequence", "00fe0704003c", "", {0, 1}},
+  {ebus::MessageType::passive, 0x33, "passive 00: Reset", "00", "", {0, 1}},
+  {ebus::MessageType::passive, 0x33, "passive 0704: Scan", "002e0704004e", "", {0, 1}},
+  {ebus::MessageType::passive, 0x33, "passive BC: Normal", "10fe07000970160443183105052592", "", {1, 0}},
+  {ebus::MessageType::passive, 0x33, "passive MS: Slave CRC 0x21 is missing", "1008b5130304cd017f000acd01000000000100010000", "", {0, 2}},
 
-  {false, ebus::MessageType::reactive, 0x33, "reactive MS: Slave NAK/ACK", "0038070400abff00"},
-  {false, ebus::MessageType::reactive, 0x33, "reactive MS: Slave NAK/NAK", "0038070400abffff"},
-  {false, ebus::MessageType::reactive, 0x33, "reactive MS: Master defect/correct", "0038070400ac0038070400ab00"},
-  {false, ebus::MessageType::reactive, 0x33, "reactive MS: Master defect/defect", "0038070400ff0038070400ac"},
-  {false, ebus::MessageType::reactive, 0x33, "reactive MS: Slave defect (callback)", "003807050030"},
-  {false, ebus::MessageType::reactive, 0x33, "reactive MM: Normal", "003307040014"},
-  {false, ebus::MessageType::reactive, 0x33, "reactive BC: Normal", "00fe0704003b"},
+  {ebus::MessageType::reactive, 0x33, "reactive MS: Slave NAK/ACK", "0038070400ab000ab5504d5330300107430245ff0ab5504d533030010743024600", "", {1, 0}},
+  {ebus::MessageType::reactive, 0x33, "reactive MS: Slave NAK/NAK", "0038070400ab000ab5504d5330300107430245ff0ab5504d5330300107430245ff", "", {0, 1}},
+  {ebus::MessageType::reactive, 0x33, "reactive MS: Master defect/correct", "0038070400acff0038070400ab000ab5504d533030010743024600", "", {1, 1}},
+  {ebus::MessageType::reactive, 0x33, "reactive MS: Master defect/defect", "0038070400ff0038070400acff", "", {0, 2}},
+  {ebus::MessageType::reactive, 0x33, "reactive MS: Slave defect (callback)", "003807050030", "", {0, 1}},
+  {ebus::MessageType::reactive, 0x33, "reactive MM: Normal", "003307040014", "", {1, 0}},
+  {ebus::MessageType::reactive, 0x33, "reactive BC: Normal", "00fe0704003b", "", {1, 0}},
 
-  {false, ebus::MessageType::active, 0x33, "active BC: Request Bus - Normal", "33", "feb5050427002d00"},
-  {false, ebus::MessageType::active, 0x33, "active BC: Request Bus - Priority lost", "01feb5050427002d007b", "feb5050427002d00"},
-  {false, ebus::MessageType::active, 0x33, "active BC: Request Bus - Priority lost/wrong byte", "01ab", "feb5050427002d00"},
-  {false, ebus::MessageType::active, 0x33, "active BC: Request Bus - Priority fit/won", "73aa33", "feb5050427002d00"},
-  {false, ebus::MessageType::active, 0x33, "active BC: Request Bus - Priority fit/lost", "73aa13", "feb5050427002d00"},
-  {false, ebus::MessageType::active, 0x33, "active BC: Request Bus - Priority retry/error", "73a0", "feb5050427002d00"},
-  {false, ebus::MessageType::active, 0x33, "active MS: Normal", "3300013fa4", "52b509030d4600"},
-  {false, ebus::MessageType::active, 0x33, "active MS: Master NAK/ACK - Slave CRC wrong/correct", "33ff00013fa3013fa4", "52b509030d4600"},
-  {false, ebus::MessageType::active, 0x33, "active MS: Master NAK/ACK - Slave CRC wrong/wrong", "3300013fa3013fa3", "52b509030d4600"},
-  {false, ebus::MessageType::active, 0x33, "active MS: Master NAK/NAK", "33ffff", "52b509030d4600"},
-  {false, ebus::MessageType::active, 0x33, "active MM: Master NAK/ACK", "33ff00", "10b57900"},
-  {false, ebus::MessageType::active, 0x30, "active BC: Request Bus - Priority lost and Sub lost", "1052b50401314b000200002c00", "feb5050427002d00"},
-  {false, ebus::MessageType::active, 0x30, "active MS: Request Bus - Priority lost to 0x10", "1052b50401314b000200002c00","feb5050427002d00"}
+  {ebus::MessageType::active, 0x33, "active BC: Request Bus - Normal", "33feb5050427002d002c", "feb5050427002d00", {1, 0}},
+  {ebus::MessageType::active, 0x33, "active BC: Request Bus - Priority lost", "01feb5050427002d007b", "feb505042700cc00", {1, 0}},
+  {ebus::MessageType::active, 0x33, "active BC: Request Bus - Priority lost/wrong byte", "01ab", "feb505042700cc00", {0, 1}},
+  {ebus::MessageType::active, 0x33, "active BC: Request Bus - Priority fit/won", "13aa33feb505042700cc0010", "feb505042700cc00", {1, 0}},
+  {ebus::MessageType::active, 0x33, "active BC: Request Bus - Priority fit/lost", "13aa13feb5050427002d0088", "feb505042700cc00", {1, 0}},
+  {ebus::MessageType::active, 0x33, "active BC: Request Bus - Priority retry/error", "13a0", "feb505042700cc00", {0, 0}},
+  {ebus::MessageType::active, 0x33, "active MS: Normal", "3352b509030d46003600013fa400", "52b509030d4600", {1, 0}},
+  {ebus::MessageType::active, 0x33, "active MS: Master valid -> NAK -> Retry OK - Slave CRC error -> NAK -> Retry OK", "3352b509030d460036ff3352b509030d46003600013fa3ff013fa400", "52b509030d4600", {1, 1}},
+  {ebus::MessageType::active, 0x33, "active MS: Master valid -> NAK -> Retry OK - Slave CRC error -> NAK -> Retry NAK", "3352b509030d460036ff3352b509030d46003600013fa3ff013fa3ff", "52b509030d4600", {0, 3}},
+  {ebus::MessageType::active, 0x33, "active MS: Master valid -> NAK -> Retry NAK", "3352b509030d460036ff3352b509030d460036ff", "52b509030d4600", {0, 1}},
+  {ebus::MessageType::active, 0x33, "active MM: Master valid -> NAK -> Retry ACK", "3310b57900fbff3310b57900fb00", "10b57900", {1, 0}},
 };
 // clang-format on
-
-void enable_group(const ebus::MessageType& messageType) {
-  for (TestCase& tc : test_cases)
-    if (tc.messageType == messageType) tc.enabled = true;
-}
 
 int main() {
   handler.setBusRequestWonCallback(busRequestWonCallback);
@@ -315,14 +363,18 @@ int main() {
   handler.setTelegramCallback(telegramCallback);
   handler.setErrorCallback(errorCallback);
 
-  // enable_group(ebus::MessageType::passive);
-  // enable_group(ebus::MessageType::reactive);
-  enable_group(ebus::MessageType::active);
+  for (const TestCase& tc : test_cases) {
+    g_detailed_output = false;
+    if (!run_test(tc)) {
+      g_detailed_output = true;
+      run_test(tc);
+      exit(1);
+    }
+  }
 
-  for (const TestCase& tc : test_cases)
-    if (tc.enabled) run_test(tc);
+  // printCounters();
 
-  printCounters();
+  std::cout << "\nAll handler tests passed!" << std::endl;
 
   return EXIT_SUCCESS;
 }
