@@ -154,6 +154,8 @@ std::string ebus::BusPosix::getSimulatedWrittenBytes() const {
   return ebus::to_string(writtenBytes_);
 }
 
+size_t ebus::BusPosix::getWrittenByteCount() const { return writtenBytes_.size(); }
+
 void ebus::BusPosix::ensureOpen() const {
   if (!open_ || fd_ < 0) throw std::runtime_error("BusPosix: device not open");
 }

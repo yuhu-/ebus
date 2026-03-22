@@ -82,6 +82,7 @@ class BusPosix {
   // get the last written byte or the full history of written bytes
   uint8_t getLastWrittenByte() const;
   std::string getSimulatedWrittenBytes() const;
+  size_t getWrittenByteCount() const;
 
  private:
   std::string device_;
