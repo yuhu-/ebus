@@ -21,6 +21,7 @@
 
 #include <algorithm>
 #include <iomanip>
+#include <numeric>
 #include <sstream>
 #include <utility>
 
@@ -63,8 +64,8 @@ bool ebus::Sequence::operator!=(const Sequence& other) const {
 }
 
 void ebus::Sequence::append(const Sequence& other) {
-  // Ensure the appended sequence matches the current state (extended vs reduced)
-  // before merging the data.
+  // Ensure the appended sequence matches the current state (extended vs
+  // reduced) before merging the data.
   Sequence temp = other;
   if (extended_) {
     temp.extend();
@@ -97,14 +98,11 @@ uint8_t ebus::Sequence::crc() const {
   Sequence temp = *this;
   temp.extend();  // Make sure we are calculating over the stuffed sequence
 
-  uint8_t crc = sym_zero;
-
   const auto& vec = temp.to_vector();
-  for (const auto& byte : vec) {
-    crc = calc_crc(byte, crc);
-  }
-
-  return crc;
+  return std::accumulate(vec.begin(), vec.end(), sym_zero,
+                         [](uint8_t current_crc, uint8_t byte) {
+                           return calc_crc(byte, current_crc);
+                         });
 }
 
 void ebus::Sequence::extend() {
