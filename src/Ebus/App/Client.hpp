@@ -42,6 +42,10 @@ class AbstractClient {
   bool writeCapable_;
 };
 
+/**
+ * ReadOnly Client: Only reads from the bus, never writes back. Ideal for
+ * monitoring or logging applications that don't need to interact with the bus.
+ */
 class ReadOnlyClient : public AbstractClient {
  public:
   ReadOnlyClient(int fd, Request* request);
@@ -52,9 +56,8 @@ class ReadOnlyClient : public AbstractClient {
 };
 
 /**
- * Regular Client: A simple byte-for-byte bridge.
- * Forwards bus data to the client as long as arbitration is not in an error
- * state.
+ * Regular Client: A simple byte-for-byte bridge. No special protocol, just
+ * forwards bytes between the bus and the client.
  */
 class RegularClient : public AbstractClient {
  public:
