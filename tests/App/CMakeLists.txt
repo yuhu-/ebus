@@ -2,6 +2,9 @@
 add_executable(catch_enhancedprotocol catch_enhancedprotocol.cpp)
 target_link_libraries(catch_enhancedprotocol PRIVATE ebus Catch2::Catch2WithMain)
 
+add_executable(catch_pollmanager catch_pollmanager.cpp)
+target_link_libraries(catch_pollmanager PRIVATE ebus Catch2::Catch2WithMain)
+
 # Legacy Tests (Manual main)
 add_executable(test_scheduler test_scheduler.cpp)
 target_link_libraries(test_scheduler PRIVATE ebus)
