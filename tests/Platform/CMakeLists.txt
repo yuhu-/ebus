@@ -1,3 +1,8 @@
+# Catch2 Tests (Modern)
+add_executable(catch_bus catch_bus.cpp)
+target_link_libraries(catch_bus PRIVATE ebus Catch2::Catch2WithMain)
+
+# Legacy Tests (Manual main)
 add_executable(test_bus test_bus.cpp)
 target_link_libraries(test_bus PRIVATE ebus)
 
