@@ -20,9 +20,10 @@
 
 namespace ebus {
 
-// ClientManager handles all connected clients and routes data between them and
-// the eBus It supports ReadOnly, Regular, and Enhanced clients.
-
+/**
+ * ClientManager handles all connected clients and routes data between them and
+ * the eBus. It supports ReadOnly, Regular, and Enhanced clients.
+ */
 class ClientManager {
  public:
   ClientManager(Bus* bus, BusHandler* busHandler, Request* request);
