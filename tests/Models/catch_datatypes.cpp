@@ -3,14 +3,13 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include <catch2/catch_all.hpp>
 #include <algorithm>
+#include <catch2/catch_all.hpp>
 #include <cctype>
 #include <cmath>
+#include <ebus/Datatypes.hpp>
 #include <limits>
 #include <vector>
-
-#include <ebus/Datatypes.hpp>
 
 using namespace ebus;
 
@@ -128,7 +127,9 @@ TEST_CASE("Datatypes: 32-bit ints and floats", "[models][datatypes]") {
     REQUIRE(decoded == value);
   }
 
-  std::vector<int32_t> i32_vals = {0, 1, -1,
+  std::vector<int32_t> i32_vals = {0,
+                                   1,
+                                   -1,
                                    std::numeric_limits<int32_t>::max(),
                                    std::numeric_limits<int32_t>::min(),
                                    0x12345678};
@@ -144,11 +145,14 @@ TEST_CASE("Datatypes: 32-bit ints and floats", "[models][datatypes]") {
     REQUIRE(decoded == value);
   }
 
-  std::vector<float> float_vals = {
-      0.0f, 1.0f, -1.0f, 123.456f, -789.123f,
-      std::numeric_limits<float>::infinity(),
-      -std::numeric_limits<float>::infinity(),
-      std::nanf("")};
+  std::vector<float> float_vals = {0.0f,
+                                   1.0f,
+                                   -1.0f,
+                                   123.456f,
+                                   -789.123f,
+                                   std::numeric_limits<float>::infinity(),
+                                   -std::numeric_limits<float>::infinity(),
+                                   std::nanf("")};
   for (float value : float_vals) {
     std::vector<uint8_t> bytes = float_2_byte(value, Endian::Little);
     double_t decoded = byte_2_float(bytes, Endian::Little);
@@ -177,19 +181,22 @@ TEST_CASE("Datatypes: 32-bit ints and floats", "[models][datatypes]") {
 }
 
 TEST_CASE("Datatypes: char and hex", "[models][datatypes]") {
-  std::vector<std::string> test_strings = {"", "A", "Hello", "ebus123", std::string(8, 'Z')};
+  std::vector<std::string> test_strings = {"", "A", "Hello", "ebus123",
+                                           std::string(8, 'Z')};
   for (const std::string& str : test_strings) {
     std::vector<uint8_t> bytes = char_2_byte(str);
     std::string decoded = byte_2_char(bytes);
     REQUIRE(decoded == str);
   }
 
-  std::vector<std::string> hex_strings = {"", "00", "FF", "1234", "abcdef", "ABCDEF", "deadbeef"};
+  std::vector<std::string> hex_strings = {"",       "00",     "FF",      "1234",
+                                          "abcdef", "ABCDEF", "deadbeef"};
   for (const std::string& str : hex_strings) {
     std::vector<uint8_t> bytes = hex_2_byte(str);
     std::string decoded = byte_2_hex(bytes);
     std::string str_lower = str;
-    std::transform(str_lower.begin(), str_lower.end(), str_lower.begin(), ::tolower);
+    std::transform(str_lower.begin(), str_lower.end(), str_lower.begin(),
+                   ::tolower);
     REQUIRE(decoded == str_lower);
   }
 }

@@ -3,14 +3,15 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include <catch2/catch_all.hpp>
 #include <atomic>
+#include <catch2/catch_all.hpp>
 #include <chrono>
 #include <thread>
 
 #include "Platform/ServiceThread.hpp"
 
-TEST_CASE("ServiceThread: Basic execution and join", "[platform][servicethread]") {
+TEST_CASE("ServiceThread: Basic execution and join",
+          "[platform][servicethread]") {
   std::atomic<int> counter{0};
   bool threadStarted = false;
 
@@ -29,7 +30,8 @@ TEST_CASE("ServiceThread: Basic execution and join", "[platform][servicethread]"
   REQUIRE(counter == 1);
 }
 
-TEST_CASE("ServiceThread: Destructor performs implicit join", "[platform][servicethread]") {
+TEST_CASE("ServiceThread: Destructor performs implicit join",
+          "[platform][servicethread]") {
   std::atomic<int> counter{0};
   bool threadStarted = false;
 

@@ -53,7 +53,7 @@ TEST_CASE("Bus: Basic Communication", "[platform][bus]") {
 
   REQUIRE(received.size() >= 2);
   REQUIRE(received[0].byte == ebus::sym_syn);  // SYN
-  REQUIRE(received[1].byte == 0x03);  // address
+  REQUIRE(received[1].byte == 0x03);           // address
 
   // Ensure no premature SYN during traffic
   bool prematureSyn = false;
