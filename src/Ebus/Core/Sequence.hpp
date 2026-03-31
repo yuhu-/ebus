@@ -3,12 +3,6 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-// This class implements basic routines for sequence handling in accordance with
-// the ebus specification, in particular the reduction and extension
-//
-// (reduced) 0xaa <-> 0xa9 0x01 (extended)
-// (reduced) 0xa9 <-> 0xa9 0x00 (extended)
-
 #pragma once
 
 #include <cstdint>
@@ -17,6 +11,16 @@
 
 namespace ebus {
 
+/**
+ * Sequence class that represents a sequence of bytes in the eBUS protocol. It
+ * provides methods for constructing sequences from vectors, comparing
+ * sequences, calculating CRC, and converting between extended and reduced
+ * formats. The class handles byte stuffing for the special characters 0xaa and
+ * 0xa9 as defined in the eBUS specification.
+ *
+ * (reduced) 0xaa <-> 0xa9 0x01 (extended)
+ * (reduced) 0xa9 <-> 0xa9 0x00 (extended)
+ */
 class Sequence {
  public:
   Sequence() = default;

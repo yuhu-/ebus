@@ -3,10 +3,6 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-// Implementation of the eBUS arbitration state machine.
-// Handles "Wire-AND" collision detection, Priority Class checks, and the
-// automatic retry mechanism (Auto-SYN) as defined in Spec 6.2.2.
-
 #pragma once
 
 #include <array>
@@ -71,6 +67,11 @@ using StartBitCallback = std::function<void()>;
   X(secondLost)                   \
   X(secondError)
 
+/**
+ * Implementation of the eBUS arbitration state machine.
+ * Handles "Wire-AND" collision detection, Priority Class checks, and the
+ * automatic retry mechanism (Auto-SYN) as defined in Spec 6.2.2.
+ */
 class Request {
  public:
   explicit Request();

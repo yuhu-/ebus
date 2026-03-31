@@ -3,10 +3,6 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-// Implementation of the send and receive routines for all types of telegrams on
-// the basis of a finite state machine. A large number of counter and
-// statistical data about the eBUS system are collected.
-
 #pragma once
 
 #include <array>
@@ -112,6 +108,14 @@ using ReactiveMasterSlaveCallback = std::function<void(
   X(callbackTelegram)            \
   X(callbackError)
 
+/**
+ * Handler class that implements the eBUS protocol logic as a finite state
+ * machine. It processes incoming bytes from the bus, manages state transitions,
+ * and invokes callbacks for telegrams and errors. It also collects various
+ * metrics about the bus activity. The handler maintains separate buffers and
+ * state for passive (observing) and active (transmitting) telegrams, and can
+ * react to bus events by sending messages or requesting the bus.
+ */
 class Handler {
  public:
   Handler(const uint8_t& address, Bus* bus, Request* request);

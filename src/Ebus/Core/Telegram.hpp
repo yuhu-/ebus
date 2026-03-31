@@ -3,31 +3,6 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-// The telegram class can parse, create and evaluate sequences in accordance
-// with the ebus specification.
-//
-// Master-Slave Telegram:
-// Sender   (Master): QQ ZZ PB SB NN DBx CRC                ACK SYN
-// Receiver ( Slave):                        ACK NN DBx CRC
-//
-// Master-Master Telegram:
-// Sender   (Master): QQ ZZ PB SB NN DBx CRC     SYN
-// Receiver (Master):                        ACK
-//
-// Broadcast Telegram:
-// Sender   (Master): QQ ZZ PB SB NN DBx CRC SYN
-// Receiver    (All):
-//
-// QQ...Source address (25 possible addresses)
-// ZZ...Target address (254 possible addresses)
-// PB...Primary command
-// SB...Secondary command
-// NN...Number of data bytes (0 <= NN <= 16)
-// DBx..Data bytes (payload)
-// CRC..8-Bit CRC byte
-// ACK..Acknowledgement byte (0x00 OK, 0xff NOK)
-// SYN..Synchronisation byte (0xaa)
-
 #pragma once
 
 #include <cstddef>
@@ -67,6 +42,36 @@ static const char* getSequenceStateText(SequenceState state) {
 
 ebus::TelegramType typeOf(const uint8_t byte);
 
+/**
+ * Based on the eBUS specification, the Telegram class can parse, create, and
+ * evaluate sequences of bytes that represent Master-Slave, Master-Master, and
+ * Broadcast telegrams. It provides methods to extract the source and target
+ * addresses, primary and secondary commands, data bytes, and CRC. The class
+ * also checks the validity of the telegrams according to the specification and
+ * can convert them to string representations.
+ *
+ * Master-Slave Telegram:
+ * Sender   (Master): QQ ZZ PB SB NN DBx CRC                ACK SYN
+ * Receiver ( Slave):                        ACK NN DBx CRC
+ *
+ * Master-Master Telegram:
+ * Sender   (Master): QQ ZZ PB SB NN DBx CRC     SYN
+ * Receiver (Master):                        ACK
+ *
+ * Broadcast Telegram:
+ * Sender   (Master): QQ ZZ PB SB NN DBx CRC SYN
+ * Receiver    (All):
+ *
+ * QQ...Source address (25 possible addresses)
+ * ZZ...Target address (254 possible addresses)
+ * PB...Primary command
+ * SB...Secondary command
+ * NN...Number of data bytes (0 <= NN <= 16)
+ * DBx..Data bytes (payload)
+ * CRC..8-Bit CRC byte
+ * ACK..Acknowledgement byte (0x00 OK, 0xff NOK)
+ * SYN..Synchronisation byte (0xaa)
+ */
 class Telegram {
  public:
   Telegram() = default;
