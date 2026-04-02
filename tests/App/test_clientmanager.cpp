@@ -32,7 +32,7 @@ void test_client_orchestration() {
   req.setMaxLockCounter(0);
 
   ebus::busConfig config = {.device = "/dev/null", .simulate = true};
-  ebus::RuntimeConfig runtime{.address = 0xff, .window = 50, .offset = 5};
+  ebus::RuntimeConfig runtime{.address = 0x01, .window = 50, .offset = 5};
 
   ebus::Bus bus(config, runtime, &req);
   ebus::Handler handler(runtime.address, &bus, &req);

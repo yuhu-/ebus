@@ -1,3 +1,5 @@
+# tools/CMakeLists.txt
+
 include_directories(${PROJECT_SOURCE_DIR}/src/Ebus)
 
 add_executable(ebusread ebusread.cpp)

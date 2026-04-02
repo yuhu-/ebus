@@ -1,10 +1,4 @@
-# Core Protocol Logic
-set(CORE_SOURCES
-    Core/Sequence.cpp
-    Core/Telegram.cpp
-    Core/Handler.cpp
-    Core/Request.cpp
-)
+# src/Ebus/CMakeLists.txt
 
 # High-level Application Logic
 set(APP_SOURCES
@@ -17,12 +11,18 @@ set(APP_SOURCES
     App/Scheduler.cpp
 )
 
-# Data Models and Utilities
-set(UTIL_SOURCES
+# Core Protocol Logic
+set(CORE_SOURCES
+    Core/Sequence.cpp
+    Core/Telegram.cpp
+    Core/Handler.cpp
+    Core/Request.cpp
+)
+
+# Data Models and Types
+set(MODELS_SOURCES
     Models/Datatypes.cpp
     Models/Device.cpp
-    Utils/Common.cpp
-    Utils/TimingStats.cpp
 )
 
 # Platform Abstraction Layer
@@ -36,11 +36,18 @@ elseif(ESP32)
     list(APPEND PLATFORM_SOURCES Platform/FreeRTOS/BusFreeRtos.cpp)
 endif()
 
-set(SOURCES 
-    ${CORE_SOURCES} 
+# Utilities
+set(UTIL_SOURCES
+    Utils/Common.cpp
+    Utils/TimingStats.cpp
+)
+
+set(SOURCES
     ${APP_SOURCES} 
-    ${UTIL_SOURCES} 
+    ${CORE_SOURCES} 
+    ${MODELS_SOURCES}
     ${PLATFORM_SOURCES}
+    ${UTIL_SOURCES} 
 )
 
 add_library(ebus ${SOURCES})
