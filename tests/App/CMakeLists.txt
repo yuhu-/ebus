@@ -2,6 +2,9 @@
 add_executable(catch_enhancedprotocol catch_enhancedprotocol.cpp)
 target_link_libraries(catch_enhancedprotocol PRIVATE ebus Catch2::Catch2WithMain)
 
+add_executable(catch_client catch_client.cpp)
+target_link_libraries(catch_client PRIVATE ebus Catch2::Catch2WithMain)
+
 add_executable(catch_pollmanager catch_pollmanager.cpp)
 target_link_libraries(catch_pollmanager PRIVATE ebus Catch2::Catch2WithMain)
 

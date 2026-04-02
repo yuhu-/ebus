@@ -31,6 +31,7 @@ endmacro()
 # Catch2 test executables using the macro
 # App
 add_catch2_test_executable(catch_enhancedprotocol App/catch_enhancedprotocol.cpp)
+add_catch2_test_executable(catch_client App/catch_client.cpp)
 add_catch2_test_executable(catch_pollmanager App/catch_pollmanager.cpp)
 # Core
 add_catch2_test_executable(catch_sequence Core/catch_sequence.cpp)
