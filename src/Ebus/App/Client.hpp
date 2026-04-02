@@ -35,9 +35,9 @@ class AbstractClient {
   bool isWriteCapable() const { return writeCapable_; }
   bool isConnected() const;
 
-  virtual bool available();
-  virtual bool readByte(uint8_t& out);
-  virtual void writeBytes(const std::vector<uint8_t>& data);
+  virtual bool available() = 0;
+  virtual bool readByte(uint8_t& out) = 0;
+  virtual void writeBytes(const std::vector<uint8_t>& data) = 0;
 
   // Logic to determine if the client wants to continue sending after a byte
   virtual Action onBusByte(uint8_t byte) = 0;
@@ -60,6 +60,7 @@ class ReadOnlyClient : public AbstractClient {
 
   bool available() override;
   bool readByte(uint8_t& out) override;
+  void writeBytes(const std::vector<uint8_t>& data) override;
 
   Action onBusByte(uint8_t byte) override;
 };
@@ -72,6 +73,7 @@ class RegularClient : public AbstractClient {
  public:
   RegularClient(int fd, Request* request);
 
+  bool available() override;
   bool readByte(uint8_t& out) override;
   void writeBytes(const std::vector<uint8_t>& data) override;
 
@@ -86,6 +88,7 @@ class EnhancedClient : public AbstractClient {
  public:
   EnhancedClient(int fd, Request* request);
 
+  bool available() override;
   bool readByte(uint8_t& out) override;
   void writeBytes(const std::vector<uint8_t>& data) override;
 

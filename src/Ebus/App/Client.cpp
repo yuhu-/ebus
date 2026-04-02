@@ -47,10 +47,17 @@ bool ebus::ReadOnlyClient::available() { return false; }
 
 bool ebus::ReadOnlyClient::readByte(uint8_t&) { return false; }
 
+void ebus::ReadOnlyClient::writeBytes(const std::vector<uint8_t>&) {}
+
 ebus::Action ebus::ReadOnlyClient::onBusByte(uint8_t) { return Action::Stop; }
 
 ebus::RegularClient::RegularClient(int fd, Request* request)
     : AbstractClient(fd, request, true) {}
+
+bool ebus::RegularClient::available() {
+  uint8_t dummy;
+  return recv(fd_, &dummy, 1, MSG_PEEK | MSG_DONTWAIT) > 0;
+}
 
 bool ebus::RegularClient::readByte(uint8_t& out) {
   return recv(fd_, &out, 1, MSG_DONTWAIT) == 1;
@@ -92,6 +99,11 @@ ebus::EnhancedClient::EnhancedClient(int fd, Request* request)
     : AbstractClient(fd, request, true) {
   std::string ver = "ebus-service 1.0\n";
   send(fd_, ver.c_str(), ver.length(), 0);
+}
+
+bool ebus::EnhancedClient::available() {
+  uint8_t dummy;
+  return recv(fd_, &dummy, 1, MSG_PEEK | MSG_DONTWAIT) > 0;
 }
 
 bool ebus::EnhancedClient::readByte(uint8_t& out) {
