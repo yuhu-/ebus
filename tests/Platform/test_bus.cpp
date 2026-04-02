@@ -36,17 +36,14 @@ void run_test(const std::string& name, bool condition) {
 
 void test_syn_timing() {
   std::cout << "\n=== Test: SYN Timing Logic ===" << std::endl;
-  ebus::busConfig config;
-  config.device = "/dev/null";
-  config.simulate = true;
-  config.enable_syn = true;
-  config.master_addr = 0x01;  // unique = 50 + 10 + 5 = 65ms
-  config.syn_base_ms = 50;  // normal = 50ms
-  config.syn_tolerance_ms = 5;
-  config.syn_deterministic = true;
-
+  ebus::busConfig config = {.device = "/dev/null", .simulate = true};
+  ebus::RuntimeConfig runtime{.address = 0x01,
+                              .window = 50,
+                              .offset = 5,
+                              .enable_syn = true,
+                              .syn_deterministic = true};
   ebus::Request req;
-  ebus::Bus bus(config, &req);
+  ebus::Bus bus(config, runtime, &req);
   auto* queue = bus.getQueue();
 
   auto start = std::chrono::steady_clock::now();
@@ -96,17 +93,15 @@ void test_syn_timing() {
 }
 
 void test_basic_communication() {
-  ebus::busConfig config;
-  config.device = "/dev/null";
-  config.simulate = true;
-  config.enable_syn = true;
-  config.master_addr = 0x01;  // Slot offset
-  config.syn_base_ms = 50;
-  config.syn_tolerance_ms = 5;
-  config.syn_deterministic = true;
+  ebus::busConfig config = {.device = "/dev/null", .simulate = true};
+  ebus::RuntimeConfig runtime{.address = 0x01,
+                              .window = 50,
+                              .offset = 5,
+                              .enable_syn = true,
+                              .syn_deterministic = true};
 
   ebus::Request req;
-  ebus::Bus bus(config, &req);
+  ebus::Bus bus(config, runtime, &req);
 
   std::cout << "\n=== Test: Basic Communication ===" << std::endl;
   bus.start();
@@ -156,13 +151,15 @@ void test_basic_communication() {
 void test_raw_reception() {
   std::cout << "\n=== Test: Raw Reception (Broadcast Simulation) ==="
             << std::endl;
-  ebus::busConfig config;
-  config.device = "/dev/null";
-  config.simulate = true;
-  config.enable_syn = false;  // Disable auto-SYN to keep line quiet
+  ebus::busConfig config = {.device = "/dev/null", .simulate = true};
+  ebus::RuntimeConfig runtime{.address = 0x01,
+                              .window = 50,
+                              .offset = 5,
+                              .enable_syn = false,
+                              .syn_deterministic = false};
 
   ebus::Request req;
-  ebus::Bus bus(config, &req);
+  ebus::Bus bus(config, runtime, &req);
   auto* queue = bus.getQueue();
 
   bus.start();

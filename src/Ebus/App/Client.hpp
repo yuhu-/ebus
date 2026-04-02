@@ -13,6 +13,14 @@
 
 namespace ebus {
 
+/**
+ * Action to be taken by the ClientManager after a byte is processed.
+ */
+enum class Action {
+  Continue,  // Keep the client active
+  Stop       // The session is over (success, failure, or end of telegram)
+};
+
 class Request;
 
 /**
@@ -32,7 +40,7 @@ class AbstractClient {
   virtual void writeBytes(const std::vector<uint8_t>& data);
 
   // Logic to determine if the client wants to continue sending after a byte
-  virtual bool handleBusData(uint8_t byte) = 0;
+  virtual Action onBusByte(uint8_t byte) = 0;
 
  protected:
   void stop();
@@ -52,7 +60,8 @@ class ReadOnlyClient : public AbstractClient {
 
   bool available() override;
   bool readByte(uint8_t& out) override;
-  bool handleBusData(uint8_t byte) override;
+
+  Action onBusByte(uint8_t byte) override;
 };
 
 /**
@@ -63,7 +72,10 @@ class RegularClient : public AbstractClient {
  public:
   RegularClient(int fd, Request* request);
 
-  bool handleBusData(uint8_t byte) override;
+  bool readByte(uint8_t& out) override;
+  void writeBytes(const std::vector<uint8_t>& data) override;
+
+  Action onBusByte(uint8_t byte) override;
 };
 
 /**
@@ -77,7 +89,7 @@ class EnhancedClient : public AbstractClient {
   bool readByte(uint8_t& out) override;
   void writeBytes(const std::vector<uint8_t>& data) override;
 
-  bool handleBusData(uint8_t byte) override;
+  Action onBusByte(uint8_t byte) override;
 };
 
 std::unique_ptr<AbstractClient> createClient(int fd, Request* req,

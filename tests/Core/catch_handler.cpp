@@ -64,10 +64,14 @@ SCENARIO("Handler processes eBUS messages correctly", "[core][handler]") {
     for (const auto& tc : test_cases) {
       WHEN(tc.description) {
         ebus::Request request;
-        ebus::busConfig config = {.device = "/dev/simulation",
-                                  .simulate = true};
-        ebus::Bus bus(config, &request);
-        ebus::Handler handler(ebus::DEFAULT_ADDRESS, &bus, &request);
+        ebus::busConfig config = {.device = "/dev/null", .simulate = true};
+        ebus::RuntimeConfig runtime{.address = 0x33,
+                                    .window = 50,
+                                    .offset = 5,
+                                    .enable_syn = true,
+                                    .syn_deterministic = true};
+        ebus::Bus bus(config, runtime, &request);
+        ebus::Handler handler(runtime.address, &bus, &request);
 
         int telegram_count = 0;
         int error_count = 0;

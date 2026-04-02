@@ -187,8 +187,10 @@ std::map<std::string, ebus::MetricValues> ebus::Handler::getMetrics() const {
 
   // 2. Calculate Error Rate (%)
   if (msgTotal > 0) {
-    double errorRate = (static_cast<double>(errTotal) / (msgTotal + errTotal)) * 100.0;
-    m["handler.errorRate"] = {errorRate, errorRate, errorRate, errorRate, 0.0, 1};
+    double errorRate =
+        (static_cast<double>(errTotal) / (msgTotal + errTotal)) * 100.0;
+    m["handler.errorRate"] = {errorRate, errorRate, errorRate,
+                              errorRate, 0.0,       1};
   } else {
     m["handler.errorRate"] = {0.0, 0.0, 0.0, 0.0, 0.0, 0};
   }
@@ -361,6 +363,7 @@ void ebus::Handler::passiveReceiveSlaveAcknowledge(const uint8_t& byte) {
 }
 
 void ebus::Handler::reactiveSendMasterPositiveAcknowledge(const uint8_t& byte) {
+  (void)byte;  // unused
   if (passiveTelegram_.getType() == TelegramType::master_master) {
     callOnTelegram(MessageType::reactive, TelegramType::master_master,
                    passiveTelegram_.getMaster().to_vector(),
@@ -375,6 +378,7 @@ void ebus::Handler::reactiveSendMasterPositiveAcknowledge(const uint8_t& byte) {
 }
 
 void ebus::Handler::reactiveSendMasterNegativeAcknowledge(const uint8_t& byte) {
+  (void)byte;  // unused
   state_ = HandlerState::passiveReceiveMaster;
   if (!passiveMasterRepeated_) {
     passiveMasterRepeated_ = true;
@@ -387,6 +391,7 @@ void ebus::Handler::reactiveSendMasterNegativeAcknowledge(const uint8_t& byte) {
 }
 
 void ebus::Handler::reactiveSendSlave(const uint8_t& byte) {
+  (void)byte;  // unused
   passiveSlaveIndex_++;
   if (passiveSlaveIndex_ >= passiveSlave_.size())
     state_ = HandlerState::reactiveReceiveSlaveAcknowledge;
@@ -584,6 +589,7 @@ void ebus::Handler::activeReceiveSlave(const uint8_t& byte) {
 }
 
 void ebus::Handler::activeSendSlavePositiveAcknowledge(const uint8_t& byte) {
+  (void)byte;  // unused
   callOnTelegram(MessageType::active, TelegramType::master_slave,
                  activeTelegram_.getMaster().to_vector(),
                  activeTelegram_.getSlave().to_vector());
@@ -594,6 +600,7 @@ void ebus::Handler::activeSendSlavePositiveAcknowledge(const uint8_t& byte) {
 }
 
 void ebus::Handler::activeSendSlaveNegativeAcknowledge(const uint8_t& byte) {
+  (void)byte;  // unused
   if (!activeSlaveRepeated_) {
     activeSlaveRepeated_ = true;
     state_ = HandlerState::activeReceiveSlave;
@@ -608,6 +615,7 @@ void ebus::Handler::activeSendSlaveNegativeAcknowledge(const uint8_t& byte) {
 }
 
 void ebus::Handler::releaseBus(const uint8_t& byte) {
+  (void)byte;  // unused
   state_ = HandlerState::passiveReceiveMaster;
 }
 

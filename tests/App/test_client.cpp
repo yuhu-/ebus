@@ -90,7 +90,7 @@ void test_enhanced_client_responses() {
 
   // Fix: Force the request result instead of driving the state machine
   req.forceResultForTest(ebus::RequestResult::firstWon);
-  client.handleBusData(0x33);
+  client.onBusByte(0x33);
   req.clearForcedResult();
 
   // Verify RESP_STARTED (Logical 0x02, val 0x33 -> Encoded 0xc8, 0xb3)
@@ -100,7 +100,7 @@ void test_enhanced_client_responses() {
 
   // Test: handleBusData mapping for observation (Short Form < 0x80)
   req.forceResultForTest(ebus::RequestResult::observeData);
-  client.handleBusData(0x15);
+  client.onBusByte(0x15);
   req.clearForcedResult();
 
   uint8_t short_resp;
@@ -109,7 +109,7 @@ void test_enhanced_client_responses() {
 
   // Test: handleBusData mapping for observation (Long Form >= 0x80)
   req.forceResultForTest(ebus::RequestResult::observeData);
-  client.handleBusData(0xaa);
+  client.onBusByte(0xaa);
   req.clearForcedResult();
 
   run_test("Received encoded long RESP_RECEIVED",

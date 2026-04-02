@@ -25,10 +25,9 @@ int main() {
 
   // 1. Configuration
   ebus::ebusConfig config;
-  config.address = 0x31;
+  config.runtime.address = 0x31;
   config.bus.simulate = true;
-  config.bus.enable_syn = true;  // Use internal SYN generator for simulation
-  config.bus.master_addr = 0x31;
+  config.runtime.enable_syn = true;  // Use internal SYN generator for simulation
 
   ebus::Controller controller(config);
   run_test("Controller is configured", controller.isConfigured());

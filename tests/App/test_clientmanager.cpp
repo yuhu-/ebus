@@ -31,10 +31,11 @@ void test_client_orchestration() {
   ebus::Request req;
   req.setMaxLockCounter(0);
 
-  ebus::busConfig busCfg{
-      .device = "/dev/null", .simulate = true, .enable_syn = false};
-  ebus::Bus bus(busCfg, &req);
-  ebus::Handler handler(0xff, &bus, &req);
+  ebus::busConfig config = {.device = "/dev/null", .simulate = true};
+  ebus::RuntimeConfig runtime{.address = 0xff, .window = 50, .offset = 5};
+
+  ebus::Bus bus(config, runtime, &req);
+  ebus::Handler handler(runtime.address, &bus, &req);
   ebus::BusHandler busHandler(&req, &handler, bus.getQueue());
   ebus::ClientManager manager(&bus, &busHandler, &req);
 
@@ -117,10 +118,11 @@ void test_arbitration_lost() {
   ebus::Request req;
   req.setMaxLockCounter(0);
 
-  ebus::busConfig busCfg{
-      .device = "/dev/null", .simulate = true, .enable_syn = false};
-  ebus::Bus bus(busCfg, &req);
-  ebus::Handler handler(0xff, &bus, &req);
+  ebus::busConfig config = {.device = "/dev/null", .simulate = true};
+  ebus::RuntimeConfig runtime{
+      .address = 0xff, .window = 50, .offset = 5, .enable_syn = false};
+  ebus::Bus bus(config, runtime, &req);
+  ebus::Handler handler(runtime.address, &bus, &req);
   ebus::BusHandler busHandler(&req, &handler, bus.getQueue());
   ebus::ClientManager manager(&bus, &busHandler, &req);
 
@@ -188,8 +190,10 @@ void test_arbitration_lost() {
 void test_client_removal() {
   std::cout << "--- Test: Client Removal ---" << std::endl;
   ebus::Request req;
-  ebus::busConfig busCfg{.simulate = true};
-  ebus::Bus bus(busCfg, &req);
+  ebus::busConfig config = {.device = "/dev/null", .simulate = true};
+  ebus::RuntimeConfig runtime{
+      .address = 0xff, .window = 50, .offset = 5, .enable_syn = false};
+  ebus::Bus bus(config, runtime, &req);
   ebus::BusHandler busHandler(&req, nullptr, bus.getQueue());
   ebus::ClientManager manager(&bus, &busHandler, &req);
 
@@ -219,10 +223,11 @@ void test_enhanced_active_sending() {
   // 1. Setup eBUS Stack
   ebus::Request req;
   req.setMaxLockCounter(0);
-  ebus::busConfig busCfg{
-      .device = "/dev/null", .simulate = true, .enable_syn = false};
-  ebus::Bus bus(busCfg, &req);
-  ebus::Handler handler(0xff, &bus, &req);
+  ebus::busConfig config = {.device = "/dev/null", .simulate = true};
+  ebus::RuntimeConfig runtime{
+      .address = 0xff, .window = 50, .offset = 5, .enable_syn = false};
+  ebus::Bus bus(config, runtime, &req);
+  ebus::Handler handler(runtime.address, &bus, &req);
   ebus::BusHandler busHandler(&req, &handler, bus.getQueue());
   ebus::ClientManager manager(&bus, &busHandler, &req);
 
@@ -296,10 +301,11 @@ void test_enhanced_arbitration_lost() {
 
   ebus::Request req;
   req.setMaxLockCounter(0);
-  ebus::busConfig busCfg{
-      .device = "/dev/null", .simulate = true, .enable_syn = false};
-  ebus::Bus bus(busCfg, &req);
-  ebus::Handler handler(0xff, &bus, &req);
+  ebus::busConfig config = {.device = "/dev/null", .simulate = true};
+  ebus::RuntimeConfig runtime{
+      .address = 0xff, .window = 50, .offset = 5, .enable_syn = false};
+  ebus::Bus bus(config, runtime, &req);
+  ebus::Handler handler(runtime.address, &bus, &req);
   ebus::BusHandler busHandler(&req, &handler, bus.getQueue());
   ebus::ClientManager manager(&bus, &busHandler, &req);
 
@@ -356,8 +362,10 @@ void test_client_timeout() {
 
   ebus::Request req;
   req.setMaxLockCounter(0);
-  ebus::busConfig busCfg{.simulate = true, .enable_syn = false};
-  ebus::Bus bus(busCfg, &req);
+  ebus::busConfig config = {.device = "/dev/null", .simulate = true};
+  ebus::RuntimeConfig runtime{
+      .address = 0xff, .window = 50, .offset = 5, .enable_syn = false};
+  ebus::Bus bus(config, runtime, &req);
   ebus::BusHandler busHandler(&req, nullptr, bus.getQueue());
   ebus::ClientManager manager(&bus, &busHandler, &req);
 

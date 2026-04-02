@@ -24,7 +24,7 @@ uint8_t ebus::Request::getLockCounter() const { return lockCounter_; }
 
 bool ebus::Request::busAvailable() const {
   return result_ == RequestResult::observeSyn && lockCounter_ == 0 &&
-         !busRequest_;
+         !busRequest_.load(std::memory_order_acquire);
 }
 
 bool ebus::Request::requestBus(const uint8_t& address, const bool& external) {

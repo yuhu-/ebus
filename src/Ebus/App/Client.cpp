@@ -29,14 +29,6 @@ bool ebus::AbstractClient::available() {
   return recv(fd_, &dummy, 1, MSG_PEEK | MSG_DONTWAIT) > 0;
 }
 
-bool ebus::AbstractClient::readByte(uint8_t& out) {
-  return recv(fd_, &out, 1, MSG_DONTWAIT) == 1;
-}
-
-void ebus::AbstractClient::writeBytes(const std::vector<uint8_t>& data) {
-  if (fd_ >= 0) send(fd_, data.data(), data.size(), MSG_DONTWAIT);
-}
-
 void ebus::AbstractClient::stop() {
   if (fd_ >= 0) {
 #if defined(ESP32)
@@ -55,34 +47,45 @@ bool ebus::ReadOnlyClient::available() { return false; }
 
 bool ebus::ReadOnlyClient::readByte(uint8_t&) { return false; }
 
-bool ebus::ReadOnlyClient::handleBusData(uint8_t) { return false; }
+ebus::Action ebus::ReadOnlyClient::onBusByte(uint8_t) { return Action::Stop; }
 
 ebus::RegularClient::RegularClient(int fd, Request* request)
     : AbstractClient(fd, request, true) {}
 
-bool ebus::RegularClient::handleBusData(uint8_t byte) {
-  // Raw bridge: always echo what we saw on the wire back to the host
-  writeBytes({byte});
+bool ebus::RegularClient::readByte(uint8_t& out) {
+  return recv(fd_, &out, 1, MSG_DONTWAIT) == 1;
+}
 
+void ebus::RegularClient::writeBytes(const std::vector<uint8_t>& data) {
+  if (fd_ >= 0) send(fd_, data.data(), data.size(), MSG_DONTWAIT);
+}
+
+ebus::Action ebus::RegularClient::onBusByte(uint8_t byte) {
+  // Handle bus response according to last command
   switch (request_->getResult()) {
-    case RequestResult::observeData:
-    case RequestResult::firstSyn:
-    case RequestResult::firstRetry:
-    case RequestResult::retrySyn:
-    case RequestResult::firstWon:
-    case RequestResult::secondWon:
-      return true;
     case RequestResult::observeSyn:
     case RequestResult::firstLost:
     case RequestResult::firstError:
     case RequestResult::retryError:
     case RequestResult::secondLost:
     case RequestResult::secondError:
-      return false;
+      return Action::Stop;
+    case RequestResult::observeData:
+      writeBytes({byte});
+      return Action::Continue;
+    case RequestResult::firstSyn:
+    case RequestResult::firstRetry:
+    case RequestResult::retrySyn:
+      // Hide micro-retry: session remains active but we send no bridge response
+      return Action::Continue;
+    case RequestResult::firstWon:
+    case RequestResult::secondWon:
+      writeBytes({byte});
+      return Action::Continue;
     default:
       break;
   }
-  return false;
+  return Action::Stop;
 }
 
 ebus::EnhancedClient::EnhancedClient(int fd, Request* request)
@@ -150,35 +153,35 @@ void ebus::EnhancedClient::writeBytes(const std::vector<uint8_t>& data) {
   }
 }
 
-bool ebus::EnhancedClient::handleBusData(uint8_t byte) {
+ebus::Action ebus::EnhancedClient::onBusByte(uint8_t byte) {
   // Handle bus response according to last command
   switch (request_->getResult()) {
     case RequestResult::observeSyn:
     case RequestResult::firstLost:
     case RequestResult::secondLost:
       writeBytes({enhanced::RESP_FAILED, byte});
-      return false;
+      return Action::Stop;
     case RequestResult::firstError:
     case RequestResult::retryError:
     case RequestResult::secondError:
       writeBytes({enhanced::RESP_ERROR_EBUS, enhanced::ERR_FRAMING});
-      return false;
+      return Action::Stop;
     case RequestResult::observeData:
       writeBytes({enhanced::RESP_RECEIVED, byte});
-      return true;
+      return Action::Continue;
     case RequestResult::firstSyn:
     case RequestResult::firstRetry:
     case RequestResult::retrySyn:
-      // Waiting for arbitration, do nothing
-      return true;
+      // Hide micro-retry: session remains active but we send no bridge response
+      return Action::Continue;
     case RequestResult::firstWon:
     case RequestResult::secondWon:
       writeBytes({enhanced::RESP_STARTED, byte});
-      return true;
+      return Action::Continue;
     default:
       break;
   }
-  return false;
+  return Action::Stop;
 }
 
 std::unique_ptr<ebus::AbstractClient> ebus::createClient(int fd, Request* req,

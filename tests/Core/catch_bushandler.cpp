@@ -18,14 +18,15 @@
 
 TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
   SECTION("Integration vectors (passive/reactive/active BC happy paths)") {
-    ebus::busConfig config;
-    config.device = "/dev/null";
-    config.simulate = true;
-    config.enable_syn = true;
-
+    ebus::busConfig config = {.device = "/dev/null", .simulate = true};
+    ebus::RuntimeConfig runtime{.address = 0xff,
+                                .window = 50,
+                                .offset = 5,
+                                .enable_syn = true,
+                                .syn_deterministic = true};
     ebus::Request request;
-    ebus::Bus bus(config, &request);
-    ebus::Handler handler(ebus::DEFAULT_ADDRESS, &bus, &request);
+    ebus::Bus bus(config, runtime, &request);
+    ebus::Handler handler(runtime.address, &bus, &request);
     ebus::BusHandler busHandler(&request, &handler, bus.getQueue());
 
     std::atomic<int> telegram_count{0};
@@ -102,14 +103,16 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
   }
 
   SECTION("Lock counter behavior and arbitration pumping") {
-    ebus::busConfig config;
-    config.device = "/dev/null";
-    config.simulate = true;
-    config.enable_syn = false;
+    ebus::busConfig config = {.device = "/dev/null", .simulate = true};
+    ebus::RuntimeConfig runtime{.address = 0xff,
+                                .window = 50,
+                                .offset = 5,
+                                .enable_syn = true,
+                                .syn_deterministic = true};
 
     ebus::Request request;
-    ebus::Bus bus(config, &request);
-    ebus::Handler handler(ebus::DEFAULT_ADDRESS, &bus, &request);
+    ebus::Bus bus(config, runtime, &request);
+    ebus::Handler handler(runtime.address, &bus, &request);
     ebus::BusHandler busHandler(&request, &handler, bus.getQueue());
 
     std::atomic<int> telegram_count{0};
@@ -162,14 +165,16 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
   }
 
   SECTION("External client callback path") {
-    ebus::busConfig config;
-    config.device = "/dev/null";
-    config.simulate = true;
-    config.enable_syn = true;
+    ebus::busConfig config = {.device = "/dev/null", .simulate = true};
+    ebus::RuntimeConfig runtime{.address = 0x33,
+                                .window = 50,
+                                .offset = 5,
+                                .enable_syn = true,
+                                .syn_deterministic = true};
 
     ebus::Request request;
-    ebus::Bus bus(config, &request);
-    ebus::Handler handler(ebus::DEFAULT_ADDRESS, &bus, &request);
+    ebus::Bus bus(config, runtime, &request);
+    ebus::Handler handler(runtime.address, &bus, &request);
     ebus::BusHandler busHandler(&request, &handler, bus.getQueue());
 
     std::atomic<int> telegram_count{0};

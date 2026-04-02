@@ -73,17 +73,22 @@ void ebus::Controller::stop() {
 }
 
 void ebus::Controller::setAddress(const uint8_t& address) {
-  config_.address = address;
-  if (configured_) impl_->handler->setSourceAddress(address);
+  config_.runtime.address = address;
+  if (configured_) {
+    impl_->handler->setSourceAddress(address);
+    impl_->deviceManager->setOwnAddress(address);
+    impl_->deviceScanner->setOwnAddress(address);
+    impl_->bus->setRuntimeConfig(config_.runtime);
+  }
 }
 
 void ebus::Controller::setWindow(const uint16_t& window) {
-  config_.window = window;
+  config_.runtime.window = window;
   if (configured_) impl_->bus->setWindow(window);
 }
 
 void ebus::Controller::setOffset(const uint16_t& offset) {
-  config_.offset = offset;
+  config_.runtime.offset = offset;
   if (configured_) impl_->bus->setOffset(offset);
 }
 
@@ -165,15 +170,21 @@ std::map<std::string, ebus::MetricValues> ebus::Controller::getMetrics() const {
   metrics.insert(bMetrics.begin(), bMetrics.end());
 
   // 4. Calculate Aggregate Bus Quality (%)
-  // Quality combines Protocol Health (Error Rate) and Network Congestion (Contention Rate)
-  double errorRate = metrics.count("handler.errorRate") ? metrics["handler.errorRate"].last : 0.0;
-  double contentionRate = metrics.count("request.contentionRate") ? metrics["request.contentionRate"].last : 0.0;
+  // Quality combines Protocol Health (Error Rate) and Network Congestion
+  // (Contention Rate)
+  double errorRate = metrics.count("handler.errorRate")
+                         ? metrics["handler.errorRate"].last
+                         : 0.0;
+  double contentionRate = metrics.count("request.contentionRate")
+                              ? metrics["request.contentionRate"].last
+                              : 0.0;
 
-  if (metrics.count("handler.counter.messagesTotal") && metrics["handler.counter.messagesTotal"].last > 0) {
+  if (metrics.count("handler.counter.messagesTotal") &&
+      metrics["handler.counter.messagesTotal"].last > 0) {
     // Score is (100 - ErrorRate) * (1 - ContentionRate/100)
     // This means 100% error or 100% contention results in 0 quality.
     double quality = (100.0 - errorRate) * (1.0 - (contentionRate / 100.0));
-    if (quality < 0) quality = 0; // Ensure non-negative
+    if (quality < 0) quality = 0;  // Ensure non-negative
     metrics["bus.quality"] = {quality, quality, quality, quality, 0.0, 1};
   } else {
     // If no messages, assume perfect quality (or no data to judge)
@@ -189,14 +200,14 @@ bool ebus::Controller::isRunning() const noexcept { return running_; }
 
 void ebus::Controller::constructMembers() {
   impl_->request.reset(new Request());
-  impl_->bus.reset(new Bus(config_.bus, impl_->request.get()));
-  impl_->handler.reset(
-      new Handler(config_.address, impl_->bus.get(), impl_->request.get()));
+  impl_->bus.reset(new Bus(config_.bus, config_.runtime, impl_->request.get()));
+  impl_->handler.reset(new Handler(config_.runtime.address, impl_->bus.get(),
+                                   impl_->request.get()));
 
   impl_->scheduler.reset(new Scheduler(impl_->handler.get()));
 
   impl_->deviceManager.reset(new DeviceManager());
-  impl_->deviceManager->setHandler(impl_->handler.get());
+  impl_->deviceManager->setOwnAddress(config_.runtime.address);
 
   // Setup the central dispatcher via the Scheduler.
   // The Scheduler handles the timing-critical Handler interaction and
@@ -225,7 +236,8 @@ void ebus::Controller::constructMembers() {
   });
 
   impl_->deviceScanner.reset(
-      new DeviceScanner(impl_->handler.get(), impl_->deviceManager.get()));
+      new DeviceScanner(config_.runtime.address, impl_->deviceManager.get()));
+
   impl_->pollManager.reset(new PollManager());
 
   impl_->busHandler.reset(new BusHandler(
@@ -234,8 +246,8 @@ void ebus::Controller::constructMembers() {
   impl_->clientManager.reset(new ClientManager(
       impl_->bus.get(), impl_->busHandler.get(), impl_->request.get()));
 
-  impl_->bus->setWindow(config_.window);
-  impl_->bus->setOffset(config_.offset);
+  impl_->bus->setWindow(config_.runtime.window);
+  impl_->bus->setOffset(config_.runtime.offset);
 }
 
 void ebus::Controller::run() {

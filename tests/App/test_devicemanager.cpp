@@ -26,10 +26,10 @@ void test_address_tracking() {
   // Setup handler dependencies to avoid nullptr issues, though update() now
   // guards against it.
   ebus::busConfig config{.device = "/dev/null", .simulate = true};
+  ebus::RuntimeConfig runtime{.address = 0xff, .window = 50, .offset = 5};
   ebus::Request request;
-  ebus::Bus bus(config, &request);
-  ebus::Handler handler(0xFF, &bus, &request);
-  dm.setHandler(&handler);
+  ebus::Bus bus(config, runtime, &request);
+  ebus::Handler handler(runtime.address, &bus, &request);
 
   // Simulate traffic: Master 0x10 talks to Slave 0x15
   std::vector<uint8_t> master = {0x10, 0x15, 0x07, 0x04, 0x00};
@@ -53,10 +53,10 @@ void test_device_update() {
   ebus::DeviceManager dm;
   // Handler needed for filtering own address logic
   ebus::busConfig config{.device = "/dev/null", .simulate = true};
+  ebus::RuntimeConfig runtime{.address = 0xff, .window = 50, .offset = 5};
   ebus::Request request;
-  ebus::Bus bus(config, &request);
-  ebus::Handler handler(0xFF, &bus, &request);
-  dm.setHandler(&handler);
+  ebus::Bus bus(config, runtime, &request);
+  ebus::Handler handler(runtime.address, &bus, &request);
 
   // Vaillant Identification Response (Slave 0x08)
   // 07 04 response with Vaillant Manuf ID (0xB5)
@@ -87,10 +87,10 @@ void test_create_scan_commands() {
   ebus::DeviceManager dm;
   // Use handler with address 0xFF
   ebus::busConfig config{.device = "/dev/null", .simulate = true};
+  ebus::RuntimeConfig runtime{.address = 0xff, .window = 50, .offset = 5};
   ebus::Request request;
-  ebus::Bus bus(config, &request);
-  ebus::Handler handler(0xFF, &bus, &request);
-  dm.setHandler(&handler);
+  ebus::Bus bus(config, runtime, &request);
+  ebus::Handler handler(runtime.address, &bus, &request);
 
   std::vector<std::string> inputs = {"08", "15", "50"};
   auto cmds = dm.createScanCommands(inputs);

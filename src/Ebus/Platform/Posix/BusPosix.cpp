@@ -11,14 +11,11 @@
 
 #include "Utils/Common.hpp"
 
-ebus::BusPosix::BusPosix(const busConfig& config, Request* request)
+ebus::BusPosix::BusPosix(const busConfig& config, const RuntimeConfig& runtime,
+                         Request* request)
     : device_(config.device),
       simulate_(config.simulate),
-      enableSyn_(config.enable_syn),
-      masterAddr_(config.master_addr),
-      synBaseMs_(config.syn_base_ms),
-      synToleranceMs_(config.syn_tolerance_ms),
-      synDeterministic_(config.syn_deterministic),
+      runtime_(runtime),
       request_(request),
       fd_(-1),
       open_(false),
@@ -63,9 +60,12 @@ void ebus::BusPosix::start() {
 
   // start SYN generator if enabled in config
   statsUptime_.markBegin();
-  if (enableSyn_) {
-    currentTunique_ = synBaseMs_ + std::chrono::milliseconds(masterAddr_ * 10) +
-                      synToleranceMs_;
+  if (runtime_.enable_syn) {
+    synBaseMsDur_ = std::chrono::milliseconds(runtime_.syn_base_ms);
+    synToleranceMsDur_ = std::chrono::milliseconds(runtime_.syn_tolerance_ms);
+    currentTunique_ = synBaseMsDur_ +
+                      std::chrono::milliseconds(runtime_.address * 10) +
+                      synToleranceMsDur_;
     nextSynExpiry_ = std::chrono::steady_clock::now() + currentTunique_;
 
     synActive_ = false;
@@ -135,9 +135,54 @@ void ebus::BusPosix::writeByte(const uint8_t byte) {
   statsTransmit_.markEnd();
 }
 
-void ebus::BusPosix::setWindow(const uint16_t window) { window_ = window; }
+void ebus::BusPosix::setWindow(const uint16_t window) {
+  runtime_.window = window;
+}
 
-void ebus::BusPosix::setOffset(const uint16_t offset) { offset_ = offset; }
+void ebus::BusPosix::setOffset(const uint16_t offset) {
+  runtime_.offset = offset;
+}
+
+void ebus::BusPosix::setRuntimeConfig(const RuntimeConfig& runtime) {
+  bool wasEnabled;
+  bool shouldStart = false;
+  bool shouldStop = false;
+
+  {
+    std::lock_guard<std::mutex> lock(synMutex_);
+    wasEnabled = runtime_.enable_syn;
+    runtime_ = runtime;
+
+    // Always recalculate timing durations based on the new configuration
+    synBaseMsDur_ = std::chrono::milliseconds(runtime_.syn_base_ms);
+    synToleranceMsDur_ = std::chrono::milliseconds(runtime_.syn_tolerance_ms);
+    currentTunique_ = synBaseMsDur_ +
+                      std::chrono::milliseconds(runtime_.address * 10) +
+                      synToleranceMsDur_;
+
+    // Manage thread transitions only if the bus is currently active
+    if (open_ && running_.load()) {
+      if (runtime_.enable_syn && !wasEnabled && !synRunning_.load()) {
+        shouldStart = true;
+        synRunning_.store(true);
+        nextSynExpiry_ = std::chrono::steady_clock::now() + currentTunique_;
+        synActive_ = false;
+      } else if (!runtime_.enable_syn && wasEnabled && synRunning_.load()) {
+        shouldStop = true;
+        synRunning_.store(false);
+        synCv_.notify_all();
+      }
+    }
+  }
+
+  // Execute thread lifecycle actions outside of the lock to prevent deadlocks
+  if (shouldStart) {
+    if (synThread_.joinable()) synThread_.join();
+    synThread_ = std::thread(&BusPosix::synThread, this);
+  } else if (shouldStop) {
+    if (synThread_.joinable()) synThread_.join();
+  }
+}
 
 void ebus::BusPosix::resetMetrics() {
 #define X(name) counter_.name##_ = 0;
@@ -248,7 +293,7 @@ void ebus::BusPosix::resetSynTimer(uint8_t byte) {
   // the echo of our own SYN (byte == sym_syn), we "won" arbitration or the bus
   // is idle. We continue generating SYNs at the fast rate (synBaseMs_).
   if (synActive_ && byte == sym_syn) {
-    nextSynExpiry_ = now + synBaseMs_;
+    nextSynExpiry_ = now + synBaseMsDur_;
   } else {
     synActive_ = false;
     nextSynExpiry_ = now + currentTunique_;
@@ -266,6 +311,14 @@ void ebus::BusPosix::synThread() {
       synCv_.wait_until(lock, nextSynExpiry_);
       continue;
     }
+
+    // Carrier Sense: Double check the bus hasn't become active in the last 1ms
+    // to avoid colliding with a master starting at the exact expiry time.
+    // if (std::chrono::steady_clock::now() - lastActivityTime_ <
+    // std::chrono::milliseconds(1)) {
+    //   nextSynExpiry_ = std::chrono::steady_clock::now() +
+    //   std::chrono::milliseconds(2); continue;
+    // }
 
     // We are about to generate a SYN, mark ourselves as active
     synActive_ = true;

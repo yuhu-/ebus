@@ -179,10 +179,12 @@ int main() {
   ebus::busConfig config;
   config.device = "/dev/simulation";
   config.simulate = true;
-  config.enable_syn = true;
-  config.master_addr = 0x33;
+  
+  ebus::RuntimeConfig runtime;
+  runtime.address = 0x33;
+  runtime.enable_syn = true;
 
-  ebus::Bus bus(config, &request);
+  ebus::Bus bus(config, runtime, &request);
   ebus::Handler handler(ebus::DEFAULT_ADDRESS, &bus, &request);
   ebus::BusHandler busHandler(&request, &handler, bus.getQueue());
 

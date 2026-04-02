@@ -41,7 +41,8 @@ struct BusEvent {
 
 class BusFreeRtos {
  public:
-  explicit BusFreeRtos(const busConfig& config, Request* request);
+  explicit BusFreeRtos(const busConfig& config, const RuntimeConfig& runtime,
+                       Request* request);
   ~BusFreeRtos();
 
   BusFreeRtos(const BusFreeRtos&) = delete;
@@ -56,6 +57,7 @@ class BusFreeRtos {
 
   void setWindow(const uint16_t window);
   void setOffset(const uint16_t offset);
+  void setRuntimeConfig(const RuntimeConfig& runtime);
 
   void resetMetrics();
   std::map<std::string, MetricValues> getMetrics() const;
@@ -67,8 +69,10 @@ class BusFreeRtos {
   uint8_t txPin_;
 
   busConfig config_;
+  RuntimeConfig runtime_;
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
   gptimer_handle_t gptimer_ = nullptr;
+  gptimer_handle_t synGptimer_ = nullptr;
 #else
   timer_group_t timerGroupNum_ = TIMER_GROUP_1;
   timer_idx_t timerIdxNum_ = TIMER_0;
@@ -96,7 +100,7 @@ class BusFreeRtos {
   volatile uint8_t bufferIndex_ = 0;  // index for falling edge buffer
   volatile int64_t microsEdgeBuffer_[FALLING_EDGE_BUFFER_SIZE] = {0};
 
-  volatile int64_t lastActivityMicros_ = 0;
+  // volatile int64_t lastActivityMicros_ = 0;
   volatile int64_t microsStartBit_ = 0;  // estimated start bit time
 
   volatile bool busRequestFlag_ = false;
@@ -107,6 +111,11 @@ class BusFreeRtos {
 
   volatile int64_t microsLastDelay_ = 0;
   volatile int64_t microsLastWindow_ = 0;
+
+  std::atomic<bool> synRunning_{false};
+  bool synActive_{false};
+  uint64_t synBaseUs_ = 0;
+  uint64_t synUniqueUs_ = 0;
 
   // platform handles
   QueueHandle_t uartEventQueue_ = nullptr;
@@ -148,10 +157,15 @@ class BusFreeRtos {
   static bool IRAM_ATTR s_onBusIsrTimer(gptimer_handle_t timer,
                                         const gptimer_alarm_event_data_t* edata,
                                         void* user_ctx);
+  static bool IRAM_ATTR s_onSynGenTimer(gptimer_handle_t timer,
+                                        const gptimer_alarm_event_data_t* edata,
+                                        void* user_ctx);
 #else
   static bool IRAM_ATTR s_onBusIsrTimer(void* arg);
+  static bool IRAM_ATTR s_onSynGenTimer(void* arg);
 #endif
   bool onBusIsrTimer();
+  bool onSynGenTimer();
 };
 
 }  // namespace ebus

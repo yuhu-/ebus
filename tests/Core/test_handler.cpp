@@ -31,9 +31,10 @@ void printByte(const std::string& prefix, const uint8_t& byte,
 ebus::Request request;
 
 ebus::busConfig config = {.device = "/dev/simulation", .simulate = true};
-ebus::Bus bus(config, &request);
+ebus::RuntimeConfig runtime = {.address = 0x33, .window = 50, .offset = 5};
+ebus::Bus bus(config, runtime, &request);
 
-ebus::Handler handler(ebus::DEFAULT_ADDRESS, &bus, &request);
+ebus::Handler handler(runtime.address, &bus, &request);
 
 void readFunction(const uint8_t& byte) {
   if (!g_detailed_output) return;

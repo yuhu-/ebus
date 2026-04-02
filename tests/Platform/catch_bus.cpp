@@ -26,17 +26,15 @@ static void force_request(ebus::Request& req, uint8_t addr) {
 }
 
 TEST_CASE("Bus: Basic Communication", "[platform][bus]") {
-  ebus::busConfig config;
-  config.device = "/dev/null";
-  config.simulate = true;
-  config.enable_syn = true;
-  config.master_addr = 0x01;
-  config.syn_base_ms = 50;
-  config.syn_tolerance_ms = 5;
-  config.syn_deterministic = true;
+  ebus::busConfig config = {.device = "/dev/null", .simulate = true};
+  ebus::RuntimeConfig runtime{.address = 0x01,
+                              .window = 50,
+                              .offset = 5,
+                              .enable_syn = true,
+                              .syn_deterministic = true};
 
   ebus::Request req;
-  ebus::Bus bus(config, &req);
+  ebus::Bus bus(config, runtime, &req);
 
   bus.start();
   force_request(req, 0x03);
@@ -71,17 +69,15 @@ TEST_CASE("Bus: Basic Communication", "[platform][bus]") {
 }
 
 TEST_CASE("Bus: SYN Timing", "[platform][bus]") {
-  ebus::busConfig config;
-  config.device = "/dev/null";
-  config.simulate = true;
-  config.enable_syn = true;
-  config.master_addr = 0x01;  // unique startup offset
-  config.syn_base_ms = 50;
-  config.syn_tolerance_ms = 5;
-  config.syn_deterministic = true;
+  ebus::busConfig config = {.device = "/dev/null", .simulate = true};
+  ebus::RuntimeConfig runtime{.address = 0x01,
+                              .window = 50,
+                              .offset = 5,
+                              .enable_syn = true,
+                              .syn_deterministic = true};
 
   ebus::Request req;
-  ebus::Bus bus(config, &req);
+  ebus::Bus bus(config, runtime, &req);
   auto* queue = bus.getQueue();
 
   auto start = std::chrono::steady_clock::now();
@@ -92,7 +88,7 @@ TEST_CASE("Bus: SYN Timing", "[platform][bus]") {
 
   for (int i = 0; i < 4; ++i) {
     if (queue->pop(ev, std::chrono::milliseconds(200))) {
-      if (ev.byte == 0xAA)
+      if (ev.byte == 0xaa)
         timestamps.push_back(std::chrono::steady_clock::now());
     }
   }
@@ -125,13 +121,14 @@ TEST_CASE("Bus: SYN Timing", "[platform][bus]") {
 }
 
 TEST_CASE("Bus: Raw Reception (Broadcast Simulation)", "[platform][bus]") {
-  ebus::busConfig config;
-  config.device = "/dev/null";
-  config.simulate = true;
-  config.enable_syn = false;
-
+  ebus::busConfig config = {.device = "/dev/null", .simulate = true};
+  ebus::RuntimeConfig runtime{.address = 0x01,
+                              .window = 50,
+                              .offset = 5,
+                              .enable_syn = false,
+                              .syn_deterministic = false};
   ebus::Request req;
-  ebus::Bus bus(config, &req);
+  ebus::Bus bus(config, runtime, &req);
   auto* queue = bus.getQueue();
 
   bus.start();

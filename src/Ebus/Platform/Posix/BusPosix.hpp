@@ -53,7 +53,8 @@ class BusPosix {
   using ReadListener = std::function<void(const uint8_t& byte)>;
   using WriteListener = std::function<void(const uint8_t& byte)>;
 
-  explicit BusPosix(const busConfig& config, Request* request);
+  BusPosix(const busConfig& config, const RuntimeConfig& runtime,
+           Request* request);
   ~BusPosix();
 
   BusPosix(const BusPosix&) = delete;
@@ -69,6 +70,7 @@ class BusPosix {
   // kept for BusFreeRtos compatibility, but not used in Posix implementation
   void setWindow(const uint16_t window);
   void setOffset(const uint16_t offset);
+  void setRuntimeConfig(const RuntimeConfig& runtime);
 
   void resetMetrics();
   std::map<std::string, MetricValues> getMetrics() const;
@@ -81,11 +83,7 @@ class BusPosix {
  private:
   std::string device_;
   bool simulate_;
-  bool enableSyn_;
-  uint8_t masterAddr_;
-  std::chrono::milliseconds synBaseMs_;
-  std::chrono::milliseconds synToleranceMs_;
-  bool synDeterministic_;
+  RuntimeConfig runtime_;
 
   Request* request_ = nullptr;
 
@@ -95,8 +93,8 @@ class BusPosix {
   bool open_;
   struct termios oldSettings_{};
 
-  volatile uint16_t window_ = 4300;  // usually between 4300-4456 us
-  volatile uint16_t offset_ = 80;    // mainly for context switch and write
+  std::chrono::milliseconds synBaseMsDur_;
+  std::chrono::milliseconds synToleranceMsDur_;
 
   std::unique_ptr<Queue<BusEvent>> byteQueue_;
   std::thread thread_;

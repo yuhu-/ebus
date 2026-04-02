@@ -23,7 +23,7 @@ namespace ebus {
 
 class DeviceManager {
  public:
-  void setHandler(ebus::Handler* handler);
+  void setOwnAddress(uint8_t address);
 
   void update(const std::vector<uint8_t>& master,
               const std::vector<uint8_t>& slave);
@@ -41,7 +41,7 @@ class DeviceManager {
       const std::vector<std::string>& addresses) const;
 
  private:
-  ebus::Handler* handler_ = nullptr;
+  uint8_t ownAddress_ = 0xff;
 
   mutable std::mutex mutex_;
 

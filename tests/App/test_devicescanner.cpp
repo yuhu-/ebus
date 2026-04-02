@@ -22,7 +22,7 @@
 
 void test_manual_and_stop() {
   std::cout << "[TEST] DeviceScanner Manual Scan & Stop... ";
-  ebus::DeviceScanner scanner(nullptr, nullptr);
+  ebus::DeviceScanner scanner(0xff, nullptr);
 
   scanner.scanAddress(0x15);
   scanner.scanAddress(0x16);
@@ -41,7 +41,7 @@ void test_manual_and_stop() {
 void test_priority() {
   std::cout << "[TEST] DeviceScanner Priority (Manual > Full > Startup)... ";
   ebus::DeviceManager dm;
-  ebus::DeviceScanner scanner(nullptr, &dm);
+  ebus::DeviceScanner scanner(0xff, &dm);
 
   // Enable all scan types
   scanner.setFullScan(true);
@@ -69,9 +69,8 @@ void test_startup_scan_logic() {
   std::cout << "[TEST] DeviceScanner Startup Scan Logic... ";
   ebus::DeviceManager dm;
   ebus::Request request;
-  ebus::Handler handler(0xFF, nullptr, &request);
-  dm.setHandler(&handler);
-  ebus::DeviceScanner scanner(&handler, &dm);
+  dm.setOwnAddress(0xff);
+  ebus::DeviceScanner scanner(0xff, &dm);
 
   // Configure for fast testing
   scanner.setInitialScanDelay(std::chrono::seconds(0));
@@ -105,9 +104,8 @@ void test_timing_and_vendor_integration() {
   std::cout << "[TEST] DeviceScanner Timing & Vendor Scans... ";
   ebus::DeviceManager dm;
   ebus::Request request;
-  ebus::Handler handler(0x10, nullptr, &request);
-  dm.setHandler(&handler);
-  ebus::DeviceScanner scanner(&handler, &dm);
+  dm.setOwnAddress(0x10);
+  ebus::DeviceScanner scanner(0x10, &dm);
 
   // 1. Identify a Vaillant device at 0x08
   std::vector<uint8_t> m = {0x10, 0x08, 0x07, 0x04, 0x00};

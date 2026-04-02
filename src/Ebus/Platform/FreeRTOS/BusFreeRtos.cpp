@@ -107,7 +107,8 @@ void ebus::BusFreeRtos::resetMetrics() {
 #undef X
 }
 
-std::map<std::string, ebus::MetricValues> ebus::BusFreeRtos::getMetrics() const {
+std::map<std::string, ebus::MetricValues> ebus::BusFreeRtos::getMetrics()
+    const {
   std::map<std::string, MetricValues> m;
   auto addCounter = [&](const std::string& name, uint32_t val) {
     m["bus.counter." + name] = {static_cast<double>(val),  0, 0, 0, 0,
@@ -393,6 +394,34 @@ bool ebus::BusFreeRtos::onBusIsrTimer() {
   busRequestFlag_ = true;
   microsWindowFlag_ = true;
   portEXIT_CRITICAL_ISR(&timerMux_);
+  return false;
+}
+
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+bool IRAM_ATTR ebus::BusFreeRtos::s_onSynGenTimer(
+    gptimer_handle_t timer, const gptimer_alarm_event_data_t* edata,
+    void* user_ctx) {
+  BusFreeRtos* inst = reinterpret_cast<BusFreeRtos*>(user_ctx);
+  return inst ? inst->onSynGenTimer() : false;
+}
+#else
+bool IRAM_ATTR ebus::BusFreeRtos::s_onSynGenTimer(void* arg) {
+  BusFreeRtos* inst = reinterpret_cast<BusFreeRtos*>(arg);
+  return inst ? inst->onSynGenTimer() : false;
+}
+#endif
+
+bool ebus::BusFreeRtos::onSynGenTimer() {
+  // Carrier Sense: Check if there was any activity very recently (e.g. within
+  // 500us) that hasn't been processed by the task runner yet. if
+  // (esp_timer_get_time() - lastActivityMicros_ < 500) {
+  //   // Postpone slightly
+  //   return true;
+  // }
+
+  synActive_ = true;
+  uint8_t syn = sym_syn;
+  uart_ll_write_txfifo(UART_LL_GET_HW(uartPortNum_), &syn, 1);
   return false;
 }
 

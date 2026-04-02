@@ -3,11 +3,6 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-// Represents a device on the eBUS, identified by its slave address and
-// identification data. Provides methods to update its data.  Also provides
-// static methods to generate scan commands for devices. Vendor-specific scan
-// commands are also supported.
-
 #pragma once
 
 #include <cstdint>
@@ -23,6 +18,12 @@ struct DeviceInfo {
   std::vector<uint8_t> hardwareVersion;
 };
 
+/**
+ * Represents a device on the eBUS, identified by its slave address and
+ * identification data. Provides methods to update its data.  Also provides
+ * static methods to generate scan commands for devices. Vendor-specific scan
+ * commands are also supported.
+ */
 class Device {
  public:
   uint8_t getSlave() const;

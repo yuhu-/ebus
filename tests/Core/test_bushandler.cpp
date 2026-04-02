@@ -115,11 +115,18 @@ void test_integration_vectors() {
   ebus::busConfig config;
   config.device = "/dev/null";
   config.simulate = true;
-  config.enable_syn = true;
+
+  ebus::RuntimeConfig runtime;
+  runtime.address = 0x01;  // Lower address = faster SYN generation (~65ms)
+  runtime.window = 50;
+  runtime.offset = 5;
+  runtime.enable_syn = true;
+  runtime.syn_deterministic = true;
 
   ebus::Request request;
-  ebus::Bus bus(config, &request);
-  ebus::Handler handler(ebus::DEFAULT_ADDRESS, &bus, &request);
+  request.setMaxLockCounter(0);  // Bypass lock for deterministic testing
+  ebus::Bus bus(config, runtime, &request);
+  ebus::Handler handler(runtime.address, &bus, &request);
   ebus::BusHandler busHandler(&request, &handler, bus.getQueue());
 
   handler.setTelegramCallback(telegramCallback);
@@ -198,14 +205,12 @@ void test_integration_vectors() {
 void test_lock_counter() {
   std::cout << "[TEST] Lock Counter Logic... " << std::flush;
 
-  ebus::busConfig config;
-  config.device = "/dev/null";
-  config.simulate = true;
-  config.enable_syn = false;
+  ebus::busConfig config = {.device = "/dev/null", .simulate = true};
+  ebus::RuntimeConfig runtime{.address = 0xff, .window = 50, .offset = 5};
 
   ebus::Request request;
-  ebus::Bus bus(config, &request);
-  ebus::Handler handler(ebus::DEFAULT_ADDRESS, &bus, &request);
+  ebus::Bus bus(config, runtime, &request);
+  ebus::Handler handler(runtime.address, &bus, &request);
   ebus::BusHandler busHandler(&request, &handler, bus.getQueue());
 
   // Setup: Max lock counter 3
@@ -296,14 +301,14 @@ void test_external_client() {
                 << "=== Test: External Client Logic ===" << std::endl;
     }
 
-    ebus::busConfig config;
-    config.device = "/dev/null";
-    config.simulate = true;
-    config.enable_syn = true;
+    ebus::busConfig config = {.device = "/dev/null", .simulate = true};
+    ebus::RuntimeConfig runtime = {
+        .address = 0x33, .window = 50, .offset = 5, .enable_syn = true};
 
     ebus::Request request;
-    ebus::Bus bus(config, &request);
-    ebus::Handler handler(ebus::DEFAULT_ADDRESS, &bus, &request);
+    request.setMaxLockCounter(0);
+    ebus::Bus bus(config, runtime, &request);
+    ebus::Handler handler(runtime.address, &bus, &request);
     ebus::BusHandler busHandler(&request, &handler, bus.getQueue());
 
     // Setup logging

@@ -7,10 +7,10 @@
 
 #include "Utils/Common.hpp"
 
-ebus::DeviceScanner::DeviceScanner(Handler* handler,
+ebus::DeviceScanner::DeviceScanner(uint8_t ownAddress,
                                    DeviceManager* deviceManager)
-    : handler_(handler),
-      deviceManager_(deviceManager),
+    : deviceManager_(deviceManager),
+      ownAddress_(ownAddress),
       nextStartupScanTime_(std::chrono::steady_clock::time_point::max()) {}
 
 void ebus::DeviceScanner::setFullScan(bool enable) {
@@ -41,6 +41,11 @@ void ebus::DeviceScanner::setScanOnStartup(bool enable) {
 bool ebus::DeviceScanner::isScanOnStartup() const {
   std::lock_guard<std::mutex> lock(mutex_);
   return scanOnStartup_;
+}
+
+void ebus::DeviceScanner::setOwnAddress(uint8_t address) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  ownAddress_ = address;
 }
 
 void ebus::DeviceScanner::setMaxStartupScans(uint8_t max) {
@@ -87,8 +92,7 @@ void ebus::DeviceScanner::scanAddress(uint8_t address) {
 }
 
 void ebus::DeviceScanner::scanAddressLocked(uint8_t address) {
-  if (ebus::isSlave(address) &&
-      (!handler_ || address != handler_->getTargetAddress())) {
+  if (ebus::isSlave(address) && (address != ebus::slaveOf(ownAddress_))) {
     manualQueue_.push(Device::createScanCommand(address));
   }
 }
@@ -135,8 +139,7 @@ std::vector<uint8_t> ebus::DeviceScanner::nextCommand() {
       uint8_t addr = static_cast<uint8_t>(fullScanAddress_);
       fullScanAddress_++;
 
-      if (ebus::isSlave(addr) &&
-          (!handler_ || addr != handler_->getTargetAddress())) {
+      if (ebus::isSlave(addr) && (addr != ebus::slaveOf(ownAddress_))) {
         return Device::createScanCommand(addr);
       }
     }

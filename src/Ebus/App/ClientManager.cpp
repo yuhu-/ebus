@@ -31,7 +31,7 @@ void ebus::ClientManager::start() {
   if (running_) return;
   running_ = true;
   worker_ = std::make_unique<ServiceThread>(
-      "ebusClientMgr", [this] { run(); }, 4096, 3, 0);
+      "ebusClientManager", [this] { run(); }, 4096, 3, 0);
   worker_->start();
 }
 
@@ -123,6 +123,11 @@ void ebus::ClientManager::run() {
 
     processBusBytes(activeClient, busState);
 
+    // TODO check if this is needed, because the syn byte should
+    // already provide a natural pacing for the loop. If not needed,
+    // removing this would reduce latency and improve responsiveness.
+    // The syn byte is the slowest symbol on the bus, so if we can process it
+    // faster than it arrives, we can react to bus events more quickly.
     sleep_ms(1);
   }
 }
@@ -144,7 +149,7 @@ void ebus::ClientManager::processBusBytes(
           // Mark as handled to prevent duplicate raw echoes in the broadcast
           // loop below
           handledByActive = true;
-          if (!currentActive->handleBusData(byte)) {
+          if (currentActive->onBusByte(byte) == Action::Stop) {
             // Client signaled it's done (e.g. error, arbitration loss, or end
             // of telegram)
             activeClient = nullptr;
@@ -152,7 +157,11 @@ void ebus::ClientManager::processBusBytes(
             busRequested_ = false;
             request_->reset();
           } else {
-            busState = BusState::Transmit;
+            // Only allow transition to Transmit if the arbitration phase
+            // is fully finished (no longer pending a first or second try).
+            if (!request_->busRequestPending()) {
+              busState = BusState::Transmit;
+            }
           }
         }
       }
@@ -162,8 +171,7 @@ void ebus::ClientManager::processBusBytes(
     // This prevents a slow WiFi client from blocking the manager loop.
     for (auto& client : clientsCache_) {
       if (handledByActive && client == currentActive) {
-        // activeClient->handleBusData already sent the appropriate
-        // status or data response.
+        // currentActive already got the appropriate status or data response.
         continue;
       }
       if (client->isConnected()) {

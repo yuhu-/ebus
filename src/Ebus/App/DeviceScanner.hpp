@@ -23,12 +23,13 @@ namespace ebus {
 
 class DeviceScanner {
  public:
-  DeviceScanner(Handler* handler, DeviceManager* deviceManager);
+  DeviceScanner(uint8_t ownAddress, DeviceManager* deviceManager);
 
   void setFullScan(bool enable);
   bool isFullScan() const;
 
   void setScanOnStartup(bool enable);
+  void setOwnAddress(uint8_t address);
   bool isScanOnStartup() const;
   void setMaxStartupScans(uint8_t max);
   void setInitialScanDelay(std::chrono::seconds delay);
@@ -46,8 +47,8 @@ class DeviceScanner {
   std::vector<uint8_t> nextCommand();
 
  private:
-  Handler* handler_ = nullptr;
   DeviceManager* deviceManager_ = nullptr;
+  uint8_t ownAddress_ = 0xff;
 
   // Protects all internal state across threads (Controller and Scheduler)
   mutable std::mutex mutex_;
