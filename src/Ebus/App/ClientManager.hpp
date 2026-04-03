@@ -47,7 +47,7 @@ class ClientManager {
   std::vector<std::shared_ptr<AbstractClient>> clientsCache_;
   std::atomic<bool> registryDirty_;
 
-  Queue<uint8_t> busByteQueue_;
+  Queue<BusEventContext> busByteQueue_;
   std::atomic<bool> running_;
   std::atomic<bool> busRequested_;
 

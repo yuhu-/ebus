@@ -27,7 +27,7 @@ ebus::ClientManager::ClientManager(Bus* bus, BusHandler* busHandler,
       busRequested_(false),
       activeTimeout_(1000) {
   busHandler_->addByteListener(
-      [this](const uint8_t& byte) { busByteQueue_.try_push(byte); });
+      [this](const BusEventContext& ctx) { busByteQueue_.try_push(ctx); });
 
   request_->setExternalBusRequestedCallback([this]() { busRequested_ = true; });
 }
@@ -171,10 +171,10 @@ void ebus::ClientManager::run() {
 
 bool ebus::ClientManager::processBusBytes(
     std::shared_ptr<AbstractClient>& activeClient, BusState& busState) {
-  uint8_t byte = 0;
+  BusEventContext ctx;
   bool processed = false;
 
-  while (busByteQueue_.try_pop(byte)) {
+  while (busByteQueue_.try_pop(ctx)) {
     processed = true;
     bool handledByActive = false;
     std::shared_ptr<AbstractClient> currentActive;
@@ -188,7 +188,7 @@ bool ebus::ClientManager::processBusBytes(
           // Mark as handled to prevent duplicate raw echoes in the broadcast
           // loop below
           handledByActive = true;
-          if (currentActive->onBusByte(byte) == Action::Stop) {
+          if (currentActive->onBusByte(ctx) == Action::Stop) {
             // Client signaled it's done (e.g. error, arbitration loss, or end
             // of telegram)
             activeClient = nullptr;
@@ -214,7 +214,7 @@ bool ebus::ClientManager::processBusBytes(
         continue;
       }
       if (client->isConnected()) {
-        client->sendToClient({byte});
+        client->sendToClient({ctx.byte});
       }
     }
   }
