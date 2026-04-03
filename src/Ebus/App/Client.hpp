@@ -11,6 +11,8 @@
 #include <string>
 #include <vector>
 
+#include "Core/Request.hpp"
+
 namespace ebus {
 
 /**
@@ -40,7 +42,7 @@ class AbstractClient {
   virtual void sendToClient(const std::vector<uint8_t>& data) = 0;
 
   // Logic to determine if the client wants to continue sending after a byte
-  virtual Action onBusByte(uint8_t byte) = 0;
+  virtual Action onBusByte(const BusEventContext& ctx) = 0;
 
  protected:
   void stop();
@@ -62,7 +64,7 @@ class ReadOnlyClient : public AbstractClient {
   bool recvFromClient(uint8_t& out) override;
   void sendToClient(const std::vector<uint8_t>& data) override;
 
-  Action onBusByte(uint8_t byte) override;
+  Action onBusByte(const BusEventContext& ctx) override;
 };
 
 /**
@@ -77,7 +79,7 @@ class RegularClient : public AbstractClient {
   bool recvFromClient(uint8_t& out) override;
   void sendToClient(const std::vector<uint8_t>& data) override;
 
-  Action onBusByte(uint8_t byte) override;
+  Action onBusByte(const BusEventContext& ctx) override;
 };
 
 /**
@@ -92,7 +94,7 @@ class EnhancedClient : public AbstractClient {
   bool recvFromClient(uint8_t& out) override;
   void sendToClient(const std::vector<uint8_t>& data) override;
 
-  Action onBusByte(uint8_t byte) override;
+  Action onBusByte(const BusEventContext& ctx) override;
 };
 
 std::unique_ptr<AbstractClient> createClient(int fd, Request* req,
