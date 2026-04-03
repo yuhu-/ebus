@@ -164,7 +164,8 @@ bool run_test(const TestCase& tc) {
       busRequestFlag = false;
     }
     request.run(seq[i]);
-    handler.run(seq[i]);
+    handler.run({seq[i], request.getState(), request.getResult(),
+                 request.getLockCounter(), std::chrono::steady_clock::now()});
 
     // simulte request bus timer
     if (seq[i] == ebus::sym_syn && request.busRequestPending()) {
