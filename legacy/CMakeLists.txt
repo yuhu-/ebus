@@ -5,15 +5,21 @@
 option(EBUS_BUILD_LEGACY_TESTS "Build legacy development and insight tests" OFF)
 
 macro(add_legacy_test_executable name source_file)
+    # We don't want these legacy tests to be built by default since they are not 
+    # using Catch2's test discovery and may have custom main functions. By using 
+    # EXCLUDE_FROM_ALL, we can prevent them from being built unless explicitly requested.
     # add_executable(${name} EXCLUDE_FROM_ALL ${source_file})
     add_executable(${name} ${source_file})
+    
     # Link to main ebus library
     target_link_libraries(${name} PRIVATE ebus)
+
     # Add include directories for your source and test utility headers
     target_include_directories(${name} PRIVATE
         ${PROJECT_SOURCE_DIR}/src/Ebus
         ${PROJECT_SOURCE_DIR}/tests # For TestUtils.hpp
     )
+    
     # Add a test to CTest for this executable
     add_test(NAME ${name} COMMAND ${name})
 endmacro()

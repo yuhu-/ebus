@@ -9,6 +9,11 @@ set(CMAKE_CXX_STANDARD 14)
 # Ensure all libraries and executables are built with PIC for modern linkers
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+# Option to build legacy tests with custom main functions (not using Catch2's test discovery)
+# commented out to default to ON since these tests are still being maintained and provide
+# valuable insights into the development process. They can be excluded from the build if 
+# desired by setting this option to OFF.
+# option(EBUS_BUILD_LEGACY_TESTS "Build legacy development and insight tests" OFF)
 set(EBUS_BUILD_LEGACY_TESTS ON CACHE BOOL "Build legacy tests" FORCE)
 
 # Default to Debug build if not specified

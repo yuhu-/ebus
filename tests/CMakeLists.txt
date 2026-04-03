@@ -16,13 +16,16 @@ include(Catch)
 # and then uses catch_discover_tests to find all TEST_CASEs within it.
 macro(add_catch2_test_executable name source_file)
     add_executable(${name} ${source_file})
+
     # Link to Catch2's main and main ebus library
     target_link_libraries(${name} PRIVATE ebus Catch2::Catch2WithMain)
+
     # Add include directories for source and test utility headers
     target_include_directories(${name} PUBLIC
         ${PROJECT_SOURCE_DIR}/src/Ebus
         ${PROJECT_SOURCE_DIR}/tests # For TestUtils.hpp
     )
+    
     # Discover all Catch2 tests in this executable
     catch_discover_tests(${name})
     add_test(NAME ${name} COMMAND ${name})
