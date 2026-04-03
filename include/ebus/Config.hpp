@@ -20,7 +20,7 @@ struct RuntimeConfig {
   uint32_t syn_base_ms = 50;
   uint32_t syn_tolerance_ms = 5;
   bool enable_syn = false;
-  bool syn_deterministic = true;
+  // bool syn_deterministic = true;
 };
 
 /**

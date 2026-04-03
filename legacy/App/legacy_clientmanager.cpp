@@ -27,7 +27,7 @@ void test_client_orchestration() {
   std::cout << "--- Test: ClientManager Orchestration (Regular + ReadOnly) ---"
             << std::endl;
 
-  // 1. Setup eBUS Stack
+  // Setup eBUS Stack
   ebus::Request req;
   req.setMaxLockCounter(0);
 
@@ -39,12 +39,12 @@ void test_client_orchestration() {
   ebus::BusHandler busHandler(&req, &handler, bus.getQueue());
   ebus::ClientManager manager(&bus, &busHandler, &req);
 
-  // 2. Setup Client A (Regular - Sender)
+  // Setup Client A (Regular - Sender)
   int svReg[2];
   socketpair(AF_UNIX, SOCK_STREAM, 0, svReg);
   manager.addClient(svReg[0], ebus::ClientType::Regular);
 
-  // 3. Setup Client B (ReadOnly - Observer)
+  // Setup Client B (ReadOnly - Observer)
   int svRO[2];
   socketpair(AF_UNIX, SOCK_STREAM, 0, svRO);
   manager.addClient(svRO[0], ebus::ClientType::ReadOnly);
@@ -54,14 +54,11 @@ void test_client_orchestration() {
   busHandler.start();
   manager.start();
 
-  // 4. Broadcast Telegram: [33] [fe] [b5] [05] [04] [27] [00] [2d] [00] [2c]
+  // Broadcast Telegram: [33] [fe] [b5] [05] [04] [27] [00] [2d] [00] [2c]
   std::vector<uint8_t> telegram = {0x33, 0xfe, 0xb5, 0x05, 0x04,
                                    0x27, 0x00, 0x2d, 0x00, 0x2c};
 
-  // 5. Make bus available for request
-  // req.forceResultForTest(ebus::RequestResult::observeSyn);
-
-  // 6. Send from Regular Client
+  // Send from Regular Client
   send(svReg[1], &telegram[0], 1, 0);
 
   // Wait for Manager to recognize and call requestBus
@@ -71,26 +68,20 @@ void test_client_orchestration() {
   }
   run_test("Manager recognized bus request", req.busRequestPending());
 
-  // 7. Simulate arbitration success
+  // Simulate arbitration success
   uint8_t addr = req.busRequestAddress();
-  // req.forceResultForTest(ebus::RequestResult::firstWon);
   req.busRequestCompleted();
   // Manually provide the echo for the arbitration address only
   bus.writeByte(addr);
 
-  // Fix: Move the request tracker to 'observeData' for the payload phase.
-  // This ensures handleBusData treats subsequent bytes as telegram content.
-  // req.forceResultForTest(ebus::RequestResult::observeData);
-
-  // 8. Send remaining bytes. Echoes are now handled automatically by the
-  // listener!
+  // Send remaining bytes. Echoes are now handled automatically by the listener!
   for (size_t i = 1; i < telegram.size(); ++i) {
     send(svReg[1], &telegram[i], 1, 0);
     // No more bus.writeByte() here!
     usleep(10000);
   }
 
-  // 9. Verification
+  // Verification
   uint8_t bufReg[10];
   run_test("Regular client received full echo",
            read_exact(svReg[1], bufReg, 10) &&
@@ -117,10 +108,11 @@ void test_arbitration_lost() {
   // 1. Setup eBUS Stack
   ebus::Request req;
   req.setMaxLockCounter(0);
-  req.reset();  // Ensure we're in a clean state before the test starts
+
   ebus::busConfig config = {.device = "/dev/null", .simulate = true};
   ebus::RuntimeConfig runtime{
       .address = 0x01, .window = 50, .offset = 5, .enable_syn = false};
+      
   ebus::Bus bus(config, runtime, &req);
   ebus::Handler handler(runtime.address, &bus, &req);
   ebus::BusHandler busHandler(&req, &handler, bus.getQueue());
@@ -192,35 +184,6 @@ void test_arbitration_lost() {
   close(svReg[1]);
   close(svRO[1]);
   close(svEnh[1]);
-}
-
-void test_client_removal() {
-  std::cout << "--- Test: Client Removal ---" << std::endl;
-  ebus::Request req;
-  ebus::busConfig config = {.device = "/dev/null", .simulate = true};
-  ebus::RuntimeConfig runtime{
-      .address = 0xff, .window = 50, .offset = 5, .enable_syn = false};
-  ebus::Bus bus(config, runtime, &req);
-  ebus::BusHandler busHandler(&req, nullptr, bus.getQueue());
-  ebus::ClientManager manager(&bus, &busHandler, &req);
-
-  int sv[2];
-  socketpair(AF_UNIX, SOCK_STREAM, 0, sv);
-  manager.addClient(sv[1], ebus::ClientType::Regular);
-
-  // Closing the other end should trigger disconnected state
-  close(sv[0]);
-
-  // Feed some data to trigger the cleanup loop in manager
-  bus.writeByte(0xAA);
-  manager.start();
-  usleep(20000);
-
-  // If we reach here without a hang or crash, cleanup logic worked
-  run_test("Manager handled closed socket", true);
-
-  manager.stop();
-  close(sv[1]);
 }
 
 void test_enhanced_active_sending() {
@@ -409,13 +372,42 @@ void test_client_timeout() {
   close(sv[1]);
 }
 
+void test_client_removal() {
+  std::cout << "--- Test: Client Removal ---" << std::endl;
+  ebus::Request req;
+  ebus::busConfig config = {.device = "/dev/null", .simulate = true};
+  ebus::RuntimeConfig runtime{
+      .address = 0xff, .window = 50, .offset = 5, .enable_syn = false};
+  ebus::Bus bus(config, runtime, &req);
+  ebus::BusHandler busHandler(&req, nullptr, bus.getQueue());
+  ebus::ClientManager manager(&bus, &busHandler, &req);
+
+  int sv[2];
+  socketpair(AF_UNIX, SOCK_STREAM, 0, sv);
+  manager.addClient(sv[1], ebus::ClientType::Regular);
+
+  // Closing the other end should trigger disconnected state
+  close(sv[0]);
+
+  // Feed some data to trigger the cleanup loop in manager
+  bus.writeByte(0xAA);
+  manager.start();
+  usleep(20000);
+
+  // If we reach here without a hang or crash, cleanup logic worked
+  run_test("Manager handled closed socket", true);
+
+  manager.stop();
+  close(sv[1]);
+}
+
 int main() {
-  // test_client_orchestration();
+  test_client_orchestration();
   test_arbitration_lost();
-  // test_enhanced_active_sending();
-  // test_enhanced_arbitration_lost();
-  // test_client_timeout();
-  // test_client_removal();
+  test_enhanced_active_sending();
+  test_enhanced_arbitration_lost();
+  test_client_timeout();
+  test_client_removal();
 
   std::cout << "\nAll ClientManager integration tests passed!" << std::endl;
   return 0;

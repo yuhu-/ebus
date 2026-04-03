@@ -112,16 +112,9 @@ bool run_test(const TestCase& tc, ebus::Bus& bus, ebus::Handler& handler,
 }
 
 void test_integration_vectors() {
-  ebus::busConfig config;
-  config.device = "/dev/null";
-  config.simulate = true;
-
-  ebus::RuntimeConfig runtime;
-  runtime.address = 0x01;  // Lower address = faster SYN generation (~65ms)
-  runtime.window = 50;
-  runtime.offset = 5;
-  runtime.enable_syn = true;
-  runtime.syn_deterministic = true;
+  ebus::busConfig config = {.device = "/dev/null", .simulate = true};
+  ebus::RuntimeConfig runtime = {
+      .address = 0xff, .window = 50, .offset = 5, .enable_syn = true};
 
   ebus::Request request;
   request.setMaxLockCounter(0);  // Bypass lock for deterministic testing

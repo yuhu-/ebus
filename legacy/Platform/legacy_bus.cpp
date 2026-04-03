@@ -37,11 +37,8 @@ void run_test(const std::string& name, bool condition) {
 void test_syn_timing() {
   std::cout << "\n=== Test: SYN Timing Logic ===" << std::endl;
   ebus::busConfig config = {.device = "/dev/null", .simulate = true};
-  ebus::RuntimeConfig runtime{.address = 0x01,
-                              .window = 50,
-                              .offset = 5,
-                              .enable_syn = true,
-                              .syn_deterministic = true};
+  ebus::RuntimeConfig runtime{
+      .address = 0x01, .window = 50, .offset = 5, .enable_syn = true};
   ebus::Request req;
   ebus::Bus bus(config, runtime, &req);
   auto* queue = bus.getQueue();
@@ -94,11 +91,8 @@ void test_syn_timing() {
 
 void test_basic_communication() {
   ebus::busConfig config = {.device = "/dev/null", .simulate = true};
-  ebus::RuntimeConfig runtime{.address = 0x01,
-                              .window = 50,
-                              .offset = 5,
-                              .enable_syn = true,
-                              .syn_deterministic = true};
+  ebus::RuntimeConfig runtime{
+      .address = 0x01, .window = 50, .offset = 5, .enable_syn = true};
 
   ebus::Request req;
   ebus::Bus bus(config, runtime, &req);
@@ -152,11 +146,8 @@ void test_raw_reception() {
   std::cout << "\n=== Test: Raw Reception (Broadcast Simulation) ==="
             << std::endl;
   ebus::busConfig config = {.device = "/dev/null", .simulate = true};
-  ebus::RuntimeConfig runtime{.address = 0x01,
-                              .window = 50,
-                              .offset = 5,
-                              .enable_syn = false,
-                              .syn_deterministic = false};
+  ebus::RuntimeConfig runtime{
+      .address = 0x01, .window = 50, .offset = 5, .enable_syn = false};
 
   ebus::Request req;
   ebus::Bus bus(config, runtime, &req);

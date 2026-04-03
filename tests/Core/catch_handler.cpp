@@ -65,11 +65,8 @@ SCENARIO("Handler processes eBUS messages correctly", "[core][handler]") {
       WHEN(tc.description) {
         ebus::Request request;
         ebus::busConfig config = {.device = "/dev/null", .simulate = true};
-        ebus::RuntimeConfig runtime{.address = 0x33,
-                                    .window = 50,
-                                    .offset = 5,
-                                    .enable_syn = true,
-                                    .syn_deterministic = true};
+        ebus::RuntimeConfig runtime{
+            .address = 0x33, .window = 50, .offset = 5, .enable_syn = true};
         ebus::Bus bus(config, runtime, &request);
         ebus::Handler handler(runtime.address, &bus, &request);
 
