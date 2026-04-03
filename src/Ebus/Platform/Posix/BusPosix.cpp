@@ -144,13 +144,12 @@ void ebus::BusPosix::setOffset(const uint16_t offset) {
 }
 
 void ebus::BusPosix::setRuntimeConfig(const RuntimeConfig& runtime) {
-  bool wasEnabled;
-  bool shouldStart = false;
+    bool shouldStart = false;
   bool shouldStop = false;
 
   {
     std::lock_guard<std::mutex> lock(synMutex_);
-    wasEnabled = runtime_.enable_syn;
+    bool wasEnabled = runtime_.enable_syn;
     runtime_ = runtime;
 
     // Always recalculate timing durations based on the new configuration
