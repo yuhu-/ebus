@@ -6,6 +6,13 @@
 #include "App/ClientManager.hpp"
 
 #include <algorithm>
+#include <iostream>
+
+#if defined(ESP32)
+#include <lwip/sockets.h>
+#elif defined(POSIX)
+#include <poll.h>
+#endif
 
 #include "Utils/Common.hpp"
 
@@ -63,13 +70,26 @@ void ebus::ClientManager::run() {
   std::shared_ptr<AbstractClient> activeClient = nullptr;
   BusState busState = BusState::Idle;
 
+  std::vector<pollfd> pollFds;
+  const int nextTimeout = 10;  // 10ms default timeout for bus responsiveness
+
   while (running_) {
+    bool activity = false;
+
     // Refresh the client cache only if the registry changed
-    // (add/remove/disconnect)
     if (registryDirty_.load(std::memory_order_acquire)) {
       std::lock_guard<std::mutex> lock(mutex_);
       clientsCache_ = clients_;
       registryDirty_.store(false, std::memory_order_release);
+
+      // Rebuild the poll descriptors for the current session
+      pollFds.clear();
+      for (auto& client : clientsCache_) {
+        pollfd pfd;
+        pfd.fd = client->getFd();
+        pfd.events = POLLIN;
+        pollFds.push_back(pfd);
+      }
     }
 
     {
@@ -81,6 +101,7 @@ void ebus::ClientManager::run() {
             activeClient = client;
             busState = BusState::Request;
             busRequested_ = false;
+            activity = true;
             lastActivityTime_ = std::chrono::steady_clock::now();
             break;
           }
@@ -106,6 +127,7 @@ void ebus::ClientManager::run() {
         if (activeClient->readByte(firstByte)) {
           request_->requestBus(firstByte, true);
           busState = BusState::Response;
+          activity = true;
           lastActivityTime_ = std::chrono::steady_clock::now();
         }
       }
@@ -117,26 +139,43 @@ void ebus::ClientManager::run() {
       if (activeClient->readByte(sendByte)) {
         bus_->writeByte(sendByte);
         busState = BusState::Response;
+        activity = true;
         lastActivityTime_ = std::chrono::steady_clock::now();
       }
     }
 
-    processBusBytes(activeClient, busState);
+    if (processBusBytes(activeClient, busState)) {
+      activity = true;
+      lastActivityTime_ = std::chrono::steady_clock::now();
+    }
 
-    // TODO check if this is needed, because the syn byte should
-    // already provide a natural pacing for the loop. If not needed,
-    // removing this would reduce latency and improve responsiveness.
-    // The syn byte is the slowest symbol on the bus, so if we can process it
-    // faster than it arrives, we can react to bus events more quickly.
-    sleep_ms(1);
+    // Efficient wait: Only wait if we haven't done any work this iteration
+    // and there is nothing immediately pending in the bus queue.
+    if (!activity && busByteQueue_.size() == 0) {
+      // We use a small timeout (10ms) to ensure the manager still reacts
+      // to bus events even if no client sends data.
+      if (!pollFds.empty()) {
+#if defined(ESP32)
+        // Note: poll() on ESP32 is a wrapper around select() in LWIP
+        poll(pollFds.data(), pollFds.size(), nextTimeout);
+#elif defined(POSIX)
+        poll(pollFds.data(), pollFds.size(), nextTimeout);
+#endif
+      } else {
+        // No clients connected? Just sleep to prevent busy loop
+        sleep_ms(nextTimeout);
+      }
+    }
   }
 }
 
-void ebus::ClientManager::processBusBytes(
+bool ebus::ClientManager::processBusBytes(
     std::shared_ptr<AbstractClient>& activeClient, BusState& busState) {
   uint8_t byte = 0;
+  bool processed = false;
 
   while (busByteQueue_.try_pop(byte)) {
+    processed = true;
     bool handledByActive = false;
     std::shared_ptr<AbstractClient> currentActive;
     {
@@ -157,8 +196,8 @@ void ebus::ClientManager::processBusBytes(
             busRequested_ = false;
             request_->reset();
           } else {
-            // Only allow transition to Transmit if the arbitration phase
-            // is fully finished (no longer pending a first or second try).
+            // Arbitration or Payload byte processed: ready for next client
+            // transmission.
             if (!request_->busRequestPending()) {
               busState = BusState::Transmit;
             }
@@ -200,4 +239,5 @@ void ebus::ClientManager::processBusBytes(
     }
   }
   clients_.erase(it, clients_.end());
+  return processed;
 }

@@ -56,7 +56,7 @@ class ClientManager {
   std::chrono::milliseconds activeTimeout_;
 
   void run();
-  void processBusBytes(std::shared_ptr<AbstractClient>& activeClient,
+  bool processBusBytes(std::shared_ptr<AbstractClient>& activeClient,
                        BusState& busState);
 };
 

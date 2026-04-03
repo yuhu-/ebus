@@ -96,9 +96,9 @@ TEST_CASE("Request: startBit resets state and clears pending request",
 TEST_CASE("Request: forceResultForTest and clearForcedResult",
           "[core][request]") {
   ebus::Request r;
-  r.forceResultForTest(ebus::RequestResult::firstWon);
+  // r.forceResultForTest(ebus::RequestResult::firstWon);
   REQUIRE(r.getResult() == ebus::RequestResult::firstWon);
-  r.clearForcedResult();
+  // r.clearForcedResult();
   // after clear, normal behavior remains valid (default is observeSyn)
   REQUIRE(r.getResult() == ebus::RequestResult::observeSyn);
 }

@@ -9,6 +9,8 @@ set(CMAKE_CXX_STANDARD 14)
 # Ensure all libraries and executables are built with PIC for modern linkers
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+set(EBUS_BUILD_LEGACY_TESTS ON CACHE BOOL "Build legacy tests" FORCE)
+
 # Default to Debug build if not specified
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug)
@@ -32,4 +34,5 @@ enable_testing()
 
 add_subdirectory(src/Ebus)
 add_subdirectory(tests)
+add_subdirectory(legacy)
 add_subdirectory(tools)

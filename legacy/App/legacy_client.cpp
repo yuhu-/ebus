@@ -89,9 +89,9 @@ void test_enhanced_client_responses() {
   read_exact(sv[1], (uint8_t*)buffer, GREETING_STR.length());
 
   // Fix: Force the request result instead of driving the state machine
-  req.forceResultForTest(ebus::RequestResult::firstWon);
+  // req.forceResultForTest(ebus::RequestResult::firstWon);
   client.onBusByte(0x33);
-  req.clearForcedResult();
+  // req.clearForcedResult();
 
   // Verify RESP_STARTED (Logical 0x02, val 0x33 -> Encoded 0xc8, 0xb3)
   uint8_t resp[2];
@@ -99,18 +99,18 @@ void test_enhanced_client_responses() {
            read_exact(sv[1], resp, 2) && resp[0] == 0xc8 && resp[1] == 0xb3);
 
   // Test: handleBusData mapping for observation (Short Form < 0x80)
-  req.forceResultForTest(ebus::RequestResult::observeData);
+  // req.forceResultForTest(ebus::RequestResult::observeData);
   client.onBusByte(0x15);
-  req.clearForcedResult();
+  // req.clearForcedResult();
 
   uint8_t short_resp;
   run_test("Received short form RESP_RECEIVED",
            read_exact(sv[1], &short_resp, 1) && short_resp == 0x15);
 
   // Test: handleBusData mapping for observation (Long Form >= 0x80)
-  req.forceResultForTest(ebus::RequestResult::observeData);
+  // req.forceResultForTest(ebus::RequestResult::observeData);
   client.onBusByte(0xaa);
-  req.clearForcedResult();
+  // req.clearForcedResult();
 
   run_test("Received encoded long RESP_RECEIVED",
            read_exact(sv[1], resp, 2) && resp[0] == 0xc6 && resp[1] == 0xaa);

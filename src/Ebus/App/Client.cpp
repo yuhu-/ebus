@@ -11,7 +11,7 @@
 
 #if defined(ESP32)
 #include <lwip/sockets.h>
-#else
+#elif defined(POSIX)
 #include <sys/socket.h>
 #include <unistd.h>
 #endif
@@ -47,7 +47,14 @@ bool ebus::ReadOnlyClient::available() { return false; }
 
 bool ebus::ReadOnlyClient::readByte(uint8_t&) { return false; }
 
-void ebus::ReadOnlyClient::writeBytes(const std::vector<uint8_t>&) {}
+void ebus::ReadOnlyClient::writeBytes(const std::vector<uint8_t>& data) {
+  if (fd_ < 0 || data.empty()) return;
+  if (send(fd_, data.data(), data.size(), MSG_DONTWAIT) < 0) {
+    if (errno != EAGAIN && errno != EWOULDBLOCK) {
+      stop();
+    }
+  }
+}
 
 ebus::Action ebus::ReadOnlyClient::onBusByte(uint8_t) { return Action::Stop; }
 
@@ -64,7 +71,12 @@ bool ebus::RegularClient::readByte(uint8_t& out) {
 }
 
 void ebus::RegularClient::writeBytes(const std::vector<uint8_t>& data) {
-  if (fd_ >= 0) send(fd_, data.data(), data.size(), MSG_DONTWAIT);
+  if (fd_ < 0 || data.empty()) return;
+  if (send(fd_, data.data(), data.size(), MSG_DONTWAIT) < 0) {
+    if (errno != EAGAIN && errno != EWOULDBLOCK) {
+      stop();
+    }
+  }
 }
 
 ebus::Action ebus::RegularClient::onBusByte(uint8_t byte) {
@@ -138,6 +150,8 @@ bool ebus::EnhancedClient::readByte(uint8_t& out) {
       //   if (data == ebus::sym_syn) return false;
       out = data;
       return true;
+    case enhanced::CMD_INFO:
+      return false;
     default:
       break;
   }
@@ -157,11 +171,15 @@ void ebus::EnhancedClient::writeBytes(const std::vector<uint8_t>& data) {
 
   // Short form is allowed for RESP_RECEIVED notifications where value < 0x80
   if (cmd == enhanced::RESP_RECEIVED && val < 0x80) {
-    send(fd_, &val, 1, MSG_DONTWAIT);
+    if (send(fd_, &val, 1, MSG_DONTWAIT) < 0) {
+      if (errno != EAGAIN && errno != EWOULDBLOCK) stop();
+    }
   } else {
     uint8_t out[2];
     enhanced::Protocol::encode(cmd, val, out);
-    send(fd_, out, 2, MSG_DONTWAIT);
+    if (send(fd_, out, 2, MSG_DONTWAIT) < 0) {
+      if (errno != EAGAIN && errno != EWOULDBLOCK) stop();
+    }
   }
 }
 

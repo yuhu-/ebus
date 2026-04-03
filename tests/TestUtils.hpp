@@ -7,10 +7,14 @@
 
 #include <unistd.h>
 
+#include <catch2/catch_all.hpp>
 #include <cstdint>
 #include <ebus/Datatypes.hpp>
+#include <iomanip>
+#include <iostream>
 #include <string>
 #include <vector>
+#include <ebus/Definitions.hpp>
 
 #include "Core/Handler.hpp"
 
@@ -49,4 +53,59 @@ struct TestCase {
     int telegram;
     int errors;
   } expected;
+};
+
+/**
+ * ProtocolLogger: Captures eBUS traffic and state changes.
+ * In Catch2: Messages are captured via INFO() and only shown on failure.
+ * In Legacy/Dev: Messages can be forced to std::cout for real-time insights.
+ */
+class ProtocolLogger {
+ public:
+  enum class Mode {
+    CatchOnly,  // Only uses Catch2 INFO (silent unless test fails)
+    DevTrace    // Synchronous stdout (like legacy tests)
+  };
+
+  ProtocolLogger(ebus::Bus* bus, ebus::Handler* handler,
+                 Mode mode = Mode::CatchOnly)
+      : mode_(mode) {
+    if (bus) {
+      bus->addWriteListener([this](const uint8_t& b) { log("<- write", b); });
+      bus->addReadListener([this](const uint8_t& b) { log("->  read", b); });
+    }
+    if (handler) {
+      handler->setTelegramCallback(
+          [this](const ebus::MessageType& mt, const ebus::TelegramType& tt,
+                 const std::vector<uint8_t>& m, const std::vector<uint8_t>& s) {
+            logTelegram(mt, tt, m, s);
+          });
+    }
+  }
+
+ private:
+  void log(const std::string& prefix, uint8_t byte) {
+    std::string msg = prefix + ": " + ebus::to_string(byte);
+    if (mode_ == Mode::DevTrace) {
+      std::cout << "[TRACE] " << msg << std::endl;
+    }
+    // This remains visible in Catch2 metadata if the test fails
+    UNSCOPED_INFO(msg);
+  }
+
+  void logTelegram(const ebus::MessageType& mt, const ebus::TelegramType& tt,
+                   const std::vector<uint8_t>& m,
+                   const std::vector<uint8_t>& s) {
+    std::stringstream ss;
+    ss << "Telegram [" << (mt == ebus::MessageType::active ? "Active" : "Passive")
+       << "] Type: " << static_cast<int>(tt) << " Master: " << ebus::to_string(m)
+       << " Slave: " << ebus::to_string(s);
+
+    if (mode_ == Mode::DevTrace) {
+      std::cout << "\033[1;32m[LOG] " << ss.str() << "\033[0m" << std::endl;
+    }
+    UNSCOPED_INFO(ss.str());
+  }
+
+  Mode mode_;
 };

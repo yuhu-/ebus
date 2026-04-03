@@ -40,9 +40,46 @@ The library includes a unified telemetry system accessible via `Controller::getM
 
 **playground**: A developer sandbox for testing library features and protocol edge cases.
 
-### Build
+### Building the Project
 
-Compilation requires CMake and a C++ compiler (tested on GCC) with C++14 support. 
+To build the library and the modern test suite:
+
+```bash
+mkdir build && cd build
+cmake ..
+make
+```
+
+### Running Tests
+
+Modern unit tests are built using [Catch2](https://github.com/catchorg/Catch2). You can run them using `ctest`:
+
+```bash
+cd build
+ctest
+```
+
+### Legacy Development Tests
+
+The project includes a collection of legacy tests used during development. These tests often provide detailed protocol traces and insights that are useful for debugging complex arbitration or timing issues.
+
+These tests are excluded from the default build to keep build times fast. To enable them, use the `EBUS_BUILD_LEGACY_TESTS` CMake option:
+
+```bash
+cmake -DEBUS_BUILD_LEGACY_TESTS=ON ..
+```
+
+Even when enabled, these tests are marked as `EXCLUDE_FROM_ALL`, meaning they won't all be compiled by a generic `make` command. You can build and run a specific insight test by its target name:
+
+```bash
+make test_request
+./legacy/test_request
+```
+
+Commonly used legacy tests:
+* `test_request`: Detailed arbitration FSM transitions.
+* `test_bushandler`: Telegram parsing and callback logic.
+* `test_scheduler`: Master scheduling behavior.
 
 
 For reporting bugs and requesting features, please use the GitHub [Issues](https://github.com/yuhu-/ebus/issues) page.

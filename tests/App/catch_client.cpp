@@ -69,9 +69,9 @@ TEST_CASE("EnhancedClient: Encoded responses mapping",
   REQUIRE(read_exact(sv[1], (uint8_t*)buffer, GREETING_STR.length()));
 
   // Force request result for deterministic tests
-  req.forceResultForTest(ebus::RequestResult::firstWon);
+//   req.forceResultForTest(ebus::RequestResult::firstWon);
   client.onBusByte(0x33);
-  req.clearForcedResult();
+//   req.clearForcedResult();
 
   uint8_t resp[2];
   REQUIRE(read_exact(sv[1], resp, 2));
@@ -79,18 +79,18 @@ TEST_CASE("EnhancedClient: Encoded responses mapping",
   REQUIRE(resp[1] == 0xb3);
 
   // Short-form observation
-  req.forceResultForTest(ebus::RequestResult::observeData);
+//   req.forceResultForTest(ebus::RequestResult::observeData);
   client.onBusByte(0x15);
-  req.clearForcedResult();
+//   req.clearForcedResult();
 
   uint8_t short_resp;
   REQUIRE(read_exact(sv[1], &short_resp, 1));
   REQUIRE(short_resp == 0x15);
 
   // Long-form observation (>= 0x80) should be encoded
-  req.forceResultForTest(ebus::RequestResult::observeData);
+//   req.forceResultForTest(ebus::RequestResult::observeData);
   client.onBusByte(0xaa);
-  req.clearForcedResult();
+//   req.clearForcedResult();
 
   REQUIRE(read_exact(sv[1], resp, 2));
   REQUIRE(resp[0] == 0xc6);
