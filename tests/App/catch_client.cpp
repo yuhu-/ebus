@@ -14,6 +14,20 @@
 #include "Core/Request.hpp"
 #include "TestUtils.hpp"
 
+TEST_CASE("ReadOnlyClient: capability checks", "[app][client][readonly]") {
+  int sv[2];
+  REQUIRE(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
+
+  ebus::Request req;
+  ebus::ReadOnlyClient client(sv[0], &req);
+
+  REQUIRE(!client.isWriteCapable());
+  REQUIRE(!client.available());
+
+  close(sv[0]);
+  close(sv[1]);
+}
+
 TEST_CASE("EnhancedClient: Protocol basics", "[app][client][enhanced]") {
   int sv[2];
   REQUIRE(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
@@ -29,22 +43,22 @@ TEST_CASE("EnhancedClient: Protocol basics", "[app][client][enhanced]") {
   uint8_t out;
   uint8_t data = 0x15;
   send(sv[1], &data, 1, 0);
-  REQUIRE(client.readByte(out));
+  REQUIRE(client.recvFromClient(out));
   REQUIRE(out == 0x15);
 
   // Enhanced escape sequence (CMD_SEND 0x01, value 0xaa)
   uint8_t escaped[2];
   encode_enhanced(0x01, 0xaa, escaped);
   send(sv[1], escaped, 2, 0);
-  REQUIRE(client.readByte(out));
+  REQUIRE(client.recvFromClient(out));
   REQUIRE(out == 0xaa);
 
-  // CMD_INIT should cause readByte to return false and client to send
+  // CMD_INIT should cause recvFromClient to return false and client to send
   // RESP_RESETTED
   uint8_t init_cmd[2];
   encode_enhanced(0x00, 0x00, init_cmd);
   send(sv[1], init_cmd, 2, 0);
-  REQUIRE(!client.readByte(out));
+  REQUIRE(!client.recvFromClient(out));
 
   uint8_t init_resp[2];
   REQUIRE(read_exact(sv[1], init_resp, 2));
@@ -68,47 +82,33 @@ TEST_CASE("EnhancedClient: Encoded responses mapping",
   char buffer[64];
   REQUIRE(read_exact(sv[1], (uint8_t*)buffer, GREETING_STR.length()));
 
-  // Force request result for deterministic tests
-//   req.forceResultForTest(ebus::RequestResult::firstWon);
+  // 1. Test: Arbitration Win
+  if (req.busAvailable()) req.requestBus(0x33, true);
+  req.busRequestCompleted();
+  req.run(0x33); // Move FSM to firstWon
+
   client.onBusByte(0x33);
-//   req.clearForcedResult();
 
   uint8_t resp[2];
   REQUIRE(read_exact(sv[1], resp, 2));
   REQUIRE(resp[0] == 0xc8);
   REQUIRE(resp[1] == 0xb3);
 
-  // Short-form observation
-//   req.forceResultForTest(ebus::RequestResult::observeData);
+  // 2. Test: Short-form observation
+  req.run(0x15); // Move FSM to observeData
   client.onBusByte(0x15);
-//   req.clearForcedResult();
 
   uint8_t short_resp;
   REQUIRE(read_exact(sv[1], &short_resp, 1));
   REQUIRE(short_resp == 0x15);
 
-  // Long-form observation (>= 0x80) should be encoded
-//   req.forceResultForTest(ebus::RequestResult::observeData);
+  // 3. Test: Long-form observation (>= 0x80) should be encoded
+  req.run(0xaa); // Move FSM to observeSyn
   client.onBusByte(0xaa);
-//   req.clearForcedResult();
 
   REQUIRE(read_exact(sv[1], resp, 2));
   REQUIRE(resp[0] == 0xc6);
   REQUIRE(resp[1] == 0xaa);
-
-  close(sv[0]);
-  close(sv[1]);
-}
-
-TEST_CASE("ReadOnlyClient: capability checks", "[app][client][readonly]") {
-  int sv[2];
-  REQUIRE(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
-
-  ebus::Request req;
-  ebus::ReadOnlyClient client(sv[0], &req);
-
-  REQUIRE(!client.isWriteCapable());
-  REQUIRE(!client.available());
 
   close(sv[0]);
   close(sv[1]);
@@ -132,7 +132,7 @@ TEST_CASE("EnhancedClient: Invalid protocol handling",
   // Invalid first-byte prefix
   uint8_t invalid_b1_prefix[] = {0x80, 0xAA};
   send(sv[1], invalid_b1_prefix, 2, 0);
-  REQUIRE(!client.readByte(out));
+  REQUIRE(!client.recvFromClient(out));
   REQUIRE(!client.isConnected());
   REQUIRE(read_exact(sv[1], err_resp, 2));
   REQUIRE(err_resp[0] == 0xf0);
@@ -148,7 +148,7 @@ TEST_CASE("EnhancedClient: Invalid protocol handling",
 
   uint8_t invalid_b2_prefix[] = {0xC6, 0x00};
   send(sv[1], invalid_b2_prefix, 2, 0);
-  REQUIRE(!client2.readByte(out));
+  REQUIRE(!client2.recvFromClient(out));
   REQUIRE(!client2.isConnected());
   REQUIRE(read_exact(sv[1], err_resp, 2));
   REQUIRE(err_resp[0] == 0xf0);

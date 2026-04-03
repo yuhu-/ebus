@@ -45,9 +45,9 @@ ebus::ReadOnlyClient::ReadOnlyClient(int fd, Request* request)
 
 bool ebus::ReadOnlyClient::available() { return false; }
 
-bool ebus::ReadOnlyClient::readByte(uint8_t&) { return false; }
+bool ebus::ReadOnlyClient::recvFromClient(uint8_t&) { return false; }
 
-void ebus::ReadOnlyClient::writeBytes(const std::vector<uint8_t>& data) {
+void ebus::ReadOnlyClient::sendToClient(const std::vector<uint8_t>& data) {
   if (fd_ < 0 || data.empty()) return;
   if (send(fd_, data.data(), data.size(), MSG_DONTWAIT) < 0) {
     if (errno != EAGAIN && errno != EWOULDBLOCK) {
@@ -66,11 +66,11 @@ bool ebus::RegularClient::available() {
   return recv(fd_, &dummy, 1, MSG_PEEK | MSG_DONTWAIT) > 0;
 }
 
-bool ebus::RegularClient::readByte(uint8_t& out) {
+bool ebus::RegularClient::recvFromClient(uint8_t& out) {
   return recv(fd_, &out, 1, MSG_DONTWAIT) == 1;
 }
 
-void ebus::RegularClient::writeBytes(const std::vector<uint8_t>& data) {
+void ebus::RegularClient::sendToClient(const std::vector<uint8_t>& data) {
   if (fd_ < 0 || data.empty()) return;
   if (send(fd_, data.data(), data.size(), MSG_DONTWAIT) < 0) {
     if (errno != EAGAIN && errno != EWOULDBLOCK) {
@@ -90,7 +90,7 @@ ebus::Action ebus::RegularClient::onBusByte(uint8_t byte) {
     case RequestResult::secondError:
       return Action::Stop;
     case RequestResult::observeData:
-      writeBytes({byte});
+      sendToClient({byte});
       return Action::Continue;
     case RequestResult::firstSyn:
     case RequestResult::firstRetry:
@@ -99,7 +99,7 @@ ebus::Action ebus::RegularClient::onBusByte(uint8_t byte) {
       return Action::Continue;
     case RequestResult::firstWon:
     case RequestResult::secondWon:
-      writeBytes({byte});
+      sendToClient({byte});
       return Action::Continue;
     default:
       break;
@@ -118,7 +118,7 @@ bool ebus::EnhancedClient::available() {
   return recv(fd_, &dummy, 1, MSG_PEEK | MSG_DONTWAIT) > 0;
 }
 
-bool ebus::EnhancedClient::readByte(uint8_t& out) {
+bool ebus::EnhancedClient::recvFromClient(uint8_t& out) {
   uint8_t b1;
   if (recv(fd_, &b1, 1, MSG_PEEK | MSG_DONTWAIT) != 1) return false;
 
@@ -131,7 +131,7 @@ bool ebus::EnhancedClient::readByte(uint8_t& out) {
   recv(fd_, buf, 2, MSG_DONTWAIT);
 
   if (!enhanced::Protocol::isValidSequence(buf[0], buf[1])) {
-    writeBytes({enhanced::RESP_ERROR_HOST, enhanced::ERR_FRAMING});
+    sendToClient({enhanced::RESP_ERROR_HOST, enhanced::ERR_FRAMING});
     stop();
     return false;
   }
@@ -141,7 +141,7 @@ bool ebus::EnhancedClient::readByte(uint8_t& out) {
 
   switch (cmd) {
     case enhanced::CMD_INIT:
-      writeBytes({enhanced::RESP_RESETTED, 0x0});
+      sendToClient({enhanced::RESP_RESETTED, 0x0});
       return false;
     case enhanced::CMD_SEND:
       out = data;
@@ -158,13 +158,17 @@ bool ebus::EnhancedClient::readByte(uint8_t& out) {
   return false;
 }
 
-void ebus::EnhancedClient::writeBytes(const std::vector<uint8_t>& data) {
+void ebus::EnhancedClient::sendToClient(const std::vector<uint8_t>& data) {
   if (fd_ < 0 || data.empty()) return;
 
-  uint8_t cmd = enhanced::RESP_RECEIVED;
-  uint8_t val = data[0];
+  uint8_t cmd;
+  uint8_t val;
 
-  if (data.size() == 2) {
+  if (data.size() == 1) {
+    // Single byte from broadcast loop: always a received notification
+    cmd = enhanced::RESP_RECEIVED;
+    val = data[0];
+  } else {
     cmd = data[0];
     val = data[1];
   }
@@ -186,18 +190,18 @@ void ebus::EnhancedClient::writeBytes(const std::vector<uint8_t>& data) {
 ebus::Action ebus::EnhancedClient::onBusByte(uint8_t byte) {
   // Handle bus response according to last command
   switch (request_->getResult()) {
-    case RequestResult::observeSyn:
     case RequestResult::firstLost:
     case RequestResult::secondLost:
-      writeBytes({enhanced::RESP_FAILED, byte});
+      sendToClient({enhanced::RESP_FAILED, byte});
       return Action::Stop;
     case RequestResult::firstError:
     case RequestResult::retryError:
     case RequestResult::secondError:
-      writeBytes({enhanced::RESP_ERROR_EBUS, enhanced::ERR_FRAMING});
+      sendToClient({enhanced::RESP_ERROR_EBUS, enhanced::ERR_FRAMING});
       return Action::Stop;
+    case RequestResult::observeSyn:
     case RequestResult::observeData:
-      writeBytes({enhanced::RESP_RECEIVED, byte});
+      sendToClient({enhanced::RESP_RECEIVED, byte});
       return Action::Continue;
     case RequestResult::firstSyn:
     case RequestResult::firstRetry:
@@ -206,7 +210,7 @@ ebus::Action ebus::EnhancedClient::onBusByte(uint8_t byte) {
       return Action::Continue;
     case RequestResult::firstWon:
     case RequestResult::secondWon:
-      writeBytes({enhanced::RESP_STARTED, byte});
+      sendToClient({enhanced::RESP_STARTED, byte});
       return Action::Continue;
     default:
       break;

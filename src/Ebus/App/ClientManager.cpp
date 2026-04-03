@@ -124,7 +124,7 @@ void ebus::ClientManager::run() {
     if (activeClient && busState == BusState::Request) {
       if (request_->busAvailable()) {
         uint8_t firstByte = 0;
-        if (activeClient->readByte(firstByte)) {
+        if (activeClient->recvFromClient(firstByte)) {
           request_->requestBus(firstByte, true);
           busState = BusState::Response;
           activity = true;
@@ -136,7 +136,7 @@ void ebus::ClientManager::run() {
     // Transmit to bus once arbitration is won
     if (activeClient && busState == BusState::Transmit) {
       uint8_t sendByte = 0;
-      if (activeClient->readByte(sendByte)) {
+      if (activeClient->recvFromClient(sendByte)) {
         bus_->writeByte(sendByte);
         busState = BusState::Response;
         activity = true;
@@ -214,7 +214,7 @@ bool ebus::ClientManager::processBusBytes(
         continue;
       }
       if (client->isConnected()) {
-        client->writeBytes({byte});
+        client->sendToClient({byte});
       }
     }
   }
