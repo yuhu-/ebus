@@ -6,6 +6,7 @@
 #pragma once
 
 #include <array>
+#include <chrono>
 #include <atomic>
 #include <cmath>
 #include <cstdint>
@@ -51,6 +52,17 @@ static const char* getRequestResultText(RequestResult result) {
                           "secondWon",  "secondLost",  "secondError"};
   return values[static_cast<int>(result)];
 }
+
+/**
+ * Snapshot of the eBUS FSM state at the moment a byte was processed.
+ */
+struct BusEventContext {
+  uint8_t byte;
+  RequestState state;
+  RequestResult result;
+  uint8_t lockCounter;
+  std::chrono::steady_clock::time_point timestamp;
+};
 
 using BusRequestedCallback = std::function<void()>;
 using StartBitCallback = std::function<void()>;
