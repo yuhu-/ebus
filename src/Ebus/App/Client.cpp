@@ -45,7 +45,10 @@ ebus::ReadOnlyClient::ReadOnlyClient(int fd, Request* request)
 
 bool ebus::ReadOnlyClient::available() { return false; }
 
-bool ebus::ReadOnlyClient::recvFromClient(uint8_t&) { return false; }
+bool ebus::ReadOnlyClient::recvFromClient(uint8_t& out) {
+  (void)out;  // unused
+  return false;
+}
 
 void ebus::ReadOnlyClient::sendToClient(const std::vector<uint8_t>& data) {
   if (fd_ < 0 || data.empty()) return;
@@ -56,7 +59,10 @@ void ebus::ReadOnlyClient::sendToClient(const std::vector<uint8_t>& data) {
   }
 }
 
-ebus::Action ebus::ReadOnlyClient::onBusByte(uint8_t) { return Action::Stop; }
+ebus::Action ebus::ReadOnlyClient::onBusByte(const BusEventContext& ctx) {
+  (void)ctx;  // unused
+  return Action::Stop;
+}
 
 ebus::RegularClient::RegularClient(int fd, Request* request)
     : AbstractClient(fd, request, true) {}
@@ -79,9 +85,9 @@ void ebus::RegularClient::sendToClient(const std::vector<uint8_t>& data) {
   }
 }
 
-ebus::Action ebus::RegularClient::onBusByte(uint8_t byte) {
+ebus::Action ebus::RegularClient::onBusByte(const BusEventContext& ctx) {
   // Handle bus response according to last command
-  switch (request_->getResult()) {
+  switch (ctx.result) {
     case RequestResult::observeSyn:
     case RequestResult::firstLost:
     case RequestResult::firstError:
@@ -90,7 +96,7 @@ ebus::Action ebus::RegularClient::onBusByte(uint8_t byte) {
     case RequestResult::secondError:
       return Action::Stop;
     case RequestResult::observeData:
-      sendToClient({byte});
+      sendToClient({ctx.byte});
       return Action::Continue;
     case RequestResult::firstSyn:
     case RequestResult::firstRetry:
@@ -99,7 +105,7 @@ ebus::Action ebus::RegularClient::onBusByte(uint8_t byte) {
       return Action::Continue;
     case RequestResult::firstWon:
     case RequestResult::secondWon:
-      sendToClient({byte});
+      sendToClient({ctx.byte});
       return Action::Continue;
     default:
       break;
@@ -147,7 +153,8 @@ bool ebus::EnhancedClient::recvFromClient(uint8_t& out) {
       out = data;
       return true;
     case enhanced::CMD_START:
-      //   if (data == ebus::sym_syn) return false;
+      // cancle ongoing arbitration if data = sym_syn
+      //  if (data == ebus::sym_syn) return false;
       out = data;
       return true;
     case enhanced::CMD_INFO:
@@ -187,12 +194,12 @@ void ebus::EnhancedClient::sendToClient(const std::vector<uint8_t>& data) {
   }
 }
 
-ebus::Action ebus::EnhancedClient::onBusByte(uint8_t byte) {
+ebus::Action ebus::EnhancedClient::onBusByte(const BusEventContext& ctx) {
   // Handle bus response according to last command
-  switch (request_->getResult()) {
+  switch (ctx.result) {
     case RequestResult::firstLost:
     case RequestResult::secondLost:
-      sendToClient({enhanced::RESP_FAILED, byte});
+      sendToClient({enhanced::RESP_FAILED, ctx.byte});
       return Action::Stop;
     case RequestResult::firstError:
     case RequestResult::retryError:
@@ -201,7 +208,7 @@ ebus::Action ebus::EnhancedClient::onBusByte(uint8_t byte) {
       return Action::Stop;
     case RequestResult::observeSyn:
     case RequestResult::observeData:
-      sendToClient({enhanced::RESP_RECEIVED, byte});
+      sendToClient({enhanced::RESP_RECEIVED, ctx.byte});
       return Action::Continue;
     case RequestResult::firstSyn:
     case RequestResult::firstRetry:
@@ -210,7 +217,7 @@ ebus::Action ebus::EnhancedClient::onBusByte(uint8_t byte) {
       return Action::Continue;
     case RequestResult::firstWon:
     case RequestResult::secondWon:
-      sendToClient({enhanced::RESP_STARTED, byte});
+      sendToClient({enhanced::RESP_STARTED, ctx.byte});
       return Action::Continue;
     default:
       break;

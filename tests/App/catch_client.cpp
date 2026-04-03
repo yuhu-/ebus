@@ -85,9 +85,10 @@ TEST_CASE("EnhancedClient: Encoded responses mapping",
   // 1. Test: Arbitration Win
   if (req.busAvailable()) req.requestBus(0x33, true);
   req.busRequestCompleted();
-  req.run(0x33); // Move FSM to firstWon
+  req.run(0x33);  // Move FSM to firstWon
 
-  client.onBusByte(0x33);
+  client.onBusByte({0x33, req.getState(), req.getResult(), req.getLockCounter(),
+                    std::chrono::steady_clock::now()});
 
   uint8_t resp[2];
   REQUIRE(read_exact(sv[1], resp, 2));
@@ -95,16 +96,18 @@ TEST_CASE("EnhancedClient: Encoded responses mapping",
   REQUIRE(resp[1] == 0xb3);
 
   // 2. Test: Short-form observation
-  req.run(0x15); // Move FSM to observeData
-  client.onBusByte(0x15);
+  req.run(0x15);  // Move FSM to observeData
+  client.onBusByte({0x15, req.getState(), req.getResult(), req.getLockCounter(),
+                    std::chrono::steady_clock::now()});
 
   uint8_t short_resp;
   REQUIRE(read_exact(sv[1], &short_resp, 1));
   REQUIRE(short_resp == 0x15);
 
   // 3. Test: Long-form observation (>= 0x80) should be encoded
-  req.run(0xaa); // Move FSM to observeSyn
-  client.onBusByte(0xaa);
+  req.run(0xaa);  // Move FSM to observeSyn
+  client.onBusByte({0xaa, req.getState(), req.getResult(), req.getLockCounter(),
+                    std::chrono::steady_clock::now()});
 
   REQUIRE(read_exact(sv[1], resp, 2));
   REQUIRE(resp[0] == 0xc6);
