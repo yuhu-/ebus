@@ -114,10 +114,9 @@ bool run_test(const TestCase& tc, ebus::Bus& bus, ebus::Handler& handler,
 void test_integration_vectors() {
   ebus::busConfig config = {.device = "/dev/null", .simulate = true};
   ebus::RuntimeConfig runtime = {
-      .address = 0xff, .window = 50, .offset = 5, .enable_syn = true};
+      .address = 0x01, .window = 50, .offset = 5, .enable_syn = true};
 
   ebus::Request request;
-  request.setMaxLockCounter(0);  // Bypass lock for deterministic testing
   ebus::Bus bus(config, runtime, &request);
   ebus::Handler handler(runtime.address, &bus, &request);
   ebus::BusHandler busHandler(&request, &handler, bus.getQueue());
@@ -140,7 +139,7 @@ void test_integration_vectors() {
   // Listener to handle Active Master-Slave simulation
   // When we send an active master telegram, we need to inject the slave
   // response after the master CRC is echoed.
-  busHandler.addByteListener([&bus, &handler](const uint8_t& byte) {
+  busHandler.addByteListener([&bus, &handler](const ebus::BusEventContext& ctx) {
     // Check if we are active and just finished sending Master CRC
     if (handler.getState() ==
         ebus::HandlerState::activeReceiveMasterAcknowledge) {

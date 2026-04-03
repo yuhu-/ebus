@@ -20,7 +20,7 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
   SECTION("Integration vectors (passive/reactive/active BC happy paths)") {
     ebus::busConfig config = {.device = "/dev/null", .simulate = true};
     ebus::RuntimeConfig runtime{
-        .address = 0xff, .window = 50, .offset = 5, .enable_syn = true};
+        .address = 0x01, .window = 50, .offset = 5, .enable_syn = true};
     ebus::Request request;
     ebus::Bus bus(config, runtime, &request);
     ebus::Handler handler(runtime.address, &bus, &request);
@@ -55,16 +55,16 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
       int expect_err;
     };
 
+    // clang-format off
     std::vector<TestCase> tests = {
-        {ebus::MessageType::passive, 0x33, "passive MS: Normal",
-         "ff52b509030d0600430003b0fba901d000", "", 1, 0},
-        {ebus::MessageType::passive, 0x33, "passive BC: Normal",
-         "10fe07000970160443183105052592", "", 1, 0},
-        {ebus::MessageType::reactive, 0x33, "reactive BC: Normal",
-         "00fe0704003b", "", 1, 0},
-        {ebus::MessageType::active, 0x33, "active BC: Request Bus - Normal", "",
-         "feb5050427002d00", 1, 0},
+        {ebus::MessageType::passive, 0x33, "passive MS: Normal", "ff52b509030d0600430003b0fba901d000", "", 1, 0},
+        {ebus::MessageType::passive, 0x33, "passive BC: Normal", "10fe07000970160443183105052592", "", 1, 0},
+
+        {ebus::MessageType::reactive, 0x33, "reactive BC: Normal", "00fe0704003b", "", 1, 0},
+        
+        {ebus::MessageType::active, 0x33, "active BC: Request Bus - Normal", "", "feb5050427002d00", 1, 0},
     };
+    // clang-format on
 
     for (const auto& tc : tests) {
       telegram_count.store(0);

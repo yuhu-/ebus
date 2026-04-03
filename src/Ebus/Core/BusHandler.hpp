@@ -27,7 +27,7 @@ namespace ebus {
  */
 class BusHandler {
  public:
-  using ByteListener = std::function<void(const uint8_t& byte)>;
+  using ByteListener = std::function<void(const BusEventContext& ctx)>;
 
   BusHandler(Request* request, Handler* handler, Queue<BusEvent>* queue)
       : request_(request), handler_(handler), queue_(queue), running_(false) {}
@@ -75,26 +75,32 @@ class BusHandler {
   uint32_t nextListenerId_ = 0;
   mutable std::mutex mutex_;
   std::vector<std::pair<uint32_t, ByteListener>> listeners_;
+  std::vector<ByteListener> listenersCache_;
 
   void run() {
     BusEvent event;
     while (running_) {
       if (queue_->pop(event, std::chrono::milliseconds(100))) {
+        BusEventContext ctx{event.byte, RequestState::observe,
+                            RequestResult::observeData, 0,
+                            std::chrono::steady_clock::now()};
+
         if (request_) {
           if (event.busRequest) request_->busRequestCompleted();
           if (event.startBit) request_->startBit();
-          request_->run(event.byte);
+          ctx.state = request_->getState();
+          ctx.result = request_->run(event.byte);
+          ctx.lockCounter = request_->getLockCounter();
         }
-        if (handler_) handler_->run(event.byte);
+        if (handler_) handler_->run(ctx);
 
-        std::vector<ByteListener> listenersCopy;
         {
           std::lock_guard<std::mutex> lock(mutex_);
-          listenersCopy.reserve(listeners_.size());
+          listenersCache_.clear();
           for (const auto& item : listeners_)
-            listenersCopy.push_back(item.second);
+            listenersCache_.push_back(item.second);
         }
-        for (const ByteListener& listener : listenersCopy) listener(event.byte);
+        for (const auto& listener : listenersCache_) listener(ctx);
       }
     }
   }
