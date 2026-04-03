@@ -38,6 +38,7 @@ struct BusEvent {
   uint8_t byte;
   bool busRequest{false};
   bool startBit{false};
+  std::chrono::steady_clock::time_point timestamp;
 };
 
 #define EBUS_BUS_COUNTER_LIST X(startBit)
@@ -112,6 +113,10 @@ class BusPosix {
   std::chrono::steady_clock::time_point nextSynExpiry_;
   std::chrono::milliseconds currentTunique_;
   bool synActive_{false};
+
+  std::atomic<bool> inArbitrationWindow_{false};
+  std::atomic<bool> collisionDetected_{false};
+  uint8_t pendingCollisionByte_{0xFF};
 
   // metrics
   struct Counter {

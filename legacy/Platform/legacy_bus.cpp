@@ -34,6 +34,59 @@ void run_test(const std::string& name, bool condition) {
   if (!condition) std::exit(1);
 }
 
+void test_basic_communication() {
+  ebus::busConfig config = {.device = "/dev/null", .simulate = true};
+  ebus::RuntimeConfig runtime{
+      .address = 0x01, .window = 50, .offset = 5, .enable_syn = true};
+
+  ebus::Request req;
+  ebus::Bus bus(config, runtime, &req);
+
+  std::cout << "\n=== Test: Basic Communication ===" << std::endl;
+  bus.start();
+  force_request(req, 0x03);
+  auto* queue = bus.getQueue();
+
+  // Replace the TEST 1 loop with this:
+  std::vector<ebus::BusEvent> received;
+  ebus::BusEvent ev;
+
+  // We expect at least 2 events (SYN and address)
+  // We give each event up to 100ms to appear in the queue
+  for (int i = 0; i < 2; ++i) {
+    if (queue->pop(ev, std::chrono::milliseconds(100))) {
+      received.push_back(ev);
+    }
+  }
+
+  // Now evaluate
+  run_test("Received at least 2 events", received.size() >= 2);
+  if (received.size() >= 2) {
+    std::cout << "  Received: 0x" << std::hex << (int)received[0].byte
+              << " and 0x" << (int)received[1].byte << std::dec << std::endl;
+    run_test("First byte is SYN (0xAA)", received[0].byte == 0xAA);
+    run_test("Second byte is address (0x03)", received[1].byte == 0x03);
+  }
+
+  // TEST 2: Reset check (also with try_pop)
+  bool prematureSyn = false;
+  for (int i = 0; i < 5; ++i) {
+    bus.writeByte(0xFF);
+    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+
+    ebus::BusEvent tempEv;
+    while (queue->try_pop(tempEv)) {
+      if (tempEv.byte == 0xAA) prematureSyn = true;
+    }
+  }
+  run_test("No SYN during traffic", !prematureSyn);
+
+  // TEST 3: Stop
+  std::cout << "  Stopping bus..." << std::endl;
+  bus.stop();
+  run_test("Bus stopped successfully", true);
+}
+
 void test_syn_timing() {
   std::cout << "\n=== Test: SYN Timing Logic ===" << std::endl;
   ebus::busConfig config = {.device = "/dev/null", .simulate = true};
@@ -87,59 +140,6 @@ void test_syn_timing() {
     std::cout << "  Interval 2-3:  " << t3 << "ms (Target: 50ms)" << std::endl;
     run_test("Repeat Timer (Normal) 2", t3 >= 40 && t3 <= 60);
   }
-}
-
-void test_basic_communication() {
-  ebus::busConfig config = {.device = "/dev/null", .simulate = true};
-  ebus::RuntimeConfig runtime{
-      .address = 0x01, .window = 50, .offset = 5, .enable_syn = true};
-
-  ebus::Request req;
-  ebus::Bus bus(config, runtime, &req);
-
-  std::cout << "\n=== Test: Basic Communication ===" << std::endl;
-  bus.start();
-  force_request(req, 0x03);
-  auto* queue = bus.getQueue();
-
-  // Replace the TEST 1 loop with this:
-  std::vector<ebus::BusEvent> received;
-  ebus::BusEvent ev;
-
-  // We expect at least 2 events (SYN and address)
-  // We give each event up to 100ms to appear in the queue
-  for (int i = 0; i < 2; ++i) {
-    if (queue->pop(ev, std::chrono::milliseconds(100))) {
-      received.push_back(ev);
-    }
-  }
-
-  // Now evaluate
-  run_test("Received at least 2 events", received.size() >= 2);
-  if (received.size() >= 2) {
-    std::cout << "  Received: 0x" << std::hex << (int)received[0].byte
-              << " and 0x" << (int)received[1].byte << std::dec << std::endl;
-    run_test("First byte is SYN (0xAA)", received[0].byte == 0xAA);
-    run_test("Second byte is address (0x03)", received[1].byte == 0x03);
-  }
-
-  // TEST 2: Reset check (also with try_pop)
-  bool prematureSyn = false;
-  for (int i = 0; i < 5; ++i) {
-    bus.writeByte(0xFF);
-    std::this_thread::sleep_for(std::chrono::milliseconds(20));
-
-    ebus::BusEvent tempEv;
-    while (queue->try_pop(tempEv)) {
-      if (tempEv.byte == 0xAA) prematureSyn = true;
-    }
-  }
-  run_test("No SYN during traffic", !prematureSyn);
-
-  // TEST 3: Stop
-  std::cout << "  Stopping bus..." << std::endl;
-  bus.stop();
-  run_test("Bus stopped successfully", true);
 }
 
 void test_raw_reception() {

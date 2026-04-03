@@ -123,6 +123,13 @@ void ebus::BusPosix::writeByte(const uint8_t byte) {
   recordUtilization(byte);
 
   if (simulate_) {
+    if (inArbitrationWindow_.load() && ebus::isMaster(byte)) {
+      std::lock_guard<std::mutex> lock(synMutex_);
+      pendingCollisionByte_ &= byte;
+      collisionDetected_.store(true, std::memory_order_release);
+      return;
+    }
+
     if (pipeFds_[1] != -1) {
       ::write(pipeFds_[1], &byte, 1);
     }
@@ -144,7 +151,7 @@ void ebus::BusPosix::setOffset(const uint16_t offset) {
 }
 
 void ebus::BusPosix::setRuntimeConfig(const RuntimeConfig& runtime) {
-    bool shouldStart = false;
+  bool shouldStart = false;
   bool shouldStop = false;
 
   {
@@ -250,6 +257,7 @@ void ebus::BusPosix::readerThread() {
     uint8_t byte;
     ssize_t n = ::read(fd_, &byte, 1);
     if (n == 1) {
+      auto arrivalTime = std::chrono::steady_clock::now();
       for (const auto& listener : readListeners_) listener(byte);
 
       // Notify SYN generator that a symbol was recognised (end of char)
@@ -259,18 +267,49 @@ void ebus::BusPosix::readerThread() {
       event.byte = byte;
       event.busRequest = busRequestFlag;
       busRequestFlag = false;
-      // startBit indicates if the start bit wasn't in the expected window
-      // event.startBit = true;
+      event.startBit = false;
+      event.timestamp = arrivalTime;
 
+      uint32_t startVersion = request_ ? request_->getVersion() : 0;
       if (byteQueue_) byteQueue_->push(event);
 
+      // Timer-based Arbitration Window (Simulation)
+      if (simulate_ && byte == sym_syn) {
+        inArbitrationWindow_.store(true);
+        pendingCollisionByte_ = 0xff;  // Start with recessive bus (all 1s)
+        collisionDetected_.store(false, std::memory_order_release);
+
+        // Deterministic Sync: Wait for BusHandler thread to process the SYN
+        if (request_) {
+          int timeout = 200;  // 20ms max wait (200 * 100us)
+          while (timeout-- > 0 && request_->getVersion() == startVersion) {
+            usleep(100);
+          }
+        }
+
+        // Include internal master if a request was triggered
+        bool internalRequest = false;
+        if (request_ && request_->busRequestPending()) {
+          pendingCollisionByte_ &= request_->busRequestAddress();
+          internalRequest = true;
+        }
+
+        inArbitrationWindow_.store(false);
+
+        if (internalRequest ||
+            collisionDetected_.load(std::memory_order_acquire)) {
+          // Mark the next byte read as the result of a bus request
+          busRequestFlag = true;
+          uint8_t winner = pendingCollisionByte_;
+          if (pipeFds_[1] != -1) ::write(pipeFds_[1], &winner, 1);
+        }
+      }
       // TODO calculate timing to write address at the right time, currently
       // just write immediately after receiving SYN
-      if (byte == sym_syn && request_->busRequestPending()) {
+      else if (byte == sym_syn && request_->busRequestPending()) {
         writeByte(request_->busRequestAddress());
         busRequestFlag = true;
       }
-
     } else if (n == 0) {
       // EOF - stop thread
       break;

@@ -82,8 +82,7 @@ class BusHandler {
     while (running_) {
       if (queue_->pop(event, std::chrono::milliseconds(100))) {
         BusEventContext ctx{event.byte, RequestState::observe,
-                            RequestResult::observeData, 0,
-                            std::chrono::steady_clock::now()};
+                            RequestResult::observeData, 0, event.timestamp};
 
         if (request_) {
           if (event.busRequest) request_->busRequestCompleted();
