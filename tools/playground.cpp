@@ -226,5 +226,9 @@ int main() {
 
   checkContains();
 
+  printEncodeDecode(0x02, 0x31);
+
+  printEncodeDecode(0x02, 0xff);
+
   return EXIT_SUCCESS;
 }
