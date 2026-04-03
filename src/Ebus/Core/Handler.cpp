@@ -98,27 +98,28 @@ void ebus::Handler::reset() {
   callPassiveReset();
 }
 
-void ebus::Handler::run(const uint8_t& byte) {
+void ebus::Handler::run(const BusEventContext& ctx) {
+  lastResult_ = ctx.result;
   // record timing
-  if (byte != sym_syn) {
+  if (ctx.byte != sym_syn) {
     if (activeMessage_) {
       if (measureSync_)
-        activeFirst_.markEnd();
+        activeFirst_.markEnd(ctx.timestamp);
       else
-        activeData_.markEnd();
+        activeData_.markEnd(ctx.timestamp);
     } else {
       if (measureSync_)
-        passiveFirst_.markEnd();
+        passiveFirst_.markEnd(ctx.timestamp);
       else
-        passiveData_.markEnd();
+        passiveData_.markEnd(ctx.timestamp);
     }
     measureSync_ = false;
   } else {
-    if (measureSync_) sync_.markEnd();
+    if (measureSync_) sync_.markEnd(ctx.timestamp);
     measureSync_ = true;
   }
 
-  lastPoint_ = std::chrono::steady_clock::now();
+  lastPoint_ = ctx.timestamp;
   if (measureSync_) {
     sync_.markBegin(lastPoint_);
     activeFirst_.markBegin(lastPoint_);
@@ -130,11 +131,14 @@ void ebus::Handler::run(const uint8_t& byte) {
 
   size_t idx = static_cast<size_t>(state_);
   if (idx < stateHandlers_.size() && stateHandlers_[idx]) {
-    (this->*stateHandlers_[idx])(byte);  // handle byte
-    if (byte != sym_syn || idx == static_cast<size_t>(HandlerState::releaseBus))
+    // Use a fresh "now" for the execution timing sample to measure CPU overhead
+    auto execStart = std::chrono::steady_clock::now();
+    (this->*stateHandlers_[idx])(ctx.byte);  // handle byte
+    if (ctx.byte != sym_syn ||
+        idx == static_cast<size_t>(HandlerState::releaseBus))
       handlerTiming_[static_cast<size_t>(idx)].addSample(
           std::chrono::duration_cast<std::chrono::microseconds>(
-              std::chrono::steady_clock::now() - lastPoint_)
+              std::chrono::steady_clock::now() - execStart)
               .count());
   }
 }
@@ -459,7 +463,7 @@ void ebus::Handler::requestBus(const uint8_t& byte) {
     state_ = HandlerState::passiveReceiveMaster;
   };
 
-  switch (request_->getResult()) {
+  switch (lastResult_) {
     case RequestResult::observeSyn:
       error();
       break;

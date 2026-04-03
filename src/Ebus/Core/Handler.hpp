@@ -137,7 +137,7 @@ class Handler {
 
   void reset();
 
-  void run(const uint8_t& byte);
+  void run(const BusEventContext& ctx);
 
   void resetMetrics();
   std::map<std::string, MetricValues> getMetrics() const;
@@ -145,6 +145,7 @@ class Handler {
  private:
   Bus* bus_ = nullptr;
   Request* request_ = nullptr;
+  RequestResult lastResult_ = RequestResult::observeSyn;
 
   uint8_t sourceAddress_ = 0;
   uint8_t targetAddress_ = 0;
