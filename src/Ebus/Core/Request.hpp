@@ -102,10 +102,6 @@ class Request {
   RequestState getState() const;
   RequestResult getResult() const;
 
-  // Testing backdoors
-  // void forceResultForTest(RequestResult result);
-  // void clearForcedResult();
-
   void reset();
 
   RequestResult run(const uint8_t& byte);
@@ -135,8 +131,6 @@ class Request {
 
   RequestState state_ = RequestState::observe;
   RequestResult result_ = RequestResult::observeSyn;
-
-  // RequestResult forcedResult_ = static_cast<RequestResult>(-1);
 
   // metrics
   struct Counter {

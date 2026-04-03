@@ -74,18 +74,7 @@ void ebus::Request::setStartBitCallback(StartBitCallback callback) {
 
 ebus::RequestState ebus::Request::getState() const { return state_; }
 
-ebus::RequestResult ebus::Request::getResult() const {
-  // if (static_cast<int>(forcedResult_) != -1) return forcedResult_;
-  return result_;
-}
-
-// void ebus::Request::forceResultForTest(RequestResult result) {
-//   forcedResult_ = result;
-// }
-
-// void ebus::Request::clearForcedResult() {
-//   forcedResult_ = static_cast<RequestResult>(-1);
-// }
+ebus::RequestResult ebus::Request::getResult() const { return result_; }
 
 void ebus::Request::reset() {
   lockCounter_ = maxLockCounter_;
