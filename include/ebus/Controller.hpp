@@ -41,6 +41,7 @@ class Controller {
   void setAddress(const uint8_t& address);
   void setWindow(const uint16_t& window);
   void setOffset(const uint16_t& offset);
+  void setClientActiveTimeout(std::chrono::milliseconds timeout);
 
   // Unified Bus Listeners
   void setTelegramCallback(TelegramCallback callback);

@@ -32,8 +32,11 @@ ebus::AbstractClient::~AbstractClient() { stop(); }
 
 void ebus::AbstractClient::stop() {
   if (fd_ >= 0) {
-    // Ensure clean EOF for the remote peer before closing the FD
-    ::shutdown(fd_, SHUT_RDWR);
+    int type;
+    socklen_t optlen = sizeof(type);
+    if (::getsockopt(fd_, SOL_SOCKET, SO_TYPE, &type, &optlen) == 0) {
+      ::shutdown(fd_, SHUT_RDWR);
+    }
 #if defined(ESP32)
     lwip_close(fd_);
 #else
@@ -92,8 +95,6 @@ void ebus::ReadOnlyClient::sendToClient(const std::vector<uint8_t>& data) {
   {
     std::lock_guard<std::mutex> lock(bufferMutex_);
     if (outboundBuffer_.size() + data.size() > MAX_OUTBOUND_BUFFER_SIZE) {
-      // Client is not consuming data fast enough, drop connection to save
-      // memory
       stop();
       return;
     }

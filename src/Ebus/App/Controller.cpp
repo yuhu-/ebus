@@ -92,6 +92,10 @@ void ebus::Controller::setOffset(const uint16_t& offset) {
   if (configured_) impl_->bus->setOffset(offset);
 }
 
+void ebus::Controller::setClientActiveTimeout(std::chrono::milliseconds timeout) {
+  if (impl_->clientManager) impl_->clientManager->setActiveTimeout(timeout);
+}
+
 void ebus::Controller::setTelegramCallback(TelegramCallback callback) {
   impl_->userTelegramCallback = std::move(callback);
 }
