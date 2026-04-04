@@ -8,13 +8,14 @@
 #include <unistd.h>
 
 #include <catch2/catch_all.hpp>
+#include <chrono>
 #include <cstdint>
 #include <ebus/Datatypes.hpp>
+#include <ebus/Definitions.hpp>
 #include <iomanip>
 #include <iostream>
 #include <string>
 #include <vector>
-#include <ebus/Definitions.hpp>
 
 #include "Core/Handler.hpp"
 
@@ -42,18 +43,24 @@ inline void encode_enhanced(uint8_t cmd, uint8_t val, uint8_t out[2]) {
 
 const std::string GREETING_STR = "ebus-service 1.0\n";
 
-// Common TestCase struct for eBUS tests
-struct TestCase {
-  ebus::MessageType messageType;
-  uint8_t address;
-  std::string description;
-  std::string read_string;
-  std::string send_string = "";
-  struct ExpectedResult {
-    int telegram;
-    int errors;
-  } expected;
-};
+/**
+ * Helper function to wait for the Request FSM to reach a specific state.
+ * Useful for synchronizing test threads with the eBUS stack's background
+ * threads.
+ */
+inline bool wait_for_request_state(ebus::Request& req,
+                                   ebus::RequestState targetState,
+                                   int timeoutMs) {
+  auto start = std::chrono::steady_clock::now();
+  while (std::chrono::steady_clock::now() - start <
+         std::chrono::milliseconds(timeoutMs)) {
+    if (req.getState() == targetState) {
+      return true;
+    }
+    ebus::sleep_ms(1);  // Poll every 1ms
+  }
+  return false;  // Timeout
+}
 
 /**
  * ProtocolLogger: Captures eBUS traffic and state changes.
@@ -77,9 +84,8 @@ class ProtocolLogger {
     if (handler) {
       handler->setTelegramCallback(
           [this](const ebus::MessageType& mt, const ebus::TelegramType& tt,
-                 const std::vector<uint8_t>& m, const std::vector<uint8_t>& s) {
-            logTelegram(mt, tt, m, s);
-          });
+                 const std::vector<uint8_t>& m,
+                 const std::vector<uint8_t>& s) { logTelegram(mt, tt, m, s); });
     }
   }
 
@@ -97,9 +103,10 @@ class ProtocolLogger {
                    const std::vector<uint8_t>& m,
                    const std::vector<uint8_t>& s) {
     std::stringstream ss;
-    ss << "Telegram [" << (mt == ebus::MessageType::active ? "Active" : "Passive")
-       << "] Type: " << static_cast<int>(tt) << " Master: " << ebus::to_string(m)
-       << " Slave: " << ebus::to_string(s);
+    ss << "Telegram ["
+       << (mt == ebus::MessageType::active ? "Active" : "Passive")
+       << "] Type: " << static_cast<int>(tt)
+       << " Master: " << ebus::to_string(m) << " Slave: " << ebus::to_string(s);
 
     if (mode_ == Mode::DevTrace) {
       std::cout << "\033[1;32m[LOG] " << ss.str() << "\033[0m" << std::endl;
