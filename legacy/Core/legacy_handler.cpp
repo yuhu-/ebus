@@ -19,6 +19,18 @@
 #include "TestUtils.hpp"
 #include "Utils/Common.hpp"
 
+struct TestCase {
+  ebus::MessageType messageType;
+  uint8_t address;
+  std::string description;
+  std::string read_string;
+  std::string send_string = "";
+  struct ExpectedResult {
+    int telegram;
+    int errors;
+  } expected;
+};
+
 std::atomic<int> g_error_count(0);
 std::atomic<int> g_telegram_count(0);
 bool g_detailed_output = false;

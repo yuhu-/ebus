@@ -20,6 +20,19 @@
 #include "TestUtils.hpp"
 #include "Utils/Common.hpp"
 
+struct TestCase {
+  ebus::MessageType messageType;
+  uint8_t address;
+  std::string description;
+  std::string read_string;
+  std::string send_string = "";
+  struct ExpectedResult {
+    int telegram;
+    int errors;
+  } expected;
+};
+
+
 SCENARIO("Handler processes eBUS messages correctly", "[core][handler]") {
   GIVEN("A set of eBUS test cases") {
     // clang-format off
