@@ -34,7 +34,7 @@ endmacro()
 # Catch2 test executables using the macro
 
 # High-level Application Logic
-# add_catch2_test_executable(catch_scheduler App/catch_scheduler.cpp)
+add_catch2_test_executable(catch_scheduler App/catch_scheduler.cpp)
 add_catch2_test_executable(catch_enhancedprotocol App/catch_enhancedprotocol.cpp)
 add_catch2_test_executable(catch_client App/catch_client.cpp)
 add_catch2_test_executable(catch_clientmanager App/catch_clientmanager.cpp)
