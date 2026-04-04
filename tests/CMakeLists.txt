@@ -41,7 +41,7 @@ add_catch2_test_executable(catch_clientmanager App/catch_clientmanager.cpp)
 add_catch2_test_executable(catch_devicemanager App/catch_devicemanager.cpp)
 add_catch2_test_executable(catch_devicescanner App/catch_devicescanner.cpp)
 add_catch2_test_executable(catch_pollmanager App/catch_pollmanager.cpp)
-# add_catch2_test_executable(catch_controller App/catch_controller.cpp)
+add_catch2_test_executable(catch_controller App/catch_controller.cpp)
 
 # Core Protocol Logic
 add_catch2_test_executable(catch_sequence Core/catch_sequence.cpp)
