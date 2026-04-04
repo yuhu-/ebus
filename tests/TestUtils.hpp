@@ -33,17 +33,6 @@ inline bool read_exact(int fd, uint8_t* buffer, size_t length) {
 }
 
 /**
- * Encodes logical cmd/val into wire-format 2-byte sequence.
- * Used for testing the Enhanced ebusd protocol.
- */
-inline void encode_enhanced(uint8_t cmd, uint8_t val, uint8_t out[2]) {
-  out[0] = 0xc0 | (cmd << 2) | (val >> 6);
-  out[1] = 0x80 | (val & 0x3f);
-}
-
-const std::string GREETING_STR = "ebus-service 1.0\n";
-
-/**
  * Helper function to wait for the Request FSM to reach a specific state.
  * Useful for synchronizing test threads with the eBUS stack's background
  * threads.
@@ -116,3 +105,22 @@ class ProtocolLogger {
 
   Mode mode_;
 };
+
+// Usage example in a test case:
+/*
+TEST_CASE("ClientManager Orchestration", "[app]") {
+    // ... setup ...
+    ebus::Bus bus(config, runtime, &req);
+    ebus::Handler handler(runtime.address, &bus, &req);
+
+    // Instantiate logger - it wires itself up via listeners
+    ProtocolLogger logger(&bus, &handler);
+
+    // If this fails, the logger output appears automatically in the report
+    REQUIRE(handler.getState() == ebus::HandlerState::activeSendMaster);
+}
+
+
+// Change mode to DevTrace to see real-time stdout during execution
+ProtocolLogger logger(&bus, &handler, ProtocolLogger::Mode::DevTrace);
+*/

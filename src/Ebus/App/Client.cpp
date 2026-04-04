@@ -12,38 +12,75 @@
 #if defined(ESP32)
 #include <lwip/sockets.h>
 #elif defined(POSIX)
+#include <errno.h>
+#include <fcntl.h>
 #include <sys/socket.h>
 #include <unistd.h>
 #endif
 
 ebus::AbstractClient::AbstractClient(int fd, Request* request,
                                      bool writeCapable)
-    : fd_(fd), request_(request), writeCapable_(writeCapable) {}
+    : fd_(fd), request_(request), writeCapable_(writeCapable) {
+  if (fd_ >= 0) {
+    // All network clients must be non-blocking for the Manager's poll loop
+    int flags = fcntl(fd_, F_GETFL, 0);
+    fcntl(fd_, F_SETFL, flags | O_NONBLOCK);
+  }
+}
 
 ebus::AbstractClient::~AbstractClient() { stop(); }
 
-bool ebus::AbstractClient::isConnected() const { return fd_ >= 0; }
-
-bool ebus::AbstractClient::available() {
-  uint8_t dummy;
-  return recv(fd_, &dummy, 1, MSG_PEEK | MSG_DONTWAIT) > 0;
-}
-
 void ebus::AbstractClient::stop() {
   if (fd_ >= 0) {
+    // Ensure clean EOF for the remote peer before closing the FD
+    ::shutdown(fd_, SHUT_RDWR);
 #if defined(ESP32)
     lwip_close(fd_);
 #else
-    close(fd_);
+    ::close(fd_);
 #endif
     fd_ = -1;
   }
 }
 
+bool ebus::AbstractClient::tryFlushOutboundBuffer() {
+  std::lock_guard<std::mutex> lock(bufferMutex_);
+  return flushLocked();
+}
+
+bool ebus::AbstractClient::flushLocked() {
+  if (fd_ < 0) return false;
+  if (outboundBuffer_.empty()) return true;
+
+  size_t totalSent = 0;
+  const size_t toSend = outboundBuffer_.size();
+  while (totalSent < toSend) {
+    ssize_t n = ::send(fd_, outboundBuffer_.data() + totalSent,
+                       toSend - totalSent, MSG_DONTWAIT);
+    if (n > 0) {
+      totalSent += static_cast<size_t>(n);
+    } else if (n < 0) {
+      if (errno == EINTR) continue;
+      if (errno == EAGAIN || errno == EWOULDBLOCK) break;
+      stop();
+      return false;
+    } else {
+      stop();
+      return false;
+    }
+  }
+
+  if (totalSent > 0) {
+    outboundBuffer_.erase(outboundBuffer_.begin(),
+                          outboundBuffer_.begin() + totalSent);
+  }
+  return true;
+}
+
 ebus::ReadOnlyClient::ReadOnlyClient(int fd, Request* request)
     : AbstractClient(fd, request, false) {}
 
-bool ebus::ReadOnlyClient::available() { return false; }
+bool ebus::ReadOnlyClient::wantsToSend() { return false; }
 
 bool ebus::ReadOnlyClient::recvFromClient(uint8_t& out) {
   (void)out;  // unused
@@ -52,40 +89,53 @@ bool ebus::ReadOnlyClient::recvFromClient(uint8_t& out) {
 
 void ebus::ReadOnlyClient::sendToClient(const std::vector<uint8_t>& data) {
   if (fd_ < 0 || data.empty()) return;
-  if (send(fd_, data.data(), data.size(), MSG_DONTWAIT) < 0) {
-    if (errno != EAGAIN && errno != EWOULDBLOCK) {
+  {
+    std::lock_guard<std::mutex> lock(bufferMutex_);
+    if (outboundBuffer_.size() + data.size() > MAX_OUTBOUND_BUFFER_SIZE) {
+      // Client is not consuming data fast enough, drop connection to save
+      // memory
       stop();
+      return;
     }
+    outboundBuffer_.insert(outboundBuffer_.end(), data.begin(), data.end());
+    flushLocked();
   }
 }
 
 ebus::Action ebus::ReadOnlyClient::onBusByte(const BusEventContext& ctx) {
-  (void)ctx;  // unused
+  if (!isConnected()) return Action::Stop;
+  (void)ctx;
   return Action::Stop;
 }
 
 ebus::RegularClient::RegularClient(int fd, Request* request)
     : AbstractClient(fd, request, true) {}
 
-bool ebus::RegularClient::available() {
+bool ebus::RegularClient::wantsToSend() {
   uint8_t dummy;
-  return recv(fd_, &dummy, 1, MSG_PEEK | MSG_DONTWAIT) > 0;
+  return ::recv(fd_, &dummy, 1, MSG_PEEK | MSG_DONTWAIT) > 0;
 }
 
 bool ebus::RegularClient::recvFromClient(uint8_t& out) {
-  return recv(fd_, &out, 1, MSG_DONTWAIT) == 1;
+  return ::recv(fd_, &out, 1, MSG_DONTWAIT) == 1;
 }
 
 void ebus::RegularClient::sendToClient(const std::vector<uint8_t>& data) {
   if (fd_ < 0 || data.empty()) return;
-  if (send(fd_, data.data(), data.size(), MSG_DONTWAIT) < 0) {
-    if (errno != EAGAIN && errno != EWOULDBLOCK) {
+  {
+    std::lock_guard<std::mutex> lock(bufferMutex_);
+    if (outboundBuffer_.size() + data.size() > MAX_OUTBOUND_BUFFER_SIZE) {
       stop();
+      return;
     }
+    outboundBuffer_.insert(outboundBuffer_.end(), data.begin(), data.end());
+    flushLocked();
   }
 }
 
 ebus::Action ebus::RegularClient::onBusByte(const BusEventContext& ctx) {
+  if (!isConnected()) return Action::Stop;
+
   // Handle bus response according to last command
   switch (ctx.result) {
     case RequestResult::observeSyn:
@@ -114,27 +164,43 @@ ebus::Action ebus::RegularClient::onBusByte(const BusEventContext& ctx) {
 }
 
 ebus::EnhancedClient::EnhancedClient(int fd, Request* request)
-    : AbstractClient(fd, request, true) {
-  std::string ver = "ebus-service 1.0\n";
-  send(fd_, ver.c_str(), ver.length(), 0);
-}
+    : AbstractClient(fd, request, true) {}
 
-bool ebus::EnhancedClient::available() {
+bool ebus::EnhancedClient::wantsToSend() {
+  if (!inboundBuffer_.empty()) return true;
   uint8_t dummy;
-  return recv(fd_, &dummy, 1, MSG_PEEK | MSG_DONTWAIT) > 0;
+  return ::recv(fd_, &dummy, 1, MSG_PEEK | MSG_DONTWAIT) > 0;
 }
 
 bool ebus::EnhancedClient::recvFromClient(uint8_t& out) {
-  uint8_t b1;
-  if (recv(fd_, &b1, 1, MSG_PEEK | MSG_DONTWAIT) != 1) return false;
-
-  if (b1 < 0x80) {
-    return recv(fd_, &out, 1, MSG_DONTWAIT) == 1;
+  // If we have an incomplete command in the buffer, try to finish it
+  if (inboundBuffer_.empty()) {
+    uint8_t b;
+    if (::recv(fd_, &b, 1, MSG_DONTWAIT) != 1) return false;
+    inboundBuffer_.push_back(b);
   }
 
+  uint8_t b1 = inboundBuffer_[0];
+
+  // Short form (< 0x80) is a single byte
+  if (b1 < 0x80) {
+    out = b1;
+    inboundBuffer_.clear();
+    return true;
+  }
+
+  // Enhanced sequences are always 2 bytes
   uint8_t buf[2];
-  if (recv(fd_, buf, 2, MSG_PEEK | MSG_DONTWAIT) != 2) return false;
-  recv(fd_, buf, 2, MSG_DONTWAIT);
+  if (inboundBuffer_.size() < 2) {
+    uint8_t b2;
+    if (::recv(fd_, &b2, 1, MSG_DONTWAIT) != 1)
+      return false;  // Still missing second byte
+    inboundBuffer_.push_back(b2);
+  }
+
+  buf[0] = inboundBuffer_[0];
+  buf[1] = inboundBuffer_[1];
+  inboundBuffer_.clear();
 
   if (!enhanced::Protocol::isValidSequence(buf[0], buf[1])) {
     sendToClient({enhanced::RESP_ERROR_HOST, enhanced::ERR_FRAMING});
@@ -180,21 +246,28 @@ void ebus::EnhancedClient::sendToClient(const std::vector<uint8_t>& data) {
     val = data[1];
   }
 
-  // Short form is allowed for RESP_RECEIVED notifications where value < 0x80
-  if (cmd == enhanced::RESP_RECEIVED && val < 0x80) {
-    if (send(fd_, &val, 1, MSG_DONTWAIT) < 0) {
-      if (errno != EAGAIN && errno != EWOULDBLOCK) stop();
+  {
+    std::lock_guard<std::mutex> lock(bufferMutex_);
+    if (outboundBuffer_.size() + 2 > MAX_OUTBOUND_BUFFER_SIZE) {
+      stop();
+      return;
     }
-  } else {
-    uint8_t out[2];
-    enhanced::Protocol::encode(cmd, val, out);
-    if (send(fd_, out, 2, MSG_DONTWAIT) < 0) {
-      if (errno != EAGAIN && errno != EWOULDBLOCK) stop();
+
+    // Short form is allowed for RESP_RECEIVED notifications where value < 0x80
+    if (cmd == enhanced::RESP_RECEIVED && val < 0x80) {
+      outboundBuffer_.push_back(val);
+    } else {
+      uint8_t out[2];
+      enhanced::Protocol::encode(cmd, val, out);
+      outboundBuffer_.insert(outboundBuffer_.end(), out, out + 2);
     }
+    flushLocked();
   }
 }
 
 ebus::Action ebus::EnhancedClient::onBusByte(const BusEventContext& ctx) {
+  if (!isConnected()) return Action::Stop;
+
   // Handle bus response according to last command
   switch (ctx.result) {
     case RequestResult::firstLost:

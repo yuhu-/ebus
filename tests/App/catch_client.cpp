@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "App/Client.hpp"
+#include "App/EnhancedProtocol.hpp"
 #include "Core/Request.hpp"
 #include "TestUtils.hpp"
 
@@ -22,7 +23,7 @@ TEST_CASE("ReadOnlyClient: capability checks", "[app][client][readonly]") {
   ebus::ReadOnlyClient client(sv[0], &req);
 
   REQUIRE(!client.isWriteCapable());
-  REQUIRE(!client.available());
+  REQUIRE(!client.wantsToSend());
 
   close(sv[0]);
   close(sv[1]);
@@ -35,10 +36,6 @@ TEST_CASE("EnhancedClient: Protocol basics", "[app][client][enhanced]") {
   ebus::Request req;
   ebus::EnhancedClient client(sv[0], &req);
 
-  // Greeting
-  char buffer[64];
-  REQUIRE(read_exact(sv[1], (uint8_t*)buffer, GREETING_STR.length()));
-
   // Simple data byte (< 0x80)
   uint8_t out;
   uint8_t data = 0x15;
@@ -48,7 +45,7 @@ TEST_CASE("EnhancedClient: Protocol basics", "[app][client][enhanced]") {
 
   // Enhanced escape sequence (CMD_SEND 0x01, value 0xaa)
   uint8_t escaped[2];
-  encode_enhanced(0x01, 0xaa, escaped);
+  ebus::enhanced::Protocol::encode(0x01, 0xaa, escaped);
   send(sv[1], escaped, 2, 0);
   REQUIRE(client.recvFromClient(out));
   REQUIRE(out == 0xaa);
@@ -56,7 +53,7 @@ TEST_CASE("EnhancedClient: Protocol basics", "[app][client][enhanced]") {
   // CMD_INIT should cause recvFromClient to return false and client to send
   // RESP_RESETTED
   uint8_t init_cmd[2];
-  encode_enhanced(0x00, 0x00, init_cmd);
+  ebus::enhanced::Protocol::encode(0x00, 0x00, init_cmd);
   send(sv[1], init_cmd, 2, 0);
   REQUIRE(!client.recvFromClient(out));
 
@@ -77,10 +74,6 @@ TEST_CASE("EnhancedClient: Encoded responses mapping",
   ebus::Request req;
   req.setMaxLockCounter(0);
   ebus::EnhancedClient client(sv[0], &req);
-
-  // Consume greeting
-  char buffer[64];
-  REQUIRE(read_exact(sv[1], (uint8_t*)buffer, GREETING_STR.length()));
 
   // 1. Test: Arbitration Win
   if (req.busAvailable()) req.requestBus(0x33, true);
@@ -125,10 +118,6 @@ TEST_CASE("EnhancedClient: Invalid protocol handling",
   ebus::Request req;
   ebus::EnhancedClient client(sv[0], &req);
 
-  // Consume greeting
-  char buffer[64];
-  REQUIRE(read_exact(sv[1], (uint8_t*)buffer, GREETING_STR.length()));
-
   uint8_t out;
   uint8_t err_resp[2];
 
@@ -147,7 +136,6 @@ TEST_CASE("EnhancedClient: Invalid protocol handling",
   // Re-establish and test invalid second-byte prefix
   REQUIRE(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
   ebus::EnhancedClient client2(sv[0], &req);
-  REQUIRE(read_exact(sv[1], (uint8_t*)buffer, GREETING_STR.length()));
 
   uint8_t invalid_b2_prefix[] = {0xC6, 0x00};
   send(sv[1], invalid_b2_prefix, 2, 0);

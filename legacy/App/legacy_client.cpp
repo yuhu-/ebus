@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "App/Client.hpp"
+#include "App/EnhancedProtocol.hpp"
 #include "Core/Request.hpp"
 #include "TestUtils.hpp"
 
@@ -33,7 +34,7 @@ void test_readonly_client() {
   ebus::ReadOnlyClient client(sv[0], &req);
 
   run_test("ReadOnly is not write capable", !client.isWriteCapable());
-  run_test("ReadOnly available() is always false", !client.available());
+  run_test("ReadOnly wantsToSend() is always false", !client.wantsToSend());
 
   close(sv[0]);
   close(sv[1]);
@@ -52,11 +53,6 @@ void test_enhanced_client_protocol() {
   ebus::Request req;
   ebus::EnhancedClient client(sv[0], &req);
 
-  // The client sends a version string on connect
-  char buffer[64];
-  run_test("Sent greeting on connect",
-           read_exact(sv[1], (uint8_t*)buffer, GREETING_STR.length()));
-
   // Test 1: Simple data byte (< 0x80)
   uint8_t out;
   uint8_t data = 0x15;
@@ -66,13 +62,14 @@ void test_enhanced_client_protocol() {
   // Test 2: Enhanced Escape Sequence (CMD_SEND 0x01)
   // Logical: CMD_SEND (1), Val 0xaa
   uint8_t escaped[2];
-  encode_enhanced(0x01, 0xaa, escaped);
+  ebus::enhanced::Protocol::encode(0x01, 0xaa, escaped);
   send(sv[1], escaped, 2, 0);
   run_test("Read escaped 0xaa", client.recvFromClient(out) && out == 0xaa);
 
   // Test 3: CMD_INIT decoding and response
   uint8_t init_cmd[2];
-  encode_enhanced(0x00, 0x00, init_cmd);  // Logical: CMD_INIT (0), val 0
+  ebus::enhanced::Protocol::encode(0x00, 0x00,
+                                   init_cmd);  // Logical: CMD_INIT (0), val 0
   send(sv[1], init_cmd, 2, 0);
   run_test("Read CMD_INIT (returns false)", !client.recvFromClient(out));
 
@@ -104,10 +101,6 @@ void test_enhanced_client_responses() {
   req.setMaxLockCounter(0);  // Ensure deterministic request result for testing
   req.reset();
   ebus::EnhancedClient client(sv[0], &req);
-
-  // Consume greeting: Read EXACTLY the length to avoid race with handleBusData
-  char buffer[64];
-  read_exact(sv[1], (uint8_t*)buffer, GREETING_STR.length());
 
   // 1. Test: Arbitration Win (driven via Request FSM)
   if (req.busAvailable()) req.requestBus(0x33, true);
@@ -155,12 +148,8 @@ void test_enhanced_client_invalid_protocol() {
   ebus::Request req;
   ebus::EnhancedClient client(sv[0], &req);
 
-  // Consume the initial greeting
-  char buffer[64];
-  read_exact(sv[1], (uint8_t*)buffer, GREETING_STR.length());
-
   uint8_t out;
-  std::vector<uint8_t> response_buffer(2);
+  // std::vector<uint8_t> response_buffer(2); // Not used
 
   // Test 1: Invalid first byte prefix (e.g., starts with 10 instead of 11)
   // Send 0x80 (10xxxxxx) 0xAA (10xxxxxx)
@@ -168,6 +157,7 @@ void test_enhanced_client_invalid_protocol() {
   send(sv[1], invalid_b1_prefix, 2, 0);
   run_test("Invalid B1 prefix: recvFromClient returns false",
            !client.recvFromClient(out));
+
   run_test("Invalid B1 prefix: client is disconnected", !client.isConnected());
   // Verify error response
   uint8_t err_resp[2];
@@ -187,7 +177,6 @@ void test_enhanced_client_invalid_protocol() {
     exit(1);
   }
   ebus::EnhancedClient client2(sv[0], &req);
-  read_exact(sv[1], (uint8_t*)buffer, GREETING_STR.length());
 
   // Test 2: Invalid second byte prefix (e.g., starts with 00 instead of 10)
   // Send 0xC6 (11xxxxxx) 0x00 (00xxxxxx)
@@ -195,6 +184,7 @@ void test_enhanced_client_invalid_protocol() {
   send(sv[1], invalid_b2_prefix, 2, 0);
   run_test("Invalid B2 prefix: recvFromClient returns false",
            !client2.recvFromClient(out));
+
   run_test("Invalid B2 prefix: client is disconnected", !client2.isConnected());
 
   run_test("Invalid B2 prefix: received 2 bytes",
@@ -212,7 +202,7 @@ int main() {
   test_readonly_client();
   test_enhanced_client_protocol();
   test_enhanced_client_responses();
-  // test_enhanced_client_invalid_protocol();
+  test_enhanced_client_invalid_protocol();
 
   std::cout << "\nAll Client unit tests passed!" << std::endl;
 

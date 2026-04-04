@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <ebus/Config.hpp>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -16,11 +17,17 @@
 namespace ebus {
 
 /**
+ * Maximum size of the outbound buffer before a client is considered stalled.
+ */
+static constexpr size_t MAX_OUTBOUND_BUFFER_SIZE = 4096;
+
+/**
  * Action to be taken by the ClientManager after a byte is processed.
  */
 enum class Action {
   Continue,  // Keep the client active
-  Stop       // The session is over (success, failure, or end of telegram)
+  Stop       // The session is over (success, failure, or end of telegram),
+             // ClientManager will remove this client.
 };
 
 class Request;
@@ -33,11 +40,24 @@ class AbstractClient {
   AbstractClient(int fd, Request* request, bool writeCapable);
   virtual ~AbstractClient();
 
+  void stop();
+
+  /**
+   * Attempts to flush the outbound buffer.
+   * @return true if the client is still connected, false if the socket was
+   * closed.
+   */
+  bool tryFlushOutboundBuffer();
+
   int getFd() const { return fd_; }
   bool isWriteCapable() const { return writeCapable_; }
-  bool isConnected() const;
+  bool isConnected() const { return fd_ >= 0; }
+  bool hasPendingData() const { return !outboundBuffer_.empty(); }
 
-  virtual bool available() = 0;
+  /**
+   * Returns true if the client has data available to read from its socket.
+   */
+  virtual bool wantsToSend() = 0;
   virtual bool recvFromClient(uint8_t& out) = 0;
   virtual void sendToClient(const std::vector<uint8_t>& data) = 0;
 
@@ -45,11 +65,13 @@ class AbstractClient {
   virtual Action onBusByte(const BusEventContext& ctx) = 0;
 
  protected:
-  void stop();
-
   int fd_;
+  std::vector<uint8_t> outboundBuffer_;  // Per-client outbound buffer
+  mutable std::mutex bufferMutex_;       // Protects outboundBuffer_
   Request* request_;
   bool writeCapable_;
+
+  bool flushLocked();  // Internal flush logic; returns false if connection lost
 };
 
 /**
@@ -60,7 +82,7 @@ class ReadOnlyClient : public AbstractClient {
  public:
   ReadOnlyClient(int fd, Request* request);
 
-  bool available() override;
+  bool wantsToSend() override;
   bool recvFromClient(uint8_t& out) override;
   void sendToClient(const std::vector<uint8_t>& data) override;
 
@@ -75,7 +97,7 @@ class RegularClient : public AbstractClient {
  public:
   RegularClient(int fd, Request* request);
 
-  bool available() override;
+  bool wantsToSend() override;
   bool recvFromClient(uint8_t& out) override;
   void sendToClient(const std::vector<uint8_t>& data) override;
 
@@ -90,11 +112,14 @@ class EnhancedClient : public AbstractClient {
  public:
   EnhancedClient(int fd, Request* request);
 
-  bool available() override;
+  bool wantsToSend() override;
   bool recvFromClient(uint8_t& out) override;
   void sendToClient(const std::vector<uint8_t>& data) override;
 
   Action onBusByte(const BusEventContext& ctx) override;
+
+ private:
+  std::vector<uint8_t> inboundBuffer_;
 };
 
 std::unique_ptr<AbstractClient> createClient(int fd, Request* req,
