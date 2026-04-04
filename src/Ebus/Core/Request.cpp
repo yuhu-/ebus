@@ -58,6 +58,16 @@ void ebus::Request::busRequestCompleted() {
   }
 }
 
+void ebus::Request::setArbitrationWonCallback(BusRequestedCallback callback) {
+  arbitrationWonCallback_ = std::move(callback);
+}
+
+void ebus::Request::setArbitrationLostCallback(
+    BusRequestedCallback callback) {
+  arbitrationLostCallback_ = std::move(callback);
+}
+
+
 void ebus::Request::startBit() {
   // This is typically called on a bus error, like a framing error, which could
   // be caused by a spurious start bit from an interference impulse. We can no
@@ -156,6 +166,7 @@ void ebus::Request::first(const uint8_t& byte) {
     lockCounter_ = maxLockCounter_;
     state_ = RequestState::observe;
     result_ = RequestResult::firstWon;
+    if (arbitrationWonCallback_) arbitrationWonCallback_();
   } else if (isMaster(byte)) {
     // ARBITRATION LOSS (Wire-AND Logic):
     // We sent our address, but read back a different master address.
@@ -176,6 +187,7 @@ void ebus::Request::first(const uint8_t& byte) {
     } else {
       counter_.firstLost_++;
       state_ = RequestState::observe;
+      if (arbitrationLostCallback_) arbitrationLostCallback_();
       result_ = RequestResult::firstLost;
     }
   } else {
@@ -203,9 +215,11 @@ void ebus::Request::second(const uint8_t& byte) {
     lockCounter_ = maxLockCounter_;
     state_ = RequestState::observe;
     result_ = RequestResult::secondWon;
+    if (arbitrationWonCallback_) arbitrationWonCallback_();
   } else if (isMaster(byte)) {
     counter_.secondLost_++;
     state_ = RequestState::observe;
+    if (arbitrationLostCallback_) arbitrationLostCallback_();
     result_ = RequestResult::secondLost;
   } else {
     counter_.secondError_++;
