@@ -301,12 +301,12 @@ void ebus::BusPosix::readerThread() {
           // Mark the next byte read as the result of a bus request
           busRequestFlag = true;
           uint8_t winner = pendingCollisionByte_;
-          if (pipeFds_[1] != -1) ::write(pipeFds_[1], &winner, 1);
+          writeByte(winner);
         }
       }
-      // TODO calculate timing to write address at the right time, currently
-      // just write immediately after receiving SYN
-      else if (byte == sym_syn && request_->busRequestPending()) {
+      // Real mode: write address immediately after SYN
+      else if (!simulate_ && byte == sym_syn && request_ &&
+               request_->busRequestPending()) {
         writeByte(request_->busRequestAddress());
         busRequestFlag = true;
       }
