@@ -79,6 +79,7 @@ void ebus::Controller::setAddress(const uint8_t& address) {
     impl_->deviceManager->setOwnAddress(address);
     impl_->deviceScanner->setOwnAddress(address);
     impl_->bus->setRuntimeConfig(config_.runtime);
+    impl_->request->setMaxLockCounter(config_.runtime.lock_counter_max);
   }
 }
 
@@ -204,6 +205,7 @@ bool ebus::Controller::isRunning() const noexcept { return running_; }
 
 void ebus::Controller::constructMembers() {
   impl_->request.reset(new Request());
+  impl_->request->setMaxLockCounter(config_.runtime.lock_counter_max);
   impl_->bus.reset(new Bus(config_.bus, config_.runtime, impl_->request.get()));
   impl_->handler.reset(new Handler(config_.runtime.address, impl_->bus.get(),
                                    impl_->request.get()));

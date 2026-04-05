@@ -19,6 +19,7 @@ struct RuntimeConfig {
   uint16_t offset = 80;
   uint32_t syn_base_ms = 50;
   uint32_t syn_tolerance_ms = 5;
+  uint8_t lock_counter_max = 3;
   bool enable_syn = false;
   // bool syn_deterministic = true;
 };
