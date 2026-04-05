@@ -338,6 +338,7 @@ void ebus::BusFreeRtos::ebusUartEventRunner() {
           // capture ISR flags and timing atomically and clear globals
           BusEvent busEvent;
           busEvent.byte = byte;
+
           portENTER_CRITICAL_ISR(&timerMux_);
           busEvent.busRequest = busRequestFlag_;
           busEvent.startBit = startBitFlag_;
@@ -345,7 +346,8 @@ void ebus::BusFreeRtos::ebusUartEventRunner() {
             delay_.addSample(static_cast<double>(microsLastDelay_));
           if (microsWindowFlag_)
             window_.addSample(static_cast<double>(microsLastWindow_));
-          // clear the global flags we consumed
+
+          // Reset the global ISR flags after consumption
           busRequestFlag_ = false;
           startBitFlag_ = false;
           portEXIT_CRITICAL_ISR(&timerMux_);
