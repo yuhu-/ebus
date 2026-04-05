@@ -226,6 +226,7 @@ void test_lock_counter() {
   for (int i = 0; i < 4; ++i) {
     bus.writeByte(ebus::sym_syn);
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    if (handler.getState() != ebus::HandlerState::passiveReceiveMaster) break;
   }
 
   // 2. Verify Lock Counter Reset
@@ -371,8 +372,8 @@ void test_external_client() {
 }
 
 int main() {
-  // test_integration_vectors();
-  // test_lock_counter();
+  test_integration_vectors();
+  test_lock_counter();
   test_external_client();
 
   std::cout << "\nAll bushandler tests passed!" << std::endl;

@@ -82,7 +82,7 @@ TEST_CASE("Bus: SYN Timing", "[platform][bus]") {
 
   for (int i = 0; i < 4; ++i) {
     if (queue->pop(ev, std::chrono::milliseconds(200))) {
-      if (ev.byte == 0xaa)
+      if (ev.byte == ebus::sym_syn)
         timestamps.push_back(std::chrono::steady_clock::now());
     }
   }

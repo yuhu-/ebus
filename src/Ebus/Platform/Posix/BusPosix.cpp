@@ -114,11 +114,13 @@ void ebus::BusPosix::writeByte(const uint8_t byte) {
     auto now = std::chrono::steady_clock::now();
     lastActivityTime_ = now;
     // Postpone automated SYN generation. Add 4ms to account for serialization.
-    synActive_ = false;
+    if (byte != sym_syn) {
+      synActive_ = false;
+    }
     nextSynExpiry_ = now + currentTunique_ + std::chrono::milliseconds(4);
     synCv_.notify_one();
   }
-  
+
   statsTransmit_.markBegin();
   recordUtilization(byte);
 
@@ -132,16 +134,14 @@ void ebus::BusPosix::writeByte(const uint8_t byte) {
       if (request_ && request_->getState() == RequestState::first) return;
     }
 
-    if (virtualLine_) {
-      virtualLine_->write(byte, writeListeners_);
-    }
-    return;
-  }
+    if (virtualLine_) virtualLine_->write(byte, writeListeners_);
 
-  ensureOpen();
-  for (const auto& listener : writeListeners_) listener(byte);
-  if (::write(fd_, &byte, 1) == -1)
-    throw std::runtime_error("BusPosix: write error");
+  } else {
+    ensureOpen();
+    for (const auto& listener : writeListeners_) listener(byte);
+    if (::write(fd_, &byte, 1) == -1)
+      throw std::runtime_error("BusPosix: write error");
+  }
   statsTransmit_.markEnd();
 }
 
@@ -281,39 +281,40 @@ void ebus::BusPosix::readerThread() {
       if (byteQueue_) byteQueue_->push(event);
 
       // Timer-based Arbitration Window (Simulation)
-      if (simulate_ && byte == sym_syn) {
-        inArbitrationWindow_.store(true, std::memory_order_release);
-        pendingCollisionByte_ = 0xff;  // Start with recessive bus (all 1s)
-        collisionDetected_.store(false, std::memory_order_release);
+      if (simulate_) {
+        if (byte == sym_syn) {
+          inArbitrationWindow_.store(true, std::memory_order_release);
+          pendingCollisionByte_ = 0xff;  // Start with recessive bus (all 1s)
+          collisionDetected_.store(false, std::memory_order_release);
 
-        // Deterministic Sync: Wait for BusHandler thread to process the SYN
-        if (request_) {
-          int timeout = 50;  // 5ms max wait ensures context switch on VMs
-                             // context switch
-          while (timeout-- > 0 && request_->getVersion() == startVersion) {
-            usleep(100);
+          // Deterministic Sync: Wait for BusHandler thread to process the SYN
+          if (request_) {
+            int timeout = 50;  // 5ms max wait ensures context switch on VMs
+                               // context switch
+            while (timeout-- > 0 && request_->getVersion() == startVersion) {
+              usleep(100);
+            }
           }
-        }
 
-        // Include internal master if a request was triggered
-        bool internalRequest = false;
-        if (request_ && request_->busRequestPending()) {
-          pendingCollisionByte_ &= request_->busRequestAddress();
-          internalRequest = true;
-        }
+          // Include internal master if a request was triggered
+          bool internalRequest = false;
+          if (request_ && request_->busRequestPending()) {
+            pendingCollisionByte_ &= request_->busRequestAddress();
+            internalRequest = true;
+          }
 
-        inArbitrationWindow_.store(false, std::memory_order_release);
+          inArbitrationWindow_.store(false, std::memory_order_release);
 
-        if (collisionDetected_.load(std::memory_order_acquire) ||
-            internalRequest) {
-          busRequestFlag = true;
-          uint8_t winner = pendingCollisionByte_;
-          writeByte(winner);  // Simulator drives the arbitration winner
+          if (collisionDetected_.load(std::memory_order_acquire) ||
+              internalRequest) {
+            busRequestFlag = true;
+            uint8_t winner = pendingCollisionByte_;
+            writeByte(winner);  // Simulator drives the arbitration winner
+          }
         }
       }
       // Real mode: write address immediately after SYN
-      else if (!simulate_ && byte == sym_syn && request_ &&
-               request_->busRequestPending()) {
+      else if (sym_syn && request_ && request_->busRequestPending()) {
         writeByte(request_->busRequestAddress());
         busRequestFlag = true;
       }

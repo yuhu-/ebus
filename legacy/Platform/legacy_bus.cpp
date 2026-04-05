@@ -71,12 +71,12 @@ void test_basic_communication() {
   // TEST 2: Reset check (also with try_pop)
   bool prematureSyn = false;
   for (int i = 0; i < 5; ++i) {
-    bus.writeByte(0xFF);
+    bus.writeByte(0xff);
     std::this_thread::sleep_for(std::chrono::milliseconds(20));
 
     ebus::BusEvent tempEv;
     while (queue->try_pop(tempEv)) {
-      if (tempEv.byte == 0xAA) prematureSyn = true;
+      if (tempEv.byte == ebus::sym_syn) prematureSyn = true;
     }
   }
   run_test("No SYN during traffic", !prematureSyn);
@@ -105,7 +105,7 @@ void test_syn_timing() {
   // Capture 4 SYNs
   for (int i = 0; i < 4; ++i) {
     if (queue->pop(ev, std::chrono::milliseconds(200))) {
-      if (ev.byte == 0xAA) {
+      if (ev.byte == ebus::sym_syn) {
         timestamps.push_back(std::chrono::steady_clock::now());
       }
     }
