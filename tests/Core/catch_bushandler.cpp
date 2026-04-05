@@ -101,8 +101,7 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
 
   SECTION("Lock counter behavior and arbitration pumping") {
     ebus::busConfig config = {.device = "/dev/null", .simulate = true};
-    ebus::RuntimeConfig runtime{
-        .address = 0xff, .window = 50, .offset = 5, .enable_syn = true};
+    ebus::RuntimeConfig runtime{.address = 0x33, .window = 50, .offset = 5};
 
     ebus::Request request;
     ebus::Bus bus(config, runtime, &request);
@@ -124,15 +123,24 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
     std::vector<uint8_t> msg = ebus::to_vector("feb5050427002d00");
     handler.sendActiveMessage(msg);
 
-    // pump SYNs until first completion or timeout
-    for (int i = 0; i < 20 && telegram_count.load() == 0; ++i) {
+    // Pump SYNs until arbitration starts.
+    for (int i = 0; i < 4; ++i) {
       bus.writeByte(ebus::sym_syn);
-      std::this_thread::sleep_for(std::chrono::milliseconds(20));
+      std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
+
+    // wait for completion
+    for (int i = 0; i < 50 && telegram_count.load() == 0; ++i)
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
     REQUIRE(telegram_count.load() == 1);
 
     // after release bus a SYN was generated: check lock counter behavior
-    // Expect it to have been reset then decremented by that SYN -> 2
+    // Wait for the background BusHandler to process the trailing SYN
+    for (int i = 0; i < 50 && request.getLockCounter() != 2; ++i) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+
     REQUIRE(request.getLockCounter() == 2);
 
     // send second message and step through SYNs to force arbitration
@@ -164,6 +172,7 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
         .address = 0x33, .window = 50, .offset = 5, .enable_syn = true};
 
     ebus::Request request;
+    request.setMaxLockCounter(0);
     ebus::Bus bus(config, runtime, &request);
     ebus::Handler handler(runtime.address, &bus, &request);
     ebus::BusHandler busHandler(&request, &handler, bus.getQueue());

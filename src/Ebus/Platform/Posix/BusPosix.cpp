@@ -29,9 +29,8 @@ void ebus::BusPosix::start() {
   if (open_) return;
 
   if (simulate_) {
-    if (::pipe(pipeFds_) < 0)
-      throw std::runtime_error("Failed to create simulation pipe");
-    fd_ = pipeFds_[0];
+    virtualLine_ = std::make_unique<VirtualLine>();
+    fd_ = virtualLine_->getReadFd();
     open_ = true;
   } else {
     struct termios newSettings;
@@ -87,10 +86,7 @@ void ebus::BusPosix::stop() {
   }
 
   if (simulate_) {
-    if (pipeFds_[1] != -1) {
-      ::close(pipeFds_[1]);
-      pipeFds_[1] = -1;
-    }
+    if (virtualLine_) virtualLine_->closeWriter();
   } else {
     if (fd_ != -1) ::tcflush(fd_, TCIOFLUSH);
   }
@@ -99,12 +95,7 @@ void ebus::BusPosix::stop() {
 
   if (thread_.joinable()) thread_.join();
 
-  if (simulate_) {
-    if (pipeFds_[0] != -1) {
-      ::close(pipeFds_[0]);
-      pipeFds_[0] = -1;
-    }
-  } else if (fd_ != -1) {
+  if (!simulate_ && fd_ != -1) {
     ::tcsetattr(fd_, TCSANOW, &oldSettings_);
     ::close(fd_);
   }
@@ -118,7 +109,16 @@ ebus::Queue<ebus::BusEvent>* ebus::BusPosix::getQueue() const {
 }
 
 void ebus::BusPosix::writeByte(const uint8_t byte) {
-  for (const auto& listener : writeListeners_) listener(byte);
+  {
+    std::lock_guard<std::mutex> lock(synMutex_);
+    auto now = std::chrono::steady_clock::now();
+    lastActivityTime_ = now;
+    // Postpone automated SYN generation. Add 4ms to account for serialization.
+    synActive_ = false;
+    nextSynExpiry_ = now + currentTunique_ + std::chrono::milliseconds(4);
+    synCv_.notify_one();
+  }
+  
   statsTransmit_.markBegin();
   recordUtilization(byte);
 
@@ -127,16 +127,19 @@ void ebus::BusPosix::writeByte(const uint8_t byte) {
       std::lock_guard<std::mutex> lock(synMutex_);
       pendingCollisionByte_ &= byte;
       collisionDetected_.store(true, std::memory_order_release);
-      return;
+      // Swallowing the byte is only correct for the arbitration address (first
+      // byte). If we are deep into the telegram, we must not swallow.
+      if (request_ && request_->getState() == RequestState::first) return;
     }
 
-    if (pipeFds_[1] != -1) {
-      ::write(pipeFds_[1], &byte, 1);
+    if (virtualLine_) {
+      virtualLine_->write(byte, writeListeners_);
     }
     return;
   }
 
   ensureOpen();
+  for (const auto& listener : writeListeners_) listener(byte);
   if (::write(fd_, &byte, 1) == -1)
     throw std::runtime_error("BusPosix: write error");
   statsTransmit_.markEnd();
@@ -247,6 +250,10 @@ void ebus::BusPosix::addWriteListener(WriteListener listener) {
   writeListeners_.push_back(listener);
 }
 
+void ebus::BusPosix::addSynListener(SynListener listener) {
+  synListeners_.push_back(listener);
+}
+
 void ebus::BusPosix::ensureOpen() const {
   if (!open_ || fd_ < 0) throw std::runtime_error("BusPosix: device not open");
 }
@@ -275,13 +282,14 @@ void ebus::BusPosix::readerThread() {
 
       // Timer-based Arbitration Window (Simulation)
       if (simulate_ && byte == sym_syn) {
-        inArbitrationWindow_.store(true);
+        inArbitrationWindow_.store(true, std::memory_order_release);
         pendingCollisionByte_ = 0xff;  // Start with recessive bus (all 1s)
         collisionDetected_.store(false, std::memory_order_release);
 
         // Deterministic Sync: Wait for BusHandler thread to process the SYN
         if (request_) {
-          int timeout = 200;  // 20ms max wait (200 * 100us)
+          int timeout = 50;  // 5ms max wait ensures context switch on VMs
+                             // context switch
           while (timeout-- > 0 && request_->getVersion() == startVersion) {
             usleep(100);
           }
@@ -294,14 +302,13 @@ void ebus::BusPosix::readerThread() {
           internalRequest = true;
         }
 
-        inArbitrationWindow_.store(false);
+        inArbitrationWindow_.store(false, std::memory_order_release);
 
-        if (internalRequest ||
-            collisionDetected_.load(std::memory_order_acquire)) {
-          // Mark the next byte read as the result of a bus request
+        if (collisionDetected_.load(std::memory_order_acquire) ||
+            internalRequest) {
           busRequestFlag = true;
           uint8_t winner = pendingCollisionByte_;
-          writeByte(winner);
+          writeByte(winner);  // Simulator drives the arbitration winner
         }
       }
       // Real mode: write address immediately after SYN
@@ -325,6 +332,7 @@ void ebus::BusPosix::readerThread() {
 void ebus::BusPosix::resetSynTimer(uint8_t byte) {
   std::lock_guard<std::mutex> lock(synMutex_);
   auto now = std::chrono::steady_clock::now();
+  lastActivityTime_ = now;
 
   // Arbitration Logic:
   // If we are the active SYN generator (synActive_ is true) and we receive
@@ -350,17 +358,19 @@ void ebus::BusPosix::synThread() {
       continue;
     }
 
-    // Carrier Sense: Double check the bus hasn't become active in the last 1ms
-    // to avoid colliding with a master starting at the exact expiry time.
-    // if (std::chrono::steady_clock::now() - lastActivityTime_ <
-    // std::chrono::milliseconds(1)) {
-    //   nextSynExpiry_ = std::chrono::steady_clock::now() +
-    //   std::chrono::milliseconds(2); continue;
-    // }
+    // Carrier Sense: If the bus was active very recently (e.g. a write
+    // started), postpone generation to avoid colliding with the byte being
+    // serialized.
+    if (now - lastActivityTime_ < std::chrono::milliseconds(5)) {
+      nextSynExpiry_ = now + std::chrono::milliseconds(2);
+      continue;
+    }
 
     // We are about to generate a SYN, mark ourselves as active
     synActive_ = true;
     lock.unlock();
+
+    for (const auto& listener : synListeners_) listener();
     writeByte(sym_syn);
 
     lock.lock();

@@ -29,6 +29,7 @@
 #include <vector>
 
 #include "Core/Request.hpp"
+#include "Platform/Posix/VirtualLine.hpp"
 #include "Platform/Queue.hpp"
 #include "Utils/TimingStats.hpp"
 
@@ -53,6 +54,7 @@ class BusPosix {
  public:
   using ReadListener = std::function<void(const uint8_t& byte)>;
   using WriteListener = std::function<void(const uint8_t& byte)>;
+  using SynListener = std::function<void()>;
 
   BusPosix(const busConfig& config, const RuntimeConfig& runtime,
            Request* request);
@@ -80,6 +82,7 @@ class BusPosix {
   // Listeners
   void addReadListener(ReadListener listener);
   void addWriteListener(WriteListener listener);
+  void addSynListener(SynListener listener);
 
  private:
   std::string device_;
@@ -89,13 +92,10 @@ class BusPosix {
   Request* request_ = nullptr;
 
   int fd_;
-  int pipeFds_[2] = {-1, -1};  // [0] = Read, [1] = Write for simulation
+  std::unique_ptr<VirtualLine> virtualLine_;
 
   bool open_;
   struct termios oldSettings_{};
-
-  std::chrono::milliseconds synBaseMsDur_;
-  std::chrono::milliseconds synToleranceMsDur_;
 
   std::unique_ptr<Queue<BusEvent>> byteQueue_;
   std::thread thread_;
@@ -103,6 +103,7 @@ class BusPosix {
 
   std::vector<ReadListener> readListeners_;
   std::vector<WriteListener> writeListeners_;
+  std::vector<SynListener> synListeners_;
 
   // SYN generator members
   std::thread synThread_;
@@ -110,13 +111,17 @@ class BusPosix {
   std::mutex synMutex_;
   std::condition_variable synCv_;
 
-  std::chrono::steady_clock::time_point nextSynExpiry_;
+  std::chrono::milliseconds synBaseMsDur_;
+  std::chrono::milliseconds synToleranceMsDur_;
   std::chrono::milliseconds currentTunique_;
+
+  std::chrono::steady_clock::time_point lastActivityTime_;
+  std::chrono::steady_clock::time_point nextSynExpiry_;
   bool synActive_{false};
 
   std::atomic<bool> inArbitrationWindow_{false};
   std::atomic<bool> collisionDetected_{false};
-  uint8_t pendingCollisionByte_{0xFF};
+  uint8_t pendingCollisionByte_{0xff};
 
   // metrics
   struct Counter {
