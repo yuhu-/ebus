@@ -123,6 +123,12 @@ void test_integration_vectors() {
 
   handler.setTelegramCallback(telegramCallback);
   handler.setErrorCallback(errorCallback);
+  handler.setBusRequestWonCallback([]() {
+    if (g_detailed_output) std::cout << "    Bus Request Won" << std::endl;
+  });
+  handler.setBusRequestLostCallback([]() {
+    if (g_detailed_output) std::cout << "    Bus Request Lost" << std::endl;
+  });
 
   // Register write listener for synchronous logging
   bus.addWriteListener([](const uint8_t& byte) {
@@ -229,9 +235,18 @@ void test_lock_counter() {
     if (handler.getState() != ebus::HandlerState::passiveReceiveMaster) break;
   }
 
-  // 2. Verify Lock Counter Reset
-  // After success, lockCounter should be reset to max (3)
-  // The SYN byte from releaseBus also counts and decrement the lockCounter to 2
+  // Wait for completion of the first telegram
+  int timeout = 100;
+  while (timeout-- > 0 && g_telegram_count == 0) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  }
+
+  // Wait for the trailing SYN to be processed and decrement counter from 3 to 2
+  timeout = 100;
+  while (timeout-- > 0 && request.getLockCounter() != 2) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  }
+
   if (request.getLockCounter() != 2) {
     std::cout << "FAILED (Lock counter not reset to 2, got "
               << (int)request.getLockCounter() << ")" << std::endl;
@@ -245,7 +260,9 @@ void test_lock_counter() {
   // 4. Pump SYNs and check lock counter decrement
   // SYN 1 -> Decrement to 1
   bus.writeByte(ebus::sym_syn);
-  std::this_thread::sleep_for(std::chrono::milliseconds(20));
+  for (int i = 0; i < 50 && request.getLockCounter() != 1; ++i) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  }
   if (request.getLockCounter() != 1) {
     std::cout << "FAILED (Lock counter not 1 after 1st SYN, got "
               << (int)request.getLockCounter() << ")" << std::endl;
@@ -254,7 +271,9 @@ void test_lock_counter() {
 
   // SYN 2 -> Decrement to 0
   bus.writeByte(ebus::sym_syn);
-  std::this_thread::sleep_for(std::chrono::milliseconds(20));
+  for (int i = 0; i < 50 && request.getLockCounter() != 0; ++i) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  }
   if (request.getLockCounter() != 0) {
     std::cout << "FAILED (Lock counter not 0 after 2nd SYN, got "
               << (int)request.getLockCounter() << ")" << std::endl;
