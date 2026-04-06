@@ -6,8 +6,8 @@
 #pragma once
 
 #include <array>
-#include <chrono>
 #include <atomic>
+#include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <functional>
@@ -117,8 +117,6 @@ class Request {
   RequestResult getResult() const;
 
   void reset();
-  
-  uint32_t getVersion() const { return version_.load(std::memory_order_acquire); }
 
   RequestResult run(const uint8_t& byte);
 
@@ -146,8 +144,6 @@ class Request {
 
   std::array<void (Request::*)(const uint8_t&), NUM_REQUEST_STATES>
       stateRequests_ = {};
-
-  std::atomic<uint32_t> version_{0};
 
   RequestState state_ = RequestState::observe;
   RequestResult result_ = RequestResult::observeSyn;

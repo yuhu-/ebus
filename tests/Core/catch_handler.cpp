@@ -125,7 +125,7 @@ SCENARIO("Handler processes eBUS messages correctly", "[core][handler]") {
 
         ebus::Sequence seq;
         seq.assign(
-            ebus::to_vector(std::string("aaaaaaaa") + tc.read_string + "aaaaaa"));
+            ebus::to_vector(std::string("aaaaaa") + tc.read_string + "aaaaaa"));
 
         if (tc.send_string.size() > 0) {
           handler.sendActiveMessage(ebus::to_vector(tc.send_string));

@@ -152,7 +152,7 @@ bool run_test(const TestCase& tc) {
   handler.setSourceAddress(tc.address);
 
   // Prepare test sequence from the provided hex string
-  std::string tmp = "aaaaaaaa" + tc.read_string + "aaaaaa";
+  std::string tmp = "aaaaaa" + tc.read_string + "aaaaaa";
   ebus::Sequence seq;
   seq.assign(ebus::to_vector(tmp));
 

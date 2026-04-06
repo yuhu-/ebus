@@ -62,11 +62,9 @@ void ebus::Request::setArbitrationWonCallback(BusRequestedCallback callback) {
   arbitrationWonCallback_ = std::move(callback);
 }
 
-void ebus::Request::setArbitrationLostCallback(
-    BusRequestedCallback callback) {
+void ebus::Request::setArbitrationLostCallback(BusRequestedCallback callback) {
   arbitrationLostCallback_ = std::move(callback);
 }
-
 
 void ebus::Request::startBit() {
   // This is typically called on a bus error, like a framing error, which could
@@ -97,7 +95,6 @@ ebus::RequestResult ebus::Request::run(const uint8_t& byte) {
   if (idx < stateRequests_.size() && stateRequests_[idx])
     (this->*stateRequests_[idx])(byte);
 
-  version_.fetch_add(1, std::memory_order_release);
   return result_;
 }
 
@@ -144,13 +141,8 @@ std::map<std::string, ebus::MetricValues> ebus::Request::getMetrics() const {
 
 void ebus::Request::observe(const uint8_t& byte) {
   if (byte == sym_syn) {
-    if (lockCounter_ > 0) {
-      lockCounter_--;
-      // If we just decremented to 0, we are not authorized for THIS cycle.
-      result_ = RequestResult::observeData;
-    } else {
-      result_ = RequestResult::observeSyn;
-    }
+    if (lockCounter_ > 0) lockCounter_--;
+    result_ = RequestResult::observeSyn;
   } else {
     result_ = RequestResult::observeData;
   }
