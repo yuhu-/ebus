@@ -119,9 +119,7 @@ class BusPosix {
   std::chrono::steady_clock::time_point nextSynExpiry_;
   bool synActive_{false};
 
-  std::atomic<bool> inArbitrationWindow_{false};
-  std::atomic<bool> collisionDetected_{false};
-  uint8_t pendingCollisionByte_{0xff};
+  std::atomic<bool> busRequestFlag_{false};
 
   // metrics
   struct Counter {

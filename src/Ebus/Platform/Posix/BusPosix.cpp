@@ -125,15 +125,6 @@ void ebus::BusPosix::writeByte(const uint8_t byte) {
   recordUtilization(byte);
 
   if (simulate_) {
-    if (inArbitrationWindow_.load() && ebus::isMaster(byte)) {
-      std::lock_guard<std::mutex> lock(synMutex_);
-      pendingCollisionByte_ &= byte;
-      collisionDetected_.store(true, std::memory_order_release);
-      // Swallowing the byte is only correct for the arbitration address (first
-      // byte). If we are deep into the telegram, we must not swallow.
-      if (request_ && request_->getState() == RequestState::first) return;
-    }
-
     if (virtualLine_) virtualLine_->write(byte, writeListeners_);
 
   } else {
@@ -259,7 +250,6 @@ void ebus::BusPosix::ensureOpen() const {
 }
 
 void ebus::BusPosix::readerThread() {
-  bool busRequestFlag = false;
   while (running_.load()) {
     uint8_t byte;
     ssize_t n = ::read(fd_, &byte, 1);
@@ -272,51 +262,17 @@ void ebus::BusPosix::readerThread() {
 
       BusEvent event;
       event.byte = byte;
-      event.busRequest = busRequestFlag;
-      busRequestFlag = false;
+      event.busRequest = busRequestFlag_.load();
       event.startBit = false;
       event.timestamp = arrivalTime;
 
-      uint32_t startVersion = request_ ? request_->getVersion() : 0;
       if (byteQueue_) byteQueue_->push(event);
 
-      // Timer-based Arbitration Window (Simulation)
-      if (simulate_) {
-        if (byte == sym_syn) {
-          inArbitrationWindow_.store(true, std::memory_order_release);
-          pendingCollisionByte_ = 0xff;  // Start with recessive bus (all 1s)
-          collisionDetected_.store(false, std::memory_order_release);
-
-          // Deterministic Sync: Wait for BusHandler thread to process the SYN
-          if (request_) {
-            int timeout = 50;  // 5ms max wait ensures context switch on VMs
-                               // context switch
-            while (timeout-- > 0 && request_->getVersion() == startVersion) {
-              usleep(100);
-            }
-          }
-
-          // Include internal master if a request was triggered
-          bool internalRequest = false;
-          if (request_ && request_->busRequestPending()) {
-            pendingCollisionByte_ &= request_->busRequestAddress();
-            internalRequest = true;
-          }
-
-          inArbitrationWindow_.store(false, std::memory_order_release);
-
-          if (collisionDetected_.load(std::memory_order_acquire) ||
-              internalRequest) {
-            busRequestFlag = true;
-            uint8_t winner = pendingCollisionByte_;
-            writeByte(winner);  // Simulator drives the arbitration winner
-          }
-        }
-      }
-      // Real mode: write address immediately after SYN
-      else if (sym_syn && request_ && request_->busRequestPending()) {
+      // Hit the 4300-4456us window (approx 200us after SYN reception)
+      if (byte == sym_syn && request_->busRequestPending()) {
+        // usleep(200);
         writeByte(request_->busRequestAddress());
-        busRequestFlag = true;
+        busRequestFlag_.store(true, std::memory_order_release);
       }
     } else if (n == 0) {
       // EOF - stop thread
