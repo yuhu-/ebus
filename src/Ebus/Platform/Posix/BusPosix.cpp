@@ -262,7 +262,7 @@ void ebus::BusPosix::readerThread() {
 
       BusEvent event;
       event.byte = byte;
-      event.busRequest = busRequestFlag_.load();
+      event.busRequest = busRequestFlag_.exchange(false, std::memory_order_acq_rel);
       event.startBit = false;
       event.timestamp = arrivalTime;
 
