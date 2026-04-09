@@ -98,8 +98,6 @@ class Request {
 
   void setHandlerBusRequestedCallback(BusRequestedCallback callback);
   void setExternalBusRequestedCallback(BusRequestedCallback callback);
-  void setArbitrationWonCallback(BusRequestedCallback callback);
-  void setArbitrationLostCallback(BusRequestedCallback callback);
 
   // Inline and non-virtual for ESP32 ISR safety (IRAM) and performance
   inline uint8_t busRequestAddress() const { return requestAddress_; }
@@ -137,8 +135,6 @@ class Request {
 
   BusRequestedCallback handlerBusRequestedCallback_ = nullptr;
   BusRequestedCallback externalBusRequestedCallback_ = nullptr;
-  BusRequestedCallback arbitrationWonCallback_ = nullptr;
-  BusRequestedCallback arbitrationLostCallback_ = nullptr;
 
   StartBitCallback startBitCallback_ = nullptr;
 
