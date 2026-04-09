@@ -12,6 +12,7 @@
 #include <lwip/sockets.h>
 #elif defined(POSIX)
 #include <poll.h>
+#include <sys/socket.h>
 #endif
 
 #include "Utils/Common.hpp"
@@ -21,15 +22,16 @@ ebus::ClientManager::ClientManager(Bus* bus, BusHandler* busHandler,
     : bus_(bus),
       busHandler_(busHandler),
       request_(request),
-      registryDirty_(true),
       busByteQueue_(256),
       running_(false),
-      busRequested_(false),
-      activeTimeout_(1000) {
-  busHandler_->addByteListener(
-      [this](const BusEventContext& ctx) { busByteQueue_.try_push(ctx); });
+      sessionState_(SessionState::Idle) {
+  if (busHandler_)
+    busHandler_->addByteListener(
+        [this](const BusEventContext& ctx) { busByteQueue_.try_push(ctx); });
 
-  request_->setExternalBusRequestedCallback([this]() { busRequested_ = true; });
+  if (request_)
+    request_->setExternalBusRequestedCallback(
+        [this]() { busRequested_.store(true, std::memory_order_release); });
 }
 
 ebus::ClientManager::~ClientManager() { stop(); }
@@ -52,7 +54,6 @@ void ebus::ClientManager::addClient(int fd, ClientType type) {
   if (client) {
     std::lock_guard<std::mutex> lock(mutex_);
     clients_.push_back(std::move(client));  // unique_ptr converts to shared_ptr
-    registryDirty_.store(true, std::memory_order_release);
   }
 }
 
@@ -63,181 +64,141 @@ void ebus::ClientManager::removeClient(int fd) {
                                   return c->getFd() == fd;
                                 }),
                  clients_.end());
-  registryDirty_.store(true, std::memory_order_release);
 }
 
 void ebus::ClientManager::run() {
-  std::shared_ptr<AbstractClient> activeClient = nullptr;
-  BusState busState = BusState::Idle;
-
-  std::vector<pollfd> pollFds;
-  const int nextTimeout = 10;  // 10ms default timeout for bus responsiveness
+  BusEventContext ctx;
+  auto lastStateChange = std::chrono::steady_clock::now();
+  SessionState prevState = sessionState_;
 
   while (running_) {
-    bool activity = false;
+    // 1. Blocking Pop: wait up to 1ms for bus activity.
+    bool hasBusEvent = busByteQueue_.pop(ctx, 1);
 
-    // Refresh the client cache only if the registry changed
-    if (registryDirty_.load(std::memory_order_acquire)) {
-      std::lock_guard<std::mutex> lock(mutex_);
-      clientsCache_ = clients_;
-      registryDirty_.store(false, std::memory_order_release);
-
-      // Rebuild the poll descriptors for the current session
-      pollFds.clear();
-      for (auto& client : clientsCache_) {
-        pollfd pfd;
-        pfd.fd = client->getFd();
-        pfd.events = POLLIN;
-        pollFds.push_back(pfd);
-      }
-    }
+    // 2. Snapshot shared state in a single lock block to reduce contention.
+    std::vector<std::shared_ptr<AbstractClient>> activeClients;
+    std::shared_ptr<AbstractClient> activeSender;
+    SessionState currentState;
 
     {
-      // Select new active client if idle
-      if (!activeClient && busState == BusState::Idle) {
-        // Iterate over the cache without locking!
-        for (auto& client : clientsCache_) {
-          if (client->isWriteCapable() && client->available()) {
-            activeClient = client;
-            busState = BusState::Request;
-            busRequested_ = false;
-            activity = true;
-            lastActivityTime_ = std::chrono::steady_clock::now();
+      std::lock_guard<std::mutex> lock(mutex_);
+      activeClients = clients_;
+
+      // Housekeeping: Clean up disconnected active client
+      if (currentActiveSender_ && !currentActiveSender_->isConnected()) {
+        stopActiveSessionInternal();
+      }
+
+      // Housekeeping: Select new active client if idle
+      if (!currentActiveSender_ && sessionState_ == SessionState::Idle) {
+        for (auto& client : activeClients) {
+          if (client->isConnected() && client->isWriteCapable() &&
+              client->wantsToSend()) {
+            currentActiveSender_ = client;
+            sessionState_ = SessionState::Request;
+            busRequested_.store(false, std::memory_order_release);
+            lastStateChange =
+                std::chrono::steady_clock::now();  // update on change
             break;
           }
         }
       }
-    }
 
-    // Watchdog: Kick active client if it hangs
-    if (activeClient && busState != BusState::Idle) {
-      auto now = std::chrono::steady_clock::now();
-      if (now - lastActivityTime_ > activeTimeout_) {
-        activeClient = nullptr;
-        busState = BusState::Idle;
-        busRequested_ = false;
-        request_->reset();
+      if (sessionState_ != prevState) {
+        lastStateChange = std::chrono::steady_clock::now();
+        prevState = sessionState_;
       }
+
+      activeSender = currentActiveSender_;
+      currentState = sessionState_;
     }
 
-    // Request bus access
-    if (activeClient && busState == BusState::Request) {
-      if (request_->busAvailable()) {
-        uint8_t firstByte = 0;
-        if (activeClient->recvFromClient(firstByte)) {
-          request_->requestBus(firstByte, true);
-          busState = BusState::Response;
-          activity = true;
-          lastActivityTime_ = std::chrono::steady_clock::now();
+    // 3. Outbound Logic: Request bus access or Transmit
+    if (activeSender) {
+      auto elapsed = std::chrono::steady_clock::now() - lastStateChange;
+      // Arbitration phase (Request/Response) depends on bus activity and
+      // hardware timing. Streaming phase (Transmit) depends on the
+      // responsiveness of the client socket.
+      auto timeout = (currentState == SessionState::Transmit)
+                         ? std::chrono::milliseconds(500)
+                         : std::chrono::seconds(1);
+
+      if (elapsed > timeout) {
+        stopActiveSession();
+      } else if (currentState == SessionState::Request) {
+        if (request_->busAvailable()) {
+          uint8_t firstByte = 0;
+          if (activeSender->recvFromClient(firstByte)) {
+            request_->requestBus(firstByte, true);
+            std::lock_guard<std::mutex> lock(mutex_);
+            sessionState_ = SessionState::Response;
+            lastStateChange = std::chrono::steady_clock::now();
+          } else {
+            stopActiveSession();
+          }
+        }
+      } else if (currentState == SessionState::Transmit) {
+        uint8_t sendByte = 0;
+        if (activeSender->recvFromClient(sendByte)) {
+          bus_->writeByte(sendByte);
+          std::lock_guard<std::mutex> lock(mutex_);
+          sessionState_ = SessionState::Response;
+          lastStateChange = std::chrono::steady_clock::now();
         }
       }
     }
 
-    // Transmit to bus once arbitration is won
-    if (activeClient && busState == BusState::Transmit) {
-      uint8_t sendByte = 0;
-      if (activeClient->recvFromClient(sendByte)) {
-        bus_->writeByte(sendByte);
-        busState = BusState::Response;
-        activity = true;
-        lastActivityTime_ = std::chrono::steady_clock::now();
+    // 4. Inbound Logic: Process the byte from the pop() and any others in queue
+    auto processByte = [&](const BusEventContext& bctx) {
+      std::shared_ptr<AbstractClient> currentSender;
+      SessionState s;
+      {
+        std::lock_guard<std::mutex> lock(mutex_);
+        currentSender = currentActiveSender_;
+        s = sessionState_;
       }
-    }
 
-    if (processBusBytes(activeClient, busState)) {
-      activity = true;
-      lastActivityTime_ = std::chrono::steady_clock::now();
-    }
-
-    // Efficient wait: Only wait if we haven't done any work this iteration
-    // and there is nothing immediately pending in the bus queue.
-    if (!activity && busByteQueue_.size() == 0) {
-      // We use a small timeout (10ms) to ensure the manager still reacts
-      // to bus events even if no client sends data.
-      if (!pollFds.empty()) {
-#if defined(ESP32)
-        // Note: poll() on ESP32 is a wrapper around select() in LWIP
-        poll(pollFds.data(), pollFds.size(), nextTimeout);
-#elif defined(POSIX)
-        poll(pollFds.data(), pollFds.size(), nextTimeout);
-#endif
-      } else {
-        // No clients connected? Just sleep to prevent busy loop
-        sleep_ms(nextTimeout);
+      if (currentSender) {
+        if ((s == SessionState::Response || s == SessionState::Transmit) &&
+            busRequested_.load(std::memory_order_acquire)) {
+          if (currentSender->onBusByte(bctx) == Action::Stop) {
+            stopActiveSession();
+          } else {
+            std::lock_guard<std::mutex> lock(mutex_);
+            sessionState_ = SessionState::Transmit;
+            lastStateChange = std::chrono::steady_clock::now();
+          }
+        }
       }
+
+      for (auto& client : activeClients) {
+        if (client != currentSender && client->isConnected()) {
+          client->sendToClient({bctx.byte});
+        }
+      }
+    };
+
+    if (hasBusEvent) processByte(ctx);
+    while (busByteQueue_.try_pop(ctx)) processByte(ctx);
+
+    // 5. Periodic flush for all clients
+    for (auto& client : activeClients) {
+      client->tryFlushOutboundBuffer();
     }
   }
 }
 
-bool ebus::ClientManager::processBusBytes(
-    std::shared_ptr<AbstractClient>& activeClient, BusState& busState) {
-  BusEventContext ctx;
-  bool processed = false;
-
-  while (busByteQueue_.try_pop(ctx)) {
-    processed = true;
-    bool handledByActive = false;
-    std::shared_ptr<AbstractClient> currentActive;
-    {
-      std::lock_guard<std::mutex> lock(mutex_);
-      currentActive = activeClient;
-      if (currentActive) {
-        if ((busState == BusState::Response ||
-             busState == BusState::Transmit) &&
-            busRequested_) {
-          // Mark as handled to prevent duplicate raw echoes in the broadcast
-          // loop below
-          handledByActive = true;
-          if (currentActive->onBusByte(ctx) == Action::Stop) {
-            // Client signaled it's done (e.g. error, arbitration loss, or end
-            // of telegram)
-            activeClient = nullptr;
-            busState = BusState::Idle;
-            busRequested_ = false;
-            request_->reset();
-          } else {
-            // Arbitration or Payload byte processed: ready for next client
-            // transmission.
-            if (!request_->busRequestPending()) {
-              busState = BusState::Transmit;
-            }
-          }
-        }
-      }
-    }
-
-    // Perform network I/O outside the lock!
-    // This prevents a slow WiFi client from blocking the manager loop.
-    for (auto& client : clientsCache_) {
-      if (handledByActive && client == currentActive) {
-        // currentActive already got the appropriate status or data response.
-        continue;
-      }
-      if (client->isConnected()) {
-        client->sendToClient({ctx.byte});
-      }
-    }
+void ebus::ClientManager::stopActiveSessionInternal() {
+  if (currentActiveSender_) {
+    currentActiveSender_->stop();
+    currentActiveSender_ = nullptr;
+    sessionState_ = SessionState::Idle;
+    busRequested_.store(false, std::memory_order_release);
+    request_->reset();
   }
+}
 
-  // Clean up disconnected clients outside the byte loop for efficiency
+void ebus::ClientManager::stopActiveSession() {
   std::lock_guard<std::mutex> lock(mutex_);
-  auto it = std::remove_if(clients_.begin(), clients_.end(),
-                           [](const std::shared_ptr<AbstractClient>& c) {
-                             return !c->isConnected();
-                           });
-
-  if (it != clients_.end())
-    registryDirty_.store(true, std::memory_order_release);
-
-  // If the active client was among those removed, reset the state
-  for (auto check = it; check != clients_.end(); ++check) {
-    if (*check == activeClient) {
-      activeClient = nullptr;
-      busState = BusState::Idle;
-      busRequested_ = false;
-      request_->reset();
-    }
-  }
-  clients_.erase(it, clients_.end());
-  return processed;
+  stopActiveSessionInternal();
 }

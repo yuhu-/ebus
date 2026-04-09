@@ -7,7 +7,6 @@
 #include "Platform/Posix/BusPosix.hpp"
 
 #include <algorithm>
-#include <iostream>
 
 #include "Utils/Common.hpp"
 
@@ -262,7 +261,8 @@ void ebus::BusPosix::readerThread() {
 
       BusEvent event;
       event.byte = byte;
-      event.busRequest = busRequestFlag_.exchange(false, std::memory_order_acq_rel);
+      event.busRequest =
+          busRequestFlag_.exchange(false, std::memory_order_acq_rel);
       event.startBit = false;
       event.timestamp = arrivalTime;
 
@@ -270,7 +270,7 @@ void ebus::BusPosix::readerThread() {
 
       // Hit the 4300-4456us window (approx 200us after SYN reception)
       if (byte == sym_syn && request_->busRequestPending()) {
-        // usleep(200);
+        usleep(200);
         writeByte(request_->busRequestAddress());
         busRequestFlag_.store(true, std::memory_order_release);
       }

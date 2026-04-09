@@ -32,12 +32,12 @@ class ClientManager {
   void start();
   void stop();
 
+  void setActiveTimeout(std::chrono::milliseconds timeout);
+
   void addClient(int fd, ClientType type);
   void removeClient(int fd);
 
  private:
-  enum class BusState { Idle, Request, Response, Transmit };
-
   Bus* bus_;
   BusHandler* busHandler_;
   Request* request_;
@@ -45,19 +45,28 @@ class ClientManager {
   mutable std::mutex mutex_;
   std::vector<std::shared_ptr<AbstractClient>> clients_;
   std::vector<std::shared_ptr<AbstractClient>> clientsCache_;
-  std::atomic<bool> registryDirty_;
 
   Queue<BusEventContext> busByteQueue_;
   std::atomic<bool> running_;
-  std::atomic<bool> busRequested_;
 
   std::unique_ptr<ServiceThread> worker_;
-  std::chrono::steady_clock::time_point lastActivityTime_;
-  std::chrono::milliseconds activeTimeout_;
+
+  std::shared_ptr<AbstractClient> currentActiveSender_ = nullptr;
+  std::atomic<bool> busRequested_{false};
+
+  enum class SessionState {
+    Idle,      // Waiting for a client to have data
+    Request,   // Bus request pending, waiting for our slot to send
+    Response,  // Waiting for arbitration result from eBUS
+    Transmit   // Arbitration won, sending telegram body
+  };
+
+  SessionState sessionState_ = SessionState::Idle;
 
   void run();
-  bool processBusBytes(std::shared_ptr<AbstractClient>& activeClient,
-                       BusState& busState);
+
+  void stopActiveSession();
+  void stopActiveSessionInternal();
 };
 
 }  // namespace ebus
