@@ -23,6 +23,7 @@ set(CORE_SOURCES
 set(MODELS_SOURCES
     Models/Datatypes.cpp
     Models/Device.cpp
+    Models/Manufacturers.cpp
 )
 
 # Platform Abstraction Layer
