@@ -6,17 +6,11 @@
 #pragma once
 
 #include <cstdint>
+#include <ebus/Device.hpp>
 #include <string>
 #include <vector>
 
 namespace ebus {
-
-struct DeviceInfo {
-  uint8_t manufacturer = 0;
-  std::vector<uint8_t> unitID;
-  std::vector<uint8_t> softwareVersion;
-  std::vector<uint8_t> hardwareVersion;
-};
 
 /**
  * Represents a device on the eBUS, identified by its slave address and

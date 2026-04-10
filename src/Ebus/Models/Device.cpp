@@ -6,6 +6,8 @@
 #include "Models/Device.hpp"
 
 #include <algorithm>
+#include <ebus/Datatypes.hpp>
+#include <ebus/Manufacturers.hpp>
 
 #include "Utils/Common.hpp"
 
@@ -51,12 +53,30 @@ std::vector<uint8_t> ebus::Device::getVendorData(uint8_t sub) const {
 
 ebus::DeviceInfo ebus::Device::getDeviceInfo() const {
   DeviceInfo info;
+  info.slave = slave_;
+
   if (vec_070400_.size() > 1) {
     info.manufacturer = vec_070400_[1];
-    info.unitID = ebus::range(vec_070400_, 2, 5);
-    info.softwareVersion = ebus::range(vec_070400_, 7, 2);
-    info.hardwareVersion = ebus::range(vec_070400_, 9, 2);
+    info.manufacturerName = ebus::manufacturer_name(info.manufacturer);
+    info.unitID = ebus::byte_2_char(ebus::range(vec_070400_, 2, 5));
+    info.softwareVersion = ebus::to_string(ebus::range(vec_070400_, 7, 2));
+    info.hardwareVersion = ebus::to_string(ebus::range(vec_070400_, 9, 2));
   }
+
+  if (isVaillant() && isVaillantValid()) {
+    // Reconstruct the 28-character Vaillant serial number from the 4 B5
+    // sub-services
+    std::string serial = ebus::byte_2_char(ebus::range(vec_b5090124_, 2, 8));
+    serial += ebus::byte_2_char(ebus::range(vec_b5090125_, 1, 9));
+    serial += ebus::byte_2_char(ebus::range(vec_b5090126_, 1, 9));
+    serial += ebus::byte_2_char(ebus::range(vec_b5090127_, 1, 2));
+
+    info.vaillant.serial = serial;
+    if (serial.length() >= 16) {
+      info.vaillant.productCode = serial.substr(6, 10);
+    }
+  }
+
   return info;
 }
 
