@@ -73,7 +73,13 @@ TEST_CASE("ClientManager Orchestration (Regular + ReadOnly)") {
   CHECK_TEST("LockCounter reset to max", req.getLockCounter() == 3);
 
   uint8_t echo;
-  for (int i = 0; i < 3; ++i) read_exact(svReg[1], &echo, 1);
+  for (int i = 0; i < 2; ++i) {
+    REQUIRE(read_exact(svReg[1], &echo, 1));
+    CHECK_TEST("Regular received correct SYN echo", echo == ebus::sym_syn);
+  }
+
+  REQUIRE(read_exact(svReg[1], &echo, 1));
+  CHECK_TEST("Regular received correct address byte echo", echo == telegram[0]);
 
   for (size_t i = 1; i < telegram.size(); ++i) {
     send(svReg[1], &telegram[i], 1, 0);

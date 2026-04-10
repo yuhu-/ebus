@@ -113,7 +113,12 @@ void test_client_orchestration() {
   // We receive 2 SYN echoes before the address byte echo, because from the
   // point we send the address byte, the client is in Request state and all
   // bytes (including SYNs) are suppressed until we allow the bus request.
-  for (int i = 0; i < 3; ++i) read_exact(svReg[1], &echo, 1);
+  for (int i = 0; i < 2; ++i)
+    run_test("Regular received correct SYN echo",
+             (read_exact(svReg[1], &echo, 1)) && echo == ebus::sym_syn);
+
+  run_test("Regular received correct address byte echo",
+           (read_exact(svReg[1], &echo, 1) && echo == telegram[0]));
 
   for (size_t i = 1; i < telegram.size(); ++i) {
     send(svReg[1], &telegram[i], 1, 0);
