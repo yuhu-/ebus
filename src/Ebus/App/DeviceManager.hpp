@@ -12,6 +12,7 @@
 #pragma once
 
 #include <cstdint>
+#include <ebus/Device.hpp>
 #include <map>
 #include <mutex>
 #include <set>
@@ -30,7 +31,7 @@ class DeviceManager {
 
   void resetAddresses();
 
-  std::vector<Device> getDevices() const;
+  std::vector<DeviceInfo> getDeviceInfo() const;
 
   std::map<uint8_t, uint32_t> getMasters() const;
   std::map<uint8_t, uint32_t> getSlaves() const;

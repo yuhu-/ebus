@@ -7,7 +7,9 @@
 
 #include <set>
 
-void ebus::DeviceManager::setOwnAddress(uint8_t address) { ownAddress_ = address; }
+void ebus::DeviceManager::setOwnAddress(uint8_t address) {
+  ownAddress_ = address;
+}
 
 void ebus::DeviceManager::update(const std::vector<uint8_t>& master,
                                  const std::vector<uint8_t>& slave) {
@@ -27,12 +29,12 @@ void ebus::DeviceManager::resetAddresses() {
   slaves_.clear();
 }
 
-std::vector<ebus::Device> ebus::DeviceManager::getDevices() const {
+std::vector<ebus::DeviceInfo> ebus::DeviceManager::getDeviceInfo() const {
   std::lock_guard<std::mutex> lock(mutex_);
-  std::vector<Device> result;
+  std::vector<DeviceInfo> result;
   result.reserve(devices_.size());
   for (const auto& device : devices_) {
-    result.push_back(device.second);
+    result.push_back(device.second.getDeviceInfo());
   }
   return result;
 }
