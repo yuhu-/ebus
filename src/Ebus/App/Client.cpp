@@ -220,8 +220,7 @@ bool ebus::EnhancedClient::recvFromClient(uint8_t& out) {
       out = data;
       return true;
     case enhanced::CMD_START:
-      // cancle ongoing arbitration if data = sym_syn
-      //  if (data == ebus::sym_syn) return false;
+      // Note: Arbitration cancellation via SYN is handled by Request FSM
       out = data;
       return true;
     case enhanced::CMD_INFO:
