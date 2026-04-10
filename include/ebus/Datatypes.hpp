@@ -101,6 +101,4 @@ std::vector<uint8_t> char_2_byte(const std::string& str);
 std::string byte_2_hex(const std::vector<uint8_t>& vec);
 std::vector<uint8_t> hex_2_byte(const std::string& str);
 
-const char* manufacturer_name(const uint8_t& id);
-
 }  // namespace ebus
