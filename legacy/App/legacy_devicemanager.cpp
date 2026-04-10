@@ -66,10 +66,10 @@ void test_device_update() {
 
   dm.update(master, slave);
 
-  auto devices = dm.getDevices();
+  auto devices = dm.getDeviceInfo();
   // Should have created device at 0x08
   ASSERT_TRUE(devices.size() == 1);
-  ASSERT_TRUE(devices[0].getSlave() == 0x08);
+  ASSERT_TRUE(devices[0].slave == 0x08);
 
   // Verify Vendor Scan Commands are generated
   auto cmds = dm.vendorScanCommands();

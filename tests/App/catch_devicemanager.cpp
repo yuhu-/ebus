@@ -4,8 +4,8 @@
  */
 
 #include <catch2/catch_all.hpp>
-#include <vector>
 #include <string>
+#include <vector>
 
 #include "App/DeviceManager.hpp"
 #include "Core/Handler.hpp"
@@ -51,9 +51,9 @@ TEST_CASE("DeviceManager: Device Update", "[app][devicemanager]") {
 
   dm.update(master, slave);
 
-  auto devices = dm.getDevices();
+  auto devices = dm.getDeviceInfo();
   REQUIRE(devices.size() == 1);
-  REQUIRE(devices[0].getSlave() == 0x08);
+  REQUIRE(devices[0].slave == 0x08);
 
   auto cmds = dm.vendorScanCommands();
   REQUIRE(cmds.size() == 4);
