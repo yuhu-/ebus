@@ -5,62 +5,37 @@
 
 #pragma once
 
-#include <unistd.h>
-#include <chrono>
-#include <thread>
+#include <cstdint>
+#include <mutex>
 #include <vector>
-#include <functional>
-#include <stdexcept>
+
+#include "Platform/Queue.hpp"
 
 namespace ebus {
 
 /**
- * VirtualLine simulates the physical characteristics of the eBUS media.
- * It introduces propagation delays (2400 baud throttle) and provides
- * a loopback mechanism via a POSIX pipe.
+ * VirtualLine simulates the physical eBUS wire.
+ * It uses a static registry to ensure that a byte written by one instance
+ * is received by all other instances connected to the "virtual bus".
  */
 class VirtualLine {
  public:
-  VirtualLine() {
-    if (::pipe(fds_) < 0) {
-      throw std::runtime_error("VirtualLine: Failed to create simulation pipe");
-    }
-  }
+  VirtualLine();
+  ~VirtualLine();
 
-  ~VirtualLine() {
-    if (fds_[0] != -1) ::close(fds_[0]);
-    if (fds_[1] != -1) ::close(fds_[1]);
-  }
+  // Broadcasts a byte to all instances (including self for echo)
+  void write(uint8_t byte);
 
-  int getReadFd() const { return fds_[0]; }
-
-  /**
-   * Simulates the serialization of a byte onto the wire.
-   * Blocks for ~4.17ms to mimic 2400 baud bit-time.
-   */
-  void write(uint8_t byte, const std::vector<std::function<void(const uint8_t&)>>& listeners) {
-    if (fds_[1] == -1) return;
-
-    // Throttle: Mimic 2400 baud UART delay (10 bits @ 2400bps ≈ 4.17ms)
-    std::this_thread::sleep_for(std::chrono::milliseconds(4));
-
-    // Trigger write listeners only when the byte "hits the wire"
-    for (const auto& listener : listeners) {
-      listener(byte);
-    }
-
-    if (::write(fds_[1], &byte, 1) != 1) {
-      // Pipe full or closed
-    }
-  }
-
-  void closeWriter() {
-    if (fds_[1] != -1) ::close(fds_[1]);
-    fds_[1] = -1;
-  }
+  // Reads a byte from this specific instance's receive buffer
+  bool read(uint8_t& byte, int timeoutMs = 10);
 
  private:
-  int fds_[2] = {-1, -1};
+  // Internal queue for bytes arriving from the "wire"
+  Queue<uint8_t> rxQueue_{256};
+
+  // Static registry members to bridge multiple instances
+  static std::mutex registryMutex_;
+  static std::vector<VirtualLine*> instances_;
 };
 
 }  // namespace ebus

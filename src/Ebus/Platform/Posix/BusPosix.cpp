@@ -29,7 +29,7 @@ void ebus::BusPosix::start() {
 
   if (simulate_) {
     virtualLine_ = std::make_unique<VirtualLine>();
-    fd_ = virtualLine_->getReadFd();
+    fd_ = -1;
     open_ = true;
   } else {
     struct termios newSettings;
@@ -80,15 +80,11 @@ void ebus::BusPosix::stop() {
   synRunning_.store(false);
 
   {
-    std::lock_guard<std::mutex> lock(synMutex_);
+    std::unique_lock<std::mutex> lock(synMutex_);
     synCv_.notify_all();
   }
 
-  if (simulate_) {
-    if (virtualLine_) virtualLine_->closeWriter();
-  } else {
-    if (fd_ != -1) ::tcflush(fd_, TCIOFLUSH);
-  }
+  if (!simulate_ && fd_ != -1) ::tcflush(fd_, TCIOFLUSH);
 
   if (synThread_.joinable()) synThread_.join();
 
@@ -124,7 +120,11 @@ void ebus::BusPosix::writeByte(const uint8_t byte) {
   recordUtilization(byte);
 
   if (simulate_) {
-    if (virtualLine_) virtualLine_->write(byte, writeListeners_);
+    if (virtualLine_) {
+      // Notify write listeners for local simulation feedback
+      for (const auto& listener : writeListeners_) listener(byte);
+      virtualLine_->write(byte);
+    }
 
   } else {
     ensureOpen();
@@ -251,7 +251,18 @@ void ebus::BusPosix::ensureOpen() const {
 void ebus::BusPosix::readerThread() {
   while (running_.load()) {
     uint8_t byte;
-    ssize_t n = ::read(fd_, &byte, 1);
+    ssize_t n = 0;
+
+    if (simulate_) {
+      // Use the memory-based simulation queue
+      if (virtualLine_->read(byte, 100))
+        n = 1;
+      else
+        continue;  // timeout, check running_ flag again
+    } else {
+      n = ::read(fd_, &byte, 1);
+    }
+
     if (n == 1) {
       auto arrivalTime = std::chrono::steady_clock::now();
       for (const auto& listener : readListeners_) listener(byte);
