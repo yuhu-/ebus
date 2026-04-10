@@ -33,6 +33,7 @@ set(PLATFORM_SOURCES
 
 if(POSIX AND NOT APPLE)
     list(APPEND PLATFORM_SOURCES Platform/Posix/BusPosix.cpp)
+    list(APPEND PLATFORM_SOURCES Platform/Posix/VirtualLine.cpp)
 elseif(ESP32)
     list(APPEND PLATFORM_SOURCES Platform/FreeRTOS/BusFreeRtos.cpp)
 endif()
