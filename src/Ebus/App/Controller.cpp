@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "ebus/Controller.hpp"
+#include <ebus/Controller.hpp>
+#include <ebus/Device.hpp>
 
 #include "App/ClientManager.hpp"
 #include "App/DeviceManager.hpp"
@@ -13,7 +14,6 @@
 #include "Core/BusHandler.hpp"
 #include "Core/Handler.hpp"
 #include "Core/Request.hpp"
-#include "Models/Device.hpp"
 #include "Platform/Bus.hpp"
 #include "Platform/ServiceThread.hpp"
 #include "Utils/Common.hpp"
@@ -93,7 +93,8 @@ void ebus::Controller::setOffset(const uint16_t& offset) {
   if (configured_) impl_->bus->setOffset(offset);
 }
 
-void ebus::Controller::setClientActiveTimeout(std::chrono::milliseconds timeout) {
+void ebus::Controller::setClientActiveTimeout(
+    std::chrono::milliseconds timeout) {
   if (impl_->clientManager) impl_->clientManager->setActiveTimeout(timeout);
 }
 
@@ -156,9 +157,9 @@ void ebus::Controller::removeClient(int fd) {
   if (impl_->clientManager) impl_->clientManager->removeClient(fd);
 }
 
-std::vector<ebus::Device> ebus::Controller::getDevices() const {
-  return impl_->deviceManager ? impl_->deviceManager->getDevices()
-                              : std::vector<Device>();
+std::vector<ebus::DeviceInfo> ebus::Controller::getDeviceInfo() const {
+  return impl_->deviceManager ? impl_->deviceManager->getDeviceInfo()
+                              : std::vector<DeviceInfo>();
 }
 
 std::map<std::string, ebus::MetricValues> ebus::Controller::getMetrics() const {
@@ -251,6 +252,7 @@ void ebus::Controller::constructMembers() {
 
   impl_->clientManager.reset(new ClientManager(
       impl_->bus.get(), impl_->busHandler.get(), impl_->request.get()));
+  impl_->clientManager->setActiveTimeout(config_.clientTimeoutMs);
 
   impl_->bus->setWindow(config_.runtime.window);
   impl_->bus->setOffset(config_.runtime.offset);

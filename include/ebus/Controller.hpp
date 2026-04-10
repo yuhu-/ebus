@@ -17,13 +17,13 @@
 #include "ebus/Config.hpp"
 #include "ebus/Datatypes.hpp"
 #include "ebus/Definitions.hpp"
+#include "ebus/Device.hpp"
+#include "ebus/Manufacturers.hpp"
 #include "ebus/Metrics.hpp"
 
 namespace ebus {
 
-// Forward declarations for private components
 struct Impl;
-struct Device;
 
 class Controller {
  public:
@@ -72,7 +72,7 @@ class Controller {
   void removeClient(int fd);
 
   // Device & Network State
-  std::vector<Device> getDevices() const;
+  std::vector<DeviceInfo> getDeviceInfo() const;
 
   // Bus Health Metrics
   std::map<std::string, MetricValues> getMetrics() const;
