@@ -133,6 +133,15 @@ std::vector<uint8_t> ebus::DeviceScanner::nextCommand() {
     return cmd;
   }
 
+  // // Priority 2: Automatic Vendor Scans (Reactive discovery)
+  // if (deviceManager_) {
+  //   auto vendorCmds = deviceManager_->vendorScanCommands();
+  //   if (!vendorCmds.empty()) {
+  //     // Return the first pending vendor command immediately
+  //     return vendorCmds[0];
+  //   }
+  // }
+
   // Priority 2: Full Scan (generates one command at a time)
   if (fullScan_) {
     while (fullScanAddress_ <= 0xff) {
