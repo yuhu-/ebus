@@ -96,9 +96,8 @@ class Scheduler {
   std::atomic<bool> stopFlag_;
   std::atomic<uint32_t> nextId_;
 
-  // Active transfer state (protected by transferMutex_)
+  // Active transfer state
   std::atomic<uint32_t> currentAttemptId_{0};
-  std::mutex transferMutex_;
   Queue<Event> eventQueue_{16};
   // Configuration
   int maxSendAttempts_;
