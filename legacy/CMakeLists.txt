@@ -2,13 +2,7 @@
 
 # Legacy tests with custom main functions (not using Catch2's test discovery)
 
-# Build legacy development and insight tests. These provide deep protocol traces.
-option(EBUS_BUILD_LEGACY_TESTS "Build legacy development and insight tests" ON)
-
 macro(add_legacy_test_executable name source_file)
-    # By using EXCLUDE_FROM_ALL, we can prevent from being built unless they are
-    # explicitly requested.
-    # add_executable(${name} EXCLUDE_FROM_ALL ${source_file})
     add_executable(${name} ${source_file})
     
     # Link to main ebus library
@@ -24,7 +18,6 @@ macro(add_legacy_test_executable name source_file)
     add_test(NAME ${name} COMMAND ${name})
 endmacro()
 
-if(EBUS_BUILD_LEGACY_TESTS)
 # High-level Application Logic
 add_legacy_test_executable(legacy_scheduler App/legacy_scheduler.cpp)
 add_legacy_test_executable(legacy_enhancedprotocol App/legacy_enhancedprotocol.cpp)
@@ -54,5 +47,3 @@ add_legacy_test_executable(legacy_servicethread Platform/legacy_servicethread.cp
 # Utilities
 add_legacy_test_executable(legacy_timingstats Utils/legacy_timingstats.cpp)
 add_legacy_test_executable(legacy_common Utils/legacy_common.cpp)
-endif()
-
