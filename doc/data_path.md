@@ -14,7 +14,7 @@ it bypasses the Scheduler and attempts to request the bus via the Request tracke
 immediately, mimicking a local master.
 
 ### Data Path: ###
-
+```
                                  [ User Application ]
                                           |
                                           v
@@ -50,3 +50,4 @@ immediately, mimicking a local master.
                     [ BusPosix (Linux) ]    [ BusFreeRtos (ESP32) ]
                            |                         |
                     (/dev/ttyUSBx)            (UART Hardware)
+```
