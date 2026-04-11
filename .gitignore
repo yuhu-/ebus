@@ -1,6 +1,5 @@
 /build
 .wiki/
-/doc
+/doc/private
 launch.json
 tasks.json
-GEMINI.md

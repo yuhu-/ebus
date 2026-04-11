@@ -19,12 +19,12 @@ The library is designed with a clear separation between the public API and inter
 - **Config**: Platform-independent configuration for the controller and hardware-specific bus settings.
 - **Definitions**: Central source of truth for protocol symbols, enums, and callback signatures.
 - **Metrics**: Unified data models for bus health monitoring (jitter, utilization, error rates).
-- **Datatypes**: Advanced encoding/decoding utilities for eBUS-specific data formats.
+- **Datatypes**: Advanced encoding/decoding utilities for eBUS-specific data formats (e.g., float-to-ebus conversion).
 
 #### Internal Implementation (`src/Ebus/`)
 - **App**: Orchestration layer containing the **Scheduler** (priority-based transmission), **PollManager** (recurring jobs), and **ClientManager** (network bridging for ebusd).
-- **Core**: The protocol engine. **Handler** manages the Finite State Machine (FSM) for telegrams, while **Request** handles byte-oriented arbitration.
-- **Platform**: Abstraction layer for **Bus** (POSIX/FreeRTOS) and **ServiceThread** (threading).
+- **Core**: The protocol engine. **Handler** manages the Finite State Machine (FSM), **Telegram** encapsulates the frame structure/validation, and **Request** handles byte-oriented arbitration.
+- **Platform**: Abstraction layer for system interaction. Includes **Bus** (serial IO), **Queue** (data buffering), and **ServiceThread** (concurrency abstractions). POSIX and FreeRTOS are supported.
 
 ### Diagnostics & Bus Health
 
