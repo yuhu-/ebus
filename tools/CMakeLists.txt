@@ -3,7 +3,7 @@
 include_directories(${PROJECT_SOURCE_DIR}/src/Ebus)
 
 add_executable(ebusread ebusread.cpp)
-target_link_libraries(ebusread ebus)
+target_link_libraries(ebusread PRIVATE ebus)
 
 add_executable(playground playground.cpp)
-target_link_libraries(playground ebus)
+target_link_libraries(playground PRIVATE ebus)
