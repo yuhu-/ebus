@@ -10,6 +10,9 @@
 
 namespace ebus {
 
+/**
+ * Device related information
+ */
 struct DeviceInfo {
   uint8_t slave = 0xff;
   uint8_t manufacturer = 0;
