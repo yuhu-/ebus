@@ -22,8 +22,8 @@ The library is designed with a clear separation between the public API and inter
 - **Datatypes**: Advanced encoding/decoding utilities for eBUS-specific data formats (e.g., float-to-ebus conversion).
 
 #### Internal Implementation (`src/Ebus/`)
-- **App**: Orchestration layer containing the **Scheduler** (priority-based transmission), **PollManager** (recurring jobs), and **ClientManager** (network bridging for ebusd).
-- **Core**: The protocol engine. **Handler** manages the Finite State Machine (FSM), **Telegram** encapsulates the frame structure/validation, and **Request** handles byte-oriented arbitration.
+- **App**: Orchestration layer containing the **Scheduler** (priority-based transmission), **PollManager** (recurring jobs), **ClientManager** (network bridging), **DeviceManager** (inventory), **DeviceScanner** (discovery), and **EnhancedProtocol** (advanced modes).
+- **Core**: The protocol engine. **Handler** manages the Finite State Machine (FSM), **Telegram** encapsulates the frame structure/validation, **Sequence** handles multi-byte sequences, and **Request** handles byte-oriented arbitration.
 - **Platform**: Abstraction layer for system interaction. Includes **Bus** (serial IO), **Queue** (data buffering), and **ServiceThread** (concurrency abstractions). POSIX and FreeRTOS are supported.
 
 ### Diagnostics & Bus Health
@@ -67,19 +67,7 @@ These tests are excluded from the default build to keep build times fast. To ena
 
 ```bash
 cmake -DEBUS_BUILD_LEGACY_TESTS=ON ..
+make
 ```
-
-Even when enabled, these tests are marked as `EXCLUDE_FROM_ALL`, meaning they won't all be compiled by a generic `make` command. You can build and run a specific insight test by its target name:
-
-```bash
-make test_request
-./legacy/test_request
-```
-
-Commonly used legacy tests:
-* `test_request`: Detailed arbitration FSM transitions.
-* `test_bushandler`: Telegram parsing and callback logic.
-* `test_scheduler`: Master scheduling behavior.
-
 
 For reporting bugs and requesting features, please use the GitHub [Issues](https://github.com/yuhu-/ebus/issues) page.

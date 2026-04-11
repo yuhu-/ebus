@@ -9,12 +9,20 @@ This document provides architectural context for Gemini Code Assist.
 
 ## Critical Classes
 *   **Controller**: The main entry point. Use this for lifecycle management.
+*   **Config**: Centralized configuration for controller and bus settings.
 *   **Bus**: Serial communication interface. Concrete implementations exist for POSIX and FreeRTOS.
 *   **Telegram**: The unit of data. Handles CRC calculation and byte sequence validation.
+*   **Sequence**: Manages timing and state for multi-byte protocol sequences.
 *   **Handler**: The brain of the protocol. Manages byte-by-byte parsing.
 *   **Request**: Manages state during the arbitration phase.
 *   **Scheduler**: Manages master priority. eBUS is a multi-master protocol where masters compete for the bus using 2400 baud arbitration.
 *   **PollManager**: Orchestrates periodic polling of slave devices.
+*   **DeviceManager**: Maintains the inventory of discovered devices and their properties.
+*   **DeviceScanner**: Implements the logic for scanning and discovering devices on the bus.
+*   **EnhancedProtocol**: Implements specialized ebusd-compatible communication enhancements.
+*   **ClientManager**: Manages network bridging and client connections.
+*   **Metrics**: Unified data models for bus health and telemetry.
+*   **Queue**: Thread-safe byte buffering for incoming bus data.
 *   **ServiceThread**: The background worker thread that processes the **Queue** and drives the protocol FSM.
 
 ## Coding Standards
