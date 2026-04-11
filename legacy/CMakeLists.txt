@@ -2,12 +2,12 @@
 
 # Legacy tests with custom main functions (not using Catch2's test discovery)
 
-option(EBUS_BUILD_LEGACY_TESTS "Build legacy development and insight tests" OFF)
+# Build legacy development and insight tests. These provide deep protocol traces.
+option(EBUS_BUILD_LEGACY_TESTS "Build legacy development and insight tests" ON)
 
 macro(add_legacy_test_executable name source_file)
-    # We don't want these legacy tests to be built by default since they are not 
-    # using Catch2's test discovery and may have custom main functions. By using 
-    # EXCLUDE_FROM_ALL, we can prevent them from being built unless explicitly requested.
+    # By using EXCLUDE_FROM_ALL, we can prevent from being built unless they are
+    # explicitly requested.
     # add_executable(${name} EXCLUDE_FROM_ALL ${source_file})
     add_executable(${name} ${source_file})
     
