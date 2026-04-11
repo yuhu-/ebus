@@ -13,6 +13,7 @@
 namespace ebus {
 
 // --- Protocol Symbols ---
+constexpr uint8_t sym_zero = 0x00;      // zero byte
 constexpr uint8_t sym_syn = 0xaa;      // synchronization byte
 constexpr uint8_t sym_ext = 0xa9;      // extend byte
 constexpr uint8_t sym_syn_ext = 0x01;  // extended synchronization byte
@@ -20,6 +21,9 @@ constexpr uint8_t sym_ext_ext = 0x00;  // extended extend byte
 constexpr uint8_t sym_ack = 0x00;      // positive acknowledge
 constexpr uint8_t sym_nak = 0xff;      // negative acknowledge
 constexpr uint8_t sym_broad = 0xfe;    // broadcast destination address
+
+// --- Protocol Limits ---
+constexpr uint8_t max_bytes = 0x10;  // 16 maximum data bytes (Spec 5.6)
 
 // --- Protocol Enums ---
 enum class TelegramType { undefined, broadcast, master_master, master_slave };
