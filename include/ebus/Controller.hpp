@@ -20,6 +20,7 @@
 #include "ebus/Device.hpp"
 #include "ebus/Manufacturers.hpp"
 #include "ebus/Metrics.hpp"
+#include "ebus/Utils.hpp"
 
 namespace ebus {
 
