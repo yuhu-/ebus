@@ -9,6 +9,6 @@
 
 namespace ebus {
 
-void sleep_ms(uint32_t ms);
+void sleepMs(uint32_t ms);
 
 }  // namespace ebus

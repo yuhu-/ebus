@@ -158,7 +158,7 @@ void ebus::Handler::resetMetrics() {
 
 std::map<std::string, ebus::MetricValues> ebus::Handler::getMetrics() const {
   std::map<std::string, MetricValues> m;
-  auto addCounter = [&](const std::string& name, uint32_t val) {
+  auto add_counter = [&](const std::string& name, uint32_t val) {
     m["handler.counter." + name] = {static_cast<double>(val),  0, 0, 0, 0,
                                     static_cast<uint64_t>(val)};
   };
@@ -171,35 +171,35 @@ std::map<std::string, ebus::MetricValues> ebus::Handler::getMetrics() const {
       c.messages_passive_broadcast_ + c.messages_active_master_slave_ +
       c.messages_active_master_master_ + c.messages_active_broadcast_ +
       c.messages_reactive_master_slave_ + c.messages_reactive_master_master_;
-  addCounter("messagesTotal", msg_total);
+  add_counter("messages_total", msg_total);
 
   uint32_t err_passive = c.error_passive_master_ + c.error_passive_master_ack_ +
                          c.error_passive_slave_ + c.error_passive_slave_ack_;
-  addCounter("errorPassive", err_passive);
+  add_counter("error_passive", err_passive);
 
   uint32_t err_reactive = c.error_reactive_master_ +
                           c.error_reactive_master_ack_ +
                           c.error_reactive_slave_ + c.error_reactive_slave_ack_;
-  addCounter("errorReactive", err_reactive);
+  add_counter("error_reactive", err_reactive);
 
   uint32_t err_active = c.error_active_master_ + c.error_active_master_ack_ +
                         c.error_active_slave_ + c.error_active_slave_ack_;
-  addCounter("errorActive", err_active);
+  add_counter("error_active", err_active);
 
   uint32_t err_total = err_passive + err_reactive + err_active;
-  addCounter("errorTotal", err_total);
+  add_counter("error_total", err_total);
 
   // 2. Calculate Error Rate (%)
   if (msg_total > 0) {
     double error_rate =
         (static_cast<double>(err_total) / (msg_total + err_total)) * 100.0;
-    m["handler.errorRate"] = {error_rate, error_rate, error_rate,
-                              error_rate, 0.0,        1};
+    m["handler.error_rate"] = {error_rate, error_rate, error_rate,
+                               error_rate, 0.0,        1};
   } else {
-    m["handler.errorRate"] = {0.0, 0.0, 0.0, 0.0, 0.0, 0};
+    m["handler.error_rate"] = {0.0, 0.0, 0.0, 0.0, 0.0, 0};
   }
 
-#define X(name) addCounter(#name, c.name##_);
+#define X(name) add_counter(#name, c.name##_);
   EBUS_HANDLER_COUNTER_LIST
 #undef X
 

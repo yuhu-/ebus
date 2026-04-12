@@ -34,14 +34,14 @@ struct BusEvent {
 #define EBUS_BUS_COUNTER_LIST X(startBit)
 
 #define EBUS_BUS_TIMING_LIST \
-  X(statsDelay)              \
-  X(statsWindow)             \
-  X(statsTransmit)           \
-  X(statsUptime)
+  X(stats_delay)             \
+  X(stats_window)            \
+  X(stats_transmit)          \
+  X(stats_uptime)
 
 class BusFreeRtos {
  public:
-  explicit BusFreeRtos(const busConfig& config, const RuntimeConfig& runtime,
+  explicit BusFreeRtos(const BusConfig& config, const RuntimeConfig& runtime,
                        Request* request);
   ~BusFreeRtos();
 
@@ -64,15 +64,15 @@ class BusFreeRtos {
   void recordUtilization(uint8_t byte);
 
  private:
-  uart_port_t uartPortNum_;
-  uint8_t rxPin_;
-  uint8_t txPin_;
+  uart_port_t uart_port_num_;
+  uint8_t rx_pin_;
+  uint8_t tx_pin_;
 
-  busConfig config_;
+  BusConfig config_;
   RuntimeConfig runtime_;
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
-  gptimer_handle_t gptimer_ = nullptr;
-  gptimer_handle_t synGptimer_ = nullptr;
+  gptimer_handle_t gp_timer_ = nullptr;
+  gptimer_handle_t syn_gp_timer_ = nullptr;
 #else
   timer_group_t timerGroupNum_ = TIMER_GROUP_1;
   timer_idx_t timerIdxNum_ = TIMER_0;
@@ -81,45 +81,44 @@ class BusFreeRtos {
   Request* request_ = nullptr;
 
   // owned queue
-  Queue<BusEvent>* byteQueue_ = nullptr;
+  Queue<BusEvent>* byte_queue_ = nullptr;
 
   // ISR/state
   static constexpr uint8_t FALLING_EDGE_BUFFER_SIZE = 5;
 
   // The bit time at 2400 baud is approximately 416.67 us
-  static constexpr float bitTime_ = 1000000.0 / 2400.0;  // ~416.67 us
+  static constexpr float bit_time_ = 1000000.0 / 2400.0;  // ~416.67 us
 
   // The byte time at 2400 baud for 10 bits with a 0.5-bit offset is
   // approximately 9.5 * bitTime_ = 9.5 * 416.67 us = 3958.33 us
-  static constexpr int64_t byteTime_ = 9.5 * bitTime_;  // ~3958.33 us
+  static constexpr int64_t byte_time_ = 9.5 * bit_time_;  // ~3958.33 us
 
   // This value can be adjusted if the bus ISR is not working as expected.
   volatile uint16_t window_ = 4300;  // usually between 4300-4456 us
   volatile uint16_t offset_ = 80;    // mainly for context switch and write
 
-  volatile uint8_t bufferIndex_ = 0;  // index for falling edge buffer
-  volatile int64_t microsEdgeBuffer_[FALLING_EDGE_BUFFER_SIZE] = {0};
+  volatile uint8_t buffer_index_ = 0;  // index for falling edge buffer
+  volatile int64_t micros_edge_buffer_[FALLING_EDGE_BUFFER_SIZE] = {0};
 
-  // volatile int64_t lastActivityMicros_ = 0;
-  volatile int64_t microsStartBit_ = 0;  // estimated start bit time
+  volatile int64_t micros_start_bit_ = 0;  // estimated start bit time
 
-  volatile bool busRequestFlag_ = false;
-  volatile bool startBitFlag_ = false;
+  volatile bool bus_request_flag_ = false;
+  volatile bool start_bit_flag_ = false;
 
-  volatile bool microsDelayFlag_ = false;
-  volatile bool microsWindowFlag_ = false;
+  volatile bool micros_delay_flag_ = false;
+  volatile bool micros_window_flag_ = false;
 
-  volatile int64_t microsLastDelay_ = 0;
-  volatile int64_t microsLastWindow_ = 0;
+  volatile int64_t micros_last_delay_ = 0;
+  volatile int64_t micros_last_window_ = 0;
 
-  std::atomic<bool> synRunning_{false};
-  bool synActive_{false};
-  uint64_t synBaseUs_ = 0;
-  uint64_t synUniqueUs_ = 0;
+  std::atomic<bool> syn_running_{false};
+  bool syn_active_{false};
+  uint64_t syn_base_us_ = 0;
+  uint64_t syn_unique_us_ = 0;
 
   // platform handles
-  QueueHandle_t uartEventQueue_ = nullptr;
-  portMUX_TYPE timerMux_ = portMUX_INITIALIZER_UNLOCKED;
+  QueueHandle_t uart_event_queue_ = nullptr;
+  portMUX_TYPE timer_mux_ = portMUX_INITIALIZER_UNLOCKED;
 
   // metrics
   struct Counter {
@@ -130,11 +129,11 @@ class BusFreeRtos {
 
   Counter counter_;
 
-  TimingStats statsDelay_;
-  TimingStats statsWindow_;
-  TimingStats statsTransmit_;
-  RollingStats statsUtilization_;
-  TimingStats statsUptime_;
+  TimingStats stats_delay_;
+  TimingStats stats_window_;
+  TimingStats stats_transmit_;
+  RollingStats stats_utilization_;
+  TimingStats stats_uptime_;
 
   // setup helpers
   void configureUart();

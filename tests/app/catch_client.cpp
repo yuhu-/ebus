@@ -59,7 +59,7 @@ TEST_CASE("EnhancedClient: Protocol basics", "[app][client][enhanced]") {
   REQUIRE(!client.recvFromClient(out));
 
   uint8_t init_resp[2];
-  REQUIRE(read_exact(sv[1], init_resp, 2));
+  REQUIRE(readExact(sv[1], init_resp, 2));
   REQUIRE(init_resp[0] == 0xc0);
   REQUIRE(init_resp[1] == 0x80);
 
@@ -85,7 +85,7 @@ TEST_CASE("EnhancedClient: Encoded responses mapping",
                     std::chrono::steady_clock::now()});
 
   uint8_t resp[2];
-  REQUIRE(read_exact(sv[1], resp, 2));
+  REQUIRE(readExact(sv[1], resp, 2));
   REQUIRE(resp[0] == 0xc8);
   REQUIRE(resp[1] == 0xb3);
 
@@ -95,7 +95,7 @@ TEST_CASE("EnhancedClient: Encoded responses mapping",
                     std::chrono::steady_clock::now()});
 
   uint8_t short_resp;
-  REQUIRE(read_exact(sv[1], &short_resp, 1));
+  REQUIRE(readExact(sv[1], &short_resp, 1));
   REQUIRE(short_resp == 0x15);
 
   // 3. Test: Long-form observation (>= 0x80) should be encoded
@@ -103,7 +103,7 @@ TEST_CASE("EnhancedClient: Encoded responses mapping",
   client.onBusByte({0xaa, req.getState(), req.getResult(), req.getLockCounter(),
                     std::chrono::steady_clock::now()});
 
-  REQUIRE(read_exact(sv[1], resp, 2));
+  REQUIRE(readExact(sv[1], resp, 2));
   REQUIRE(resp[0] == 0xc6);
   REQUIRE(resp[1] == 0xaa);
 
@@ -127,7 +127,7 @@ TEST_CASE("EnhancedClient: Invalid protocol handling",
   send(sv[1], invalid_b1_prefix, 2, 0);
   REQUIRE(!client.recvFromClient(out));
   REQUIRE(!client.isConnected());
-  REQUIRE(read_exact(sv[1], err_resp, 2));
+  REQUIRE(readExact(sv[1], err_resp, 2));
   REQUIRE(err_resp[0] == 0xf0);
   REQUIRE(err_resp[1] == 0x80);
 
@@ -142,7 +142,7 @@ TEST_CASE("EnhancedClient: Invalid protocol handling",
   send(sv[1], invalid_b2_prefix, 2, 0);
   REQUIRE(!client2.recvFromClient(out));
   REQUIRE(!client2.isConnected());
-  REQUIRE(read_exact(sv[1], err_resp, 2));
+  REQUIRE(readExact(sv[1], err_resp, 2));
   REQUIRE(err_resp[0] == 0xf0);
   REQUIRE(err_resp[1] == 0x80);
 

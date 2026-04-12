@@ -274,6 +274,6 @@ void ebus::Controller::run() {
     }
 
     // High-level "Tick" rate (100ms is enough for register polling resolution)
-    ebus::sleep_ms(100);
+    ebus::sleepMs(100);
   }
 }

@@ -9,7 +9,7 @@
 #include <thread>
 #endif
 
-void ebus::sleep_ms(uint32_t ms) {
+void ebus::sleepMs(uint32_t ms) {
 #if defined(ESP32)
   vTaskDelay(pdMS_TO_TICKS(ms));
 #elif defined(POSIX)

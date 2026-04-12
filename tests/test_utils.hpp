@@ -24,7 +24,7 @@
 /**
  * Robust read helper to handle partial TCP/Socket reads.
  */
-inline bool read_exact(int fd, uint8_t* buffer, size_t length) {
+inline bool readExact(int fd, uint8_t* buffer, size_t length) {
   size_t total = 0;
   while (total < length) {
     ssize_t n = read(fd, buffer + total, length - total);
@@ -32,25 +32,6 @@ inline bool read_exact(int fd, uint8_t* buffer, size_t length) {
     total += n;
   }
   return true;
-}
-
-/**
- * Helper function to wait for the Request FSM to reach a specific state.
- * Useful for synchronizing test threads with the eBUS stack's background
- * threads.
- */
-inline bool wait_for_request_state(ebus::Request& req,
-                                   ebus::RequestState targetState,
-                                   int timeoutMs) {
-  auto start = std::chrono::steady_clock::now();
-  while (std::chrono::steady_clock::now() - start <
-         std::chrono::milliseconds(timeoutMs)) {
-    if (req.getState() == targetState) {
-      return true;
-    }
-    ebus::sleep_ms(1);  // Poll every 1ms
-  }
-  return false;  // Timeout
 }
 
 /**

@@ -22,13 +22,13 @@ class QueuePosix {
 
   // Blocking push with duration (Standard C++ naming alias)
   template <typename Rep, typename Period>
-  bool try_push_for(const T& item, std::chrono::duration<Rep, Period> timeout) {
+  bool tryPushFor(const T& item, std::chrono::duration<Rep, Period> timeout) {
     return push(item, timeout);
   }
 
   // Blocking push (move semantics) with duration (Standard C++ naming alias)
   template <typename Rep, typename Period>
-  bool try_push_for(T&& item, std::chrono::duration<Rep, Period> timeout) {
+  bool tryPushFor(T&& item, std::chrono::duration<Rep, Period> timeout) {
     return push(std::move(item), timeout);
   }
 
@@ -52,16 +52,16 @@ class QueuePosix {
       std::unique_lock<std::mutex> lock(mutex_);
       if (capacity_ > 0) {
         if (timeout == std::chrono::milliseconds::max()) {
-          notFull_.wait(lock, [this] { return queue_.size() < capacity_; });
+          not_full_.wait(lock, [this] { return queue_.size() < capacity_; });
         } else {
-          if (!notFull_.wait_for(lock, timeout,
-                                 [this] { return queue_.size() < capacity_; }))
+          if (!not_full_.wait_for(lock, timeout,
+                                  [this] { return queue_.size() < capacity_; }))
             return false;  // timeout
         }
       }
       queue_.push(item);
     }
-    notEmpty_.notify_one();
+    not_empty_.notify_one();
     return true;
   }
 
@@ -78,16 +78,16 @@ class QueuePosix {
       std::unique_lock<std::mutex> lock(mutex_);
       if (capacity_ > 0) {
         if (timeout == std::chrono::milliseconds::max()) {
-          notFull_.wait(lock, [this] { return queue_.size() < capacity_; });
+          not_full_.wait(lock, [this] { return queue_.size() < capacity_; });
         } else {
-          if (!notFull_.wait_for(lock, timeout,
-                                 [this] { return queue_.size() < capacity_; }))
+          if (!not_full_.wait_for(lock, timeout,
+                                  [this] { return queue_.size() < capacity_; }))
             return false;  // timeout
         }
       }
       queue_.push(std::move(item));
     }
-    notEmpty_.notify_one();
+    not_empty_.notify_one();
     return true;
   }
 
@@ -105,13 +105,13 @@ class QueuePosix {
       }
       std::unique_lock<std::mutex> lock(mutex_);
       if (capacity_ > 0) {
-        if (!notFull_.wait_for(lock, timeout_val,
-                               [this] { return queue_.size() < capacity_; }))
+        if (!not_full_.wait_for(lock, timeout_val,
+                                [this] { return queue_.size() < capacity_; }))
           return false;  // timeout
       }
       queue_.push(std::move(item));
     }
-    notEmpty_.notify_one();
+    not_empty_.notify_one();
     return true;
   }
 
@@ -122,7 +122,7 @@ class QueuePosix {
       if (capacity_ > 0 && queue_.size() >= capacity_) return false;
       queue_.push(item);
     }
-    notEmpty_.notify_one();
+    not_empty_.notify_one();
     return true;
   }
 
@@ -133,13 +133,13 @@ class QueuePosix {
       if (capacity_ > 0 && queue_.size() >= capacity_) return false;
       queue_.push(std::move(item));
     }
-    notEmpty_.notify_one();
+    not_empty_.notify_one();
     return true;
   }
 
   // Blocking pop with duration (Standard C++ naming alias)
   template <typename Rep, typename Period>
-  bool try_pop_for(T& out, std::chrono::duration<Rep, Period> timeout) {
+  bool tryPopFor(T& out, std::chrono::duration<Rep, Period> timeout) {
     return pop(out, timeout);
   }
 
@@ -158,16 +158,16 @@ class QueuePosix {
                                      : std::chrono::milliseconds(timeout_ms);
       std::unique_lock<std::mutex> lock(mutex_);
       if (timeout == std::chrono::milliseconds::max()) {
-        notEmpty_.wait(lock, [this] { return !queue_.empty(); });
+        not_empty_.wait(lock, [this] { return !queue_.empty(); });
       } else {
-        if (!notEmpty_.wait_for(lock, timeout,
-                                [this] { return !queue_.empty(); }))
+        if (!not_empty_.wait_for(lock, timeout,
+                                 [this] { return !queue_.empty(); }))
           return false;  // timeout
       }
       out = std::move(queue_.front());
       queue_.pop();
     }
-    if (capacity_ > 0) notFull_.notify_one();
+    if (capacity_ > 0) not_full_.notify_one();
     return true;
   }
 
@@ -179,7 +179,7 @@ class QueuePosix {
       out = std::move(queue_.front());
       queue_.pop();
     }
-    if (capacity_ > 0) notFull_.notify_one();
+    if (capacity_ > 0) not_full_.notify_one();
     return true;
   }
 
@@ -192,14 +192,14 @@ class QueuePosix {
     std::lock_guard<std::mutex> lock(mutex_);
     std::queue<T> empty;
     std::swap(queue_, empty);
-    if (capacity_ > 0) notFull_.notify_all();
+    if (capacity_ > 0) not_full_.notify_all();
   }
 
  private:
   std::queue<T> queue_;
   mutable std::mutex mutex_;
-  std::condition_variable notEmpty_;
-  std::condition_variable notFull_;
+  std::condition_variable not_empty_;
+  std::condition_variable not_full_;
   size_t capacity_;
 };
 

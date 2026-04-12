@@ -98,7 +98,7 @@ void ebus::Request::resetMetrics() {
 
 std::map<std::string, ebus::MetricValues> ebus::Request::getMetrics() const {
   std::map<std::string, MetricValues> m;
-  auto addCounter = [&](const std::string& name, uint32_t val) {
+  auto add_counter = [&](const std::string& name, uint32_t val) {
     m["request.counter." + name] = {static_cast<double>(val),  0, 0, 0, 0,
                                     static_cast<uint64_t>(val)};
   };
@@ -109,8 +109,8 @@ std::map<std::string, ebus::MetricValues> ebus::Request::getMetrics() const {
   uint32_t attempts = c.first_won_ + c.first_lost_ + c.first_retry_;
   uint32_t collisions = c.first_lost_ + c.first_retry_;
 
-  addCounter("wonTotal", c.first_won_ + c.second_won_);
-  addCounter("lostTotal", c.first_lost_ + c.second_lost_);
+  add_counter("won_total", c.first_won_ + c.second_won_);
+  add_counter("lost_total", c.first_lost_ + c.second_lost_);
 
   // 2. Calculate Contention Rate (%)
   // Contention happens when we lose arbitration (lost or retry) on the
@@ -118,17 +118,17 @@ std::map<std::string, ebus::MetricValues> ebus::Request::getMetrics() const {
   if (attempts > 0) {
     double contention_rate =
         (static_cast<double>(collisions) / attempts) * 100.0;
-    m["request.contentionRate"] = {contention_rate,
-                                   contention_rate,
-                                   contention_rate,
-                                   contention_rate,
-                                   0.0,
-                                   1};
+    m["request.contention_rate"] = {contention_rate,
+                                    contention_rate,
+                                    contention_rate,
+                                    contention_rate,
+                                    0.0,
+                                    1};
   } else {
     m["request.contentionRate"] = {0.0, 0.0, 0.0, 0.0, 0.0, 0};
   }
 
-#define X(name) addCounter(#name, c.name##_);
+#define X(name) add_counter(#name, c.name##_);
   EBUS_REQUEST_COUNTER_LIST
 #undef X
 

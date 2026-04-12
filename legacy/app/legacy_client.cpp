@@ -76,7 +76,7 @@ void test_enhanced_client_protocol() {
   // Verify library sends RESP_RESETTED (Logical 0x00, val 0x00 -> Encoded 0xc0,
   // 0x80)
   uint8_t init_resp[2];
-  run_test("Received RESP_RESETTED", read_exact(sv[1], init_resp, 2) &&
+  run_test("Received RESP_RESETTED", readExact(sv[1], init_resp, 2) &&
                                          init_resp[0] == 0xc0 &&
                                          init_resp[1] == 0x80);
 
@@ -113,7 +113,7 @@ void test_enhanced_client_responses() {
   // Verify RESP_STARTED (Logical 0x02, val 0x33 -> Encoded 0xc8, 0xb3)
   uint8_t resp[2];
   run_test("Encoded RESP_STARTED",
-           read_exact(sv[1], resp, 2) && resp[0] == 0xc8 && resp[1] == 0xb3);
+           readExact(sv[1], resp, 2) && resp[0] == 0xc8 && resp[1] == 0xb3);
 
   // 2. Test: Observation (Short Form < 0x80)
   req.run(0x15);  // FSM sets result to observeData
@@ -122,7 +122,7 @@ void test_enhanced_client_responses() {
 
   uint8_t short_resp;
   run_test("Received short form RESP_RECEIVED",
-           read_exact(sv[1], &short_resp, 1) && short_resp == 0x15);
+           readExact(sv[1], &short_resp, 1) && short_resp == 0x15);
 
   // 3. Test: Observation (Long Form >= 0x80)
   req.run(0xaa);  // FSM sets result to observeSyn
@@ -130,7 +130,7 @@ void test_enhanced_client_responses() {
                     std::chrono::steady_clock::now()});
 
   run_test("Received encoded long RESP_RECEIVED",
-           read_exact(sv[1], resp, 2) && resp[0] == 0xc6 && resp[1] == 0xaa);
+           readExact(sv[1], resp, 2) && resp[0] == 0xc6 && resp[1] == 0xaa);
 
   close(sv[0]);
   close(sv[1]);
@@ -162,7 +162,7 @@ void test_enhanced_client_invalid_protocol() {
   // Verify error response
   uint8_t err_resp[2];
   run_test("Invalid B1 prefix: received 2 bytes",
-           read_exact(sv[1], err_resp, 2));
+           readExact(sv[1], err_resp, 2));
   // RESP_ERROR_HOST (0x0c), ERR_FRAMING (0x00) -> 0xf0, 0x80
   run_test("Invalid B1 prefix: received encoded RESP_ERROR_HOST",
            err_resp[0] == 0xf0);
@@ -188,7 +188,7 @@ void test_enhanced_client_invalid_protocol() {
   run_test("Invalid B2 prefix: client is disconnected", !client2.isConnected());
 
   run_test("Invalid B2 prefix: received 2 bytes",
-           read_exact(sv[1], err_resp, 2));
+           readExact(sv[1], err_resp, 2));
   run_test("Invalid B2 prefix: received encoded RESP_ERROR_HOST",
            err_resp[0] == 0xf0);
   run_test("Invalid B2 prefix: received encoded ERR_FRAMING",

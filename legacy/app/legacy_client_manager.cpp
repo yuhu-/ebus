@@ -117,10 +117,10 @@ void test_client_orchestration() {
   // bytes (including SYNs) are suppressed until we allow the bus request.
   for (int i = 0; i < 2; ++i)
     run_test("Regular received correct SYN echo",
-             (read_exact(svReg[1], &echo, 1)) && echo == ebus::sym_syn);
+             (readExact(svReg[1], &echo, 1)) && echo == ebus::sym_syn);
 
   run_test("Regular received correct address byte echo",
-           (read_exact(svReg[1], &echo, 1) && echo == telegram[0]));
+           (readExact(svReg[1], &echo, 1) && echo == telegram[0]));
 
   for (size_t i = 1; i < telegram.size(); ++i) {
     send(svReg[1], &telegram[i], 1, 0);
@@ -129,7 +129,7 @@ void test_client_orchestration() {
     // Because it's bus-driven, each byte we send is triggered by the
     // reception/echo of the previous byte.
     run_test("Client received correct byte echo",
-             read_exact(svReg[1], &echo, 1) && echo == telegram[i]);
+             readExact(svReg[1], &echo, 1) && echo == telegram[i]);
   }
 
   // Final Verification: ReadOnly observer should have captured everything (4
@@ -138,7 +138,7 @@ void test_client_orchestration() {
   expectedRO.insert(expectedRO.end(), telegram.begin(), telegram.end());
   std::vector<uint8_t> actualRO(expectedRO.size());
   run_test("ReadOnly client received full trace",
-           read_exact(svRO[1], actualRO.data(), actualRO.size()) &&
+           readExact(svRO[1], actualRO.data(), actualRO.size()) &&
                actualRO == expectedRO);
 
   // Cleanup
@@ -214,13 +214,13 @@ void test_enhanced_active_sending() {
   // point we send the address byte, the client is in Request state and all
   // bytes (including SYNs) are suppressed until we allow the bus request.
   for (int i = 0; i < 2; ++i) {
-    read_exact(svEnh[1], resp, 2);
+    readExact(svEnh[1], resp, 2);
     run_test("Enhanced received correct SYN echo",
              (resp[0] == 0xc6 && resp[1] == 0xaa));
   }
 
   run_test("Enhanced received RESP_STARTED",
-           read_exact(svEnh[1], resp, 2) && resp[0] == 0xc8 && resp[1] == 0xb3);
+           readExact(svEnh[1], resp, 2) && resp[0] == 0xc8 && resp[1] == 0xb3);
 
   // Enhanced Client sends CMD_SEND(0xfe) -> 0xc7 0xbe
   uint8_t cmdSend[] = {0xc7, 0xbe};
@@ -229,13 +229,13 @@ void test_enhanced_active_sending() {
 
   // Verify Enhanced client receives RESP_RECEIVED(0xfe) -> 0xc7 0xbe
   run_test("Enhanced received encoded 0xfe",
-           read_exact(svEnh[1], resp, 2) && resp[0] == 0xc7 && resp[1] == 0xbe);
+           readExact(svEnh[1], resp, 2) && resp[0] == 0xc7 && resp[1] == 0xbe);
 
   // Verify ReadOnly client received raw bytes
   std::vector<uint8_t> expectedRO = {0xaa, 0xaa, 0xaa, 0xaa, 0x33, 0xfe};
   std::vector<uint8_t> actualRO(expectedRO.size());
   run_test("ReadOnly client received full trace",
-           read_exact(svRO[1], actualRO.data(), actualRO.size()) &&
+           readExact(svRO[1], actualRO.data(), actualRO.size()) &&
                actualRO == expectedRO);
 
   manager.stop();

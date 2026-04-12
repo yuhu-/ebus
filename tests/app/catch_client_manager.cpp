@@ -76,24 +76,24 @@ TEST_CASE("ClientManager Orchestration (Regular + ReadOnly)") {
 
   uint8_t echo;
   for (int i = 0; i < 2; ++i) {
-    REQUIRE(read_exact(svReg[1], &echo, 1));
+    REQUIRE(readExact(svReg[1], &echo, 1));
     CHECK_TEST("Regular received correct SYN echo", echo == ebus::sym_syn);
   }
 
-  REQUIRE(read_exact(svReg[1], &echo, 1));
+  REQUIRE(readExact(svReg[1], &echo, 1));
   CHECK_TEST("Regular received correct address byte echo", echo == telegram[0]);
 
   for (size_t i = 1; i < telegram.size(); ++i) {
     send(svReg[1], &telegram[i], 1, 0);
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    REQUIRE(read_exact(svReg[1], &echo, 1));
+    REQUIRE(readExact(svReg[1], &echo, 1));
     CHECK_TEST("Client received correct byte echo", echo == telegram[i]);
   }
 
   std::vector<uint8_t> expectedRO = {0xaa, 0xaa, 0xaa, 0xaa};
   expectedRO.insert(expectedRO.end(), telegram.begin(), telegram.end());
   std::vector<uint8_t> actualRO(expectedRO.size());
-  REQUIRE(read_exact(svRO[1], actualRO.data(), actualRO.size()));
+  REQUIRE(readExact(svRO[1], actualRO.data(), actualRO.size()));
   CHECK_TEST("ReadOnly client received full trace", actualRO == expectedRO);
 
   manager.stop();
@@ -149,12 +149,12 @@ TEST_CASE("ClientManager Enhanced Active Sending") {
 
   uint8_t resp[2];
   for (int i = 0; i < 2; ++i) {
-    read_exact(svEnh[1], resp, 2);
+    readExact(svEnh[1], resp, 2);
     CHECK_TEST("Enhanced received correct SYN echo",
                (resp[0] == 0xc6 && resp[1] == 0xaa));
   }
 
-  REQUIRE(read_exact(svEnh[1], resp, 2));
+  REQUIRE(readExact(svEnh[1], resp, 2));
   CHECK_TEST("Enhanced received RESP_STARTED",
              resp[0] == 0xc8 && resp[1] == 0xb3);
 
@@ -162,13 +162,13 @@ TEST_CASE("ClientManager Enhanced Active Sending") {
   send(svEnh[1], cmdSend, 2, 0);
   std::this_thread::sleep_for(std::chrono::milliseconds(5));
 
-  REQUIRE(read_exact(svEnh[1], resp, 2));
+  REQUIRE(readExact(svEnh[1], resp, 2));
   CHECK_TEST("Enhanced received encoded 0xfe",
              resp[0] == 0xc7 && resp[1] == 0xbe);
 
   std::vector<uint8_t> expectedRO = {0xaa, 0xaa, 0xaa, 0xaa, 0x33, 0xfe};
   std::vector<uint8_t> actualRO(expectedRO.size());
-  REQUIRE(read_exact(svRO[1], actualRO.data(), actualRO.size()));
+  REQUIRE(readExact(svRO[1], actualRO.data(), actualRO.size()));
   CHECK_TEST("ReadOnly client received full trace", actualRO == expectedRO);
 
   manager.stop();

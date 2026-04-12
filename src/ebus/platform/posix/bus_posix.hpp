@@ -45,10 +45,10 @@ struct BusEvent {
 #define EBUS_BUS_COUNTER_LIST X(startBit)
 
 #define EBUS_BUS_TIMING_LIST \
-  X(statsDelay)              \
-  X(statsWindow)             \
-  X(statsTransmit)           \
-  X(statsUptime)
+  X(stats_delay)             \
+  X(stats_window)            \
+  X(stats_transmit)          \
+  X(stats_uptime)
 
 class BusPosix {
  public:
@@ -92,34 +92,34 @@ class BusPosix {
   Request* request_ = nullptr;
 
   int fd_;
-  std::unique_ptr<VirtualLine> virtualLine_;
+  std::unique_ptr<VirtualLine> virtual_line_;
 
   bool open_;
-  struct termios oldSettings_{};
+  struct termios old_settings_{};
 
-  std::unique_ptr<Queue<BusEvent>> byteQueue_;
+  std::unique_ptr<Queue<BusEvent>> byte_queue_;
   std::thread thread_;
   std::atomic<bool> running_;
 
-  std::vector<ReadListener> readListeners_;
-  std::vector<WriteListener> writeListeners_;
-  std::vector<SynListener> synListeners_;
+  std::vector<ReadListener> read_listeners_;
+  std::vector<WriteListener> write_listeners_;
+  std::vector<SynListener> syn_listeners_;
 
   // SYN generator members
-  std::thread synThread_;
-  std::atomic<bool> synRunning_{false};
-  std::mutex synMutex_;
-  std::condition_variable synCv_;
+  std::thread syn_thread_;
+  std::atomic<bool> syn_running_{false};
+  std::mutex syn_mutex_;
+  std::condition_variable syn_cv_;
 
-  std::chrono::milliseconds synBaseMsDur_;
-  std::chrono::milliseconds synToleranceMsDur_;
-  std::chrono::milliseconds currentTunique_;
+  std::chrono::milliseconds syn_base_ms_dur_;
+  std::chrono::milliseconds syn_tolerance_ms_dur_;
+  std::chrono::milliseconds current_t_unique_;
 
-  std::chrono::steady_clock::time_point lastActivityTime_;
-  std::chrono::steady_clock::time_point nextSynExpiry_;
-  bool synActive_{false};
+  std::chrono::steady_clock::time_point last_activity_time_;
+  std::chrono::steady_clock::time_point next_syn_expiry_;
+  bool syn_active_{false};
 
-  std::atomic<bool> busRequestFlag_{false};
+  std::atomic<bool> bus_request_flag_{false};
 
   // metrics
   struct Counter {
@@ -130,11 +130,11 @@ class BusPosix {
 
   Counter counter_;
 
-  TimingStats statsDelay_;
-  TimingStats statsWindow_;
-  TimingStats statsTransmit_;
-  RollingStats statsUtilization_;
-  TimingStats statsUptime_;
+  TimingStats stats_delay_;
+  TimingStats stats_window_;
+  TimingStats stats_transmit_;
+  RollingStats stats_utilization_;
+  TimingStats stats_uptime_;
 
   void ensureOpen() const;
 
