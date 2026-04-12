@@ -5,9 +5,8 @@
 
 #include "core/handler.hpp"
 
+#include <ebus/utils.hpp>
 #include <utility>
-
-#include "utils/common.hpp"
 
 ebus::Handler::Handler(const uint8_t& address, Bus* bus, Request* request)
     : bus_(bus), request_(request) {

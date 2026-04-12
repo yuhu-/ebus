@@ -3,12 +3,12 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+#include <ebus/utils.hpp>
 #include <iostream>
 #include <string>
 #include <vector>
 
 #include "models/device.hpp"
-#include "utils/common.hpp"
 
 // Helper macro for simple assertions
 #define ASSERT_EQ(val, expected)                                            \

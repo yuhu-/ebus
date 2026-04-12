@@ -16,12 +16,12 @@
 namespace ebus {
 
 struct PollItem {
-  uint32_t id_;
-  uint8_t priority_;
-  std::vector<uint8_t> message_;
-  std::chrono::seconds interval_;
-  std::chrono::steady_clock::time_point next_due_;
-  std::function<void(const std::vector<uint8_t>& data)> callback_;
+  uint32_t id;
+  uint8_t priority;
+  std::vector<uint8_t> message;
+  std::chrono::seconds interval;
+  std::chrono::steady_clock::time_point next_due;
+  std::function<void(const std::vector<uint8_t>& data)> callback;
 };
 
 class PollManager {
@@ -32,7 +32,7 @@ class PollManager {
   uint32_t addPollItem(
       uint8_t priority, const std::vector<uint8_t>& message,
       std::chrono::seconds interval,
-      std::function<void(const std::vector<uint8_t>&)> cb = nullptr);
+      std::function<void(const std::vector<uint8_t>&)> callback = nullptr);
 
   // Remove a recurring command by ID.
   void removePollItem(uint32_t id);

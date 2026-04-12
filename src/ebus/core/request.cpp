@@ -5,7 +5,7 @@
 
 #include "core/request.hpp"
 
-#include "utils/common.hpp"
+#include <ebus/utils.hpp>
 
 ebus::Request::Request()
     : state_requests_({&Request::observe, &Request::first, &Request::retry,

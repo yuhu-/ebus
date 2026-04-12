@@ -8,7 +8,7 @@
 
 #include <algorithm>
 
-#include "utils/common.hpp"
+#include "utils/utils_internal.hpp"
 
 ebus::BusPosix::BusPosix(const BusConfig& config, const RuntimeConfig& runtime,
                          Request* request)
@@ -274,9 +274,9 @@ void ebus::BusPosix::readerThread() {
 
       BusEvent event;
       event.byte = byte;
-      event.busRequest =
+      event.bus_request =
           bus_request_flag_.exchange(false, std::memory_order_acq_rel);
-      event.startBit = false;
+      event.start_bit = false;
       event.timestamp = arrival_time;
 
       if (byte_queue_) byte_queue_->push(event);

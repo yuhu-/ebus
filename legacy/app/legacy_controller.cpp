@@ -5,11 +5,10 @@
 
 #include <chrono>
 #include <ebus/controller.hpp>
+#include <ebus/utils.hpp>
 #include <iostream>
 #include <thread>
 #include <vector>
-
-#include "utils/common.hpp"
 
 /**
  * Legacy-style test helper.
@@ -71,11 +70,11 @@ int main() {
   // 5. Verify Diagnostics (Metrics)
   auto metrics = controller.getMetrics();
   run_test("Metrics collection is active", !metrics.empty());
-  if (metrics.count("handler.counter.messagesTotal")) {
+  if (metrics.count("handler.counter.messages_total")) {
     std::cout << "  Total messages processed: "
-              << metrics["handler.counter.messagesTotal"].last << std::endl;
+              << metrics["handler.counter.messages_total"].last << std::endl;
     run_test("Message count is at least 1",
-             metrics["handler.counter.messagesTotal"].last >= 1);
+             metrics["handler.counter.messages_total"].last >= 1);
   }
 
   // 6. Shutdown

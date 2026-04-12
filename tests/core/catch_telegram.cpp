@@ -4,10 +4,10 @@
  */
 
 #include <catch2/catch_all.hpp>
+#include <ebus/utils.hpp>
 
 #include "core/sequence.hpp"
 #include "core/telegram.hpp"
-#include "utils/common.hpp"
 
 TEST_CASE("Telegram: creation", "[core][telegram]") {
   ebus::Telegram tel;

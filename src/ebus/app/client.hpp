@@ -25,9 +25,9 @@ static constexpr size_t MAX_OUTBOUND_BUFFER_SIZE = 4096;
  * Action to be taken by the ClientManager after a byte is processed.
  */
 enum class Action {
-  Continue,  // Keep the client active
-  Stop       // The session is over (success, failure, or end of telegram),
-             // ClientManager will remove this client.
+  keep_active,  // Keep the client active
+  stop_session  // The session is over (success, failure, or end of telegram),
+                // ClientManager will remove this client.
 };
 
 class Request;

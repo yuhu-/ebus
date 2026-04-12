@@ -27,11 +27,11 @@ namespace ebus {
 
 struct BusEvent {
   uint8_t byte;
-  bool busRequest{false};
-  bool startBit{false};
+  bool bus_request{false};
+  bool start_bit{false};
 };
 
-#define EBUS_BUS_COUNTER_LIST X(startBit)
+#define EBUS_BUS_COUNTER_LIST X(start_bit)
 
 #define EBUS_BUS_TIMING_LIST \
   X(stats_delay)             \
@@ -74,8 +74,8 @@ class BusFreeRtos {
   gptimer_handle_t gp_timer_ = nullptr;
   gptimer_handle_t syn_gp_timer_ = nullptr;
 #else
-  timer_group_t timerGroupNum_ = TIMER_GROUP_1;
-  timer_idx_t timerIdxNum_ = TIMER_0;
+  timer_group_t timer_group_num_ = TIMER_GROUP_1;
+  timer_idx_t timer_idx_num_ = TIMER_0;
 #endif
 
   Request* request_ = nullptr;

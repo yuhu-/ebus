@@ -9,6 +9,7 @@
 #include <cstddef>
 #include <ebus/data_types.hpp>
 #include <ebus/metrics.hpp>
+#include <ebus/utils.hpp>
 #include <iomanip>
 #include <iostream>
 #include <string>
@@ -19,7 +20,6 @@
 #include "core/telegram.hpp"
 #include "platform/bus.hpp"
 #include "test_utils.hpp"
-#include "utils/common.hpp"
 
 struct TestCase {
   ebus::MessageType messageType;

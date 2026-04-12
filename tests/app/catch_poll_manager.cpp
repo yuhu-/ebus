@@ -32,8 +32,8 @@ TEST_CASE("PollManager: Timing and Recurrence", "[app][pollmanager]") {
   auto due = pm.getDueItems();
   REQUIRE(due.size() == 1);
   if (!due.empty()) {
-    REQUIRE(due[0].message_ == std::vector<uint8_t>{0xaa, 0xbb});
-    REQUIRE(due[0].priority_ == 5);
+    REQUIRE(due[0].message == std::vector<uint8_t>{0xaa, 0xbb});
+    REQUIRE(due[0].priority == 5);
   }
 
   REQUIRE(pm.getDueItems().empty());

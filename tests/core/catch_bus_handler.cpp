@@ -6,6 +6,7 @@
 #include <atomic>
 #include <catch2/catch_all.hpp>
 #include <chrono>
+#include <ebus/utils.hpp>
 #include <iostream>
 #include <thread>
 #include <vector>
@@ -14,7 +15,6 @@
 #include "core/handler.hpp"
 #include "core/request.hpp"
 #include "platform/bus.hpp"
-#include "utils/common.hpp"
 
 TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
   SECTION("Integration vectors (passive/reactive/active BC happy paths)") {

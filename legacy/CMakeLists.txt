@@ -46,4 +46,4 @@ add_legacy_test_executable(legacy_service_thread platform/legacy_service_thread.
 
 # Utilities
 add_legacy_test_executable(legacy_timing_stats utils/legacy_timing_stats.cpp)
-add_legacy_test_executable(legacy_common utils/legacy_common.cpp)
+add_legacy_test_executable(legacy_utils utils/legacy_utils.cpp)

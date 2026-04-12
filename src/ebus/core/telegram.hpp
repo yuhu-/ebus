@@ -7,11 +7,11 @@
 
 #include <cstddef>
 #include <ebus/definitions.hpp>
+#include <ebus/utils.hpp>
 #include <string>
 #include <vector>
 
 #include "core/sequence.hpp"
-#include "utils/common.hpp"
 
 namespace ebus {
 

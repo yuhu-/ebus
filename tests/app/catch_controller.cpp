@@ -7,12 +7,12 @@
 #include <catch2/catch_all.hpp>
 #include <chrono>
 #include <ebus/controller.hpp>
+#include <ebus/utils.hpp>
 #include <iostream>
 #include <thread>
 #include <vector>
 
 #include "test_utils.hpp"
-#include "utils/common.hpp"
 
 TEST_CASE("Controller: Lifecycle and API", "[app][controller]") {
   // Configuration
@@ -55,8 +55,8 @@ TEST_CASE("Controller: Lifecycle and API", "[app][controller]") {
   // Metrics
   auto metrics = controller.getMetrics();
   REQUIRE(!metrics.empty());
-  if (metrics.count("handler.counter.messagesTotal")) {
-    REQUIRE(metrics["handler.counter.messagesTotal"].last >= 1);
+  if (metrics.count("handler.counter.messages_total")) {
+    REQUIRE(metrics["handler.counter.messages_total"].last >= 1);
   }
 
   // Shutdown

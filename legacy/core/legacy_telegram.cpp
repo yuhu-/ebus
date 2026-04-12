@@ -5,12 +5,12 @@
 
 #include <cassert>
 #include <cstddef>
+#include <ebus/utils.hpp>
 #include <iostream>
 #include <string>
 
 #include "core/sequence.hpp"
 #include "core/telegram.hpp"
-#include "utils/common.hpp"
 
 void run_test(const std::string& name, bool condition) {
   std::cout << "[TEST] " << name << ": " << (condition ? "PASSED" : "FAILED")
@@ -94,9 +94,8 @@ void test_parsing() {
   // Master 2: ... 8a (CRC) 00 (ACK) -> Success
   // Slave 1:  ... a7 (CRC) ff (NAK)
   // Slave 2:  ... a7 (CRC) 00 (ACK) -> Success
-  seq.assign(
-      ebus::toVector("1008b51101028aff1008b51101028a00013ca7ff013ca700"),
-      true);
+  seq.assign(ebus::toVector("1008b51101028aff1008b51101028a00013ca7ff013ca700"),
+             true);
   tel.parse(seq);
   run_test("Parse NAK: Master State OK",
            tel.getMasterState() == ebus::SequenceState::seq_ok);

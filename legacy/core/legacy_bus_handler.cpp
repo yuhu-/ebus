@@ -4,6 +4,7 @@
  */
 
 #include <atomic>
+#include <ebus/utils.hpp>
 #include <iostream>
 #include <string>
 #include <thread>
@@ -13,7 +14,6 @@
 #include "core/handler.hpp"
 #include "core/request.hpp"
 #include "platform/bus.hpp"
-#include "utils/common.hpp"
 
 struct TestCase {
   ebus::MessageType messageType;

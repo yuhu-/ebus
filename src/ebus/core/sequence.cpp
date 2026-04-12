@@ -6,12 +6,11 @@
 #include "core/sequence.hpp"
 
 #include <algorithm>
+#include <ebus/utils.hpp>
 #include <iomanip>
 #include <numeric>
 #include <sstream>
 #include <utility>
-
-#include "utils/common.hpp"
 
 ebus::Sequence::Sequence(const Sequence& sequence, const size_t index,
                          size_t len) {

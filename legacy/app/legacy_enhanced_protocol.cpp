@@ -4,11 +4,11 @@
  */
 
 #include <cassert>
+#include <ebus/utils.hpp>
 #include <iostream>
 #include <vector>
 
 #include "app/enhanced_protocol.hpp"
-#include "utils/common.hpp"
 
 /**
  * Unit test for the ebusd Enhanced Protocol bit-shifting logic.

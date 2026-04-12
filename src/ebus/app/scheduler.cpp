@@ -9,14 +9,13 @@
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
+#include <ebus/utils.hpp>
 #include <functional>
 #include <memory>
 #include <mutex>
 #include <queue>
 #include <string>
 #include <vector>
-
-#include "utils/common.hpp"
 
 ebus::Scheduler::Scheduler(Handler* handler)
     : handler_(handler),
@@ -136,17 +135,17 @@ void ebus::Scheduler::run() {
     if (item_queue_.front().due_ > Clock::now()) continue;
 
     std::pop_heap(item_queue_.begin(), item_queue_.end(), Compare());
-    Item currentItem = std::move(item_queue_.back());
+    Item current_item = std::move(item_queue_.back());
     item_queue_.pop_back();
 
     lock.unlock();
 
     bool sent = false;
-    std::string lastError = "unknown";
-    std::vector<uint8_t> slaveResponse;
-    uint32_t attemptId = currentItem.id_;
+    std::string last_error = "unknown";
+    std::vector<uint8_t> slave_response;
+    uint32_t attempt_id = current_item.id_;
 
-    current_attempt_id_.store(attemptId, std::memory_order_relaxed);
+    current_attempt_id_.store(attempt_id, std::memory_order_relaxed);
 
     // Clear any stale events from previous attempts
     Event stale;
@@ -156,38 +155,38 @@ void ebus::Scheduler::run() {
 
     // Initiation: check if handler is busy, then arm it.
     if (handler_->isActiveMessagePending()) {
-      lastError = "Handler busy";
-    } else if (!handler_->sendActiveMessage(currentItem.message_)) {
-      lastError = "Invalid message";
+      last_error = "Handler busy";
+    } else if (!handler_->sendActiveMessage(current_item.message_)) {
+      last_error = "Invalid message";
     }
 
     // If arming succeeded, wait for terminal events
-    if (lastError == "unknown") {
+    if (last_error == "unknown") {
       auto start = Clock::now();
       while (!stop_flag_.load()) {
         Event ev;
         if (!event_queue_.pop(ev, 2000)) {
-          lastError = "FSM timeout";
+          last_error = "FSM timeout";
           handler_->reset();  // Serious error: FSM stuck.
           break;
         }
 
-        if (ev.id != attemptId) continue;
+        if (ev.id != attempt_id) continue;
 
         if (ev.type == EventType::Telegram) {
           sent = true;
-          slaveResponse = std::move(ev.slave);
+          slave_response = std::move(ev.slave);
           break;
         } else if (ev.type == EventType::Lost) {
-          lastError = "Arbitration lost";
+          last_error = "Arbitration lost";
           break;
         } else if (ev.type == EventType::Error) {
-          lastError = ev.error;
+          last_error = ev.error;
           break;
         }
 
         if (Clock::now() - start > std::chrono::seconds(4)) {
-          lastError = "Total transfer timeout";
+          last_error = "Total transfer timeout";
           handler_->reset();
           break;
         }
@@ -198,24 +197,25 @@ void ebus::Scheduler::run() {
     current_attempt_id_.store(0, std::memory_order_relaxed);
 
     if (sent) {
-      if (currentItem.result_callback_)
-        currentItem.result_callback_(true, currentItem.message_, slaveResponse);
+      if (current_item.result_callback_)
+        current_item.result_callback_(true, current_item.message_,
+                                      slave_response);
       lock.lock();
     } else {
-      ++currentItem.send_attempts_;
-      if (currentItem.send_attempts_ < max_send_attempts_) {
-        currentItem.due_ =
-            Clock::now() + backoffDuration(currentItem.send_attempts_);
+      ++current_item.send_attempts_;
+      if (current_item.send_attempts_ < max_send_attempts_) {
+        current_item.due_ =
+            Clock::now() + backoffDuration(current_item.send_attempts_);
         lock.lock();
-        item_queue_.push_back(std::move(currentItem));
+        item_queue_.push_back(std::move(current_item));
         std::push_heap(item_queue_.begin(), item_queue_.end(), Compare());
         data_ready_cv_.notify_one();
       } else {
         if (extern_error_callback_) {
-          extern_error_callback_(lastError, currentItem.message_, {});
+          extern_error_callback_(last_error, current_item.message_, {});
         }
-        if (currentItem.result_callback_) {
-          currentItem.result_callback_(false, currentItem.message_, {});
+        if (current_item.result_callback_) {
+          current_item.result_callback_(false, current_item.message_, {});
         }
         lock.lock();
       }
@@ -264,12 +264,12 @@ void ebus::Scheduler::attachHandlerCallbacks() {
     event_queue_.tryPush(ev);
   });
 
-  handler_->setTelegramCallback([this](const MessageType& messageType,
-                                       const TelegramType& telegramType,
+  handler_->setTelegramCallback([this](const MessageType& message_type,
+                                       const TelegramType& telegram_type,
                                        const std::vector<uint8_t>& master,
                                        const std::vector<uint8_t>& slave) {
     if (extern_telegram_callback_)
-      extern_telegram_callback_(messageType, telegramType, master, slave);
+      extern_telegram_callback_(message_type, telegram_type, master, slave);
 
     uint32_t id = current_attempt_id_.load(std::memory_order_relaxed);
     if (id == 0) return;
@@ -277,8 +277,8 @@ void ebus::Scheduler::attachHandlerCallbacks() {
     Event ev;
     ev.type = EventType::Telegram;
     ev.id = id;
-    ev.message_type = messageType;
-    ev.telegram_type = telegramType;
+    ev.message_type = message_type;
+    ev.telegram_type = telegram_type;
     ev.master = master;
     ev.slave = slave;
     event_queue_.tryPush(ev);

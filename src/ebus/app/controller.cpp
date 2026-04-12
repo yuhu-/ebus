@@ -5,6 +5,7 @@
 
 #include <ebus/controller.hpp>
 #include <ebus/device.hpp>
+#include <ebus/utils.hpp>
 
 #include "app/client_manager.hpp"
 #include "app/device_manager.hpp"
@@ -17,7 +18,6 @@
 #include "platform/bus.hpp"
 #include "platform/service_thread.hpp"
 #include "platform/system.hpp"
-#include "utils/common.hpp"
 
 struct ebus::Impl {
   ebus::TelegramCallback userTelegramCallback;
@@ -167,30 +167,30 @@ std::map<std::string, ebus::MetricValues> ebus::Controller::getMetrics() const {
   if (!configured_) return {};
 
   std::map<std::string, MetricValues> metrics;
-  auto hMetrics = impl_->handler->getMetrics();
-  metrics.insert(hMetrics.begin(), hMetrics.end());
+  auto handler_metrics = impl_->handler->getMetrics();
+  metrics.insert(handler_metrics.begin(), handler_metrics.end());
 
-  auto rMetrics = impl_->request->getMetrics();
-  metrics.insert(rMetrics.begin(), rMetrics.end());
+  auto request_metrics = impl_->request->getMetrics();
+  metrics.insert(request_metrics.begin(), request_metrics.end());
 
-  auto bMetrics = impl_->bus->getMetrics();
-  metrics.insert(bMetrics.begin(), bMetrics.end());
+  auto bus_metrics = impl_->bus->getMetrics();
+  metrics.insert(bus_metrics.begin(), bus_metrics.end());
 
   // 4. Calculate Aggregate Bus Quality (%)
   // Quality combines Protocol Health (Error Rate) and Network Congestion
   // (Contention Rate)
-  double errorRate = metrics.count("handler.errorRate")
-                         ? metrics["handler.errorRate"].last
-                         : 0.0;
-  double contentionRate = metrics.count("request.contentionRate")
-                              ? metrics["request.contentionRate"].last
-                              : 0.0;
+  double error_rate = metrics.count("handler.error_rate")
+                          ? metrics["handler.error_rate"].last
+                          : 0.0;
+  double contention_rate = metrics.count("request.contention_rate")
+                               ? metrics["request.contention_rate"].last
+                               : 0.0;
 
-  if (metrics.count("handler.counter.messagesTotal") &&
-      metrics["handler.counter.messagesTotal"].last > 0) {
+  if (metrics.count("handler.counter.messages_total") &&
+      metrics["handler.counter.messages_total"].last > 0) {
     // Score is (100 - ErrorRate) * (1 - ContentionRate/100)
     // This means 100% error or 100% contention results in 0 quality.
-    double quality = (100.0 - errorRate) * (1.0 - (contentionRate / 100.0));
+    double quality = (100.0 - error_rate) * (1.0 - (contention_rate / 100.0));
     if (quality < 0) quality = 0;  // Ensure non-negative
     metrics["bus.quality"] = {quality, quality, quality, quality, 0.0, 1};
   } else {
@@ -222,7 +222,7 @@ void ebus::Controller::constructMembers() {
   // provides an 'extern' callback hook which we use to feed the rest of the
   // app.
   impl_->scheduler->setTelegramCallback(
-      [this](const MessageType& mType, const TelegramType& tType,
+      [this](const MessageType& message_type, const TelegramType& telegram_type,
              const std::vector<uint8_t>& master,
              const std::vector<uint8_t>& slave) {
         // 1. Update Internal State (Device Discovery)
@@ -231,7 +231,8 @@ void ebus::Controller::constructMembers() {
         }
         // 2. Inform the Application (Active, Passive, and Reactive)
         if (impl_->userTelegramCallback) {
-          impl_->userTelegramCallback(mType, tType, master, slave);
+          impl_->userTelegramCallback(message_type, telegram_type, master,
+                                      slave);
         }
       });
 
@@ -261,15 +262,15 @@ void ebus::Controller::constructMembers() {
 
 void ebus::Controller::run() {
   while (running_) {
-    auto dueItems = impl_->pollManager->getDueItems();
-    for (const auto& item : dueItems) {
-      impl_->scheduler->enqueue(item.priority_, item.message_);
+    auto due_items = impl_->pollManager->getDueItems();
+    for (const auto& item : due_items) {
+      impl_->scheduler->enqueue(item.priority, item.message);
     }
 
     if (impl_->scheduler->queueSize() < 5) {
-      auto scanCmd = impl_->deviceScanner->nextCommand();
-      if (!scanCmd.empty()) {
-        impl_->scheduler->enqueue(5, scanCmd);
+      auto scan_cmd = impl_->deviceScanner->nextCommand();
+      if (!scan_cmd.empty()) {
+        impl_->scheduler->enqueue(5, scan_cmd);
       }
     }
 

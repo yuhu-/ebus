@@ -4,11 +4,11 @@
  */
 
 #include <catch2/catch_all.hpp>
+#include <ebus/utils.hpp>
 #include <string>
 #include <vector>
 
 #include "core/sequence.hpp"
-#include "utils/common.hpp"
 
 TEST_CASE("Sequence Extend and Reduce logic", "[core][sequence]") {
   ebus::Sequence seq;

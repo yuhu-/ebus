@@ -5,12 +5,12 @@
 
 #include "app/device_scanner.hpp"
 
-#include "utils/common.hpp"
+#include <ebus/utils.hpp>
 
-ebus::DeviceScanner::DeviceScanner(uint8_t ownAddress,
-                                   DeviceManager* deviceManager)
-    : device_manager_(deviceManager),
-      own_address_(ownAddress),
+ebus::DeviceScanner::DeviceScanner(uint8_t address,
+                                   DeviceManager* device_manager)
+    : device_manager_(device_manager),
+      own_address_(address),
       next_startup_scan_time_(std::chrono::steady_clock::time_point::max()) {}
 
 void ebus::DeviceScanner::setFullScan(bool enable) {
@@ -69,11 +69,11 @@ void ebus::DeviceScanner::scanObservedDevices() {
   // deviceManager is thread-safe, so we can query it outside our lock
   // to reduce contention, although getObservedSlaves copies the set anyway.
   std::set<uint8_t> slaves;
-  std::vector<std::vector<uint8_t>> vendorCmds;
+  std::vector<std::vector<uint8_t>> vendor_cmds;
 
   if (device_manager_) {
     slaves = device_manager_->getObservedSlaves();
-    vendorCmds = device_manager_->vendorScanCommands();
+    vendor_cmds = device_manager_->vendorScanCommands();
   }
 
   std::lock_guard<std::mutex> lock(mutex_);
@@ -81,7 +81,7 @@ void ebus::DeviceScanner::scanObservedDevices() {
     scanAddressLocked(addr);
   }
   // Also queue vendor-specific scans for a complete refresh
-  for (const auto& cmd : vendorCmds) {
+  for (const auto& cmd : vendor_cmds) {
     // Basic deduplication: only add if the queue is small or command is unique
     manual_queue_.push(cmd);
   }
@@ -116,11 +116,11 @@ void ebus::DeviceScanner::stop() {
   full_scan_ = false;
   scan_on_startup_ = false;
 
-  std::queue<std::vector<uint8_t>> emptyManual;
-  std::swap(manual_queue_, emptyManual);
+  std::queue<std::vector<uint8_t>> empty_manual;
+  std::swap(manual_queue_, empty_manual);
 
-  std::queue<std::vector<uint8_t>> emptyStartup;
-  std::swap(startup_queue_, emptyStartup);
+  std::queue<std::vector<uint8_t>> empty_startup;
+  std::swap(startup_queue_, empty_startup);
 
   next_startup_scan_time_ = std::chrono::steady_clock::time_point::max();
 }
@@ -176,8 +176,8 @@ std::vector<uint8_t> ebus::DeviceScanner::nextCommand() {
         }
         // Also queue vendor-specific scans for already identified devices
         if (device_manager_) {
-          auto vendorCmds = device_manager_->vendorScanCommands();
-          for (const auto& vcmd : vendorCmds) {
+          auto vendor_cmds = device_manager_->vendorScanCommands();
+          for (const auto& vcmd : vendor_cmds) {
             startup_queue_.push(vcmd);
           }
         }

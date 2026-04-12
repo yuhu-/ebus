@@ -4,11 +4,10 @@
  */
 
 #include <cstdlib>
+#include <ebus/utils.hpp>
 #include <iostream>
 #include <string>
 #include <vector>
-
-#include "utils/common.hpp"
 
 void run_test(const std::string& name, bool condition) {
   std::cout << "[TEST] " << name << ": " << (condition ? "PASSED" : "FAILED")

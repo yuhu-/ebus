@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+#include <ebus/utils.hpp>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -11,7 +12,6 @@
 #include "core/handler.hpp"
 #include "core/request.hpp"
 #include "platform/bus.hpp"
-#include "utils/common.hpp"
 
 #define ASSERT_TRUE(cond)                                                   \
   if (!(cond)) {                                                            \

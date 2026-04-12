@@ -4,6 +4,7 @@
  */
 
 #include <catch2/catch_all.hpp>
+#include <ebus/utils.hpp>
 #include <string>
 #include <thread>
 #include <vector>
@@ -14,7 +15,6 @@
 #include "core/request.hpp"
 #include "platform/bus.hpp"
 #include "test_utils.hpp"
-#include "utils/common.hpp"
 
 TEST_CASE("DeviceScanner: Manual Scan & Stop", "[app][devicescanner]") {
   ebus::DeviceScanner scanner(0xff, nullptr);

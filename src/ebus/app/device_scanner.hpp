@@ -23,7 +23,7 @@ namespace ebus {
 
 class DeviceScanner {
  public:
-  DeviceScanner(uint8_t ownAddress, DeviceManager* deviceManager);
+  DeviceScanner(uint8_t address, DeviceManager* device_manager);
 
   void setFullScan(bool enable);
   bool isFullScan() const;

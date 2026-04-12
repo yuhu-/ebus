@@ -301,7 +301,7 @@ void ebus::BusFreeRtos::ebusUartEventRunner() {
             // for slight variations in timing due to processing delays or
             // other factors. If the difference is larger than 1.5 bit times, we
             // consider it an unexpected start bit, and we set the
-            // startBitFlag_ to true.
+            // start_bit_flag_ to true.
             int64_t delta =
                 std::abs(expected_start_bit_time - micros_start_bit_);
 
@@ -344,8 +344,8 @@ void ebus::BusFreeRtos::ebusUartEventRunner() {
           bus_event.byte = byte;
 
           portENTER_CRITICAL_ISR(&timer_mux_);
-          bus_event.busRequest = bus_request_flag_;
-          bus_event.startBit = start_bit_flag_;
+          bus_event.bus_request = bus_request_flag_;
+          bus_event.start_bit = start_bit_flag_;
           if (micros_delay_flag_)
             stats_delay_.addSample(static_cast<double>(micros_last_delay_));
           if (micros_window_flag_)

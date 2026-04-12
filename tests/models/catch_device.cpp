@@ -4,11 +4,11 @@
  */
 
 #include <catch2/catch_all.hpp>
+#include <ebus/utils.hpp>
 #include <string>
 #include <vector>
 
 #include "models/device.hpp"
-#include "utils/common.hpp"
 
 TEST_CASE("Device: createScanCommand", "[models][device]") {
   auto cmd = ebus::Device::createScanCommand(0x15);

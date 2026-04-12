@@ -4,9 +4,9 @@
  */
 
 #include <catch2/catch_all.hpp>
+#include <ebus/utils.hpp>
 
 #include "app/enhanced_protocol.hpp"
-#include "utils/common.hpp"
 
 TEST_CASE("Encoding/decoding examples (0x7f / 0x80 / 0xff)",
           "[app][enhanced]") {

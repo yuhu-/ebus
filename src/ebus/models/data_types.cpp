@@ -6,11 +6,10 @@
 #include <algorithm>
 #include <cstring>
 #include <ebus/data_types.hpp>
+#include <ebus/utils.hpp>
 #include <limits>
 #include <map>
 #include <utility>
-
-#include "utils/common.hpp"
 
 std::map<ebus::DataType, const char*> dataTypeNames = {
     {ebus::DataType::error, "ERROR"},     {ebus::DataType::bcd, "BCD"},

@@ -124,6 +124,15 @@ int main() {
     }
   }
 
+  // Print metrics to see bus health
+  auto metrics = deviceB.getMetrics();
+  for (const auto& item : metrics) {
+    std::cout << item.first << ": " << item.second.last << std::endl;
+  }
+
+  // --- 8. Stop the simulation ---
+  std::cout << "Stopping simulation on virtual bus..." << std::endl;
+
   deviceA.stop();
   deviceB.stop();
   close(sv[1]);

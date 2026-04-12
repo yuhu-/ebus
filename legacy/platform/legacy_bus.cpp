@@ -6,6 +6,7 @@
 #include <cassert>
 #include <chrono>
 #include <cmath>
+#include <ebus/utils.hpp>
 #include <iostream>
 #include <string>
 #include <thread>
@@ -14,7 +15,6 @@
 #include "core/request.hpp"
 #include "platform/bus.hpp"
 #include "platform/queue.hpp"
-#include "utils/common.hpp"
 
 // Helper to force a bus request for testing without waiting for lockCounter
 void force_request(ebus::Request& req, uint8_t addr) {

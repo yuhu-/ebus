@@ -4,6 +4,7 @@
  */
 
 #include <catch2/catch_all.hpp>
+#include <ebus/utils.hpp>
 #include <string>
 #include <vector>
 
@@ -12,7 +13,6 @@
 #include "core/request.hpp"
 #include "platform/bus.hpp"
 #include "test_utils.hpp"
-#include "utils/common.hpp"
 
 TEST_CASE("DeviceManager: Address Tracking", "[app][devicemanager]") {
   ebus::DeviceManager dm;

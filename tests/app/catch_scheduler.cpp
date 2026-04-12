@@ -7,6 +7,7 @@
 #include <catch2/catch_all.hpp>
 #include <chrono>
 #include <ebus/data_types.hpp>
+#include <ebus/utils.hpp>
 #include <future>
 #include <iomanip>
 #include <iostream>
@@ -22,7 +23,6 @@
 #include "core/request.hpp"
 #include "platform/bus.hpp"
 #include "test_utils.hpp"
-#include "utils/common.hpp"
 
 struct TestCase {
   std::string description;

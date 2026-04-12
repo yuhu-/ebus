@@ -8,8 +8,7 @@
 #include <algorithm>
 #include <ebus/data_types.hpp>
 #include <ebus/manufacturers.hpp>
-
-#include "utils/common.hpp"
+#include <ebus/utils.hpp>
 
 constexpr uint8_t VENDOR_VAILLANT = 0xb5;
 

@@ -48,8 +48,8 @@ void test_timing() {
   run_test("Item due after 1.1s", due.size() == 1);
   if (!due.empty()) {
     run_test("Payload matches",
-             due[0].message_ == std::vector<uint8_t>{0xaa, 0xbb});
-    run_test("Priority matches", due[0].priority_ == 5);
+             due[0].message == std::vector<uint8_t>{0xaa, 0xbb});
+    run_test("Priority matches", due[0].priority == 5);
   }
 
   // 3. Check recurrence

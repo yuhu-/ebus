@@ -5,12 +5,11 @@
 
 #include <algorithm>
 #include <catch2/catch_all.hpp>
+#include <ebus/utils.hpp>
 #include <string>
 #include <vector>
 
-#include "utils/common.hpp"
-
-TEST_CASE("Common: Addressing logic", "[utils][common]") {
+TEST_CASE("Utils: Addressing logic", "[utils][utils]") {
   REQUIRE(ebus::isMaster(0x00));
   REQUIRE(ebus::isMaster(0x01));
   REQUIRE(ebus::isMaster(0x03));
@@ -34,7 +33,7 @@ TEST_CASE("Common: Addressing logic", "[utils][common]") {
   REQUIRE(ebus::slaveOf(0x05) == 0x05);
 }
 
-TEST_CASE("Common: Conversions", "[utils][common]") {
+TEST_CASE("Utils: Conversions", "[utils][utils]") {
   REQUIRE(ebus::toString(0x0a) == "0a");
   REQUIRE(ebus::toString(0xff) == "ff");
 
@@ -46,7 +45,7 @@ TEST_CASE("Common: Conversions", "[utils][common]") {
   REQUIRE(res == vec);
 }
 
-TEST_CASE("Common: Vector utilities", "[utils][common]") {
+TEST_CASE("Utils: Vector utilities", "[utils][utils]") {
   std::vector<uint8_t> vec = {0x10, 0x20, 0x30, 0x40, 0x50};
 
   std::vector<uint8_t> sub = ebus::range(vec, 1, 3);  // 20 30 40
@@ -64,7 +63,7 @@ TEST_CASE("Common: Vector utilities", "[utils][common]") {
   REQUIRE(!ebus::matches(vec, search_hit, 0));
 }
 
-TEST_CASE("Common: CRC", "[utils][common]") {
+TEST_CASE("Utils: CRC", "[utils][utils]") {
   // calc_crc(byte, 0) == byte because table[0] == 0
   REQUIRE(ebus::calcCRC(0x77, 0x00) == 0x77);
 

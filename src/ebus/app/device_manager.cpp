@@ -78,16 +78,17 @@ ebus::DeviceManager::vendorScanCommands() const {
 
 const std::vector<std::vector<uint8_t>> ebus::DeviceManager::createScanCommands(
     const std::vector<std::string>& addresses) const {
-  std::set<uint8_t> scanSlaves;
+  std::set<uint8_t> scan_slaves;
   for (const std::string& address : addresses) {
     const std::vector<uint8_t> bytes = ebus::toVector(address);
     if (bytes.empty()) continue;
-    uint8_t firstByte = bytes[0];
-    if (ebus::isSlave(firstByte) && (firstByte != ebus::slaveOf(own_address_)))
-      scanSlaves.insert(firstByte);
+    uint8_t first_byte = bytes[0];
+    if (ebus::isSlave(first_byte) &&
+        (first_byte != ebus::slaveOf(own_address_)))
+      scan_slaves.insert(first_byte);
   }
   std::vector<std::vector<uint8_t>> result;
-  for (const uint8_t slave : scanSlaves)
+  for (const uint8_t slave : scan_slaves)
     result.push_back(Device::createScanCommand(slave));
   return result;
 }

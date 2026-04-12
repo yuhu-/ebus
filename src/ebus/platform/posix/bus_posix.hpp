@@ -37,12 +37,12 @@ namespace ebus {
 
 struct BusEvent {
   uint8_t byte;
-  bool busRequest{false};
-  bool startBit{false};
+  bool bus_request{false};
+  bool start_bit{false};
   std::chrono::steady_clock::time_point timestamp;
 };
 
-#define EBUS_BUS_COUNTER_LIST X(startBit)
+#define EBUS_BUS_COUNTER_LIST X(start_bit)
 
 #define EBUS_BUS_TIMING_LIST \
   X(stats_delay)             \

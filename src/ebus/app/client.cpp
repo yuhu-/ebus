@@ -5,9 +5,10 @@
 
 #include "app/client.hpp"
 
+#include <ebus/utils.hpp>
+
 #include "app/enhanced_protocol.hpp"
 #include "core/request.hpp"
-#include "utils/common.hpp"
 
 #if defined(ESP32)
 #include <lwip/sockets.h>
@@ -55,13 +56,13 @@ bool ebus::AbstractClient::flushLocked() {
   if (fd_ < 0) return false;
   if (outbound_buffer_.empty()) return true;
 
-  size_t totalSent = 0;
-  const size_t toSend = outbound_buffer_.size();
-  while (totalSent < toSend) {
-    ssize_t n = ::send(fd_, outbound_buffer_.data() + totalSent,
-                       toSend - totalSent, MSG_DONTWAIT);
+  size_t total_sent = 0;
+  const size_t to_send = outbound_buffer_.size();
+  while (total_sent < to_send) {
+    ssize_t n = ::send(fd_, outbound_buffer_.data() + total_sent,
+                       to_send - total_sent, MSG_DONTWAIT);
     if (n > 0) {
-      totalSent += static_cast<size_t>(n);
+      total_sent += static_cast<size_t>(n);
     } else if (n < 0) {
       if (errno == EINTR) continue;
       if (errno == EAGAIN || errno == EWOULDBLOCK) break;
@@ -73,9 +74,9 @@ bool ebus::AbstractClient::flushLocked() {
     }
   }
 
-  if (totalSent > 0) {
+  if (total_sent > 0) {
     outbound_buffer_.erase(outbound_buffer_.begin(),
-                           outbound_buffer_.begin() + totalSent);
+                           outbound_buffer_.begin() + total_sent);
   }
   return true;
 }
@@ -104,9 +105,9 @@ void ebus::ReadOnlyClient::sendToClient(const std::vector<uint8_t>& data) {
 }
 
 ebus::Action ebus::ReadOnlyClient::onBusByte(const BusEventContext& ctx) {
-  if (!isConnected()) return Action::Stop;
+  if (!isConnected()) return Action::stop_session;
   (void)ctx;
-  return Action::Stop;
+  return Action::stop_session;
 }
 
 ebus::RegularClient::RegularClient(int fd, Request* request)
@@ -135,7 +136,7 @@ void ebus::RegularClient::sendToClient(const std::vector<uint8_t>& data) {
 }
 
 ebus::Action ebus::RegularClient::onBusByte(const BusEventContext& ctx) {
-  if (!isConnected()) return Action::Stop;
+  if (!isConnected()) return Action::stop_session;
 
   // Handle bus response according to last command
   switch (ctx.result) {
@@ -145,23 +146,23 @@ ebus::Action ebus::RegularClient::onBusByte(const BusEventContext& ctx) {
     case RequestResult::retry_error:
     case RequestResult::second_lost:
     case RequestResult::second_error:
-      return Action::Stop;
+      return Action::stop_session;
     case RequestResult::observe_data:
       sendToClient({ctx.byte});
-      return Action::Continue;
+      return Action::keep_active;
     case RequestResult::first_syn:
     case RequestResult::first_retry:
     case RequestResult::retry_syn:
       // Hide micro-retry: session remains active but we send no bridge response
-      return Action::Continue;
+      return Action::keep_active;
     case RequestResult::first_won:
     case RequestResult::second_won:
       sendToClient({ctx.byte});
-      return Action::Continue;
+      return Action::keep_active;
     default:
       break;
   }
-  return Action::Stop;
+  return Action::stop_session;
 }
 
 ebus::EnhancedClient::EnhancedClient(int fd, Request* request)
@@ -266,36 +267,36 @@ void ebus::EnhancedClient::sendToClient(const std::vector<uint8_t>& data) {
 }
 
 ebus::Action ebus::EnhancedClient::onBusByte(const BusEventContext& ctx) {
-  if (!isConnected()) return Action::Stop;
+  if (!isConnected()) return Action::stop_session;
 
   // Handle bus response according to last command
   switch (ctx.result) {
     case RequestResult::first_lost:
     case RequestResult::second_lost:
       sendToClient({enhanced::RESP_FAILED, ctx.byte});
-      return Action::Stop;
+      return Action::stop_session;
     case RequestResult::first_error:
     case RequestResult::retry_error:
     case RequestResult::second_error:
       sendToClient({enhanced::RESP_ERROR_EBUS, enhanced::ERR_FRAMING});
-      return Action::Stop;
+      return Action::stop_session;
     case RequestResult::observe_syn:
     case RequestResult::observe_data:
       sendToClient({enhanced::RESP_RECEIVED, ctx.byte});
-      return Action::Continue;
+      return Action::keep_active;
     case RequestResult::first_syn:
     case RequestResult::first_retry:
     case RequestResult::retry_syn:
       // Hide micro-retry: session remains active but we send no bridge response
-      return Action::Continue;
+      return Action::keep_active;
     case RequestResult::first_won:
     case RequestResult::second_won:
       sendToClient({enhanced::RESP_STARTED, ctx.byte});
-      return Action::Continue;
+      return Action::keep_active;
     default:
       break;
   }
-  return Action::Stop;
+  return Action::stop_session;
 }
 
 std::unique_ptr<ebus::AbstractClient> ebus::createClient(int fd, Request* req,

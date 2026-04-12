@@ -87,8 +87,8 @@ class BusHandler {
                             RequestResult::observe_data, 0, event.timestamp};
 
         if (request_) {
-          if (event.busRequest) request_->busRequestCompleted();
-          if (event.startBit) request_->startBit();
+          if (event.bus_request) request_->busRequestCompleted();
+          if (event.start_bit) request_->startBit();
           ctx.state = request_->getState();
           ctx.result = request_->run(event.byte);
           ctx.lock_counter = request_->getLockCounter();
