@@ -45,10 +45,10 @@ void test_parsing() {
   dev.update(master, slave);
 
   auto info = dev.getDeviceInfo();
-  ASSERT_EQ(info.manufacturer, 0xda);
+  ASSERT_EQ(info.manufacturer_, 0xda);
 
   // Check Unit ID string conversion
-  std::string unitIdStr(info.unitID.begin(), info.unitID.end());
+  std::string unitIdStr(info.unit_id_.begin(), info.unit_id_.end());
   if (unitIdStr != "ESPDA") {
     std::cerr << "UnitID mismatch: " << unitIdStr << std::endl;
     exit(1);

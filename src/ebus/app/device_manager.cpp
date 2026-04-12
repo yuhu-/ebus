@@ -8,7 +8,7 @@
 #include <set>
 
 void ebus::DeviceManager::setOwnAddress(uint8_t address) {
-  ownAddress_ = address;
+  own_address_ = address;
 }
 
 void ebus::DeviceManager::update(const std::vector<uint8_t>& master,
@@ -19,7 +19,7 @@ void ebus::DeviceManager::update(const std::vector<uint8_t>& master,
   if (ebus::isSlave(master[1])) slaves_[master[1]]++;
 
   // Devices
-  if (master[1] == ebus::slaveOf(ownAddress_)) return;
+  if (master[1] == ebus::slaveOf(own_address_)) return;
   if (ebus::isSlave(master[1])) devices_[master[1]].update(master, slave);
 }
 
@@ -54,11 +54,12 @@ std::set<uint8_t> ebus::DeviceManager::getObservedSlaves() const {
   std::set<uint8_t> slaves;
 
   for (const auto& master : masters_) {
-    if (master.first != ownAddress_) slaves.insert(ebus::slaveOf(master.first));
+    if (master.first != own_address_)
+      slaves.insert(ebus::slaveOf(master.first));
   }
 
   for (const auto& slave : slaves_) {
-    if (slave.first != ebus::slaveOf(ownAddress_)) slaves.insert(slave.first);
+    if (slave.first != ebus::slaveOf(own_address_)) slaves.insert(slave.first);
   }
   return slaves;
 }
@@ -82,7 +83,7 @@ const std::vector<std::vector<uint8_t>> ebus::DeviceManager::createScanCommands(
     const std::vector<uint8_t> bytes = ebus::toVector(address);
     if (bytes.empty()) continue;
     uint8_t firstByte = bytes[0];
-    if (ebus::isSlave(firstByte) && (firstByte != ebus::slaveOf(ownAddress_)))
+    if (ebus::isSlave(firstByte) && (firstByte != ebus::slaveOf(own_address_)))
       scanSlaves.insert(firstByte);
   }
   std::vector<std::vector<uint8_t>> result;

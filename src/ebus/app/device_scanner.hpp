@@ -47,36 +47,36 @@ class DeviceScanner {
   std::vector<uint8_t> nextCommand();
 
  private:
-  DeviceManager* deviceManager_ = nullptr;
-  uint8_t ownAddress_ = 0xff;
+  DeviceManager* device_manager_ = nullptr;
+  uint8_t own_address_ = 0xff;
 
   // Protects all internal state across threads (Controller and Scheduler)
   mutable std::mutex mutex_;
 
   // Commands explicitly requested via scanAddress() or scanObservedDevices().
   // These are always returned first.
-  std::queue<std::vector<uint8_t>> manualQueue_;
+  std::queue<std::vector<uint8_t>> manual_queue_;
 
   // Timing configuration for the discovery/startup phase.
-  std::chrono::seconds initialScanDelay_{10};
-  std::chrono::seconds startupScanInterval_{60};
+  std::chrono::seconds initial_scan_delay_{10};
+  std::chrono::seconds startup_scan_interval_{60};
 
   // The wall-clock time when the next startup scan iteration is allowed to run
-  std::chrono::steady_clock::time_point nextStartupScanTime_;
+  std::chrono::steady_clock::time_point next_startup_scan_time_;
 
   // Flag and cursor for the exhaustive 0x00-0xff scan.
   // fullScanAddress_ iterates from 0 to 255.
-  bool fullScan_ = false;
-  uint16_t fullScanAddress_ = 0;
+  bool full_scan_ = false;
+  uint16_t full_scan_address_ = 0;
 
   // Configuration for the background discovery of known devices.
-  bool scanOnStartup_ = false;
+  bool scan_on_startup_ = false;
   // Number of full discovery iterations performed so far
-  uint8_t startupScanCount_ = 0;
+  uint8_t startup_scan_count_ = 0;
   // Threshold to stop periodic discovery
-  uint8_t maxStartupScans_ = 5;
+  uint8_t max_startup_scans_ = 5;
   // Buffer of commands for the currently active startup scan iteration
-  std::queue<std::vector<uint8_t>> startupQueue_;
+  std::queue<std::vector<uint8_t>> startup_queue_;
 
   // Internal helper to add a scan command without locking (caller must hold
   // lock)

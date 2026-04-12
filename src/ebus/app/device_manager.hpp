@@ -42,7 +42,7 @@ class DeviceManager {
       const std::vector<std::string>& addresses) const;
 
  private:
-  uint8_t ownAddress_ = 0xff;
+  uint8_t own_address_ = 0xff;
 
   mutable std::mutex mutex_;
 

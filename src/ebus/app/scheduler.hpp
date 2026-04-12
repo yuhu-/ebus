@@ -31,12 +31,12 @@ class Scheduler {
                          const std::vector<uint8_t>& slave)>;
 
   struct Item {
-    uint8_t priority = 0;  // larger = higher priority (e.g. 255 is top)
-    TimePoint due = Clock::now();
-    uint32_t id = 0;
-    int sendAttempts = 0;
-    std::vector<uint8_t> message;
-    ResultCallback resultCallback = nullptr;
+    uint8_t priority_ = 0;  // larger = higher priority (e.g. 255 is top)
+    TimePoint due_ = Clock::now();
+    uint32_t id_ = 0;
+    int send_attempts_ = 0;
+    std::vector<uint8_t> message_;
+    ResultCallback result_callback_ = nullptr;
   };
 
   Scheduler(Handler* handler);
@@ -53,7 +53,7 @@ class Scheduler {
   void enqueueAt(uint8_t priority, const std::vector<uint8_t>& message,
                  TimePoint when, ResultCallback callback = nullptr);
 
-  void setMaxSendAttempts(int sendAttempts);
+  void setMaxSendAttempts(int send_attempts);
   void setBaseBackoff(Duration duration);
 
   void setTelegramCallback(TelegramCallback callback);
@@ -66,9 +66,9 @@ class Scheduler {
  private:
   struct Compare {
     bool operator()(Item const& lhs, Item const& rhs) const {
-      if (lhs.due != rhs.due)
-        return lhs.due > rhs.due;          // earlier due time first
-      return lhs.priority < rhs.priority;  // larger priority value second
+      if (lhs.due_ != rhs.due_)
+        return lhs.due_ > rhs.due_;          // earlier due time first
+      return lhs.priority_ < rhs.priority_;  // larger priority value second
     }
   };
 
@@ -77,8 +77,8 @@ class Scheduler {
   struct Event {
     EventType type;
     uint32_t id;
-    MessageType messageType;
-    TelegramType telegramType;
+    MessageType message_type;
+    TelegramType telegram_type;
     std::vector<uint8_t> master;
     std::vector<uint8_t> slave;
     std::string error;
@@ -87,25 +87,25 @@ class Scheduler {
   Handler* handler_ = nullptr;
 
   // Queue management
-  std::vector<Item> itemQueue_;
-  std::mutex dataMutex_;
-  std::condition_variable dataReadyCv_;
+  std::vector<Item> item_queue_;
+  std::mutex data_mutex_;
+  std::condition_variable data_ready_cv_;
 
   // Worker thread
   std::unique_ptr<ServiceThread> worker_;
-  std::atomic<bool> stopFlag_;
-  std::atomic<uint32_t> nextId_;
+  std::atomic<bool> stop_flag_;
+  std::atomic<uint32_t> next_id_;
 
   // Active transfer state
-  std::atomic<uint32_t> currentAttemptId_{0};
-  Queue<Event> eventQueue_{16};
+  std::atomic<uint32_t> current_attempt_id_{0};
+  Queue<Event> event_queue_{16};
   // Configuration
-  int maxSendAttempts_;
-  Duration baseBackoff_;
+  int max_send_attempts_;
+  Duration base_backoff_;
 
   // Forwarded callbacks
-  TelegramCallback externTelegramCallback_ = nullptr;
-  ErrorCallback externErrorCallback_ = nullptr;
+  TelegramCallback extern_telegram_callback_ = nullptr;
+  ErrorCallback extern_error_callback_ = nullptr;
 
   void pushItem(Item&& it);
   void run();

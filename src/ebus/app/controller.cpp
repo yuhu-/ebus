@@ -263,7 +263,7 @@ void ebus::Controller::run() {
   while (running_) {
     auto dueItems = impl_->pollManager->getDueItems();
     for (const auto& item : dueItems) {
-      impl_->scheduler->enqueue(item.priority, item.message);
+      impl_->scheduler->enqueue(item.priority_, item.message_);
     }
 
     if (impl_->scheduler->queueSize() < 5) {

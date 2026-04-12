@@ -16,17 +16,17 @@
 namespace ebus {
 
 struct PollItem {
-  uint32_t id;
-  uint8_t priority;
-  std::vector<uint8_t> message;
-  std::chrono::seconds interval;
-  std::chrono::steady_clock::time_point nextDue;
-  std::function<void(const std::vector<uint8_t>& data)> callback;
+  uint32_t id_;
+  uint8_t priority_;
+  std::vector<uint8_t> message_;
+  std::chrono::seconds interval_;
+  std::chrono::steady_clock::time_point next_due_;
+  std::function<void(const std::vector<uint8_t>& data)> callback_;
 };
 
 class PollManager {
  public:
-  PollManager() : nextId_(1) {}
+  PollManager() : next_id_(1) {}
 
   // Register a new recurring command. Returns a unique ID.
   uint32_t addPollItem(
@@ -46,7 +46,7 @@ class PollManager {
  private:
   mutable std::mutex mutex_;
   std::vector<PollItem> items_;
-  uint32_t nextId_;
+  uint32_t next_id_;
 };
 
 }  // namespace ebus

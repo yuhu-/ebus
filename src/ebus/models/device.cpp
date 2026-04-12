@@ -53,14 +53,14 @@ std::vector<uint8_t> ebus::Device::getVendorData(uint8_t sub) const {
 
 ebus::DeviceInfo ebus::Device::getDeviceInfo() const {
   DeviceInfo info;
-  info.slave = slave_;
+  info.slave_address_ = slave_;
 
   if (vec_070400_.size() > 1) {
-    info.manufacturer = vec_070400_[1];
-    info.manufacturerName = ebus::manufacturer_name(info.manufacturer);
-    info.unitID = ebus::byte_2_char(ebus::range(vec_070400_, 2, 5));
-    info.softwareVersion = ebus::toString(ebus::range(vec_070400_, 7, 2));
-    info.hardwareVersion = ebus::toString(ebus::range(vec_070400_, 9, 2));
+    info.manufacturer_ = vec_070400_[1];
+    info.manufacturer_name_ = ebus::manufacturer_name(info.manufacturer_);
+    info.unit_id_ = ebus::byte_2_char(ebus::range(vec_070400_, 2, 5));
+    info.software_version_ = ebus::toString(ebus::range(vec_070400_, 7, 2));
+    info.hardware_version_ = ebus::toString(ebus::range(vec_070400_, 9, 2));
   }
 
   if (isVaillant() && isVaillantValid()) {
@@ -71,9 +71,9 @@ ebus::DeviceInfo ebus::Device::getDeviceInfo() const {
     serial += ebus::byte_2_char(ebus::range(vec_b5090126_, 1, 9));
     serial += ebus::byte_2_char(ebus::range(vec_b5090127_, 1, 2));
 
-    info.vaillant.serial = serial;
+    info.vaillant.serial_number_ = serial;
     if (serial.length() >= 16) {
-      info.vaillant.productCode = serial.substr(6, 10);
+      info.vaillant.product_code_ = serial.substr(6, 10);
     }
   }
 

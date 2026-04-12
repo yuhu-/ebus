@@ -9,59 +9,60 @@
 
 ebus::DeviceScanner::DeviceScanner(uint8_t ownAddress,
                                    DeviceManager* deviceManager)
-    : deviceManager_(deviceManager),
-      ownAddress_(ownAddress),
-      nextStartupScanTime_(std::chrono::steady_clock::time_point::max()) {}
+    : device_manager_(deviceManager),
+      own_address_(ownAddress),
+      next_startup_scan_time_(std::chrono::steady_clock::time_point::max()) {}
 
 void ebus::DeviceScanner::setFullScan(bool enable) {
   std::lock_guard<std::mutex> lock(mutex_);
-  fullScan_ = enable;
+  full_scan_ = enable;
   if (enable) {
-    fullScanAddress_ = 0;
+    full_scan_address_ = 0;
   }
 }
 
 bool ebus::DeviceScanner::isFullScan() const {
   std::lock_guard<std::mutex> lock(mutex_);
-  return fullScan_;
+  return full_scan_;
 }
 
 void ebus::DeviceScanner::setScanOnStartup(bool enable) {
   std::lock_guard<std::mutex> lock(mutex_);
-  scanOnStartup_ = enable;
+  scan_on_startup_ = enable;
   if (enable) {
     // Reset state and arm the timer for the first scan
-    startupScanCount_ = 0;
+    startup_scan_count_ = 0;
     std::queue<std::vector<uint8_t>> empty;
-    std::swap(startupQueue_, empty);
-    nextStartupScanTime_ = std::chrono::steady_clock::now() + initialScanDelay_;
+    std::swap(startup_queue_, empty);
+    next_startup_scan_time_ =
+        std::chrono::steady_clock::now() + initial_scan_delay_;
   }
 }
 
 bool ebus::DeviceScanner::isScanOnStartup() const {
   std::lock_guard<std::mutex> lock(mutex_);
-  return scanOnStartup_;
+  return scan_on_startup_;
 }
 
 void ebus::DeviceScanner::setOwnAddress(uint8_t address) {
   std::lock_guard<std::mutex> lock(mutex_);
-  ownAddress_ = address;
+  own_address_ = address;
 }
 
 void ebus::DeviceScanner::setMaxStartupScans(uint8_t max) {
   std::lock_guard<std::mutex> lock(mutex_);
-  maxStartupScans_ = max;
+  max_startup_scans_ = max;
 }
 
 void ebus::DeviceScanner::setInitialScanDelay(std::chrono::seconds delay) {
   std::lock_guard<std::mutex> lock(mutex_);
-  initialScanDelay_ = delay;
+  initial_scan_delay_ = delay;
 }
 
 void ebus::DeviceScanner::setStartupScanInterval(
     std::chrono::seconds interval) {
   std::lock_guard<std::mutex> lock(mutex_);
-  startupScanInterval_ = interval;
+  startup_scan_interval_ = interval;
 }
 
 void ebus::DeviceScanner::scanObservedDevices() {
@@ -70,9 +71,9 @@ void ebus::DeviceScanner::scanObservedDevices() {
   std::set<uint8_t> slaves;
   std::vector<std::vector<uint8_t>> vendorCmds;
 
-  if (deviceManager_) {
-    slaves = deviceManager_->getObservedSlaves();
-    vendorCmds = deviceManager_->vendorScanCommands();
+  if (device_manager_) {
+    slaves = device_manager_->getObservedSlaves();
+    vendorCmds = device_manager_->vendorScanCommands();
   }
 
   std::lock_guard<std::mutex> lock(mutex_);
@@ -82,7 +83,7 @@ void ebus::DeviceScanner::scanObservedDevices() {
   // Also queue vendor-specific scans for a complete refresh
   for (const auto& cmd : vendorCmds) {
     // Basic deduplication: only add if the queue is small or command is unique
-    manualQueue_.push(cmd);
+    manual_queue_.push(cmd);
   }
 }
 
@@ -92,8 +93,8 @@ void ebus::DeviceScanner::scanAddress(uint8_t address) {
 }
 
 void ebus::DeviceScanner::scanAddressLocked(uint8_t address) {
-  if (ebus::isSlave(address) && (address != ebus::slaveOf(ownAddress_))) {
-    manualQueue_.push(Device::createScanCommand(address));
+  if (ebus::isSlave(address) && (address != ebus::slaveOf(own_address_))) {
+    manual_queue_.push(Device::createScanCommand(address));
   }
 }
 
@@ -106,89 +107,89 @@ void ebus::DeviceScanner::scanAddresses(const std::vector<uint8_t>& addresses) {
 
 bool ebus::DeviceScanner::isScanning() const {
   std::lock_guard<std::mutex> lock(mutex_);
-  return fullScan_ || scanOnStartup_ || !manualQueue_.empty() ||
-         !startupQueue_.empty();
+  return full_scan_ || scan_on_startup_ || !manual_queue_.empty() ||
+         !startup_queue_.empty();
 }
 
 void ebus::DeviceScanner::stop() {
   std::lock_guard<std::mutex> lock(mutex_);
-  fullScan_ = false;
-  scanOnStartup_ = false;
+  full_scan_ = false;
+  scan_on_startup_ = false;
 
   std::queue<std::vector<uint8_t>> emptyManual;
-  std::swap(manualQueue_, emptyManual);
+  std::swap(manual_queue_, emptyManual);
 
   std::queue<std::vector<uint8_t>> emptyStartup;
-  std::swap(startupQueue_, emptyStartup);
+  std::swap(startup_queue_, emptyStartup);
 
-  nextStartupScanTime_ = std::chrono::steady_clock::time_point::max();
+  next_startup_scan_time_ = std::chrono::steady_clock::time_point::max();
 }
 
 std::vector<uint8_t> ebus::DeviceScanner::nextCommand() {
   std::lock_guard<std::mutex> lock(mutex_);
   // Priority 1: Manual Scan
-  if (!manualQueue_.empty()) {
-    auto cmd = manualQueue_.front();
-    manualQueue_.pop();
+  if (!manual_queue_.empty()) {
+    auto cmd = manual_queue_.front();
+    manual_queue_.pop();
     return cmd;
   }
 
   // Priority 2: Full Scan (generates one command at a time)
-  if (fullScan_) {
-    while (fullScanAddress_ <= 0xff) {
-      uint8_t addr = static_cast<uint8_t>(fullScanAddress_);
-      fullScanAddress_++;
+  if (full_scan_) {
+    while (full_scan_address_ <= 0xff) {
+      uint8_t addr = static_cast<uint8_t>(full_scan_address_);
+      full_scan_address_++;
 
-      if (ebus::isSlave(addr) && (addr != ebus::slaveOf(ownAddress_))) {
+      if (ebus::isSlave(addr) && (addr != ebus::slaveOf(own_address_))) {
         return Device::createScanCommand(addr);
       }
     }
     // Finished full scan
-    fullScan_ = false;
+    full_scan_ = false;
   }
 
   // Priority 3: Startup Scan (Discovery of observed devices)
-  if (scanOnStartup_) {
+  if (scan_on_startup_) {
     // If the queue for the current iteration is empty, try to populate it.
-    if (startupQueue_.empty()) {
+    if (startup_queue_.empty()) {
       // Stop if we have completed all scan iterations.
-      if (startupScanCount_ >= maxStartupScans_) {
-        scanOnStartup_ = false;
+      if (startup_scan_count_ >= max_startup_scans_) {
+        scan_on_startup_ = false;
         return {};
       }
 
       auto now = std::chrono::steady_clock::now();
       // Check if it's time for the next iteration.
-      if (now >= nextStartupScanTime_) {
-        startupScanCount_++;
+      if (now >= next_startup_scan_time_) {
+        startup_scan_count_++;
 
         std::set<uint8_t> targets;
-        if (deviceManager_) {
+        if (device_manager_) {
           // Note: accessing deviceManager under lock.
           // deviceManager handles its own locking, so this is safe.
-          targets = deviceManager_->getObservedSlaves();
+          targets = device_manager_->getObservedSlaves();
         }
 
         // Populate queue for this iteration
         for (uint8_t addr : targets) {
-          startupQueue_.push(Device::createScanCommand(addr));
+          startup_queue_.push(Device::createScanCommand(addr));
         }
         // Also queue vendor-specific scans for already identified devices
-        if (deviceManager_) {
-          auto vendorCmds = deviceManager_->vendorScanCommands();
+        if (device_manager_) {
+          auto vendorCmds = device_manager_->vendorScanCommands();
           for (const auto& vcmd : vendorCmds) {
-            startupQueue_.push(vcmd);
+            startup_queue_.push(vcmd);
           }
         }
 
         // Schedule the next iteration.
-        nextStartupScanTime_ = now + startupScanInterval_;
+        next_startup_scan_time_ = now + startup_scan_interval_;
       }
     }
 
-    if (!startupQueue_.empty()) {
-      auto cmd = startupQueue_.front();
-      startupQueue_.pop();
+    if (!startup_queue_.empty()) {
+      auto cmd = startup_queue_.front();
+      startup_queue_.pop();
       return cmd;
     }
   }

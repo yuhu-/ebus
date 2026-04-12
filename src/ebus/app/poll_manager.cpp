@@ -12,7 +12,7 @@ uint32_t ebus::PollManager::addPollItem(
     std::chrono::seconds interval,
     std::function<void(const std::vector<uint8_t>&)> cb) {
   std::lock_guard<std::mutex> lock(mutex_);
-  uint32_t id = nextId_++;
+  uint32_t id = next_id_++;
   PollItem item{id,
                 priority,
                 message,
@@ -26,7 +26,7 @@ uint32_t ebus::PollManager::addPollItem(
 void ebus::PollManager::removePollItem(uint32_t id) {
   std::lock_guard<std::mutex> lock(mutex_);
   items_.erase(std::remove_if(items_.begin(), items_.end(),
-                              [id](const PollItem& i) { return i.id == id; }),
+                              [id](const PollItem& i) { return i.id_ == id; }),
                items_.end());
 }
 
@@ -36,11 +36,11 @@ std::vector<ebus::PollItem> ebus::PollManager::getDueItems() {
   auto now = std::chrono::steady_clock::now();
 
   for (auto& item : items_) {
-    if (now >= item.nextDue) {
+    if (now >= item.next_due_) {
       due.push_back(item);
       // Schedule next occurrence based on current "now" to avoid
       // drift or accumulation if the bus was busy.
-      item.nextDue = now + item.interval;
+      item.next_due_ = now + item.interval_;
     }
   }
   return due;
