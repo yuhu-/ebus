@@ -3,7 +3,7 @@
 cmake_minimum_required(VERSION 3.10.0)
 project(ebus VERSION 1.0.0 LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Ensure all libraries and executables are built with PIC for modern linkers
@@ -33,7 +33,7 @@ FetchContent_MakeAvailable(Catch2)
 
 enable_testing()
 
-add_subdirectory(src/Ebus)
+add_subdirectory(src/ebus)
 add_subdirectory(tests)
 if(EBUS_BUILD_LEGACY_TESTS)
     add_subdirectory(legacy)

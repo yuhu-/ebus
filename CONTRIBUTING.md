@@ -5,7 +5,7 @@ Thank you for your interest in contributing to the eBUS library! To maintain hig
 ## Coding Standards
 
 ### C++ Version
-*   **C++14**: Strictly adhere to C++14 features. Do not use C++17 or later features (like `std::optional` or `std::string_view`) unless a polyfill is provided.
+*   **C++17**: Strictly adhere to C++17 features. Do not use C++20 or later features unless a polyfill is provided.
 
 ### Naming Conventions
 *   **Classes and Structs**: `PascalCase` (e.g., `PollManager`, `BusConfig`).
