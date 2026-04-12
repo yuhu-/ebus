@@ -11,7 +11,7 @@
 #include <map>
 #include <utility>
 
-std::map<ebus::DataType, const char*> dataTypeNames = {
+std::map<ebus::DataType, const char*> data_type_names = {
     {ebus::DataType::error, "ERROR"},     {ebus::DataType::bcd, "BCD"},
     {ebus::DataType::uint8, "UINT8"},     {ebus::DataType::int8, "INT8"},
     {ebus::DataType::data1b, "DATA1B"},   {ebus::DataType::data1c, "DATA1C"},
@@ -31,20 +31,20 @@ std::map<ebus::DataType, const char*> dataTypeNames = {
     {ebus::DataType::hex5, "HEX5"},       {ebus::DataType::hex6, "HEX6"},
     {ebus::DataType::hex7, "HEX7"},       {ebus::DataType::hex8, "HEX8"}};
 
-const char* ebus::dataTypeToString(const ebus::DataType& datatype) {
-  return dataTypeNames[datatype];
+const char* ebus::dataTypeToString(const ebus::DataType& data_type) {
+  return data_type_names[data_type];
 }
 
 ebus::DataType ebus::stringToDataType(const char* str) {
   DataType datatype = DataType::error;
 
   const auto it =
-      std::find_if(dataTypeNames.begin(), dataTypeNames.end(),
+      std::find_if(data_type_names.begin(), data_type_names.end(),
                    [&str](const std::pair<DataType, const char*>& item) {
                      return strcmp(str, item.second) == 0;
                    });
 
-  if (it != dataTypeNames.end()) datatype = it->first;
+  if (it != data_type_names.end()) datatype = it->first;
 
   return datatype;
 }
