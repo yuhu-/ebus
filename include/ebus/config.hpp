@@ -29,7 +29,7 @@ struct RuntimeConfig {
  * Platform-dependent bus configuration.
  */
 #if defined(ESP32)
-struct busConfig {
+struct BusConfig {
   uint8_t uart_port;
   uint8_t rx_pin;
   uint8_t tx_pin;
@@ -37,7 +37,7 @@ struct busConfig {
   uint8_t timer_idx;
 };
 #elif defined(POSIX)
-struct busConfig {
+struct BusConfig {
   std::string device = "/dev/ttyUSB0";
   uint32_t baud = 2400;
   bool simulate = false;
@@ -47,10 +47,10 @@ struct busConfig {
 /**
  * Global eBUS Controller configuration.
  */
-struct ebusConfig {
+struct EbusConfig {
   RuntimeConfig runtime = {};
-  std::chrono::milliseconds clientTimeoutMs{500};
-  busConfig bus = {};
+  std::chrono::milliseconds client_timeout_ms{500};
+  BusConfig bus = {};
 };
 
 /**

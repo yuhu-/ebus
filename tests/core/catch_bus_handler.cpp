@@ -18,7 +18,7 @@
 
 TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
   SECTION("Integration vectors (passive/reactive/active BC happy paths)") {
-    ebus::busConfig config = {.device = "/dev/null", .simulate = true};
+    ebus::BusConfig config = {.device = "/dev/null", .simulate = true};
     ebus::RuntimeConfig runtime{
         .address = 0x01, .window = 50, .offset = 5, .enable_syn = true};
     ebus::Request request;
@@ -100,7 +100,7 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
   }
 
   SECTION("Lock counter behavior and arbitration pumping") {
-    ebus::busConfig config = {.device = "/dev/null", .simulate = true};
+    ebus::BusConfig config = {.device = "/dev/null", .simulate = true};
     ebus::RuntimeConfig runtime{.address = 0x33, .window = 50, .offset = 5};
 
     ebus::Request request;
@@ -168,7 +168,7 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
   }
 
   SECTION("External client callback path") {
-    ebus::busConfig config = {.device = "/dev/null", .simulate = true};
+    ebus::BusConfig config = {.device = "/dev/null", .simulate = true};
     ebus::RuntimeConfig runtime{
         .address = 0x33, .window = 50, .offset = 5, .enable_syn = true};
 

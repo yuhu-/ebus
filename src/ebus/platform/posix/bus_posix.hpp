@@ -56,7 +56,7 @@ class BusPosix {
   using WriteListener = std::function<void(const uint8_t& byte)>;
   using SynListener = std::function<void()>;
 
-  BusPosix(const busConfig& config, const RuntimeConfig& runtime,
+  BusPosix(const BusConfig& config, const RuntimeConfig& runtime,
            Request* request);
   ~BusPosix();
 

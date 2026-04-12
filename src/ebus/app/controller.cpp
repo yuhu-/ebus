@@ -34,7 +34,7 @@ struct ebus::Impl {
   std::unique_ptr<ebus::ServiceThread> worker;
 };
 
-ebus::Controller::Controller(const ebusConfig& config)
+ebus::Controller::Controller(const EbusConfig& config)
     : config_(config), impl_(new Impl()) {
   configured_ = true;
   constructMembers();
@@ -42,7 +42,7 @@ ebus::Controller::Controller(const ebusConfig& config)
 
 ebus::Controller::~Controller() { stop(); }
 
-void ebus::Controller::configure(const ebusConfig& config) {
+void ebus::Controller::configure(const EbusConfig& config) {
   if (running_) return;
   config_ = config;
   configured_ = true;

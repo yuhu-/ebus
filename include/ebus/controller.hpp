@@ -29,13 +29,13 @@ struct Impl;
 class Controller {
  public:
   Controller() = default;
-  explicit Controller(const ebusConfig& config);
+  explicit Controller(const EbusConfig& config);
   ~Controller();
 
   Controller(const Controller&) = delete;
   Controller& operator=(const Controller&) = delete;
 
-  void configure(const ebusConfig& config);
+  void configure(const EbusConfig& config);
   void start();
   void stop();
 
@@ -82,7 +82,7 @@ class Controller {
   bool isRunning() const noexcept;
 
  private:
-  ebusConfig config_;
+  EbusConfig config_;
   std::unique_ptr<Impl> impl_;
 
   bool configured_ = false;

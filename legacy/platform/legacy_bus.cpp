@@ -35,7 +35,7 @@ void run_test(const std::string& name, bool condition) {
 }
 
 void test_basic_communication() {
-  ebus::busConfig config = {.device = "/dev/null", .simulate = true};
+  ebus::BusConfig config = {.device = "/dev/null", .simulate = true};
   ebus::RuntimeConfig runtime{
       .address = 0x01, .window = 50, .offset = 5, .enable_syn = true};
 
@@ -89,7 +89,7 @@ void test_basic_communication() {
 
 void test_syn_timing() {
   std::cout << "\n=== Test: SYN Timing Logic ===" << std::endl;
-  ebus::busConfig config = {.device = "/dev/null", .simulate = true};
+  ebus::BusConfig config = {.device = "/dev/null", .simulate = true};
   ebus::RuntimeConfig runtime{
       .address = 0x01, .window = 50, .offset = 5, .enable_syn = true};
   ebus::Request req;
@@ -145,7 +145,7 @@ void test_syn_timing() {
 void test_raw_reception() {
   std::cout << "\n=== Test: Raw Reception (Broadcast Simulation) ==="
             << std::endl;
-  ebus::busConfig config = {.device = "/dev/null", .simulate = true};
+  ebus::BusConfig config = {.device = "/dev/null", .simulate = true};
   ebus::RuntimeConfig runtime{
       .address = 0x01, .window = 50, .offset = 5, .enable_syn = false};
 

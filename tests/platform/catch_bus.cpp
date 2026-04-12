@@ -26,7 +26,7 @@ static void force_request(ebus::Request& req, uint8_t addr) {
 }
 
 TEST_CASE("Bus: Basic Communication", "[platform][bus]") {
-  ebus::busConfig config = {.device = "/dev/null", .simulate = true};
+  ebus::BusConfig config = {.device = "/dev/null", .simulate = true};
   ebus::RuntimeConfig runtime{
       .address = 0x01, .window = 50, .offset = 5, .enable_syn = true};
 
@@ -66,7 +66,7 @@ TEST_CASE("Bus: Basic Communication", "[platform][bus]") {
 }
 
 TEST_CASE("Bus: SYN Timing", "[platform][bus]") {
-  ebus::busConfig config = {.device = "/dev/null", .simulate = true};
+  ebus::BusConfig config = {.device = "/dev/null", .simulate = true};
   ebus::RuntimeConfig runtime{
       .address = 0x01, .window = 50, .offset = 5, .enable_syn = true};
 
@@ -115,7 +115,7 @@ TEST_CASE("Bus: SYN Timing", "[platform][bus]") {
 }
 
 TEST_CASE("Bus: Raw Reception (Broadcast Simulation)", "[platform][bus]") {
-  ebus::busConfig config = {.device = "/dev/null", .simulate = true};
+  ebus::BusConfig config = {.device = "/dev/null", .simulate = true};
   ebus::RuntimeConfig runtime{
       .address = 0x01, .window = 50, .offset = 5, .enable_syn = false};
   ebus::Request req;

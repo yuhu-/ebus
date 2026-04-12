@@ -10,7 +10,7 @@
 
 #include "utils/common.hpp"
 
-ebus::BusPosix::BusPosix(const busConfig& config, const RuntimeConfig& runtime,
+ebus::BusPosix::BusPosix(const BusConfig& config, const RuntimeConfig& runtime,
                          Request* request)
     : device_(config.device),
       simulate_(config.simulate),

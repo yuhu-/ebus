@@ -34,7 +34,7 @@ void test_client_orchestration() {
   req.setMaxLockCounter(3);  // Start with a standard lock counter for the test
   req.reset();
 
-  ebus::busConfig config = {.device = "/dev/null", .simulate = true};
+  ebus::BusConfig config = {.device = "/dev/null", .simulate = true};
   ebus::RuntimeConfig runtime{
       .address = 0x01, .window = 50, .offset = 5, .enable_syn = false};
 
@@ -158,7 +158,7 @@ void test_enhanced_active_sending() {
   req.setMaxLockCounter(3);  // Start with a standard lock counter for the test
   req.reset();
 
-  ebus::busConfig config = {.device = "/dev/null", .simulate = true};
+  ebus::BusConfig config = {.device = "/dev/null", .simulate = true};
   ebus::RuntimeConfig runtime{.address = 0x01, .window = 50, .offset = 5};
 
   ebus::Bus bus(config, runtime, &req);
@@ -250,7 +250,7 @@ void test_client_timeout() {
 
   ebus::Request req;
   req.setMaxLockCounter(0);
-  ebus::busConfig config = {.device = "/dev/null", .simulate = true};
+  ebus::BusConfig config = {.device = "/dev/null", .simulate = true};
   ebus::RuntimeConfig runtime{
       .address = 0xff, .window = 50, .offset = 5, .enable_syn = false};
   ebus::Bus bus(config, runtime, &req);
@@ -291,7 +291,7 @@ void test_client_timeout() {
 void test_client_removal() {
   std::cout << "--- Test: Client Removal ---" << std::endl;
   ebus::Request req;
-  ebus::busConfig config = {.device = "/dev/null", .simulate = true};
+  ebus::BusConfig config = {.device = "/dev/null", .simulate = true};
   ebus::RuntimeConfig runtime{
       .address = 0xff, .window = 50, .offset = 5, .enable_syn = false};
   ebus::Bus bus(config, runtime, &req);

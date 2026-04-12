@@ -16,7 +16,7 @@
 
 TEST_CASE("Controller: Lifecycle and API", "[app][controller]") {
   // Configuration
-  ebus::ebusConfig config;
+  ebus::EbusConfig config;
   config.runtime.address = 0x31;
   config.bus.simulate = true;
   config.runtime.enable_syn = true;

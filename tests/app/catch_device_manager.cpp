@@ -17,7 +17,7 @@
 TEST_CASE("DeviceManager: Address Tracking", "[app][devicemanager]") {
   ebus::DeviceManager dm;
 
-  ebus::busConfig config{.device = "/dev/null", .simulate = true};
+  ebus::BusConfig config{.device = "/dev/null", .simulate = true};
   ebus::RuntimeConfig runtime{.address = 0xff, .window = 50, .offset = 5};
   ebus::Request request;
   ebus::Bus bus(config, runtime, &request);
@@ -39,7 +39,7 @@ TEST_CASE("DeviceManager: Address Tracking", "[app][devicemanager]") {
 TEST_CASE("DeviceManager: Device Update", "[app][devicemanager]") {
   ebus::DeviceManager dm;
 
-  ebus::busConfig config{.device = "/dev/null", .simulate = true};
+  ebus::BusConfig config{.device = "/dev/null", .simulate = true};
   ebus::RuntimeConfig runtime{.address = 0xff, .window = 50, .offset = 5};
   ebus::Request request;
   ebus::Bus bus(config, runtime, &request);
@@ -63,7 +63,7 @@ TEST_CASE("DeviceManager: Device Update", "[app][devicemanager]") {
 TEST_CASE("DeviceManager: Create Scan Commands", "[app][devicemanager]") {
   ebus::DeviceManager dm;
 
-  ebus::busConfig config{.device = "/dev/null", .simulate = true};
+  ebus::BusConfig config{.device = "/dev/null", .simulate = true};
   ebus::RuntimeConfig runtime{.address = 0xff, .window = 50, .offset = 5};
   ebus::Request request;
   ebus::Bus bus(config, runtime, &request);

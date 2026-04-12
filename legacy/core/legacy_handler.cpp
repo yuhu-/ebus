@@ -44,7 +44,7 @@ void printByte(const std::string& prefix, const uint8_t& byte,
 }
 ebus::Request request;
 
-ebus::busConfig config = {.device = "/dev/simulation", .simulate = true};
+ebus::BusConfig config = {.device = "/dev/simulation", .simulate = true};
 ebus::RuntimeConfig runtime = {.address = 0x33, .window = 50, .offset = 5};
 ebus::Bus bus(config, runtime, &request);
 

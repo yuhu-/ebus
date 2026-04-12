@@ -31,7 +31,7 @@ TEST_CASE("ClientManager Orchestration (Regular + ReadOnly)") {
   req.setMaxLockCounter(3);
   req.reset();
 
-  ebus::busConfig config = {.device = "/dev/null", .simulate = true};
+  ebus::BusConfig config = {.device = "/dev/null", .simulate = true};
   ebus::RuntimeConfig runtime{
       .address = 0x01, .window = 50, .offset = 5, .enable_syn = false};
 
@@ -108,7 +108,7 @@ TEST_CASE("ClientManager Enhanced Active Sending") {
   req.setMaxLockCounter(3);
   req.reset();
 
-  ebus::busConfig config = {.device = "/dev/null", .simulate = true};
+  ebus::BusConfig config = {.device = "/dev/null", .simulate = true};
   ebus::RuntimeConfig runtime{.address = 0x01, .window = 50, .offset = 5};
 
   ebus::Bus bus(config, runtime, &req);
@@ -181,7 +181,7 @@ TEST_CASE("ClientManager Enhanced Active Sending") {
 TEST_CASE("ClientManager Watchdog Timeout") {
   ebus::Request req;
   req.setMaxLockCounter(0);
-  ebus::busConfig config = {.device = "/dev/null", .simulate = true};
+  ebus::BusConfig config = {.device = "/dev/null", .simulate = true};
   ebus::RuntimeConfig runtime{
       .address = 0xff, .window = 50, .offset = 5, .enable_syn = false};
   ebus::Bus bus(config, runtime, &req);
@@ -215,7 +215,7 @@ TEST_CASE("ClientManager Watchdog Timeout") {
 
 TEST_CASE("Client Removal") {
   ebus::Request req;
-  ebus::busConfig config = {.device = "/dev/null", .simulate = true};
+  ebus::BusConfig config = {.device = "/dev/null", .simulate = true};
   ebus::RuntimeConfig runtime{
       .address = 0xff, .window = 50, .offset = 5, .enable_syn = false};
   ebus::Bus bus(config, runtime, &req);

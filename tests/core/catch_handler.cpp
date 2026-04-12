@@ -76,7 +76,7 @@ SCENARIO("Handler processes eBUS messages correctly", "[core][handler]") {
     for (const auto& tc : test_cases) {
       WHEN(tc.description) {
         ebus::Request request;
-        ebus::busConfig config = {.device = "/dev/null", .simulate = true};
+        ebus::BusConfig config = {.device = "/dev/null", .simulate = true};
         ebus::RuntimeConfig runtime{
             .address = 0x33, .window = 50, .offset = 5, .enable_syn = true};
         ebus::Bus bus(config, runtime, &request);

@@ -24,7 +24,7 @@ int main() {
   std::cout << "--- Test: Controller Lifecycle and API ---" << std::endl;
 
   // 1. Configuration
-  ebus::ebusConfig config;
+  ebus::EbusConfig config;
   config.runtime.address = 0x31;
   config.bus.simulate = true;
   config.runtime.enable_syn =

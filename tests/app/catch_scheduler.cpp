@@ -154,7 +154,7 @@ bool runSchedulerTest(ebus::Scheduler& scheduler, const TestCase& tc,
 
 TEST_CASE("Scheduler: Simulation", "[app][scheduler]") {
   ebus::Request request;
-  ebus::busConfig config;
+  ebus::BusConfig config;
   config.device = "/dev/simulation";
   config.simulate = true;
 

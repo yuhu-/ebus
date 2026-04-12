@@ -12,7 +12,7 @@
 
 #include "utils/common.hpp"
 
-std::map<ebus::DataType, const char*> DatatypeName = {
+std::map<ebus::DataType, const char*> datatype_names = {
     {ebus::DataType::ERROR, "ERROR"},   {ebus::DataType::BCD, "BCD"},
     {ebus::DataType::UINT8, "UINT8"},   {ebus::DataType::INT8, "INT8"},
     {ebus::DataType::DATA1B, "DATA1B"}, {ebus::DataType::DATA1C, "DATA1C"},
@@ -33,19 +33,19 @@ std::map<ebus::DataType, const char*> DatatypeName = {
     {ebus::DataType::HEX7, "HEX7"},     {ebus::DataType::HEX8, "HEX8"}};
 
 const char* ebus::datatype_2_string(const ebus::DataType& datatype) {
-  return DatatypeName[datatype];
+  return datatype_names[datatype];
 }
 
 ebus::DataType ebus::string_2_datatype(const char* str) {
   DataType datatype = DataType::ERROR;
 
   const auto it =
-      std::find_if(DatatypeName.begin(), DatatypeName.end(),
+      std::find_if(datatype_names.begin(), datatype_names.end(),
                    [&str](const std::pair<DataType, const char*>& item) {
                      return strcmp(str, item.second) == 0;
                    });
 
-  if (it != DatatypeName.end()) datatype = it->first;
+  if (it != datatype_names.end()) datatype = it->first;
 
   return datatype;
 }

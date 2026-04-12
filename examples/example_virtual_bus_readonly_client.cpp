@@ -23,7 +23,7 @@ using namespace std::chrono_literals;
 int main() {
   // --- 1. Configuration for Device A (Traffic Generator) ---
   // This device will act as a Master at address 0x01.
-  ebus::ebusConfig configA;
+  ebus::EbusConfig configA;
   configA.runtime.address = 0x01;
   configA.bus.simulate = true;
   configA.runtime.enable_syn = true;  // One device should act as SYN generator
@@ -32,7 +32,7 @@ int main() {
 
   // --- 2. Configuration for Device B (Boiler Emulator) ---
   // This device acts as Master 0x10 (Slave 0x15).
-  ebus::ebusConfig configB;
+  ebus::EbusConfig configB;
   configB.runtime.address = 0x10;
   configB.bus.simulate = true;
 

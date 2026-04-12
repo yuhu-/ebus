@@ -112,7 +112,7 @@ bool run_test(const TestCase& tc, ebus::Bus& bus, ebus::Handler& handler,
 }
 
 void test_integration_vectors() {
-  ebus::busConfig config = {.device = "/dev/null", .simulate = true};
+  ebus::BusConfig config = {.device = "/dev/null", .simulate = true};
   ebus::RuntimeConfig runtime = {
       .address = 0x01, .window = 50, .offset = 5, .enable_syn = true};
 
@@ -204,7 +204,7 @@ void test_integration_vectors() {
 void test_lock_counter() {
   std::cout << "[TEST] Lock Counter Logic... " << std::flush;
 
-  ebus::busConfig config = {.device = "/dev/null", .simulate = true};
+  ebus::BusConfig config = {.device = "/dev/null", .simulate = true};
   ebus::RuntimeConfig runtime{.address = 0x33, .window = 50, .offset = 5};
 
   ebus::Request request;
@@ -309,7 +309,7 @@ void test_external_client() {
                 << "=== Test: External Client Logic ===" << std::endl;
     }
 
-    ebus::busConfig config = {.device = "/dev/null", .simulate = true};
+    ebus::BusConfig config = {.device = "/dev/null", .simulate = true};
     ebus::RuntimeConfig runtime = {
         .address = 0x33, .window = 50, .offset = 5, .enable_syn = true};
 
