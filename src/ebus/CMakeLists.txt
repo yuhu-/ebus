@@ -42,7 +42,6 @@ endif()
 # Utilities
 set(UTIL_SOURCES
     utils/utils.cpp
-    utils/utils_internal.cpp
     utils/timing_stats.cpp
 )
 
