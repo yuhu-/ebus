@@ -20,18 +20,18 @@
 #include "platform/system.hpp"
 
 struct ebus::Impl {
-  ebus::TelegramCallback user_telegram_callback;
-  ebus::ErrorCallback user_error_callback;
-  std::unique_ptr<ebus::Request> request;
-  std::unique_ptr<ebus::Bus> bus;
-  std::unique_ptr<ebus::BusHandler> bus_handler;
-  std::unique_ptr<ebus::Handler> handler;
-  std::unique_ptr<ebus::DeviceManager> device_manager;
-  std::unique_ptr<ebus::DeviceScanner> device_scanner;
-  std::unique_ptr<ebus::PollManager> poll_manager;
-  std::unique_ptr<ebus::Scheduler> scheduler;
-  std::unique_ptr<ebus::ClientManager> client_manager;
-  std::unique_ptr<ebus::ServiceThread> worker;
+  ebus::TelegramCallback user_telegram_callback_;
+  ebus::ErrorCallback user_error_callback_;
+  std::unique_ptr<ebus::Request> request_;
+  std::unique_ptr<ebus::Bus> bus_;
+  std::unique_ptr<ebus::BusHandler> bus_handler_;
+  std::unique_ptr<ebus::Handler> handler_;
+  std::unique_ptr<ebus::DeviceManager> device_manager_;
+  std::unique_ptr<ebus::DeviceScanner> device_scanner_;
+  std::unique_ptr<ebus::PollManager> poll_manager_;
+  std::unique_ptr<ebus::Scheduler> scheduler_;
+  std::unique_ptr<ebus::ClientManager> client_manager_;
+  std::unique_ptr<ebus::ServiceThread> worker_;
 };
 
 ebus::Controller::Controller(const EbusConfig& config)
@@ -53,58 +53,58 @@ void ebus::Controller::start() {
   if (!configured_) return;
   if (running_) return;
   running_ = true;
-  impl_->bus->start();
-  impl_->bus_handler->start();
-  impl_->scheduler->start();
-  impl_->client_manager->start();
-  impl_->worker = std::make_unique<ServiceThread>(
+  impl_->bus_->start();
+  impl_->bus_handler_->start();
+  impl_->scheduler_->start();
+  impl_->client_manager_->start();
+  impl_->worker_ = std::make_unique<ServiceThread>(
       "ebusController", [this] { run(); }, 4096, 1, 0);
-  impl_->worker->start();
+  impl_->worker_->start();
 }
 
 void ebus::Controller::stop() {
   if (!configured_) return;
   if (!running_) return;
   running_ = false;
-  if (impl_->worker) impl_->worker->join();
-  impl_->client_manager->stop();
-  impl_->scheduler->stop();
-  impl_->bus_handler->stop();
-  impl_->bus->stop();
+  if (impl_->worker_) impl_->worker_->join();
+  impl_->client_manager_->stop();
+  impl_->scheduler_->stop();
+  impl_->bus_handler_->stop();
+  impl_->bus_->stop();
 }
 
 void ebus::Controller::setAddress(const uint8_t& address) {
   config_.runtime.address = address;
   if (configured_) {
-    impl_->handler->setSourceAddress(address);
-    impl_->device_manager->setOwnAddress(address);
-    impl_->device_scanner->setOwnAddress(address);
-    impl_->bus->setRuntimeConfig(config_.runtime);
-    impl_->request->setMaxLockCounter(config_.runtime.lock_counter_max);
+    impl_->handler_->setSourceAddress(address);
+    impl_->device_manager_->setOwnAddress(address);
+    impl_->device_scanner_->setOwnAddress(address);
+    impl_->bus_->setRuntimeConfig(config_.runtime);
+    impl_->request_->setMaxLockCounter(config_.runtime.lock_counter_max);
   }
 }
 
 void ebus::Controller::setWindow(const uint16_t& window) {
   config_.runtime.window = window;
-  if (configured_) impl_->bus->setWindow(window);
+  if (configured_) impl_->bus_->setWindow(window);
 }
 
 void ebus::Controller::setOffset(const uint16_t& offset) {
   config_.runtime.offset = offset;
-  if (configured_) impl_->bus->setOffset(offset);
+  if (configured_) impl_->bus_->setOffset(offset);
 }
 
 void ebus::Controller::setClientActiveTimeout(
     std::chrono::milliseconds timeout) {
-  if (impl_->client_manager) impl_->client_manager->setActiveTimeout(timeout);
+  if (impl_->client_manager_) impl_->client_manager_->setActiveTimeout(timeout);
 }
 
 void ebus::Controller::setTelegramCallback(TelegramCallback callback) {
-  impl_->user_telegram_callback = std::move(callback);
+  impl_->user_telegram_callback_ = std::move(callback);
 }
 
 void ebus::Controller::setErrorCallback(ErrorCallback callback) {
-  impl_->user_error_callback = std::move(callback);
+  impl_->user_error_callback_ = std::move(callback);
 }
 
 void ebus::Controller::enqueue(
@@ -112,68 +112,68 @@ void ebus::Controller::enqueue(
     std::function<void(bool success, const std::vector<uint8_t>& master,
                        const std::vector<uint8_t>& slave)>
         callback) {
-  if (impl_->scheduler)
-    impl_->scheduler->enqueue(priority, message, std::move(callback));
+  if (impl_->scheduler_)
+    impl_->scheduler_->enqueue(priority, message, std::move(callback));
 }
 
 uint32_t ebus::Controller::addPollItem(
     uint8_t priority, const std::vector<uint8_t>& message,
     std::chrono::seconds interval,
     std::function<void(const std::vector<uint8_t>&)> callback) {
-  return impl_->poll_manager
-             ? impl_->poll_manager->addPollItem(priority, message, interval,
-                                               std::move(callback))
+  return impl_->poll_manager_
+             ? impl_->poll_manager_->addPollItem(priority, message, interval,
+                                                 std::move(callback))
              : 0;
 }
 
 void ebus::Controller::removePollItem(uint32_t id) {
-  if (impl_->poll_manager) impl_->poll_manager->removePollItem(id);
+  if (impl_->poll_manager_) impl_->poll_manager_->removePollItem(id);
 }
 
 void ebus::Controller::setFullScan(bool enable) {
-  if (impl_->device_scanner) impl_->device_scanner->setFullScan(enable);
+  if (impl_->device_scanner_) impl_->device_scanner_->setFullScan(enable);
 }
 
 void ebus::Controller::setScanOnStartup(bool enable) {
-  if (impl_->device_scanner) impl_->device_scanner->setScanOnStartup(enable);
+  if (impl_->device_scanner_) impl_->device_scanner_->setScanOnStartup(enable);
 }
 
 void ebus::Controller::scanAddress(uint8_t address) {
-  if (impl_->device_scanner) impl_->device_scanner->scanAddress(address);
+  if (impl_->device_scanner_) impl_->device_scanner_->scanAddress(address);
 }
 
 void ebus::Controller::scanObservedDevices() {
-  if (impl_->device_scanner) impl_->device_scanner->scanObservedDevices();
+  if (impl_->device_scanner_) impl_->device_scanner_->scanObservedDevices();
 }
 
 bool ebus::Controller::isScanning() const {
-  return impl_->device_scanner ? impl_->device_scanner->isScanning() : false;
+  return impl_->device_scanner_ ? impl_->device_scanner_->isScanning() : false;
 }
 
 void ebus::Controller::addClient(int fd, ClientType type) {
-  if (impl_->client_manager) impl_->client_manager->addClient(fd, type);
+  if (impl_->client_manager_) impl_->client_manager_->addClient(fd, type);
 }
 
 void ebus::Controller::removeClient(int fd) {
-  if (impl_->client_manager) impl_->client_manager->removeClient(fd);
+  if (impl_->client_manager_) impl_->client_manager_->removeClient(fd);
 }
 
 std::vector<ebus::DeviceInfo> ebus::Controller::getDeviceInfo() const {
-  return impl_->device_manager ? impl_->device_manager->getDeviceInfo()
-                              : std::vector<DeviceInfo>();
+  return impl_->device_manager_ ? impl_->device_manager_->getDeviceInfo()
+                                : std::vector<DeviceInfo>();
 }
 
 std::map<std::string, ebus::MetricValues> ebus::Controller::getMetrics() const {
   if (!configured_) return {};
 
   std::map<std::string, MetricValues> metrics;
-  auto handler_metrics = impl_->handler->getMetrics();
+  auto handler_metrics = impl_->handler_->getMetrics();
   metrics.insert(handler_metrics.begin(), handler_metrics.end());
 
-  auto request_metrics = impl_->request->getMetrics();
+  auto request_metrics = impl_->request_->getMetrics();
   metrics.insert(request_metrics.begin(), request_metrics.end());
 
-  auto bus_metrics = impl_->bus->getMetrics();
+  auto bus_metrics = impl_->bus_->getMetrics();
   metrics.insert(bus_metrics.begin(), bus_metrics.end());
 
   // 4. Calculate Aggregate Bus Quality (%)
@@ -206,71 +206,72 @@ bool ebus::Controller::isConfigured() const noexcept { return configured_; }
 bool ebus::Controller::isRunning() const noexcept { return running_; }
 
 void ebus::Controller::constructMembers() {
-  impl_->request.reset(new Request());
-  impl_->request->setMaxLockCounter(config_.runtime.lock_counter_max);
-  impl_->bus.reset(new Bus(config_.bus, config_.runtime, impl_->request.get()));
-  impl_->handler.reset(new Handler(config_.runtime.address, impl_->bus.get(),
-                                   impl_->request.get()));
+  impl_->request_.reset(new Request());
+  impl_->request_->setMaxLockCounter(config_.runtime.lock_counter_max);
+  impl_->bus_.reset(
+      new Bus(config_.bus, config_.runtime, impl_->request_.get()));
+  impl_->handler_.reset(new Handler(config_.runtime.address, impl_->bus_.get(),
+                                    impl_->request_.get()));
 
-  impl_->scheduler.reset(new Scheduler(impl_->handler.get()));
+  impl_->scheduler_.reset(new Scheduler(impl_->handler_.get()));
 
-  impl_->device_manager.reset(new DeviceManager());
-  impl_->device_manager->setOwnAddress(config_.runtime.address);
+  impl_->device_manager_.reset(new DeviceManager());
+  impl_->device_manager_->setOwnAddress(config_.runtime.address);
 
   // Setup the central dispatcher via the Scheduler.
   // The Scheduler handles the timing-critical Handler interaction and
   // provides an 'extern' callback hook which we use to feed the rest of the
   // app.
-  impl_->scheduler->setTelegramCallback(
+  impl_->scheduler_->setTelegramCallback(
       [this](const MessageType& message_type, const TelegramType& telegram_type,
              const std::vector<uint8_t>& master,
              const std::vector<uint8_t>& slave) {
         // 1. Update Internal State (Device Discovery)
-        if (impl_->device_manager) {
-          impl_->device_manager->update(master, slave);
+        if (impl_->device_manager_) {
+          impl_->device_manager_->update(master, slave);
         }
         // 2. Inform the Application (Active, Passive, and Reactive)
-        if (impl_->user_telegram_callback) {
-          impl_->user_telegram_callback(message_type, telegram_type, master,
-                                      slave);
+        if (impl_->user_telegram_callback_) {
+          impl_->user_telegram_callback_(message_type, telegram_type, master,
+                                         slave);
         }
       });
 
-  impl_->scheduler->setErrorCallback([this](const std::string& error,
-                                            const std::vector<uint8_t>& master,
-                                            const std::vector<uint8_t>& slave) {
-    if (impl_->user_error_callback) {
-      impl_->user_error_callback(error, master, slave);
-    }
-  });
+  impl_->scheduler_->setErrorCallback(
+      [this](const std::string& error, const std::vector<uint8_t>& master,
+             const std::vector<uint8_t>& slave) {
+        if (impl_->user_error_callback_) {
+          impl_->user_error_callback_(error, master, slave);
+        }
+      });
 
-  impl_->device_scanner.reset(
-      new DeviceScanner(config_.runtime.address, impl_->device_manager.get()));
+  impl_->device_scanner_.reset(
+      new DeviceScanner(config_.runtime.address, impl_->device_manager_.get()));
 
-  impl_->poll_manager.reset(new PollManager());
+  impl_->poll_manager_.reset(new PollManager());
 
-  impl_->bus_handler.reset(new BusHandler(
-      impl_->request.get(), impl_->handler.get(), impl_->bus->getQueue()));
+  impl_->bus_handler_.reset(new BusHandler(
+      impl_->request_.get(), impl_->handler_.get(), impl_->bus_->getQueue()));
 
-  impl_->client_manager.reset(new ClientManager(
-      impl_->bus.get(), impl_->bus_handler.get(), impl_->request.get()));
-  impl_->client_manager->setActiveTimeout(config_.client_timeout_ms);
+  impl_->client_manager_.reset(new ClientManager(
+      impl_->bus_.get(), impl_->bus_handler_.get(), impl_->request_.get()));
+  impl_->client_manager_->setActiveTimeout(config_.client_timeout_ms);
 
-  impl_->bus->setWindow(config_.runtime.window);
-  impl_->bus->setOffset(config_.runtime.offset);
+  impl_->bus_->setWindow(config_.runtime.window);
+  impl_->bus_->setOffset(config_.runtime.offset);
 }
 
 void ebus::Controller::run() {
   while (running_) {
-    auto due_items = impl_->poll_manager->getDueItems();
+    auto due_items = impl_->poll_manager_->getDueItems();
     for (const auto& item : due_items) {
-      impl_->scheduler->enqueue(item.priority, item.message);
+      impl_->scheduler_->enqueue(item.priority, item.message);
     }
 
-    if (impl_->scheduler->queueSize() < 5) {
-      auto scan_cmd = impl_->device_scanner->nextCommand();
+    if (impl_->scheduler_->queueSize() < 5) {
+      auto scan_cmd = impl_->device_scanner_->nextCommand();
       if (!scan_cmd.empty()) {
-        impl_->scheduler->enqueue(5, scan_cmd);
+        impl_->scheduler_->enqueue(5, scan_cmd);
       }
     }
 
