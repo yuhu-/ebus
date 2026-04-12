@@ -77,8 +77,7 @@ const char* timestamp() {
   return time;
 }
 
-std::string services(const std::vector<uint8_t>& master,
-                     const std::vector<uint8_t>& slave) {
+std::string services(std::vector<uint8_t> master, std::vector<uint8_t> slave) {
   std::ostringstream ostr;
   if (master[2] == 0x07 && master[3] == 0x00) {
     ostr << "0700: 20";
@@ -128,7 +127,7 @@ std::string services(const std::vector<uint8_t>& master,
   return ostr.str();
 }
 
-std::string collect(const uint8_t& byte) {
+std::string collect(uint8_t byte) {
   static ebus::Sequence sequence;
   std::string result = "";
 
