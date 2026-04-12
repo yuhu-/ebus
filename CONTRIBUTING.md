@@ -1,0 +1,97 @@
+# Contributing to the eBUS Library
+
+Thank you for your interest in contributing to the eBUS library! To maintain high code quality and architectural consistency, please follow these guidelines.
+
+## Coding Standards
+
+### C++ Version
+*   **C++14**: Strictly adhere to C++14 features. Do not use C++17 or later features (like `std::optional` or `std::string_view`) unless a polyfill is provided.
+
+### Naming Conventions
+*   **Classes and Structs**: `PascalCase` (e.g., `PollManager`, `BusConfig`).
+*   **Methods and Functions**: `camelCase` (e.g., `getMetrics`, `sendActiveMessage`).
+*   **Variables and Parameters**: `snake_case` (e.g., `retry_count`, `src_address`).
+*   **Private Members**: `snake_case_` with a trailing underscore (e.g., `bus_handle_`, `state_`).
+*   **Files and Directories**: `snake_case` (e.g., `serial_bus.cpp`, `data_types.hpp`).
+
+### Memory Management
+*   **Avoid Heap Allocation**: Do not allocate memory on the heap within the protocol processing loop (the "hot path"). Use pre-allocated buffers and reuse existing capacities.
+*   **Standard Library**: Be mindful of `std::vector` and `std::string` usage in performance-critical sections to avoid hidden allocations.
+
+### Threading
+*   **Thread Safety**: The public `Controller` API must be thread-safe.
+*   **Synchronization**: Internal state updates must be synchronized, as the `ServiceThread` processes the bus stream asynchronously.
+
+### Error Handling
+*   **Metrics Over Exceptions**: Use the internal `Metrics` system for protocol-level errors. Avoid using exceptions in the hot path.
+
+## Architectural Patterns
+
+To keep the library maintainable and portable, we follow these patterns:
+
+*   **PIMPL Idiom**: Used in `ebus::Controller` to provide a stable ABI and hide internal orchestration details.
+*   **Finite State Machine (FSM)**: The `Core::Handler` uses an FSM to manage synchronization, arbitration, and data phases.
+*   **Hardware Abstraction Layer (HAL)**: All hardware interaction is abstracted through the `Platform::Bus`. **Do not** use direct POSIX or FreeRTOS calls outside of the `src/ebus/platform/` directory.
+
+## Key Components
+
+*   **Controller**: The main entry point. Manages the library lifecycle and provides the public API.
+*   **Config**: Centralized configuration for both runtime settings and platform-specific hardware.
+*   **Bus**: Serial communication interface. Concrete implementations exist for POSIX and FreeRTOS.
+*   **Telegram**: Encapsulates the eBUS frame structure, CRC calculation, and validation.
+*   **Sequence**: Manages byte-stuffing/unstuffing and timing for multi-byte protocol sequences.
+*   **Handler**: The protocol engine. Drives the FSM to parse incoming streams byte-by-byte.
+*   **Request**: Implements the multi-master arbitration logic and collision detection.
+*   **Scheduler**: Manages master priority and enqueues messages for transmission.
+*   **PollManager**: Orchestrates recurring jobs and periodic slave polling.
+*   **DeviceManager**: Maintains the inventory of discovered devices and their properties.
+*   **DeviceScanner**: Implements the logic for identifying devices on the bus.
+*   **EnhancedProtocol**: Implements specialized ebusd-compatible communication modes.
+*   **ClientManager**: Manages bridge connections for external clients (e.g., ebusd).
+*   **Metrics**: Unified telemetry models for bus utilization, jitter, and error tracking.
+*   **Queue**: Thread-safe byte buffering for incoming bus data.
+*   **ServiceThread**: The background worker thread that processes the Queue and drives the FSM.
+
+## Project Structure
+
+*   `include/ebus/`: Public API headers.
+*   `src/ebus/app/`: High-level orchestration (Scheduler, DeviceManager).
+*   `src/ebus/core/`: Protocol engine and FSM logic.
+*   `src/ebus/models/`: Data types and device models.
+*   `src/ebus/platform/`: HAL and system-specific implementations.
+*   `src/ebus/utils/`: Common helpers and timing statistics.
+
+## Testing
+
+Every contribution should be accompanied by appropriate tests.
+
+*   **Catch2**: Our preferred framework for unit testing. New tests should be added to the `tests/` directory.
+*   **Legacy Tests**: Used for timing-sensitive arbitration debugging and protocol tracing. 
+
+### Legacy Development Tests
+
+These tests often provide detailed protocol traces and insights that are useful for debugging complex arbitration or timing issues. They are excluded from the default build to keep build times fast. To enable them, use the `EBUS_BUILD_LEGACY_TESTS` CMake option:
+
+```bash
+cmake -DEBUS_BUILD_LEGACY_TESTS=ON ..
+make
+```
+
+### Running Tests
+
+```bash
+mkdir build && cd build
+cmake ..
+make
+ctest
+```
+
+## How to Submit Changes
+
+1.  **Small Commits**: Keep your commits atomic and focused on a single change.
+2.  **Naming**: Ensure all new files follow the `snake_case` naming rule.
+3.  **Headers**: Ensure every new file starts with the standard project license header.
+4.  **Pull Requests**: Submit your changes via a Pull Request. Ensure that all tests pass before submission.
+
+---
+*This project is licensed under the GPL-3.0-or-later.*

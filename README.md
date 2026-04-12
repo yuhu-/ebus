@@ -10,21 +10,9 @@ This library enables communication with systems based on the eBUS protocol. eBUS
 - The eBUS protocol is byte-oriented with byte-oriented arbitration.
 - Data protection through 8-bit CRC.
 
-### Class Overview
+### Architecture and Development
 
-The library is designed with a clear separation between the public API and internal protocol orchestration.
-
-#### Public API (`include/ebus/`)
-- **Controller**: The primary interface for applications. It manages the lifecycle, scheduling, and diagnostic aggregation. Encapsulated using the PIMPL idiom to hide internal complexity.
-- **Config**: Platform-independent configuration for the controller and hardware-specific bus settings.
-- **Definitions**: Central source of truth for protocol symbols, enums, and callback signatures.
-- **Metrics**: Unified data models for bus health monitoring (jitter, utilization, error rates).
-- **Datatypes**: Advanced encoding/decoding utilities for eBUS-specific data formats (e.g., float-to-ebus conversion).
-
-#### Internal Implementation (`src/ebus/`)
-- **app**: Orchestration layer containing the **Scheduler** (priority-based transmission), **PollManager** (recurring jobs), **ClientManager** (network bridging), **DeviceManager** (inventory), **DeviceScanner** (discovery), and **EnhancedProtocol** (advanced modes).
-- **core**: The protocol engine. **Handler** manages the Finite State Machine (FSM), **Telegram** encapsulates the frame structure/validation, and **Sequence** handles multi-byte sequences, and **Request** handles byte-oriented arbitration.
-- **platform**: Abstraction layer for system interaction. Includes **Bus** (serial IO), **Queue** (data buffering), and **ServiceThread** (concurrency abstractions). POSIX and FreeRTOS are supported.
+The library is designed with a clear separation between the public API and internal protocol orchestration. For detailed information on the architectural patterns, component roles, and coding standards, please refer to the CONTRIBUTING.md guide.
 
 ### Diagnostics & Bus Health
 
@@ -40,22 +28,14 @@ The library includes a unified telemetry system accessible via `Controller::getM
 
 **playground**: A developer sandbox for testing library features and protocol edge cases.
 
-### Building the Project
+### Quick Start
 
-To build the library and the modern test suite:
+To build the library and run the modern unit tests (Catch2):
 
 ```bash
 mkdir build && cd build
 cmake ..
 make
-```
-
-### Running Tests
-
-Modern unit tests are built using [Catch2](https://github.com/catchorg/Catch2). You can run them using `ctest`:
-
-```bash
-cd build
 ctest
 ```
 
@@ -71,3 +51,6 @@ make
 ```
 
 For reporting bugs and requesting features, please use the GitHub [Issues](https://github.com/yuhu-/ebus/issues) page.
+
+---
+*This project is licensed under the GPL-3.0-or-later.*
