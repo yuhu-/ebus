@@ -37,6 +37,12 @@ ebus::Handler::Handler(const uint8_t& address, Bus* bus, Request* request)
                      &Handler::activeSendSlaveNegativeAcknowledge,
                      &Handler::releaseBus};
 
+  // Pre-allocate core buffers to avoid heap allocations in the hot path
+  passive_master_.reserve(64);
+  passive_slave_.reserve(64);
+  active_master_.reserve(64);
+  active_slave_.reserve(64);
+
   last_point_ = std::chrono::steady_clock::now();
 }
 

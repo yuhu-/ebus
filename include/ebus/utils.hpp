@@ -5,9 +5,15 @@
 
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <cstdint>
+#include <initializer_list>
+#include <iomanip>
+#include <iterator>
+#include <sstream>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -53,18 +59,63 @@ constexpr uint8_t slaveOf(uint8_t byte) {
 
 // --- Hex and String Conversion ---
 std::string toString(uint8_t byte);
-std::string toString(const std::vector<uint8_t>& vec);
+
+/**
+ * Converts any byte container to a hex string.
+ */
+template <typename T, typename = std::enable_if_t<!std::is_arithmetic_v<T>>>
+std::string toString(const T& container) {
+  std::ostringstream ostr;
+  for (auto b : container)
+    ostr << std::nouppercase << std::hex << std::setw(2) << std::setfill('0')
+         << static_cast<unsigned>(b);
+  return ostr.str();
+}
+
 std::vector<uint8_t> toVector(const std::string& str);
 
 // --- Vector Helpers ---
-std::vector<uint8_t> range(const std::vector<uint8_t>& vec, size_t index,
-                           size_t len);
 
-bool contains(const std::vector<uint8_t>& vec,
-              const std::vector<uint8_t>& search);
+template <typename T>
+std::vector<uint8_t> range(const T& container, size_t index, size_t len) {
+  if (index >= container.size()) return {};
+  size_t end_idx = std::min(index + len, container.size());
+  return std::vector<uint8_t>(container.begin() + index,
+                              container.begin() + end_idx);
+}
 
-bool matches(const std::vector<uint8_t>& vec,
-             const std::vector<uint8_t>& search, size_t index = 0);
+template <typename T, typename U>
+bool contains(const T& container, const U& search) {
+  if (std::empty(search) || std::empty(container) ||
+      std::size(search) > std::size(container))
+    return false;
+  return std::search(container.begin(), container.end(), search.begin(),
+                     search.end()) != container.end();
+}
+
+/**
+ * Overload for contains to support brace-enclosed initializer lists.
+ */
+template <typename T>
+bool contains(const T& container, std::initializer_list<uint8_t> search) {
+  return contains<T, std::initializer_list<uint8_t>>(container, search);
+}
+
+template <typename T, typename U>
+bool matches(const T& container, const U& search, size_t index = 0) {
+  if (std::empty(search)) return true;
+  if (index + search.size() > container.size()) return false;
+  return std::equal(search.begin(), search.end(), container.begin() + index);
+}
+
+/**
+ * Overload for matches to support brace-enclosed initializer lists.
+ */
+template <typename T>
+bool matches(const T& container, std::initializer_list<uint8_t> search,
+             size_t index = 0) {
+  return matches<T, std::initializer_list<uint8_t>>(container, search, index);
+}
 
 // --- Protocol Math ---
 
@@ -94,6 +145,7 @@ constexpr std::array<uint8_t, 256> generateCrcTable() {
   }
   return table;
 }
+
 }  // namespace detail
 
 inline constexpr std::array<uint8_t, 256> crc_table =
