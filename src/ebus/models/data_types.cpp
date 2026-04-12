@@ -329,9 +329,9 @@ std::vector<uint8_t> ebus::char_2_byte(const std::string& str) {
 
 // HEX
 std::string ebus::byte_2_hex(const std::vector<uint8_t>& vec) {
-  return ebus::to_string(vec);
+  return ebus::toString(vec);
 }
 
 std::vector<uint8_t> ebus::hex_2_byte(const std::string& str) {
-  return ebus::to_vector(str);
+  return ebus::toVector(str);
 }

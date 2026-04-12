@@ -93,41 +93,41 @@ SCENARIO("Handler processes eBUS messages correctly", "[core][handler]") {
               std::vector<uint8_t> search;
               search = {0x07, 0x04};
               if (ebus::contains(master, search))
-                *slave = ebus::to_vector("0ab5504d53303001074302");
+                *slave = ebus::toVector("0ab5504d53303001074302");
               search = {0x07, 0x05};
               if (ebus::contains(master, search))
-                *slave = ebus::to_vector("0ab5504d533030010743");
-              INFO("reactive: " << ebus::to_string(master) << " "
-                                << ebus::to_string(*slave));
+                *slave = ebus::toVector("0ab5504d533030010743");
+              INFO("reactive: " << ebus::toString(master) << " "
+                                << ebus::toString(*slave));
             });
         handler.setTelegramCallback([&](const ebus::MessageType& messageType,
                                         const ebus::TelegramType& telegramType,
                                         const std::vector<uint8_t>& master,
                                         const std::vector<uint8_t>& slave) {
           telegram_count++;
-          INFO("telegram: " << ebus::to_string(master) << " "
-                            << ebus::to_string(slave));
+          INFO("telegram: " << ebus::toString(master) << " "
+                            << ebus::toString(slave));
         });
         handler.setErrorCallback([&](const std::string& error,
                                      const std::vector<uint8_t>& master,
                                      const std::vector<uint8_t>& slave) {
           error_count++;
-          INFO("error: " << error << " master '" << ebus::to_string(master)
-                         << "' slave '" << ebus::to_string(slave) << "'");
+          INFO("error: " << error << " master '" << ebus::toString(master)
+                         << "' slave '" << ebus::toString(slave) << "'");
         });
 
         bus.addWriteListener([&](const uint8_t& byte) {
-          INFO("<- write: " << ebus::to_string(byte));
+          INFO("<- write: " << ebus::toString(byte));
         });
 
         handler.setSourceAddress(tc.address);
 
         ebus::Sequence seq;
         seq.assign(
-            ebus::to_vector(std::string("aaaaaa") + tc.read_string + "aaaaaa"));
+            ebus::toVector(std::string("aaaaaa") + tc.read_string + "aaaaaa"));
 
         if (tc.send_string.size() > 0) {
-          handler.sendActiveMessage(ebus::to_vector(tc.send_string));
+          handler.sendActiveMessage(ebus::toVector(tc.send_string));
         }
 
         bool busRequestFlag = false;
@@ -137,7 +137,7 @@ SCENARIO("Handler processes eBUS messages correctly", "[core][handler]") {
               i--;
               break;
             default:
-              INFO("->  read: " << ebus::to_string(seq[i]));
+              INFO("->  read: " << ebus::toString(seq[i]));
               break;
           }
 

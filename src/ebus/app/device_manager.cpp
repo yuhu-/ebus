@@ -79,7 +79,7 @@ const std::vector<std::vector<uint8_t>> ebus::DeviceManager::createScanCommands(
     const std::vector<std::string>& addresses) const {
   std::set<uint8_t> scanSlaves;
   for (const std::string& address : addresses) {
-    const std::vector<uint8_t> bytes = ebus::to_vector(address);
+    const std::vector<uint8_t> bytes = ebus::toVector(address);
     if (bytes.empty()) continue;
     uint8_t firstByte = bytes[0];
     if (ebus::isSlave(firstByte) && (firstByte != ebus::slaveOf(ownAddress_)))

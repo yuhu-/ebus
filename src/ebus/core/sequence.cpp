@@ -36,7 +36,7 @@ void ebus::Sequence::assign(const std::vector<uint8_t>& vec,
   extended_ = extended;
 }
 
-void ebus::Sequence::push_back(const uint8_t byte, const bool extended) {
+void ebus::Sequence::pushBack(const uint8_t byte, const bool extended) {
   sequence_.push_back(byte);
   extended_ = extended;
 }
@@ -84,10 +84,10 @@ uint8_t ebus::Sequence::crc() const {
   Sequence temp = *this;
   temp.extend();  // Make sure we are calculating over the stuffed sequence
 
-  const auto& vec = temp.to_vector();
+  const auto& vec = temp.toVector();
   return std::accumulate(vec.begin(), vec.end(), sym_zero,
                          [](uint8_t current_crc, uint8_t byte) {
-                           return calc_crc(byte, current_crc);
+                           return calcCrc(byte, current_crc);
                          });
 }
 
@@ -152,19 +152,10 @@ void ebus::Sequence::reduce() {
   extended_ = false;
 }
 
-const std::string ebus::Sequence::to_string() const {
-  if (sequence_.empty()) return {};
-
-  std::ostringstream ostr;
-  ostr << std::hex << std::setfill('0');
-
-  for (size_t i = 0; i < sequence_.size(); ++i)
-    ostr << std::nouppercase << std::setw(2)
-         << static_cast<unsigned>(sequence_[i]);
-
-  return ostr.str();
+const std::string ebus::Sequence::toString() const {
+  return ebus::toString(sequence_);
 }
 
-const std::vector<uint8_t>& ebus::Sequence::to_vector() const {
+const std::vector<uint8_t>& ebus::Sequence::toVector() const {
   return sequence_;
 }

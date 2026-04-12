@@ -48,14 +48,14 @@ uint8_t ebus::slaveOf(const uint8_t& byte) {
     return byte;
 }
 
-const std::string ebus::to_string(const uint8_t& byte) {
+const std::string ebus::toString(const uint8_t& byte) {
   std::ostringstream ostr;
   ostr << std::nouppercase << std::hex << std::setw(2) << std::setfill('0')
        << static_cast<unsigned>(byte);
   return ostr.str();
 }
 
-const std::string ebus::to_string(const std::vector<uint8_t>& vec) {
+const std::string ebus::toString(const std::vector<uint8_t>& vec) {
   std::ostringstream ostr;
 
   for (size_t i = 0; i < vec.size(); i++)
@@ -65,7 +65,7 @@ const std::string ebus::to_string(const std::vector<uint8_t>& vec) {
   return ostr.str();
 }
 
-const std::vector<uint8_t> ebus::to_vector(const std::string& str) {
+const std::vector<uint8_t> ebus::toVector(const std::string& str) {
   std::vector<uint8_t> result;
 
   for (size_t i = 0; i + 1 < str.size(); i += 2)
@@ -125,7 +125,7 @@ static const uint8_t crc_table[] = {
     0x95, 0x0e, 0x38, 0xa3, 0x54, 0xcf, 0xf9, 0x62, 0x8c, 0x17, 0x21, 0xba,
     0x4d, 0xd6, 0xe0, 0x7b};
 
-uint8_t ebus::calc_crc(const uint8_t& byte, const uint8_t& init) {
+uint8_t ebus::calcCrc(const uint8_t& byte, const uint8_t& init) {
   return uint8_t(crc_table[init] ^ byte);
 }
 

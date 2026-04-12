@@ -35,13 +35,13 @@ TEST_CASE("Common: Addressing logic", "[utils][common]") {
 }
 
 TEST_CASE("Common: Conversions", "[utils][common]") {
-  REQUIRE(ebus::to_string(0x0a) == "0a");
-  REQUIRE(ebus::to_string(0xff) == "ff");
+  REQUIRE(ebus::toString(0x0a) == "0a");
+  REQUIRE(ebus::toString(0xff) == "ff");
 
   std::vector<uint8_t> vec = {0x01, 0x02, 0xff};
-  REQUIRE(ebus::to_string(vec) == "0102ff");
+  REQUIRE(ebus::toString(vec) == "0102ff");
 
-  std::vector<uint8_t> res = ebus::to_vector("0102ff");
+  std::vector<uint8_t> res = ebus::toVector("0102ff");
   REQUIRE(res.size() == 3);
   REQUIRE(res == vec);
 }
@@ -66,20 +66,20 @@ TEST_CASE("Common: Vector utilities", "[utils][common]") {
 
 TEST_CASE("Common: CRC", "[utils][common]") {
   // calc_crc(byte, 0) == byte because table[0] == 0
-  REQUIRE(ebus::calc_crc(0x77, 0x00) == 0x77);
+  REQUIRE(ebus::calcCrc(0x77, 0x00) == 0x77);
 
   // calc_crc(0, init) == table[init] (table[1] == 0x9b)
-  REQUIRE(ebus::calc_crc(0x00, 0x01) == 0x9b);
+  REQUIRE(ebus::calcCrc(0x00, 0x01) == 0x9b);
 
   // Manual chain verification: 10 08 -> 3a
   uint8_t crc = 0;
-  crc = ebus::calc_crc(0x10, crc);
-  crc = ebus::calc_crc(0x08, crc);
+  crc = ebus::calcCrc(0x10, crc);
+  crc = ebus::calcCrc(0x08, crc);
   REQUIRE(crc == 0x3a);
 
   // Full sequence verification
-  std::vector<uint8_t> data = ebus::to_vector("1008b511020300");
+  std::vector<uint8_t> data = ebus::toVector("1008b511020300");
   crc = 0;
-  for (uint8_t b : data) crc = ebus::calc_crc(b, crc);
+  for (uint8_t b : data) crc = ebus::calcCrc(b, crc);
   REQUIRE(crc == 0x1e);
 }

@@ -44,7 +44,7 @@ bool matchTail(const std::vector<uint8_t>& buffer,
 static uint8_t compute_crc_for_message(
     uint8_t source, const std::vector<uint8_t>& payload_no_crc) {
   uint8_t crc = source;
-  for (auto b : payload_no_crc) crc = ebus::calc_crc(b, crc);
+  for (auto b : payload_no_crc) crc = ebus::calcCrc(b, crc);
   return crc;
 }
 
@@ -57,7 +57,7 @@ static std::string byte_to_hex(uint8_t b) {
 
 static std::string msg_with_crc_hex(uint8_t source,
                                     const std::string& payloadHexNoCrc) {
-  auto payload = ebus::to_vector(payloadHexNoCrc);
+  auto payload = ebus::toVector(payloadHexNoCrc);
   uint8_t crc = compute_crc_for_message(source, payload);
   std::ostringstream oss;
   oss << byte_to_hex(source);
@@ -73,7 +73,7 @@ void installSimulatorResponses(ebus::Bus& bus,
   expectedMasters.reserve(tests.size());
   for (const auto& tc : tests) {
     expectedMasters.push_back(
-        ebus::to_vector(msg_with_crc_hex(source, tc.payloadHexNoCrc)));
+        ebus::toVector(msg_with_crc_hex(source, tc.payloadHexNoCrc)));
   }
 
   bus.addWriteListener([&bus, expectedMasters, tests,
@@ -99,7 +99,7 @@ void installSimulatorResponses(ebus::Bus& bus,
       if (tc.description == "MS Success") {
         std::thread([&bus]() {
           std::this_thread::sleep_for(std::chrono::milliseconds(5));
-          const std::vector<uint8_t> response = ebus::to_vector("00013fa4");
+          const std::vector<uint8_t> response = ebus::toVector("00013fa4");
           for (uint8_t b : response) {
             bus.writeByte(b);
             std::this_thread::sleep_for(std::chrono::milliseconds(2));
@@ -119,7 +119,7 @@ void installSimulatorResponses(ebus::Bus& bus,
         } else {
           std::thread([&bus]() {
             std::this_thread::sleep_for(std::chrono::milliseconds(5));
-            const std::vector<uint8_t> response = ebus::to_vector("00013fa4");
+            const std::vector<uint8_t> response = ebus::toVector("00013fa4");
             for (uint8_t b : response) {
               bus.writeByte(b);
               std::this_thread::sleep_for(std::chrono::milliseconds(2));
@@ -137,7 +137,7 @@ bool runSchedulerTest(ebus::Scheduler& scheduler, const TestCase& tc,
   auto promise = std::make_shared<std::promise<bool>>();
   auto future = promise->get_future();
 
-  scheduler.enqueue(tc.priority, ebus::to_vector(tc.payloadHexNoCrc),
+  scheduler.enqueue(tc.priority, ebus::toVector(tc.payloadHexNoCrc),
                     [promise, description = tc.description](
                         bool success, const std::vector<uint8_t>& master,
                         const std::vector<uint8_t>& slave) {

@@ -40,7 +40,7 @@ bool g_detailed_output = false;
 void printByte(const std::string& prefix, const uint8_t& byte,
                const std::string& postfix) {
   if (!g_detailed_output) return;
-  std::cout << prefix << ebus::to_string(byte) << " " << postfix << std::endl;
+  std::cout << prefix << ebus::toString(byte) << " " << postfix << std::endl;
 }
 ebus::Request request;
 
@@ -52,7 +52,7 @@ ebus::Handler handler(runtime.address, &bus, &request);
 
 void readFunction(const uint8_t& byte) {
   if (!g_detailed_output) return;
-  std::cout << "->  read: " << ebus::to_string(byte) << std::endl;
+  std::cout << "->  read: " << ebus::toString(byte) << std::endl;
 }
 
 void busRequestWonCallback() {
@@ -68,14 +68,14 @@ void reactiveMasterSlaveCallback(const std::vector<uint8_t>& master,
   std::vector<uint8_t> search;
   search = {0x07, 0x04};  // 0008070400
   if (ebus::contains(master, search))
-    *slave = ebus::to_vector("0ab5504d53303001074302");
+    *slave = ebus::toVector("0ab5504d53303001074302");
   search = {0x07, 0x05};  // 0008070500
   if (ebus::contains(master, search))
-    *slave = ebus::to_vector("0ab5504d533030010743");  // defect
+    *slave = ebus::toVector("0ab5504d533030010743");  // defect
 
   if (!g_detailed_output) return;
-  std::cout << "reactive: " << ebus::to_string(master) << " "
-            << ebus::to_string(*slave) << std::endl;
+  std::cout << "reactive: " << ebus::toString(master) << " "
+            << ebus::toString(*slave) << std::endl;
 }
 
 void telegramCallback(const ebus::MessageType& messageType,
@@ -106,7 +106,7 @@ void telegramCallback(const ebus::MessageType& messageType,
       std::cout << "reactive: ";
       break;
   }
-  std::cout << ebus::to_string(master) << " " << ebus::to_string(slave)
+  std::cout << ebus::toString(master) << " " << ebus::toString(slave)
             << std::endl;
 }
 
@@ -114,8 +114,8 @@ void errorCallback(const std::string& error, const std::vector<uint8_t>& master,
                    const std::vector<uint8_t>& slave) {
   g_error_count++;
   if (!g_detailed_output) return;
-  std::cout << "   error: " << error << " master '" << ebus::to_string(master)
-            << "' slave '" << ebus::to_string(slave) << "'" << std::endl;
+  std::cout << "   error: " << error << " master '" << ebus::toString(master)
+            << "' slave '" << ebus::toString(slave) << "'" << std::endl;
 }
 
 void printMetrics() {
@@ -156,10 +156,10 @@ bool run_test(const TestCase& tc) {
   // Prepare test sequence from the provided hex string
   std::string tmp = "aaaaaa" + tc.read_string + "aaaaaa";
   ebus::Sequence seq;
-  seq.assign(ebus::to_vector(tmp));
+  seq.assign(ebus::toVector(tmp));
 
   if (tc.send_string.size() > 0)
-    handler.sendActiveMessage(ebus::to_vector(tc.send_string));
+    handler.sendActiveMessage(ebus::toVector(tc.send_string));
 
   bool busRequestFlag = false;
   for (size_t i = 0; i < seq.size(); i++) {
@@ -262,7 +262,7 @@ int main() {
   // Register write listener for synchronous logging
   bus.addWriteListener([](const uint8_t& byte) {
     if (g_detailed_output)
-      std::cout << "<- write: " << ebus::to_string(byte) << std::endl;
+      std::cout << "<- write: " << ebus::toString(byte) << std::endl;
   });
 
   for (const TestCase& tc : test_cases) {

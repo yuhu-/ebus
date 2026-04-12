@@ -22,9 +22,9 @@ uint8_t masterOf(const uint8_t& byte);
 uint8_t slaveOf(const uint8_t& byte);
 
 // --- Hex and String Conversion ---
-const std::string to_string(const uint8_t& byte);
-const std::string to_string(const std::vector<uint8_t>& vec);
-const std::vector<uint8_t> to_vector(const std::string& str);
+const std::string toString(const uint8_t& byte);
+const std::string toString(const std::vector<uint8_t>& vec);
+const std::vector<uint8_t> toVector(const std::string& str);
 
 // --- Vector Helpers ---
 const std::vector<uint8_t> range(const std::vector<uint8_t>& vec,
@@ -41,6 +41,6 @@ bool matches(const std::vector<uint8_t>& vec,
 /**
  * Calculates the eBUS 8-bit CRC using the 0x9b polynomial.
  */
-uint8_t calc_crc(const uint8_t& byte, const uint8_t& init);
+uint8_t calcCrc(const uint8_t& byte, const uint8_t& init);
 
 }  // namespace ebus

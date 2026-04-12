@@ -53,14 +53,14 @@ void test_conversions() {
   std::cout << "\n=== Test: Conversions ===" << std::endl;
 
   // to_string
-  run_test("to_string(0x0A)", ebus::to_string(0x0A) == "0a");
-  run_test("to_string(0xFF)", ebus::to_string(0xFF) == "ff");
+  run_test("to_string(0x0A)", ebus::toString(0x0A) == "0a");
+  run_test("to_string(0xFF)", ebus::toString(0xFF) == "ff");
 
   std::vector<uint8_t> vec = {0x01, 0x02, 0xFF};
-  run_test("to_string(vector)", ebus::to_string(vec) == "0102ff");
+  run_test("to_string(vector)", ebus::toString(vec) == "0102ff");
 
   // to_vector
-  std::vector<uint8_t> res = ebus::to_vector("0102ff");
+  std::vector<uint8_t> res = ebus::toVector("0102ff");
   run_test("to_vector size", res.size() == 3);
   run_test("to_vector content", res == vec);
 }
@@ -91,23 +91,23 @@ void test_crc() {
   std::cout << "\n=== Test: CRC ===" << std::endl;
 
   // 1. Basic property: calc_crc(byte, 0) == byte because table[0] == 0
-  run_test("CRC step (init=0)", ebus::calc_crc(0x77, 0x00) == 0x77);
+  run_test("CRC step (init=0)", ebus::calcCrc(0x77, 0x00) == 0x77);
 
   // 2. Basic property: calc_crc(0, init) == table[init] (table[1] = 0x9b)
-  run_test("CRC step (init=1, byte=0)", ebus::calc_crc(0x00, 0x01) == 0x9b);
+  run_test("CRC step (init=1, byte=0)", ebus::calcCrc(0x00, 0x01) == 0x9b);
 
   // 3. Manual chain verification: 10 08 -> 3a
   uint8_t crc = 0;
-  crc = ebus::calc_crc(0x10, crc);
-  crc = ebus::calc_crc(0x08, crc);
+  crc = ebus::calcCrc(0x10, crc);
+  crc = ebus::calcCrc(0x08, crc);
   run_test("CRC chain (10 08 -> 3a)", crc == 0x3a);
 
   // 4. Full sequence verification matching a known valid telegram
   // Data: 10 08 b5 11 02 03 00 -> CRC 0x1e
-  std::vector<uint8_t> data = ebus::to_vector("1008b511020300");
+  std::vector<uint8_t> data = ebus::toVector("1008b511020300");
   crc = 0;
   for (uint8_t b : data) {
-    crc = ebus::calc_crc(b, crc);
+    crc = ebus::calcCrc(b, crc);
   }
   run_test("CRC full sequence (1008b511020300 -> 1e)", crc == 0x1e);
 }

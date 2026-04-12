@@ -39,7 +39,7 @@ int main() {
       [&](const ebus::MessageType&, const ebus::TelegramType&,
           const std::vector<uint8_t>& master, const std::vector<uint8_t>&) {
         std::cout << "  Dispatcher -> Observed Telegram: "
-                  << ebus::to_string(master) << std::endl;
+                  << ebus::toString(master) << std::endl;
         telegramSeen = true;
       });
 

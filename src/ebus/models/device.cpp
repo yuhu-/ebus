@@ -59,8 +59,8 @@ ebus::DeviceInfo ebus::Device::getDeviceInfo() const {
     info.manufacturer = vec_070400_[1];
     info.manufacturerName = ebus::manufacturer_name(info.manufacturer);
     info.unitID = ebus::byte_2_char(ebus::range(vec_070400_, 2, 5));
-    info.softwareVersion = ebus::to_string(ebus::range(vec_070400_, 7, 2));
-    info.hardwareVersion = ebus::to_string(ebus::range(vec_070400_, 9, 2));
+    info.softwareVersion = ebus::toString(ebus::range(vec_070400_, 7, 2));
+    info.hardwareVersion = ebus::toString(ebus::range(vec_070400_, 9, 2));
   }
 
   if (isVaillant() && isVaillantValid()) {

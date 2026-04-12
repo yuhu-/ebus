@@ -29,7 +29,7 @@ class Sequence {
   void assign(const std::vector<uint8_t>& vec, const bool extended = true);
   void assign(const Sequence& other, size_t index, size_t len = 0);
 
-  void push_back(const uint8_t byte, const bool extended = true);
+  void pushBack(const uint8_t byte, const bool extended = true);
 
   bool operator==(const Sequence& other) const;
   bool operator!=(const Sequence& other) const;
@@ -48,8 +48,8 @@ class Sequence {
   void extend();
   void reduce();
 
-  const std::string to_string() const;
-  const std::vector<uint8_t>& to_vector() const;
+  const std::string toString() const;
+  const std::vector<uint8_t>& toVector() const;
 
  private:
   std::vector<uint8_t> sequence_;

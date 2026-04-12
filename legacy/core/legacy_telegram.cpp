@@ -25,7 +25,7 @@ void test_creation() {
   // Create Master
   // Data: 10 (Src) 08 (Dst) b5 09 (Cmd) 03 (Len) 0d 06 00 (Payload)
   // Expected CRC: 0xe1
-  tel.createMaster(0x10, ebus::to_vector("08b509030d0600"));
+  tel.createMaster(0x10, ebus::toVector("08b509030d0600"));
   run_test("Create Master State OK",
            tel.getMasterState() == ebus::SequenceState::seq_ok);
   run_test("Create Master Source", tel.getSourceAddress() == 0x10);
@@ -35,12 +35,12 @@ void test_creation() {
   // Create Slave
   // Data: 03 (Len) b0 fb aa (Payload)
   // Expected CRC: 0xd0
-  tel.createSlave(ebus::to_vector("03b0fbaa"));
+  tel.createSlave(ebus::toVector("03b0fbaa"));
   run_test("Create Slave State OK",
            tel.getSlaveState() == ebus::SequenceState::seq_ok);
   run_test("Create Slave Num Bytes", tel.getSlaveNumberBytes() == 0x03);
   run_test("Create Slave Data",
-           tel.getSlaveDataBytes() == ebus::to_vector("b0fbaa"));
+           tel.getSlaveDataBytes() == ebus::toVector("b0fbaa"));
   run_test("Create Slave CRC", tel.getSlaveCRC() == 0xd0);
 }
 
@@ -55,7 +55,7 @@ void test_parsing() {
   // 00                      [Master ACK]
   // 03 b0 fb aa             [Slave Payload] -> Wire: 03 b0 fb a9 01
   // d0 00                   [Slave CRC + ACK]
-  seq.assign(ebus::to_vector("1008b509030d0600e10003b0fba901d000"), true);
+  seq.assign(ebus::toVector("1008b509030d0600e10003b0fba901d000"), true);
   tel.parse(seq);
   run_test("Parse MS: Master State OK",
            tel.getMasterState() == ebus::SequenceState::seq_ok);
@@ -65,12 +65,12 @@ void test_parsing() {
   run_test("Parse MS: Master ACK", tel.getMasterACK() == 0x00);
   run_test("Parse MS: Slave ACK", tel.getSlaveACK() == 0x00);
   run_test("Parse MS: Master Data",
-           tel.getMasterDataBytes() == ebus::to_vector("0d0600"));
+           tel.getMasterDataBytes() == ebus::toVector("0d0600"));
   run_test("Parse MS: Slave Data",
-           tel.getSlaveDataBytes() == ebus::to_vector("b0fbaa"));
+           tel.getSlaveDataBytes() == ebus::toVector("b0fbaa"));
 
   // Test 2: Master-Master
-  seq.assign(ebus::to_vector("1000b5050427002400d900"), true);
+  seq.assign(ebus::toVector("1000b5050427002400d900"), true);
   tel.parse(seq);
   run_test("Parse MM: Master State OK",
            tel.getMasterState() == ebus::SequenceState::seq_ok);
@@ -81,7 +81,7 @@ void test_parsing() {
            tel.getSlaveState() == ebus::SequenceState::seq_empty);
 
   // Test 3: Broadcast
-  seq.assign(ebus::to_vector("10fe07000970160443183105052592"), true);
+  seq.assign(ebus::toVector("10fe07000970160443183105052592"), true);
   tel.parse(seq);
   run_test("Parse BC: Master State OK",
            tel.getMasterState() == ebus::SequenceState::seq_ok);
@@ -95,7 +95,7 @@ void test_parsing() {
   // Slave 1:  ... a7 (CRC) ff (NAK)
   // Slave 2:  ... a7 (CRC) 00 (ACK) -> Success
   seq.assign(
-      ebus::to_vector("1008b51101028aff1008b51101028a00013ca7ff013ca700"),
+      ebus::toVector("1008b51101028aff1008b51101028a00013ca7ff013ca700"),
       true);
   tel.parse(seq);
   run_test("Parse NAK: Master State OK",
@@ -103,12 +103,12 @@ void test_parsing() {
   run_test("Parse NAK: Slave State OK",
            tel.getSlaveState() == ebus::SequenceState::seq_ok);
   run_test("Parse NAK: Master Data (final)",
-           tel.getMasterDataBytes() == ebus::to_vector("02"));
+           tel.getMasterDataBytes() == ebus::toVector("02"));
   run_test("Parse NAK: Slave Data (final)",
-           tel.getSlaveDataBytes() == ebus::to_vector("3c"));
+           tel.getSlaveDataBytes() == ebus::toVector("3c"));
 
   // Test 5: Invalid CRC
-  seq.assign(ebus::to_vector("1008b509030d06009f"), true);  // Correct CRC is e1
+  seq.assign(ebus::toVector("1008b509030d06009f"), true);  // Correct CRC is e1
   tel.parse(seq);
   run_test("Parse Invalid CRC",
            tel.getMasterState() == ebus::SequenceState::err_crc_invalid);
@@ -120,17 +120,17 @@ void test_parsing() {
 
   // Calculate CRC for verification
   ebus::Sequence tempSeq;
-  tempSeq.assign(ebus::to_vector("1008b50402a9aa"), false);
+  tempSeq.assign(ebus::toVector("1008b50402a9aa"), false);
   uint8_t expectedCrc = tempSeq.crc();
 
   std::string wireStr =
-      "1008b50402a900a901" + ebus::to_string(expectedCrc) + "00";
-  seq.assign(ebus::to_vector(wireStr), true);
+      "1008b50402a900a901" + ebus::toString(expectedCrc) + "00";
+  seq.assign(ebus::toVector(wireStr), true);
   tel.parse(seq);
   run_test("Parse Ext: Master State OK",
            tel.getMasterState() == ebus::SequenceState::seq_ok);
   run_test("Parse Ext: Master Data",
-           tel.getMasterDataBytes() == ebus::to_vector("a9aa"));
+           tel.getMasterDataBytes() == ebus::toVector("a9aa"));
 
   // Test 7: Complex Retry (Master NAK/Retry/ACK, Slave NAK/Retry/ACK)
   // Master: ff 52 b5 09 03 0d 06 a9 (Logical)
@@ -138,9 +138,9 @@ void test_parsing() {
 
   // Calculate Master CRC dynamically for the new payload
   ebus::Sequence masterSeqRetry;
-  masterSeqRetry.assign(ebus::to_vector("ff52b509030d06a9"), false);
+  masterSeqRetry.assign(ebus::toVector("ff52b509030d06a9"), false);
   uint8_t masterCrcRetry = masterSeqRetry.crc();
-  std::string masterCrcHex = ebus::to_string(masterCrcRetry);
+  std::string masterCrcHex = ebus::toString(masterCrcRetry);
 
   // Wire: ff 52 b5 09 03 0d 06 a9 00 [CRC] ...
   std::string masterWire = "ff52b509030d06a900";
@@ -150,16 +150,16 @@ void test_parsing() {
                            masterCrcHex + "00" + slaveWirePart + "ff" +
                            slaveWirePart + "00";
 
-  seq.assign(ebus::to_vector(complexSeq), true);
+  seq.assign(ebus::toVector(complexSeq), true);
   tel.parse(seq);
   run_test("Parse Complex Retry: Master State OK",
            tel.getMasterState() == ebus::SequenceState::seq_ok);
   run_test("Parse Complex Retry: Slave State OK",
            tel.getSlaveState() == ebus::SequenceState::seq_ok);
   run_test("Parse Complex Retry: Master Data",
-           tel.getMasterDataBytes() == ebus::to_vector("0d06a9"));
+           tel.getMasterDataBytes() == ebus::toVector("0d06a9"));
   run_test("Parse Complex Retry: Slave Data",
-           tel.getSlaveDataBytes() == ebus::to_vector("b0fbaa"));
+           tel.getSlaveDataBytes() == ebus::toVector("b0fbaa"));
 }
 
 int main() {

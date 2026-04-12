@@ -190,9 +190,9 @@ void ebus::Telegram::createMaster(const uint8_t src,
                                   const std::vector<uint8_t>& vec) {
   Sequence seq;
 
-  seq.push_back(src, false);
+  seq.pushBack(src, false);
 
-  for (size_t i = 0; i < vec.size(); i++) seq.push_back(vec.at(i), false);
+  for (size_t i = 0; i < vec.size(); i++) seq.pushBack(vec.at(i), false);
 
   createMaster(seq);
 }
@@ -256,7 +256,7 @@ void ebus::Telegram::createMaster(Sequence& seq) {
 void ebus::Telegram::createSlave(const std::vector<uint8_t>& vec) {
   Sequence seq;
 
-  for (size_t i = 0; i < vec.size(); i++) seq.push_back(vec.at(i), false);
+  for (size_t i = 0; i < vec.size(); i++) seq.pushBack(vec.at(i), false);
 
   createSlave(seq);
 }
@@ -390,7 +390,7 @@ const std::string ebus::Telegram::toStringMaster() const {
   if (masterState_ != SequenceState::seq_ok)
     ostr << toStringMasterState();
   else
-    ostr << master_.to_string();
+    ostr << master_.toString();
 
   return ostr.str();
 }
@@ -401,7 +401,7 @@ const std::string ebus::Telegram::toStringSlave() const {
       telegramType_ != TelegramType::broadcast) {
     ostr << toStringSlaveState();
   } else {
-    ostr << slave_.to_string();
+    ostr << slave_.toString();
   }
 
   return ostr.str();
@@ -409,7 +409,7 @@ const std::string ebus::Telegram::toStringSlave() const {
 
 const std::string ebus::Telegram::toStringMasterState() const {
   std::ostringstream ostr;
-  if (master_.size() > 0) ostr << "'" << master_.to_string() << "' ";
+  if (master_.size() > 0) ostr << "'" << master_.toString() << "' ";
 
   ostr << "master " << ebus::getSequenceStateText(masterState_);
 
@@ -418,7 +418,7 @@ const std::string ebus::Telegram::toStringMasterState() const {
 
 const std::string ebus::Telegram::toStringSlaveState() const {
   std::ostringstream ostr;
-  if (slave_.size() > 0) ostr << "'" << slave_.to_string() << "' ";
+  if (slave_.size() > 0) ostr << "'" << slave_.toString() << "' ";
 
   ostr << "slave " << getSequenceStateText(slaveState_);
 

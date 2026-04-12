@@ -66,7 +66,7 @@ int main() {
   // Try to enqueue a faulty broadcast message every 7 seconds.
   // This library offers several helper functions, such as...ebus::to_vector("")
   deviceB.addPollItem(
-      15, ebus::to_vector("feb5160301"), 7s,
+      15, ebus::toVector("feb5160301"), 7s,
       [](const std::vector<uint8_t>& data) {
         std::cout << "[Device B] Periodic faulty broadcast sent." << std::endl;
       });
@@ -80,7 +80,7 @@ int main() {
         if (tType == ebus::TelegramType::broadcast) {
           if (ebus::matches(master, {0xfe, 0xb5, 0x16, 0x03, 0x01}, 1))
             std::cout << "[Device A] Observed broadcast from "
-                      << ebus::to_string(master[0]) << " with data: "
+                      << ebus::toString(master[0]) << " with data: "
                       << ebus::byte_2_data2b(ebus::range(master, 6, 2),
                                              ebus::Endian::Little)
                       << "°C)" << std::endl;
@@ -92,8 +92,8 @@ int main() {
                               const std::vector<uint8_t>& master,
                               const std::vector<uint8_t>& slave) {
     std::cout << "[Device B] Error message " << errorMessage << " master: '"
-              << ebus::to_string(master) << "' slave: '"
-              << ebus::to_string(slave) << "'" << std::endl;
+              << ebus::toString(master) << "' slave: '"
+              << ebus::toString(slave) << "'" << std::endl;
   });
 
   // --- 7. Start the simulation ---

@@ -124,7 +124,7 @@ TEST_CASE("Bus: Raw Reception (Broadcast Simulation)", "[platform][bus]") {
 
   bus.start();
 
-  std::vector<uint8_t> msg = ebus::to_vector("10fe07000970160443183105052592");
+  std::vector<uint8_t> msg = ebus::toVector("10fe07000970160443183105052592");
 
   for (auto b : msg) {
     bus.writeByte(b);

@@ -45,18 +45,18 @@ void test_extend_reduce() {
 
   for (const auto& tc : test_cases) {
     ebus::Sequence seq;
-    std::vector<uint8_t> reduced_vec = ebus::to_vector(tc.reduced_hex);
-    std::vector<uint8_t> extended_vec = ebus::to_vector(tc.extended_hex);
+    std::vector<uint8_t> reduced_vec = ebus::toVector(tc.reduced_hex);
+    std::vector<uint8_t> extended_vec = ebus::toVector(tc.extended_hex);
 
     // Test extend
     seq.assign(reduced_vec, false);
     seq.extend();
-    run_test(tc.description + " (extend)", seq.to_vector() == extended_vec);
+    run_test(tc.description + " (extend)", seq.toVector() == extended_vec);
 
     // Test reduce
     seq.assign(extended_vec, true);
     seq.reduce();
-    run_test(tc.description + " (reduce)", seq.to_vector() == reduced_vec);
+    run_test(tc.description + " (reduce)", seq.toVector() == reduced_vec);
   }
 }
 
@@ -68,7 +68,7 @@ void test_crc() {
   // QQ ZZ NN PB SB D1 D2 CRC
   // 10 08 b5 11 02 03 00 1e
   // crc("1008b511020300") -> 0x1e
-  seq.assign(ebus::to_vector("1008b511020300"), true);
+  seq.assign(ebus::toVector("1008b511020300"), true);
   run_test("CRC calculation on reduced seq", seq.crc() == 0x1e);
 
   // CRC should be the same whether the sequence is currently extended or not
@@ -78,7 +78,7 @@ void test_crc() {
   // Test CRC on a sequence that requires byte-stuffing
   // reduced: 01aa03 -> extended: 01a90103
   // The CRC must be calculated on the extended sequence.
-  seq.assign(ebus::to_vector("01aa03"), false);
+  seq.assign(ebus::toVector("01aa03"), false);
   run_test("CRC calculation with byte stuffing", seq.crc() == 0x22);
 }
 
@@ -86,17 +86,17 @@ void test_operators() {
   std::cout << "\n=== Test: Sequence Operators ===" << std::endl;
   ebus::Sequence s1, s2;
 
-  s1.assign(ebus::to_vector("010203"), false);
-  s2.assign(ebus::to_vector("010203"), false);
+  s1.assign(ebus::toVector("010203"), false);
+  s2.assign(ebus::toVector("010203"), false);
   run_test("Equality check identical", s1 == s2);
   run_test("Inequality check identical", !(s1 != s2));
 
-  s2.assign(ebus::to_vector("010204"), false);
+  s2.assign(ebus::toVector("010204"), false);
   run_test("Equality check different content", !(s1 == s2));
   run_test("Inequality check different content", s1 != s2);
 
   // Same data but different extended state
-  s2.assign(ebus::to_vector("010203"), true);
+  s2.assign(ebus::toVector("010203"), true);
   run_test("Equality check different extended state", !(s1 == s2));
 }
 
@@ -107,39 +107,39 @@ void test_append() {
 
   // Case 1: Reduced + Reduced
   ebus::Sequence s1, s2, expected;
-  s1.assign(ebus::to_vector("0102"), false);
-  s2.assign(ebus::to_vector("0304"), false);
+  s1.assign(ebus::toVector("0102"), false);
+  s2.assign(ebus::toVector("0304"), false);
   s1.append(s2);
-  expected.assign(ebus::to_vector("01020304"), false);
+  expected.assign(ebus::toVector("01020304"), false);
   run_test("Append Reduced+Reduced", s1 == expected);
 
   // Case 2: Extended + Extended
   // 0xAA -> 0xA9 0x01
-  s1.assign(ebus::to_vector("a901"), true);
-  s2.assign(ebus::to_vector("a901"), true);
+  s1.assign(ebus::toVector("a901"), true);
+  s2.assign(ebus::toVector("a901"), true);
   s1.append(s2);
   // Expected: a901 a901
-  expected.assign(ebus::to_vector("a901a901"), true);
+  expected.assign(ebus::toVector("a901a901"), true);
   run_test("Append Extended+Extended", s1 == expected);
 
   // Case 3: Reduced + Extended (s1 is reduced, s2 is extended)
   // s1 = 01 02 (reduced)
   // s2 = a9 01 (extended, which is AA)
   // result should be reduced: 01 02 aa
-  s1.assign(ebus::to_vector("0102"), false);
-  s2.assign(ebus::to_vector("a901"), true);
+  s1.assign(ebus::toVector("0102"), false);
+  s2.assign(ebus::toVector("a901"), true);
   s1.append(s2);
-  expected.assign(ebus::to_vector("0102aa"), false);
+  expected.assign(ebus::toVector("0102aa"), false);
   run_test("Append Reduced+Extended (auto-reduce)", s1 == expected);
 
   // Case 4: Extended + Reduced (s1 is extended, s2 is reduced)
   // s1 = a9 01 (extended AA)
   // s2 = aa (reduced)
   // result should be extended: a9 01 a9 01
-  s1.assign(ebus::to_vector("a901"), true);
-  s2.assign(ebus::to_vector("aa"), false);
+  s1.assign(ebus::toVector("a901"), true);
+  s2.assign(ebus::toVector("aa"), false);
   s1.append(s2);
-  expected.assign(ebus::to_vector("a901a901"), true);
+  expected.assign(ebus::toVector("a901a901"), true);
   run_test("Append Extended+Reduced (auto-extend)", s1 == expected);
 }
 

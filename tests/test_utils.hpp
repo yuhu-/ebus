@@ -82,7 +82,7 @@ class ProtocolLogger {
 
  private:
   void log(const std::string& prefix, uint8_t byte) {
-    std::string msg = prefix + ": " + ebus::to_string(byte);
+    std::string msg = prefix + ": " + ebus::toString(byte);
     if (mode_ == Mode::DevTrace) {
       std::cout << "[TRACE] " << msg << std::endl;
     }
@@ -96,8 +96,8 @@ class ProtocolLogger {
     std::stringstream ss;
     ss << "Telegram ["
        << (mt == ebus::MessageType::active ? "Active" : "Passive")
-       << "] Type: " << static_cast<int>(tt)
-       << " Master: " << ebus::to_string(m) << " Slave: " << ebus::to_string(s);
+       << "] Type: " << static_cast<int>(tt) << " Master: " << ebus::toString(m)
+       << " Slave: " << ebus::toString(s);
 
     if (mode_ == Mode::DevTrace) {
       std::cout << "\033[1;32m[LOG] " << ss.str() << "\033[0m" << std::endl;

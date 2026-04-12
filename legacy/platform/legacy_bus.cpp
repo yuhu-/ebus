@@ -157,7 +157,7 @@ void test_raw_reception() {
 
   // A typical broadcast telegram (raw bytes)
   // We send this into the simulation pipe and expect to read it back intact.
-  std::vector<uint8_t> msg = ebus::to_vector("10fe07000970160443183105052592");
+  std::vector<uint8_t> msg = ebus::toVector("10fe07000970160443183105052592");
 
   for (auto b : msg) {
     bus.writeByte(b);
@@ -178,8 +178,8 @@ void test_raw_reception() {
   if (received.size() == msg.size()) {
     run_test("Received data content matches", received == msg);
   } else {
-    std::cout << "  Expected: " << ebus::to_string(msg) << std::endl;
-    std::cout << "  Got:      " << ebus::to_string(received) << std::endl;
+    std::cout << "  Expected: " << ebus::toString(msg) << std::endl;
+    std::cout << "  Got:      " << ebus::toString(received) << std::endl;
   }
 }
 

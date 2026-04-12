@@ -82,44 +82,44 @@ std::string services(const std::vector<uint8_t>& master,
   std::ostringstream ostr;
   if (master[2] == 0x07 && master[3] == 0x00) {
     ostr << "0700: 20";
-    ostr << ebus::to_string(master[13]);
+    ostr << ebus::toString(master[13]);
     ostr << "-";
-    ostr << ebus::to_string(master[11]);
+    ostr << ebus::toString(master[11]);
     ostr << "-";
-    ostr << ebus::to_string(master[10]);
+    ostr << ebus::toString(master[10]);
     ostr << " ";
-    ostr << ebus::to_string(master[9]);
+    ostr << ebus::toString(master[9]);
     ostr << ":";
-    ostr << ebus::to_string(master[8]);
+    ostr << ebus::toString(master[8]);
     ostr << ":";
-    ostr << ebus::to_string(master[7]);
+    ostr << ebus::toString(master[7]);
     ostr << " - ";
     ostr << ebus::byte_2_data2b(ebus::range(master, 5, 2),
                                 ebus::Endian::Little);
     ostr << " °C";
   } else if (master[2] == 0x07 && master[3] == 0x04) {
-    ostr << "0704: " + ebus::to_string(master[1]);
+    ostr << "0704: " + ebus::toString(master[1]);
     ostr << " MF=";
-    ostr << ebus::to_string(ebus::range(slave, 1, 1));
+    ostr << ebus::toString(ebus::range(slave, 1, 1));
     ostr << " ID=";
     ostr << ebus::byte_2_char(ebus::range(slave, 2, 5));
     ostr << " SW=";
-    ostr << ebus::to_string(ebus::range(slave, 7, 2));
+    ostr << ebus::toString(ebus::range(slave, 7, 2));
     ostr << " HW=";
-    ostr << ebus::to_string(ebus::range(slave, 9, 2));
+    ostr << ebus::toString(ebus::range(slave, 9, 2));
   } else if (master[2] == 0xb5 && master[3] == 0x16 && master[4] == 0x08) {
     ostr << "b51608: 20";
-    ostr << ebus::to_string(master[12]);
+    ostr << ebus::toString(master[12]);
     ostr << "-";
-    ostr << ebus::to_string(master[10]);
+    ostr << ebus::toString(master[10]);
     ostr << "-";
-    ostr << ebus::to_string(master[9]);
+    ostr << ebus::toString(master[9]);
     ostr << " ";
-    ostr << ebus::to_string(master[8]);
+    ostr << ebus::toString(master[8]);
     ostr << ":";
-    ostr << ebus::to_string(master[7]);
+    ostr << ebus::toString(master[7]);
     ostr << ":";
-    ostr << ebus::to_string(master[6]);
+    ostr << ebus::toString(master[6]);
   } else if (master[2] == 0xb5 && master[3] == 0x16 && master[4] == 0x03 &&
              master[5] == 0x01) {
     ostr << "b5160301: ";
@@ -134,7 +134,7 @@ std::string collect(const uint8_t& byte) {
   static ebus::Sequence sequence;
   std::string result = "";
 
-  if (raw) std::cout << ebus::to_string(byte) << std::endl;
+  if (raw) std::cout << ebus::toString(byte) << std::endl;
 
   if (byte == ebus::sym_syn) {
     static bool running = false;
@@ -159,54 +159,54 @@ std::string collect(const uint8_t& byte) {
           ostr << " ";
         }
         if (color) ostr << GREEN;
-        ostr << ebus::to_string(tel.getSourceAddress());
-        ostr << ebus::to_string(tel.getTargetAddress());
+        ostr << ebus::toString(tel.getSourceAddress());
+        ostr << ebus::toString(tel.getTargetAddress());
         if (color) ostr << RESET;
         if (split) ostr << " ";
         if (color) ostr << BLUE;
-        ostr << ebus::to_string(tel.getPrimaryCommand());
-        ostr << ebus::to_string(tel.getSecondaryCommand());
+        ostr << ebus::toString(tel.getPrimaryCommand());
+        ostr << ebus::toString(tel.getSecondaryCommand());
         if (color) ostr << RESET;
         if (split) ostr << " ";
         if (color) ostr << YELLOW;
-        ostr << ebus::to_string(tel.getMasterNumberBytes());
+        ostr << ebus::toString(tel.getMasterNumberBytes());
         if (color) ostr << RESET;
         if (tel.getMasterNumberBytes() > 0) {
           if (split) ostr << " ";
 
           if (bold) ostr << BOLD;
-          ostr << ebus::to_string(tel.getMasterDataBytes());
+          ostr << ebus::toString(tel.getMasterDataBytes());
           if (bold) ostr << RESET;
         }
         if (split) ostr << " ";
         if (color) ostr << MAGENTA;
-        ostr << ebus::to_string(tel.getMasterCRC());
+        ostr << ebus::toString(tel.getMasterCRC());
         if (color) ostr << RESET;
         if (tel.getType() != ebus::TelegramType::broadcast) {
           if (split) ostr << " ";
-          ostr << ebus::to_string(tel.getSlaveACK());
+          ostr << ebus::toString(tel.getSlaveACK());
           if (tel.getType() == ebus::TelegramType::master_slave) {
             if (split) ostr << " ";
             if (color) ostr << YELLOW;
-            ostr << ebus::to_string(tel.getSlaveNumberBytes());
+            ostr << ebus::toString(tel.getSlaveNumberBytes());
             if (color) ostr << RESET;
             if (tel.getSlaveNumberBytes() > 0) {
               if (split) ostr << " ";
               if (bold) ostr << BOLD;
-              ostr << ebus::to_string(tel.getSlaveDataBytes());
+              ostr << ebus::toString(tel.getSlaveDataBytes());
               if (bold) ostr << RESET;
             }
             if (split) ostr << " ";
             if (color) ostr << MAGENTA;
-            ostr << ebus::to_string(tel.getSlaveCRC());
+            ostr << ebus::toString(tel.getSlaveCRC());
             if (color) ostr << RESET;
             if (split) ostr << " ";
-            ostr << ebus::to_string(tel.getMasterACK());
+            ostr << ebus::toString(tel.getMasterACK());
           }
         }
         if (parse) {
           std::string tmp =
-              services(tel.getMaster().to_vector(), tel.getSlave().to_vector());
+              services(tel.getMaster().toVector(), tel.getSlave().toVector());
           if (!tmp.empty()) {
             ostr << std::endl;
             if (color) ostr << CYAN;
@@ -224,7 +224,7 @@ std::string collect(const uint8_t& byte) {
           ostr << " ";
         }
         if (type) ostr << "   ";
-        ostr << sequence.to_string() << std::endl;
+        ostr << sequence.toString() << std::endl;
         if (color) ostr << RED;
         if (!notime) {
           ostr << "----ERROR-DETECTED----> ";
@@ -243,7 +243,7 @@ std::string collect(const uint8_t& byte) {
     }
     running = true;
   } else {
-    sequence.push_back(byte);
+    sequence.pushBack(byte);
   }
 
   return result;

@@ -29,21 +29,21 @@ void run_test(const TestCase& tc) {
   // Prepare test sequence from the provided hex string
   std::string tmp = "aaaaaa" + tc.sequence + "aaaaaa";
   ebus::Sequence seq;
-  seq.assign(ebus::to_vector(tmp));
+  seq.assign(ebus::toVector(tmp));
 
   bool requestPending = true;
 
   ebus::RequestResult testResult;
 
-  std::cout << " address: " << ebus::to_string(tc.address) << std::endl;
-  std::cout << "sequence: " << seq.to_string() << std::endl;
+  std::cout << " address: " << ebus::toString(tc.address) << std::endl;
+  std::cout << "sequence: " << seq.toString() << std::endl;
 
   for (size_t i = 0; i < seq.size(); ++i) {
     uint8_t byte = seq[i];
 
     ebus::RequestState state = request.getState();
 
-    std::cout << "->  read: " << ebus::to_string(byte)
+    std::cout << "->  read: " << ebus::toString(byte)
               << "   state: " << ebus::getRequestStateText(state)
               << "\tlockCounter: "
               << static_cast<int>(request.getLockCounter());

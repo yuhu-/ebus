@@ -38,8 +38,8 @@ void telegramCallback(const ebus::MessageType& messageType,
                       const std::vector<uint8_t>& slave) {
   g_telegram_count++;
   if (g_detailed_output) {
-    std::cout << "    Telegram: " << ebus::to_string(master) << " "
-              << ebus::to_string(slave) << std::endl;
+    std::cout << "    Telegram: " << ebus::toString(master) << " "
+              << ebus::toString(slave) << std::endl;
   }
 }
 
@@ -74,11 +74,11 @@ bool run_test(const TestCase& tc, ebus::Bus& bus, ebus::Handler& handler,
 
   if (tc.messageType == ebus::MessageType::active) {
     // Prepare active message
-    std::vector<uint8_t> msg = ebus::to_vector(tc.send_string);
+    std::vector<uint8_t> msg = ebus::toVector(tc.send_string);
     handler.sendActiveMessage(msg);
   } else {
     // Passive/Reactive: Inject the sequence
-    std::vector<uint8_t> seq = ebus::to_vector(tc.read_string);
+    std::vector<uint8_t> seq = ebus::toVector(tc.read_string);
     for (uint8_t b : seq) {
       bus.writeByte(b);
       std::this_thread::sleep_for(std::chrono::microseconds(100));
@@ -133,13 +133,13 @@ void test_integration_vectors() {
   // Register write listener for synchronous logging
   bus.addWriteListener([](const uint8_t& byte) {
     if (g_detailed_output)
-      std::cout << "<- write: " << ebus::to_string(byte) << std::endl;
+      std::cout << "<- write: " << ebus::toString(byte) << std::endl;
   });
 
   // Read listener
   bus.addReadListener([](const uint8_t& byte) {
     if (g_detailed_output)
-      std::cout << "->  read: " << ebus::to_string(byte) << std::endl;
+      std::cout << "->  read: " << ebus::toString(byte) << std::endl;
   });
 
   // Listener to handle Active Master-Slave simulation
@@ -225,7 +225,7 @@ void test_lock_counter() {
 
   // 1. Send First Message (Active BC)
   // 33 feb5050427002d00 2c (CRC)
-  std::vector<uint8_t> msg = ebus::to_vector("feb5050427002d00");
+  std::vector<uint8_t> msg = ebus::toVector("feb5050427002d00");
   handler.sendActiveMessage(msg);
 
   // Pump SYNs until arbitration starts.
@@ -322,11 +322,11 @@ void test_external_client() {
     // Setup logging
     bus.addWriteListener([](const uint8_t& byte) {
       if (g_detailed_output)
-        std::cout << "<- write: " << ebus::to_string(byte) << std::endl;
+        std::cout << "<- write: " << ebus::toString(byte) << std::endl;
     });
     bus.addReadListener([](const uint8_t& byte) {
       if (g_detailed_output)
-        std::cout << "->  read: " << ebus::to_string(byte) << std::endl;
+        std::cout << "->  read: " << ebus::toString(byte) << std::endl;
     });
 
     g_telegram_count = 0;
@@ -339,7 +339,7 @@ void test_external_client() {
     // Message: 33 (Arb) fe b5 05 04 27 00 2d 00 2c (CRC)
     // The 33 is sent by Request/Bus during arbitration.
     // The client sends the rest.
-    std::vector<uint8_t> clientData = ebus::to_vector("feb5050427002d002c");
+    std::vector<uint8_t> clientData = ebus::toVector("feb5050427002d002c");
 
     request.setExternalBusRequestedCallback([&]() {
       callbackFired = true;

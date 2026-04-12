@@ -38,9 +38,9 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
             const std::vector<uint8_t>&) { error_count++; });
 
     bus.addWriteListener(
-        [&](const uint8_t b) { INFO("<- write: " << ebus::to_string(b)); });
+        [&](const uint8_t b) { INFO("<- write: " << ebus::toString(b)); });
     bus.addReadListener(
-        [&](const uint8_t b) { INFO("->  read: " << ebus::to_string(b)); });
+        [&](const uint8_t b) { INFO("->  read: " << ebus::toString(b)); });
 
     bus.start();
     busHandler.start();
@@ -75,9 +75,9 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
       handler.setSourceAddress(tc.address);
 
       if (tc.messageType == ebus::MessageType::active) {
-        handler.sendActiveMessage(ebus::to_vector(tc.send_string));
+        handler.sendActiveMessage(ebus::toVector(tc.send_string));
       } else {
-        auto seq = ebus::to_vector(tc.read_string);
+        auto seq = ebus::toVector(tc.read_string);
         for (uint8_t b : seq) {
           bus.writeByte(b);
           std::this_thread::sleep_for(std::chrono::microseconds(100));
@@ -120,7 +120,7 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
     request.setMaxLockCounter(3);
 
     // send active BC message
-    std::vector<uint8_t> msg = ebus::to_vector("feb5050427002d00");
+    std::vector<uint8_t> msg = ebus::toVector("feb5050427002d00");
     handler.sendActiveMessage(msg);
 
     // Pump SYNs until arbitration starts.
@@ -188,7 +188,7 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
     busHandler.start();
 
     std::atomic<bool> callbackFired{false};
-    std::vector<uint8_t> clientData = ebus::to_vector("feb5050427002d002c");
+    std::vector<uint8_t> clientData = ebus::toVector("feb5050427002d002c");
 
     request.setExternalBusRequestedCallback([&]() {
       callbackFired.store(true);
