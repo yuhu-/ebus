@@ -121,7 +121,7 @@ class Telegram {
 
   bool isValid() const;
 
-  const std::string to_string() const;
+  const std::string toString() const;
   const std::string toStringMaster() const;
   const std::string toStringSlave() const;
 
@@ -132,19 +132,19 @@ class Telegram {
   static ebus::SequenceState checkSlaveSequence(const Sequence& seq);
 
  private:
-  TelegramType telegramType_ = TelegramType::undefined;
+  TelegramType telegram_type_ = TelegramType::undefined;
 
   Sequence master_;
-  size_t masterNN_ = 0;
-  uint8_t masterCRC_ = sym_zero;
-  uint8_t masterACK_ = sym_zero;
-  SequenceState masterState_ = SequenceState::seq_empty;
+  size_t master_nn_ = 0;
+  uint8_t master_crc_ = sym_zero;
+  uint8_t master_ack_ = sym_zero;
+  SequenceState master_state_ = SequenceState::seq_empty;
 
   Sequence slave_;
-  size_t slaveNN_ = 0;
-  uint8_t slaveCRC_ = sym_zero;
-  uint8_t slaveACK_ = sym_zero;
-  SequenceState slaveState_ = SequenceState::seq_empty;
+  size_t slave_nn_ = 0;
+  uint8_t slave_crc_ = sym_zero;
+  uint8_t slave_ack_ = sym_zero;
+  SequenceState slave_state_ = SequenceState::seq_empty;
 };
 
 }  // namespace ebus

@@ -125,7 +125,7 @@ static const uint8_t crc_table[] = {
     0x95, 0x0e, 0x38, 0xa3, 0x54, 0xcf, 0xf9, 0x62, 0x8c, 0x17, 0x21, 0xba,
     0x4d, 0xd6, 0xe0, 0x7b};
 
-uint8_t ebus::calcCrc(const uint8_t& byte, const uint8_t& init) {
+uint8_t ebus::calcCRC(const uint8_t& byte, const uint8_t& init) {
   return uint8_t(crc_table[init] ^ byte);
 }
 

@@ -44,7 +44,7 @@ bool matchTail(const std::vector<uint8_t>& buffer,
 static uint8_t compute_crc_for_message(
     uint8_t source, const std::vector<uint8_t>& payload_no_crc) {
   uint8_t crc = source;
-  for (auto b : payload_no_crc) crc = ebus::calcCrc(b, crc);
+  for (auto b : payload_no_crc) crc = ebus::calcCRC(b, crc);
   return crc;
 }
 

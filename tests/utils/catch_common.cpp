@@ -66,20 +66,20 @@ TEST_CASE("Common: Vector utilities", "[utils][common]") {
 
 TEST_CASE("Common: CRC", "[utils][common]") {
   // calc_crc(byte, 0) == byte because table[0] == 0
-  REQUIRE(ebus::calcCrc(0x77, 0x00) == 0x77);
+  REQUIRE(ebus::calcCRC(0x77, 0x00) == 0x77);
 
   // calc_crc(0, init) == table[init] (table[1] == 0x9b)
-  REQUIRE(ebus::calcCrc(0x00, 0x01) == 0x9b);
+  REQUIRE(ebus::calcCRC(0x00, 0x01) == 0x9b);
 
   // Manual chain verification: 10 08 -> 3a
   uint8_t crc = 0;
-  crc = ebus::calcCrc(0x10, crc);
-  crc = ebus::calcCrc(0x08, crc);
+  crc = ebus::calcCRC(0x10, crc);
+  crc = ebus::calcCRC(0x08, crc);
   REQUIRE(crc == 0x3a);
 
   // Full sequence verification
   std::vector<uint8_t> data = ebus::toVector("1008b511020300");
   crc = 0;
-  for (uint8_t b : data) crc = ebus::calcCrc(b, crc);
+  for (uint8_t b : data) crc = ebus::calcCRC(b, crc);
   REQUIRE(crc == 0x1e);
 }

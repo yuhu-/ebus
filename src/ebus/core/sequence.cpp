@@ -87,7 +87,7 @@ uint8_t ebus::Sequence::crc() const {
   const auto& vec = temp.toVector();
   return std::accumulate(vec.begin(), vec.end(), sym_zero,
                          [](uint8_t current_crc, uint8_t byte) {
-                           return calcCrc(byte, current_crc);
+                           return calcCRC(byte, current_crc);
                          });
 }
 

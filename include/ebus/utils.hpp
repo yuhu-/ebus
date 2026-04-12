@@ -41,6 +41,6 @@ bool matches(const std::vector<uint8_t>& vec,
 /**
  * Calculates the eBUS 8-bit CRC using the 0x9b polynomial.
  */
-uint8_t calcCrc(const uint8_t& byte, const uint8_t& init);
+uint8_t calcCRC(const uint8_t& byte, const uint8_t& init);
 
 }  // namespace ebus

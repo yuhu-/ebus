@@ -230,7 +230,7 @@ std::string collect(const uint8_t& byte) {
           ostr << "----ERROR-DETECTED----> ";
           if (type) ostr << "   ";
         }
-        ostr << tel.to_string();
+        ostr << tel.toString();
         if (color) ostr << RESET;
       }
 
