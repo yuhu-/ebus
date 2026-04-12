@@ -27,6 +27,12 @@ This document provides architectural context for Gemini Code Assist.
 
 ## Coding Standards
 *   **C++14**: Strictly adhere to C++14 features. Do not use C++17 or later features (like `std::optional` or `std::string_view`) unless polyfilled.
+*   **Naming Conventions**:
+    *   **Classes/Structs**: `PascalCase` (e.g., `PollManager`).
+    *   **Methods/Functions**: `camelCase` (e.g., `getMetrics`).
+    *   **Variables/Params**: `snake_case` (e.g., `retry_count`).
+    *   **Private Members**: `snake_case_` with trailing underscore (e.g., `bus_handle_`).
+    *   **Files/Dirs**: `snake_case` (e.g., `serial_bus.cpp`).
 *   **Threading**: Thread safety is required for the `Controller` API. Internal state updates must be synchronized as the `ServiceThread` processes the bus stream asynchronously.
 *   **Memory**: Avoid heap allocation in the protocol processing loop. Utilize the pre-allocated `Queue` for bus byte buffering.
 *   **Error Handling**: Use the `Metrics` system for protocol-level errors rather than exceptions in the hot path.

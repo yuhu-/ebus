@@ -21,14 +21,16 @@
 #include <unistd.h>
 
 #include <algorithm>
+#include <cstdint>
 #include <cstdlib>
 #include <cstring>
-#include <ebus/Datatypes.hpp>
+#include <ebus/data_types.hpp>
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <vector>
 
-#include "Core/Telegram.hpp"
+#include "core/telegram.hpp"
 
 constexpr const char* RESET = "\033[0m";
 constexpr const char* BOLD = "\033[1m";

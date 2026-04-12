@@ -22,42 +22,45 @@ macro(add_catch2_test_executable name source_file)
 
     # Add include directories for source and test utility headers
     target_include_directories(${name} PUBLIC
-        ${PROJECT_SOURCE_DIR}/src/Ebus
-        ${PROJECT_SOURCE_DIR}/tests # For TestUtils.hpp
+        ${PROJECT_SOURCE_DIR}/src/ebus
+        ${PROJECT_SOURCE_DIR}/tests # For test_utils.hpp
     )
     
     # Discover all Catch2 tests in this executable
     catch_discover_tests(${name})
+
+    # Add a test to CTest for this executable
+    # add_test(NAME ${name} COMMAND ${name})
 endmacro()
 
 # Catch2 test executables using the macro
 
 # High-level Application Logic
-add_catch2_test_executable(catch_scheduler App/catch_scheduler.cpp)
-add_catch2_test_executable(catch_enhancedprotocol App/catch_enhancedprotocol.cpp)
-add_catch2_test_executable(catch_client App/catch_client.cpp)
-add_catch2_test_executable(catch_clientmanager App/catch_clientmanager.cpp)
-add_catch2_test_executable(catch_devicemanager App/catch_devicemanager.cpp)
-add_catch2_test_executable(catch_devicescanner App/catch_devicescanner.cpp)
-add_catch2_test_executable(catch_pollmanager App/catch_pollmanager.cpp)
-add_catch2_test_executable(catch_controller App/catch_controller.cpp)
+add_catch2_test_executable(catch_scheduler app/catch_scheduler.cpp)
+add_catch2_test_executable(catch_enhanced_protocol app/catch_enhanced_protocol.cpp)
+add_catch2_test_executable(catch_client app/catch_client.cpp)
+add_catch2_test_executable(catch_client_manager app/catch_client_manager.cpp)
+add_catch2_test_executable(catch_device_manager app/catch_device_manager.cpp)
+add_catch2_test_executable(catch_device_scanner app/catch_device_scanner.cpp)
+add_catch2_test_executable(catch_poll_manager app/catch_poll_manager.cpp)
+add_catch2_test_executable(catch_controller app/catch_controller.cpp)
 
 # Core Protocol Logic
-add_catch2_test_executable(catch_sequence Core/catch_sequence.cpp)
-add_catch2_test_executable(catch_telegram Core/catch_telegram.cpp)
-add_catch2_test_executable(catch_request Core/catch_request.cpp)
-add_catch2_test_executable(catch_handler Core/catch_handler.cpp)
-add_catch2_test_executable(catch_bushandler Core/catch_bushandler.cpp)
+add_catch2_test_executable(catch_sequence core/catch_sequence.cpp)
+add_catch2_test_executable(catch_telegram core/catch_telegram.cpp)
+add_catch2_test_executable(catch_request core/catch_request.cpp)
+add_catch2_test_executable(catch_handler core/catch_handler.cpp)
+add_catch2_test_executable(catch_bus_handler core/catch_bus_handler.cpp)
 
 # Data Models and Types
-add_catch2_test_executable(catch_device Models/catch_device.cpp)
-add_catch2_test_executable(catch_datatypes Models/catch_datatypes.cpp)
+add_catch2_test_executable(catch_device models/catch_device.cpp)
+add_catch2_test_executable(catch_data_types models/catch_data_types.cpp)
 
 # Platform Abstraction Layer
-add_catch2_test_executable(catch_bus Platform/catch_bus.cpp)
-add_catch2_test_executable(catch_queue Platform/catch_queue.cpp)
-add_catch2_test_executable(catch_servicethread Platform/catch_servicethread.cpp)
+add_catch2_test_executable(catch_bus platform/catch_bus.cpp)
+add_catch2_test_executable(catch_queue platform/catch_queue.cpp)
+add_catch2_test_executable(catch_service_thread platform/catch_service_thread.cpp)
 
 # Utilities
-add_catch2_test_executable(catch_timingstats Utils/catch_timingstats.cpp)
-add_catch2_test_executable(catch_common Utils/catch_common.cpp)
+add_catch2_test_executable(catch_timing_stats utils/catch_timing_stats.cpp)
+add_catch2_test_executable(catch_common utils/catch_common.cpp)

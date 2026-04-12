@@ -21,10 +21,10 @@ The library is designed with a clear separation between the public API and inter
 - **Metrics**: Unified data models for bus health monitoring (jitter, utilization, error rates).
 - **Datatypes**: Advanced encoding/decoding utilities for eBUS-specific data formats (e.g., float-to-ebus conversion).
 
-#### Internal Implementation (`src/Ebus/`)
-- **App**: Orchestration layer containing the **Scheduler** (priority-based transmission), **PollManager** (recurring jobs), **ClientManager** (network bridging), **DeviceManager** (inventory), **DeviceScanner** (discovery), and **EnhancedProtocol** (advanced modes).
-- **Core**: The protocol engine. **Handler** manages the Finite State Machine (FSM), **Telegram** encapsulates the frame structure/validation, **Sequence** handles multi-byte sequences, and **Request** handles byte-oriented arbitration.
-- **Platform**: Abstraction layer for system interaction. Includes **Bus** (serial IO), **Queue** (data buffering), and **ServiceThread** (concurrency abstractions). POSIX and FreeRTOS are supported.
+#### Internal Implementation (`src/ebus/`)
+- **app**: Orchestration layer containing the **Scheduler** (priority-based transmission), **PollManager** (recurring jobs), **ClientManager** (network bridging), **DeviceManager** (inventory), **DeviceScanner** (discovery), and **EnhancedProtocol** (advanced modes).
+- **core**: The protocol engine. **Handler** manages the Finite State Machine (FSM), **Telegram** encapsulates the frame structure/validation, and **Sequence** handles multi-byte sequences, and **Request** handles byte-oriented arbitration.
+- **platform**: Abstraction layer for system interaction. Includes **Bus** (serial IO), **Queue** (data buffering), and **ServiceThread** (concurrency abstractions). POSIX and FreeRTOS are supported.
 
 ### Diagnostics & Bus Health
 

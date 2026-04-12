@@ -10,8 +10,8 @@ macro(add_legacy_test_executable name source_file)
 
     # Add include directories for your source and test utility headers
     target_include_directories(${name} PRIVATE
-        ${PROJECT_SOURCE_DIR}/src/Ebus
-        ${PROJECT_SOURCE_DIR}/tests # For TestUtils.hpp
+        ${PROJECT_SOURCE_DIR}/src/ebus
+        ${PROJECT_SOURCE_DIR}/tests # For test_utils.hpp
     )
     
     # Add a test to CTest for this executable
@@ -19,31 +19,31 @@ macro(add_legacy_test_executable name source_file)
 endmacro()
 
 # High-level Application Logic
-add_legacy_test_executable(legacy_scheduler App/legacy_scheduler.cpp)
-add_legacy_test_executable(legacy_enhancedprotocol App/legacy_enhancedprotocol.cpp)
-add_legacy_test_executable(legacy_client App/legacy_client.cpp)
-add_legacy_test_executable(legacy_clientmanager App/legacy_clientmanager.cpp)
-add_legacy_test_executable(legacy_devicemanager App/legacy_devicemanager.cpp)
-add_legacy_test_executable(legacy_devicescanner App/legacy_devicescanner.cpp)
-add_legacy_test_executable(legacy_pollmanager App/legacy_pollmanager.cpp)
-add_legacy_test_executable(legacy_controller App/legacy_controller.cpp)
+add_legacy_test_executable(legacy_scheduler app/legacy_scheduler.cpp)
+add_legacy_test_executable(legacy_enhanced_protocol app/legacy_enhanced_protocol.cpp)
+add_legacy_test_executable(legacy_client app/legacy_client.cpp)
+add_legacy_test_executable(legacy_client_manager app/legacy_client_manager.cpp)
+add_legacy_test_executable(legacy_device_manager app/legacy_device_manager.cpp)
+add_legacy_test_executable(legacy_device_scanner app/legacy_device_scanner.cpp)
+add_legacy_test_executable(legacy_poll_manager app/legacy_poll_manager.cpp)
+add_legacy_test_executable(legacy_controller app/legacy_controller.cpp)
 
 # Core Protocol Logic
-add_legacy_test_executable(legacy_sequence Core/legacy_sequence.cpp)
-add_legacy_test_executable(legacy_telegram Core/legacy_telegram.cpp)
-add_legacy_test_executable(legacy_request Core/legacy_request.cpp)
-add_legacy_test_executable(legacy_handler Core/legacy_handler.cpp)
-add_legacy_test_executable(legacy_bushandler Core/legacy_bushandler.cpp)
+add_legacy_test_executable(legacy_sequence core/legacy_sequence.cpp)
+add_legacy_test_executable(legacy_telegram core/legacy_telegram.cpp)
+add_legacy_test_executable(legacy_request core/legacy_request.cpp)
+add_legacy_test_executable(legacy_handler core/legacy_handler.cpp)
+add_legacy_test_executable(legacy_bus_handler core/legacy_bus_handler.cpp)
 
 # Data Models and Types
-add_legacy_test_executable(legacy_device Models/legacy_device.cpp)
-add_legacy_test_executable(legacy_datatypes Models/legacy_datatypes.cpp)
+add_legacy_test_executable(legacy_device models/legacy_device.cpp)
+add_legacy_test_executable(legacy_data_types models/legacy_data_types.cpp)
 
 # Platform Abstraction Layer
-add_legacy_test_executable(legacy_bus Platform/legacy_bus.cpp)
-add_legacy_test_executable(legacy_queue Platform/legacy_queue.cpp)
-add_legacy_test_executable(legacy_servicethread Platform/legacy_servicethread.cpp)
+add_legacy_test_executable(legacy_bus platform/legacy_bus.cpp)
+add_legacy_test_executable(legacy_queue platform/legacy_queue.cpp)
+add_legacy_test_executable(legacy_service_thread platform/legacy_service_thread.cpp)
 
 # Utilities
-add_legacy_test_executable(legacy_timingstats Utils/legacy_timingstats.cpp)
-add_legacy_test_executable(legacy_common Utils/legacy_common.cpp)
+add_legacy_test_executable(legacy_timing_stats utils/legacy_timing_stats.cpp)
+add_legacy_test_executable(legacy_common utils/legacy_common.cpp)

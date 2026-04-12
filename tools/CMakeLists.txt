@@ -1,6 +1,6 @@
 # tools/CMakeLists.txt
 
-include_directories(${PROJECT_SOURCE_DIR}/src/Ebus)
+include_directories(${PROJECT_SOURCE_DIR}/src/ebus)
 
 add_executable(ebusread ebusread.cpp)
 target_link_libraries(ebusread PRIVATE ebus)

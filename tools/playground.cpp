@@ -5,13 +5,14 @@
 
 #include <algorithm>
 #include <cstddef>
-#include <ebus/Datatypes.hpp>
+#include <ebus/data_types.hpp>
 #include <iomanip>
 #include <iostream>
+#include <sstream>
 #include <string>
 
-#include "Core/Sequence.hpp"
-#include "Core/Telegram.hpp"
+#include "core/sequence.hpp"
+#include "core/telegram.hpp"
 
 void printSequence(const std::string& strSequence) {
   ebus::Sequence sequence;
