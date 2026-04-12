@@ -66,7 +66,7 @@ void ebus::DeviceScanner::setStartupScanInterval(
 }
 
 void ebus::DeviceScanner::scanObservedDevices() {
-  // deviceManager is thread-safe, so we can query it outside our lock
+  // device_manager is thread-safe, so we can query it outside our lock
   // to reduce contention, although getObservedSlaves copies the set anyway.
   std::set<uint8_t> slaves;
   std::vector<std::vector<uint8_t>> vendor_cmds;
@@ -165,8 +165,8 @@ std::vector<uint8_t> ebus::DeviceScanner::nextCommand() {
 
         std::set<uint8_t> targets;
         if (device_manager_) {
-          // Note: accessing deviceManager under lock.
-          // deviceManager handles its own locking, so this is safe.
+          // Note: accessing device_manager under lock.
+          // device_manager handles its own locking, so this is safe.
           targets = device_manager_->getObservedSlaves();
         }
 

@@ -53,10 +53,10 @@ enum class DataType {
   hex8
 };
 
-const char* dataTypeToString(const DataType& datatype);
+const char* dataTypeToString(const DataType& data_type);
 DataType stringToDataType(const char* str);
-size_t sizeOfDataType(const DataType& datatype);
-bool typeOfDataType(const DataType& datatype);
+size_t sizeOfDataType(const DataType& data_type);
+bool typeOfDataType(const DataType& data_type);
 double_t roundDigits(const double_t& value, const uint8_t& digits);
 
 uint8_t byteToBcd(const std::vector<uint8_t>& bytes);

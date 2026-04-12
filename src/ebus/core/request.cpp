@@ -125,7 +125,7 @@ std::map<std::string, ebus::MetricValues> ebus::Request::getMetrics() const {
                                     0.0,
                                     1};
   } else {
-    m["request.contentionRate"] = {0.0, 0.0, 0.0, 0.0, 0.0, 0};
+    m["request.contention_rate"] = {0.0, 0.0, 0.0, 0.0, 0.0, 0};
   }
 
 #define X(name) add_counter(#name, c.name##_);

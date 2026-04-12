@@ -36,7 +36,7 @@ const char* ebus::dataTypeToString(const ebus::DataType& data_type) {
 }
 
 ebus::DataType ebus::stringToDataType(const char* str) {
-  DataType datatype = DataType::error;
+  DataType data_type = DataType::error;
 
   const auto it =
       std::find_if(data_type_names.begin(), data_type_names.end(),
@@ -44,15 +44,15 @@ ebus::DataType ebus::stringToDataType(const char* str) {
                      return strcmp(str, item.second) == 0;
                    });
 
-  if (it != data_type_names.end()) datatype = it->first;
+  if (it != data_type_names.end()) data_type = it->first;
 
-  return datatype;
+  return data_type;
 }
 
-size_t ebus::sizeOfDataType(const ebus::DataType& datatype) {
+size_t ebus::sizeOfDataType(const ebus::DataType& data_type) {
   size_t length = 0;
 
-  switch (datatype) {
+  switch (data_type) {
     case ebus::DataType::bcd:
     case ebus::DataType::uint8:
     case ebus::DataType::int8:
@@ -110,10 +110,10 @@ size_t ebus::sizeOfDataType(const ebus::DataType& datatype) {
   return length;
 }
 
-bool ebus::typeOfDataType(const DataType& datatype) {
+bool ebus::typeOfDataType(const DataType& data_type) {
   bool numeric = true;
 
-  switch (datatype) {
+  switch (data_type) {
     case ebus::DataType::char1:
     case ebus::DataType::char2:
     case ebus::DataType::char3:
