@@ -8,7 +8,7 @@
 
 namespace ebus {
 
-static const std::map<uint8_t, const char*> ManufacturerNames = {
+static const std::map<uint8_t, const char*> manufacturer_names = {
     {0x03, "Junkers"},       {0x04, "Bosch"},         {0x05, "Buderus"},
     {0x06, "Dungs"},         {0x08, "Siemens"},       {0x0b, "Danfoss"},
     {0x0f, "FH Ostfalia"},   {0x10, "TEM"},           {0x11, "Lamberti"},
@@ -23,9 +23,9 @@ static const std::map<uint8_t, const char*> ManufacturerNames = {
     {0xc0, "Toby"},          {0xc5, "Weishaupt"},     {0xcc, "Honeywell"},
     {0xd4, "Wolf"},          {0xda, "danman.eu"},     {0xfd, "ebusd.eu"}};
 
-const char* manufacturerName(const uint8_t& id) {
-  auto it = ManufacturerNames.find(id);
-  if (it != ManufacturerNames.end()) return it->second;
+const char* manufacturerName(uint8_t id) {
+  auto it = manufacturer_names.find(id);
+  if (it != manufacturer_names.end()) return it->second;
   return "Unknown";
 }
 

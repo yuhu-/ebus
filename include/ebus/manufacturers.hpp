@@ -12,6 +12,6 @@ namespace ebus {
 /**
  * Returns the manufacturer name associated with the given eBUS ID.
  */
-const char* manufacturerName(const uint8_t& id);
+const char* manufacturerName(uint8_t id);
 
 }  // namespace ebus
