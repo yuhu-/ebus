@@ -152,8 +152,8 @@ void test_enhanced_client_invalid_protocol() {
   // std::vector<uint8_t> response_buffer(2); // Not used
 
   // Test 1: Invalid first byte prefix (e.g., starts with 10 instead of 11)
-  // Send 0x80 (10xxxxxx) 0xAA (10xxxxxx)
-  uint8_t invalid_b1_prefix[] = {0x80, 0xAA};
+  // Send 0x80 (10xxxxxx) 0xaa (10xxxxxx)
+  uint8_t invalid_b1_prefix[] = {0x80, 0xaa};
   send(sv[1], invalid_b1_prefix, 2, 0);
   run_test("Invalid B1 prefix: recvFromClient returns false",
            !client.recvFromClient(out));
@@ -179,8 +179,8 @@ void test_enhanced_client_invalid_protocol() {
   ebus::EnhancedClient client2(sv[0], &req);
 
   // Test 2: Invalid second byte prefix (e.g., starts with 00 instead of 10)
-  // Send 0xC6 (11xxxxxx) 0x00 (00xxxxxx)
-  uint8_t invalid_b2_prefix[] = {0xC6, 0x00};
+  // Send 0xc6 (11xxxxxx) 0x00 (00xxxxxx)
+  uint8_t invalid_b2_prefix[] = {0xc6, 0x00};
   send(sv[1], invalid_b2_prefix, 2, 0);
   run_test("Invalid B2 prefix: recvFromClient returns false",
            !client2.recvFromClient(out));

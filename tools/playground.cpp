@@ -122,19 +122,19 @@ void printEncodeDecode(uint8_t c, uint8_t d) {
 void printFloatTestLittleEndian() {
   float f = 21.0375f;
   std::vector<uint8_t> bytes =
-      ebus::float_2_byte(static_cast<double_t>(f), ebus::Endian::Little);
+      ebus::floatToByte(static_cast<double_t>(f), ebus::Endian::little);
   std::cout << "float: " << f << " to bytes: " << ebus::toString(bytes)
             << std::endl;
-  double_t df = ebus::byte_2_float(bytes, ebus::Endian::Little);
+  double_t df = ebus::byteToFloat(bytes, ebus::Endian::little);
   std::cout << "bytes: " << ebus::toString(bytes) << " to float: " << df
             << std::endl
             << std::endl;
 
   std::vector<uint8_t> h = {0xcd, 0x4c, 0xb2, 0x41};
-  double_t dh = ebus::byte_2_float(h, ebus::Endian::Little);
+  double_t dh = ebus::byteToFloat(h, ebus::Endian::little);
   std::cout << "bytes: " << ebus::toString(h) << " to float: " << dh
             << std::endl;
-  std::vector<uint8_t> bh = ebus::float_2_byte(dh, ebus::Endian::Little);
+  std::vector<uint8_t> bh = ebus::floatToByte(dh, ebus::Endian::little);
   std::cout << "float: " << dh << " to bytes: " << ebus::toString(bh)
             << std::endl
             << std::endl;
@@ -143,19 +143,19 @@ void printFloatTestLittleEndian() {
 void printFloatTestBigEndian() {
   float f = 21.0375f;
   std::vector<uint8_t> bytes =
-      ebus::float_2_byte(static_cast<double_t>(f), ebus::Endian::Big);
+      ebus::floatToByte(static_cast<double_t>(f), ebus::Endian::big);
   std::cout << "float: " << f << " to bytes: " << ebus::toString(bytes)
             << std::endl;
-  double_t df = ebus::byte_2_float(bytes, ebus::Endian::Big);
+  double_t df = ebus::byteToFloat(bytes, ebus::Endian::big);
   std::cout << "bytes: " << ebus::toString(bytes) << " to float: " << df
             << std::endl
             << std::endl;
 
   std::vector<uint8_t> h = {0x41, 0xa8, 0x4c, 0x7f};
-  double_t dh = ebus::byte_2_float(h, ebus::Endian::Big);
+  double_t dh = ebus::byteToFloat(h, ebus::Endian::big);
   std::cout << "bytes: " << ebus::toString(h) << " to float: " << dh
             << std::endl;
-  std::vector<uint8_t> bh = ebus::float_2_byte(dh, ebus::Endian::Big);
+  std::vector<uint8_t> bh = ebus::floatToByte(dh, ebus::Endian::big);
   std::cout << "float: " << dh << " to bytes: " << ebus::toString(bh)
             << std::endl
             << std::endl;

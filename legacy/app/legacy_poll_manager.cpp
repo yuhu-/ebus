@@ -35,7 +35,7 @@ void test_timing() {
   ebus::PollManager pm;
 
   // Register item with 1 second interval
-  pm.addPollItem(5, {0xAA, 0xBB}, std::chrono::seconds(1));
+  pm.addPollItem(5, {0xaa, 0xbb}, std::chrono::seconds(1));
 
   // 1. Not due yet
   run_test("Not due after 0s", pm.getDueItems().empty());
@@ -48,7 +48,7 @@ void test_timing() {
   run_test("Item due after 1.1s", due.size() == 1);
   if (!due.empty()) {
     run_test("Payload matches",
-             due[0].message_ == std::vector<uint8_t>{0xAA, 0xBB});
+             due[0].message_ == std::vector<uint8_t>{0xaa, 0xbb});
     run_test("Priority matches", due[0].priority_ == 5);
   }
 
@@ -65,7 +65,7 @@ void test_removal() {
   std::cout << "--- Test: Removal ---" << std::endl;
   ebus::PollManager pm;
 
-  uint32_t id = pm.addPollItem(1, {0xFF}, std::chrono::seconds(1));
+  uint32_t id = pm.addPollItem(1, {0xff}, std::chrono::seconds(1));
   std::this_thread::sleep_for(std::chrono::milliseconds(1100));
 
   // Verify it's ready to pop

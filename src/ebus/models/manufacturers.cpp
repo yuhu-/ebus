@@ -23,7 +23,7 @@ static const std::map<uint8_t, const char*> ManufacturerNames = {
     {0xc0, "Toby"},          {0xc5, "Weishaupt"},     {0xcc, "Honeywell"},
     {0xd4, "Wolf"},          {0xda, "danman.eu"},     {0xfd, "ebusd.eu"}};
 
-const char* manufacturer_name(const uint8_t& id) {
+const char* manufacturerName(const uint8_t& id) {
   auto it = ManufacturerNames.find(id);
   if (it != ManufacturerNames.end()) return it->second;
   return "Unknown";

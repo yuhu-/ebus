@@ -16,7 +16,7 @@ TEST_CASE("Common: Addressing logic", "[utils][common]") {
   REQUIRE(ebus::isMaster(0x03));
   REQUIRE(ebus::isMaster(0x10));
   REQUIRE(ebus::isMaster(0x37));
-  REQUIRE(ebus::isMaster(0xFF));
+  REQUIRE(ebus::isMaster(0xff));
 
   REQUIRE(!ebus::isMaster(0x02));
   REQUIRE(!ebus::isMaster(0x04));

@@ -12,93 +12,93 @@
 
 namespace ebus {
 
-enum class Endian { Little, Big };
+enum class Endian { little, big };
 
 enum class DataType {
-  ERROR = -1,
-  BCD,
-  UINT8,
-  INT8,
-  DATA1B,
-  DATA1C,
-  UINT16,
-  UINT16R,
-  INT16,
-  INT16R,
-  DATA2B,
-  DATA2BR,
-  DATA2C,
-  DATA2CR,
-  UINT32,
-  UINT32R,
-  INT32,
-  INT32R,
-  FLOAT,
-  FLOATR,
-  CHAR1,
-  CHAR2,
-  CHAR3,
-  CHAR4,
-  CHAR5,
-  CHAR6,
-  CHAR7,
-  CHAR8,
-  HEX1,
-  HEX2,
-  HEX3,
-  HEX4,
-  HEX5,
-  HEX6,
-  HEX7,
-  HEX8
+  error = -1,
+  bcd,
+  uint8,
+  int8,
+  data1b,
+  data1c,
+  uint16,
+  uint16r,
+  int16,
+  int16r,
+  data2b,
+  data2br,
+  data2c,
+  data2cr,
+  uint32,
+  uint32r,
+  int32,
+  int32r,
+  float_val,
+  floatr,
+  char1,
+  char2,
+  char3,
+  char4,
+  char5,
+  char6,
+  char7,
+  char8,
+  hex1,
+  hex2,
+  hex3,
+  hex4,
+  hex5,
+  hex6,
+  hex7,
+  hex8
 };
 
-const char* datatype_2_string(const DataType& datatype);
-DataType string_2_datatype(const char* str);
-size_t sizeof_datatype(const DataType& datatype);
-bool typeof_datatype(const DataType& datatype);
-double_t round_digits(const double_t& value, const uint8_t& digits);
+const char* dataTypeToString(const DataType& datatype);
+DataType stringToDataType(const char* str);
+size_t sizeOfDataType(const DataType& datatype);
+bool typeOfDataType(const DataType& datatype);
+double_t roundDigits(const double_t& value, const uint8_t& digits);
 
-uint8_t byte_2_bcd(const std::vector<uint8_t>& bytes);
-std::vector<uint8_t> bcd_2_byte(const uint8_t& value);
+uint8_t byteToBcd(const std::vector<uint8_t>& bytes);
+std::vector<uint8_t> bcdToByte(const uint8_t& value);
 
-uint8_t byte_2_uint8(const std::vector<uint8_t>& bytes);
-std::vector<uint8_t> uint8_2_byte(const uint8_t& value);
+uint8_t byteToUint8(const std::vector<uint8_t>& bytes);
+std::vector<uint8_t> uint8ToByte(const uint8_t& value);
 
-int8_t byte_2_int8(const std::vector<uint8_t>& bytes);
-std::vector<uint8_t> int8_2_byte(const int8_t& value);
+int8_t byteToInt8(const std::vector<uint8_t>& bytes);
+std::vector<uint8_t> int8ToByte(const int8_t& value);
 
-double_t byte_2_data1b(const std::vector<uint8_t>& bytes);
-std::vector<uint8_t> data1b_2_byte(const double_t& value);
+double_t byteToData1b(const std::vector<uint8_t>& bytes);
+std::vector<uint8_t> data1bToByte(const double_t& value);
 
-double_t byte_2_data1c(const std::vector<uint8_t>& bytes);
-std::vector<uint8_t> data1c_2_byte(const double_t& value);
+double_t byteToData1c(const std::vector<uint8_t>& bytes);
+std::vector<uint8_t> data1cToByte(const double_t& value);
 
-uint16_t byte_2_uint16(const std::vector<uint8_t>& bytes, Endian e);
-std::vector<uint8_t> uint16_2_byte(const uint16_t& value, Endian e);
+uint16_t byteToUint16(const std::vector<uint8_t>& bytes, Endian e);
+std::vector<uint8_t> uint16ToByte(const uint16_t& value, Endian e);
 
-int16_t byte_2_int16(const std::vector<uint8_t>& bytes, Endian e);
-std::vector<uint8_t> int16_2_byte(const int16_t& value, Endian e);
+int16_t byteToInt16(const std::vector<uint8_t>& bytes, Endian e);
+std::vector<uint8_t> int16ToByte(const int16_t& value, Endian e);
 
-double_t byte_2_data2b(const std::vector<uint8_t>& bytes, Endian e);
-std::vector<uint8_t> data2b_2_byte(const double_t& value, Endian e);
+double_t byteToData2b(const std::vector<uint8_t>& bytes, Endian e);
+std::vector<uint8_t> data2bToByte(const double_t& value, Endian e);
 
-double_t byte_2_data2c(const std::vector<uint8_t>& bytes, Endian e);
-std::vector<uint8_t> data2c_2_byte(const double_t& value, Endian e);
+double_t byteToData2c(const std::vector<uint8_t>& bytes, Endian e);
+std::vector<uint8_t> data2cToByte(const double_t& value, Endian e);
 
-uint32_t byte_2_uint32(const std::vector<uint8_t>& bytes, Endian e);
-std::vector<uint8_t> uint32_2_byte(const uint32_t& value, Endian e);
+uint32_t byteToUint32(const std::vector<uint8_t>& bytes, Endian e);
+std::vector<uint8_t> uint32ToByte(const uint32_t& value, Endian e);
 
-int32_t byte_2_int32(const std::vector<uint8_t>& bytes, Endian e);
-std::vector<uint8_t> int32_2_byte(const int32_t& value, Endian e);
+int32_t byteToInt32(const std::vector<uint8_t>& bytes, Endian e);
+std::vector<uint8_t> int32ToByte(const int32_t& value, Endian e);
 
-double_t byte_2_float(const std::vector<uint8_t>& bytes, Endian e);
-std::vector<uint8_t> float_2_byte(const double_t& value, Endian e);
+double_t byteToFloat(const std::vector<uint8_t>& bytes, Endian e);
+std::vector<uint8_t> floatToByte(const double_t& value, Endian e);
 
-std::string byte_2_char(const std::vector<uint8_t>& vec);
-std::vector<uint8_t> char_2_byte(const std::string& str);
+std::string byteToChar(const std::vector<uint8_t>& vec);
+std::vector<uint8_t> charToByte(const std::string& str);
 
-std::string byte_2_hex(const std::vector<uint8_t>& vec);
-std::vector<uint8_t> hex_2_byte(const std::string& str);
+std::string byteToHex(const std::vector<uint8_t>& vec);
+std::vector<uint8_t> hexToByte(const std::string& str);
 
 }  // namespace ebus

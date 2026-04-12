@@ -123,7 +123,7 @@ TEST_CASE("EnhancedClient: Invalid protocol handling",
   uint8_t err_resp[2];
 
   // Invalid first-byte prefix
-  uint8_t invalid_b1_prefix[] = {0x80, 0xAA};
+  uint8_t invalid_b1_prefix[] = {0x80, 0xaa};
   send(sv[1], invalid_b1_prefix, 2, 0);
   REQUIRE(!client.recvFromClient(out));
   REQUIRE(!client.isConnected());
@@ -138,7 +138,7 @@ TEST_CASE("EnhancedClient: Invalid protocol handling",
   REQUIRE(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
   ebus::EnhancedClient client2(sv[0], &req);
 
-  uint8_t invalid_b2_prefix[] = {0xC6, 0x00};
+  uint8_t invalid_b2_prefix[] = {0xc6, 0x00};
   send(sv[1], invalid_b2_prefix, 2, 0);
   REQUIRE(!client2.recvFromClient(out));
   REQUIRE(!client2.isConnected());

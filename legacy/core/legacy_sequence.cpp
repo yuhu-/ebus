@@ -114,7 +114,7 @@ void test_append() {
   run_test("Append Reduced+Reduced", s1 == expected);
 
   // Case 2: Extended + Extended
-  // 0xAA -> 0xA9 0x01
+  // 0xaa -> 0xa9 0x01
   s1.assign(ebus::toVector("a901"), true);
   s2.assign(ebus::toVector("a901"), true);
   s1.append(s2);

@@ -56,6 +56,6 @@ struct EbusConfig {
 /**
  * Available client types.
  */
-enum class ClientType { ReadOnly, Regular, Enhanced };
+enum class ClientType { read_only, regular, enhanced };
 
 }  // namespace ebus

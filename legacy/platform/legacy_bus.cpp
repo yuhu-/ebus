@@ -64,7 +64,7 @@ void test_basic_communication() {
   if (received.size() >= 2) {
     std::cout << "  Received: 0x" << std::hex << (int)received[0].byte
               << " and 0x" << (int)received[1].byte << std::dec << std::endl;
-    run_test("First byte is SYN (0xAA)", received[0].byte == 0xAA);
+    run_test("First byte is SYN (0xaa)", received[0].byte == 0xaa);
     run_test("Second byte is address (0x03)", received[1].byte == 0x03);
   }
 

@@ -12,7 +12,7 @@
 
 // According to eBUS spec 6.2.2.1, master addresses are formed from a
 // priority class (lower nibble) and a sub-address (higher nibble).
-// There are 5 valid values for each nibble: 0x0, 0x1, 0x3, 0x7, 0xF.
+// There are 5 valid values for each nibble: 0x0, 0x1, 0x3, 0x7, 0xf.
 // This results in 5 * 5 = 25 possible master addresses.
 // This function checks if a given byte conforms to this rule.
 // Optimization: Valid values x satisfy ((x + 1) & x) == 0 for x <= 15.

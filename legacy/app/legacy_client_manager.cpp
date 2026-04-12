@@ -47,13 +47,13 @@ void test_client_orchestration() {
   // svReg[0] is the manager's end, svReg[1] is the client's end
   int svReg[2];
   socketpair(AF_UNIX, SOCK_STREAM, 0, svReg);
-  manager.addClient(svReg[0], ebus::ClientType::Regular);
+  manager.addClient(svReg[0], ebus::ClientType::regular);
 
   // Setup Client B (ReadOnly - Observer)
   // svRO[0] is the manager's end, svRO[1] is the client's end
   int svRO[2];
   socketpair(AF_UNIX, SOCK_STREAM, 0, svRO);
-  manager.addClient(svRO[0], ebus::ClientType::ReadOnly);
+  manager.addClient(svRO[0], ebus::ClientType::read_only);
 
   // bus.addWriteListener([](const uint8_t& byte) {
   //   std::cout << "Bus <- write: " << ebus::to_string(byte) << std::endl;
@@ -171,8 +171,8 @@ void test_enhanced_active_sending() {
   socketpair(AF_UNIX, SOCK_STREAM, 0, svEnh);
   socketpair(AF_UNIX, SOCK_STREAM, 0, svRO);
 
-  manager.addClient(svEnh[0], ebus::ClientType::Enhanced);
-  manager.addClient(svRO[0], ebus::ClientType::ReadOnly);
+  manager.addClient(svEnh[0], ebus::ClientType::enhanced);
+  manager.addClient(svRO[0], ebus::ClientType::read_only);
 
   // Start threads
   bus.start();
@@ -259,7 +259,7 @@ void test_client_timeout() {
 
   int sv[2];
   socketpair(AF_UNIX, SOCK_STREAM, 0, sv);
-  manager.addClient(sv[0], ebus::ClientType::Regular);
+  manager.addClient(sv[0], ebus::ClientType::regular);
 
   bus.start();
   manager.start();
@@ -300,7 +300,7 @@ void test_client_removal() {
 
   int sv[2];
   socketpair(AF_UNIX, SOCK_STREAM, 0, sv);
-  manager.addClient(sv[1], ebus::ClientType::Regular);
+  manager.addClient(sv[1], ebus::ClientType::regular);
 
   // Closing the other end should trigger disconnected state
   close(sv[0]);

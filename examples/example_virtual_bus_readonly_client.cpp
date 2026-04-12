@@ -48,7 +48,7 @@ int main() {
   if (socketpair(AF_UNIX, SOCK_STREAM, 0, sv) != 0) return 1;
   // The controller takes ownership of sv[0]. We use sv[1] to monitor.
   fcntl(sv[1], F_SETFL, O_NONBLOCK);
-  deviceA.addClient(sv[0], ebus::ClientType::ReadOnly);
+  deviceA.addClient(sv[0], ebus::ClientType::read_only);
 
   // --- 4. Logic for Device B: Periodic Traffic ---
   // Enqueue a broadcast message every 5 seconds.
@@ -81,8 +81,8 @@ int main() {
           if (ebus::matches(master, {0xfe, 0xb5, 0x16, 0x03, 0x01}, 1))
             std::cout << "[Device A] Observed broadcast from "
                       << ebus::toString(master[0]) << " with data: "
-                      << ebus::byte_2_data2b(ebus::range(master, 6, 2),
-                                             ebus::Endian::Little)
+                      << ebus::byteToData2b(ebus::range(master, 6, 2),
+                                            ebus::Endian::little)
                       << "°C)" << std::endl;
         }
       });
@@ -92,8 +92,8 @@ int main() {
                               const std::vector<uint8_t>& master,
                               const std::vector<uint8_t>& slave) {
     std::cout << "[Device B] Error message " << errorMessage << " master: '"
-              << ebus::toString(master) << "' slave: '"
-              << ebus::toString(slave) << "'" << std::endl;
+              << ebus::toString(master) << "' slave: '" << ebus::toString(slave)
+              << "'" << std::endl;
   });
 
   // --- 7. Start the simulation ---
@@ -109,10 +109,10 @@ int main() {
     uint8_t logBuf[256];
     ssize_t n = read(sv[1], logBuf, sizeof(logBuf));
     if (n > 0) {
-      // If you see 0xAA here, the virtual connection is working.
+      // If you see 0xaa here, the virtual connection is working.
       // If you see nothing, the VirtualLine is isolated.
       std::cout << "[DeviceA ReadOnly] Logged " << n << " bytes: "
-                << ebus::byte_2_hex(std::vector<uint8_t>(logBuf, logBuf + n))
+                << ebus::byteToHex(std::vector<uint8_t>(logBuf, logBuf + n))
                 << std::endl;
     }
 

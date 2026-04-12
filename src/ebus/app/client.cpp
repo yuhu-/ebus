@@ -19,8 +19,8 @@
 #endif
 
 ebus::AbstractClient::AbstractClient(int fd, Request* request,
-                                     bool writeCapable)
-    : fd_(fd), request_(request), writeCapable_(writeCapable) {
+                                     bool write_capable)
+    : fd_(fd), request_(request), write_capable_(write_capable) {
   if (fd_ >= 0) {
     // All network clients must be non-blocking for the Manager's poll loop
     int flags = fcntl(fd_, F_GETFL, 0);
@@ -47,18 +47,18 @@ void ebus::AbstractClient::stop() {
 }
 
 bool ebus::AbstractClient::tryFlushOutboundBuffer() {
-  std::lock_guard<std::mutex> lock(bufferMutex_);
+  std::lock_guard<std::mutex> lock(buffer_mutex_);
   return flushLocked();
 }
 
 bool ebus::AbstractClient::flushLocked() {
   if (fd_ < 0) return false;
-  if (outboundBuffer_.empty()) return true;
+  if (outbound_buffer_.empty()) return true;
 
   size_t totalSent = 0;
-  const size_t toSend = outboundBuffer_.size();
+  const size_t toSend = outbound_buffer_.size();
   while (totalSent < toSend) {
-    ssize_t n = ::send(fd_, outboundBuffer_.data() + totalSent,
+    ssize_t n = ::send(fd_, outbound_buffer_.data() + totalSent,
                        toSend - totalSent, MSG_DONTWAIT);
     if (n > 0) {
       totalSent += static_cast<size_t>(n);
@@ -74,8 +74,8 @@ bool ebus::AbstractClient::flushLocked() {
   }
 
   if (totalSent > 0) {
-    outboundBuffer_.erase(outboundBuffer_.begin(),
-                          outboundBuffer_.begin() + totalSent);
+    outbound_buffer_.erase(outbound_buffer_.begin(),
+                           outbound_buffer_.begin() + totalSent);
   }
   return true;
 }
@@ -93,12 +93,12 @@ bool ebus::ReadOnlyClient::recvFromClient(uint8_t& out) {
 void ebus::ReadOnlyClient::sendToClient(const std::vector<uint8_t>& data) {
   if (fd_ < 0 || data.empty()) return;
   {
-    std::lock_guard<std::mutex> lock(bufferMutex_);
-    if (outboundBuffer_.size() + data.size() > MAX_OUTBOUND_BUFFER_SIZE) {
+    std::lock_guard<std::mutex> lock(buffer_mutex_);
+    if (outbound_buffer_.size() + data.size() > MAX_OUTBOUND_BUFFER_SIZE) {
       stop();
       return;
     }
-    outboundBuffer_.insert(outboundBuffer_.end(), data.begin(), data.end());
+    outbound_buffer_.insert(outbound_buffer_.end(), data.begin(), data.end());
     flushLocked();
   }
 }
@@ -124,12 +124,12 @@ bool ebus::RegularClient::recvFromClient(uint8_t& out) {
 void ebus::RegularClient::sendToClient(const std::vector<uint8_t>& data) {
   if (fd_ < 0 || data.empty()) return;
   {
-    std::lock_guard<std::mutex> lock(bufferMutex_);
-    if (outboundBuffer_.size() + data.size() > MAX_OUTBOUND_BUFFER_SIZE) {
+    std::lock_guard<std::mutex> lock(buffer_mutex_);
+    if (outbound_buffer_.size() + data.size() > MAX_OUTBOUND_BUFFER_SIZE) {
       stop();
       return;
     }
-    outboundBuffer_.insert(outboundBuffer_.end(), data.begin(), data.end());
+    outbound_buffer_.insert(outbound_buffer_.end(), data.begin(), data.end());
     flushLocked();
   }
 }
@@ -168,40 +168,40 @@ ebus::EnhancedClient::EnhancedClient(int fd, Request* request)
     : AbstractClient(fd, request, true) {}
 
 bool ebus::EnhancedClient::wantsToSend() {
-  if (!inboundBuffer_.empty()) return true;
+  if (!inbound_buffer_.empty()) return true;
   uint8_t dummy;
   return ::recv(fd_, &dummy, 1, MSG_PEEK | MSG_DONTWAIT) > 0;
 }
 
 bool ebus::EnhancedClient::recvFromClient(uint8_t& out) {
   // If we have an incomplete command in the buffer, try to finish it
-  if (inboundBuffer_.empty()) {
+  if (inbound_buffer_.empty()) {
     uint8_t b;
     if (::recv(fd_, &b, 1, MSG_DONTWAIT) != 1) return false;
-    inboundBuffer_.push_back(b);
+    inbound_buffer_.push_back(b);
   }
 
-  uint8_t b1 = inboundBuffer_[0];
+  uint8_t b1 = inbound_buffer_[0];
 
   // Short form (< 0x80) is a single byte
   if (b1 < 0x80) {
     out = b1;
-    inboundBuffer_.clear();
+    inbound_buffer_.clear();
     return true;
   }
 
   // Enhanced sequences are always 2 bytes
   uint8_t buf[2];
-  if (inboundBuffer_.size() < 2) {
+  if (inbound_buffer_.size() < 2) {
     uint8_t b2;
     if (::recv(fd_, &b2, 1, MSG_DONTWAIT) != 1)
       return false;  // Still missing second byte
-    inboundBuffer_.push_back(b2);
+    inbound_buffer_.push_back(b2);
   }
 
-  buf[0] = inboundBuffer_[0];
-  buf[1] = inboundBuffer_[1];
-  inboundBuffer_.clear();
+  buf[0] = inbound_buffer_[0];
+  buf[1] = inbound_buffer_[1];
+  inbound_buffer_.clear();
 
   if (!enhanced::Protocol::isValidSequence(buf[0], buf[1])) {
     sendToClient({enhanced::RESP_ERROR_HOST, enhanced::ERR_FRAMING});
@@ -247,19 +247,19 @@ void ebus::EnhancedClient::sendToClient(const std::vector<uint8_t>& data) {
   }
 
   {
-    std::lock_guard<std::mutex> lock(bufferMutex_);
-    if (outboundBuffer_.size() + 2 > MAX_OUTBOUND_BUFFER_SIZE) {
+    std::lock_guard<std::mutex> lock(buffer_mutex_);
+    if (outbound_buffer_.size() + 2 > MAX_OUTBOUND_BUFFER_SIZE) {
       stop();
       return;
     }
 
     // Short form is allowed for RESP_RECEIVED notifications where value < 0x80
     if (cmd == enhanced::RESP_RECEIVED && val < 0x80) {
-      outboundBuffer_.push_back(val);
+      outbound_buffer_.push_back(val);
     } else {
       uint8_t out[2];
       enhanced::Protocol::encode(cmd, val, out);
-      outboundBuffer_.insert(outboundBuffer_.end(), out, out + 2);
+      outbound_buffer_.insert(outbound_buffer_.end(), out, out + 2);
     }
     flushLocked();
   }
@@ -301,11 +301,11 @@ ebus::Action ebus::EnhancedClient::onBusByte(const BusEventContext& ctx) {
 std::unique_ptr<ebus::AbstractClient> ebus::createClient(int fd, Request* req,
                                                          ClientType type) {
   switch (type) {
-    case ClientType::ReadOnly:
+    case ClientType::read_only:
       return std::unique_ptr<AbstractClient>(new ReadOnlyClient(fd, req));
-    case ClientType::Regular:
+    case ClientType::regular:
       return std::unique_ptr<AbstractClient>(new RegularClient(fd, req));
-    case ClientType::Enhanced:
+    case ClientType::enhanced:
       return std::unique_ptr<AbstractClient>(new EnhancedClient(fd, req));
     default:
       return nullptr;

@@ -53,7 +53,7 @@ TEST_CASE("DeviceManager: Device Update", "[app][devicemanager]") {
 
   auto devices = dm.getDeviceInfo();
   REQUIRE(devices.size() == 1);
-  REQUIRE(devices[0].slave_address_ == 0x08);
+  REQUIRE(devices[0].slave_address == 0x08);
 
   auto cmds = dm.vendorScanCommands();
   REQUIRE(cmds.size() == 4);

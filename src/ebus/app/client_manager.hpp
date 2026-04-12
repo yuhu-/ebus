@@ -28,7 +28,7 @@ namespace ebus {
  */
 class ClientManager {
  public:
-  ClientManager(Bus* bus, BusHandler* busHandler, Request* request);
+  ClientManager(Bus* bus, BusHandler* bus_handler, Request* request);
   ~ClientManager();
 
   void start();
@@ -41,44 +41,44 @@ class ClientManager {
 
  private:
   Bus* bus_;
-  BusHandler* busHandler_;
+  BusHandler* bus_handler_;
   Request* request_;
 
-  Queue<BusEventContext> busByteQueue_;
+  Queue<BusEventContext> bus_byte_queue_;
   std::atomic<bool> running_{false};
 
   enum class SessionState {
-    Idle,      // Waiting for a client to have data
-    Request,   // Bus request pending, waiting for our slot to send
-    Response,  // Waiting for arbitration result from eBUS
-    Transmit   // Arbitration won, sending telegram body
+    idle,      // Waiting for a client to have data
+    request,   // Bus request pending, waiting for our slot to send
+    response,  // Waiting for arbitration result from eBUS
+    transmit   // Arbitration won, sending telegram body
   };
 
-  SessionState sessionState_ = SessionState::Idle;
+  SessionState session_state_ = SessionState::idle;
 
   mutable std::mutex mutex_;
   std::vector<std::shared_ptr<AbstractClient>> clients_;
-  std::vector<std::shared_ptr<AbstractClient>> clientsCache_;
+  std::vector<std::shared_ptr<AbstractClient>> clients_cache_;
 
   // Versioning to avoid copying clients_ every loop iteration unless changed.
-  std::atomic<uint64_t> clientsVersion_{0};
-  uint64_t lastSnapshotVersion_{0};
+  std::atomic<uint64_t> clients_version_{0};
+  uint64_t last_snapshot_version_{0};
 
   std::unique_ptr<ServiceThread> worker_;
 
-  std::shared_ptr<AbstractClient> currentActiveSender_ = nullptr;
-  std::atomic<bool> busRequested_{false};
+  std::shared_ptr<AbstractClient> current_active_sender_ = nullptr;
+  std::atomic<bool> bus_requested_{false};
 
   // Wake primitives to reduce busy-waiting
-  std::mutex wakeMutex_;
-  std::condition_variable wakeCv_;
-  std::atomic<bool> wakeFlag_{false};
+  std::mutex wake_mutex_;
+  std::condition_variable wake_cv_;
+  std::atomic<bool> wake_flag_{false};
 
   // Listener id from BusHandler so we can remove the listener safely.
-  uint32_t busListenerId_{0};
+  uint32_t bus_listener_id_{0};
 
   // Configurable timeout for active session
-  std::chrono::milliseconds activeTimeout_{1000};
+  std::chrono::milliseconds active_timeout_{1000};
 
   void run();
 

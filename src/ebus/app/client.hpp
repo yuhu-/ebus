@@ -37,7 +37,7 @@ class Request;
  */
 class AbstractClient {
  public:
-  AbstractClient(int fd, Request* request, bool writeCapable);
+  AbstractClient(int fd, Request* request, bool write_capable);
   virtual ~AbstractClient();
 
   void stop();
@@ -50,9 +50,9 @@ class AbstractClient {
   bool tryFlushOutboundBuffer();
 
   int getFd() const { return fd_; }
-  bool isWriteCapable() const { return writeCapable_; }
+  bool isWriteCapable() const { return write_capable_; }
   bool isConnected() const { return fd_ >= 0; }
-  bool hasPendingData() const { return !outboundBuffer_.empty(); }
+  bool hasPendingData() const { return !outbound_buffer_.empty(); }
 
   /**
    * Returns true if the client has data available to read from its socket.
@@ -66,10 +66,10 @@ class AbstractClient {
 
  protected:
   int fd_;
-  std::vector<uint8_t> outboundBuffer_;  // Per-client outbound buffer
-  mutable std::mutex bufferMutex_;       // Protects outboundBuffer_
+  std::vector<uint8_t> outbound_buffer_;  // Per-client outbound buffer
+  mutable std::mutex buffer_mutex_;       // Protects outboundBuffer_
   Request* request_;
-  bool writeCapable_;
+  bool write_capable_;
 
   bool flushLocked();  // Internal flush logic; returns false if connection lost
 };
@@ -119,7 +119,7 @@ class EnhancedClient : public AbstractClient {
   Action onBusByte(const BusEventContext& ctx) override;
 
  private:
-  std::vector<uint8_t> inboundBuffer_;
+  std::vector<uint8_t> inbound_buffer_;
 };
 
 std::unique_ptr<AbstractClient> createClient(int fd, Request* req,

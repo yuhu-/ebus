@@ -42,11 +42,11 @@ TEST_CASE("ClientManager Orchestration (Regular + ReadOnly)") {
 
   int svReg[2];
   socketpair(AF_UNIX, SOCK_STREAM, 0, svReg);
-  manager.addClient(svReg[0], ebus::ClientType::Regular);
+  manager.addClient(svReg[0], ebus::ClientType::regular);
 
   int svRO[2];
   socketpair(AF_UNIX, SOCK_STREAM, 0, svRO);
-  manager.addClient(svRO[0], ebus::ClientType::ReadOnly);
+  manager.addClient(svRO[0], ebus::ClientType::read_only);
 
   bus.start();
   busHandler.start();
@@ -120,8 +120,8 @@ TEST_CASE("ClientManager Enhanced Active Sending") {
   socketpair(AF_UNIX, SOCK_STREAM, 0, svEnh);
   socketpair(AF_UNIX, SOCK_STREAM, 0, svRO);
 
-  manager.addClient(svEnh[0], ebus::ClientType::Enhanced);
-  manager.addClient(svRO[0], ebus::ClientType::ReadOnly);
+  manager.addClient(svEnh[0], ebus::ClientType::enhanced);
+  manager.addClient(svRO[0], ebus::ClientType::read_only);
 
   bus.start();
   busHandler.start();
@@ -190,7 +190,7 @@ TEST_CASE("ClientManager Watchdog Timeout") {
 
   int sv[2];
   socketpair(AF_UNIX, SOCK_STREAM, 0, sv);
-  manager.addClient(sv[0], ebus::ClientType::Regular);
+  manager.addClient(sv[0], ebus::ClientType::regular);
 
   bus.start();
   manager.start();
@@ -224,7 +224,7 @@ TEST_CASE("Client Removal") {
 
   int sv[2];
   socketpair(AF_UNIX, SOCK_STREAM, 0, sv);
-  manager.addClient(sv[1], ebus::ClientType::Regular);
+  manager.addClient(sv[1], ebus::ClientType::regular);
 
   close(sv[0]);
 

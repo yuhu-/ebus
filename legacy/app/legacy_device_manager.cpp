@@ -69,7 +69,7 @@ void test_device_update() {
   auto devices = dm.getDeviceInfo();
   // Should have created device at 0x08
   ASSERT_TRUE(devices.size() == 1);
-  ASSERT_TRUE(devices[0].slave_address_ == 0x08);
+  ASSERT_TRUE(devices[0].slave_address == 0x08);
 
   // Verify Vendor Scan Commands are generated
   auto cmds = dm.vendorScanCommands();
@@ -85,7 +85,7 @@ void test_create_scan_commands() {
   std::cout << "[TEST] DeviceManager Create Scan Commands... ";
 
   ebus::DeviceManager dm;
-  // Use handler with address 0xFF
+  // Use handler with address 0xff
   ebus::BusConfig config{.device = "/dev/null", .simulate = true};
   ebus::RuntimeConfig runtime{.address = 0xff, .window = 50, .offset = 5};
   ebus::Request request;

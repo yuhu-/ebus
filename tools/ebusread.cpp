@@ -94,15 +94,14 @@ std::string services(const std::vector<uint8_t>& master,
     ostr << ":";
     ostr << ebus::toString(master[7]);
     ostr << " - ";
-    ostr << ebus::byte_2_data2b(ebus::range(master, 5, 2),
-                                ebus::Endian::Little);
+    ostr << ebus::byteToData2b(ebus::range(master, 5, 2), ebus::Endian::little);
     ostr << " °C";
   } else if (master[2] == 0x07 && master[3] == 0x04) {
     ostr << "0704: " + ebus::toString(master[1]);
     ostr << " MF=";
     ostr << ebus::toString(ebus::range(slave, 1, 1));
     ostr << " ID=";
-    ostr << ebus::byte_2_char(ebus::range(slave, 2, 5));
+    ostr << ebus::byteToChar(ebus::range(slave, 2, 5));
     ostr << " SW=";
     ostr << ebus::toString(ebus::range(slave, 7, 2));
     ostr << " HW=";
@@ -123,8 +122,7 @@ std::string services(const std::vector<uint8_t>& master,
   } else if (master[2] == 0xb5 && master[3] == 0x16 && master[4] == 0x03 &&
              master[5] == 0x01) {
     ostr << "b5160301: ";
-    ostr << ebus::byte_2_data2b(ebus::range(master, 6, 2),
-                                ebus::Endian::Little);
+    ostr << ebus::byteToData2b(ebus::range(master, 6, 2), ebus::Endian::little);
     ostr << " °C";
   }
   return ostr.str();
@@ -309,7 +307,7 @@ void run(const char* hostname, const char* port, int max_retries = 5) {
     bool connection_ok = true;
     bool mode_enhanced = false;
     int enhanced_seq_count = 0;
-    bool waiting_for_c6 = true;  // true: expect 0xC6, false: expect 0xAA
+    bool waiting_for_c6 = true;  // true: expect 0xc6, false: expect 0xaa
 
     while (connection_ok) {
       fd_set readfds;
@@ -341,12 +339,12 @@ void run(const char* hostname, const char* port, int max_retries = 5) {
             uint8_t byte = static_cast<uint8_t>(data[0]);
             if (waiting_for_c6) {
               if (byte == ENHANCED_SYM) {
-                waiting_for_c6 = false;  // now expect 0xAA
+                waiting_for_c6 = false;  // now expect 0xaa
               } else {
                 enhanced_seq_count = 0;
                 waiting_for_c6 = true;
               }
-            } else {  // waiting for 0xAA
+            } else {  // waiting for 0xaa
               if (byte == ebus::sym_syn) {
                 enhanced_seq_count++;
                 if (enhanced_seq_count >= ENHANCED_THRESHOLD) {

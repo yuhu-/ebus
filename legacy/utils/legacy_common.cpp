@@ -26,18 +26,18 @@ void test_addressing() {
   run_test("isMaster(0x03)", ebus::isMaster(0x03));
   run_test("isMaster(0x10)", ebus::isMaster(0x10));
   run_test("isMaster(0x37)", ebus::isMaster(0x37));
-  run_test("isMaster(0xFF)", ebus::isMaster(0xFF));
+  run_test("isMaster(0xff)", ebus::isMaster(0xff));
 
   run_test("!isMaster(0x02)", !ebus::isMaster(0x02));
   run_test("!isMaster(0x04)", !ebus::isMaster(0x04));
   run_test("!isMaster(0x05)", !ebus::isMaster(0x05));
-  run_test("!isMaster(0xAA) [SYN]", !ebus::isMaster(ebus::sym_syn));
+  run_test("!isMaster(0xaa) [SYN]", !ebus::isMaster(ebus::sym_syn));
 
   // Test isSlave
   // Slaves are usually Master + 5.
   run_test("isSlave(0x05)", ebus::isSlave(0x05));
   run_test("isSlave(0x00) [Master is not Slave]", !ebus::isSlave(0x00));
-  run_test("isSlave(0xAA) [SYN is not Slave]", !ebus::isSlave(ebus::sym_syn));
+  run_test("isSlave(0xaa) [SYN is not Slave]", !ebus::isSlave(ebus::sym_syn));
 
   // Test masterOf / slaveOf
   run_test("masterOf(0x05) == 0x00", ebus::masterOf(0x05) == 0x00);
@@ -53,10 +53,10 @@ void test_conversions() {
   std::cout << "\n=== Test: Conversions ===" << std::endl;
 
   // to_string
-  run_test("to_string(0x0A)", ebus::toString(0x0A) == "0a");
-  run_test("to_string(0xFF)", ebus::toString(0xFF) == "ff");
+  run_test("to_string(0x0a)", ebus::toString(0x0a) == "0a");
+  run_test("to_string(0xff)", ebus::toString(0xff) == "ff");
 
-  std::vector<uint8_t> vec = {0x01, 0x02, 0xFF};
+  std::vector<uint8_t> vec = {0x01, 0x02, 0xff};
   run_test("to_string(vector)", ebus::toString(vec) == "0102ff");
 
   // to_vector

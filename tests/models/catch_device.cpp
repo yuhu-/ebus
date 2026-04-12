@@ -29,9 +29,9 @@ TEST_CASE("Device: update parsing", "[models][device]") {
   dev.update(master, slave);
 
   auto info = dev.getDeviceInfo();
-  REQUIRE(info.manufacturer_ == 0xda);
+  REQUIRE(info.manufacturer == 0xda);
 
-  std::string unitIdStr(info.unit_id_.begin(), info.unit_id_.end());
+  std::string unitIdStr(info.unit_id.begin(), info.unit_id.end());
   REQUIRE(unitIdStr == "ESPDA");
 }
 

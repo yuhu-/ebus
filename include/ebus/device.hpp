@@ -14,17 +14,17 @@ namespace ebus {
  * Device related information
  */
 struct DeviceInfo {
-  uint8_t slave_address_ = 0xff;
-  uint8_t manufacturer_ = 0;
-  std::string manufacturer_name_;
-  std::string unit_id_;
-  std::string software_version_;
-  std::string hardware_version_;
+  uint8_t slave_address = 0xff;
+  uint8_t manufacturer = 0;
+  std::string manufacturer_name;
+  std::string unit_id;
+  std::string software_version;
+  std::string hardware_version;
 
   // Vendor-specific data
   struct VaillantData {
-    std::string serial_number_;  // Full 28-character serial number
-    std::string product_code_;   // 10-digit product identifier (digits 7-16)
+    std::string serial_number;  // Full 28-character serial number
+    std::string product_code;   // 10-digit product identifier (digits 7-16)
   } vaillant;
 };
 
