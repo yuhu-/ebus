@@ -253,7 +253,7 @@ void ebus::Controller::constructMembers() {
 
   impl_->clientManager.reset(new ClientManager(
       impl_->bus.get(), impl_->busHandler.get(), impl_->request.get()));
-  impl_->clientManager->setActiveTimeout(config_.clientTimeoutMs);
+  impl_->clientManager->setActiveTimeout(config_.client_timeout_ms);
 
   impl_->bus->setWindow(config_.runtime.window);
   impl_->bus->setOffset(config_.runtime.offset);
