@@ -10,30 +10,30 @@
 namespace ebus {
 
 // Initialize static members
-std::mutex VirtualLine::registryMutex_;
+std::mutex VirtualLine::registry_mutex_;
 std::vector<VirtualLine*> VirtualLine::instances_;
 
 VirtualLine::VirtualLine() {
-  std::lock_guard<std::mutex> lock(registryMutex_);
+  std::lock_guard<std::mutex> lock(registry_mutex_);
   instances_.push_back(this);
 }
 
 VirtualLine::~VirtualLine() {
-  std::lock_guard<std::mutex> lock(registryMutex_);
+  std::lock_guard<std::mutex> lock(registry_mutex_);
   instances_.erase(std::remove(instances_.begin(), instances_.end(), this),
                    instances_.end());
 }
 
 void VirtualLine::write(uint8_t byte) {
-  std::lock_guard<std::mutex> lock(registryMutex_);
+  std::lock_guard<std::mutex> lock(registry_mutex_);
   // Simulates the physical wire: everyone connected sees the signal
   for (auto* instance : instances_) {
-    instance->rxQueue_.try_push(byte);
+    instance->rx_queue_.tryPush(byte);
   }
 }
 
-bool VirtualLine::read(uint8_t& byte, int timeoutMs) {
-  return rxQueue_.pop(byte, timeoutMs);
+bool VirtualLine::read(uint8_t& byte, int timeout_ms) {
+  return rx_queue_.pop(byte, timeout_ms);
 }
 
 }  // namespace ebus

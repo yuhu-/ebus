@@ -116,7 +116,7 @@ class QueuePosix {
   }
 
   // Non-blocking push (returns false if full)
-  bool try_push(const T& item) {
+  bool tryPush(const T& item) {
     {
       std::lock_guard<std::mutex> lock(mutex_);
       if (capacity_ > 0 && queue_.size() >= capacity_) return false;
@@ -127,7 +127,7 @@ class QueuePosix {
   }
 
   // Non-blocking push (move semantics)
-  bool try_push(T&& item) {
+  bool tryPush(T&& item) {
     {
       std::lock_guard<std::mutex> lock(mutex_);
       if (capacity_ > 0 && queue_.size() >= capacity_) return false;
@@ -172,7 +172,7 @@ class QueuePosix {
   }
 
   // Non-blocking pop (returns false if empty)
-  bool try_pop(T& out) {
+  bool tryPop(T& out) {
     {
       std::lock_guard<std::mutex> lock(mutex_);
       if (queue_.empty()) return false;

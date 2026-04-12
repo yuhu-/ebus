@@ -56,7 +56,7 @@ TEST_CASE("Bus: Basic Communication", "[platform][bus]") {
     bus.writeByte(0xff);
     std::this_thread::sleep_for(std::chrono::milliseconds(20));
     ebus::BusEvent tempEv;
-    while (queue->try_pop(tempEv)) {
+    while (queue->tryPop(tempEv)) {
       if (tempEv.byte == ebus::sym_syn) prematureSyn = true;
     }
   }

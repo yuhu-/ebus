@@ -425,7 +425,7 @@ bool ebus::BusFreeRtos::onSynGenTimer() {
   //   return true;
   // }
 
-  synActive_ = true;
+  syn_active_ = true;
   uint8_t syn = sym_syn;
   uart_ll_write_txfifo(UART_LL_GET_HW(uart_port_num_), &syn, 1);
   return false;

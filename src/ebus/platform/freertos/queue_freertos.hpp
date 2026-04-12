@@ -59,9 +59,7 @@ class QueueFreeRtos {
   }
 
   // Non-blocking push
-  bool try_push(const T& item) {
-    return xQueueSend(queue_, &item, 0) == pdTRUE;
-  }
+  bool tryPush(const T& item) { return xQueueSend(queue_, &item, 0) == pdTRUE; }
 
   // ISR-safe push (from ISR context)
   bool pushFromISR(const T& item) {
@@ -73,7 +71,7 @@ class QueueFreeRtos {
   }
 
   // ISR-safe, non-blocking push (returns immediately)
-  bool try_pushFromISR(const T& item) {
+  bool tryPushFromISR(const T& item) {
     BaseType_t xTaskWoken = pdFALSE;
     return xQueueSendFromISR(queue_, &item, &xTaskWoken) == pdTRUE;
   }
@@ -100,7 +98,7 @@ class QueueFreeRtos {
   }
 
   // Non-blocking pop
-  bool try_pop(T& out) { return xQueueReceive(queue_, &out, 0) == pdTRUE; }
+  bool tryPop(T& out) { return xQueueReceive(queue_, &out, 0) == pdTRUE; }
 
   // ISR-safe pop (from ISR context)
   bool popFromISR(T& out) {
@@ -112,7 +110,7 @@ class QueueFreeRtos {
   }
 
   // ISR-safe, non-blocking pop (returns immediately)
-  bool try_popFromISR(T& out) {
+  bool tryPopFromISR(T& out) {
     BaseType_t xTaskWoken = pdFALSE;
     return xQueueReceiveFromISR(queue_, &out, &xTaskWoken) == pdTRUE;
   }

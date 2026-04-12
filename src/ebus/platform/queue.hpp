@@ -6,13 +6,13 @@
 #pragma once
 
 #if defined(ESP32)
-#include "freertos/QueueFreeRtos.hpp"
+#include "freertos/queue_freertos.hpp"
 namespace ebus {
 template <typename T>
 using Queue = QueueFreeRtos<T>;
 }
 #elif defined(POSIX)
-#include "posix/QueuePosix.hpp"
+#include "posix/queue_posix.hpp"
 namespace ebus {
 template <typename T>
 using Queue = QueuePosix<T>;

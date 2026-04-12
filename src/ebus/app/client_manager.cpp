@@ -31,7 +31,7 @@ ebus::ClientManager::ClientManager(Bus* bus, BusHandler* busHandler,
   if (busHandler_) {
     busListenerId_ =
         busHandler_->addByteListener([this](const BusEventContext& ctx) {
-          busByteQueue_.try_push(ctx);
+          busByteQueue_.tryPush(ctx);
           notifyWake();
         });
   }
@@ -104,7 +104,7 @@ void ebus::ClientManager::run() {
 
   while (running_.load(std::memory_order_acquire)) {
     // 0. Drain immediate bus events first (non-blocking)
-    bool hasBusEvent = busByteQueue_.try_pop(ctx);
+    bool hasBusEvent = busByteQueue_.tryPop(ctx);
 
     // 1. Snapshot clients only if changed
     {
@@ -232,7 +232,7 @@ void ebus::ClientManager::run() {
     };
 
     if (hasBusEvent) processByte(ctx);
-    while (busByteQueue_.try_pop(ctx)) processByte(ctx);
+    while (busByteQueue_.tryPop(ctx)) processByte(ctx);
 
     // 5. Periodic flush for all clients (calls outside lock)
     for (auto& client : activeClients) {

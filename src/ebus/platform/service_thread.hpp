@@ -19,7 +19,8 @@ namespace ebus {
 class ServiceThread {
  public:
   ServiceThread(std::string name, std::function<void()> func,
-                uint32_t stackSize = 4096, uint8_t priority = 1, int core = -1);
+                uint32_t stack_size = 4096, uint8_t priority = 1,
+                int core = -1);
   ~ServiceThread();
 
   void start();

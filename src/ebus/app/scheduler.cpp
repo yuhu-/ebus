@@ -150,7 +150,7 @@ void ebus::Scheduler::run() {
 
     // Clear any stale events from previous attempts
     Event stale;
-    while (eventQueue_.try_pop(stale));
+    while (eventQueue_.tryPop(stale));
 
     if (stopFlag_.load()) break;
 
@@ -251,7 +251,7 @@ void ebus::Scheduler::attachHandlerCallbacks() {
     Event ev;
     ev.type = EventType::Won;
     ev.id = id;
-    eventQueue_.try_push(ev);
+    eventQueue_.tryPush(ev);
   });
 
   handler_->setBusRequestLostCallback([this]() {
@@ -261,7 +261,7 @@ void ebus::Scheduler::attachHandlerCallbacks() {
     Event ev;
     ev.type = EventType::Lost;
     ev.id = id;
-    eventQueue_.try_push(ev);
+    eventQueue_.tryPush(ev);
   });
 
   handler_->setTelegramCallback([this](const MessageType& messageType,
@@ -281,7 +281,7 @@ void ebus::Scheduler::attachHandlerCallbacks() {
     ev.telegramType = telegramType;
     ev.master = master;
     ev.slave = slave;
-    eventQueue_.try_push(ev);
+    eventQueue_.tryPush(ev);
   });
 
   handler_->setErrorCallback([this](const std::string& error,
@@ -301,7 +301,7 @@ void ebus::Scheduler::attachHandlerCallbacks() {
     ev.error = error;
     ev.master = master;
     ev.slave = slave;
-    eventQueue_.try_push(ev);
+    eventQueue_.tryPush(ev);
   });
 }
 

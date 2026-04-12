@@ -30,14 +30,14 @@ void test_basic_operations() {
   run_test("Size after push", q.size() == 2);
 
   int val;
-  bool success = q.try_pop(val);
+  bool success = q.tryPop(val);
   run_test("try_pop success", success && val == 1);
 
   q.pop(val);
   run_test("pop success", val == 2);
   run_test("Empty after pops", q.size() == 0);
 
-  success = q.try_pop(val);
+  success = q.tryPop(val);
   run_test("try_pop on empty", !success);
 }
 
@@ -49,7 +49,7 @@ void test_capacity() {
   run_test("push 2", q.push(2));
 
   // Queue is full now
-  bool pushed = q.try_push(3);
+  bool pushed = q.tryPush(3);
   run_test("try_push on full", !pushed);
 
   // Push with timeout should fail
@@ -121,7 +121,7 @@ void test_clear() {
   q.clear();
   run_test("Size after clear", q.size() == 0);
   int val;
-  run_test("Empty after clear", !q.try_pop(val));
+  run_test("Empty after clear", !q.tryPop(val));
 }
 
 void test_move_only() {
@@ -129,13 +129,13 @@ void test_move_only() {
   ebus::Queue<std::unique_ptr<int>> q(5);
 
   q.push(std::make_unique<int>(10));
-  run_test("try_push move success", q.try_push(std::make_unique<int>(20)));
+  run_test("try_push move success", q.tryPush(std::make_unique<int>(20)));
 
   std::unique_ptr<int> ptr;
   q.pop(ptr);
   run_test("Pop unique_ptr 10", ptr && *ptr == 10);
 
-  q.try_pop(ptr);
+  q.tryPop(ptr);
   run_test("Try pop unique_ptr 20", ptr && *ptr == 20);
 }
 

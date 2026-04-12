@@ -31,10 +31,10 @@ class VirtualLine {
 
  private:
   // Internal queue for bytes arriving from the "wire"
-  Queue<uint8_t> rxQueue_{256};
+  Queue<uint8_t> rx_queue_{256};
 
   // Static registry members to bridge multiple instances
-  static std::mutex registryMutex_;
+  static std::mutex registry_mutex_;
   static std::vector<VirtualLine*> instances_;
 };
 

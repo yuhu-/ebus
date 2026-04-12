@@ -23,7 +23,7 @@ TEST_CASE("Queue: Basic Operations", "[platform][queue]") {
   REQUIRE(q.size() == 2);
 
   int val;
-  bool success = q.try_pop(val);
+  bool success = q.tryPop(val);
   REQUIRE(success);
   REQUIRE(val == 1);
 
@@ -31,7 +31,7 @@ TEST_CASE("Queue: Basic Operations", "[platform][queue]") {
   REQUIRE(val == 2);
   REQUIRE(q.size() == 0);
 
-  success = q.try_pop(val);
+  success = q.tryPop(val);
   REQUIRE(!success);
 }
 
@@ -41,7 +41,7 @@ TEST_CASE("Queue: Capacity", "[platform][queue]") {
   REQUIRE(q.push(1));
   REQUIRE(q.push(2));
 
-  bool pushed = q.try_push(3);
+  bool pushed = q.tryPush(3);
   REQUIRE(!pushed);
 
   auto start = std::chrono::steady_clock::now();
@@ -106,21 +106,21 @@ TEST_CASE("Queue: Clear", "[platform][queue]") {
   q.clear();
   REQUIRE(q.size() == 0);
   int val;
-  REQUIRE(!q.try_pop(val));
+  REQUIRE(!q.tryPop(val));
 }
 
 TEST_CASE("Queue: Move Only (std::unique_ptr)", "[platform][queue]") {
   ebus::Queue<std::unique_ptr<int>> q(5);
 
   q.push(std::make_unique<int>(10));
-  REQUIRE(q.try_push(std::make_unique<int>(20)));
+  REQUIRE(q.tryPush(std::make_unique<int>(20)));
 
   std::unique_ptr<int> ptr;
   q.pop(ptr);
   REQUIRE(ptr);
   REQUIRE(*ptr == 10);
 
-  q.try_pop(ptr);
+  q.tryPop(ptr);
   REQUIRE(ptr);
   REQUIRE(*ptr == 20);
 }

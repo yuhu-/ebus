@@ -32,22 +32,22 @@ void ebus::BusPosix::start() {
     fd_ = -1;
     open_ = true;
   } else {
-    struct termios newSettings;
+    struct termios new_settings;
     fd_ = ::open(device_.c_str(), O_RDWR | O_NOCTTY);
     if (fd_ < 0 || isatty(fd_) == 0)
       throw std::runtime_error("Failed to open ebus device: " + device_);
 
     tcgetattr(fd_, &old_settings_);
-    ::memset(&newSettings, 0, sizeof(newSettings));
-    newSettings.c_cflag |= (B2400 | CS8 | CLOCAL | CREAD);
-    newSettings.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG);
-    newSettings.c_iflag |= IGNPAR;
-    newSettings.c_oflag &= ~OPOST;
-    newSettings.c_cc[VMIN] = 1;
-    newSettings.c_cc[VTIME] = 0;
+    ::memset(&new_settings, 0, sizeof(new_settings));
+    new_settings.c_cflag |= (B2400 | CS8 | CLOCAL | CREAD);
+    new_settings.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG);
+    new_settings.c_iflag |= IGNPAR;
+    new_settings.c_oflag &= ~OPOST;
+    new_settings.c_cc[VMIN] = 1;
+    new_settings.c_cc[VTIME] = 0;
 
     tcflush(fd_, TCIFLUSH);
-    tcsetattr(fd_, TCSAFLUSH, &newSettings);
+    tcsetattr(fd_, TCSAFLUSH, &new_settings);
     fcntl(fd_, F_SETFL, fcntl(fd_, F_GETFL) & ~O_NONBLOCK);
 
     open_ = true;
@@ -145,12 +145,12 @@ void ebus::BusPosix::setOffset(const uint16_t offset) {
 }
 
 void ebus::BusPosix::setRuntimeConfig(const RuntimeConfig& runtime) {
-  bool shouldStart = false;
-  bool shouldStop = false;
+  bool should_start = false;
+  bool should_stop = false;
 
   {
     std::lock_guard<std::mutex> lock(syn_mutex_);
-    bool wasEnabled = runtime_.enable_syn;
+    bool was_enabled = runtime_.enable_syn;
     runtime_ = runtime;
 
     // Always recalculate timing durations based on the new configuration
@@ -163,13 +163,13 @@ void ebus::BusPosix::setRuntimeConfig(const RuntimeConfig& runtime) {
 
     // Manage thread transitions only if the bus is currently active
     if (open_ && running_.load()) {
-      if (runtime_.enable_syn && !wasEnabled && !syn_running_.load()) {
-        shouldStart = true;
+      if (runtime_.enable_syn && !was_enabled && !syn_running_.load()) {
+        should_start = true;
         syn_running_.store(true);
         next_syn_expiry_ = std::chrono::steady_clock::now() + current_t_unique_;
         syn_active_ = false;
-      } else if (!runtime_.enable_syn && wasEnabled && syn_running_.load()) {
-        shouldStop = true;
+      } else if (!runtime_.enable_syn && was_enabled && syn_running_.load()) {
+        should_stop = true;
         syn_running_.store(false);
         syn_cv_.notify_all();
       }
@@ -177,10 +177,10 @@ void ebus::BusPosix::setRuntimeConfig(const RuntimeConfig& runtime) {
   }
 
   // Execute thread lifecycle actions outside of the lock to prevent deadlocks
-  if (shouldStart) {
+  if (should_start) {
     if (syn_thread_.joinable()) syn_thread_.join();
     syn_thread_ = std::thread(&BusPosix::synThread, this);
-  } else if (shouldStop) {
+  } else if (should_stop) {
     if (syn_thread_.joinable()) syn_thread_.join();
   }
 }
@@ -217,12 +217,12 @@ std::map<std::string, ebus::MetricValues> ebus::BusPosix::getMetrics() const {
   m["bus.uptime"] = stats_uptime_.getValues();
 
   // Calculate Physical Utilization (%)
-  double totalUptime =
+  double total_uptime =
       stats_uptime_.getValues().last;  // assuming uptime tracks total run time
-  if (totalUptime > 0) {
-    double utilPercent = (stats_utilization_.getSum() / totalUptime) * 100.0;
-    m["bus.utilization"] = {utilPercent, utilPercent, utilPercent,
-                            utilPercent, 0.0,         1};
+  if (total_uptime > 0) {
+    double util_percent = (stats_utilization_.getSum() / total_uptime) * 100.0;
+    m["bus.utilization"] = {util_percent, util_percent, util_percent,
+                            util_percent, 0.0,          1};
   }
 
   return m;
@@ -230,8 +230,8 @@ std::map<std::string, ebus::MetricValues> ebus::BusPosix::getMetrics() const {
 
 void ebus::BusPosix::recordUtilization(uint8_t byte) {
   // 1 (start bit) + zero bits in data. eBUS bit time is ~416.67us
-  double lowTime = (countZeroBits(byte) + 1) * (1000000.0 / 2400.0);
-  stats_utilization_.addSample(lowTime);
+  double low_time = (countZeroBits(byte) + 1) * (1000000.0 / 2400.0);
+  stats_utilization_.addSample(low_time);
 }
 
 void ebus::BusPosix::addReadListener(ReadListener listener) {
@@ -266,7 +266,7 @@ void ebus::BusPosix::readerThread() {
     }
 
     if (n == 1) {
-      auto arrivalTime = std::chrono::steady_clock::now();
+      auto arrival_time = std::chrono::steady_clock::now();
       for (const auto& listener : read_listeners_) listener(byte);
 
       // Notify SYN generator that a symbol was recognised (end of char)
@@ -277,7 +277,7 @@ void ebus::BusPosix::readerThread() {
       event.busRequest =
           bus_request_flag_.exchange(false, std::memory_order_acq_rel);
       event.startBit = false;
-      event.timestamp = arrivalTime;
+      event.timestamp = arrival_time;
 
       if (byte_queue_) byte_queue_->push(event);
 
