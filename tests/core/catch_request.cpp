@@ -12,7 +12,7 @@ TEST_CASE("Request: defaults", "[core][request]") {
   ebus::Request r;
   REQUIRE(r.busRequestPending() == false);
   REQUIRE(r.getState() == ebus::RequestState::observe);
-  REQUIRE(r.getResult() == ebus::RequestResult::observeSyn);
+  REQUIRE(r.getResult() == ebus::RequestResult::observe_syn);
 }
 
 TEST_CASE("Request: requestBus, completion and handler callback",
@@ -43,10 +43,10 @@ TEST_CASE("Request: first -> firstWon flow", "[core][request]") {
   r.busRequestCompleted();  // moves to first
 
   auto res = r.run(ebus::sym_syn);
-  REQUIRE(res == ebus::RequestResult::firstSyn);
+  REQUIRE(res == ebus::RequestResult::first_syn);
 
   res = r.run(0x33);  // our address observed -> won
-  REQUIRE(res == ebus::RequestResult::firstWon);
+  REQUIRE(res == ebus::RequestResult::first_won);
   REQUIRE(r.getState() == ebus::RequestState::observe);
 }
 
@@ -60,23 +60,23 @@ TEST_CASE("Request: first -> firstRetry -> retry -> second -> secondWon",
 
   // observe SYN first
   auto res = r.run(ebus::sym_syn);
-  REQUIRE(res == ebus::RequestResult::firstSyn);
+  REQUIRE(res == ebus::RequestResult::first_syn);
 
   // simulate arbitration loss but same priority class (lower nibble match)
   // Use 0x13 (master-like address) which shares low nibble 0x3 with 0x33
   res = r.run(0x13);
-  REQUIRE(res == ebus::RequestResult::firstRetry);
+  REQUIRE(res == ebus::RequestResult::first_retry);
   REQUIRE(r.getState() == ebus::RequestState::retry);
   REQUIRE(r.busRequestPending() == true);  // re-armed
 
   // retry phase: see SYN -> move to second
   res = r.run(ebus::sym_syn);
-  REQUIRE(res == ebus::RequestResult::retrySyn);
+  REQUIRE(res == ebus::RequestResult::retry_syn);
   REQUIRE(r.getState() == ebus::RequestState::second);
 
   // second-phase: observe our address -> won
   res = r.run(0x33);
-  REQUIRE(res == ebus::RequestResult::secondWon);
+  REQUIRE(res == ebus::RequestResult::second_won);
   REQUIRE(r.getState() == ebus::RequestState::observe);
 }
 
@@ -90,5 +90,5 @@ TEST_CASE("Request: startBit resets state and clears pending request",
   r.startBit();
   REQUIRE(r.busRequestPending() == false);
   REQUIRE(r.getState() == ebus::RequestState::observe);
-  REQUIRE(r.getResult() == ebus::RequestResult::observeSyn);
+  REQUIRE(r.getResult() == ebus::RequestResult::observe_syn);
 }

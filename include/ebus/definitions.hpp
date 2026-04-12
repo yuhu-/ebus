@@ -35,13 +35,13 @@ enum class MessageType { undefined, active, passive, reactive };
  * Callback for every valid telegram captured on the bus.
  */
 using TelegramCallback = std::function<void(
-    const MessageType& messageType, const TelegramType& telegramType,
+    const MessageType& message_type, const TelegramType& telegram_type,
     const std::vector<uint8_t>& master, const std::vector<uint8_t>& slave)>;
 
 /**
  * Callback for protocol or hardware errors.
  */
-using ErrorCallback = std::function<void(const std::string& errorMessage,
+using ErrorCallback = std::function<void(const std::string& error_message,
                                          const std::vector<uint8_t>& master,
                                          const std::vector<uint8_t>& slave)>;
 

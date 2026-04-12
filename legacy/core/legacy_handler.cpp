@@ -165,7 +165,7 @@ bool run_test(const TestCase& tc) {
   for (size_t i = 0; i < seq.size(); i++) {
     switch (handler.getState()) {
       // These states consume the echoed byte of what was just written
-      case ebus::HandlerState::releaseBus:
+      case ebus::HandlerState::release_bus:
         i--;
         break;
       default:

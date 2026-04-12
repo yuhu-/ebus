@@ -27,39 +27,39 @@ constexpr uint8_t DEFAULT_ADDRESS = 0xff;
 constexpr size_t NUM_HANDLER_STATES = 15;
 
 enum class HandlerState {
-  passiveReceiveMaster,
-  passiveReceiveMasterAcknowledge,
-  passiveReceiveSlave,
-  passiveReceiveSlaveAcknowledge,
-  reactiveSendMasterPositiveAcknowledge,
-  reactiveSendMasterNegativeAcknowledge,
-  reactiveSendSlave,
-  reactiveReceiveSlaveAcknowledge,
-  requestBus,
-  activeSendMaster,
-  activeReceiveMasterAcknowledge,
-  activeReceiveSlave,
-  activeSendSlavePositiveAcknowledge,
-  activeSendSlaveNegativeAcknowledge,
-  releaseBus
+  passive_receive_master,
+  passive_receive_master_acknowledge,
+  passive_receive_slave,
+  passive_receive_slave_acknowledge,
+  reactive_send_master_positive_acknowledge,
+  reactive_send_master_negative_acknowledge,
+  reactive_send_slave,
+  reactive_receive_slave_acknowledge,
+  request_bus,
+  active_send_master,
+  active_receive_master_acknowledge,
+  active_receive_slave,
+  active_send_slave_positive_acknowledge,
+  active_send_slave_negative_acknowledge,
+  release_bus
 };
 
 static const char* getHandlerStateText(HandlerState state) {
-  const char* values[] = {"passiveReceiveMaster",
-                          "passiveReceiveMasterAcknowledge",
-                          "passiveReceiveSlave",
-                          "passiveReceiveSlaveAcknowledge",
-                          "reactiveSendMasterPositiveAcknowledge",
-                          "reactiveSendMasterNegativeAcknowledge",
-                          "reactiveSendSlave",
-                          "reactiveReceiveSlaveAcknowledge",
-                          "requestBus",
-                          "activeSendMaster",
-                          "activeReceiveMasterAcknowledge",
-                          "activeReceiveSlave",
-                          "activeSendSlavePositiveAcknowledge",
-                          "activeSendSlaveNegativeAcknowledge",
-                          "releaseBus"};
+  const char* values[] = {"passive_receive_master",
+                          "passive_receive_master_acknowledge",
+                          "passive_receive_slave",
+                          "passive_receive_slave_acknowledge",
+                          "reactive_send_master_positive_acknowledge",
+                          "reactive_send_master_negative_acknowledge",
+                          "reactive_send_slave",
+                          "reactive_receive_slave_acknowledge",
+                          "request_bus",
+                          "active_send_master",
+                          "active_receive_master_acknowledge",
+                          "active_receive_slave",
+                          "active_send_slave_positive_acknowledge",
+                          "active_send_slave_negative_acknowledge",
+                          "release_bus"};
   return values[static_cast<int>(state)];
 }
 
@@ -69,46 +69,46 @@ using BusRequestLostCallback = std::function<void()>;
 using ReactiveMasterSlaveCallback = std::function<void(
     const std::vector<uint8_t>& master, std::vector<uint8_t>* const slave)>;
 
-#define EBUS_HANDLER_COUNTER_LIST \
-  X(messagesPassiveMasterSlave)   \
-  X(messagesPassiveMasterMaster)  \
-  X(messagesPassiveBroadcast)     \
-  X(messagesActiveMasterSlave)    \
-  X(messagesActiveMasterMaster)   \
-  X(messagesActiveBroadcast)      \
-  X(messagesReactiveMasterSlave)  \
-  X(messagesReactiveMasterMaster) \
-  X(resetPassive00)               \
-  X(resetPassive0704)             \
-  X(resetPassive)                 \
-  X(resetActive00)                \
-  X(resetActive0704)              \
-  X(resetActive)                  \
-  X(errorPassiveMaster)           \
-  X(errorPassiveMasterACK)        \
-  X(errorPassiveSlave)            \
-  X(errorPassiveSlaveACK)         \
-  X(errorReactiveMaster)          \
-  X(errorReactiveMasterACK)       \
-  X(errorReactiveSlave)           \
-  X(errorReactiveSlaveACK)        \
-  X(errorActiveMaster)            \
-  X(errorActiveMasterACK)         \
-  X(errorActiveSlave)             \
-  X(errorActiveSlaveACK)
+#define EBUS_HANDLER_COUNTER_LIST    \
+  X(messages_passive_master_slave)   \
+  X(messages_passive_master_master)  \
+  X(messages_passive_broadcast)      \
+  X(messages_active_master_slave)    \
+  X(messages_active_master_master)   \
+  X(messages_active_broadcast)       \
+  X(messages_reactive_master_slave)  \
+  X(messages_reactive_master_master) \
+  X(reset_passive_00)                \
+  X(reset_passive_0704)              \
+  X(reset_passive)                   \
+  X(reset_active_00)                 \
+  X(reset_active_0704)               \
+  X(reset_active)                    \
+  X(error_passive_master)            \
+  X(error_passive_master_ack)        \
+  X(error_passive_slave)             \
+  X(error_passive_slave_ack)         \
+  X(error_reactive_master)           \
+  X(error_reactive_master_ack)       \
+  X(error_reactive_slave)            \
+  X(error_reactive_slave_ack)        \
+  X(error_active_master)             \
+  X(error_active_master_ack)         \
+  X(error_active_slave)              \
+  X(error_active_slave_ack)
 
 #define EBUS_HANDLER_TIMING_LIST \
   X(sync)                        \
   X(write)                       \
-  X(passiveFirst)                \
-  X(passiveData)                 \
-  X(activeFirst)                 \
-  X(activeData)                  \
-  X(callbackWon)                 \
-  X(callbackLost)                \
-  X(callbackReactive)            \
-  X(callbackTelegram)            \
-  X(callbackError)
+  X(passive_first)               \
+  X(passive_data)                \
+  X(active_first)                \
+  X(active_data)                 \
+  X(callback_won)                \
+  X(callback_lost)               \
+  X(callback_reactive)           \
+  X(callback_telegram)           \
+  X(callback_error)
 
 /**
  * Handler class that implements the eBUS protocol logic as a finite state
@@ -147,22 +147,22 @@ class Handler {
  private:
   Bus* bus_ = nullptr;
   Request* request_ = nullptr;
-  RequestResult lastResult_ = RequestResult::observeSyn;
+  RequestResult last_result_ = RequestResult::observe_syn;
 
-  uint8_t sourceAddress_ = 0;
-  uint8_t targetAddress_ = 0;
+  uint8_t source_address_ = 0;
+  uint8_t target_address_ = 0;
 
-  BusRequestWonCallback busRequestWonCallback_ = nullptr;
-  BusRequestLostCallback busRequestLostCallback_ = nullptr;
-  ReactiveMasterSlaveCallback reactiveMasterSlaveCallback_ = nullptr;
-  TelegramCallback telegramCallback_ = nullptr;
-  ErrorCallback errorCallback_ = nullptr;
+  BusRequestWonCallback bus_request_won_callback_ = nullptr;
+  BusRequestLostCallback bus_request_lost_callback_ = nullptr;
+  ReactiveMasterSlaveCallback reactive_master_slave_callback_ = nullptr;
+  TelegramCallback telegram_callback_ = nullptr;
+  ErrorCallback error_callback_ = nullptr;
 
   std::array<void (Handler::*)(const uint8_t&), NUM_HANDLER_STATES>
-      stateHandlers_ = {};
+      state_handlers_ = {};
 
-  HandlerState state_ = HandlerState::passiveReceiveMaster;
-  HandlerState lastState_ = HandlerState::passiveReceiveMaster;
+  HandlerState state_ = HandlerState::passive_receive_master;
+  HandlerState last_state_ = HandlerState::passive_receive_master;
 
   // metrics
   struct Counter {
@@ -175,44 +175,44 @@ class Handler {
 
   TimingStats sync_;
   TimingStats write_;
-  TimingStats passiveFirst_;
-  TimingStats passiveData_;
-  TimingStats activeFirst_;
-  TimingStats activeData_;
-  TimingStats callbackWon_;
-  TimingStats callbackLost_;
-  TimingStats callbackReactive_;
-  TimingStats callbackTelegram_;
-  TimingStats callbackError_;
+  TimingStats passive_first_;
+  TimingStats passive_data_;
+  TimingStats active_first_;
+  TimingStats active_data_;
+  TimingStats callback_won_;
+  TimingStats callback_lost_;
+  TimingStats callback_reactive_;
+  TimingStats callback_telegram_;
+  TimingStats callback_error_;
 
-  std::array<TimingStats, NUM_HANDLER_STATES> handlerTiming_ = {};
+  std::array<TimingStats, NUM_HANDLER_STATES> handler_timing_ = {};
 
-  std::chrono::steady_clock::time_point lastPoint_;
-  bool measureSync_ = false;
+  std::chrono::steady_clock::time_point last_point_;
+  bool measure_sync_ = false;
 
   // passive
-  Telegram passiveTelegram_;
+  Telegram passive_telegram_;
 
-  Sequence passiveMaster_;
-  size_t passiveMasterDBx_ = 0;
-  bool passiveMasterRepeated_ = false;
+  Sequence passive_master_;
+  size_t passive_master_dbx_ = 0;
+  bool passive_master_repeated_ = false;
 
-  Sequence passiveSlave_;
-  size_t passiveSlaveDBx_ = 0;
-  size_t passiveSlaveIndex_ = 0;
-  bool passiveSlaveRepeated_ = false;
+  Sequence passive_slave_;
+  size_t passive_slave_dbx_ = 0;
+  size_t passive_slave_index_ = 0;
+  bool passive_slave_repeated_ = false;
 
   // active
-  bool activeMessage_ = false;
-  Telegram activeTelegram_;
+  bool active_message_ = false;
+  Telegram active_telegram_;
 
-  Sequence activeMaster_;
-  size_t activeMasterIndex_ = 0;
-  bool activeMasterRepeated_ = false;
+  Sequence active_master_;
+  size_t active_master_index_ = 0;
+  bool active_master_repeated_ = false;
 
-  Sequence activeSlave_;
-  size_t activeSlaveDBx_ = 0;
-  bool activeSlaveRepeated_ = false;
+  Sequence active_slave_;
+  size_t active_slave_dbx_ = 0;
+  bool active_slave_repeated_ = false;
 
   void passiveReceiveMaster(const uint8_t& byte);
   void passiveReceiveMasterAcknowledge(const uint8_t& byte);
@@ -244,12 +244,13 @@ class Handler {
   void callOnReactiveMasterSlave(const std::vector<uint8_t>& master,
                                  std::vector<uint8_t>* const slave);
 
-  void callOnTelegram(const MessageType& messageType,
-                      const TelegramType& telegramType,
+  void callOnTelegram(const MessageType& message_type,
+                      const TelegramType& telegram_type,
                       const std::vector<uint8_t>& master,
                       const std::vector<uint8_t>& slave);
 
-  void callOnError(const std::string& error, const std::vector<uint8_t>& master,
+  void callOnError(const std::string& error_message,
+                   const std::vector<uint8_t>& master,
                    const std::vector<uint8_t>& slave);
 };
 

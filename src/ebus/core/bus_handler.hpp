@@ -51,7 +51,7 @@ class BusHandler {
 
   uint32_t addByteListener(ByteListener listener) {
     std::lock_guard<std::mutex> lock(mutex_);
-    uint32_t id = nextListenerId_++;
+    uint32_t id = next_listener_id_++;
     listeners_.push_back({id, std::move(listener)});
     return id;
   }
@@ -74,34 +74,34 @@ class BusHandler {
 
   std::unique_ptr<ServiceThread> worker_;
 
-  uint32_t nextListenerId_ = 0;
+  uint32_t next_listener_id_ = 0;
   mutable std::mutex mutex_;
   std::vector<std::pair<uint32_t, ByteListener>> listeners_;
-  std::vector<ByteListener> listenersCache_;
+  std::vector<ByteListener> listeners_cache_;
 
   void run() {
     BusEvent event;
     while (running_) {
       if (queue_->pop(event, std::chrono::milliseconds(100))) {
         BusEventContext ctx{event.byte, RequestState::observe,
-                            RequestResult::observeData, 0, event.timestamp};
+                            RequestResult::observe_data, 0, event.timestamp};
 
         if (request_) {
           if (event.busRequest) request_->busRequestCompleted();
           if (event.startBit) request_->startBit();
           ctx.state = request_->getState();
           ctx.result = request_->run(event.byte);
-          ctx.lockCounter = request_->getLockCounter();
+          ctx.lock_counter = request_->getLockCounter();
         }
         if (handler_) handler_->run(ctx);
 
         {
           std::lock_guard<std::mutex> lock(mutex_);
-          listenersCache_.clear();
+          listeners_cache_.clear();
           for (const auto& item : listeners_)
-            listenersCache_.push_back(item.second);
+            listeners_cache_.push_back(item.second);
         }
-        for (const auto& listener : listenersCache_) listener(ctx);
+        for (const auto& listener : listeners_cache_) listener(ctx);
       }
     }
   }

@@ -71,7 +71,7 @@ TEST_CASE("ClientManager Orchestration (Regular + ReadOnly)") {
   std::this_thread::sleep_for(std::chrono::milliseconds(5));
 
   CHECK_TEST("Arbitration resolved and won",
-             req.getResult() == ebus::RequestResult::firstWon);
+             req.getResult() == ebus::RequestResult::first_won);
   CHECK_TEST("LockCounter reset to max", req.getLockCounter() == 3);
 
   uint8_t echo;
@@ -144,7 +144,7 @@ TEST_CASE("ClientManager Enhanced Active Sending") {
   std::this_thread::sleep_for(std::chrono::milliseconds(5));
 
   CHECK_TEST("Arbitration resolved and won",
-             req.getResult() == ebus::RequestResult::firstWon);
+             req.getResult() == ebus::RequestResult::first_won);
   CHECK_TEST("LockCounter reset to max", req.getLockCounter() == 3);
 
   uint8_t resp[2];

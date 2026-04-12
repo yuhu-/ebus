@@ -8,68 +8,68 @@
 #include "utils/common.hpp"
 
 ebus::Request::Request()
-    : stateRequests_({&Request::observe, &Request::first, &Request::retry,
-                      &Request::second}) {}
+    : state_requests_({&Request::observe, &Request::first, &Request::retry,
+                       &Request::second}) {}
 
-void ebus::Request::setMaxLockCounter(const uint8_t& maxCounter) {
-  if (maxCounter > MAX_LOCK_COUNTER)
-    maxLockCounter_ = MAX_LOCK_COUNTER;
+void ebus::Request::setMaxLockCounter(const uint8_t& max_counter) {
+  if (max_counter > MAX_LOCK_COUNTER)
+    max_lock_counter_ = MAX_LOCK_COUNTER;
   else
-    maxLockCounter_ = maxCounter;
+    max_lock_counter_ = max_counter;
 
-  if (lockCounter_ > maxLockCounter_) lockCounter_ = maxLockCounter_;
+  if (lock_counter_ > max_lock_counter_) lock_counter_ = max_lock_counter_;
 }
 
-uint8_t ebus::Request::getLockCounter() const { return lockCounter_; }
+uint8_t ebus::Request::getLockCounter() const { return lock_counter_; }
 
 bool ebus::Request::busAvailable() const {
-  return result_ == RequestResult::observeSyn && lockCounter_ == 0 &&
-         !busRequest_.load(std::memory_order_acquire);
+  return result_ == RequestResult::observe_syn && lock_counter_ == 0 &&
+         !bus_request_.load(std::memory_order_acquire);
 }
 
 bool ebus::Request::requestBus(const uint8_t& address, const bool& external) {
   if (busAvailable()) {
-    requestAddress_ = address;
-    externalBusRequest_ = external;
+    request_address_ = address;
+    external_bus_request_ = external;
     // Set flag after data is ready (Release semantics)
-    busRequest_.store(true, std::memory_order_release);
+    bus_request_.store(true, std::memory_order_release);
   }
-  return busRequest_;
+  return bus_request_;
 }
 
 void ebus::Request::setHandlerBusRequestedCallback(
     BusRequestedCallback callback) {
-  handlerBusRequestedCallback_ = std::move(callback);
+  handler_bus_requested_callback_ = std::move(callback);
 }
 
 void ebus::Request::setExternalBusRequestedCallback(
     BusRequestedCallback callback) {
-  externalBusRequestedCallback_ = std::move(callback);
+  external_bus_requested_callback_ = std::move(callback);
 }
 
 void ebus::Request::busRequestCompleted() {
-  busRequest_.store(false, std::memory_order_release);
+  bus_request_.store(false, std::memory_order_release);
   if (state_ == RequestState::observe) state_ = RequestState::first;
 
-  if (externalBusRequest_) {
-    if (externalBusRequestedCallback_) externalBusRequestedCallback_();
+  if (external_bus_request_) {
+    if (external_bus_requested_callback_) external_bus_requested_callback_();
   } else {
-    if (handlerBusRequestedCallback_) handlerBusRequestedCallback_();
+    if (handler_bus_requested_callback_) handler_bus_requested_callback_();
   }
 }
 
 void ebus::Request::startBit() {
-  // This is typically called on a bus error, like a framing error, which could
-  // be caused by a spurious start bit from an interference impulse. We can no
-  // longer trust the bus state, so we abort any pending request and return to
-  // the safest state: observing the bus for a clean SYN.
-  busRequest_.store(false, std::memory_order_release);
+  // This is typically called on a bus error, like a framing error, which
+  // could be caused by a spurious start bit from an interference impulse.
+  // We can no longer trust the bus state, so we abort any pending request
+  // and return to the safest state: observing the bus for a clean SYN.
+  bus_request_.store(false, std::memory_order_release);
   state_ = RequestState::observe;
-  result_ = RequestResult::observeSyn;
+  result_ = RequestResult::observe_syn;
 }
 
 void ebus::Request::setStartBitCallback(StartBitCallback callback) {
-  startBitCallback_ = std::move(callback);
+  start_bit_callback_ = std::move(callback);
 }
 
 ebus::RequestState ebus::Request::getState() const { return state_; }
@@ -77,15 +77,15 @@ ebus::RequestState ebus::Request::getState() const { return state_; }
 ebus::RequestResult ebus::Request::getResult() const { return result_; }
 
 void ebus::Request::reset() {
-  lockCounter_ = maxLockCounter_;
-  busRequest_.store(false, std::memory_order_release);
+  lock_counter_ = max_lock_counter_;
+  bus_request_.store(false, std::memory_order_release);
   state_ = RequestState::observe;
 }
 
 ebus::RequestResult ebus::Request::run(const uint8_t& byte) {
   size_t idx = static_cast<size_t>(state_);
-  if (idx < stateRequests_.size() && stateRequests_[idx])
-    (this->*stateRequests_[idx])(byte);
+  if (idx < state_requests_.size() && state_requests_[idx])
+    (this->*state_requests_[idx])(byte);
 
   return result_;
 }
@@ -106,20 +106,24 @@ std::map<std::string, ebus::MetricValues> ebus::Request::getMetrics() const {
   // 1. Calculate and map Counters
   Counter c = counter_;
 
-  uint32_t attempts = c.firstWon_ + c.firstLost_ + c.firstRetry_;
-  uint32_t collisions = c.firstLost_ + c.firstRetry_;
+  uint32_t attempts = c.first_won_ + c.first_lost_ + c.first_retry_;
+  uint32_t collisions = c.first_lost_ + c.first_retry_;
 
-  addCounter("wonTotal", c.firstWon_ + c.secondWon_);
-  addCounter("lostTotal", c.firstLost_ + c.secondLost_);
+  addCounter("wonTotal", c.first_won_ + c.second_won_);
+  addCounter("lostTotal", c.first_lost_ + c.second_lost_);
 
   // 2. Calculate Contention Rate (%)
-  // Contention happens when we lose arbitration (lost or retry) on the first
-  // attempt.
+  // Contention happens when we lose arbitration (lost or retry) on the
+  // first attempt.
   if (attempts > 0) {
-    double contentionRate =
+    double contention_rate =
         (static_cast<double>(collisions) / attempts) * 100.0;
-    m["request.contentionRate"] = {
-        contentionRate, contentionRate, contentionRate, contentionRate, 0.0, 1};
+    m["request.contentionRate"] = {contention_rate,
+                                   contention_rate,
+                                   contention_rate,
+                                   contention_rate,
+                                   0.0,
+                                   1};
   } else {
     m["request.contentionRate"] = {0.0, 0.0, 0.0, 0.0, 0.0, 0};
   }
@@ -133,23 +137,23 @@ std::map<std::string, ebus::MetricValues> ebus::Request::getMetrics() const {
 
 void ebus::Request::observe(const uint8_t& byte) {
   if (byte == sym_syn) {
-    if (lockCounter_ > 0) lockCounter_--;
-    result_ = RequestResult::observeSyn;
+    if (lock_counter_ > 0) lock_counter_--;
+    result_ = RequestResult::observe_syn;
   } else {
-    result_ = RequestResult::observeData;
+    result_ = RequestResult::observe_data;
   }
 }
 
 void ebus::Request::first(const uint8_t& byte) {
   if (byte == sym_syn) {
-    counter_.firstSyn_++;
+    counter_.first_syn_++;
     state_ = RequestState::first;
-    result_ = RequestResult::firstSyn;
-  } else if (byte == requestAddress_) {
-    counter_.firstWon_++;
-    lockCounter_ = maxLockCounter_;
+    result_ = RequestResult::first_syn;
+  } else if (byte == request_address_) {
+    counter_.first_won_++;
+    lock_counter_ = max_lock_counter_;
     state_ = RequestState::observe;
-    result_ = RequestResult::firstWon;
+    result_ = RequestResult::first_won;
   } else if (isMaster(byte)) {
     // ARBITRATION LOSS (Wire-AND Logic):
     // We sent our address, but read back a different master address.
@@ -159,51 +163,51 @@ void ebus::Request::first(const uint8_t& byte) {
     // SPECIAL RETRY CASE (Spec 6.2.2.2):
     // If the Priority Class (Bits 0-3) matches our own, we are allowed
     // to retry immediately at the next SYN (Auto-SYN).
-    if ((byte & 0x0f) == (requestAddress_ & 0x0f)) {
-      counter_.firstRetry_++;
+    if ((byte & 0x0f) == (request_address_ & 0x0f)) {
+      counter_.first_retry_++;
       state_ = RequestState::retry;
       // CRITICAL: We must re-arm the bus request immediately here.
       // If we wait until we see the next SYN in 'retry()', the Bus thread
       // will have already passed the write window for that SYN.
-      busRequest_.store(true, std::memory_order_release);
-      result_ = RequestResult::firstRetry;
+      bus_request_.store(true, std::memory_order_release);
+      result_ = RequestResult::first_retry;
     } else {
-      counter_.firstLost_++;
+      counter_.first_lost_++;
       state_ = RequestState::observe;
-      result_ = RequestResult::firstLost;
+      result_ = RequestResult::first_lost;
     }
   } else {
-    counter_.firstError_++;
+    counter_.first_error_++;
     state_ = RequestState::observe;
-    result_ = RequestResult::firstError;
+    result_ = RequestResult::first_error;
   }
 }
 
 void ebus::Request::retry(const uint8_t& byte) {
   if (byte == sym_syn) {
-    counter_.retrySyn_++;
+    counter_.retry_syn_++;
     state_ = RequestState::second;
-    result_ = RequestResult::retrySyn;
+    result_ = RequestResult::retry_syn;
   } else {
-    counter_.retryError_++;
+    counter_.retry_error_++;
     state_ = RequestState::observe;
-    result_ = RequestResult::retryError;
+    result_ = RequestResult::retry_error;
   }
 }
 
 void ebus::Request::second(const uint8_t& byte) {
-  if (byte == requestAddress_) {
-    counter_.secondWon_++;
-    lockCounter_ = maxLockCounter_;
+  if (byte == request_address_) {
+    counter_.second_won_++;
+    lock_counter_ = max_lock_counter_;
     state_ = RequestState::observe;
-    result_ = RequestResult::secondWon;
+    result_ = RequestResult::second_won;
   } else if (isMaster(byte)) {
-    counter_.secondLost_++;
+    counter_.second_lost_++;
     state_ = RequestState::observe;
-    result_ = RequestResult::secondLost;
+    result_ = RequestResult::second_lost;
   } else {
-    counter_.secondError_++;
+    counter_.second_error_++;
     state_ = RequestState::observe;
-    result_ = RequestResult::secondError;
+    result_ = RequestResult::second_error;
   }
 }

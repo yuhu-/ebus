@@ -139,23 +139,23 @@ ebus::Action ebus::RegularClient::onBusByte(const BusEventContext& ctx) {
 
   // Handle bus response according to last command
   switch (ctx.result) {
-    case RequestResult::observeSyn:
-    case RequestResult::firstLost:
-    case RequestResult::firstError:
-    case RequestResult::retryError:
-    case RequestResult::secondLost:
-    case RequestResult::secondError:
+    case RequestResult::observe_syn:
+    case RequestResult::first_lost:
+    case RequestResult::first_error:
+    case RequestResult::retry_error:
+    case RequestResult::second_lost:
+    case RequestResult::second_error:
       return Action::Stop;
-    case RequestResult::observeData:
+    case RequestResult::observe_data:
       sendToClient({ctx.byte});
       return Action::Continue;
-    case RequestResult::firstSyn:
-    case RequestResult::firstRetry:
-    case RequestResult::retrySyn:
+    case RequestResult::first_syn:
+    case RequestResult::first_retry:
+    case RequestResult::retry_syn:
       // Hide micro-retry: session remains active but we send no bridge response
       return Action::Continue;
-    case RequestResult::firstWon:
-    case RequestResult::secondWon:
+    case RequestResult::first_won:
+    case RequestResult::second_won:
       sendToClient({ctx.byte});
       return Action::Continue;
     default:
@@ -270,26 +270,26 @@ ebus::Action ebus::EnhancedClient::onBusByte(const BusEventContext& ctx) {
 
   // Handle bus response according to last command
   switch (ctx.result) {
-    case RequestResult::firstLost:
-    case RequestResult::secondLost:
+    case RequestResult::first_lost:
+    case RequestResult::second_lost:
       sendToClient({enhanced::RESP_FAILED, ctx.byte});
       return Action::Stop;
-    case RequestResult::firstError:
-    case RequestResult::retryError:
-    case RequestResult::secondError:
+    case RequestResult::first_error:
+    case RequestResult::retry_error:
+    case RequestResult::second_error:
       sendToClient({enhanced::RESP_ERROR_EBUS, enhanced::ERR_FRAMING});
       return Action::Stop;
-    case RequestResult::observeSyn:
-    case RequestResult::observeData:
+    case RequestResult::observe_syn:
+    case RequestResult::observe_data:
       sendToClient({enhanced::RESP_RECEIVED, ctx.byte});
       return Action::Continue;
-    case RequestResult::firstSyn:
-    case RequestResult::firstRetry:
-    case RequestResult::retrySyn:
+    case RequestResult::first_syn:
+    case RequestResult::first_retry:
+    case RequestResult::retry_syn:
       // Hide micro-retry: session remains active but we send no bridge response
       return Action::Continue;
-    case RequestResult::firstWon:
-    case RequestResult::secondWon:
+    case RequestResult::first_won:
+    case RequestResult::second_won:
       sendToClient({enhanced::RESP_STARTED, ctx.byte});
       return Action::Continue;
     default:

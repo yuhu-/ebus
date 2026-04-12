@@ -30,7 +30,7 @@ class TimingStats : public RollingStats {
 
  private:
   bool marked_;
-  std::chrono::steady_clock::time_point beginTime_;
+  std::chrono::steady_clock::time_point begin_time_;
 };
 
 }  // namespace ebus

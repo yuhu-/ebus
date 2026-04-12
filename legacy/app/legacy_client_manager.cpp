@@ -105,7 +105,7 @@ void test_client_orchestration() {
 
   // Step 3: Wait for arbitration to resolve and win.
   run_test("Arbitration resolved and won",
-           req.getResult() == ebus::RequestResult::firstWon);
+           req.getResult() == ebus::RequestResult::first_won);
   run_test("LockCounter reset to max", req.getLockCounter() == 3);
 
   // Step 4: Verify echoes and stream the telegram body
@@ -203,7 +203,7 @@ void test_enhanced_active_sending() {
 
   // Step 3: Wait for arbitration to resolve and win.
   run_test("Arbitration resolved and won",
-           req.getResult() == ebus::RequestResult::firstWon);
+           req.getResult() == ebus::RequestResult::first_won);
   run_test("LockCounter reset to max", req.getLockCounter() == 3);
 
   // Verify Enhanced client receives RESP_STARTED(0x33) -> 0xc8 0xb3

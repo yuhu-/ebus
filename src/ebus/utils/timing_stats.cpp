@@ -46,18 +46,18 @@ double RollingStats::getStdDev() const {
 TimingStats::TimingStats()
     : RollingStats(),
       marked_(false),
-      beginTime_(std::chrono::steady_clock::time_point()) {}
+      begin_time_(std::chrono::steady_clock::time_point()) {}
 
 void TimingStats::markBegin(
     const std::chrono::steady_clock::time_point& begin) {
-  beginTime_ = begin;
+  begin_time_ = begin;
   marked_ = true;
 }
 
 void TimingStats::markEnd(const std::chrono::steady_clock::time_point& end) {
   if (marked_) {
     int64_t duration =
-        std::chrono::duration_cast<std::chrono::microseconds>(end - beginTime_)
+        std::chrono::duration_cast<std::chrono::microseconds>(end - begin_time_)
             .count();
     addSample(static_cast<double>(duration));
     marked_ = false;

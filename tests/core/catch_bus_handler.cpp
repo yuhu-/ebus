@@ -127,7 +127,8 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
     for (int i = 0; i < 4; ++i) {
       bus.writeByte(ebus::sym_syn);
       std::this_thread::sleep_for(std::chrono::milliseconds(50));
-      if (handler.getState() != ebus::HandlerState::passiveReceiveMaster) break;
+      if (handler.getState() != ebus::HandlerState::passive_receive_master)
+        break;
     }
 
     // wait for completion

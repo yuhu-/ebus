@@ -133,7 +133,7 @@ SCENARIO("Handler processes eBUS messages correctly", "[core][handler]") {
         bool busRequestFlag = false;
         for (size_t i = 0; i < seq.size(); i++) {
           switch (handler.getState()) {
-            case ebus::HandlerState::releaseBus:
+            case ebus::HandlerState::release_bus:
               i--;
               break;
             default:

@@ -32,25 +32,25 @@ static const char* getRequestStateText(RequestState state) {
 }
 
 enum class RequestResult {
-  observeSyn,
-  observeData,
-  firstSyn,
-  firstWon,
-  firstRetry,
-  firstLost,
-  firstError,
-  retrySyn,
-  retryError,
-  secondWon,
-  secondLost,
-  secondError
+  observe_syn,
+  observe_data,
+  first_syn,
+  first_won,
+  first_retry,
+  first_lost,
+  first_error,
+  retry_syn,
+  retry_error,
+  second_won,
+  second_lost,
+  second_error
 };
 
 static const char* getRequestResultText(RequestResult result) {
-  const char* values[] = {"observeSyn", "observeData", "firstSyn",
-                          "firstWon",   "firstRetry",  "firstLost",
-                          "firstError", "retrySyn",    "retryError",
-                          "secondWon",  "secondLost",  "secondError"};
+  const char* values[] = {"observe_syn", "observe_data", "first_syn",
+                          "first_won",   "first_retry",  "first_lost",
+                          "first_error", "retry_syn",    "retry_error",
+                          "second_won",  "second_lost",  "second_error"};
   return values[static_cast<int>(result)];
 }
 
@@ -61,7 +61,7 @@ struct BusEventContext {
   uint8_t byte;
   RequestState state;
   RequestResult result;
-  uint8_t lockCounter;
+  uint8_t lock_counter;
   std::chrono::steady_clock::time_point timestamp;
 };
 
@@ -69,16 +69,16 @@ using BusRequestedCallback = std::function<void()>;
 using StartBitCallback = std::function<void()>;
 
 #define EBUS_REQUEST_COUNTER_LIST \
-  X(firstSyn)                     \
-  X(firstWon)                     \
-  X(firstRetry)                   \
-  X(firstLost)                    \
-  X(firstError)                   \
-  X(retrySyn)                     \
-  X(retryError)                   \
-  X(secondWon)                    \
-  X(secondLost)                   \
-  X(secondError)
+  X(first_syn)                    \
+  X(first_won)                    \
+  X(first_retry)                  \
+  X(first_lost)                   \
+  X(first_error)                  \
+  X(retry_syn)                    \
+  X(retry_error)                  \
+  X(second_won)                   \
+  X(second_lost)                  \
+  X(second_error)
 
 /**
  * Implementation of the eBUS arbitration state machine.
@@ -89,7 +89,7 @@ class Request {
  public:
   explicit Request();
 
-  void setMaxLockCounter(const uint8_t& maxCounter);
+  void setMaxLockCounter(const uint8_t& max_counter);
   uint8_t getLockCounter() const;
 
   bool busAvailable() const;
@@ -101,10 +101,10 @@ class Request {
   void setExternalBusRequestedCallback(BusRequestedCallback callback);
 
   // Inline and non-virtual for ESP32 ISR safety (IRAM) and performance
-  inline uint8_t busRequestAddress() const { return requestAddress_; }
+  inline uint8_t busRequestAddress() const { return request_address_; }
 
   inline bool busRequestPending() const {
-    return busRequest_.load(std::memory_order_acquire);
+    return bus_request_.load(std::memory_order_acquire);
   }
 
   void busRequestCompleted();
@@ -123,27 +123,27 @@ class Request {
   std::map<std::string, MetricValues> getMetrics() const;
 
  private:
-  uint8_t maxLockCounter_ = DEFAULT_LOCK_COUNTER;
-  uint8_t lockCounter_ = DEFAULT_LOCK_COUNTER;
+  uint8_t max_lock_counter_ = DEFAULT_LOCK_COUNTER;
+  uint8_t lock_counter_ = DEFAULT_LOCK_COUNTER;
 
-  uint8_t requestAddress_ = 0;
+  uint8_t request_address_ = 0;
 
   // Indicates whether a bus request is present
-  std::atomic<bool> busRequest_ = {false};
+  std::atomic<bool> bus_request_ = {false};
 
   // Indicates whether the bus request is internal or external
-  bool externalBusRequest_ = false;
+  bool external_bus_request_ = false;
 
-  BusRequestedCallback handlerBusRequestedCallback_ = nullptr;
-  BusRequestedCallback externalBusRequestedCallback_ = nullptr;
+  BusRequestedCallback handler_bus_requested_callback_ = nullptr;
+  BusRequestedCallback external_bus_requested_callback_ = nullptr;
 
-  StartBitCallback startBitCallback_ = nullptr;
+  StartBitCallback start_bit_callback_ = nullptr;
 
   std::array<void (Request::*)(const uint8_t&), NUM_REQUEST_STATES>
-      stateRequests_ = {};
+      state_requests_ = {};
 
   RequestState state_ = RequestState::observe;
-  RequestResult result_ = RequestResult::observeSyn;
+  RequestResult result_ = RequestResult::observe_syn;
 
   // metrics
   struct Counter {

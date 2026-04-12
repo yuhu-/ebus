@@ -149,7 +149,7 @@ void test_integration_vectors() {
       [&bus, &handler](const ebus::BusEventContext& ctx) {
         // Check if we are active and just finished sending Master CRC
         if (handler.getState() ==
-            ebus::HandlerState::activeReceiveMasterAcknowledge) {
+            ebus::HandlerState::active_receive_master_acknowledge) {
           // We just entered this state, meaning we sent the CRC.
           // In simulation, we immediately ACK the master telegram to proceed.
           // But wait, the Handler expects an ACK from the *slave*.
@@ -232,7 +232,7 @@ void test_lock_counter() {
   for (int i = 0; i < 4; ++i) {
     bus.writeByte(ebus::sym_syn);
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
-    if (handler.getState() != ebus::HandlerState::passiveReceiveMaster) break;
+    if (handler.getState() != ebus::HandlerState::passive_receive_master) break;
   }
 
   // Wait for completion of the first telegram
