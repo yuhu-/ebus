@@ -70,7 +70,7 @@ void ebus::Sequence::append(const Sequence& other) {
                    temp.sequence_.end());
 }
 
-const uint8_t& ebus::Sequence::operator[](const size_t index) const {
+uint8_t ebus::Sequence::operator[](size_t index) const {
   return sequence_[index];
 }
 

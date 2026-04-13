@@ -168,7 +168,7 @@ class Sequence {
    */
   void reserve(size_t capacity);
 
-  const uint8_t& operator[](const size_t index) const;
+  uint8_t operator[](size_t index) const;
   const std::vector<uint8_t> range(const size_t index, const size_t len) const;
 
   size_t size() const;

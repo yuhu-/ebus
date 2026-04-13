@@ -53,47 +53,47 @@ enum class DataType {
   hex8
 };
 
-const char* dataTypeToString(const DataType& data_type);
+const char* dataTypeToString(DataType data_type);
 DataType stringToDataType(const char* str);
-size_t sizeOfDataType(const DataType& data_type);
-bool typeOfDataType(const DataType& data_type);
-double_t roundDigits(const double_t& value, const uint8_t& digits);
+size_t sizeOfDataType(DataType data_type);
+bool typeOfDataType(DataType data_type);
+double_t roundDigits(double_t value, uint8_t digits);
 
 uint8_t byteToBcd(const std::vector<uint8_t>& bytes);
-std::vector<uint8_t> bcdToByte(const uint8_t& value);
+std::vector<uint8_t> bcdToByte(uint8_t value);
 
 uint8_t byteToUint8(const std::vector<uint8_t>& bytes);
-std::vector<uint8_t> uint8ToByte(const uint8_t& value);
+std::vector<uint8_t> uint8ToByte(uint8_t value);
 
 int8_t byteToInt8(const std::vector<uint8_t>& bytes);
-std::vector<uint8_t> int8ToByte(const int8_t& value);
+std::vector<uint8_t> int8ToByte(int8_t value);
 
 double_t byteToData1b(const std::vector<uint8_t>& bytes);
-std::vector<uint8_t> data1bToByte(const double_t& value);
+std::vector<uint8_t> data1bToByte(double_t value);
 
 double_t byteToData1c(const std::vector<uint8_t>& bytes);
-std::vector<uint8_t> data1cToByte(const double_t& value);
+std::vector<uint8_t> data1cToByte(double_t value);
 
 uint16_t byteToUint16(const std::vector<uint8_t>& bytes, Endian e);
-std::vector<uint8_t> uint16ToByte(const uint16_t& value, Endian e);
+std::vector<uint8_t> uint16ToByte(uint16_t value, Endian e);
 
 int16_t byteToInt16(const std::vector<uint8_t>& bytes, Endian e);
-std::vector<uint8_t> int16ToByte(const int16_t& value, Endian e);
+std::vector<uint8_t> int16ToByte(int16_t value, Endian e);
 
 double_t byteToData2b(const std::vector<uint8_t>& bytes, Endian e);
-std::vector<uint8_t> data2bToByte(const double_t& value, Endian e);
+std::vector<uint8_t> data2bToByte(double_t value, Endian e);
 
 double_t byteToData2c(const std::vector<uint8_t>& bytes, Endian e);
-std::vector<uint8_t> data2cToByte(const double_t& value, Endian e);
+std::vector<uint8_t> data2cToByte(double_t value, Endian e);
 
 uint32_t byteToUint32(const std::vector<uint8_t>& bytes, Endian e);
-std::vector<uint8_t> uint32ToByte(const uint32_t& value, Endian e);
+std::vector<uint8_t> uint32ToByte(uint32_t value, Endian e);
 
 int32_t byteToInt32(const std::vector<uint8_t>& bytes, Endian e);
-std::vector<uint8_t> int32ToByte(const int32_t& value, Endian e);
+std::vector<uint8_t> int32ToByte(int32_t value, Endian e);
 
 double_t byteToFloat(const std::vector<uint8_t>& bytes, Endian e);
-std::vector<uint8_t> floatToByte(const double_t& value, Endian e);
+std::vector<uint8_t> floatToByte(double_t value, Endian e);
 
 std::string byteToChar(const std::vector<uint8_t>& vec);
 std::vector<uint8_t> charToByte(const std::string& str);
