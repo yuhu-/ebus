@@ -205,30 +205,33 @@ bool ebus::EnhancedClient::recvFromClient(uint8_t& out) {
   inbound_buffer_.clear();
 
   if (!enhanced::Protocol::isValidSequence(buf[0], buf[1])) {
-    sendToClient({enhanced::RESP_ERROR_HOST, enhanced::ERR_FRAMING});
+    sendToClient({static_cast<uint8_t>(enhanced::Response::error_host),
+                  static_cast<uint8_t>(enhanced::Error::framing)});
     stop();
     return false;
   }
 
-  uint8_t cmd, data;
+  enhanced::Command cmd;
+  uint8_t data;
   enhanced::Protocol::decode(buf, cmd, data);
 
   switch (cmd) {
-    case enhanced::CMD_INIT:
-      sendToClient({enhanced::RESP_RESETTED, 0x0});
+    case enhanced::Command::init:
+      sendToClient({static_cast<uint8_t>(enhanced::Response::resetted), 0x0});
       return false;
-    case enhanced::CMD_SEND:
+    case enhanced::Command::send:
       out = data;
       return true;
-    case enhanced::CMD_START:
+    case enhanced::Command::start:
       // Note: Arbitration cancellation via SYN is handled by Request FSM
       out = data;
       return true;
-    case enhanced::CMD_INFO:
+    case enhanced::Command::info:
       return false;
     default:
       break;
   }
+
   return false;
 }
 
@@ -240,7 +243,7 @@ void ebus::EnhancedClient::sendToClient(const std::vector<uint8_t>& data) {
 
   if (data.size() == 1) {
     // Single byte from broadcast loop: always a received notification
-    cmd = enhanced::RESP_RECEIVED;
+    cmd = static_cast<uint8_t>(enhanced::Response::received);
     val = data[0];
   } else {
     cmd = data[0];
@@ -254,8 +257,9 @@ void ebus::EnhancedClient::sendToClient(const std::vector<uint8_t>& data) {
       return;
     }
 
-    // Short form is allowed for RESP_RECEIVED notifications where value < 0x80
-    if (cmd == enhanced::RESP_RECEIVED && val < 0x80) {
+    // Short form is allowed for RECEIVED notifications where value < 0x80
+    if (cmd == static_cast<uint8_t>(enhanced::Response::received) &&
+        val < 0x80) {
       outbound_buffer_.push_back(val);
     } else {
       uint8_t out[2];
@@ -273,16 +277,19 @@ ebus::Action ebus::EnhancedClient::onBusByte(const BusEventContext& ctx) {
   switch (ctx.result) {
     case RequestResult::first_lost:
     case RequestResult::second_lost:
-      sendToClient({enhanced::RESP_FAILED, ctx.byte});
+      sendToClient(
+          {static_cast<uint8_t>(enhanced::Response::failed), ctx.byte});
       return Action::stop_session;
     case RequestResult::first_error:
     case RequestResult::retry_error:
     case RequestResult::second_error:
-      sendToClient({enhanced::RESP_ERROR_EBUS, enhanced::ERR_FRAMING});
+      sendToClient({static_cast<uint8_t>(enhanced::Response::error_ebus),
+                    static_cast<uint8_t>(enhanced::Error::framing)});
       return Action::stop_session;
     case RequestResult::observe_syn:
     case RequestResult::observe_data:
-      sendToClient({enhanced::RESP_RECEIVED, ctx.byte});
+      sendToClient(
+          {static_cast<uint8_t>(enhanced::Response::received), ctx.byte});
       return Action::keep_active;
     case RequestResult::first_syn:
     case RequestResult::first_retry:
@@ -291,7 +298,8 @@ ebus::Action ebus::EnhancedClient::onBusByte(const BusEventContext& ctx) {
       return Action::keep_active;
     case RequestResult::first_won:
     case RequestResult::second_won:
-      sendToClient({enhanced::RESP_STARTED, ctx.byte});
+      sendToClient(
+          {static_cast<uint8_t>(enhanced::Response::started), ctx.byte});
       return Action::keep_active;
     default:
       break;

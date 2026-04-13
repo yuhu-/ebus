@@ -14,33 +14,41 @@ namespace ebus {
  */
 namespace enhanced {
 
-enum Command : uint8_t {
-  CMD_INIT = 0x00,
-  CMD_SEND = 0x01,
-  CMD_START = 0x02,
-  CMD_INFO = 0x03
+enum class Command : uint8_t {
+  init = 0x00,
+  send = 0x01,
+  start = 0x02,
+  info = 0x03
 };
 
-enum Response : uint8_t {
-  RESP_RESETTED = 0x00,
-  RESP_RECEIVED = 0x01,
-  RESP_STARTED = 0x02,
-  RESP_INFO = 0x03,
-  RESP_FAILED = 0x0a,
-  RESP_ERROR_EBUS = 0x0b,
-  RESP_ERROR_HOST = 0x0c
+enum class Response : uint8_t {
+  resetted = 0x00,
+  received = 0x01,
+  started = 0x02,
+  info = 0x03,
+  failed = 0x0a,
+  error_ebus = 0x0b,
+  error_host = 0x0c
 };
 
-enum Error : uint8_t { ERR_FRAMING = 0x00, ERR_OVERRUN = 0x01 };
+enum class Error : uint8_t { framing = 0x00, overrun = 0x01 };
 
 struct Protocol {
-  static inline void encode(uint8_t cmd, uint8_t val, uint8_t out[2]) {
-    out[0] = 0xc0 | (cmd << 2) | (val >> 6);
+  static inline void encode(Command cmd, uint8_t val, uint8_t out[2]) {
+    encode(static_cast<uint8_t>(cmd), val, out);
+  }
+
+  static inline void encode(Response res, uint8_t val, uint8_t out[2]) {
+    encode(static_cast<uint8_t>(res), val, out);
+  }
+
+  static inline void encode(uint8_t code, uint8_t val, uint8_t out[2]) {
+    out[0] = 0xc0 | (code << 2) | (val >> 6);
     out[1] = 0x80 | (val & 0x3f);
   }
 
-  static inline void decode(const uint8_t buf[2], uint8_t& cmd, uint8_t& val) {
-    cmd = (buf[0] >> 2) & 0x0f;
+  static inline void decode(const uint8_t buf[2], Command& cmd, uint8_t& val) {
+    cmd = static_cast<Command>((buf[0] >> 2) & 0x0f);
     val = ((buf[0] & 0x03) << 6) | (buf[1] & 0x3f);
   }
 
@@ -50,4 +58,5 @@ struct Protocol {
 };
 
 }  // namespace enhanced
+
 }  // namespace ebus

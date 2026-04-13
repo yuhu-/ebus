@@ -24,34 +24,35 @@ void test_protocol_logic() {
   std::cout << "--- Test: Enhanced Protocol Logic (0x7f/0x80) ---" << std::endl;
 
   uint8_t out[2];
-  uint8_t cmd, val;
+  uint8_t val;
+  ebus::enhanced::Command cmd;
 
   // Case 1: 0x7f (0111 1111)
   // cmd=1 (SEND), val=0x7f
   // byte 0: 11 <0001> <01> -> 1100 0101 -> 0xc5
   // byte 1: 10 <11 1111> -> 1011 1111 -> 0xbf
-  ebus::enhanced::Protocol::encode(ebus::enhanced::CMD_SEND, 0x7f, out);
+  ebus::enhanced::Protocol::encode(ebus::enhanced::Command::send, 0x7f, out);
   run_test("0x7f encoded high byte (0xc5)", out[0] == 0xc5);
   run_test("0x7f encoded low byte (0xbf)", out[1] == 0xbf);
 
   ebus::enhanced::Protocol::decode(out, cmd, val);
   run_test("0x7f decoded correctly",
-           cmd == ebus::enhanced::CMD_SEND && val == 0x7f);
+           cmd == ebus::enhanced::Command::send && val == 0x7f);
 
   // Case 2: 0x80 (1000 0000)
   // byte 0: 11 <0001> <10> -> 1100 0110 -> 0xc6
   // byte 1: 10 <00 0000> -> 1000 0000 -> 0x80
-  ebus::enhanced::Protocol::encode(ebus::enhanced::CMD_SEND, 0x80, out);
+  ebus::enhanced::Protocol::encode(ebus::enhanced::Command::send, 0x80, out);
   run_test("0x80 encoded correctly", out[0] == 0xc6 && out[1] == 0x80);
 
   ebus::enhanced::Protocol::decode(out, cmd, val);
   run_test("0x80 decoded correctly",
-           cmd == ebus::enhanced::CMD_SEND && val == 0x80);
+           cmd == ebus::enhanced::Command::send && val == 0x80);
 
   // Case 3: 0xff (1111 1111)
   // byte 0: 11 <0001> <11> -> 1100 0111 -> 0xc7
   // byte 1: 10 <11 1111> -> 1011 1111 -> 0xbf
-  ebus::enhanced::Protocol::encode(ebus::enhanced::CMD_SEND, 0xff, out);
+  ebus::enhanced::Protocol::encode(ebus::enhanced::Command::send, 0xff, out);
   run_test("0xff encoded correctly", out[0] == 0xc7 && out[1] == 0xbf);
 }
 
@@ -84,7 +85,8 @@ void test_validation() {
 void test_decode_robustness() {
   std::cout << "--- Test: Decode Robustness (Prefix Independence) ---"
             << std::endl;
-  uint8_t cmd, val;
+  uint8_t val;
+  ebus::enhanced::Command cmd;
   // CMD_SEND (1), Val 0xaa.
   // Logic: Correct wire format is 0xc6 0xaa.
   // We test with malformed prefixes (00 instead of 11/10) to ensure masking
@@ -92,7 +94,7 @@ void test_decode_robustness() {
   uint8_t malformed[] = {0x06, 0x2a};
   ebus::enhanced::Protocol::decode(malformed, cmd, val);
   run_test("Decode extracts bits regardless of prefix",
-           cmd == ebus::enhanced::CMD_SEND && val == 0xaa);
+           cmd == ebus::enhanced::Command::send && val == 0xaa);
 }
 
 int main() {
@@ -105,10 +107,12 @@ int main() {
   bool success = true;
   for (int c = 0; c < 16; ++c) {
     for (int v = 0; v < 256; ++v) {
-      uint8_t encoded[2], dCmd, dVal;
+      uint8_t encoded[2], dVal;
+      ebus::enhanced::Command dCmd;
       ebus::enhanced::Protocol::encode(c, v, encoded);
       ebus::enhanced::Protocol::decode(encoded, dCmd, dVal);
-      if (dCmd != c || dVal != v) success = false;
+      if (dCmd != static_cast<ebus::enhanced::Command>(c) || dVal != v)
+        success = false;
     }
   }
   run_test("Exhaustive roundtrip (4096 cases)", success);
