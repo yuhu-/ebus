@@ -30,8 +30,8 @@ class Device {
 
   DeviceInfo getDeviceInfo() const;
 
-  static const std::vector<uint8_t> createScanCommand(const uint8_t& slave);
-  const std::vector<std::vector<uint8_t>> createVendorScanCommands() const;
+  static std::vector<uint8_t> createScanCommand(uint8_t slave);
+  std::vector<std::vector<uint8_t>> createVendorScanCommands() const;
 
  private:
   uint8_t slave_ = 0;

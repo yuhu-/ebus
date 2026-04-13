@@ -79,14 +79,13 @@ ebus::DeviceInfo ebus::Device::getDeviceInfo() const {
   return info;
 }
 
-const std::vector<uint8_t> ebus::Device::createScanCommand(
-    const uint8_t& slave) {
+std::vector<uint8_t> ebus::Device::createScanCommand(uint8_t slave) {
   std::vector<uint8_t> command = {slave};
   command.insert(command.end(), VEC_070400.begin(), VEC_070400.end());
   return command;
 }
 
-const std::vector<std::vector<uint8_t>> ebus::Device::createVendorScanCommands()
+std::vector<std::vector<uint8_t>> ebus::Device::createVendorScanCommands()
     const {
   std::vector<std::vector<uint8_t>> commands;
   if (isVaillant()) {
