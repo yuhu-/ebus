@@ -40,7 +40,7 @@ static const char* getSequenceStateText(SequenceState state) {
   return values[static_cast<int>(state)];
 }
 
-ebus::TelegramType typeOf(const uint8_t byte);
+ebus::TelegramType typeOf(uint8_t byte);
 
 /**
  * Based on the eBUS specification, the Telegram class can parse, create, and
@@ -75,15 +75,15 @@ ebus::TelegramType typeOf(const uint8_t byte);
 class Telegram {
  public:
   Telegram() = default;
-  explicit Telegram(Sequence& seq);
+  explicit Telegram(Sequence& sequence);
 
-  void parse(Sequence& seq);
+  void parse(Sequence& sequence);
 
-  void createMaster(const uint8_t src, const std::vector<uint8_t>& vec);
-  void createMaster(Sequence& seq);
+  void createMaster(uint8_t source_address, const std::vector<uint8_t>& data);
+  void createMaster(Sequence& sequence);
 
-  void createSlave(const std::vector<uint8_t>& vec);
-  void createSlave(Sequence& seq);
+  void createSlave(const std::vector<uint8_t>& data);
+  void createSlave(Sequence& sequence);
 
   void clear();
 
@@ -97,39 +97,39 @@ class Telegram {
   uint8_t getSecondaryCommand() const;
 
   uint8_t getMasterNumberBytes() const;
-  const std::vector<uint8_t> getMasterDataBytes() const;
+  std::vector<uint8_t> getMasterDataBytes() const;
 
   uint8_t getMasterCRC() const;
   ebus::SequenceState getMasterState() const;
 
-  void setMasterACK(const uint8_t byte);
+  void setMasterACK(uint8_t ack_byte);
   uint8_t getMasterACK() const;
 
   // returns the slave sequence [NN DBx] without CRC byte
   const Sequence& getSlave() const;
 
   uint8_t getSlaveNumberBytes() const;
-  const std::vector<uint8_t> getSlaveDataBytes() const;
+  std::vector<uint8_t> getSlaveDataBytes() const;
 
   uint8_t getSlaveCRC() const;
   ebus::SequenceState getSlaveState() const;
 
-  void setSlaveACK(const uint8_t byte);
+  void setSlaveACK(uint8_t ack_byte);
   uint8_t getSlaveACK() const;
 
   ebus::TelegramType getType() const;
 
   bool isValid() const;
 
-  const std::string toString() const;
-  const std::string toStringMaster() const;
-  const std::string toStringSlave() const;
+  std::string toString() const;
+  std::string toStringMaster() const;
+  std::string toStringSlave() const;
 
-  const std::string toStringMasterState() const;
-  const std::string toStringSlaveState() const;
+  std::string toStringMasterState() const;
+  std::string toStringSlaveState() const;
 
-  static ebus::SequenceState checkMasterSequence(const Sequence& seq);
-  static ebus::SequenceState checkSlaveSequence(const Sequence& seq);
+  static ebus::SequenceState checkMasterSequence(const Sequence& sequence, size_t offset = 0);
+  static ebus::SequenceState checkSlaveSequence(const Sequence& sequence, size_t offset = 0);
 
  private:
   TelegramType telegram_type_ = TelegramType::undefined;
@@ -145,6 +145,9 @@ class Telegram {
   uint8_t slave_crc_ = sym_zero;
   uint8_t slave_ack_ = sym_zero;
   SequenceState slave_state_ = SequenceState::seq_empty;
+
+  // Internal helper to parse a chunk of a sequence into master or slave members
+  bool parseSequencePart(const Sequence& sequence, size_t& offset, bool is_master);
 };
 
 }  // namespace ebus
