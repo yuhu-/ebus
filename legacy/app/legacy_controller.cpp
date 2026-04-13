@@ -34,13 +34,13 @@ int main() {
 
   // 2. Setup Central Dispatcher Callback
   bool telegramSeen = false;
-  controller.setTelegramCallback(
-      [&](const ebus::MessageType&, const ebus::TelegramType&,
-          const std::vector<uint8_t>& master, const std::vector<uint8_t>&) {
-        std::cout << "  Dispatcher -> Observed Telegram: "
-                  << ebus::toString(master) << std::endl;
-        telegramSeen = true;
-      });
+  controller.setTelegramCallback([&](ebus::MessageType, ebus::TelegramType,
+                                     const std::vector<uint8_t>& master,
+                                     const std::vector<uint8_t>&) {
+    std::cout << "  Dispatcher -> Observed Telegram: " << ebus::toString(master)
+              << std::endl;
+    telegramSeen = true;
+  });
 
   // 3. Start the service
   controller.start();

@@ -264,8 +264,8 @@ void ebus::Scheduler::attachHandlerCallbacks() {
     event_queue_.tryPush(ev);
   });
 
-  handler_->setTelegramCallback([this](const MessageType& message_type,
-                                       const TelegramType& telegram_type,
+  handler_->setTelegramCallback([this](MessageType message_type,
+                                       TelegramType telegram_type,
                                        const std::vector<uint8_t>& master,
                                        const std::vector<uint8_t>& slave) {
     if (extern_telegram_callback_)

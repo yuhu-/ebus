@@ -27,7 +27,7 @@ TEST_CASE("Controller: Lifecycle and API", "[app][controller]") {
   // Central dispatcher callback
   std::atomic<bool> telegramSeen{false};
   controller.setTelegramCallback(
-      [&](const ebus::MessageType&, const ebus::TelegramType&,
+      [&](ebus::MessageType, ebus::TelegramType,
           const std::vector<uint8_t>& master,
           const std::vector<uint8_t>&) { telegramSeen = true; });
 

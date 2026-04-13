@@ -21,7 +21,7 @@
 #include "test_utils.hpp"
 
 struct TestCase {
-  ebus::MessageType messageType;
+  ebus::MessageType message_type;
   uint8_t address;
   std::string description;
   std::string read_string;
@@ -100,8 +100,8 @@ SCENARIO("Handler processes eBUS messages correctly", "[core][handler]") {
               INFO("reactive: " << ebus::toString(master) << " "
                                 << ebus::toString(*slave));
             });
-        handler.setTelegramCallback([&](const ebus::MessageType& messageType,
-                                        const ebus::TelegramType& telegramType,
+        handler.setTelegramCallback([&](ebus::MessageType message_type,
+                                        ebus::TelegramType telegram_type,
                                         const std::vector<uint8_t>& master,
                                         const std::vector<uint8_t>& slave) {
           telegram_count++;

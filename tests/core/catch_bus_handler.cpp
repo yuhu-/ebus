@@ -30,8 +30,7 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
     std::atomic<int> error_count{0};
 
     handler.setTelegramCallback(
-        [&](const ebus::MessageType&, const ebus::TelegramType&,
-            const std::vector<uint8_t>&,
+        [&](ebus::MessageType, ebus::TelegramType, const std::vector<uint8_t>&,
             const std::vector<uint8_t>&) { telegram_count++; });
     handler.setErrorCallback(
         [&](const std::string&, const std::vector<uint8_t>&,
@@ -46,7 +45,7 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
     busHandler.start();
 
     struct TestCase {
-      ebus::MessageType messageType;
+      ebus::MessageType message_type;
       uint8_t address;
       std::string description;
       std::string read_string;
@@ -74,7 +73,7 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
       bus.getQueue()->clear();
       handler.setSourceAddress(tc.address);
 
-      if (tc.messageType == ebus::MessageType::active) {
+      if (tc.message_type == ebus::MessageType::active) {
         handler.sendActiveMessage(ebus::toVector(tc.send_string));
       } else {
         auto seq = ebus::toVector(tc.read_string);
@@ -110,8 +109,7 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
 
     std::atomic<int> telegram_count{0};
     handler.setTelegramCallback(
-        [&](const ebus::MessageType&, const ebus::TelegramType&,
-            const std::vector<uint8_t>&,
+        [&](ebus::MessageType, ebus::TelegramType, const std::vector<uint8_t>&,
             const std::vector<uint8_t>&) { telegram_count++; });
 
     bus.start();
@@ -181,8 +179,7 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
 
     std::atomic<int> telegram_count{0};
     handler.setTelegramCallback(
-        [&](const ebus::MessageType&, const ebus::TelegramType&,
-            const std::vector<uint8_t>&,
+        [&](ebus::MessageType, ebus::TelegramType, const std::vector<uint8_t>&,
             const std::vector<uint8_t>&) { telegram_count++; });
 
     bus.start();

@@ -22,7 +22,7 @@
 #include "test_utils.hpp"
 
 struct TestCase {
-  ebus::MessageType messageType;
+  ebus::MessageType message_type;
   uint8_t address;
   std::string description;
   std::string read_string;
@@ -78,8 +78,8 @@ void reactiveMasterSlaveCallback(const std::vector<uint8_t>& master,
             << ebus::toString(*slave) << std::endl;
 }
 
-void telegramCallback(const ebus::MessageType& messageType,
-                      const ebus::TelegramType& telegramType,
+void telegramCallback(ebus::MessageType message_type,
+                      ebus::TelegramType telegramType,
                       const std::vector<uint8_t>& master,
                       const std::vector<uint8_t>& slave) {
   g_telegram_count++;
@@ -95,7 +95,7 @@ void telegramCallback(const ebus::MessageType& messageType,
       std::cout << "    type: master slave" << std::endl;
       break;
   }
-  switch (messageType) {
+  switch (message_type) {
     case ebus::MessageType::active:
       std::cout << "  active: ";
       break;

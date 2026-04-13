@@ -223,7 +223,7 @@ void ebus::Controller::constructMembers() {
   // provides an 'extern' callback hook which we use to feed the rest of the
   // app.
   impl_->scheduler_->setTelegramCallback(
-      [this](const MessageType& message_type, const TelegramType& telegram_type,
+      [this](MessageType message_type, TelegramType telegram_type,
              const std::vector<uint8_t>& master,
              const std::vector<uint8_t>& slave) {
         // 1. Update Internal State (Device Discovery)

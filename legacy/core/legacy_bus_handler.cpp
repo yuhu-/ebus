@@ -16,7 +16,7 @@
 #include "platform/bus.hpp"
 
 struct TestCase {
-  ebus::MessageType messageType;
+  ebus::MessageType message_type;
   uint8_t address;
   std::string description;
   std::string read_string;
@@ -32,8 +32,8 @@ std::atomic<int> g_telegram_count(0);
 std::atomic<int> g_error_count(0);
 bool g_detailed_output = false;
 
-void telegramCallback(const ebus::MessageType& messageType,
-                      const ebus::TelegramType& telegramType,
+void telegramCallback(ebus::MessageType message_type,
+                      ebus::TelegramType telegram_type,
                       const std::vector<uint8_t>& master,
                       const std::vector<uint8_t>& slave) {
   g_telegram_count++;
@@ -72,7 +72,7 @@ bool run_test(const TestCase& tc, ebus::Bus& bus, ebus::Handler& handler,
               << "=== Test: " << tc.description << " ===" << std::endl;
   }
 
-  if (tc.messageType == ebus::MessageType::active) {
+  if (tc.message_type == ebus::MessageType::active) {
     // Prepare active message
     std::vector<uint8_t> msg = ebus::toVector(tc.send_string);
     handler.sendActiveMessage(msg);

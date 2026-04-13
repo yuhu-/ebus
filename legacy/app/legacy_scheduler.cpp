@@ -202,8 +202,8 @@ int main() {
   installSimulatorResponses(bus, tests, source);
 
   ebus::Scheduler scheduler(&handler);
-  scheduler.setTelegramCallback([](const ebus::MessageType& messageType,
-                                   const ebus::TelegramType& telegramType,
+  scheduler.setTelegramCallback([](ebus::MessageType message_type,
+                                   ebus::TelegramType telegram_type,
                                    const std::vector<uint8_t>& master,
                                    const std::vector<uint8_t>& slave) {
     std::cout << "[scheduler] telegram " << ebus::toString(master) << " "
