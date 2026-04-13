@@ -128,8 +128,10 @@ class Telegram {
   std::string toStringMasterState() const;
   std::string toStringSlaveState() const;
 
-  static ebus::SequenceState checkMasterSequence(const Sequence& sequence, size_t offset = 0);
-  static ebus::SequenceState checkSlaveSequence(const Sequence& sequence, size_t offset = 0);
+  static ebus::SequenceState checkMasterSequence(const Sequence& sequence,
+                                                 size_t offset = 0);
+  static ebus::SequenceState checkSlaveSequence(const Sequence& sequence,
+                                                size_t offset = 0);
 
  private:
   TelegramType telegram_type_ = TelegramType::undefined;
@@ -147,7 +149,8 @@ class Telegram {
   SequenceState slave_state_ = SequenceState::seq_empty;
 
   // Internal helper to parse a chunk of a sequence into master or slave members
-  bool parseSequencePart(const Sequence& sequence, size_t& offset, bool is_master);
+  bool parseSequencePart(const Sequence& sequence, size_t& offset,
+                         bool is_master);
 };
 
 }  // namespace ebus

@@ -120,9 +120,9 @@ using ReactiveMasterSlaveCallback = std::function<void(
  */
 class Handler {
  public:
-  Handler(const uint8_t& address, Bus* bus, Request* request);
+  Handler(uint8_t source_address, Bus* bus, Request* request);
 
-  void setSourceAddress(const uint8_t& address);
+  void setSourceAddress(uint8_t source_address);
   uint8_t getSourceAddress() const;
   uint8_t getTargetAddress() const;
 
@@ -158,8 +158,8 @@ class Handler {
   TelegramCallback telegram_callback_ = nullptr;
   ErrorCallback error_callback_ = nullptr;
 
-  std::array<void (Handler::*)(const uint8_t&), NUM_HANDLER_STATES>
-      state_handlers_ = {};
+  std::array<void (Handler::*)(uint8_t), NUM_HANDLER_STATES> state_handlers_ =
+      {};
 
   HandlerState state_ = HandlerState::passive_receive_master;
   HandlerState last_state_ = HandlerState::passive_receive_master;
@@ -214,21 +214,21 @@ class Handler {
   size_t active_slave_dbx_ = 0;
   bool active_slave_repeated_ = false;
 
-  void passiveReceiveMaster(const uint8_t& byte);
-  void passiveReceiveMasterAcknowledge(const uint8_t& byte);
-  void passiveReceiveSlave(const uint8_t& byte);
-  void passiveReceiveSlaveAcknowledge(const uint8_t& byte);
-  void reactiveSendMasterPositiveAcknowledge(const uint8_t& byte);
-  void reactiveSendMasterNegativeAcknowledge(const uint8_t& byte);
-  void reactiveSendSlave(const uint8_t& byte);
-  void reactiveReceiveSlaveAcknowledge(const uint8_t& byte);
-  void requestBus(const uint8_t& byte);
-  void activeSendMaster(const uint8_t& byte);
-  void activeReceiveMasterAcknowledge(const uint8_t& byte);
-  void activeReceiveSlave(const uint8_t& byte);
-  void activeSendSlavePositiveAcknowledge(const uint8_t& byte);
-  void activeSendSlaveNegativeAcknowledge(const uint8_t& byte);
-  void releaseBus(const uint8_t& byte);
+  void passiveReceiveMaster(uint8_t byte);
+  void passiveReceiveMasterAcknowledge(uint8_t byte);
+  void passiveReceiveSlave(uint8_t byte);
+  void passiveReceiveSlaveAcknowledge(uint8_t byte);
+  void reactiveSendMasterPositiveAcknowledge(uint8_t byte);
+  void reactiveSendMasterNegativeAcknowledge(uint8_t byte);
+  void reactiveSendSlave(uint8_t byte);
+  void reactiveReceiveSlaveAcknowledge(uint8_t byte);
+  void requestBus(uint8_t byte);
+  void activeSendMaster(uint8_t byte);
+  void activeReceiveMasterAcknowledge(uint8_t byte);
+  void activeReceiveSlave(uint8_t byte);
+  void activeSendSlavePositiveAcknowledge(uint8_t byte);
+  void activeSendSlaveNegativeAcknowledge(uint8_t byte);
+  void releaseBus(uint8_t byte);
 
   void checkPassiveBuffers();
   void checkActiveBuffers();
@@ -236,7 +236,7 @@ class Handler {
   void callPassiveReset();
   void callActiveReset();
 
-  void callWrite(const uint8_t& byte);
+  void callWrite(uint8_t byte);
 
   void callOnBusRequestWon();
   void callOnBusRequestLost();
@@ -244,8 +244,7 @@ class Handler {
   void callOnReactiveMasterSlave(const std::vector<uint8_t>& master,
                                  std::vector<uint8_t>* const slave);
 
-  void callOnTelegram(const MessageType& message_type,
-                      const TelegramType& telegram_type,
+  void callOnTelegram(MessageType message_type, TelegramType telegram_type,
                       const std::vector<uint8_t>& master,
                       const std::vector<uint8_t>& slave);
 
