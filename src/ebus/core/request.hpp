@@ -89,13 +89,13 @@ class Request {
  public:
   explicit Request();
 
-  void setMaxLockCounter(const uint8_t& max_counter);
+  void setMaxLockCounter(uint8_t max_counter);
   uint8_t getLockCounter() const;
 
   bool busAvailable() const;
 
   // Request the bus from handler or external
-  bool requestBus(const uint8_t& address, const bool& external = false);
+  bool requestBus(uint8_t address, bool external = false);
 
   void setHandlerBusRequestedCallback(BusRequestedCallback callback);
   void setExternalBusRequestedCallback(BusRequestedCallback callback);
@@ -117,7 +117,7 @@ class Request {
 
   void reset();
 
-  RequestResult run(const uint8_t& byte);
+  RequestResult run(uint8_t byte);
 
   void resetMetrics();
   std::map<std::string, MetricValues> getMetrics() const;
@@ -139,8 +139,8 @@ class Request {
 
   StartBitCallback start_bit_callback_ = nullptr;
 
-  std::array<void (Request::*)(const uint8_t&), NUM_REQUEST_STATES>
-      state_requests_ = {};
+  std::array<void (Request::*)(uint8_t), NUM_REQUEST_STATES> state_requests_ =
+      {};
 
   RequestState state_ = RequestState::observe;
   RequestResult result_ = RequestResult::observe_syn;
@@ -154,10 +154,10 @@ class Request {
 
   Counter counter_;
 
-  void observe(const uint8_t& byte);
-  void first(const uint8_t& byte);
-  void retry(const uint8_t& byte);
-  void second(const uint8_t& byte);
+  void observe(uint8_t byte);
+  void first(uint8_t byte);
+  void retry(uint8_t byte);
+  void second(uint8_t byte);
 };
 
 }  // namespace ebus

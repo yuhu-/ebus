@@ -35,7 +35,7 @@ enum class MessageType { undefined, active, passive, reactive };
  * Callback for every valid telegram captured on the bus.
  */
 using TelegramCallback = std::function<void(
-    const MessageType& message_type, const TelegramType& telegram_type,
+    MessageType message_type, TelegramType telegram_type,
     const std::vector<uint8_t>& master, const std::vector<uint8_t>& slave)>;
 
 /**

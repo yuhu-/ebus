@@ -11,12 +11,8 @@ ebus::Request::Request()
     : state_requests_({&Request::observe, &Request::first, &Request::retry,
                        &Request::second}) {}
 
-void ebus::Request::setMaxLockCounter(const uint8_t& max_counter) {
-  if (max_counter > MAX_LOCK_COUNTER)
-    max_lock_counter_ = MAX_LOCK_COUNTER;
-  else
-    max_lock_counter_ = max_counter;
-
+void ebus::Request::setMaxLockCounter(uint8_t max_counter) {
+  max_lock_counter_ = std::min(max_counter, MAX_LOCK_COUNTER);
   if (lock_counter_ > max_lock_counter_) lock_counter_ = max_lock_counter_;
 }
 
@@ -27,7 +23,7 @@ bool ebus::Request::busAvailable() const {
          !bus_request_.load(std::memory_order_acquire);
 }
 
-bool ebus::Request::requestBus(const uint8_t& address, const bool& external) {
+bool ebus::Request::requestBus(uint8_t address, bool external) {
   if (busAvailable()) {
     request_address_ = address;
     external_bus_request_ = external;
@@ -82,7 +78,7 @@ void ebus::Request::reset() {
   state_ = RequestState::observe;
 }
 
-ebus::RequestResult ebus::Request::run(const uint8_t& byte) {
+ebus::RequestResult ebus::Request::run(uint8_t byte) {
   size_t idx = static_cast<size_t>(state_);
   if (idx < state_requests_.size() && state_requests_[idx])
     (this->*state_requests_[idx])(byte);
@@ -135,7 +131,7 @@ std::map<std::string, ebus::MetricValues> ebus::Request::getMetrics() const {
   return m;
 }
 
-void ebus::Request::observe(const uint8_t& byte) {
+void ebus::Request::observe(uint8_t byte) {
   if (byte == sym_syn) {
     if (lock_counter_ > 0) lock_counter_--;
     result_ = RequestResult::observe_syn;
@@ -144,7 +140,7 @@ void ebus::Request::observe(const uint8_t& byte) {
   }
 }
 
-void ebus::Request::first(const uint8_t& byte) {
+void ebus::Request::first(uint8_t byte) {
   if (byte == sym_syn) {
     counter_.first_syn_++;
     state_ = RequestState::first;
@@ -183,7 +179,7 @@ void ebus::Request::first(const uint8_t& byte) {
   }
 }
 
-void ebus::Request::retry(const uint8_t& byte) {
+void ebus::Request::retry(uint8_t byte) {
   if (byte == sym_syn) {
     counter_.retry_syn_++;
     state_ = RequestState::second;
@@ -195,7 +191,7 @@ void ebus::Request::retry(const uint8_t& byte) {
   }
 }
 
-void ebus::Request::second(const uint8_t& byte) {
+void ebus::Request::second(uint8_t byte) {
   if (byte == request_address_) {
     counter_.second_won_++;
     lock_counter_ = max_lock_counter_;
