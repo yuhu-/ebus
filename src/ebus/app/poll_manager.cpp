@@ -8,42 +8,43 @@
 #include <algorithm>
 
 uint32_t ebus::PollManager::addPollItem(
-    uint8_t priority, const std::vector<uint8_t>& message,
-    std::chrono::seconds interval,
-    std::function<void(const std::vector<uint8_t>&)> callback) {
+    uint8_t priority, ByteView message, std::chrono::seconds interval,
+    std::function<void(ByteView)> callback) {
   std::lock_guard<std::mutex> lock(mutex_);
   uint32_t id = next_id_++;
-  PollItem item{id,
-                priority,
-                message,
-                interval,
-                std::chrono::steady_clock::now() + interval,
-                std::move(callback)};
-  items_.push_back(std::move(item));
+  PollItem item;
+  item.id = id;
+  item.priority = priority;
+  item.message.assign(message);
+  item.interval = interval;
+  item.next_due = std::chrono::steady_clock::now() + interval;
+  item.callback = std::move(callback);
+
+  items_.insert(std::move(item));
   return id;
 }
 
 void ebus::PollManager::removePollItem(uint32_t id) {
   std::lock_guard<std::mutex> lock(mutex_);
-  items_.erase(std::remove_if(items_.begin(), items_.end(),
-                              [id](const PollItem& i) { return i.id == id; }),
-               items_.end());
+  auto it = std::find_if(items_.begin(), items_.end(),
+                         [id](const PollItem& i) { return i.id == id; });
+  if (it != items_.end()) items_.erase(it);
 }
 
-std::vector<ebus::PollItem> ebus::PollManager::getDueItems() {
+void ebus::PollManager::processDueItems(
+    const std::function<void(const PollItem&)>& callback) {
   std::lock_guard<std::mutex> lock(mutex_);
-  std::vector<PollItem> due;
   auto now = std::chrono::steady_clock::now();
 
-  for (auto& item : items_) {
-    if (now >= item.next_due) {
-      due.push_back(item);
-      // Schedule next occurrence based on current "now" to avoid
-      // drift or accumulation if the bus was busy.
-      item.next_due = now + item.interval;
-    }
+  while (!items_.empty() && now >= items_.begin()->next_due) {
+    // Extract the due item (node handles are C++17)
+    auto node = items_.extract(items_.begin());
+    callback(node.value());
+
+    // Update timer and re-insert
+    node.value().next_due = now + node.value().interval;
+    items_.insert(std::move(node));
   }
-  return due;
 }
 
 void ebus::PollManager::clear() {

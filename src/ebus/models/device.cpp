@@ -23,30 +23,29 @@ const std::vector<uint8_t> VEC_b5090127 = {0xb5, 0x09, 0x01, 0x27};
 
 uint8_t ebus::Device::getSlave() const { return slave_; }
 
-void ebus::Device::update(const std::vector<uint8_t>& master,
-                          const std::vector<uint8_t>& slave) {
+void ebus::Device::update(ByteView master, ByteView slave) {
   slave_ = master[1];
   if (ebus::matches(master, VEC_070400, 2))
-    vec_070400_ = slave;
+    vec_070400_.assign(slave);
   else if (ebus::matches(master, VEC_b5090124, 2))
-    vec_b5090124_ = slave;
+    vec_b5090124_.assign(slave);
   else if (ebus::matches(master, VEC_b5090125, 2))
-    vec_b5090125_ = slave;
+    vec_b5090125_.assign(slave);
   else if (ebus::matches(master, VEC_b5090126, 2))
-    vec_b5090126_ = slave;
+    vec_b5090126_.assign(slave);
   else if (ebus::matches(master, VEC_b5090127, 2))
-    vec_b5090127_ = slave;
+    vec_b5090127_.assign(slave);
 }
 
 std::vector<uint8_t> ebus::Device::getIdentificationData() const {
-  return vec_070400_;
+  return vec_070400_.toVector();
 }
 
 std::vector<uint8_t> ebus::Device::getVendorData(uint8_t sub) const {
-  if (sub == 0x24) return vec_b5090124_;
-  if (sub == 0x25) return vec_b5090125_;
-  if (sub == 0x26) return vec_b5090126_;
-  if (sub == 0x27) return vec_b5090127_;
+  if (sub == 0x24) return vec_b5090124_.toVector();
+  if (sub == 0x25) return vec_b5090125_.toVector();
+  if (sub == 0x26) return vec_b5090126_.toVector();
+  if (sub == 0x27) return vec_b5090127_.toVector();
   return {};
 }
 
@@ -58,8 +57,10 @@ ebus::DeviceInfo ebus::Device::getDeviceInfo() const {
     info.manufacturer = vec_070400_[1];
     info.manufacturer_name = ebus::manufacturerName(info.manufacturer);
     info.unit_id = ebus::byteToChar(ebus::range(vec_070400_, 2, 5));
-    info.software_version = ebus::toString(ebus::range(vec_070400_, 7, 2));
-    info.hardware_version = ebus::toString(ebus::range(vec_070400_, 9, 2));
+    info.software_version =
+        ebus::toString(ebus::ByteView(vec_070400_.data() + 7, 2));
+    info.hardware_version =
+        ebus::toString(ebus::ByteView(vec_070400_.data() + 9, 2));
   }
 
   if (isVaillant() && isVaillantValid()) {
@@ -79,34 +80,38 @@ ebus::DeviceInfo ebus::Device::getDeviceInfo() const {
   return info;
 }
 
-std::vector<uint8_t> ebus::Device::createScanCommand(uint8_t slave) {
-  std::vector<uint8_t> command = {slave};
-  command.insert(command.end(), VEC_070400.begin(), VEC_070400.end());
-  return command;
+ebus::Sequence ebus::Device::createScanCommand(uint8_t slave) {
+  Sequence sequence;
+  sequence.pushBack(slave, false);
+  for (uint8_t b : VEC_070400) sequence.pushBack(b, false);
+  return sequence;
 }
 
-std::vector<std::vector<uint8_t>> ebus::Device::createVendorScanCommands()
-    const {
-  std::vector<std::vector<uint8_t>> commands;
+std::vector<ebus::Sequence> ebus::Device::createVendorScanCommands() const {
+  std::vector<Sequence> commands;
   if (isVaillant()) {
     if (vec_b5090124_.size() == 0) {
-      std::vector<uint8_t> command = {slave_};
-      command.insert(command.end(), VEC_b5090124.begin(), VEC_b5090124.end());
+      Sequence command;
+      command.pushBack(slave_);
+      for (uint8_t b : VEC_b5090124) command.pushBack(b, false);
       commands.push_back(command);
     }
     if (vec_b5090125_.size() == 0) {
-      std::vector<uint8_t> command = {slave_};
-      command.insert(command.end(), VEC_b5090125.begin(), VEC_b5090125.end());
+      Sequence command;
+      command.pushBack(slave_, false);
+      for (uint8_t b : VEC_b5090125) command.pushBack(b, false);
       commands.push_back(command);
     }
     if (vec_b5090126_.size() == 0) {
-      std::vector<uint8_t> command = {slave_};
-      command.insert(command.end(), VEC_b5090126.begin(), VEC_b5090126.end());
+      Sequence command;
+      command.pushBack(slave_, false);
+      for (uint8_t b : VEC_b5090126) command.pushBack(b, false);
       commands.push_back(command);
     }
     if (vec_b5090127_.size() == 0) {
-      std::vector<uint8_t> command = {slave_};
-      command.insert(command.end(), VEC_b5090127.begin(), VEC_b5090127.end());
+      Sequence command;
+      command.pushBack(slave_, false);
+      for (uint8_t b : VEC_b5090127) command.pushBack(b, false);
       commands.push_back(command);
     }
   }

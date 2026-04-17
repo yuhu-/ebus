@@ -107,19 +107,15 @@ void ebus::Controller::setErrorCallback(ErrorCallback callback) {
   impl_->user_error_callback_ = std::move(callback);
 }
 
-void ebus::Controller::enqueue(
-    uint8_t priority, const std::vector<uint8_t>& message,
-    std::function<void(bool success, const std::vector<uint8_t>& master,
-                       const std::vector<uint8_t>& slave)>
-        callback) {
+void ebus::Controller::enqueue(uint8_t priority, ByteView message,
+                               ResultCallback callback) {
   if (impl_->scheduler_)
     impl_->scheduler_->enqueue(priority, message, std::move(callback));
 }
 
-uint32_t ebus::Controller::addPollItem(
-    uint8_t priority, const std::vector<uint8_t>& message,
-    std::chrono::seconds interval,
-    std::function<void(const std::vector<uint8_t>&)> callback) {
+uint32_t ebus::Controller::addPollItem(uint8_t priority, ByteView message,
+                                       std::chrono::seconds interval,
+                                       std::function<void(ByteView)> callback) {
   return impl_->poll_manager_
              ? impl_->poll_manager_->addPollItem(priority, message, interval,
                                                  std::move(callback))
@@ -224,26 +220,25 @@ void ebus::Controller::constructMembers() {
   // app.
   impl_->scheduler_->setTelegramCallback(
       [this](MessageType message_type, TelegramType telegram_type,
-             const std::vector<uint8_t>& master,
-             const std::vector<uint8_t>& slave) {
+             ByteView master_view, ByteView slave_view) {
         // 1. Update Internal State (Device Discovery)
         if (impl_->device_manager_) {
-          impl_->device_manager_->update(master, slave);
+          impl_->device_manager_->update(master_view, slave_view);
         }
         // 2. Inform the Application (Active, Passive, and Reactive)
         if (impl_->user_telegram_callback_) {
-          impl_->user_telegram_callback_(message_type, telegram_type, master,
-                                         slave);
+          impl_->user_telegram_callback_(message_type, telegram_type,
+                                         master_view, slave_view);
         }
       });
 
-  impl_->scheduler_->setErrorCallback(
-      [this](const std::string& error, const std::vector<uint8_t>& master,
-             const std::vector<uint8_t>& slave) {
-        if (impl_->user_error_callback_) {
-          impl_->user_error_callback_(error, master, slave);
-        }
-      });
+  impl_->scheduler_->setErrorCallback([this](std::string_view error,
+                                             ByteView master_view,
+                                             ByteView slave_view) {
+    if (impl_->user_error_callback_) {
+      impl_->user_error_callback_(error, master_view, slave_view);
+    }
+  });
 
   impl_->device_scanner_.reset(
       new DeviceScanner(config_.runtime.address, impl_->device_manager_.get()));
@@ -263,10 +258,9 @@ void ebus::Controller::constructMembers() {
 
 void ebus::Controller::run() {
   while (running_) {
-    auto due_items = impl_->poll_manager_->getDueItems();
-    for (const auto& item : due_items) {
+    impl_->poll_manager_->processDueItems([this](const PollItem& item) {
       impl_->scheduler_->enqueue(item.priority, item.message);
-    }
+    });
 
     if (impl_->scheduler_->queueSize() < 5) {
       auto scan_cmd = impl_->device_scanner_->nextCommand();

@@ -225,7 +225,7 @@ void ebus::ClientManager::run() {
 
       for (auto& client : active_clients) {
         if (client != current_sender && client->isConnected()) {
-          client->sendToClient({bctx.byte});
+          client->sendToClient(ByteView(&bctx.byte, 1));
         }
       }
     };

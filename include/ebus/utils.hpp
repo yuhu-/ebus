@@ -6,56 +6,20 @@
 #pragma once
 
 #include <algorithm>
-#include <array>
+#include <cmath>
 #include <cstdint>
 #include <initializer_list>
-#include <iomanip>
 #include <iterator>
-#include <sstream>
 #include <string>
 #include <type_traits>
 #include <utility>
 #include <vector>
 
+#include "ebus/addressing.hpp"
 #include "ebus/definitions.hpp"
+#include "ebus/protocol_math.hpp"
 
 namespace ebus {
-
-// --- Address Logic ---
-
-/**
- * Checks if a byte conforms to the eBUS master address rules (Spec 6.2.2.1).
- * Valid values x satisfy ((x + 1) & x) == 0 for both nibbles (value <= 15).
- */
-constexpr bool isMaster(uint8_t byte) {
-  return ((((byte >> 4) & 0x0f) + 1) & ((byte >> 4) & 0x0f)) == 0 &&
-         (((byte & 0x0f) + 1) & (byte & 0x0f)) == 0;
-}
-
-/**
- * Checks if a byte is a slave address (not master, not SYN, EXT, or BROADCAST).
- */
-constexpr bool isSlave(uint8_t byte) {
-  return !isMaster(byte) && byte != sym_syn && byte != sym_ext &&
-         byte != sym_broad;
-}
-
-/**
- * Checks if a byte is a valid target address (not SYN or EXT).
- */
-constexpr bool isTarget(uint8_t byte) {
-  return byte != sym_syn && byte != sym_ext;
-}
-
-constexpr uint8_t masterOf(uint8_t byte) {
-  return isMaster(static_cast<uint8_t>(byte - 5))
-             ? static_cast<uint8_t>(byte - 5)
-             : byte;
-}
-
-constexpr uint8_t slaveOf(uint8_t byte) {
-  return isMaster(byte) ? static_cast<uint8_t>(byte + 5) : byte;
-}
 
 // --- Hex and String Conversion ---
 std::string toString(uint8_t byte);
@@ -65,23 +29,44 @@ std::string toString(uint8_t byte);
  */
 template <typename T, typename = std::enable_if_t<!std::is_arithmetic_v<T>>>
 std::string toString(const T& container) {
-  std::ostringstream ostr;
-  for (auto b : container)
-    ostr << std::nouppercase << std::hex << std::setw(2) << std::setfill('0')
-         << static_cast<unsigned>(b);
-  return ostr.str();
+  if (std::empty(container)) return {};
+  static constexpr char hex_chars[] = "0123456789abcdef";
+  std::string res;
+  res.reserve(std::size(container) * 2);
+  for (auto b : container) {
+    uint8_t byte = static_cast<uint8_t>(b);
+    res.push_back(hex_chars[byte >> 4]);
+    res.push_back(hex_chars[byte & 0xf]);
+  }
+  return res;
 }
+
+inline std::string byteToChar(ByteView view) {
+  return std::string(reinterpret_cast<const char*>(view.data()), view.size());
+}
+
+inline std::string byteToHex(ByteView view) { return toString(view); }
 
 std::vector<uint8_t> toVector(const std::string& str);
 
+/**
+ * Rounds a floating point value to a specific number of decimal places.
+ */
+inline double roundDigits(double value, uint8_t digits) noexcept {
+  double decimals = std::pow(10, digits);
+  return std::round(value * decimals) / decimals;
+}
+
 // --- Vector Helpers ---
 
+/**
+ * Returns a non-owning ByteView of a range within a container.
+ */
 template <typename T>
-std::vector<uint8_t> range(const T& container, size_t index, size_t len) {
+ByteView range(const T& container, size_t index, size_t len) {
   if (index >= container.size()) return {};
-  size_t end_idx = std::min(index + len, container.size());
-  return std::vector<uint8_t>(container.begin() + index,
-                              container.begin() + end_idx);
+  size_t count = std::min(len, container.size() - index);
+  return ByteView(container.data() + index, count);
 }
 
 template <typename T, typename U>
@@ -115,47 +100,6 @@ template <typename T>
 bool matches(const T& container, std::initializer_list<uint8_t> search,
              size_t index = 0) {
   return matches<T, std::initializer_list<uint8_t>>(container, search, index);
-}
-
-// --- Protocol Math ---
-
-namespace detail {
-/**
- * Helper function to calculate a single CRC table entry at compile time.
- */
-constexpr uint8_t calculateCrcEntry(uint8_t index) {
-  uint8_t crc = index;
-  for (int i = 0; i < 8; ++i) {
-    if (crc & 0x80) {
-      crc = static_cast<uint8_t>((crc << 1) ^ 0x9b);
-    } else {
-      crc = static_cast<uint8_t>(crc << 1);
-    }
-  }
-  return crc;
-}
-
-/**
- * Generates the CRC table as a constexpr array.
- */
-constexpr std::array<uint8_t, 256> generateCrcTable() {
-  std::array<uint8_t, 256> table{};
-  for (std::size_t i = 0; i < 256; ++i) {
-    table[i] = calculateCrcEntry(static_cast<uint8_t>(i));
-  }
-  return table;
-}
-
-}  // namespace detail
-
-inline constexpr std::array<uint8_t, 256> crc_table =
-    detail::generateCrcTable();
-
-/**
- * Calculates the eBUS 8-bit CRC using the 0x9b polynomial.
- */
-constexpr uint8_t calcCRC(uint8_t byte, uint8_t init) {
-  return static_cast<uint8_t>(crc_table[init] ^ byte);
 }
 
 }  // namespace ebus

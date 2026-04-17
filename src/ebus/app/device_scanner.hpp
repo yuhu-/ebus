@@ -12,6 +12,7 @@
 
 #include <chrono>
 #include <cstdint>
+#include <ebus/sequence.hpp>
 #include <mutex>
 #include <queue>
 #include <vector>
@@ -21,6 +22,13 @@
 
 namespace ebus {
 
+/**
+ * The DeviceScanner is responsible for generating eBUS scan commands to
+ * discover devices on the bus. It operates as a state machine that prioritizes
+ * three scanning modes: Manual Scan (initiated by explicit requests), Full Scan
+ * (exhaustive 0x00-0xff), and Startup Scan (periodic discovery of known
+ * devices). The scanner maintains internal queues for manual and startup scans.
+ */
 class DeviceScanner {
  public:
   DeviceScanner(uint8_t address, DeviceManager* device_manager);
@@ -44,7 +52,7 @@ class DeviceScanner {
   void stop();
 
   // Returns the next command to send, or empty vector if idle
-  std::vector<uint8_t> nextCommand();
+  Sequence nextCommand();
 
  private:
   DeviceManager* device_manager_ = nullptr;
@@ -55,7 +63,7 @@ class DeviceScanner {
 
   // Commands explicitly requested via scanAddress() or scanObservedDevices().
   // These are always returned first.
-  std::queue<std::vector<uint8_t>> manual_queue_;
+  std::queue<Sequence> manual_queue_;
 
   // Timing configuration for the discovery/startup phase.
   std::chrono::seconds initial_scan_delay_{10};
@@ -76,7 +84,7 @@ class DeviceScanner {
   // Threshold to stop periodic discovery
   uint8_t max_startup_scans_ = 5;
   // Buffer of commands for the currently active startup scan iteration
-  std::queue<std::vector<uint8_t>> startup_queue_;
+  std::queue<Sequence> startup_queue_;
 
   // Internal helper to add a scan command without locking (caller must hold
   // lock)

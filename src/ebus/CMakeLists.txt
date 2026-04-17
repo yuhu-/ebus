@@ -15,8 +15,6 @@ set(APP_SOURCES
 set(CORE_SOURCES
     core/handler.cpp
     core/request.cpp
-    core/sequence.cpp
-    core/telegram.cpp
 )
 
 # Data Models and Types

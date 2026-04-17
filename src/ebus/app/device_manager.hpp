@@ -3,16 +3,11 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-// Manages devices on the eBUS, identified by their slave address and
-// identification data. Collects data from eBUS messages to identify devices and
-// their manufacturers. Provides methods to generate scan commands for
-// discovered devices. Also tracks master and slave addresses observed on the
-// bus.
-
 #pragma once
 
 #include <cstdint>
 #include <ebus/device.hpp>
+#include <ebus/sequence.hpp>
 #include <map>
 #include <mutex>
 #include <set>
@@ -22,12 +17,18 @@
 
 namespace ebus {
 
+/**
+ * Manages devices on the eBUS, identified by their slave address and
+ * identification data. Collects data from eBUS messages to identify devices and
+ * their manufacturers. Provides methods to generate scan commands for
+ * discovered devices. Also tracks master and slave addresses observed on the
+ * bus.
+ */
 class DeviceManager {
  public:
   void setOwnAddress(uint8_t address);
 
-  void update(const std::vector<uint8_t>& master,
-              const std::vector<uint8_t>& slave);
+  void update(ByteView master, ByteView slave);
 
   void resetAddresses();
 
@@ -37,8 +38,8 @@ class DeviceManager {
   std::map<uint8_t, uint32_t> getSlaves() const;
 
   std::set<uint8_t> getObservedSlaves() const;
-  const std::vector<std::vector<uint8_t>> vendorScanCommands() const;
-  const std::vector<std::vector<uint8_t>> createScanCommands(
+  std::vector<Sequence> vendorScanCommands() const;
+  std::vector<Sequence> createScanCommands(
       const std::vector<std::string>& addresses) const;
 
  private:

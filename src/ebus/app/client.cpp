@@ -7,7 +7,6 @@
 
 #include <ebus/utils.hpp>
 
-#include "app/enhanced_protocol.hpp"
 #include "core/request.hpp"
 
 #if defined(ESP32)
@@ -91,7 +90,7 @@ bool ebus::ReadOnlyClient::recvFromClient(uint8_t& out) {
   return false;
 }
 
-void ebus::ReadOnlyClient::sendToClient(const std::vector<uint8_t>& data) {
+void ebus::ReadOnlyClient::sendToClient(ByteView data) {
   if (fd_ < 0 || data.empty()) return;
   {
     std::lock_guard<std::mutex> lock(buffer_mutex_);
@@ -122,7 +121,7 @@ bool ebus::RegularClient::recvFromClient(uint8_t& out) {
   return ::recv(fd_, &out, 1, MSG_DONTWAIT) == 1;
 }
 
-void ebus::RegularClient::sendToClient(const std::vector<uint8_t>& data) {
+void ebus::RegularClient::sendToClient(ByteView data) {
   if (fd_ < 0 || data.empty()) return;
   {
     std::lock_guard<std::mutex> lock(buffer_mutex_);
@@ -148,7 +147,7 @@ ebus::Action ebus::RegularClient::onBusByte(const BusEventContext& ctx) {
     case RequestResult::second_error:
       return Action::stop_session;
     case RequestResult::observe_data:
-      sendToClient({ctx.byte});
+      sendToClient(ByteView(&ctx.byte, 1));
       return Action::keep_active;
     case RequestResult::first_syn:
     case RequestResult::first_retry:
@@ -157,7 +156,7 @@ ebus::Action ebus::RegularClient::onBusByte(const BusEventContext& ctx) {
       return Action::keep_active;
     case RequestResult::first_won:
     case RequestResult::second_won:
-      sendToClient({ctx.byte});
+      sendToClient(ByteView(&ctx.byte, 1));
       return Action::keep_active;
     default:
       break;
@@ -169,55 +168,51 @@ ebus::EnhancedClient::EnhancedClient(int fd, Request* request)
     : AbstractClient(fd, request, true) {}
 
 bool ebus::EnhancedClient::wantsToSend() {
-  if (!inbound_buffer_.empty()) return true;
+  if (inbound_len_ > 0) return true;
   uint8_t dummy;
   return ::recv(fd_, &dummy, 1, MSG_PEEK | MSG_DONTWAIT) > 0;
 }
 
 bool ebus::EnhancedClient::recvFromClient(uint8_t& out) {
   // If we have an incomplete command in the buffer, try to finish it
-  if (inbound_buffer_.empty()) {
+  if (inbound_len_ == 0) {
     uint8_t b;
     if (::recv(fd_, &b, 1, MSG_DONTWAIT) != 1) return false;
-    inbound_buffer_.push_back(b);
+    inbound_buf_[inbound_len_++] = b;
   }
 
-  uint8_t b1 = inbound_buffer_[0];
+  uint8_t b1 = inbound_buf_[0];
 
   // Short form (< 0x80) is a single byte
   if (b1 < 0x80) {
     out = b1;
-    inbound_buffer_.clear();
+    inbound_len_ = 0;
     return true;
   }
 
   // Enhanced sequences are always 2 bytes
-  uint8_t buf[2];
-  if (inbound_buffer_.size() < 2) {
+  if (inbound_len_ < 2) {
     uint8_t b2;
-    if (::recv(fd_, &b2, 1, MSG_DONTWAIT) != 1)
-      return false;  // Still missing second byte
-    inbound_buffer_.push_back(b2);
+    if (::recv(fd_, &b2, 1, MSG_DONTWAIT) != 1) return false;
+    inbound_buf_[inbound_len_++] = b2;
   }
 
-  buf[0] = inbound_buffer_[0];
-  buf[1] = inbound_buffer_[1];
-  inbound_buffer_.clear();
-
-  if (!enhanced::Protocol::isValidSequence(buf[0], buf[1])) {
-    sendToClient({static_cast<uint8_t>(enhanced::Response::error_host),
-                  static_cast<uint8_t>(enhanced::Error::framing)});
+  if (!enhanced::Protocol::isValidSequence(inbound_buf_[0], inbound_buf_[1])) {
+    sendEnhancedResponse(enhanced::Response::error_host,
+                         static_cast<uint8_t>(enhanced::Error::framing));
+    inbound_len_ = 0;
     stop();
     return false;
   }
 
   enhanced::Command cmd;
   uint8_t data;
-  enhanced::Protocol::decode(buf, cmd, data);
+  enhanced::Protocol::decode(inbound_buf_, cmd, data);
+  inbound_len_ = 0;
 
   switch (cmd) {
     case enhanced::Command::init:
-      sendToClient({static_cast<uint8_t>(enhanced::Response::resetted), 0x0});
+      sendEnhancedResponse(enhanced::Response::resetted, 0x00);
       return false;
     case enhanced::Command::send:
       out = data;
@@ -235,7 +230,13 @@ bool ebus::EnhancedClient::recvFromClient(uint8_t& out) {
   return false;
 }
 
-void ebus::EnhancedClient::sendToClient(const std::vector<uint8_t>& data) {
+void ebus::EnhancedClient::sendEnhancedResponse(enhanced::Response res,
+                                                uint8_t val) {
+  uint8_t raw[2] = {static_cast<uint8_t>(res), val};
+  sendToClient(ByteView(raw, 2));
+}
+
+void ebus::EnhancedClient::sendToClient(ByteView data) {
   if (fd_ < 0 || data.empty()) return;
 
   uint8_t cmd;
@@ -277,19 +278,17 @@ ebus::Action ebus::EnhancedClient::onBusByte(const BusEventContext& ctx) {
   switch (ctx.result) {
     case RequestResult::first_lost:
     case RequestResult::second_lost:
-      sendToClient(
-          {static_cast<uint8_t>(enhanced::Response::failed), ctx.byte});
+      sendEnhancedResponse(enhanced::Response::failed, ctx.byte);
       return Action::stop_session;
     case RequestResult::first_error:
     case RequestResult::retry_error:
     case RequestResult::second_error:
-      sendToClient({static_cast<uint8_t>(enhanced::Response::error_ebus),
-                    static_cast<uint8_t>(enhanced::Error::framing)});
+      sendEnhancedResponse(enhanced::Response::error_ebus,
+                           static_cast<uint8_t>(enhanced::Error::framing));
       return Action::stop_session;
     case RequestResult::observe_syn:
     case RequestResult::observe_data:
-      sendToClient(
-          {static_cast<uint8_t>(enhanced::Response::received), ctx.byte});
+      sendEnhancedResponse(enhanced::Response::received, ctx.byte);
       return Action::keep_active;
     case RequestResult::first_syn:
     case RequestResult::first_retry:
@@ -298,8 +297,7 @@ ebus::Action ebus::EnhancedClient::onBusByte(const BusEventContext& ctx) {
       return Action::keep_active;
     case RequestResult::first_won:
     case RequestResult::second_won:
-      sendToClient(
-          {static_cast<uint8_t>(enhanced::Response::started), ctx.byte});
+      sendEnhancedResponse(enhanced::Response::started, ctx.byte);
       return Action::keep_active;
     default:
       break;

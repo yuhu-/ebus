@@ -6,12 +6,12 @@
 #include <algorithm>
 #include <cstddef>
 #include <ebus/data_types.hpp>
+#include <ebus/sequence.hpp>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
 #include <string>
 
-#include "core/sequence.hpp"
 #include "core/telegram.hpp"
 
 void printSequence(const std::string& strSequence) {
@@ -121,43 +121,45 @@ void printEncodeDecode(uint8_t c, uint8_t d) {
 
 void printFloatTestLittleEndian() {
   float f = 21.0375f;
-  std::vector<uint8_t> bytes =
-      ebus::floatToByte(static_cast<double_t>(f), ebus::Endian::little);
-  std::cout << "float: " << f << " to bytes: " << ebus::toString(bytes)
+  ebus::Sequence ef =
+      ebus::encode(ebus::DataType::float4, f, ebus::Endian::little);
+  std::cout << "float: " << f << " to bytes: " << ebus::toString(ef)
             << std::endl;
-  double_t df = ebus::byteToFloat(bytes, ebus::Endian::little);
-  std::cout << "bytes: " << ebus::toString(bytes) << " to float: " << df
-            << std::endl
+  auto df = ebus::decode(ebus::DataType::float4, ef, ebus::Endian::little);
+  std::cout << "bytes: " << ebus::toString(ef)
+            << " to float: " << ebus::asDouble(*df) << std::endl
             << std::endl;
 
   std::vector<uint8_t> h = {0xcd, 0x4c, 0xb2, 0x41};
-  double_t dh = ebus::byteToFloat(h, ebus::Endian::little);
-  std::cout << "bytes: " << ebus::toString(h) << " to float: " << dh
-            << std::endl;
-  std::vector<uint8_t> bh = ebus::floatToByte(dh, ebus::Endian::little);
-  std::cout << "float: " << dh << " to bytes: " << ebus::toString(bh)
-            << std::endl
+  auto dh = ebus::decode(ebus::DataType::float4, h, ebus::Endian::little);
+  std::cout << "bytes: " << ebus::toString(h)
+            << " to float: " << ebus::asDouble(*dh) << std::endl;
+  ebus::Sequence bh =
+      ebus::encode(ebus::DataType::float4, *dh, ebus::Endian::little);
+  std::cout << "float: " << ebus::asDouble(*dh)
+            << " to bytes: " << ebus::toString(bh) << std::endl
             << std::endl;
 }
 
 void printFloatTestBigEndian() {
   float f = 21.0375f;
-  std::vector<uint8_t> bytes =
-      ebus::floatToByte(static_cast<double_t>(f), ebus::Endian::big);
-  std::cout << "float: " << f << " to bytes: " << ebus::toString(bytes)
+  ebus::Sequence ef =
+      ebus::encode(ebus::DataType::float4, f, ebus::Endian::big);
+  std::cout << "float: " << f << " to bytes: " << ebus::toString(ef)
             << std::endl;
-  double_t df = ebus::byteToFloat(bytes, ebus::Endian::big);
-  std::cout << "bytes: " << ebus::toString(bytes) << " to float: " << df
-            << std::endl
+  auto df = ebus::decode(ebus::DataType::float4, ef, ebus::Endian::big);
+  std::cout << "bytes: " << ebus::toString(ef)
+            << " to float: " << ebus::asDouble(*df) << std::endl
             << std::endl;
 
   std::vector<uint8_t> h = {0x41, 0xa8, 0x4c, 0x7f};
-  double_t dh = ebus::byteToFloat(h, ebus::Endian::big);
-  std::cout << "bytes: " << ebus::toString(h) << " to float: " << dh
-            << std::endl;
-  std::vector<uint8_t> bh = ebus::floatToByte(dh, ebus::Endian::big);
-  std::cout << "float: " << dh << " to bytes: " << ebus::toString(bh)
-            << std::endl
+  auto dh = ebus::decode(ebus::DataType::float4, h, ebus::Endian::big);
+  std::cout << "bytes: " << ebus::toString(h)
+            << " to float: " << ebus::asDouble(*dh) << std::endl;
+  ebus::Sequence bh =
+      ebus::encode(ebus::DataType::float4, *dh, ebus::Endian::big);
+  std::cout << "float: " << ebus::asDouble(*dh)
+            << " to bytes: " << ebus::toString(bh) << std::endl
             << std::endl;
 }
 
@@ -189,7 +191,7 @@ int main() {
 
   createTelegram("1008b5110203001e000a0e028709b104032c00007e00");
 
-  // checkTargetMasterSlave();
+  checkTargetMasterSlave();
 
   printSequence("3010b504020d00");
 

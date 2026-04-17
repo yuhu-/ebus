@@ -86,7 +86,11 @@
         "csignal": "cpp",
         "cassert": "cpp",
         "complex": "cpp",
-        "regex": "cpp"
+        "regex": "cpp",
+        "cfenv": "cpp",
+        "codecvt": "cpp",
+        "shared_mutex": "cpp",
+        "core": "cpp"
     },
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
     "C_Cpp.autoAddFileAssociations": true

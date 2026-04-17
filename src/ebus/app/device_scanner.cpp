@@ -32,7 +32,7 @@ void ebus::DeviceScanner::setScanOnStartup(bool enable) {
   if (enable) {
     // Reset state and arm the timer for the first scan
     startup_scan_count_ = 0;
-    std::queue<std::vector<uint8_t>> empty;
+    std::queue<Sequence> empty;
     std::swap(startup_queue_, empty);
     next_startup_scan_time_ =
         std::chrono::steady_clock::now() + initial_scan_delay_;
@@ -69,7 +69,7 @@ void ebus::DeviceScanner::scanObservedDevices() {
   // device_manager is thread-safe, so we can query it outside our lock
   // to reduce contention, although getObservedSlaves copies the set anyway.
   std::set<uint8_t> slaves;
-  std::vector<std::vector<uint8_t>> vendor_cmds;
+  std::vector<Sequence> vendor_cmds;  // Correct type
 
   if (device_manager_) {
     slaves = device_manager_->getObservedSlaves();
@@ -116,16 +116,16 @@ void ebus::DeviceScanner::stop() {
   full_scan_ = false;
   scan_on_startup_ = false;
 
-  std::queue<std::vector<uint8_t>> empty_manual;
+  std::queue<Sequence> empty_manual;
   std::swap(manual_queue_, empty_manual);
 
-  std::queue<std::vector<uint8_t>> empty_startup;
+  std::queue<Sequence> empty_startup;
   std::swap(startup_queue_, empty_startup);
 
   next_startup_scan_time_ = std::chrono::steady_clock::time_point::max();
 }
 
-std::vector<uint8_t> ebus::DeviceScanner::nextCommand() {
+ebus::Sequence ebus::DeviceScanner::nextCommand() {
   std::lock_guard<std::mutex> lock(mutex_);
   // Priority 1: Manual Scan
   if (!manual_queue_.empty()) {

@@ -7,11 +7,13 @@
 
 #include <cstdint>
 #include <ebus/config.hpp>
+#include <ebus/definitions.hpp>
 #include <memory>
 #include <mutex>
 #include <string>
 #include <vector>
 
+#include "app/enhanced_protocol.hpp"
 #include "core/request.hpp"
 
 namespace ebus {
@@ -59,7 +61,7 @@ class AbstractClient {
    */
   virtual bool wantsToSend() = 0;
   virtual bool recvFromClient(uint8_t& out) = 0;
-  virtual void sendToClient(const std::vector<uint8_t>& data) = 0;
+  virtual void sendToClient(ByteView data) = 0;
 
   // Logic to determine if the client wants to continue sending after a byte
   virtual Action onBusByte(const BusEventContext& ctx) = 0;
@@ -84,7 +86,7 @@ class ReadOnlyClient : public AbstractClient {
 
   bool wantsToSend() override;
   bool recvFromClient(uint8_t& out) override;
-  void sendToClient(const std::vector<uint8_t>& data) override;
+  void sendToClient(ByteView data) override;
 
   Action onBusByte(const BusEventContext& ctx) override;
 };
@@ -99,7 +101,7 @@ class RegularClient : public AbstractClient {
 
   bool wantsToSend() override;
   bool recvFromClient(uint8_t& out) override;
-  void sendToClient(const std::vector<uint8_t>& data) override;
+  void sendToClient(ByteView data) override;
 
   Action onBusByte(const BusEventContext& ctx) override;
 };
@@ -114,12 +116,17 @@ class EnhancedClient : public AbstractClient {
 
   bool wantsToSend() override;
   bool recvFromClient(uint8_t& out) override;
-  void sendToClient(const std::vector<uint8_t>& data) override;
+  void sendToClient(ByteView data) override;
 
   Action onBusByte(const BusEventContext& ctx) override;
 
  private:
-  std::vector<uint8_t> inbound_buffer_;
+  // The Enhanced protocol accumulation buffer (max 2 bytes for escaped
+  // sequences)
+  uint8_t inbound_buf_[2];
+  size_t inbound_len_ = 0;
+
+  void sendEnhancedResponse(ebus::enhanced::Response res, uint8_t val);
 };
 
 std::unique_ptr<AbstractClient> createClient(int fd, Request* req,

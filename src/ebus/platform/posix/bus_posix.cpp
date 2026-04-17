@@ -7,8 +7,8 @@
 #include "platform/posix/bus_posix.hpp"
 
 #include <algorithm>
-
-#include "utils/utils_internal.hpp"
+#include <ebus/definitions.hpp>
+#include <ebus/protocol_math.hpp>
 
 ebus::BusPosix::BusPosix(const BusConfig& config, const RuntimeConfig& runtime,
                          Request* request)

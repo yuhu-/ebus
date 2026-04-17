@@ -58,42 +58,41 @@ int main() {
   // * Data: 9.25°C - DATA2B -> 0x40, 0x09
   std::vector<uint8_t> broadcastMsg = {0xfe, 0xb5, 0x16, 0x03,
                                        0x01, 0x40, 0x09};
-  deviceB.addPollItem(
-      10, broadcastMsg, 5s, [](const std::vector<uint8_t>& data) {
-        std::cout << "[Device B] Periodic broadcast sent." << std::endl;
-      });
+  deviceB.addPollItem(10, broadcastMsg, 5s, [](ebus::ByteView byte_view) {
+    std::cout << "[Device B] Periodic broadcast sent." << std::endl;
+  });
 
   // Try to enqueue a faulty broadcast message every 7 seconds.
   // This library offers several helper functions, such as...ebus::to_vector("")
   deviceB.addPollItem(
-      15, ebus::toVector("feb5160301"), 7s,
-      [](const std::vector<uint8_t>& data) {
+      15, ebus::toVector("feb5160301"), 7s, [](ebus::ByteView byte_view) {
         std::cout << "[Device B] Periodic faulty broadcast sent." << std::endl;
       });
 
   // --- 5. Logic for Device A: Decoding of a received message ---
   // We set a callback to decode the received message from DeviceB.
   deviceA.setTelegramCallback(
-      [](ebus::MessageType mType, ebus::TelegramType tType,
-         const std::vector<uint8_t>& master,  // master includes source address
-         const std::vector<uint8_t>& slave) {
-        if (tType == ebus::TelegramType::broadcast) {
-          if (ebus::matches(master, {0xfe, 0xb5, 0x16, 0x03, 0x01}, 1))
+      [](ebus::MessageType message_type, ebus::TelegramType telegram_type,
+         ebus::ByteView master_view, ebus::ByteView slave_view) {
+        if (telegram_type == ebus::TelegramType::broadcast) {
+          if (ebus::matches(master_view, {0xfe, 0xb5, 0x16, 0x03, 0x01}, 1))
             std::cout << "[Device A] Observed broadcast from "
-                      << ebus::toString(master[0]) << " with data: "
-                      << ebus::byteToData2b(ebus::range(master, 6, 2),
-                                            ebus::Endian::little)
-                      << "°C)" << std::endl;
+                      << ebus::toString(master_view[0]) << " with data: "
+                      << ebus::toString(
+                             *ebus::decode(ebus::DataType::data2b,
+                                           ebus::range(master_view, 6, 2)),
+                             "°C")
+                      << std::endl;
         }
       });
 
   // --- 6. Add a error callback handler to Device B ---
-  deviceB.setErrorCallback([](const std::string& errorMessage,
-                              const std::vector<uint8_t>& master,
-                              const std::vector<uint8_t>& slave) {
-    std::cout << "[Device B] Error message " << errorMessage << " master: '"
-              << ebus::toString(master) << "' slave: '" << ebus::toString(slave)
-              << "'" << std::endl;
+  deviceB.setErrorCallback([](std::string_view error_message,
+                              ebus::ByteView master_view,
+                              ebus::ByteView slave_view) {
+    std::cout << "[Device B] Error message " << error_message << " master: '"
+              << ebus::toString(master_view) << "' slave: '"
+              << ebus::toString(slave_view) << "'" << std::endl;
   });
 
   // --- 7. Start the simulation ---

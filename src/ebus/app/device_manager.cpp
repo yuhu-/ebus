@@ -11,8 +11,7 @@ void ebus::DeviceManager::setOwnAddress(uint8_t address) {
   own_address_ = address;
 }
 
-void ebus::DeviceManager::update(const std::vector<uint8_t>& master,
-                                 const std::vector<uint8_t>& slave) {
+void ebus::DeviceManager::update(ByteView master, ByteView slave) {
   std::lock_guard<std::mutex> lock(mutex_);
   // Addresses
   masters_[master[0]]++;
@@ -33,8 +32,8 @@ std::vector<ebus::DeviceInfo> ebus::DeviceManager::getDeviceInfo() const {
   std::lock_guard<std::mutex> lock(mutex_);
   std::vector<DeviceInfo> result;
   result.reserve(devices_.size());
-  for (const auto& device : devices_) {
-    result.push_back(device.second.getDeviceInfo());
+  for (const auto& [address, device] : devices_) {
+    result.push_back(device.getDeviceInfo());
   }
   return result;
 }
@@ -64,10 +63,9 @@ std::set<uint8_t> ebus::DeviceManager::getObservedSlaves() const {
   return slaves;
 }
 
-const std::vector<std::vector<uint8_t>>
-ebus::DeviceManager::vendorScanCommands() const {
+std::vector<ebus::Sequence> ebus::DeviceManager::vendorScanCommands() const {
   std::lock_guard<std::mutex> lock(mutex_);
-  std::vector<std::vector<uint8_t>> result;
+  std::vector<Sequence> result;
   for (const auto& device : devices_) {
     const auto commands = device.second.createVendorScanCommands();
     if (!commands.empty())
@@ -76,7 +74,7 @@ ebus::DeviceManager::vendorScanCommands() const {
   return result;
 }
 
-const std::vector<std::vector<uint8_t>> ebus::DeviceManager::createScanCommands(
+std::vector<ebus::Sequence> ebus::DeviceManager::createScanCommands(
     const std::vector<std::string>& addresses) const {
   std::set<uint8_t> scan_slaves;
   for (const std::string& address : addresses) {
@@ -87,7 +85,7 @@ const std::vector<std::vector<uint8_t>> ebus::DeviceManager::createScanCommands(
         (first_byte != ebus::slaveOf(own_address_)))
       scan_slaves.insert(first_byte);
   }
-  std::vector<std::vector<uint8_t>> result;
+  std::vector<Sequence> result;
   for (const uint8_t slave : scan_slaves)
     result.push_back(Device::createScanCommand(slave));
   return result;

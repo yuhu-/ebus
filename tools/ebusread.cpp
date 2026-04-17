@@ -93,7 +93,9 @@ std::string services(std::vector<uint8_t> master, std::vector<uint8_t> slave) {
     ostr << ":";
     ostr << ebus::toString(master[7]);
     ostr << " - ";
-    ostr << ebus::byteToData2b(ebus::range(master, 5, 2), ebus::Endian::little);
+    ostr << ebus::toString(
+        *ebus::decode(ebus::DataType::data2b, ebus::range(master, 5, 2)),
+        " °C");
     ostr << " °C";
   } else if (master[2] == 0x07 && master[3] == 0x04) {
     ostr << "0704: " + ebus::toString(master[1]);
@@ -121,8 +123,9 @@ std::string services(std::vector<uint8_t> master, std::vector<uint8_t> slave) {
   } else if (master[2] == 0xb5 && master[3] == 0x16 && master[4] == 0x03 &&
              master[5] == 0x01) {
     ostr << "b5160301: ";
-    ostr << ebus::byteToData2b(ebus::range(master, 6, 2), ebus::Endian::little);
-    ostr << " °C";
+    ostr << ebus::toString(
+        *ebus::decode(ebus::DataType::data2b, ebus::range(master, 6, 2)),
+        " °C");
   }
   return ostr.str();
 }

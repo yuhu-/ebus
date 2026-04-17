@@ -66,8 +66,8 @@ static const char* getHandlerStateText(HandlerState state) {
 using BusRequestWonCallback = std::function<void()>;
 using BusRequestLostCallback = std::function<void()>;
 
-using ReactiveMasterSlaveCallback = std::function<void(
-    const std::vector<uint8_t>& master, std::vector<uint8_t>* const slave)>;
+using ReactiveMasterSlaveCallback =
+    std::function<void(ByteView master, Sequence& response)>;
 
 #define EBUS_HANDLER_COUNTER_LIST    \
   X(messages_passive_master_slave)   \
@@ -134,7 +134,7 @@ class Handler {
 
   HandlerState getState() const;
 
-  bool sendActiveMessage(const std::vector<uint8_t>& message);
+  bool sendActiveMessage(ByteView message);
   bool isActiveMessagePending() const;
 
   void reset();
@@ -241,16 +241,13 @@ class Handler {
   void callOnBusRequestWon();
   void callOnBusRequestLost();
 
-  void callOnReactiveMasterSlave(const std::vector<uint8_t>& master,
-                                 std::vector<uint8_t>* const slave);
+  void callOnReactiveMasterSlave(ByteView master, Sequence& slave_response);
 
   void callOnTelegram(MessageType message_type, TelegramType telegram_type,
-                      const std::vector<uint8_t>& master,
-                      const std::vector<uint8_t>& slave);
+                      ByteView master_view, ByteView slave_view);
 
-  void callOnError(const std::string& error_message,
-                   const std::vector<uint8_t>& master,
-                   const std::vector<uint8_t>& slave);
+  void callOnError(std::string_view error_message, ByteView master_view,
+                   ByteView slave_view);
 };
 
 }  // namespace ebus

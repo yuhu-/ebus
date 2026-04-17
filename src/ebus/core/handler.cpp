@@ -79,7 +79,7 @@ void ebus::Handler::setErrorCallback(ErrorCallback callback) {
 
 ebus::HandlerState ebus::Handler::getState() const { return state_; }
 
-bool ebus::Handler::sendActiveMessage(const std::vector<uint8_t>& message) {
+bool ebus::Handler::sendActiveMessage(ByteView message) {
   if (active_message_) return false;
   if (message.empty()) return false;
 
@@ -88,8 +88,9 @@ bool ebus::Handler::sendActiveMessage(const std::vector<uint8_t>& message) {
     active_message_ = true;
   } else {
     counter_.error_active_master_++;
-    callOnError("errorActiveMaster", active_master_.toVector(),
-                active_slave_.toVector());
+    callOnError("errorActiveMaster",
+                {active_master_.data(), active_master_.size()},
+                {active_slave_.data(), active_slave_.size()});
   }
 
   return active_message_;
@@ -239,18 +240,21 @@ void ebus::Handler::passiveReceiveMaster(uint8_t byte) {
       if (passive_telegram_.getMasterState() == SequenceState::seq_ok) {
         if (passive_telegram_.getType() == TelegramType::broadcast) {
           callOnTelegram(MessageType::passive, TelegramType::broadcast,
-                         passive_telegram_.getMaster().toVector(),
-                         passive_telegram_.getSlave().toVector());
+                         {passive_telegram_.getMaster().data(),
+                          passive_telegram_.getMaster().size()},
+                         {passive_telegram_.getSlave().data(),
+                          passive_telegram_.getSlave().size()});
           counter_.messages_passive_broadcast_++;
           callPassiveReset();
         } else if (passive_master_[1] == source_address_) {
           callWrite(sym_ack);
           state_ = HandlerState::reactive_send_master_positive_acknowledge;
         } else if (passive_master_[1] == target_address_) {
-          std::vector<uint8_t> response;
-          callOnReactiveMasterSlave(passive_telegram_.getMaster().toVector(),
-                                    &response);
-          passive_telegram_.createSlave(response);
+          passive_slave_.clear();
+          callOnReactiveMasterSlave(passive_telegram_.getMaster(),
+                                    passive_slave_);
+
+          passive_telegram_.createSlave(passive_slave_);
           if (passive_telegram_.getSlaveState() == SequenceState::seq_ok) {
             passive_slave_ = passive_telegram_.getSlave();
             passive_slave_.pushBack(passive_telegram_.getSlaveCRC(), false);
@@ -259,8 +263,9 @@ void ebus::Handler::passiveReceiveMaster(uint8_t byte) {
             state_ = HandlerState::reactive_send_master_positive_acknowledge;
           } else {
             counter_.error_reactive_slave_++;
-            callOnError("errorReactiveSlave", passive_master_.toVector(),
-                        passive_slave_.toVector());
+            callOnError("errorReactiveSlave",
+                        {passive_master_.data(), passive_master_.size()},
+                        {passive_slave_.data(), passive_slave_.size()});
             callPassiveReset();
             callWrite(sym_syn);
             state_ = HandlerState::release_bus;
@@ -272,8 +277,9 @@ void ebus::Handler::passiveReceiveMaster(uint8_t byte) {
         if (passive_master_[1] == source_address_ ||
             passive_master_[1] == target_address_) {
           counter_.error_reactive_master_++;
-          callOnError("errorReactiveMaster", passive_master_.toVector(),
-                      passive_slave_.toVector());
+          callOnError("errorReactiveMaster",
+                      {passive_master_.data(), passive_master_.size()},
+                      {passive_slave_.data(), passive_slave_.size()});
           passive_telegram_.clear();
           passive_master_.clear();
           passive_master_dbx_ = 0;
@@ -284,8 +290,9 @@ void ebus::Handler::passiveReceiveMaster(uint8_t byte) {
           state_ = HandlerState::passive_receive_master_acknowledge;
         } else {
           counter_.error_passive_master_++;
-          callOnError("errorPassiveMaster", passive_master_.toVector(),
-                      passive_slave_.toVector());
+          callOnError("errorPassiveMaster",
+                      {passive_master_.data(), passive_master_.size()},
+                      {passive_slave_.data(), passive_slave_.size()});
           callPassiveReset();
         }
       }
@@ -303,8 +310,10 @@ void ebus::Handler::passiveReceiveMasterAcknowledge(uint8_t byte) {
   if (byte == sym_ack) {
     if (passive_telegram_.getType() == TelegramType::master_master) {
       callOnTelegram(MessageType::passive, TelegramType::master_master,
-                     passive_telegram_.getMaster().toVector(),
-                     passive_telegram_.getSlave().toVector());
+                     {passive_telegram_.getMaster().data(),
+                      passive_telegram_.getMaster().size()},
+                     {passive_telegram_.getSlave().data(),
+                      passive_telegram_.getSlave().size()});
       counter_.messages_passive_master_master_++;
       callPassiveReset();
       state_ = HandlerState::passive_receive_master;
@@ -323,8 +332,9 @@ void ebus::Handler::passiveReceiveMasterAcknowledge(uint8_t byte) {
         passive_master_[3] == 0x04)
       counter_.reset_passive_0704_++;
 
-    callOnError("errorPassiveMasterACK", passive_master_.toVector(),
-                passive_slave_.toVector());
+    callOnError("errorPassiveMasterACK",
+                {passive_master_.data(), passive_master_.size()},
+                {passive_slave_.data(), passive_slave_.size()});
     callPassiveReset();
     state_ = HandlerState::passive_receive_master;
   }
@@ -343,8 +353,9 @@ void ebus::Handler::passiveReceiveSlave(uint8_t byte) {
     passive_telegram_.createSlave(passive_slave_);
     if (passive_telegram_.getSlaveState() != SequenceState::seq_ok) {
       counter_.error_passive_slave_++;
-      callOnError("errorPassiveSlave", passive_master_.toVector(),
-                  passive_slave_.toVector());
+      callOnError("errorPassiveSlave",
+                  {passive_master_.data(), passive_master_.size()},
+                  {passive_slave_.data(), passive_slave_.size()});
     }
     state_ = HandlerState::passive_receive_slave_acknowledge;
   }
@@ -353,8 +364,10 @@ void ebus::Handler::passiveReceiveSlave(uint8_t byte) {
 void ebus::Handler::passiveReceiveSlaveAcknowledge(uint8_t byte) {
   if (byte == sym_ack) {
     callOnTelegram(MessageType::passive, TelegramType::master_slave,
-                   passive_telegram_.getMaster().toVector(),
-                   passive_telegram_.getSlave().toVector());
+                   {passive_telegram_.getMaster().data(),
+                    passive_telegram_.getMaster().size()},
+                   {passive_telegram_.getSlave().data(),
+                    passive_telegram_.getSlave().size()});
     counter_.messages_passive_master_slave_++;
     callPassiveReset();
     state_ = HandlerState::passive_receive_master;
@@ -365,19 +378,22 @@ void ebus::Handler::passiveReceiveSlaveAcknowledge(uint8_t byte) {
     state_ = HandlerState::passive_receive_slave;
   } else {
     counter_.error_passive_slave_ack_++;
-    callOnError("errorPassiveSlaveACK", passive_master_.toVector(),
-                passive_slave_.toVector());
+    callOnError("errorPassiveSlaveACK",
+                {passive_master_.data(), passive_master_.size()},
+                {passive_slave_.data(), passive_slave_.size()});
     callPassiveReset();
     state_ = HandlerState::passive_receive_master;
   }
 }
 
-void ebus::Handler::reactiveSendMasterPositiveAcknowledge(uint8_t byte) {
-  (void)byte;  // unused
+void ebus::Handler::reactiveSendMasterPositiveAcknowledge(
+    [[maybe_unused]] uint8_t byte) {
   if (passive_telegram_.getType() == TelegramType::master_master) {
     callOnTelegram(MessageType::reactive, TelegramType::master_master,
-                   passive_telegram_.getMaster().toVector(),
-                   passive_telegram_.getSlave().toVector());
+                   {passive_telegram_.getMaster().data(),
+                    passive_telegram_.getMaster().size()},
+                   {passive_telegram_.getSlave().data(),
+                    passive_telegram_.getSlave().size()});
     counter_.messages_reactive_master_master_++;
     callPassiveReset();
     state_ = HandlerState::passive_receive_master;
@@ -387,21 +403,21 @@ void ebus::Handler::reactiveSendMasterPositiveAcknowledge(uint8_t byte) {
   }
 }
 
-void ebus::Handler::reactiveSendMasterNegativeAcknowledge(uint8_t byte) {
-  (void)byte;  // unused
+void ebus::Handler::reactiveSendMasterNegativeAcknowledge(
+    [[maybe_unused]] uint8_t byte) {
   state_ = HandlerState::passive_receive_master;
   if (!passive_master_repeated_) {
     passive_master_repeated_ = true;
   } else {
     counter_.error_reactive_master_ack_++;
-    callOnError("errorReactiveMasterACK", passive_master_.toVector(),
-                passive_slave_.toVector());
+    callOnError("errorReactiveMasterACK",
+                {passive_master_.data(), passive_master_.size()},
+                {passive_slave_.data(), passive_slave_.size()});
     callPassiveReset();
   }
 }
 
-void ebus::Handler::reactiveSendSlave(uint8_t byte) {
-  (void)byte;  // unused
+void ebus::Handler::reactiveSendSlave([[maybe_unused]] uint8_t byte) {
   passive_slave_index_++;
   if (passive_slave_index_ >= passive_slave_.size())
     state_ = HandlerState::reactive_receive_slave_acknowledge;
@@ -412,8 +428,10 @@ void ebus::Handler::reactiveSendSlave(uint8_t byte) {
 void ebus::Handler::reactiveReceiveSlaveAcknowledge(uint8_t byte) {
   if (byte == sym_ack) {
     callOnTelegram(MessageType::reactive, TelegramType::master_slave,
-                   passive_telegram_.getMaster().toVector(),
-                   passive_telegram_.getSlave().toVector());
+                   {passive_telegram_.getMaster().data(),
+                    passive_telegram_.getMaster().size()},
+                   {passive_telegram_.getSlave().data(),
+                    passive_telegram_.getSlave().size()});
     counter_.messages_reactive_master_slave_++;
     callPassiveReset();
     state_ = HandlerState::passive_receive_master;
@@ -424,8 +442,9 @@ void ebus::Handler::reactiveReceiveSlaveAcknowledge(uint8_t byte) {
     state_ = HandlerState::reactive_send_slave;
   } else {
     counter_.error_reactive_slave_ack_++;
-    callOnError("errorReactiveSlaveACK", passive_master_.toVector(),
-                passive_slave_.toVector());
+    callOnError("errorReactiveSlaveACK",
+                {passive_master_.data(), passive_master_.size()},
+                {passive_slave_.data(), passive_slave_.size()});
     callPassiveReset();
     state_ = HandlerState::passive_receive_master;
   }
@@ -516,8 +535,9 @@ void ebus::Handler::activeSendMaster(uint8_t byte) {
   // If the check fails, we abort immediately to prevent bus contention.
   if (byte != active_master_[active_master_index_]) {
     counter_.error_active_master_++;
-    callOnError("errorActiveMasterEcho", active_master_.toVector(),
-                active_slave_.toVector());
+    callOnError("errorActiveMasterEcho",
+                {active_master_.data(), active_master_.size()},
+                {active_slave_.data(), active_slave_.size()});
     callActiveReset();
     // Do not increment; abort and release bus or retry logic could trigger here
   }
@@ -526,8 +546,9 @@ void ebus::Handler::activeSendMaster(uint8_t byte) {
   if (active_master_index_ >= active_master_.size()) {
     if (active_telegram_.getType() == TelegramType::broadcast) {
       callOnTelegram(MessageType::active, TelegramType::broadcast,
-                     active_telegram_.getMaster().toVector(),
-                     active_telegram_.getSlave().toVector());
+                     {active_master_.data(), active_master_.size()},
+                     {active_slave_.data(), active_slave_.size()});
+
       counter_.messages_active_broadcast_++;
       callActiveReset();
       callWrite(sym_syn);
@@ -544,8 +565,8 @@ void ebus::Handler::activeReceiveMasterAcknowledge(uint8_t byte) {
   if (byte == sym_ack) {
     if (active_telegram_.getType() == TelegramType::master_master) {
       callOnTelegram(MessageType::active, TelegramType::master_master,
-                     active_telegram_.getMaster().toVector(),
-                     active_telegram_.getSlave().toVector());
+                     {active_master_.data(), active_master_.size()},
+                     {active_slave_.data(), active_slave_.size()});
       counter_.messages_active_master_master_++;
       callActiveReset();
       callWrite(sym_syn);
@@ -564,8 +585,9 @@ void ebus::Handler::activeReceiveMasterAcknowledge(uint8_t byte) {
         active_master_[3] == 0x04)
       counter_.reset_active_0704_++;
 
-    callOnError("errorActiveMasterACK", active_master_.toVector(),
-                active_slave_.toVector());
+    callOnError("errorActiveMasterACK",
+                {active_master_.data(), active_master_.size()},
+                {active_slave_.data(), active_slave_.size()});
     callActiveReset();
     callWrite(sym_syn);
     state_ = HandlerState::release_bus;
@@ -588,8 +610,9 @@ void ebus::Handler::activeReceiveSlave(uint8_t byte) {
       state_ = HandlerState::active_send_slave_positive_acknowledge;
     } else {
       counter_.error_active_slave_++;
-      callOnError("errorActiveSlave", active_master_.toVector(),
-                  active_slave_.toVector());
+      callOnError("errorActiveSlave",
+                  {active_master_.data(), active_master_.size()},
+                  {active_slave_.data(), active_slave_.size()});
       active_slave_.clear();
       active_slave_dbx_ = 0;
       callWrite(sym_nak);
@@ -598,34 +621,36 @@ void ebus::Handler::activeReceiveSlave(uint8_t byte) {
   }
 }
 
-void ebus::Handler::activeSendSlavePositiveAcknowledge(uint8_t byte) {
-  (void)byte;  // unused
-  callOnTelegram(MessageType::active, TelegramType::master_slave,
-                 active_telegram_.getMaster().toVector(),
-                 active_telegram_.getSlave().toVector());
+void ebus::Handler::activeSendSlavePositiveAcknowledge(
+    [[maybe_unused]] uint8_t byte) {
+  callOnTelegram(
+      MessageType::active, TelegramType::master_slave,
+      {active_telegram_.getMaster().data(),
+       active_telegram_.getMaster().size()},
+      {active_telegram_.getSlave().data(), active_telegram_.getSlave().size()});
   counter_.messages_active_master_slave_++;
   callActiveReset();
   callWrite(sym_syn);
   state_ = HandlerState::release_bus;
 }
 
-void ebus::Handler::activeSendSlaveNegativeAcknowledge(uint8_t byte) {
-  (void)byte;  // unused
+void ebus::Handler::activeSendSlaveNegativeAcknowledge(
+    [[maybe_unused]] uint8_t byte) {
   if (!active_slave_repeated_) {
     active_slave_repeated_ = true;
     state_ = HandlerState::active_receive_slave;
   } else {
     counter_.error_active_slave_ack_++;
-    callOnError("errorActiveSlaveACK", active_master_.toVector(),
-                active_slave_.toVector());
+    callOnError("errorActiveSlaveACK",
+                {active_master_.data(), active_master_.size()},
+                {active_slave_.data(), active_slave_.size()});
     callActiveReset();
     callWrite(sym_syn);
     state_ = HandlerState::release_bus;
   }
 }
 
-void ebus::Handler::releaseBus(uint8_t byte) {
-  (void)byte;  // unused
+void ebus::Handler::releaseBus([[maybe_unused]] uint8_t byte) {
   state_ = HandlerState::passive_receive_master;
 }
 
@@ -639,8 +664,9 @@ void ebus::Handler::releaseBus(uint8_t byte) {
  */
 void ebus::Handler::checkPassiveBuffers() {
   if (passive_master_.size() > 0 || passive_slave_.size() > 0) {
-    callOnError("checkPassiveBuffers", passive_master_.toVector(),
-                passive_slave_.toVector());
+    callOnError("checkPassiveBuffers",
+                {passive_master_.data(), passive_master_.size()},
+                {passive_slave_.data(), passive_slave_.size()});
 
     if (passive_master_.size() == 1 && passive_master_[0] == 0x00)
       counter_.reset_passive_00_++;
@@ -663,8 +689,9 @@ void ebus::Handler::checkPassiveBuffers() {
  */
 void ebus::Handler::checkActiveBuffers() {
   if (active_master_.size() > 0 || active_slave_.size() > 0) {
-    callOnError("checkActiveBuffers", active_master_.toVector(),
-                active_slave_.toVector());
+    callOnError("checkActiveBuffers",
+                {active_master_.data(), active_master_.size()},
+                {active_slave_.data(), active_slave_.size()});
 
     counter_.reset_active_++;
 
@@ -722,32 +749,30 @@ void ebus::Handler::callOnBusRequestLost() {
   }
 }
 
-void ebus::Handler::callOnReactiveMasterSlave(
-    const std::vector<uint8_t>& master, std::vector<uint8_t>* const slave) {
+void ebus::Handler::callOnReactiveMasterSlave(ByteView master,
+                                              Sequence& slave_response) {
   if (reactive_master_slave_callback_) {
     callback_reactive_.markBegin();
-    reactive_master_slave_callback_(master, slave);
+    reactive_master_slave_callback_(master, slave_response);
     callback_reactive_.markEnd();
   }
 }
 
 void ebus::Handler::callOnTelegram(MessageType message_type,
                                    TelegramType telegram_type,
-                                   const std::vector<uint8_t>& master,
-                                   const std::vector<uint8_t>& slave) {
+                                   ByteView master_view, ByteView slave_view) {
   if (telegram_callback_) {
     callback_telegram_.markBegin();
-    telegram_callback_(message_type, telegram_type, master, slave);
+    telegram_callback_(message_type, telegram_type, master_view, slave_view);
     callback_telegram_.markEnd();
   }
 }
 
-void ebus::Handler::callOnError(const std::string& error_message,
-                                const std::vector<uint8_t>& master,
-                                const std::vector<uint8_t>& slave) {
+void ebus::Handler::callOnError(std::string_view error_message,
+                                ByteView master_view, ByteView slave_view) {
   if (error_callback_) {
     callback_error_.markBegin();
-    error_callback_(error_message, master, slave);
+    error_callback_(error_message, master_view, slave_view);
     callback_error_.markEnd();
   }
 }

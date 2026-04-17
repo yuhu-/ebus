@@ -49,16 +49,12 @@ class Controller {
   void setErrorCallback(ErrorCallback callback);
 
   // Scheduling & Polling
-  void enqueue(
-      uint8_t priority, const std::vector<uint8_t>& message,
-      std::function<void(bool success, const std::vector<uint8_t>& master,
-                         const std::vector<uint8_t>& slave)>
-          callback = nullptr);
+  void enqueue(uint8_t priority, ByteView message,
+               ResultCallback callback = nullptr);
 
-  uint32_t addPollItem(
-      uint8_t priority, const std::vector<uint8_t>& message,
-      std::chrono::seconds interval,
-      std::function<void(const std::vector<uint8_t>&)> callback = nullptr);
+  uint32_t addPollItem(uint8_t priority, ByteView message,
+                       std::chrono::seconds interval,
+                       std::function<void(ByteView)> callback = nullptr);
   void removePollItem(uint32_t id);
 
   // Scanning

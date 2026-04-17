@@ -4,331 +4,435 @@
  */
 
 #include <algorithm>
+#include <charconv>
+#include <cmath>
 #include <cstring>
 #include <ebus/data_types.hpp>
+#include <ebus/sequence.hpp>
 #include <ebus/utils.hpp>
+#include <iomanip>
 #include <limits>
-#include <map>
+#include <sstream>
+#include <string_view>
 #include <utility>
 
-std::map<ebus::DataType, const char*> data_type_names = {
-    {ebus::DataType::error, "ERROR"},     {ebus::DataType::bcd, "BCD"},
-    {ebus::DataType::uint8, "UINT8"},     {ebus::DataType::int8, "INT8"},
-    {ebus::DataType::data1b, "DATA1B"},   {ebus::DataType::data1c, "DATA1C"},
-    {ebus::DataType::uint16, "UINT16"},   {ebus::DataType::uint16r, "UINT16R"},
-    {ebus::DataType::int16, "INT16"},     {ebus::DataType::int16r, "INT16R"},
-    {ebus::DataType::data2b, "DATA2B"},   {ebus::DataType::data2br, "DATA2BR"},
-    {ebus::DataType::data2c, "DATA2C"},   {ebus::DataType::data2cr, "DATA2CR"},
-    {ebus::DataType::uint32, "UINT32"},   {ebus::DataType::uint32r, "UINT32R"},
-    {ebus::DataType::int32, "INT32"},     {ebus::DataType::int32r, "INT32R"},
-    {ebus::DataType::float_val, "FLOAT"}, {ebus::DataType::floatr, "FLOATR"},
-    {ebus::DataType::char1, "CHAR1"},     {ebus::DataType::char2, "CHAR2"},
-    {ebus::DataType::char3, "CHAR3"},     {ebus::DataType::char4, "CHAR4"},
-    {ebus::DataType::char5, "CHAR5"},     {ebus::DataType::char6, "CHAR6"},
-    {ebus::DataType::char7, "CHAR7"},     {ebus::DataType::char8, "CHAR8"},
-    {ebus::DataType::hex1, "HEX1"},       {ebus::DataType::hex2, "HEX2"},
-    {ebus::DataType::hex3, "HEX3"},       {ebus::DataType::hex4, "HEX4"},
-    {ebus::DataType::hex5, "HEX5"},       {ebus::DataType::hex6, "HEX6"},
-    {ebus::DataType::hex7, "HEX7"},       {ebus::DataType::hex8, "HEX8"}};
+namespace ebus {
 
-const char* ebus::dataTypeToString(ebus::DataType data_type) {
-  return data_type_names[data_type];
+namespace {
+struct Scale {
+  int32_t num;
+  int32_t den;
+};
+
+struct Meta {
+  DataType dt;
+  uint8_t size;
+  bool is_string;
+  bool is_float;
+  bool is_signed;
+  bool reversed;
+  Scale scale;
+  const char* name;
+  bool has_repl;
+  uint32_t replacement;
+};
+
+// Table MUST be sorted alphabetically by 'name' for binary search in
+// stringToDataType
+// clang-format off
+constexpr Meta kMetaTable[] = {
+  {DataType::bcd, 1, false, false, false, false, {1, 1}, "BCD", true, 0xff},
+  {DataType::char1, 1, true, false, false, false, {1, 1}, "CHAR1", true, 0xff},
+  {DataType::char2, 2, true, false, false, false, {1, 1}, "CHAR2", true, 0xffff},
+  {DataType::char3, 3, true, false, false, false, {1, 1}, "CHAR3", false, 0},
+  {DataType::char4, 4, true, false, false, false, {1, 1}, "CHAR4", false, 0},
+  {DataType::char5, 5, true, false, false, false, {1, 1}, "CHAR5", false, 0},
+  {DataType::char6, 6, true, false, false, false, {1, 1}, "CHAR6", false, 0},
+  {DataType::char7, 7, true, false, false, false, {1, 1}, "CHAR7", false, 0},
+  {DataType::char8, 8, true, false, false, false, {1, 1}, "CHAR8", false, 0},
+  {DataType::data1b, 1, false, false, true, false, {1, 1}, "DATA1B", true, 0x80},
+  {DataType::data1c, 1, false, false, false, false, {1, 2}, "DATA1C", true, 0xff},
+  {DataType::data2b, 2, false, false, true, false, {1, 256}, "DATA2B", true, 0x8000},
+  {DataType::data2br, 2, false, false, true, true, {1, 256}, "DATA2BR", true, 0x8000},
+  {DataType::data2c, 2, false, false, true, false, {1, 16}, "DATA2C", true, 0x8000},
+  {DataType::data2cr, 2, false, false, true, true, {1, 16}, "DATA2CR", true, 0x8000},
+  {DataType::float4, 4, false, true, false, false, {1, 1}, "FLOAT4", false, 0},
+  {DataType::float4r, 4, false, true, false, true, {1, 1}, "FLOAT4R", false, 0},
+  {DataType::hex1, 1, true, false, false, false, {1, 1}, "HEX1", true, 0xff},
+  {DataType::hex2, 2, true, false, false, false, {1, 1}, "HEX2", true, 0xffff},
+  {DataType::hex3, 3, true, false, false, false, {1, 1}, "HEX3", false, 0},
+  {DataType::hex4, 4, true, false, false, false, {1, 1}, "HEX4", false, 0},
+  {DataType::hex5, 5, true, false, false, false, {1, 1}, "HEX5", false, 0},
+  {DataType::hex6, 6, true, false, false, false, {1, 1}, "HEX6", false, 0},
+  {DataType::hex7, 7, true, false, false, false, {1, 1}, "HEX7", false, 0},
+  {DataType::hex8, 8, true, false, false, false, {1, 1}, "HEX8", false, 0},
+  {DataType::int16, 2, false, false, true, false, {1, 1}, "INT16", true, 0x8000},
+  {DataType::int16r, 2, false, false, true, true, {1, 1}, "INT16R", true, 0x8000},
+  {DataType::int32, 4, false, false, true, false, {1, 1}, "INT32", true, 0x80000000},
+  {DataType::int32r, 4, false, false, true, true, {1, 1}, "INT32R", true, 0x80000000},
+  {DataType::int8, 1, false, false, true, false, {1, 1}, "INT8", true, 0x80},
+  {DataType::uint16, 2, false, false, false, false, {1, 1}, "UINT16", true, 0xffff},
+  {DataType::uint16r, 2, false, false, false, true, {1, 1}, "UINT16R", true, 0xffff},
+  {DataType::uint32, 4, false, false, false, false, {1, 1}, "UINT32", true, 0xffffffff},
+  {DataType::uint32r, 4, false, false, false, true, {1, 1}, "UINT32R", true, 0xffffffff},
+  {DataType::uint8, 1, false, false, false, false, {1, 1}, "UINT8", true, 0xff},
+};
+// clang-format on
+
+/**
+ * Internal helper to generate the lookup table at compile time.
+ */
+constexpr std::array<const Meta*, 144> generateMetaLookup() {
+  std::array<const Meta*, 144> arr{};
+  for (size_t i = 0; i < 144; ++i) arr[i] = nullptr;
+  for (const auto& m : kMetaTable) {
+    const int32_t val = static_cast<int32_t>(m.dt);
+    const int idx = ((val >> 8) << 4) | (val & 0xFF);
+    arr[idx] = &m;
+  }
+  return arr;
 }
 
-ebus::DataType ebus::stringToDataType(const char* str) {
-  DataType data_type = DataType::error;
+static constexpr auto kMetaLookup = generateMetaLookup();
 
-  const auto it =
-      std::find_if(data_type_names.begin(), data_type_names.end(),
-                   [&str](const std::pair<DataType, const char*>& item) {
-                     return strcmp(str, item.second) == 0;
-                   });
+const Meta* metaFor(DataType dt) {
+  if (dt == DataType::error || dt == DataType::auto_detect) return nullptr;
 
-  if (it != data_type_names.end()) data_type = it->first;
+  const int32_t val = static_cast<int32_t>(dt);
+  const int idx = ((val >> 8) << 4) | (val & 0xFF);
 
-  return data_type;
+  if (idx < 0 || idx >= 144) return nullptr;
+  return kMetaLookup[idx];
 }
 
-size_t ebus::sizeOfDataType(ebus::DataType data_type) {
-  size_t length = 0;
+template <typename IntType>
+constexpr IntType readInt(ebus::ByteView bytes, bool flip) {
+  IntType val = 0;
+  // Spec 2.4.3: Low-byte first. By using shifts we reconstruct the integer
+  // in a host-endian independent way.
+  for (size_t i = 0; i < sizeof(IntType); ++i) {
+    val |= (static_cast<IntType>(bytes[i]) << (8 * i));
+  }
+  return flip ? swapEndian(val) : val;
+}
 
-  switch (data_type) {
-    case ebus::DataType::bcd:
-    case ebus::DataType::uint8:
-    case ebus::DataType::int8:
-    case ebus::DataType::data1b:
-    case ebus::DataType::data1c:
-    case ebus::DataType::char1:
-    case ebus::DataType::hex1:
-      length = 1;
+template <typename IntType>
+void writeInt(ebus::Sequence& s, IntType val, bool flip) {
+  const IntType to_write = flip ? swapEndian(val) : val;
+  // Spec 2.4.3: Low-byte first.
+  for (size_t i = 0; i < sizeof(IntType); ++i)
+    s.pushBack(static_cast<uint8_t>((to_write >> (8 * i)) & 0xff), false);
+}
+
+}  // namespace
+
+std::optional<DataValue> decode(DataType dt, ByteView bytes, Endian e) {
+  const Meta* m = metaFor(dt);
+  if (!m || bytes.size() < m->size) return std::nullopt;
+
+  const bool flip = m->reversed ? (e == Endian::little) : (e == Endian::big);
+
+  if (m->is_string)
+    return std::string(reinterpret_cast<const char*>(bytes.data()), m->size);
+
+  // Check for Replacement Values (Sentinels)
+  uint32_t bit_pattern = 0;
+  switch (m->size) {
+    case 1:
+      bit_pattern = bytes[0];
       break;
-    case ebus::DataType::uint16:
-    case ebus::DataType::uint16r:
-    case ebus::DataType::int16:
-    case ebus::DataType::int16r:
-    case ebus::DataType::data2b:
-    case ebus::DataType::data2br:
-    case ebus::DataType::data2c:
-    case ebus::DataType::data2cr:
-    case ebus::DataType::char2:
-    case ebus::DataType::hex2:
-      length = 2;
+    case 2:
+      bit_pattern = readInt<uint16_t>(bytes, flip);
       break;
-    case ebus::DataType::char3:
-    case ebus::DataType::hex3:
-      length = 3;
-      break;
-    case ebus::DataType::uint32:
-    case ebus::DataType::uint32r:
-    case ebus::DataType::int32:
-    case ebus::DataType::int32r:
-    case ebus::DataType::float_val:
-    case ebus::DataType::floatr:
-    case ebus::DataType::char4:
-    case ebus::DataType::hex4:
-      length = 4;
-      break;
-    case ebus::DataType::char5:
-    case ebus::DataType::hex5:
-      length = 5;
-      break;
-    case ebus::DataType::char6:
-    case ebus::DataType::hex6:
-      length = 6;
-      break;
-    case ebus::DataType::char7:
-    case ebus::DataType::hex7:
-      length = 7;
-      break;
-    case ebus::DataType::char8:
-    case ebus::DataType::hex8:
-      length = 8;
+    case 4:
+      bit_pattern = readInt<uint32_t>(bytes, flip);
       break;
     default:
       break;
   }
-  return length;
-}
 
-bool ebus::typeOfDataType(DataType data_type) {
-  bool numeric = true;
-
-  switch (data_type) {
-    case ebus::DataType::char1:
-    case ebus::DataType::char2:
-    case ebus::DataType::char3:
-    case ebus::DataType::char4:
-    case ebus::DataType::char5:
-    case ebus::DataType::char6:
-    case ebus::DataType::char7:
-    case ebus::DataType::char8:
-    case ebus::DataType::hex1:
-    case ebus::DataType::hex2:
-    case ebus::DataType::hex3:
-    case ebus::DataType::hex4:
-    case ebus::DataType::hex5:
-    case ebus::DataType::hex6:
-    case ebus::DataType::hex7:
-    case ebus::DataType::hex8:
-      numeric = false;
-      break;
-    default:
-      break;
+  if (!m->is_float && m->has_repl && bit_pattern == m->replacement) {
+    return nullValue();
   }
 
-  return numeric;
+  if (dt == DataType::bcd) {
+    uint8_t val = bytes[0];
+    if ((val & 0x0f) > 9 || ((val >> 4) & 0x0f) > 9) return std::nullopt;
+    return static_cast<uint8_t>((val >> 4) * 10 + (val & 0x0f));
+  }
+
+  if (m->is_float) {
+    uint32_t raw = readInt<uint32_t>(bytes, flip);
+    float f;
+    std::memcpy(&f, &raw, 4);
+    return static_cast<double_t>(f);
+  }
+
+  int64_t raw_val = 0;
+  if (m->size == 1)
+    raw_val = m->is_signed ? static_cast<int8_t>(bytes[0]) : bytes[0];
+  else if (m->size == 2)
+    raw_val = m->is_signed
+                  ? static_cast<int16_t>(readInt<uint16_t>(bytes, flip))
+                  : static_cast<int64_t>(readInt<uint16_t>(bytes, flip));
+  else if (m->size == 4)
+    raw_val = m->is_signed
+                  ? static_cast<int32_t>(readInt<uint32_t>(bytes, flip))
+                  : static_cast<int64_t>(readInt<uint32_t>(bytes, flip));
+
+  if (m->scale.num == 1 && m->scale.den == 1) {
+    if (m->size == 1)
+      return m->is_signed ? DataValue(static_cast<int8_t>(raw_val))
+                          : DataValue(static_cast<uint8_t>(raw_val));
+    if (m->size == 2)
+      return m->is_signed ? DataValue(static_cast<int16_t>(raw_val))
+                          : DataValue(static_cast<uint16_t>(raw_val));
+    return m->is_signed ? DataValue(static_cast<int32_t>(raw_val))
+                        : DataValue(static_cast<uint32_t>(raw_val));
+  }
+
+  return static_cast<double_t>(raw_val) * static_cast<double_t>(m->scale.num) /
+         m->scale.den;
 }
 
-double_t ebus::roundDigits(double_t value, uint8_t digits) {
-  double_t fractpart, intpart;
-  fractpart = std::modf(value, &intpart);
+bool isValid(DataType dt, ByteView bytes) noexcept {
+  const Meta* m = metaFor(dt);
+  if (!m || bytes.size() < m->size) return false;
 
-  double_t decimals = std::pow(10, digits);
-
-  return static_cast<double_t>(intpart) +
-         std::round(fractpart * decimals) / decimals;
+  if (dt == DataType::bcd) {
+    uint8_t val = bytes[0];
+    // Sentinel 0xFF is valid as a "null" result, not a protocol error.
+    if (val == 0xFF) return true;
+    return (val & 0x0f) <= 9 && ((val >> 4) & 0x0f) <= 9;
+  }
+  return true;
 }
 
-// BCD
-uint8_t ebus::byteToBcd(const std::vector<uint8_t>& bytes) {
-  if (bytes.size() != 1) return 0xff;
-  uint8_t value = bytes[0];
-  if ((value & 0x0f) > 9 || ((value >> 4) & 0x0f) > 9) return 0xff;
-  return (value >> 4) * 10 + (value & 0x0f);
-}
+Sequence encode(DataType dt, const DataValue& value, Endian e) {
+  if (dt == DataType::auto_detect) {
+    dt = getDataType(value);
+  }
 
-std::vector<uint8_t> ebus::bcdToByte(uint8_t value) {
-  if (value > 99) return {0xff};
-  uint8_t bcd = ((value / 10) << 4) | (value % 10);
-  return {bcd};
-}
+  const Meta* m = metaFor(dt);
+  Sequence s;
+  if (!m) return s;
+  s.reserve(m->size);
 
-// void ebus::bcd_2_byte(const uint8_t& value, uint8_t* out) {
-//   if (value > 99) { *out = 0xff; return; }
-//   uint8_t bcd = ((value / 10) << 4) | (value % 10);
-//   *out = bcd;
-// }
+  const bool flip = m->reversed ? (e == Endian::little) : (e == Endian::big);
 
-// UINT8
-uint8_t ebus::byteToUint8(const std::vector<uint8_t>& bytes) {
-  if (bytes.size() != 1) return 0;
-  return bytes[0];
-}
+  // Handle Strings
+  if (m->is_string) {
+    if (auto* str = std::get_if<std::string>(&value)) {
+      s.assign(ByteView(reinterpret_cast<const uint8_t*>(str->data()),
+                        std::min(str->size(), static_cast<size_t>(m->size))),
+               false);
+      while (s.size() < m->size) s.pushBack(0, false);
+    }
+    return s;
+  }
 
-std::vector<uint8_t> ebus::uint8ToByte(uint8_t value) { return {value}; }
+  // Handle BCD
+  if (dt == DataType::bcd) {
+    int64_t v = asInt64(value);
+    if (v < 0 || v > 99) return s;  // Returns empty sequence to indicate error
 
-// INT8
-int8_t ebus::byteToInt8(const std::vector<uint8_t>& bytes) {
-  if (bytes.size() != 1) return 0;
-  return static_cast<int8_t>(bytes[0]);
-}
+    s.pushBack(
+        ((static_cast<uint8_t>(v) / 10) << 4) | (static_cast<uint8_t>(v) % 10),
+        false);
+    return s;
+  }
 
-std::vector<uint8_t> ebus::int8ToByte(int8_t value) {
-  return {static_cast<uint8_t>(value)};
-}
+  // Handle Floats
+  if (m->is_float) {
+    float f = static_cast<float>(asDouble(value));
+    uint32_t raw;
+    std::memcpy(&raw, &f, 4);
+    writeInt<uint32_t>(s, raw, flip);
+    return s;
+  }
 
-// DATA1B
-double_t ebus::byteToData1b(const std::vector<uint8_t>& bytes) {
-  return static_cast<double_t>(ebus::byteToInt8(bytes));
-}
-
-std::vector<uint8_t> ebus::data1bToByte(double_t value) {
-  return ebus::int8ToByte(static_cast<int8_t>(value));
-}
-
-// DATA1C
-double_t ebus::byteToData1c(const std::vector<uint8_t>& bytes) {
-  return static_cast<double_t>(ebus::byteToUint8(bytes)) / 2.0;
-}
-
-std::vector<uint8_t> ebus::data1cToByte(double_t value) {
-  return ebus::uint8ToByte(static_cast<uint8_t>(value * 2.0));
-}
-
-// UINT16 + UINT16R
-uint16_t ebus::byteToUint16(const std::vector<uint8_t>& bytes, Endian e) {
-  if (bytes.size() != 2) return 0;
-  if (e == Endian::little) {
-    return static_cast<uint16_t>(bytes[0]) |
-           (static_cast<uint16_t>(bytes[1]) << 8);
+  // Handle Integers and Fixed-Point
+  int64_t raw_int = 0;
+  if (auto* d = std::get_if<double_t>(&value)) {
+    raw_int =
+        static_cast<int64_t>(std::round(*d * m->scale.den / m->scale.num));
   } else {
-    return (static_cast<uint16_t>(bytes[0]) << 8) |
-           static_cast<uint16_t>(bytes[1]);
+    raw_int = asInt64(value);
   }
+
+  if (m->size == 1)
+    s.pushBack(static_cast<uint8_t>(raw_int & 0xff), false);
+  else if (m->size == 2)
+    writeInt<uint16_t>(s, static_cast<uint16_t>(raw_int & 0xffff), flip);
+  else if (m->size == 4)
+    writeInt<uint32_t>(s, static_cast<uint32_t>(raw_int & 0xffffffff), flip);
+
+  return s;
 }
 
-std::vector<uint8_t> ebus::uint16ToByte(uint16_t value, Endian e) {
-  if (e == Endian::little) {
-    return std::vector<uint8_t>{static_cast<uint8_t>(value & 0xff),
-                                static_cast<uint8_t>((value >> 8) & 0xff)};
-  } else {
-    return std::vector<uint8_t>{static_cast<uint8_t>((value >> 8) & 0xff),
-                                static_cast<uint8_t>(value & 0xff)};
+bool isNull(const DataValue& value) noexcept {
+  return std::holds_alternative<std::monostate>(value);
+}
+
+bool isNumeric(const DataValue& value) noexcept {
+  return std::visit(
+      [](auto&& arg) -> bool {
+        using T = std::decay_t<decltype(arg)>;
+        // std::monostate and std::string return false, all others are numeric
+        return std::is_arithmetic_v<T>;
+      },
+      value);
+}
+
+DataValue nullValue() noexcept { return DataValue(std::monostate{}); }
+
+double_t asDouble(const DataValue& value) noexcept {
+  return std::visit(
+      [](auto&& arg) -> double_t {
+        using T = std::decay_t<decltype(arg)>;
+        if constexpr (std::is_arithmetic_v<T>)
+          return static_cast<double_t>(arg);
+        return 0.0;
+      },
+      value);
+}
+
+int64_t asInt64(const DataValue& value) noexcept {
+  return std::visit(
+      [](auto&& arg) -> int64_t {
+        using T = std::decay_t<decltype(arg)>;
+        if constexpr (std::is_integral_v<T>) return static_cast<int64_t>(arg);
+        if constexpr (std::is_floating_point_v<T>)
+          return static_cast<int64_t>(std::round(arg));
+        if constexpr (std::is_same_v<T, std::string>) {
+          if (arg.empty()) return 0;
+          std::string_view sv = arg;
+          int base = 10;
+          // Handle optional 0x prefix for hex strings
+          if (sv.size() >= 2 && sv[0] == '0' &&
+              (sv[1] == 'x' || sv[1] == 'X')) {
+            sv.remove_prefix(2);
+            base = 16;
+          } else {
+            // Default to hex for eBUS string fields (which usually hold hex
+            // pairs)
+            base = 16;
+          }
+          int64_t result = 0;
+          auto [ptr, ec] =
+              std::from_chars(sv.data(), sv.data() + sv.size(), result, base);
+          if (ec == std::errc{}) return result;
+        }
+        return 0;
+      },
+      value);
+}
+
+std::string const& asString(const DataValue& value) noexcept {
+  static const std::string empty;
+  if (const std::string* s = std::get_if<std::string>(&value)) {
+    return *s;
   }
+  return empty;
 }
 
-// INT16 + INT16R
-int16_t ebus::byteToInt16(const std::vector<uint8_t>& bytes, Endian e) {
-  if (bytes.size() != 2) return 0;
-  uint32_t uval = ebus::byteToUint16(bytes, e);
-  return static_cast<int32_t>(uval);
-}
-
-std::vector<uint8_t> ebus::int16ToByte(int16_t value, Endian e) {
-  uint32_t uval = static_cast<uint32_t>(value);
-  return ebus::uint16ToByte(uval, e);
-}
-
-// DATA2B + DATA2BR
-double_t ebus::byteToData2b(const std::vector<uint8_t>& bytes, Endian e) {
-  return static_cast<double_t>(ebus::byteToInt16(bytes, e)) / 256.0;
-}
-
-std::vector<uint8_t> ebus::data2bToByte(double_t value, Endian e) {
-  return ebus::int16ToByte(static_cast<int16_t>(value * 256.0), e);
-}
-
-// DATA2C + DATA2CR
-double_t ebus::byteToData2c(const std::vector<uint8_t>& bytes, Endian e) {
-  return static_cast<double_t>(ebus::byteToInt16(bytes, e)) / 16.0;
-}
-
-std::vector<uint8_t> ebus::data2cToByte(double_t value, Endian e) {
-  return ebus::int16ToByte(static_cast<int16_t>(value * 16.0), e);
-}
-
-// UINT32 + UINT32R
-uint32_t ebus::byteToUint32(const std::vector<uint8_t>& bytes, Endian e) {
-  if (bytes.size() != 4) return 0;
-  if (e == Endian::little) {
-    return static_cast<uint32_t>(bytes[0]) |
-           (static_cast<uint32_t>(bytes[1]) << 8) |
-           (static_cast<uint32_t>(bytes[2]) << 16) |
-           (static_cast<uint32_t>(bytes[3]) << 24);
-  } else {
-    return (static_cast<uint32_t>(bytes[0]) << 24) |
-           (static_cast<uint32_t>(bytes[1]) << 16) |
-           (static_cast<uint32_t>(bytes[2]) << 8) |
-           static_cast<uint32_t>(bytes[3]);
+std::string toHexString(const DataValue& value, char separator) {
+  if (const std::string* s = std::get_if<std::string>(&value)) {
+    if (s->empty()) return "";
+    std::string res;
+    res.reserve(s->size() + (separator ? s->size() / 2 : 0));
+    for (size_t i = 0; i < s->size(); ++i) {
+      if (i > 0 && i % 2 == 0 && separator != 0) res += separator;
+      res += (*s)[i];
+    }
+    return res;
   }
+  return toString(value);
 }
 
-std::vector<uint8_t> ebus::uint32ToByte(uint32_t value, Endian e) {
-  if (e == Endian::little) {
-    return {static_cast<uint8_t>(value & 0xff),
-            static_cast<uint8_t>((value >> 8) & 0xff),
-            static_cast<uint8_t>((value >> 16) & 0xff),
-            static_cast<uint8_t>((value >> 24) & 0xff)};
-  } else {
-    return {static_cast<uint8_t>((value >> 24) & 0xff),
-            static_cast<uint8_t>((value >> 16) & 0xff),
-            static_cast<uint8_t>((value >> 8) & 0xff),
-            static_cast<uint8_t>(value & 0xff)};
-  }
+std::string toString(const DataValue& value, std::string_view unit) {
+  return std::visit(
+      [unit](auto&& arg) -> std::string {
+        using T = std::decay_t<decltype(arg)>;
+        std::string s;
+        if constexpr (std::is_same_v<T, std::monostate>) {
+          return "null";
+        } else if constexpr (std::is_same_v<T, std::string>) {
+          s = arg;
+        } else if constexpr (std::is_floating_point_v<T>) {
+          std::ostringstream oss;
+          // Format floats with fixed precision for consistent logging
+          oss << std::fixed << std::setprecision(2) << arg;
+          s = oss.str();
+        } else if constexpr (std::is_integral_v<T>) {
+          s = std::to_string(arg);
+        } else {
+          s = "";
+        }
+
+        if (!unit.empty()) {
+          s += " ";
+          s += unit;
+        }
+        return s;
+      },
+      value);
 }
 
-// INT32 + INT32R
-int32_t ebus::byteToInt32(const std::vector<uint8_t>& bytes, Endian e) {
-  if (bytes.size() != 4) return 0;
-  uint32_t uval = ebus::byteToUint32(bytes, e);
-  return static_cast<int32_t>(uval);
+std::vector<DataType> getSupportedDataTypes() {
+  std::vector<DataType> types;
+  types.reserve(sizeof(kMetaTable) / sizeof(kMetaTable[0]));
+  std::transform(std::begin(kMetaTable), std::end(kMetaTable),
+                 std::back_inserter(types), [](const Meta& m) { return m.dt; });
+  return types;
 }
 
-std::vector<uint8_t> ebus::int32ToByte(int32_t value, Endian e) {
-  uint32_t uval = static_cast<uint32_t>(value);
-  return ebus::uint32ToByte(uval, e);
+DataType getDataType(const DataValue& value) noexcept {
+  return std::visit(
+      [](auto&& arg) -> DataType {
+        using T = std::decay_t<decltype(arg)>;
+        if constexpr (std::is_same_v<T, uint8_t>) return DataType::uint8;
+        if constexpr (std::is_same_v<T, int8_t>) return DataType::int8;
+        if constexpr (std::is_same_v<T, uint16_t>) return DataType::uint16;
+        if constexpr (std::is_same_v<T, int16_t>) return DataType::int16;
+        if constexpr (std::is_same_v<T, uint32_t>) return DataType::uint32;
+        if constexpr (std::is_same_v<T, int32_t>) return DataType::int32;
+        if constexpr (std::is_floating_point_v<T>) return DataType::float4;
+        if constexpr (std::is_same_v<T, std::string>) return DataType::char8;
+        return DataType::error;
+      },
+      value);
 }
 
-// FLOAT (IEEE 754 single precision)
-double_t ebus::byteToFloat(const std::vector<uint8_t>& bytes, Endian e) {
-  if (bytes.size() != 4) return 0.0;
-  uint32_t raw = ebus::byteToUint32(bytes, e);
-  float value;
-  std::memcpy(&value, &raw, sizeof(float));
-  return static_cast<double_t>(value);
+std::optional<DataTypeInfo> getMeta(DataType dt) {
+  const Meta* m = metaFor(dt);
+  if (!m) return std::nullopt;
+
+  DataTypeInfo info;
+  info.dt = m->dt;
+  info.name = m->name;
+  info.size = m->size;
+  info.is_numeric = !m->is_string;
+  info.is_signed = m->is_signed;
+  info.is_float = m->is_float;
+  info.factor = static_cast<double>(m->scale.num) / m->scale.den;
+  info.has_replacement = m->has_repl;
+  info.replacement_value = m->replacement;
+  return info;
 }
 
-std::vector<uint8_t> ebus::floatToByte(double_t value, Endian e) {
-  float f = static_cast<float>(value);
-  uint32_t raw;
-  std::memcpy(&raw, &f, sizeof(float));
-  return ebus::uint32ToByte(raw, e);
+const char* dataTypeToString(DataType data_type) noexcept {
+  auto m = getMeta(data_type);
+  return m ? m->name : "UNKNOWN";
 }
 
-// CHAR
-std::string ebus::byteToChar(const std::vector<uint8_t>& vec) {
-  return std::string(vec.begin(), vec.end());
+DataType stringToDataType(const char* str) {
+  auto it = std::lower_bound(
+      std::begin(kMetaTable), std::end(kMetaTable), str,
+      [](const Meta& m, const char* s) { return std::strcmp(m.name, s) < 0; });
+  if (it != std::end(kMetaTable) && std::strcmp(it->name, str) == 0)
+    return it->dt;
+  return DataType::error;
 }
 
-std::vector<uint8_t> ebus::charToByte(const std::string& str) {
-  return std::vector<uint8_t>(str.begin(), str.end());
-}
-
-// HEX
-std::string ebus::byteToHex(const std::vector<uint8_t>& vec) {
-  return ebus::toString(vec);
-}
-
-std::vector<uint8_t> ebus::hexToByte(const std::string& str) {
-  return ebus::toVector(str);
-}
+}  // namespace ebus

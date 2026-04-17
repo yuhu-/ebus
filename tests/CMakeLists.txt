@@ -28,9 +28,6 @@ macro(add_catch2_test_executable name source_file)
     
     # Discover all Catch2 tests in this executable
     catch_discover_tests(${name})
-
-    # Add a test to CTest for this executable
-    # add_test(NAME ${name} COMMAND ${name})
 endmacro()
 
 # Catch2 test executables using the macro

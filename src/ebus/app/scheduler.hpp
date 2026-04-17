@@ -8,6 +8,7 @@
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
+#include <ebus/sequence.hpp>
 #include <functional>
 #include <mutex>
 #include <queue>
@@ -20,23 +21,29 @@
 
 namespace ebus {
 
+/**
+ * The Scheduler manages the timing and prioritization of active eBUS messages.
+ * It allows enqueuing messages with specific priorities and scheduled times,
+ * and handles retries with backoff. The Scheduler runs a worker thread that
+ * processes the queue, interacts with the Handler to send messages, and manages
+ * callbacks for results, telegrams, and errors. It ensures thread safety for
+ * concurrent access and provides configuration options for send attempts and
+ * backoff durations. The Scheduler also forwards relevant events to external
+ * callbacks for integration with the Controller's central dispatcher.
+ */
 class Scheduler {
  public:
   using Clock = std::chrono::steady_clock;
   using TimePoint = Clock::time_point;
   using Duration = Clock::duration;
 
-  using ResultCallback =
-      std::function<void(bool success, const std::vector<uint8_t>& master,
-                         const std::vector<uint8_t>& slave)>;
-
   struct Item {
-    uint8_t priority_ = 0;  // larger = higher priority (e.g. 255 is top)
-    TimePoint due_ = Clock::now();
-    uint32_t id_ = 0;
-    int send_attempts_ = 0;
-    std::vector<uint8_t> message_;
-    ResultCallback result_callback_ = nullptr;
+    uint8_t priority = 0;  // larger = higher priority (e.g. 255 is top)
+    TimePoint due = Clock::now();
+    uint32_t id = 0;
+    int send_attempts = 0;
+    Sequence message;
+    ResultCallback result_callback = nullptr;
   };
 
   Scheduler(Handler* handler);
@@ -48,10 +55,10 @@ class Scheduler {
   void start();
   void stop();
 
-  void enqueue(uint8_t priority, const std::vector<uint8_t>& message,
+  void enqueue(uint8_t priority, ByteView message,
                ResultCallback callback = nullptr);
-  void enqueueAt(uint8_t priority, const std::vector<uint8_t>& message,
-                 TimePoint when, ResultCallback callback = nullptr);
+  void enqueueAt(uint8_t priority, ByteView message, TimePoint when,
+                 ResultCallback callback = nullptr);
 
   void setMaxSendAttempts(int send_attempts);
   void setBaseBackoff(Duration duration);
@@ -66,22 +73,22 @@ class Scheduler {
  private:
   struct Compare {
     bool operator()(Item const& lhs, Item const& rhs) const {
-      if (lhs.due_ != rhs.due_)
-        return lhs.due_ > rhs.due_;          // earlier due time first
-      return lhs.priority_ < rhs.priority_;  // larger priority value second
+      if (lhs.due != rhs.due)
+        return lhs.due > rhs.due;          // earlier due time first
+      return lhs.priority < rhs.priority;  // larger priority value second
     }
   };
 
-  enum class EventType { Won, Lost, Telegram, Error };
+  enum class EventType { won, lost, telegram, error };
 
   struct Event {
     EventType type;
     uint32_t id;
     MessageType message_type;
     TelegramType telegram_type;
-    std::vector<uint8_t> master;
-    std::vector<uint8_t> slave;
-    std::string error;
+    Sequence master;
+    Sequence slave;
+    const char* error = nullptr;
   };
 
   Handler* handler_ = nullptr;

@@ -64,13 +64,12 @@ void ebus::ServiceThread::start() {
 void ebus::ServiceThread::join() {
 #if defined(ESP32)
   if (impl_->handle) {
-    if (impl_->handle) {
-      // Wait for task to finish or timeout
-      xSemaphoreTake(impl_->done_sem, pdMS_TO_TICKS(2000));
-    }
+    // Wait for task to finish or timeout
+    xSemaphoreTake(impl_->done_sem, pdMS_TO_TICKS(2000));
+  }
 #elif defined(POSIX)
   if (impl_->thread.joinable()) {
     impl_->thread.join();
   }
 #endif
-  }
+}

@@ -96,12 +96,17 @@ class BusHandler {
         if (handler_) handler_->run(ctx);
 
         {
-          std::lock_guard<std::mutex> lock(mutex_);
-          listeners_cache_.clear();
-          for (const auto& item : listeners_)
-            listeners_cache_.push_back(item.second);
+          // Only lock and copy if listeners actually exist.
+          // Note: read size() without lock is acceptable for this check.
+          if (!listeners_.empty()) {
+            std::lock_guard<std::mutex> lock(mutex_);
+            listeners_cache_.clear();
+            for (const auto& item : listeners_)
+              listeners_cache_.push_back(item.second);
+
+            for (const auto& listener : listeners_cache_) listener(ctx);
+          }
         }
-        for (const auto& listener : listeners_cache_) listener(ctx);
       }
     }
   }

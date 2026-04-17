@@ -7,6 +7,7 @@
 
 #include <cstdint>
 #include <ebus/device.hpp>
+#include <ebus/sequence.hpp>
 #include <string>
 #include <vector>
 
@@ -22,26 +23,25 @@ class Device {
  public:
   uint8_t getSlave() const;
 
-  void update(const std::vector<uint8_t>& master,
-              const std::vector<uint8_t>& slave);
+  void update(ByteView master, ByteView slave);
 
   std::vector<uint8_t> getIdentificationData() const;
   std::vector<uint8_t> getVendorData(uint8_t sub) const;
 
   DeviceInfo getDeviceInfo() const;
 
-  static std::vector<uint8_t> createScanCommand(uint8_t slave);
-  std::vector<std::vector<uint8_t>> createVendorScanCommands() const;
+  static Sequence createScanCommand(uint8_t slave);
+  std::vector<Sequence> createVendorScanCommands() const;
 
  private:
   uint8_t slave_ = 0;
 
-  std::vector<uint8_t> vec_070400_;
+  Sequence vec_070400_;
 
-  std::vector<uint8_t> vec_b5090124_;
-  std::vector<uint8_t> vec_b5090125_;
-  std::vector<uint8_t> vec_b5090126_;
-  std::vector<uint8_t> vec_b5090127_;
+  Sequence vec_b5090124_;
+  Sequence vec_b5090125_;
+  Sequence vec_b5090126_;
+  Sequence vec_b5090127_;
 
   bool isVaillant() const;
   bool isVaillantValid() const;
