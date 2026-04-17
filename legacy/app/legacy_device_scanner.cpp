@@ -85,7 +85,8 @@ void test_startup_scan_logic() {
   ASSERT_TRUE(scanner.nextCommand().empty());
 
   // Add an observed device
-  dm.update({0x10, 0x15, 0x00}, {0x00});  // Master 10 -> Slave 15
+  dm.update(ebus::ByteView({0x10, 0x15, 0x00}),
+            ebus::ByteView({0x00}));  // Master 10 -> Slave 15
 
   // Iteration 2: Should now find and queue a command for 0x15.
   auto cmd1 = scanner.nextCommand();

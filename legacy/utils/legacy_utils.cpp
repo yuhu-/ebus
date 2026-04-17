@@ -46,6 +46,11 @@ void test_addressing() {
   run_test("slaveOf(0x00) == 0x05", ebus::slaveOf(0x00) == 0x05);
   run_test("slaveOf(0x05) == 0x05",
            ebus::slaveOf(0x05) == 0x05);  // Already slave
+
+  // Boundary checks
+  run_test("masterOf(0x00) boundary", ebus::masterOf(0x00) == 0x00);
+  run_test("slaveOf(0xff) boundary (no slave wrap)",
+           ebus::slaveOf(0xff) == 0x04);
 }
 
 void test_conversions() {
@@ -70,8 +75,8 @@ void test_vector_utils() {
   std::vector<uint8_t> vec = {0x10, 0x20, 0x30, 0x40, 0x50};
 
   // Range
-  std::vector<uint8_t> sub = ebus::range(vec, 1, 3);  // 20 30 40
-  std::vector<uint8_t> expected_sub = {0x20, 0x30, 0x40};
+  ebus::ByteView sub = ebus::range(vec, 1, 3);  // 20 30 40
+  ebus::ByteView expected_sub(vec.data() + 1, 3);
   run_test("range(1,3)", sub == expected_sub);
   run_test("range out of bounds", ebus::range(vec, 10, 1).empty());
 

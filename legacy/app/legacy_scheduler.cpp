@@ -150,20 +150,20 @@ bool runSchedulerTest(ebus::Scheduler& scheduler, const TestCase& tc,
 
   // Build the actual master bytes (source + payload + CRC) and pass to
   // scheduler
-  scheduler.enqueue(tc.priority, ebus::toVector(tc.payloadHexNoCrc),
-                    [promise, description = tc.description](
-                        bool success, const std::vector<uint8_t>& master,
-                        const std::vector<uint8_t>& slave) {
-                      if (!promise) return;
-                      promise->set_value(success);
-                      if (success) {
-                        std::cout << "[PASS] " << description
-                                  << ": callback success" << std::endl;
-                      } else {
-                        std::cout << "[FAIL] " << description
-                                  << ": callback failure" << std::endl;
-                      }
-                    });
+  scheduler.enqueue(
+      tc.priority, ebus::toVector(tc.payloadHexNoCrc),
+      [promise, description = tc.description](
+          bool success, ebus::ByteView master_view, ebus::ByteView slave_view) {
+        if (!promise) return;
+        promise->set_value(success);
+        if (success) {
+          std::cout << "[PASS] " << description << ": callback success"
+                    << std::endl;
+        } else {
+          std::cout << "[FAIL] " << description << ": callback failure"
+                    << std::endl;
+        }
+      });
 
   // Allow longer timeout to account for SYN/backoff delays
   if (future.wait_for(std::chrono::seconds(8)) != std::future_status::ready) {
@@ -202,18 +202,18 @@ int main() {
   installSimulatorResponses(bus, tests, source);
 
   ebus::Scheduler scheduler(&handler);
-  scheduler.setTelegramCallback([](ebus::MessageType message_type,
-                                   ebus::TelegramType telegram_type,
-                                   const std::vector<uint8_t>& master,
-                                   const std::vector<uint8_t>& slave) {
-    std::cout << "[scheduler] telegram " << ebus::toString(master) << " "
-              << ebus::toString(slave) << std::endl;
-  });
-  scheduler.setErrorCallback([](const std::string& error,
-                                const std::vector<uint8_t>& master,
-                                const std::vector<uint8_t>& slave) {
-    std::cout << "[scheduler] error " << error << " " << ebus::toString(master)
-              << " " << ebus::toString(slave) << std::endl;
+  scheduler.setTelegramCallback(
+      [](ebus::MessageType message_type, ebus::TelegramType telegram_type,
+         ebus::ByteView master_view, ebus::ByteView slave_view) {
+        std::cout << "[scheduler] telegram " << ebus::toString(master_view)
+                  << " " << ebus::toString(slave_view) << std::endl;
+      });
+  scheduler.setErrorCallback([](std::string_view error_message,
+                                ebus::ByteView master_view,
+                                ebus::ByteView slave_view) {
+    std::cout << "[scheduler] error " << error_message << " "
+              << ebus::toString(master_view) << " "
+              << ebus::toString(slave_view) << std::endl;
   });
 
   scheduler.setMaxSendAttempts(3);

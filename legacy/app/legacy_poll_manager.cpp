@@ -23,11 +23,15 @@ void test_registration() {
   std::cout << "--- Test: Registration ---" << std::endl;
   ebus::PollManager pm;
 
-  uint32_t id1 = pm.addPollItem(1, {0x01, 0x02}, std::chrono::seconds(5));
-  uint32_t id2 = pm.addPollItem(2, {0x03, 0x04}, std::chrono::seconds(10));
+  uint32_t id1 =
+      pm.addPollItem(1, ebus::ByteView({0x01, 0x02}), std::chrono::seconds(5));
+  uint32_t id2 =
+      pm.addPollItem(2, ebus::ByteView({0x03, 0x04}), std::chrono::seconds(10));
 
   run_test("IDs are unique", id1 != id2);
-  run_test("Initial due items list is empty", pm.getDueItems().empty());
+  size_t count = 0;
+  pm.processDueItems([&](const ebus::PollItem&) { count++; });
+  run_test("Initial due items list is empty", count == 0);
 }
 
 void test_timing() {
@@ -35,46 +39,55 @@ void test_timing() {
   ebus::PollManager pm;
 
   // Register item with 1 second interval
-  pm.addPollItem(5, {0xaa, 0xbb}, std::chrono::seconds(1));
+  pm.addPollItem(5, ebus::ByteView({0xaa, 0xbb}), std::chrono::seconds(1));
 
   // 1. Not due yet
-  run_test("Not due after 0s", pm.getDueItems().empty());
+  size_t count = 0;
+  pm.processDueItems([&](const ebus::PollItem&) { count++; });
+  run_test("Not due after 0s", count == 0);
 
   // 2. Wait for expiration
   std::cout << "  Waiting 1.1s for poll item..." << std::endl;
   std::this_thread::sleep_for(std::chrono::milliseconds(1100));
 
-  auto due = pm.getDueItems();
-  run_test("Item due after 1.1s", due.size() == 1);
-  if (!due.empty()) {
-    run_test("Payload matches",
-             due[0].message == std::vector<uint8_t>{0xaa, 0xbb});
-    run_test("Priority matches", due[0].priority == 5);
-  }
+  count = 0;
+  pm.processDueItems([&](const ebus::PollItem& item) {
+    count++;
+    run_test("Payload matches", item.message == ebus::Sequence({0xaa, 0xbb}));
+    run_test("Priority matches", item.priority == 5);
+  });
+  run_test("Item due after 1.1s", count == 1);
 
   // 3. Check recurrence
-  run_test("Empty immediately after being popped", pm.getDueItems().empty());
+  count = 0;
+  pm.processDueItems([&](const ebus::PollItem&) { count++; });
+  run_test("Empty immediately after being processed", count == 0);
 
   std::cout << "  Waiting another 1.1s..." << std::endl;
   std::this_thread::sleep_for(std::chrono::milliseconds(1100));
-  run_test("Item due again after second interval",
-           pm.getDueItems().size() == 1);
+  count = 0;
+  pm.processDueItems([&](const ebus::PollItem&) { count++; });
+  run_test("Item due again after second interval", count == 1);
 }
 
 void test_removal() {
   std::cout << "--- Test: Removal ---" << std::endl;
   ebus::PollManager pm;
 
-  uint32_t id = pm.addPollItem(1, {0xff}, std::chrono::seconds(1));
+  uint32_t id =
+      pm.addPollItem(1, ebus::ByteView({0xff}), std::chrono::seconds(1));
   std::this_thread::sleep_for(std::chrono::milliseconds(1100));
 
   // Verify it's ready to pop
-  run_test("Item is due", pm.getDueItems().size() == 1);
+  size_t count = 0;
+  pm.processDueItems([&](const ebus::PollItem&) { count++; });
+  run_test("Item is due", count == 1);
 
   pm.removePollItem(id);
   std::this_thread::sleep_for(std::chrono::milliseconds(1100));
-  run_test("Removed item does not appear in due list",
-           pm.getDueItems().empty());
+  count = 0;
+  pm.processDueItems([&](const ebus::PollItem&) { count++; });
+  run_test("Removed item does not appear in due list", count == 0);
 }
 
 int main() {

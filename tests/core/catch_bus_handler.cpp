@@ -30,11 +30,12 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
     std::atomic<int> error_count{0};
 
     handler.setTelegramCallback(
-        [&](ebus::MessageType, ebus::TelegramType, const std::vector<uint8_t>&,
-            const std::vector<uint8_t>&) { telegram_count++; });
-    handler.setErrorCallback(
-        [&](const std::string&, const std::vector<uint8_t>&,
-            const std::vector<uint8_t>&) { error_count++; });
+        [&](ebus::MessageType message_type, ebus::TelegramType telegram_type,
+            ebus::ByteView master_view,
+            ebus::ByteView slave_view) { telegram_count++; });
+    handler.setErrorCallback([&](std::string_view error_message,
+                                 ebus::ByteView master_view,
+                                 ebus::ByteView slave_view) { error_count++; });
 
     bus.addWriteListener(
         [&](const uint8_t b) { INFO("<- write: " << ebus::toString(b)); });
@@ -109,8 +110,9 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
 
     std::atomic<int> telegram_count{0};
     handler.setTelegramCallback(
-        [&](ebus::MessageType, ebus::TelegramType, const std::vector<uint8_t>&,
-            const std::vector<uint8_t>&) { telegram_count++; });
+        [&](ebus::MessageType message_type, ebus::TelegramType telegram_type,
+            ebus::ByteView master_view,
+            ebus::ByteView slave_view) { telegram_count++; });
 
     bus.start();
     busHandler.start();
@@ -179,8 +181,9 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
 
     std::atomic<int> telegram_count{0};
     handler.setTelegramCallback(
-        [&](ebus::MessageType, ebus::TelegramType, const std::vector<uint8_t>&,
-            const std::vector<uint8_t>&) { telegram_count++; });
+        [&](ebus::MessageType message_type, ebus::TelegramType telegram_type,
+            ebus::ByteView master_view,
+            ebus::ByteView slave_view) { telegram_count++; });
 
     bus.start();
     busHandler.start();

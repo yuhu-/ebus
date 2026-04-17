@@ -8,6 +8,7 @@
 #include <cstddef>
 #include <ebus/data_types.hpp>
 #include <ebus/metrics.hpp>
+#include <ebus/sequence.hpp>
 #include <ebus/utils.hpp>
 #include <iomanip>
 #include <iostream>
@@ -15,7 +16,6 @@
 
 #include "core/handler.hpp"
 #include "core/request.hpp"
-#include "core/sequence.hpp"
 #include "core/telegram.hpp"
 #include "platform/bus.hpp"
 #include "test_utils.hpp"
@@ -88,32 +88,33 @@ SCENARIO("Handler processes eBUS messages correctly", "[core][handler]") {
         handler.setBusRequestWonCallback([&]() { INFO("request: won"); });
         handler.setBusRequestLostCallback([&]() { INFO("request: lost"); });
         handler.setReactiveMasterSlaveCallback(
-            [&](const std::vector<uint8_t>& master,
-                std::vector<uint8_t>* const slave) {
+            [&](ebus::ByteView master, ebus::Sequence& slave_response) {
               std::vector<uint8_t> search;
               search = {0x07, 0x04};
               if (ebus::contains(master, search))
-                *slave = ebus::toVector("0ab5504d53303001074302");
+                slave_response.assign(ebus::toVector("0ab5504d53303001074302"));
               search = {0x07, 0x05};
               if (ebus::contains(master, search))
-                *slave = ebus::toVector("0ab5504d533030010743");
+                slave_response.assign(
+                    ebus::toVector("0ab5504d533030010743"));  // defect
               INFO("reactive: " << ebus::toString(master) << " "
-                                << ebus::toString(*slave));
+                                << ebus::toString(slave_response));
             });
         handler.setTelegramCallback([&](ebus::MessageType message_type,
                                         ebus::TelegramType telegram_type,
-                                        const std::vector<uint8_t>& master,
-                                        const std::vector<uint8_t>& slave) {
+                                        ebus::ByteView master_view,
+                                        ebus::ByteView slave_view) {
           telegram_count++;
-          INFO("telegram: " << ebus::toString(master) << " "
-                            << ebus::toString(slave));
+          INFO("telegram: " << ebus::toString(master_view) << " "
+                            << ebus::toString(slave_view));
         });
-        handler.setErrorCallback([&](const std::string& error,
-                                     const std::vector<uint8_t>& master,
-                                     const std::vector<uint8_t>& slave) {
+        handler.setErrorCallback([&](std::string_view error_message,
+                                     ebus::ByteView master_view,
+                                     ebus::ByteView slave_view) {
           error_count++;
-          INFO("error: " << error << " master '" << ebus::toString(master)
-                         << "' slave '" << ebus::toString(slave) << "'");
+          INFO("error: " << error_message << " master '"
+                         << ebus::toString(master_view) << "' slave '"
+                         << ebus::toString(slave_view) << "'");
         });
 
         bus.addWriteListener([&](const uint8_t& byte) {

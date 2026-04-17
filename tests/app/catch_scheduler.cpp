@@ -137,13 +137,13 @@ bool runSchedulerTest(ebus::Scheduler& scheduler, const TestCase& tc,
   auto promise = std::make_shared<std::promise<bool>>();
   auto future = promise->get_future();
 
-  scheduler.enqueue(tc.priority, ebus::toVector(tc.payloadHexNoCrc),
-                    [promise, description = tc.description](
-                        bool success, const std::vector<uint8_t>& master,
-                        const std::vector<uint8_t>& slave) {
-                      if (!promise) return;
-                      promise->set_value(success);
-                    });
+  scheduler.enqueue(
+      tc.priority, ebus::toVector(tc.payloadHexNoCrc),
+      [promise, description = tc.description](
+          bool success, ebus::ByteView master_view, ebus::ByteView slave_view) {
+        if (!promise) return;
+        promise->set_value(success);
+      });
 
   if (future.wait_for(std::chrono::seconds(8)) != std::future_status::ready) {
     return false;
@@ -178,13 +178,12 @@ TEST_CASE("Scheduler: Simulation", "[app][scheduler]") {
   installSimulatorResponses(bus, tests, source);
 
   ebus::Scheduler scheduler(&handler);
-  scheduler.setTelegramCallback([](ebus::MessageType message_type,
-                                   ebus::TelegramType telegram_type,
-                                   const std::vector<uint8_t>& master,
-                                   const std::vector<uint8_t>& slave) {});
-  scheduler.setErrorCallback([](const std::string& error,
-                                const std::vector<uint8_t>& master,
-                                const std::vector<uint8_t>& slave) {});
+  scheduler.setTelegramCallback(
+      [](ebus::MessageType message_type, ebus::TelegramType telegram_type,
+         ebus::ByteView master_view, ebus::ByteView slave_view) {});
+  scheduler.setErrorCallback([](std::string_view error_message,
+                                ebus::ByteView master_view,
+                                ebus::ByteView slave_view) {});
 
   scheduler.setMaxSendAttempts(3);
   scheduler.setBaseBackoff(std::chrono::milliseconds(50));

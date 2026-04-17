@@ -5,11 +5,11 @@
 
 #include <cassert>
 #include <cstddef>
+#include <ebus/sequence.hpp>
 #include <ebus/utils.hpp>
 #include <iostream>
 #include <string>
 
-#include "core/sequence.hpp"
 #include "core/telegram.hpp"
 
 void run_test(const std::string& name, bool condition) {

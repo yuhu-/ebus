@@ -34,20 +34,19 @@ bool g_detailed_output = false;
 
 void telegramCallback(ebus::MessageType message_type,
                       ebus::TelegramType telegram_type,
-                      const std::vector<uint8_t>& master,
-                      const std::vector<uint8_t>& slave) {
+                      ebus::ByteView master_view, ebus::ByteView slave_view) {
   g_telegram_count++;
   if (g_detailed_output) {
-    std::cout << "    Telegram: " << ebus::toString(master) << " "
-              << ebus::toString(slave) << std::endl;
+    std::cout << "    Telegram: " << ebus::toString(master_view) << " "
+              << ebus::toString(slave_view) << std::endl;
   }
 }
 
-void errorCallback(const std::string& error, const std::vector<uint8_t>& master,
-                   const std::vector<uint8_t>& slave) {
+void errorCallback(std::string_view error_message, ebus::ByteView master_view,
+                   ebus::ByteView slave_view) {
   g_error_count++;
   if (g_detailed_output) {
-    std::cout << "    Error: " << error << std::endl;
+    std::cout << "    Error: " << error_message << std::endl;
   }
 }
 

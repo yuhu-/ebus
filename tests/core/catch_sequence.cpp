@@ -4,17 +4,16 @@
  */
 
 #include <catch2/catch_all.hpp>
+#include <ebus/sequence.hpp>
 #include <ebus/utils.hpp>
 #include <string>
 #include <vector>
-
-#include "core/sequence.hpp"
 
 TEST_CASE("Sequence Extend and Reduce logic", "[core][sequence]") {
   ebus::Sequence seq;
 
   SECTION("Empty sequences remain empty") {
-    seq.assign({}, false);
+    seq.assign(ebus::ByteView{}, false);
     seq.extend();
     REQUIRE(seq.toVector().empty());
   }
@@ -92,4 +91,15 @@ TEST_CASE("Sequence Append operations", "[core][sequence]") {
     s1.append(s2);
     REQUIRE(s1.toVector() == ebus::toVector("a901a901"));
   }
+}
+
+TEST_CASE("Sequence Logical Comparison", "[core][sequence]") {
+  ebus::Sequence reduced;
+  ebus::Sequence extended;
+
+  reduced.assign(ebus::toVector("01aa03"), false);
+  extended.assign(ebus::toVector("01a90103"), true);
+
+  REQUIRE(reduced != extended); // Physical bytes differ
+  REQUIRE(reduced.logicallyEquals(extended)); // Protocol meaning is the same
 }

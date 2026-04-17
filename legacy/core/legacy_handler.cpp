@@ -9,6 +9,7 @@
 #include <cstddef>
 #include <ebus/data_types.hpp>
 #include <ebus/metrics.hpp>
+#include <ebus/sequence.hpp>
 #include <ebus/utils.hpp>
 #include <iomanip>
 #include <iostream>
@@ -16,7 +17,6 @@
 
 #include "core/handler.hpp"
 #include "core/request.hpp"
-#include "core/sequence.hpp"
 #include "core/telegram.hpp"
 #include "platform/bus.hpp"
 #include "test_utils.hpp"
@@ -63,25 +63,24 @@ void busRequestLostCallback() {
   if (g_detailed_output) std::cout << " request: lost" << std::endl;
 }
 
-void reactiveMasterSlaveCallback(const std::vector<uint8_t>& master,
-                                 std::vector<uint8_t>* const slave) {
+void reactiveMasterSlaveCallback(ebus::ByteView master,
+                                 ebus::Sequence& slave_response) {
   std::vector<uint8_t> search;
   search = {0x07, 0x04};  // 0008070400
   if (ebus::contains(master, search))
-    *slave = ebus::toVector("0ab5504d53303001074302");
+    slave_response.assign(ebus::toVector("0ab5504d53303001074302"));
   search = {0x07, 0x05};  // 0008070500
   if (ebus::contains(master, search))
-    *slave = ebus::toVector("0ab5504d533030010743");  // defect
+    slave_response.assign(ebus::toVector("0ab5504d533030010743"));  // defect
 
   if (!g_detailed_output) return;
   std::cout << "reactive: " << ebus::toString(master) << " "
-            << ebus::toString(*slave) << std::endl;
+            << ebus::toString(slave_response) << std::endl;
 }
 
 void telegramCallback(ebus::MessageType message_type,
                       ebus::TelegramType telegramType,
-                      const std::vector<uint8_t>& master,
-                      const std::vector<uint8_t>& slave) {
+                      ebus::ByteView master_view, ebus::ByteView slave_view) {
   g_telegram_count++;
   if (!g_detailed_output) return;
   switch (telegramType) {
@@ -106,16 +105,17 @@ void telegramCallback(ebus::MessageType message_type,
       std::cout << "reactive: ";
       break;
   }
-  std::cout << ebus::toString(master) << " " << ebus::toString(slave)
+  std::cout << ebus::toString(master_view) << " " << ebus::toString(slave_view)
             << std::endl;
 }
 
-void errorCallback(const std::string& error, const std::vector<uint8_t>& master,
-                   const std::vector<uint8_t>& slave) {
+void errorCallback(std::string_view error_message, ebus::ByteView master_view,
+                   ebus::ByteView slave_view) {
   g_error_count++;
   if (!g_detailed_output) return;
-  std::cout << "   error: " << error << " master '" << ebus::toString(master)
-            << "' slave '" << ebus::toString(slave) << "'" << std::endl;
+  std::cout << "   error: " << error_message << " master '"
+            << ebus::toString(master_view) << "' slave '"
+            << ebus::toString(slave_view) << "'" << std::endl;
 }
 
 void printMetrics() {

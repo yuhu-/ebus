@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+#include <ebus/sequence.hpp>
 #include <ebus/utils.hpp>
 #include <iomanip>
 #include <iostream>
@@ -10,7 +11,6 @@
 #include <vector>
 
 #include "core/request.hpp"
-#include "core/sequence.hpp"
 
 struct TestCase {
   bool enabled;

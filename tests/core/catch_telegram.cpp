@@ -4,9 +4,9 @@
  */
 
 #include <catch2/catch_all.hpp>
+#include <ebus/sequence.hpp>
 #include <ebus/utils.hpp>
 
-#include "core/sequence.hpp"
 #include "core/telegram.hpp"
 
 TEST_CASE("Telegram: creation", "[core][telegram]") {

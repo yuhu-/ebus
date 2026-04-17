@@ -68,7 +68,7 @@ TEST_CASE("DeviceScanner: Startup Scan Logic", "[app][devicescanner]") {
 
   REQUIRE(scanner.nextCommand().empty());
 
-  dm.update({0x10, 0x15, 0x00}, {0x00});
+  dm.update(ebus::ByteView({0x10, 0x15, 0x00}), ebus::ByteView({0x00}));
 
   auto cmd1 = scanner.nextCommand();
   REQUIRE(!cmd1.empty());

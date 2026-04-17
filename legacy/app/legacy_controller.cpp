@@ -35,10 +35,10 @@ int main() {
   // 2. Setup Central Dispatcher Callback
   bool telegramSeen = false;
   controller.setTelegramCallback([&](ebus::MessageType, ebus::TelegramType,
-                                     const std::vector<uint8_t>& master,
-                                     const std::vector<uint8_t>&) {
-    std::cout << "  Dispatcher -> Observed Telegram: " << ebus::toString(master)
-              << std::endl;
+                                     ebus::ByteView master_view,
+                                     ebus::ByteView slave_view) {
+    std::cout << "  Dispatcher -> Observed Telegram: "
+              << ebus::toString(master_view) << std::endl;
     telegramSeen = true;
   });
 
@@ -52,12 +52,12 @@ int main() {
   bool resultCallbackFired = false;
 
   std::cout << "  Enqueuing broadcast message..." << std::endl;
-  controller.enqueue(1, msg,
-                     [&](bool success, const std::vector<uint8_t>&,
-                         const std::vector<uint8_t>&) {
-                       run_test("Scheduler result callback fired", success);
-                       resultCallbackFired = true;
-                     });
+  controller.enqueue(
+      1, msg,
+      [&](bool success, ebus::ByteView master_view, ebus::ByteView slave_view) {
+        run_test("Scheduler result callback fired", success);
+        resultCallbackFired = true;
+      });
 
   // Wait for the background threads to process.
   // The simulation needs time for: SYN generation -> Arbitration ->

@@ -13,44 +13,61 @@
 TEST_CASE("PollManager: Registration", "[app][pollmanager]") {
   ebus::PollManager pm;
 
-  uint32_t id1 = pm.addPollItem(1, {0x01, 0x02}, std::chrono::seconds(5));
-  uint32_t id2 = pm.addPollItem(2, {0x03, 0x04}, std::chrono::seconds(10));
+  uint32_t id1 =
+      pm.addPollItem(1, ebus::ByteView({0x01, 0x02}), std::chrono::seconds(5));
+  uint32_t id2 =
+      pm.addPollItem(2, ebus::ByteView({0x03, 0x04}), std::chrono::seconds(10));
 
+  size_t count = 0;
+  pm.processDueItems([&](const ebus::PollItem&) { count++; });
   REQUIRE(id1 != id2);
-  REQUIRE(pm.getDueItems().empty());
+  REQUIRE(count == 0);
 }
 
 TEST_CASE("PollManager: Timing and Recurrence", "[app][pollmanager]") {
   ebus::PollManager pm;
 
-  pm.addPollItem(5, {0xaa, 0xbb}, std::chrono::seconds(1));
+  pm.addPollItem(5, ebus::ByteView({0xaa, 0xbb}), std::chrono::seconds(1));
 
-  REQUIRE(pm.getDueItems().empty());
+  size_t count = 0;
+  pm.processDueItems([&](const ebus::PollItem&) { count++; });
+  REQUIRE(count == 0);
+
+  std::this_thread::sleep_for(std::chrono::milliseconds(1100));
+
+  count = 0;
+  pm.processDueItems([&](const ebus::PollItem& item) {
+    count++;
+    REQUIRE(item.message == ebus::Sequence({0xaa, 0xbb}));
+    REQUIRE(item.priority == 5);
+  });
+  REQUIRE(count == 1);
+
+  count = 0;
+  pm.processDueItems([&](const ebus::PollItem&) { count++; });
+  REQUIRE(count == 0);
 
   std::this_thread::sleep_for(std::chrono::milliseconds(1100));
 
-  auto due = pm.getDueItems();
-  REQUIRE(due.size() == 1);
-  if (!due.empty()) {
-    REQUIRE(due[0].message == std::vector<uint8_t>{0xaa, 0xbb});
-    REQUIRE(due[0].priority == 5);
-  }
-
-  REQUIRE(pm.getDueItems().empty());
-
-  std::this_thread::sleep_for(std::chrono::milliseconds(1100));
-  REQUIRE(pm.getDueItems().size() == 1);
+  count = 0;
+  pm.processDueItems([&](const ebus::PollItem&) { count++; });
+  REQUIRE(count == 1);
 }
 
 TEST_CASE("PollManager: Removal", "[app][pollmanager]") {
   ebus::PollManager pm;
 
-  uint32_t id = pm.addPollItem(1, {0xff}, std::chrono::seconds(1));
+  uint32_t id =
+      pm.addPollItem(1, ebus::ByteView({0xff}), std::chrono::seconds(1));
   std::this_thread::sleep_for(std::chrono::milliseconds(1100));
 
-  REQUIRE(pm.getDueItems().size() == 1);
+  size_t count = 0;
+  pm.processDueItems([&](const ebus::PollItem&) { count++; });
+  REQUIRE(count == 1);
 
   pm.removePollItem(id);
   std::this_thread::sleep_for(std::chrono::milliseconds(1100));
-  REQUIRE(pm.getDueItems().empty());
+  count = 0;
+  pm.processDueItems([&](const ebus::PollItem&) { count++; });
+  REQUIRE(count == 0);
 }

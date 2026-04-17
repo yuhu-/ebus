@@ -4,12 +4,11 @@
  */
 
 #include <cassert>
+#include <ebus/sequence.hpp>
 #include <ebus/utils.hpp>
 #include <iostream>
 #include <string>
 #include <vector>
-
-#include "core/sequence.hpp"
 
 void run_test(const std::string& name, bool condition) {
   std::cout << "[TEST] " << name << ": " << (condition ? "PASSED" : "FAILED")
@@ -143,11 +142,23 @@ void test_append() {
   run_test("Append Extended+Reduced (auto-extend)", s1 == expected);
 }
 
+void test_logically_equals() {
+  ebus::Sequence reduced;
+  ebus::Sequence extended;
+
+  reduced.assign(ebus::toVector("01aa03"), false);
+  extended.assign(ebus::toVector("01a90103"), true);
+
+  run_test("Physical bytes differ", reduced != extended);
+  run_test("Protocol meaning is the same", reduced.logicallyEquals(extended));
+}
+
 int main() {
   test_extend_reduce();
   test_crc();
   test_operators();
   test_append();
+  test_logically_equals();
 
   std::cout << "\nAll sequence tests passed!" << std::endl;
 
