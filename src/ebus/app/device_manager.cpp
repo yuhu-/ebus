@@ -24,8 +24,8 @@ void ebus::DeviceManager::update(ByteView master, ByteView slave) {
 
 void ebus::DeviceManager::resetAddresses() {
   std::lock_guard<std::mutex> lock(mutex_);
-  masters_.clear();
-  slaves_.clear();
+  masters_.fill(0);
+  slaves_.fill(0);
 }
 
 std::vector<ebus::DeviceInfo> ebus::DeviceManager::getDeviceInfo() const {
@@ -38,29 +38,41 @@ std::vector<ebus::DeviceInfo> ebus::DeviceManager::getDeviceInfo() const {
   return result;
 }
 
-std::map<uint8_t, uint32_t> ebus::DeviceManager::getMasters() const {
+std::vector<std::pair<uint8_t, uint32_t>> ebus::DeviceManager::getMasters()
+    const {
   std::lock_guard<std::mutex> lock(mutex_);
-  return masters_;
+  std::vector<std::pair<uint8_t, uint32_t>> result;
+  for (size_t i = 0; i < masters_.size(); ++i) {
+    if (masters_[i] > 0)
+      result.push_back({static_cast<uint8_t>(i), masters_[i]});
+  }
+  return result;
 }
 
-std::map<uint8_t, uint32_t> ebus::DeviceManager::getSlaves() const {
+std::vector<std::pair<uint8_t, uint32_t>> ebus::DeviceManager::getSlaves()
+    const {
   std::lock_guard<std::mutex> lock(mutex_);
-  return slaves_;
+  std::vector<std::pair<uint8_t, uint32_t>> result;
+  for (size_t i = 0; i < slaves_.size(); ++i) {
+    if (slaves_[i] > 0) result.push_back({static_cast<uint8_t>(i), slaves_[i]});
+  }
+  return result;
 }
 
-std::set<uint8_t> ebus::DeviceManager::getObservedSlaves() const {
+std::bitset<256> ebus::DeviceManager::getObservedSlaves() const {
   std::lock_guard<std::mutex> lock(mutex_);
-  std::set<uint8_t> slaves;
+  std::bitset<256> observed;
 
-  for (const auto& master : masters_) {
-    if (master.first != own_address_)
-      slaves.insert(ebus::slaveOf(master.first));
+  for (size_t i = 0; i < masters_.size(); ++i) {
+    if (masters_[i] > 0 && i != own_address_)
+      observed.set(ebus::slaveOf(static_cast<uint8_t>(i)));
   }
 
-  for (const auto& slave : slaves_) {
-    if (slave.first != ebus::slaveOf(own_address_)) slaves.insert(slave.first);
+  for (size_t i = 0; i < slaves_.size(); ++i) {
+    if (slaves_[i] > 0 && i != ebus::slaveOf(own_address_))
+      observed.set(static_cast<uint8_t>(i));
   }
-  return slaves;
+  return observed;
 }
 
 std::vector<ebus::Sequence> ebus::DeviceManager::vendorScanCommands() const {

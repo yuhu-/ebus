@@ -5,6 +5,7 @@
 
 #include "app/device_scanner.hpp"
 
+#include <bitset>
 #include <ebus/utils.hpp>
 
 ebus::DeviceScanner::DeviceScanner(uint8_t address,
@@ -68,17 +69,19 @@ void ebus::DeviceScanner::setStartupScanInterval(
 void ebus::DeviceScanner::scanObservedDevices() {
   // device_manager is thread-safe, so we can query it outside our lock
   // to reduce contention, although getObservedSlaves copies the set anyway.
-  std::set<uint8_t> slaves;
+  std::bitset<256> observed;
   std::vector<Sequence> vendor_cmds;  // Correct type
 
   if (device_manager_) {
-    slaves = device_manager_->getObservedSlaves();
+    observed = device_manager_->getObservedSlaves();
     vendor_cmds = device_manager_->vendorScanCommands();
   }
 
   std::lock_guard<std::mutex> lock(mutex_);
-  for (uint8_t addr : slaves) {
-    scanAddressLocked(addr);
+  for (size_t i = 0; i < 256; ++i) {
+    if (observed.test(i)) {
+      scanAddressLocked(static_cast<uint8_t>(i));
+    }
   }
   // Also queue vendor-specific scans for a complete refresh
   for (const auto& cmd : vendor_cmds) {
@@ -163,7 +166,7 @@ ebus::Sequence ebus::DeviceScanner::nextCommand() {
       if (now >= next_startup_scan_time_) {
         startup_scan_count_++;
 
-        std::set<uint8_t> targets;
+        std::bitset<256> targets;
         if (device_manager_) {
           // Note: accessing device_manager under lock.
           // device_manager handles its own locking, so this is safe.
@@ -171,8 +174,11 @@ ebus::Sequence ebus::DeviceScanner::nextCommand() {
         }
 
         // Populate queue for this iteration
-        for (uint8_t addr : targets) {
-          startup_queue_.push(Device::createScanCommand(addr));
+        for (size_t i = 0; i < 256; ++i) {
+          if (targets.test(i)) {
+            startup_queue_.push(
+                Device::createScanCommand(static_cast<uint8_t>(i)));
+          }
         }
         // Also queue vendor-specific scans for already identified devices
         if (device_manager_) {

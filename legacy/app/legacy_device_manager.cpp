@@ -40,9 +40,18 @@ void test_address_tracking() {
   auto masters = dm.getMasters();
   auto slaves = dm.getSlaves();
 
-  ASSERT_TRUE(masters.count(0x10) > 0);
-  ASSERT_TRUE(slaves.count(0x15) > 0);
-  ASSERT_TRUE(dm.getObservedSlaves().count(0x15) > 0);
+  ASSERT_TRUE(masters.size() == 1);
+  ASSERT_TRUE(masters[0].first == 0x10);
+  ASSERT_TRUE(masters[0].second == 1);
+
+  ASSERT_TRUE(slaves.size() == 1);
+  ASSERT_TRUE(slaves[0].first == 0x15);
+  ASSERT_TRUE(slaves[0].second == 1);
+  
+  auto observed = dm.getObservedSlaves();
+
+  ASSERT_TRUE(observed[0x10] == 0);
+  ASSERT_TRUE(observed[0x15] == 1);
 
   std::cout << "PASSED" << std::endl;
 }
