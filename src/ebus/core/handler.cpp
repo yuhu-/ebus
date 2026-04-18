@@ -749,11 +749,11 @@ void ebus::Handler::callOnBusRequestLost() {
   }
 }
 
-void ebus::Handler::callOnReactiveMasterSlave(ByteView master,
+void ebus::Handler::callOnReactiveMasterSlave(ByteView master_view,
                                               Sequence& slave_response) {
   if (reactive_master_slave_callback_) {
     callback_reactive_.markBegin();
-    reactive_master_slave_callback_(master, slave_response);
+    reactive_master_slave_callback_(master_view, slave_response);
     callback_reactive_.markEnd();
   }
 }

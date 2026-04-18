@@ -23,6 +23,8 @@ ebus::Scheduler::Scheduler(Handler* handler)
       next_id_(1),
       max_send_attempts_(3),
       base_backoff_(std::chrono::milliseconds(100)) {
+  // Reserve space for typical traffic bursts
+  item_queue_.reserve(32);
   attachHandlerCallbacks();
 }
 
@@ -79,6 +81,13 @@ void ebus::Scheduler::setMaxSendAttempts(int send_attempts) {
 
 void ebus::Scheduler::setBaseBackoff(Duration duration) {
   base_backoff_ = duration;
+}
+
+void ebus::Scheduler::setReactiveMasterSlaveCallback(
+    ReactiveMasterSlaveCallback callback) {
+  extern_reactive_callback_ = std::move(callback);
+  if (handler_)
+    handler_->setReactiveMasterSlaveCallback(extern_reactive_callback_);
 }
 
 void ebus::Scheduler::setTelegramCallback(TelegramCallback callback) {
@@ -222,20 +231,15 @@ void ebus::Scheduler::run() {
 }
 
 ebus::Scheduler::Duration ebus::Scheduler::backoffDuration(int attempt) const {
-  // exponential backoff: base * 2^(attempt-1)
-  int shift = std::max(0, attempt - 1);
-  // cap shift to avoid undefined/overflowed shifts
-  constexpr int kMaxShift = 30;
-  shift = std::min(shift, kMaxShift);
-
-  // multiply base_backoff_ by (1 << shift) using integer multiplication on
-  // count() to avoid accidental scaling issues with some duration types.
+  // Pre-calculated multipliers for 2^(attempt-1) to avoid runtime bit-shifts.
   using Rep = typename Duration::rep;
+  static constexpr Rep kMultipliers[] = {1, 2, 4, 8, 16, 32, 64, 128, 256, 512};
+  constexpr int kMaxAttempt = sizeof(kMultipliers) / sizeof(kMultipliers[0]);
 
-  // Cap shift to prevent overflow if Rep is small or base is large
-  if (shift >= static_cast<int>(sizeof(Rep) * 8 - 2)) return Duration::max();
+  if (attempt <= 0) return Duration::zero();
+  if (attempt > kMaxAttempt) return Duration::max();
 
-  Rep factor = static_cast<Rep>(1) << shift;
+  Rep factor = kMultipliers[attempt - 1];
   return Duration(static_cast<Rep>(base_backoff_.count() * factor));
 }
 
@@ -262,6 +266,8 @@ void ebus::Scheduler::attachHandlerCallbacks() {
     event_queue_.tryPush(ev);
   });
 
+  handler_->setReactiveMasterSlaveCallback(extern_reactive_callback_);
+
   handler_->setTelegramCallback(
       [this](MessageType message_type, TelegramType telegram_type,
              ByteView master_view, ByteView slave_view) {
@@ -286,8 +292,6 @@ void ebus::Scheduler::attachHandlerCallbacks() {
                                     ByteView master_view, ByteView slave_view) {
     if (extern_error_callback_)
       extern_error_callback_(error, master_view, slave_view);
-
-    // auto state = handler_->getState();
 
     // Reset on certain error conditions that indicate the bus is now free
     // again

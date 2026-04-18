@@ -45,6 +45,7 @@ class Controller {
   void setClientActiveTimeout(std::chrono::milliseconds timeout);
 
   // Unified Bus Listeners
+  void setReactiveMasterSlaveCallback(ReactiveMasterSlaveCallback callback);
   void setTelegramCallback(TelegramCallback callback);
   void setErrorCallback(ErrorCallback callback);
 

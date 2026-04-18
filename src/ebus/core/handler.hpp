@@ -66,9 +66,6 @@ static const char* getHandlerStateText(HandlerState state) {
 using BusRequestWonCallback = std::function<void()>;
 using BusRequestLostCallback = std::function<void()>;
 
-using ReactiveMasterSlaveCallback =
-    std::function<void(ByteView master, Sequence& response)>;
-
 #define EBUS_HANDLER_COUNTER_LIST    \
   X(messages_passive_master_slave)   \
   X(messages_passive_master_master)  \

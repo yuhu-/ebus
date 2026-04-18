@@ -99,6 +99,12 @@ void ebus::Controller::setClientActiveTimeout(
   if (impl_->client_manager_) impl_->client_manager_->setActiveTimeout(timeout);
 }
 
+void ebus::Controller::setReactiveMasterSlaveCallback(
+    ReactiveMasterSlaveCallback callback) {
+  if (impl_->scheduler_)
+    impl_->scheduler_->setReactiveMasterSlaveCallback(std::move(callback));
+}
+
 void ebus::Controller::setTelegramCallback(TelegramCallback callback) {
   impl_->user_telegram_callback_ = std::move(callback);
 }

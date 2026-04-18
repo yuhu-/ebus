@@ -63,6 +63,7 @@ class Scheduler {
   void setMaxSendAttempts(int send_attempts);
   void setBaseBackoff(Duration duration);
 
+  void setReactiveMasterSlaveCallback(ReactiveMasterSlaveCallback callback);
   void setTelegramCallback(TelegramCallback callback);
   void setErrorCallback(ErrorCallback callback);
 
@@ -111,6 +112,7 @@ class Scheduler {
   Duration base_backoff_;
 
   // Forwarded callbacks
+  ReactiveMasterSlaveCallback extern_reactive_callback_ = nullptr;
   TelegramCallback extern_telegram_callback_ = nullptr;
   ErrorCallback extern_error_callback_ = nullptr;
 

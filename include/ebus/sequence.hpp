@@ -429,6 +429,14 @@ class SequenceImpl {
 using Sequence = SequenceImpl<64>;
 
 /**
+ * Callback for reactive master-slave interactions, where the slave response is
+ * generated based on the master message. The callback receives the master
+ * message and must populate the slave response sequence.
+ */
+using ReactiveMasterSlaveCallback =
+    std::function<void(ByteView master_view, Sequence& slave_response)>;
+
+/**
  * Factory function to create a sequence from a raw ByteView.
  */
 template <size_t N = 64>
