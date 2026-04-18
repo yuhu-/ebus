@@ -39,6 +39,11 @@ struct BusEvent {
   X(stats_transmit)          \
   X(stats_uptime)
 
+/**
+ * FreeRtos-specific implementation of the eBUS physical layer.
+ * Handles serial port configuration and asynchronous byte reading via a
+ * background thread.
+ */
 class BusFreeRtos {
  public:
   explicit BusFreeRtos(const BusConfig& config, const RuntimeConfig& runtime,

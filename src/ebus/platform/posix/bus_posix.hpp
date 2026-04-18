@@ -50,6 +50,11 @@ struct BusEvent {
   X(stats_transmit)          \
   X(stats_uptime)
 
+/**
+ * POSIX-specific implementation of the eBUS physical layer.
+ * Handles serial port configuration and asynchronous byte reading via a 
+ * background thread. Supports a virtual-line simulation for testing.
+ */
 class BusPosix {
  public:
   using ReadListener = std::function<void(const uint8_t& byte)>;
