@@ -44,20 +44,18 @@ void run_test(const TestCase& tc) {
     ebus::RequestState state = request.getState();
 
     std::cout << "->  read: " << ebus::toString(byte)
-              << "   state: " << ebus::getRequestStateText(state)
-              << "\tlockCounter: "
+              << "   state: " << ebus::toString(state) << "\tlockCounter: "
               << static_cast<int>(request.getLockCounter());
 
     testResult = request.run(byte);
 
-    std::cout << "\tresult: " << ebus::getRequestResultText(testResult);
+    std::cout << "\tresult: " << ebus::toString(testResult);
 
     if (requestPending && request.requestBus(tc.address))
       requestPending = false;
 
     if (state != request.getState())
-      std::cout << "\tswitch: "
-                << ebus::getRequestStateText(request.getState());
+      std::cout << "\tswitch: " << ebus::toString(request.getState());
 
     // simulate request bus timer
     if (request.busRequestPending()) {
@@ -76,10 +74,7 @@ void run_test(const TestCase& tc) {
 void printMetrics() {
   auto requestMetrics = request.getMetrics();
   std::cout << "\n--- Request Metrics ---" << std::endl;
-  for (auto const& m : requestMetrics) {
-    std::cout << std::setw(60) << std::left << m.first << ": " << m.second.last
-              << std::endl;
-  }
+  std::cout << toJson(requestMetrics) << std::endl;
 }
 
 // clang-format off

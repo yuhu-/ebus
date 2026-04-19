@@ -9,6 +9,7 @@
 #include <cstring>
 #include <functional>
 #include <string_view>
+#include <type_traits>
 #include <vector>
 
 namespace ebus {
@@ -70,6 +71,52 @@ constexpr const char* toString(SequenceState state) noexcept {
   }
 }
 
+enum class RequestResult {
+  observe_syn,
+  observe_data,
+  first_syn,
+  first_won,
+  first_retry,
+  first_lost,
+  first_error,
+  retry_syn,
+  retry_error,
+  second_won,
+  second_lost,
+  second_error
+};
+
+constexpr const char* toString(RequestResult result) {
+  switch (result) {
+    case RequestResult::observe_syn:
+      return "observe_syn";
+    case RequestResult::observe_data:
+      return "observe_data";
+    case RequestResult::first_syn:
+      return "first_syn";
+    case RequestResult::first_won:
+      return "first_won";
+    case RequestResult::first_retry:
+      return "first_retry";
+    case RequestResult::first_lost:
+      return "first_lost";
+    case RequestResult::first_error:
+      return "first_error";
+    case RequestResult::retry_syn:
+      return "retry_syn";
+    case RequestResult::retry_error:
+      return "retry_error";
+    case RequestResult::second_won:
+      return "second_won";
+    case RequestResult::second_lost:
+      return "second_lost";
+    case RequestResult::second_error:
+      return "second_error";
+    default:
+      return "unknown_result";
+  }
+}
+
 // --- Protocol Enums ---
 enum class TelegramType { undefined, broadcast, master_master, master_slave };
 enum class MessageType { undefined, active, passive, reactive };
@@ -108,6 +155,13 @@ struct ByteView {
   size_t size_ = 0;
 };
 
+// Ensure definitions.hpp remains lean and free of heavy template logic
+static_assert(std::is_standard_layout_v<ByteView>,
+              "ByteView must maintain standard layout for ABI compatibility.");
+static_assert(std::is_trivially_copyable_v<ByteView>,
+              "ByteView must be trivially copyable to remain heap-free in the "
+              "hot path.");
+
 // --- Public Callback Signatures ---
 
 /**
@@ -122,11 +176,5 @@ using TelegramCallback =
  */
 using ErrorCallback = std::function<void(
     std::string_view error_message, ByteView master_view, ByteView slave_view)>;
-
-/**
- * Result of a message enqueued via the Scheduler.
- */
-using ResultCallback = std::function<void(bool success, ByteView master_view,
-                                          ByteView slave_view)>;
 
 }  // namespace ebus

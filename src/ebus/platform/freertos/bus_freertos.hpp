@@ -65,7 +65,7 @@ class BusFreeRtos {
   void setRuntimeConfig(const RuntimeConfig& runtime);
 
   void resetMetrics();
-  std::map<std::string, MetricValues> getMetrics() const;
+  ebus::metrics::BusMetrics getMetrics() const;
   void recordUtilization(uint8_t byte);
 
  private:

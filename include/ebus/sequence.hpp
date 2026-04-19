@@ -437,6 +437,12 @@ using ReactiveMasterSlaveCallback =
     std::function<void(ByteView master_view, Sequence& slave_response)>;
 
 /**
+ * Result of an active bus message enqueued via the Scheduler.
+ */
+using ResultCallback = std::function<void(bool success, ByteView master_view,
+                                          ByteView slave_view)>;
+
+/**
  * Factory function to create a sequence from a raw ByteView.
  */
 template <size_t N = 64>

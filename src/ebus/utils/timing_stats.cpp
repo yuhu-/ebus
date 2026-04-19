@@ -7,12 +7,10 @@
 
 #include <cmath>
 
-namespace ebus {
-
-RollingStats::RollingStats()
+ebus::RollingStats::RollingStats()
     : last_(0.0), min_(0.0), max_(0.0), count_(0), mean_(0.0), m2_(0.0) {}
 
-void RollingStats::addSample(double value) {
+void ebus::RollingStats::addSample(double value) {
   last_ = value;
   if (count_ == 0) {
     min_ = value;
@@ -29,32 +27,33 @@ void RollingStats::addSample(double value) {
   m2_ += delta * delta2;
 }
 
-void RollingStats::reset() {
+void ebus::RollingStats::reset() {
   last_ = min_ = max_ = mean_ = m2_ = 0.0;
   count_ = 0;
 }
 
-MetricValues RollingStats::getValues() const {
+ebus::MetricValues ebus::RollingStats::getValues() const {
   return {last_, min_, max_, mean_, getStdDev(), count_};
 }
 
-double RollingStats::getStdDev() const {
+double ebus::RollingStats::getStdDev() const {
   if (count_ == 0) return 0.0;
   return std::sqrt(m2_ / count_);
 }
 
-TimingStats::TimingStats()
+ebus::TimingStats::TimingStats()
     : RollingStats(),
       marked_(false),
       begin_time_(std::chrono::steady_clock::time_point()) {}
 
-void TimingStats::markBegin(
+void ebus::TimingStats::markBegin(
     const std::chrono::steady_clock::time_point& begin) {
   begin_time_ = begin;
   marked_ = true;
 }
 
-void TimingStats::markEnd(const std::chrono::steady_clock::time_point& end) {
+void ebus::TimingStats::markEnd(
+    const std::chrono::steady_clock::time_point& end) {
   if (marked_) {
     int64_t duration =
         std::chrono::duration_cast<std::chrono::microseconds>(end - begin_time_)
@@ -64,7 +63,7 @@ void TimingStats::markEnd(const std::chrono::steady_clock::time_point& end) {
   }
 }
 
-void TimingStats::addDurationWithTime(
+void ebus::TimingStats::addDurationWithTime(
     const std::chrono::steady_clock::time_point& begin,
     const std::chrono::steady_clock::time_point& end) {
   int64_t duration =
@@ -72,5 +71,3 @@ void TimingStats::addDurationWithTime(
           .count();
   addSample(static_cast<double>(duration));
 }
-
-}  // namespace ebus

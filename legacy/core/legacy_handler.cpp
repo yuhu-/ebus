@@ -121,24 +121,15 @@ void errorCallback(std::string_view error_message, ebus::ByteView master_view,
 void printMetrics() {
   auto handlerMetrics = handler.getMetrics();
   std::cout << "\n--- Handler Metrics ---" << std::endl;
-  for (auto const& m : handlerMetrics) {
-    std::cout << std::setw(60) << std::left << m.first << ": " << m.second.last
-              << std::endl;
-  }
+  std::cout << toJson(handlerMetrics) << std::endl;
 
   auto requestMetrics = request.getMetrics();
   std::cout << "\n--- Request Metrics ---" << std::endl;
-  for (auto const& m : requestMetrics) {
-    std::cout << std::setw(60) << std::left << m.first << ": " << m.second.last
-              << std::endl;
-  }
+  std::cout << toJson(requestMetrics) << std::endl;
 
   auto busMetrics = bus.getMetrics();
   std::cout << "\n--- Bus Metrics ---" << std::endl;
-  for (auto const& m : busMetrics) {
-    std::cout << std::setw(60) << std::left << m.first << ": " << m.second.last
-              << std::endl;
-  }
+  std::cout << toJson(busMetrics) << std::endl;
 }
 
 bool run_test(const TestCase& tc) {

@@ -109,35 +109,16 @@ void ebus::BusFreeRtos::resetMetrics() {
 #undef X
 }
 
-std::map<std::string, ebus::MetricValues> ebus::BusFreeRtos::getMetrics()
-    const {
-  std::map<std::string, MetricValues> m;
-  auto addCounter = [&](const std::string& name, uint32_t val) {
-    m["bus.counter." + name] = {static_cast<double>(val),  0, 0, 0, 0,
-                                static_cast<uint64_t>(val)};
-  };
-
-  // 1. Calculate and map Counters
-  Counter c = counter_;
-
-#define X(name) addCounter(#name, c.name##_);
-  EBUS_BUS_COUNTER_LIST
-#undef X
-
-  // 2. Map the explicit TimingStats members
-  m["bus.timing.delay"] = stats_delay_.getValues();
-  m["bus.timing.window"] = stats_window_.getValues();
-  m["bus.timing.transmit"] = stats_transmit_.getValues();
-
-  m["bus.uptime"] = stats_uptime_.getValues();
+ebus::metrics::BusMetrics ebus::BusFreeRtos::getMetrics() const {
+  metrics::BusMetrics m;
+  m.uptime = stats_uptime_.getValues();
 
   // Calculate Physical Utilization (%)
-  double total_uptime =
-      stats_uptime_.getValues().last;  // assuming uptime tracks total run time
+  double total_uptime = m.uptime.last;
   if (total_uptime > 0) {
-    double util_percent = (stats_utilization_.getSum() / total_uptime) * 100.0;
-    m["bus.utilization"] = {util_percent, util_percent, util_percent,
-                            util_percent, 0.0,          1};
+    m.utilization = (stats_utilization_.getSum() / total_uptime) * 100.0;
+  } else {
+    m.utilization = 0.0;
   }
 
   return m;

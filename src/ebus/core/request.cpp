@@ -7,9 +7,7 @@
 
 #include <ebus/utils.hpp>
 
-ebus::Request::Request()
-    : state_requests_({&Request::observe, &Request::first, &Request::retry,
-                       &Request::second}) {}
+ebus::Request::Request() {}
 
 void ebus::Request::setMaxLockCounter(uint8_t max_counter) {
   max_lock_counter_ = std::min(max_counter, MAX_LOCK_COUNTER);
@@ -80,53 +78,34 @@ void ebus::Request::reset() {
 
 ebus::RequestResult ebus::Request::run(uint8_t byte) {
   size_t idx = static_cast<size_t>(state_);
-  if (idx < state_requests_.size() && state_requests_[idx])
-    (this->*state_requests_[idx])(byte);
+  if (idx < NUM_REQUEST_STATES && kStateRequests[idx])
+    (this->*kStateRequests[idx])(byte);
 
   return result_;
 }
 
 void ebus::Request::resetMetrics() {
-#define X(name) counter_.name##_ = 0;
-  EBUS_REQUEST_COUNTER_LIST
-#undef X
+  metrics_storage_ = {};
 }
 
-std::map<std::string, ebus::MetricValues> ebus::Request::getMetrics() const {
-  std::map<std::string, MetricValues> m;
-  auto add_counter = [&](const std::string& name, uint32_t val) {
-    m["request.counter." + name] = {static_cast<double>(val),  0, 0, 0, 0,
-                                    static_cast<uint64_t>(val)};
-  };
+ebus::metrics::RequestMetrics ebus::Request::getMetrics() const {
+  metrics::RequestMetrics m = metrics_storage_;
 
-  // 1. Calculate and map Counters
-  Counter c = counter_;
-
-  uint32_t attempts = c.first_won_ + c.first_lost_ + c.first_retry_;
-  uint32_t collisions = c.first_lost_ + c.first_retry_;
-
-  add_counter("won_total", c.first_won_ + c.second_won_);
-  add_counter("lost_total", c.first_lost_ + c.second_lost_);
+  // 1. Aggregate Calculations
+  m.won_total = m.first_won + m.second_won;
+  m.lost_total = m.first_lost + m.second_lost;
 
   // 2. Calculate Contention Rate (%)
   // Contention happens when we lose arbitration (lost or retry) on the
   // first attempt.
-  if (attempts > 0) {
-    double contention_rate =
-        (static_cast<double>(collisions) / attempts) * 100.0;
-    m["request.contention_rate"] = {contention_rate,
-                                    contention_rate,
-                                    contention_rate,
-                                    contention_rate,
-                                    0.0,
-                                    1};
-  } else {
-    m["request.contention_rate"] = {0.0, 0.0, 0.0, 0.0, 0.0, 0};
-  }
+  uint32_t attempts = m.first_won + m.first_lost + m.first_retry;
+  uint32_t collisions = m.first_lost + m.first_retry;
 
-#define X(name) add_counter(#name, c.name##_);
-  EBUS_REQUEST_COUNTER_LIST
-#undef X
+  if (attempts > 0) {
+    m.contention_rate = (static_cast<double>(collisions) / attempts) * 100.0;
+  } else {
+    m.contention_rate = 0.0;
+  }
 
   return m;
 }
@@ -142,11 +121,11 @@ void ebus::Request::observe(uint8_t byte) {
 
 void ebus::Request::first(uint8_t byte) {
   if (byte == sym_syn) {
-    counter_.first_syn_++;
+    metrics_storage_.first_syn++;
     state_ = RequestState::first;
     result_ = RequestResult::first_syn;
   } else if (byte == request_address_) {
-    counter_.first_won_++;
+    metrics_storage_.first_won++;
     lock_counter_ = max_lock_counter_;
     state_ = RequestState::observe;
     result_ = RequestResult::first_won;
@@ -160,7 +139,7 @@ void ebus::Request::first(uint8_t byte) {
     // If the Priority Class (Bits 0-3) matches our own, we are allowed
     // to retry immediately at the next SYN (Auto-SYN).
     if ((byte & 0x0f) == (request_address_ & 0x0f)) {
-      counter_.first_retry_++;
+      metrics_storage_.first_retry++;
       state_ = RequestState::retry;
       // CRITICAL: We must re-arm the bus request immediately here.
       // If we wait until we see the next SYN in 'retry()', the Bus thread
@@ -168,12 +147,12 @@ void ebus::Request::first(uint8_t byte) {
       bus_request_.store(true, std::memory_order_release);
       result_ = RequestResult::first_retry;
     } else {
-      counter_.first_lost_++;
+      metrics_storage_.first_lost++;
       state_ = RequestState::observe;
       result_ = RequestResult::first_lost;
     }
   } else {
-    counter_.first_error_++;
+    metrics_storage_.first_error++;
     state_ = RequestState::observe;
     result_ = RequestResult::first_error;
   }
@@ -181,11 +160,11 @@ void ebus::Request::first(uint8_t byte) {
 
 void ebus::Request::retry(uint8_t byte) {
   if (byte == sym_syn) {
-    counter_.retry_syn_++;
+    metrics_storage_.retry_syn++;
     state_ = RequestState::second;
     result_ = RequestResult::retry_syn;
   } else {
-    counter_.retry_error_++;
+    metrics_storage_.retry_error++;
     state_ = RequestState::observe;
     result_ = RequestResult::retry_error;
   }
@@ -193,16 +172,16 @@ void ebus::Request::retry(uint8_t byte) {
 
 void ebus::Request::second(uint8_t byte) {
   if (byte == request_address_) {
-    counter_.second_won_++;
+    metrics_storage_.second_won++;
     lock_counter_ = max_lock_counter_;
     state_ = RequestState::observe;
     result_ = RequestResult::second_won;
   } else if (isMaster(byte)) {
-    counter_.second_lost_++;
+    metrics_storage_.second_lost++;
     state_ = RequestState::observe;
     result_ = RequestResult::second_lost;
   } else {
-    counter_.second_error_++;
+    metrics_storage_.second_error++;
     state_ = RequestState::observe;
     result_ = RequestResult::second_error;
   }

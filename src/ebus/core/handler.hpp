@@ -11,6 +11,7 @@
 #include <ebus/metrics.hpp>
 #include <functional>
 #include <map>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -44,68 +45,45 @@ enum class HandlerState {
   release_bus
 };
 
-static const char* getHandlerStateText(HandlerState state) {
-  const char* values[] = {"passive_receive_master",
-                          "passive_receive_master_acknowledge",
-                          "passive_receive_slave",
-                          "passive_receive_slave_acknowledge",
-                          "reactive_send_master_positive_acknowledge",
-                          "reactive_send_master_negative_acknowledge",
-                          "reactive_send_slave",
-                          "reactive_receive_slave_acknowledge",
-                          "request_bus",
-                          "active_send_master",
-                          "active_receive_master_acknowledge",
-                          "active_receive_slave",
-                          "active_send_slave_positive_acknowledge",
-                          "active_send_slave_negative_acknowledge",
-                          "release_bus"};
-  return values[static_cast<int>(state)];
+constexpr const char* toString(HandlerState state) {
+  switch (state) {
+    case HandlerState::passive_receive_master:
+      return "passive_receive_master";
+    case HandlerState::passive_receive_master_acknowledge:
+      return "passive_receive_master_acknowledge";
+    case HandlerState::passive_receive_slave:
+      return "passive_receive_slave";
+    case HandlerState::passive_receive_slave_acknowledge:
+      return "passive_receive_slave_acknowledge";
+    case HandlerState::reactive_send_master_positive_acknowledge:
+      return "reactive_send_master_positive_acknowledge";
+    case HandlerState::reactive_send_master_negative_acknowledge:
+      return "reactive_send_master_negative_acknowledge";
+    case HandlerState::reactive_send_slave:
+      return "reactive_send_slave";
+    case HandlerState::reactive_receive_slave_acknowledge:
+      return "reactive_receive_slave_acknowledge";
+    case HandlerState::request_bus:
+      return "request_bus";
+    case HandlerState::active_send_master:
+      return "active_send_master";
+    case HandlerState::active_receive_master_acknowledge:
+      return "active_receive_master_acknowledge";
+    case HandlerState::active_receive_slave:
+      return "active_receive_slave";
+    case HandlerState::active_send_slave_positive_acknowledge:
+      return "active_send_slave_positive_acknowledge";
+    case HandlerState::active_send_slave_negative_acknowledge:
+      return "active_send_slave_negative_acknowledge";
+    case HandlerState::release_bus:
+      return "release_bus";
+    default:
+      return "unknown_state";
+  }
 }
 
 using BusRequestWonCallback = std::function<void()>;
 using BusRequestLostCallback = std::function<void()>;
-
-#define EBUS_HANDLER_COUNTER_LIST    \
-  X(messages_passive_master_slave)   \
-  X(messages_passive_master_master)  \
-  X(messages_passive_broadcast)      \
-  X(messages_active_master_slave)    \
-  X(messages_active_master_master)   \
-  X(messages_active_broadcast)       \
-  X(messages_reactive_master_slave)  \
-  X(messages_reactive_master_master) \
-  X(reset_passive_00)                \
-  X(reset_passive_0704)              \
-  X(reset_passive)                   \
-  X(reset_active_00)                 \
-  X(reset_active_0704)               \
-  X(reset_active)                    \
-  X(error_passive_master)            \
-  X(error_passive_master_ack)        \
-  X(error_passive_slave)             \
-  X(error_passive_slave_ack)         \
-  X(error_reactive_master)           \
-  X(error_reactive_master_ack)       \
-  X(error_reactive_slave)            \
-  X(error_reactive_slave_ack)        \
-  X(error_active_master)             \
-  X(error_active_master_ack)         \
-  X(error_active_slave)              \
-  X(error_active_slave_ack)
-
-#define EBUS_HANDLER_TIMING_LIST \
-  X(sync)                        \
-  X(write)                       \
-  X(passive_first)               \
-  X(passive_data)                \
-  X(active_first)                \
-  X(active_data)                 \
-  X(callback_won)                \
-  X(callback_lost)               \
-  X(callback_reactive)           \
-  X(callback_telegram)           \
-  X(callback_error)
 
 /**
  * Handler class that implements the eBUS protocol logic as a finite state
@@ -139,12 +117,14 @@ class Handler {
   void run(const BusEventContext& ctx);
 
   void resetMetrics();
-  std::map<std::string, MetricValues> getMetrics() const;
+  metrics::HandlerMetrics getMetrics() const;
 
  private:
   Bus* bus_ = nullptr;
   Request* request_ = nullptr;
   RequestResult last_result_ = RequestResult::observe_syn;
+
+  std::optional<uint8_t> pending_write_;
 
   uint8_t source_address_ = 0;
   uint8_t target_address_ = 0;
@@ -155,20 +135,8 @@ class Handler {
   TelegramCallback telegram_callback_ = nullptr;
   ErrorCallback error_callback_ = nullptr;
 
-  std::array<void (Handler::*)(uint8_t), NUM_HANDLER_STATES> state_handlers_ =
-      {};
-
-  HandlerState state_ = HandlerState::passive_receive_master;
-  HandlerState last_state_ = HandlerState::passive_receive_master;
-
-  // metrics
-  struct Counter {
-#define X(name) uint32_t name##_ = 0;
-    EBUS_HANDLER_COUNTER_LIST
-#undef X
-  };
-
-  Counter counter_;
+  // Internal storage for detailed counters
+  ebus::metrics::HandlerMetrics metrics_storage_;
 
   TimingStats sync_;
   TimingStats write_;
@@ -226,6 +194,27 @@ class Handler {
   void activeSendSlavePositiveAcknowledge(uint8_t byte);
   void activeSendSlaveNegativeAcknowledge(uint8_t byte);
   void releaseBus(uint8_t byte);
+
+  using StateHandler = void (Handler::*)(uint8_t);
+  static inline constexpr StateHandler kStateHandlers[] = {
+      &Handler::passiveReceiveMaster,
+      &Handler::passiveReceiveMasterAcknowledge,
+      &Handler::passiveReceiveSlave,
+      &Handler::passiveReceiveSlaveAcknowledge,
+      &Handler::reactiveSendMasterPositiveAcknowledge,
+      &Handler::reactiveSendMasterNegativeAcknowledge,
+      &Handler::reactiveSendSlave,
+      &Handler::reactiveReceiveSlaveAcknowledge,
+      &Handler::requestBus,
+      &Handler::activeSendMaster,
+      &Handler::activeReceiveMasterAcknowledge,
+      &Handler::activeReceiveSlave,
+      &Handler::activeSendSlavePositiveAcknowledge,
+      &Handler::activeSendSlaveNegativeAcknowledge,
+      &Handler::releaseBus};
+
+  HandlerState state_ = HandlerState::passive_receive_master;
+  HandlerState last_state_ = HandlerState::passive_receive_master;
 
   void checkPassiveBuffers();
   void checkActiveBuffers();

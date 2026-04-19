@@ -52,10 +52,7 @@ TEST_CASE("Controller: Lifecycle and API", "[app][controller]") {
 
   // Metrics
   auto metrics = controller.getMetrics();
-  REQUIRE(!metrics.empty());
-  if (metrics.count("handler.counter.messages_total")) {
-    REQUIRE(metrics["handler.counter.messages_total"].last >= 1);
-  }
+  REQUIRE(metrics.handler.messages_total == 1);
 
   // Shutdown
   controller.stop();

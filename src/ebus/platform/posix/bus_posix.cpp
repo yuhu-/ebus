@@ -186,52 +186,35 @@ void ebus::BusPosix::setRuntimeConfig(const RuntimeConfig& runtime) {
 }
 
 void ebus::BusPosix::resetMetrics() {
-#define X(name) counter_.name##_ = 0;
-  EBUS_BUS_COUNTER_LIST
-#undef X
+  metrics_storage_ = {};
 
-#define X(name) name##_.reset();
-  EBUS_BUS_TIMING_LIST
-#undef X
+  stats_delay_.reset();
+  stats_window_.reset();
+  stats_transmit_.reset();
+  stats_uptime_.reset();
+
+  stats_utilization_.reset();
 }
 
-std::map<std::string, ebus::MetricValues> ebus::BusPosix::getMetrics() const {
-  std::map<std::string, MetricValues> m;
-  auto addCounter = [&](const std::string& name, uint32_t val) {
-    m["bus.counter." + name] = {static_cast<double>(val),  0, 0, 0, 0,
-                                static_cast<uint64_t>(val)};
-  };
+ebus::metrics::BusMetrics ebus::BusPosix::getMetrics() const {
+  metrics::BusMetrics m;
+  m.uptime = stats_uptime_.getValues();
 
-  // 1. Calculate and map Counters
-  Counter c = counter_;
-
-#define X(name) addCounter(#name, c.name##_);
-  EBUS_BUS_COUNTER_LIST
-#undef X
-
-  // 2. Map the explicit TimingStats members
-  m["bus.timing.delay"] = stats_delay_.getValues();
-  m["bus.timing.window"] = stats_window_.getValues();
-  m["bus.timing.transmit"] = stats_transmit_.getValues();
-
-  m["bus.uptime"] = stats_uptime_.getValues();
-
-  // Calculate Physical Utilization (%)
-  double total_uptime =
-      stats_uptime_.getValues().last;  // assuming uptime tracks total run time
+  // 1. Calculate Physical Utilization (%)
+  double total_uptime = m.uptime.last;
   if (total_uptime > 0) {
-    double util_percent = (stats_utilization_.getSum() / total_uptime) * 100.0;
-    m["bus.utilization"] = {util_percent, util_percent, util_percent,
-                            util_percent, 0.0,          1};
+    m.utilization = (stats_utilization_.getSum() / total_uptime) * 100.0;
+  } else {
+    m.utilization = 0.0;
   }
 
-  return m;
-}
+  // 2. Map Timings
+  m.delay = stats_delay_.getValues();
+  m.window = stats_window_.getValues();
+  m.transmit = stats_transmit_.getValues();
+  m.uptime = stats_uptime_.getValues();
 
-void ebus::BusPosix::recordUtilization(uint8_t byte) {
-  // 1 (start bit) + zero bits in data. eBUS bit time is ~416.67us
-  double low_time = (countZeroBits(byte) + 1) * (1000000.0 / 2400.0);
-  stats_utilization_.addSample(low_time);
+  return m;
 }
 
 void ebus::BusPosix::addReadListener(ReadListener listener) {
@@ -244,6 +227,12 @@ void ebus::BusPosix::addWriteListener(WriteListener listener) {
 
 void ebus::BusPosix::addSynListener(SynListener listener) {
   syn_listeners_.push_back(listener);
+}
+
+void ebus::BusPosix::recordUtilization(uint8_t byte) {
+  // 1 (start bit) + zero bits in data. eBUS bit time is ~416.67us
+  double low_time = (countZeroBits(byte) + 1) * (1000000.0 / 2400.0);
+  stats_utilization_.addSample(low_time);
 }
 
 void ebus::BusPosix::ensureOpen() const {

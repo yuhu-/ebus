@@ -117,17 +117,12 @@ int main() {
 
     // Print metrics to see bus health
     auto metrics = deviceB.getMetrics();
-    if (metrics.count("bus.quality")) {
-      std::cout << "Bus Quality: " << metrics["bus.quality"].last << "%"
-                << std::endl;
-    }
+    std::cout << "Bus Quality: " << metrics.quality << "%" << std::endl;
   }
 
   // Print metrics to see bus health
   auto metrics = deviceB.getMetrics();
-  for (const auto& item : metrics) {
-    std::cout << item.first << ": " << item.second.last << std::endl;
-  }
+  std::cout << "devieB Metrics: " << toJson(metrics) << std::endl;
 
   // --- 8. Stop the simulation ---
   std::cout << "Stopping simulation on virtual bus..." << std::endl;

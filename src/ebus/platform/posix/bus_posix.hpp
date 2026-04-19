@@ -52,7 +52,7 @@ struct BusEvent {
 
 /**
  * POSIX-specific implementation of the eBUS physical layer.
- * Handles serial port configuration and asynchronous byte reading via a 
+ * Handles serial port configuration and asynchronous byte reading via a
  * background thread. Supports a virtual-line simulation for testing.
  */
 class BusPosix {
@@ -81,8 +81,7 @@ class BusPosix {
   void setRuntimeConfig(const RuntimeConfig& runtime);
 
   void resetMetrics();
-  std::map<std::string, MetricValues> getMetrics() const;
-  void recordUtilization(uint8_t byte);
+  ebus::metrics::BusMetrics getMetrics() const;
 
   // Listeners
   void addReadListener(ReadListener listener);
@@ -126,20 +125,17 @@ class BusPosix {
 
   std::atomic<bool> bus_request_flag_{false};
 
-  // metrics
-  struct Counter {
-#define X(name) uint32_t name##_ = 0;
-    EBUS_BUS_COUNTER_LIST
-#undef X
-  };
-
-  Counter counter_;
+  // Internal storage for detailed counters
+  ebus::metrics::BusMetrics metrics_storage_;
 
   TimingStats stats_delay_;
   TimingStats stats_window_;
   TimingStats stats_transmit_;
-  RollingStats stats_utilization_;
   TimingStats stats_uptime_;
+
+  RollingStats stats_utilization_;  // TimingStats ?
+
+  void recordUtilization(uint8_t byte);
 
   void ensureOpen() const;
 

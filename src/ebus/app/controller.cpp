@@ -20,6 +20,7 @@
 #include "platform/system.hpp"
 
 struct ebus::Impl {
+  ebus::ReactiveMasterSlaveCallback user_reactive_callback_;
   ebus::TelegramCallback user_telegram_callback_;
   ebus::ErrorCallback user_error_callback_;
   std::unique_ptr<ebus::Request> request_;
@@ -101,8 +102,11 @@ void ebus::Controller::setClientActiveTimeout(
 
 void ebus::Controller::setReactiveMasterSlaveCallback(
     ReactiveMasterSlaveCallback callback) {
-  if (impl_->scheduler_)
-    impl_->scheduler_->setReactiveMasterSlaveCallback(std::move(callback));
+  impl_->user_reactive_callback_ = std::move(callback);
+  if (impl_->scheduler_) {
+    impl_->scheduler_->setReactiveMasterSlaveCallback(
+        impl_->user_reactive_callback_);
+  }
 }
 
 void ebus::Controller::setTelegramCallback(TelegramCallback callback) {
@@ -165,42 +169,22 @@ std::vector<ebus::DeviceInfo> ebus::Controller::getDeviceInfo() const {
                                 : std::vector<DeviceInfo>();
 }
 
-std::map<std::string, ebus::MetricValues> ebus::Controller::getMetrics() const {
+ebus::BusMetrics ebus::Controller::getMetrics() const {
   if (!configured_) return {};
 
-  std::map<std::string, MetricValues> metrics;
-  auto handler_metrics = impl_->handler_->getMetrics();
-  metrics.insert(handler_metrics.begin(), handler_metrics.end());
+  metrics::SystemMetrics sm;
+  sm.handler = impl_->handler_->getMetrics();
+  sm.request = impl_->request_->getMetrics();
+  sm.bus = impl_->bus_->getMetrics();
 
-  auto request_metrics = impl_->request_->getMetrics();
-  metrics.insert(request_metrics.begin(), request_metrics.end());
+  // Calculate Quality Score (%)
+  // Quality Score is a composite metric that combines error rate and contention
+  // rate to provide an overall health indicator of the bus communication. A
+  // higher score indicates better performance and reliability.
+  sm.quality = (100.0 - sm.handler.error_rate) *
+               (1.0 - (sm.request.contention_rate / 100.0));
 
-  auto bus_metrics = impl_->bus_->getMetrics();
-  metrics.insert(bus_metrics.begin(), bus_metrics.end());
-
-  // 4. Calculate Aggregate Bus Quality (%)
-  // Quality combines Protocol Health (Error Rate) and Network Congestion
-  // (Contention Rate)
-  double error_rate = metrics.count("handler.error_rate")
-                          ? metrics["handler.error_rate"].last
-                          : 0.0;
-  double contention_rate = metrics.count("request.contention_rate")
-                               ? metrics["request.contention_rate"].last
-                               : 0.0;
-
-  if (metrics.count("handler.counter.messages_total") &&
-      metrics["handler.counter.messages_total"].last > 0) {
-    // Score is (100 - ErrorRate) * (1 - ContentionRate/100)
-    // This means 100% error or 100% contention results in 0 quality.
-    double quality = (100.0 - error_rate) * (1.0 - (contention_rate / 100.0));
-    if (quality < 0) quality = 0;  // Ensure non-negative
-    metrics["bus.quality"] = {quality, quality, quality, quality, 0.0, 1};
-  } else {
-    // If no messages, assume perfect quality (or no data to judge)
-    metrics["bus.quality"] = {100.0, 100.0, 100.0, 100.0, 0.0, 0};
-  }
-
-  return metrics;
+  return sm;
 }
 
 bool ebus::Controller::isConfigured() const noexcept { return configured_; }
@@ -219,6 +203,11 @@ void ebus::Controller::constructMembers() {
 
   impl_->device_manager_.reset(new DeviceManager());
   impl_->device_manager_->setOwnAddress(config_.runtime.address);
+
+  if (impl_->user_reactive_callback_) {
+    impl_->scheduler_->setReactiveMasterSlaveCallback(
+        impl_->user_reactive_callback_);
+  }
 
   // Setup the central dispatcher via the Scheduler.
   // The Scheduler handles the timing-critical Handler interaction and

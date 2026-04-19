@@ -69,13 +69,7 @@ int main() {
 
   // 5. Verify Diagnostics (Metrics)
   auto metrics = controller.getMetrics();
-  run_test("Metrics collection is active", !metrics.empty());
-  if (metrics.count("handler.counter.messages_total")) {
-    std::cout << "  Total messages processed: "
-              << metrics["handler.counter.messages_total"].last << std::endl;
-    run_test("Message count is at least 1",
-             metrics["handler.counter.messages_total"].last >= 1);
-  }
+  run_test("Message count is at least 1", metrics.handler.messages_total == 1);
 
   // 6. Shutdown
   std::cout << "  Stopping controller..." << std::endl;

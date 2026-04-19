@@ -10,6 +10,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstdint>
+#include <ebus/definitions.hpp>
 #include <ebus/metrics.hpp>
 #include <functional>
 #include <map>
@@ -26,32 +27,19 @@ constexpr size_t NUM_REQUEST_STATES = 4;
 
 enum class RequestState { observe, first, retry, second };
 
-static const char* getRequestStateText(RequestState state) {
-  const char* values[] = {"observe", "first", "retry", "second"};
-  return values[static_cast<int>(state)];
-}
-
-enum class RequestResult {
-  observe_syn,
-  observe_data,
-  first_syn,
-  first_won,
-  first_retry,
-  first_lost,
-  first_error,
-  retry_syn,
-  retry_error,
-  second_won,
-  second_lost,
-  second_error
-};
-
-static const char* getRequestResultText(RequestResult result) {
-  const char* values[] = {"observe_syn", "observe_data", "first_syn",
-                          "first_won",   "first_retry",  "first_lost",
-                          "first_error", "retry_syn",    "retry_error",
-                          "second_won",  "second_lost",  "second_error"};
-  return values[static_cast<int>(result)];
+constexpr const char* toString(RequestState state) {
+  switch (state) {
+    case RequestState::observe:
+      return "observe";
+    case RequestState::first:
+      return "first";
+    case RequestState::retry:
+      return "retry";
+    case RequestState::second:
+      return "second";
+    default:
+      return "unknown state";
+  }
 }
 
 /**
@@ -67,18 +55,6 @@ struct BusEventContext {
 
 using BusRequestedCallback = std::function<void()>;
 using StartBitCallback = std::function<void()>;
-
-#define EBUS_REQUEST_COUNTER_LIST \
-  X(first_syn)                    \
-  X(first_won)                    \
-  X(first_retry)                  \
-  X(first_lost)                   \
-  X(first_error)                  \
-  X(retry_syn)                    \
-  X(retry_error)                  \
-  X(second_won)                   \
-  X(second_lost)                  \
-  X(second_error)
 
 /**
  * Implementation of the eBUS arbitration state machine.
@@ -120,7 +96,7 @@ class Request {
   RequestResult run(uint8_t byte);
 
   void resetMetrics();
-  std::map<std::string, MetricValues> getMetrics() const;
+  metrics::RequestMetrics getMetrics() const;
 
  private:
   uint8_t max_lock_counter_ = DEFAULT_LOCK_COUNTER;
@@ -139,25 +115,20 @@ class Request {
 
   StartBitCallback start_bit_callback_ = nullptr;
 
-  std::array<void (Request::*)(uint8_t), NUM_REQUEST_STATES> state_requests_ =
-      {};
-
-  RequestState state_ = RequestState::observe;
-  RequestResult result_ = RequestResult::observe_syn;
-
-  // metrics
-  struct Counter {
-#define X(name) uint32_t name##_ = 0;
-    EBUS_REQUEST_COUNTER_LIST
-#undef X
-  };
-
-  Counter counter_;
+  // Internal storage for detailed counters
+  ebus::metrics::RequestMetrics metrics_storage_;
 
   void observe(uint8_t byte);
   void first(uint8_t byte);
   void retry(uint8_t byte);
   void second(uint8_t byte);
+
+  using StateHandler = void (Request::*)(uint8_t);
+  static inline constexpr StateHandler kStateRequests[] = {
+      &Request::observe, &Request::first, &Request::retry, &Request::second};
+
+  RequestState state_ = RequestState::observe;
+  RequestResult result_ = RequestResult::observe_syn;
 };
 
 }  // namespace ebus
