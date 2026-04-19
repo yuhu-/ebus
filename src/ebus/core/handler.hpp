@@ -19,13 +19,12 @@
 #include "core/telegram.hpp"
 #include "platform/bus.hpp"
 #include "platform/queue.hpp"
-#include "utils/timing_stats.hpp"
 
 namespace ebus {
 
-constexpr uint8_t DEFAULT_ADDRESS = 0xff;
+class BusMonitor;
 
-constexpr size_t NUM_HANDLER_STATES = 15;
+constexpr uint8_t DEFAULT_ADDRESS = 0xff;
 
 enum class HandlerState {
   passive_receive_master,
@@ -95,7 +94,8 @@ using BusRequestLostCallback = std::function<void()>;
  */
 class Handler {
  public:
-  Handler(uint8_t source_address, Bus* bus, Request* request);
+  Handler(uint8_t source_address, Bus* bus, Request* request,
+          BusMonitor* monitor);
 
   void setSourceAddress(uint8_t source_address);
   uint8_t getSourceAddress() const;
@@ -122,6 +122,7 @@ class Handler {
  private:
   Bus* bus_ = nullptr;
   Request* request_ = nullptr;
+  BusMonitor* monitor_ = nullptr;
   RequestResult last_result_ = RequestResult::observe_syn;
 
   std::optional<uint8_t> pending_write_;
@@ -137,20 +138,6 @@ class Handler {
 
   // Internal storage for detailed counters
   ebus::metrics::HandlerMetrics metrics_storage_;
-
-  TimingStats sync_;
-  TimingStats write_;
-  TimingStats passive_first_;
-  TimingStats passive_data_;
-  TimingStats active_first_;
-  TimingStats active_data_;
-  TimingStats callback_won_;
-  TimingStats callback_lost_;
-  TimingStats callback_reactive_;
-  TimingStats callback_telegram_;
-  TimingStats callback_error_;
-
-  std::array<TimingStats, NUM_HANDLER_STATES> handler_timing_ = {};
 
   std::chrono::steady_clock::time_point last_point_;
   bool measure_sync_ = false;
@@ -212,6 +199,10 @@ class Handler {
       &Handler::activeSendSlavePositiveAcknowledge,
       &Handler::activeSendSlaveNegativeAcknowledge,
       &Handler::releaseBus};
+
+  static_assert(sizeof(kStateHandlers) / sizeof(kStateHandlers[0]) ==
+                    NUM_HANDLER_STATES,
+                "kStateHandlers table size does not match NUM_HANDLER_STATES");
 
   HandlerState state_ = HandlerState::passive_receive_master;
   HandlerState last_state_ = HandlerState::passive_receive_master;

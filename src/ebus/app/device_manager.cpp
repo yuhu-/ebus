@@ -19,7 +19,10 @@ void ebus::DeviceManager::update(ByteView master, ByteView slave) {
 
   // Devices
   if (master[1] == ebus::slaveOf(own_address_)) return;
-  if (ebus::isSlave(master[1])) devices_[master[1]].update(master, slave);
+  if (ebus::isSlave(master[1])) {
+    devices_[master[1]].update(master, slave);
+    identified_devices_.set(master[1]);
+  }
 }
 
 void ebus::DeviceManager::resetAddresses() {
@@ -31,9 +34,10 @@ void ebus::DeviceManager::resetAddresses() {
 std::vector<ebus::DeviceInfo> ebus::DeviceManager::getDeviceInfo() const {
   std::lock_guard<std::mutex> lock(mutex_);
   std::vector<DeviceInfo> result;
-  result.reserve(devices_.size());
-  for (const auto& [address, device] : devices_) {
-    result.push_back(device.getDeviceInfo());
+  for (size_t i = 0; i < 256; ++i) {
+    if (identified_devices_.test(i)) {
+      result.push_back(devices_[i].getDeviceInfo());
+    }
   }
   return result;
 }
@@ -59,6 +63,11 @@ std::vector<std::pair<uint8_t, uint32_t>> ebus::DeviceManager::getSlaves()
   return result;
 }
 
+uint32_t ebus::DeviceManager::findCounter(uint8_t address) const {
+  std::lock_guard<std::mutex> lock(mutex_);
+  return masters_[address] + slaves_[address];
+}
+
 std::bitset<256> ebus::DeviceManager::getObservedSlaves() const {
   std::lock_guard<std::mutex> lock(mutex_);
   std::bitset<256> observed;
@@ -78,10 +87,12 @@ std::bitset<256> ebus::DeviceManager::getObservedSlaves() const {
 std::vector<ebus::Sequence> ebus::DeviceManager::vendorScanCommands() const {
   std::lock_guard<std::mutex> lock(mutex_);
   std::vector<Sequence> result;
-  for (const auto& device : devices_) {
-    const auto commands = device.second.createVendorScanCommands();
-    if (!commands.empty())
-      result.insert(result.end(), commands.begin(), commands.end());
+  for (size_t i = 0; i < 256; ++i) {
+    if (identified_devices_.test(i)) {
+      const auto commands = devices_[i].createVendorScanCommands();
+      if (!commands.empty())
+        result.insert(result.end(), commands.begin(), commands.end());
+    }
   }
   return result;
 }

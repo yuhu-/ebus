@@ -8,7 +8,7 @@
 #include <algorithm>
 
 uint32_t ebus::PollManager::addPollItem(
-    uint8_t priority, ByteView message, std::chrono::seconds interval,
+    uint8_t priority, ByteView message, std::chrono::milliseconds interval,
     std::function<void(ByteView)> callback) {
   std::lock_guard<std::mutex> lock(mutex_);
   uint32_t id = next_id_++;

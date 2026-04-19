@@ -11,11 +11,12 @@
 #include <ebus/protocol_math.hpp>
 
 ebus::BusPosix::BusPosix(const BusConfig& config, const RuntimeConfig& runtime,
-                         Request* request)
+                         Request* request, BusMonitor* monitor)
     : device_(config.device),
       simulate_(config.simulate),
       runtime_(runtime),
       request_(request),
+      monitor_(monitor),
       fd_(-1),
       open_(false),
       byte_queue_(new Queue<BusEvent>()),
@@ -57,7 +58,7 @@ void ebus::BusPosix::start() {
   thread_ = std::thread(&BusPosix::readerThread, this);
 
   // start SYN generator if enabled in config
-  stats_uptime_.markBegin();
+  if (monitor_) monitor_->uptime.markBegin();
   if (runtime_.enable_syn) {
     syn_base_ms_dur_ = std::chrono::milliseconds(runtime_.syn_base_ms);
     syn_tolerance_ms_dur_ =
@@ -75,7 +76,7 @@ void ebus::BusPosix::start() {
 
 void ebus::BusPosix::stop() {
   if (!open_) return;
-  stats_uptime_.markEnd();
+  if (monitor_) monitor_->uptime.markEnd();
 
   running_.store(false);
   syn_running_.store(false);
@@ -117,7 +118,7 @@ void ebus::BusPosix::writeByte(const uint8_t byte) {
     syn_cv_.notify_one();
   }
 
-  stats_transmit_.markBegin();
+  if (monitor_) monitor_->transmit.markBegin();
   recordUtilization(byte);
 
   if (simulate_) {
@@ -133,7 +134,7 @@ void ebus::BusPosix::writeByte(const uint8_t byte) {
     if (::write(fd_, &byte, 1) == -1)
       throw std::runtime_error("BusPosix: write error");
   }
-  stats_transmit_.markEnd();
+  if (monitor_) monitor_->transmit.markEnd();
 }
 
 void ebus::BusPosix::setWindow(const uint16_t window) {
@@ -187,33 +188,14 @@ void ebus::BusPosix::setRuntimeConfig(const RuntimeConfig& runtime) {
 
 void ebus::BusPosix::resetMetrics() {
   metrics_storage_ = {};
-
-  stats_delay_.reset();
-  stats_window_.reset();
-  stats_transmit_.reset();
-  stats_uptime_.reset();
-
-  stats_utilization_.reset();
+  if (monitor_) monitor_->reset();
 }
 
 ebus::metrics::BusMetrics ebus::BusPosix::getMetrics() const {
   metrics::BusMetrics m;
-  m.uptime = stats_uptime_.getValues();
-
-  // 1. Calculate Physical Utilization (%)
-  double total_uptime = m.uptime.last;
-  if (total_uptime > 0) {
-    m.utilization = (stats_utilization_.getSum() / total_uptime) * 100.0;
-  } else {
-    m.utilization = 0.0;
+  if (monitor_) {
+    monitor_->updateBusMetrics(m);
   }
-
-  // 2. Map Timings
-  m.delay = stats_delay_.getValues();
-  m.window = stats_window_.getValues();
-  m.transmit = stats_transmit_.getValues();
-  m.uptime = stats_uptime_.getValues();
-
   return m;
 }
 
@@ -232,7 +214,7 @@ void ebus::BusPosix::addSynListener(SynListener listener) {
 void ebus::BusPosix::recordUtilization(uint8_t byte) {
   // 1 (start bit) + zero bits in data. eBUS bit time is ~416.67us
   double low_time = (countZeroBits(byte) + 1) * (1000000.0 / 2400.0);
-  stats_utilization_.addSample(low_time);
+  if (monitor_) monitor_->utilization.addSample(low_time);
 }
 
 void ebus::BusPosix::ensureOpen() const {

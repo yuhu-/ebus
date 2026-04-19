@@ -74,7 +74,7 @@ void run_test(const TestCase& tc) {
 void printMetrics() {
   auto requestMetrics = request.getMetrics();
   std::cout << "\n--- Request Metrics ---" << std::endl;
-  std::cout << toJson(requestMetrics) << std::endl;
+  std::cout << ebus::toJson(requestMetrics) << std::endl;
 }
 
 // clang-format off

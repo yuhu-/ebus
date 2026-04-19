@@ -122,7 +122,7 @@ int main() {
 
   // Print metrics to see bus health
   auto metrics = deviceB.getMetrics();
-  std::cout << "devieB Metrics: " << toJson(metrics) << std::endl;
+  std::cout << "devieB Metrics: " << ebus::toJson(metrics) << std::endl;
 
   // --- 8. Stop the simulation ---
   std::cout << "Stopping simulation on virtual bus..." << std::endl;

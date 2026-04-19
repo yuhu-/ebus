@@ -13,6 +13,7 @@ set(APP_SOURCES
 
 # Core Protocol Logic
 set(CORE_SOURCES
+    core/bus_monitor.cpp
     core/handler.cpp
     core/request.cpp
 )

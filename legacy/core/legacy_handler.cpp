@@ -15,6 +15,7 @@
 #include <iostream>
 #include <string>
 
+#include "core/bus_monitor.hpp"
 #include "core/handler.hpp"
 #include "core/request.hpp"
 #include "core/telegram.hpp"
@@ -46,9 +47,10 @@ ebus::Request request;
 
 ebus::BusConfig config = {.device = "/dev/simulation", .simulate = true};
 ebus::RuntimeConfig runtime = {.address = 0x33, .window = 50, .offset = 5};
-ebus::Bus bus(config, runtime, &request);
 
-ebus::Handler handler(runtime.address, &bus, &request);
+ebus::BusMonitor monitor;
+ebus::Bus bus(config, runtime, &request, &monitor);
+ebus::Handler handler(runtime.address, &bus, &request, &monitor);
 
 void readFunction(const uint8_t& byte) {
   if (!g_detailed_output) return;
@@ -121,15 +123,15 @@ void errorCallback(std::string_view error_message, ebus::ByteView master_view,
 void printMetrics() {
   auto handlerMetrics = handler.getMetrics();
   std::cout << "\n--- Handler Metrics ---" << std::endl;
-  std::cout << toJson(handlerMetrics) << std::endl;
+  std::cout << ebus::toJson(handlerMetrics) << std::endl;
 
   auto requestMetrics = request.getMetrics();
   std::cout << "\n--- Request Metrics ---" << std::endl;
-  std::cout << toJson(requestMetrics) << std::endl;
+  std::cout << ebus::toJson(requestMetrics) << std::endl;
 
   auto busMetrics = bus.getMetrics();
   std::cout << "\n--- Bus Metrics ---" << std::endl;
-  std::cout << toJson(busMetrics) << std::endl;
+  std::cout << ebus::toJson(busMetrics) << std::endl;
 }
 
 bool run_test(const TestCase& tc) {

@@ -27,6 +27,10 @@ constexpr uint8_t sym_broad = 0xfe;    // broadcast destination address
 // --- Protocol Limits ---
 constexpr uint8_t max_bytes = 0x10;  // 16 maximum data bytes (Spec 5.6)
 
+// --- FSM Limits ---
+constexpr size_t NUM_HANDLER_STATES = 15;
+constexpr size_t NUM_REQUEST_STATES = 4;
+
 // --- Protocol States ---
 enum class SequenceState {
   seq_empty,           // sequence is empty

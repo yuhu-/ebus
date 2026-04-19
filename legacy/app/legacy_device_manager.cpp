@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "app/device_manager.hpp"
+#include "core/bus_monitor.hpp"
 #include "core/handler.hpp"
 #include "core/request.hpp"
 #include "platform/bus.hpp"
@@ -28,8 +29,9 @@ void test_address_tracking() {
   ebus::BusConfig config{.device = "/dev/null", .simulate = true};
   ebus::RuntimeConfig runtime{.address = 0xff, .window = 50, .offset = 5};
   ebus::Request request;
-  ebus::Bus bus(config, runtime, &request);
-  ebus::Handler handler(runtime.address, &bus, &request);
+  ebus::BusMonitor monitor;
+  ebus::Bus bus(config, runtime, &request, &monitor);
+  ebus::Handler handler(runtime.address, &bus, &request, &monitor);
 
   // Simulate traffic: Master 0x10 talks to Slave 0x15
   std::vector<uint8_t> master = {0x10, 0x15, 0x07, 0x04, 0x00};
@@ -47,7 +49,7 @@ void test_address_tracking() {
   ASSERT_TRUE(slaves.size() == 1);
   ASSERT_TRUE(slaves[0].first == 0x15);
   ASSERT_TRUE(slaves[0].second == 1);
-  
+
   auto observed = dm.getObservedSlaves();
 
   ASSERT_TRUE(observed[0x10] == 0);
@@ -64,8 +66,9 @@ void test_device_update() {
   ebus::BusConfig config{.device = "/dev/null", .simulate = true};
   ebus::RuntimeConfig runtime{.address = 0xff, .window = 50, .offset = 5};
   ebus::Request request;
-  ebus::Bus bus(config, runtime, &request);
-  ebus::Handler handler(runtime.address, &bus, &request);
+  ebus::BusMonitor monitor;
+  ebus::Bus bus(config, runtime, &request, &monitor);
+  ebus::Handler handler(runtime.address, &bus, &request, &monitor);
 
   // Vaillant Identification Response (Slave 0x08)
   // 07 04 response with Vaillant Manuf ID (0xB5)
@@ -98,8 +101,9 @@ void test_create_scan_commands() {
   ebus::BusConfig config{.device = "/dev/null", .simulate = true};
   ebus::RuntimeConfig runtime{.address = 0xff, .window = 50, .offset = 5};
   ebus::Request request;
-  ebus::Bus bus(config, runtime, &request);
-  ebus::Handler handler(runtime.address, &bus, &request);
+  ebus::BusMonitor monitor;
+  ebus::Bus bus(config, runtime, &request, &monitor);
+  ebus::Handler handler(runtime.address, &bus, &request, &monitor);
 
   std::vector<std::string> inputs = {"08", "15", "50"};
   auto cmds = dm.createScanCommands(inputs);

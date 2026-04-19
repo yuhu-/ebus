@@ -15,6 +15,7 @@
 
 #include "app/client_manager.hpp"
 #include "core/bus_handler.hpp"
+#include "core/bus_monitor.hpp"
 #include "core/handler.hpp"
 #include "core/request.hpp"
 #include "platform/bus.hpp"
@@ -35,8 +36,9 @@ TEST_CASE("ClientManager Orchestration (Regular + ReadOnly)") {
   ebus::RuntimeConfig runtime{
       .address = 0x01, .window = 50, .offset = 5, .enable_syn = false};
 
-  ebus::Bus bus(config, runtime, &req);
-  ebus::Handler handler(runtime.address, &bus, &req);
+  ebus::BusMonitor monitor;
+  ebus::Bus bus(config, runtime, &req, &monitor);
+  ebus::Handler handler(runtime.address, &bus, &req, &monitor);
   ebus::BusHandler busHandler(&req, &handler, bus.getQueue());
   ebus::ClientManager manager(&bus, &busHandler, &req);
 
@@ -111,8 +113,9 @@ TEST_CASE("ClientManager Enhanced Active Sending") {
   ebus::BusConfig config = {.device = "/dev/null", .simulate = true};
   ebus::RuntimeConfig runtime{.address = 0x01, .window = 50, .offset = 5};
 
-  ebus::Bus bus(config, runtime, &req);
-  ebus::Handler handler(runtime.address, &bus, &req);
+  ebus::BusMonitor monitor;
+  ebus::Bus bus(config, runtime, &req, &monitor);
+  ebus::Handler handler(runtime.address, &bus, &req, &monitor);
   ebus::BusHandler busHandler(&req, &handler, bus.getQueue());
   ebus::ClientManager manager(&bus, &busHandler, &req);
 
@@ -184,7 +187,9 @@ TEST_CASE("ClientManager Watchdog Timeout") {
   ebus::BusConfig config = {.device = "/dev/null", .simulate = true};
   ebus::RuntimeConfig runtime{
       .address = 0xff, .window = 50, .offset = 5, .enable_syn = false};
-  ebus::Bus bus(config, runtime, &req);
+
+  ebus::BusMonitor monitor;
+  ebus::Bus bus(config, runtime, &req, &monitor);
   ebus::BusHandler busHandler(&req, nullptr, bus.getQueue());
   ebus::ClientManager manager(&bus, &busHandler, &req);
 
@@ -218,7 +223,9 @@ TEST_CASE("Client Removal") {
   ebus::BusConfig config = {.device = "/dev/null", .simulate = true};
   ebus::RuntimeConfig runtime{
       .address = 0xff, .window = 50, .offset = 5, .enable_syn = false};
-  ebus::Bus bus(config, runtime, &req);
+
+  ebus::BusMonitor monitor;
+  ebus::Bus bus(config, runtime, &req, &monitor);
   ebus::BusHandler busHandler(&req, nullptr, bus.getQueue());
   ebus::ClientManager manager(&bus, &busHandler, &req);
 

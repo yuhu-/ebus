@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "core/bus_handler.hpp"
+#include "core/bus_monitor.hpp"
 #include "core/handler.hpp"
 #include "core/request.hpp"
 #include "platform/bus.hpp"
@@ -21,9 +22,11 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
     ebus::BusConfig config = {.device = "/dev/null", .simulate = true};
     ebus::RuntimeConfig runtime{
         .address = 0x01, .window = 50, .offset = 5, .enable_syn = true};
+
     ebus::Request request;
-    ebus::Bus bus(config, runtime, &request);
-    ebus::Handler handler(runtime.address, &bus, &request);
+    ebus::BusMonitor monitor;
+    ebus::Bus bus(config, runtime, &request, &monitor);
+    ebus::Handler handler(runtime.address, &bus, &request, &monitor);
     ebus::BusHandler busHandler(&request, &handler, bus.getQueue());
 
     std::atomic<int> telegram_count{0};
@@ -104,8 +107,9 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
     ebus::RuntimeConfig runtime{.address = 0x33, .window = 50, .offset = 5};
 
     ebus::Request request;
-    ebus::Bus bus(config, runtime, &request);
-    ebus::Handler handler(runtime.address, &bus, &request);
+    ebus::BusMonitor monitor;
+    ebus::Bus bus(config, runtime, &request, &monitor);
+    ebus::Handler handler(runtime.address, &bus, &request, &monitor);
     ebus::BusHandler busHandler(&request, &handler, bus.getQueue());
 
     std::atomic<int> telegram_count{0};
@@ -175,8 +179,9 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
 
     ebus::Request request;
     request.setMaxLockCounter(0);
-    ebus::Bus bus(config, runtime, &request);
-    ebus::Handler handler(runtime.address, &bus, &request);
+    ebus::BusMonitor monitor;
+    ebus::Bus bus(config, runtime, &request, &monitor);
+    ebus::Handler handler(runtime.address, &bus, &request, &monitor);
     ebus::BusHandler busHandler(&request, &handler, bus.getQueue());
 
     std::atomic<int> telegram_count{0};

@@ -13,6 +13,7 @@
 #include "app/poll_manager.hpp"
 #include "app/scheduler.hpp"
 #include "core/bus_handler.hpp"
+#include "core/bus_monitor.hpp"
 #include "core/handler.hpp"
 #include "core/request.hpp"
 #include "platform/bus.hpp"
@@ -24,6 +25,7 @@ struct ebus::Impl {
   ebus::TelegramCallback user_telegram_callback_;
   ebus::ErrorCallback user_error_callback_;
   std::unique_ptr<ebus::Request> request_;
+  std::unique_ptr<ebus::BusMonitor> bus_monitor_;
   std::unique_ptr<ebus::Bus> bus_;
   std::unique_ptr<ebus::BusHandler> bus_handler_;
   std::unique_ptr<ebus::Handler> handler_;
@@ -124,7 +126,7 @@ void ebus::Controller::enqueue(uint8_t priority, ByteView message,
 }
 
 uint32_t ebus::Controller::addPollItem(uint8_t priority, ByteView message,
-                                       std::chrono::seconds interval,
+                                       std::chrono::milliseconds interval,
                                        std::function<void(ByteView)> callback) {
   return impl_->poll_manager_
              ? impl_->poll_manager_->addPollItem(priority, message, interval,
@@ -169,7 +171,7 @@ std::vector<ebus::DeviceInfo> ebus::Controller::getDeviceInfo() const {
                                 : std::vector<DeviceInfo>();
 }
 
-ebus::BusMetrics ebus::Controller::getMetrics() const {
+ebus::Metrics ebus::Controller::getMetrics() const {
   if (!configured_) return {};
 
   metrics::SystemMetrics sm;
@@ -194,10 +196,12 @@ bool ebus::Controller::isRunning() const noexcept { return running_; }
 void ebus::Controller::constructMembers() {
   impl_->request_.reset(new Request());
   impl_->request_->setMaxLockCounter(config_.runtime.lock_counter_max);
-  impl_->bus_.reset(
-      new Bus(config_.bus, config_.runtime, impl_->request_.get()));
+  impl_->bus_monitor_.reset(new BusMonitor());
+  impl_->bus_.reset(new Bus(config_.bus, config_.runtime, impl_->request_.get(),
+                            impl_->bus_monitor_.get()));
   impl_->handler_.reset(new Handler(config_.runtime.address, impl_->bus_.get(),
-                                    impl_->request_.get()));
+                                    impl_->request_.get(),
+                                    impl_->bus_monitor_.get()));
 
   impl_->scheduler_.reset(new Scheduler(impl_->handler_.get()));
 

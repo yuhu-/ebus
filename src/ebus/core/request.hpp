@@ -23,8 +23,6 @@ namespace ebus {
 constexpr uint8_t DEFAULT_LOCK_COUNTER = 3;
 constexpr uint8_t MAX_LOCK_COUNTER = 25;
 
-constexpr size_t NUM_REQUEST_STATES = 4;
-
 enum class RequestState { observe, first, retry, second };
 
 constexpr const char* toString(RequestState state) {
@@ -126,6 +124,10 @@ class Request {
   using StateHandler = void (Request::*)(uint8_t);
   static inline constexpr StateHandler kStateRequests[] = {
       &Request::observe, &Request::first, &Request::retry, &Request::second};
+
+  static_assert(sizeof(kStateRequests) / sizeof(kStateRequests[0]) ==
+                    NUM_REQUEST_STATES,
+                "kStateRequests table size does not match NUM_REQUEST_STATES");
 
   RequestState state_ = RequestState::observe;
   RequestResult result_ = RequestResult::observe_syn;

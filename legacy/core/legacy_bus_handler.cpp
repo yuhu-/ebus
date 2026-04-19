@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "core/bus_handler.hpp"
+#include "core/bus_monitor.hpp"
 #include "core/handler.hpp"
 #include "core/request.hpp"
 #include "platform/bus.hpp"
@@ -116,8 +117,9 @@ void test_integration_vectors() {
       .address = 0x01, .window = 50, .offset = 5, .enable_syn = true};
 
   ebus::Request request;
-  ebus::Bus bus(config, runtime, &request);
-  ebus::Handler handler(runtime.address, &bus, &request);
+  ebus::BusMonitor monitor;
+  ebus::Bus bus(config, runtime, &request, &monitor);
+  ebus::Handler handler(runtime.address, &bus, &request, &monitor);
   ebus::BusHandler busHandler(&request, &handler, bus.getQueue());
 
   handler.setTelegramCallback(telegramCallback);
@@ -207,8 +209,9 @@ void test_lock_counter() {
   ebus::RuntimeConfig runtime{.address = 0x33, .window = 50, .offset = 5};
 
   ebus::Request request;
-  ebus::Bus bus(config, runtime, &request);
-  ebus::Handler handler(runtime.address, &bus, &request);
+  ebus::BusMonitor monitor;
+  ebus::Bus bus(config, runtime, &request, &monitor);
+  ebus::Handler handler(runtime.address, &bus, &request, &monitor);
   ebus::BusHandler busHandler(&request, &handler, bus.getQueue());
 
   // Ensure we start from a clean state
@@ -314,8 +317,9 @@ void test_external_client() {
 
     ebus::Request request;
     request.setMaxLockCounter(0);
-    ebus::Bus bus(config, runtime, &request);
-    ebus::Handler handler(runtime.address, &bus, &request);
+    ebus::BusMonitor monitor;
+    ebus::Bus bus(config, runtime, &request, &monitor);
+    ebus::Handler handler(runtime.address, &bus, &request, &monitor);
     ebus::BusHandler busHandler(&request, &handler, bus.getQueue());
 
     // Setup logging

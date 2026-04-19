@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "app/device_manager.hpp"
+#include "core/bus_monitor.hpp"
 #include "core/handler.hpp"
 #include "core/request.hpp"
 #include "platform/bus.hpp"
@@ -20,8 +21,11 @@ TEST_CASE("DeviceManager: Address Tracking", "[app][devicemanager]") {
   ebus::BusConfig config{.device = "/dev/null", .simulate = true};
   ebus::RuntimeConfig runtime{.address = 0xff, .window = 50, .offset = 5};
   ebus::Request request;
-  ebus::Bus bus(config, runtime, &request);
-  ebus::Handler handler(runtime.address, &bus, &request);
+  ebus::BusMonitor monitor;
+  ebus::Bus bus(config, runtime, &request, &monitor);
+  ebus::Handler handler(runtime.address, &bus, &request, &monitor);
+
+  dm.setOwnAddress(runtime.address);
 
   std::vector<uint8_t> master = {0x10, 0x15, 0x07, 0x04, 0x00};
   std::vector<uint8_t> slave = {0x00};
@@ -51,8 +55,11 @@ TEST_CASE("DeviceManager: Device Update", "[app][devicemanager]") {
   ebus::BusConfig config{.device = "/dev/null", .simulate = true};
   ebus::RuntimeConfig runtime{.address = 0xff, .window = 50, .offset = 5};
   ebus::Request request;
-  ebus::Bus bus(config, runtime, &request);
-  ebus::Handler handler(runtime.address, &bus, &request);
+  ebus::BusMonitor monitor;
+  ebus::Bus bus(config, runtime, &request, &monitor);
+  ebus::Handler handler(runtime.address, &bus, &request, &monitor);
+
+  dm.setOwnAddress(runtime.address);
 
   std::vector<uint8_t> master = {0x10, 0x08, 0x07, 0x04, 0x00};
   std::vector<uint8_t> slave = {0x0a, 0xb5, 0x50, 0x4d, 0x53, 0x30,
@@ -75,8 +82,9 @@ TEST_CASE("DeviceManager: Create Scan Commands", "[app][devicemanager]") {
   ebus::BusConfig config{.device = "/dev/null", .simulate = true};
   ebus::RuntimeConfig runtime{.address = 0xff, .window = 50, .offset = 5};
   ebus::Request request;
-  ebus::Bus bus(config, runtime, &request);
-  ebus::Handler handler(runtime.address, &bus, &request);
+  ebus::BusMonitor monitor;
+  ebus::Bus bus(config, runtime, &request, &monitor);
+  ebus::Handler handler(runtime.address, &bus, &request, &monitor);
 
   std::vector<std::string> inputs = {"08", "15", "50"};
   auto cmds = dm.createScanCommands(inputs);

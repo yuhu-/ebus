@@ -11,6 +11,7 @@
 #include <thread>
 #include <vector>
 
+#include "core/bus_monitor.hpp"
 #include "core/request.hpp"
 #include "platform/bus.hpp"
 #include "platform/queue.hpp"
@@ -31,7 +32,8 @@ TEST_CASE("Bus: Basic Communication", "[platform][bus]") {
       .address = 0x01, .window = 50, .offset = 5, .enable_syn = true};
 
   ebus::Request req;
-  ebus::Bus bus(config, runtime, &req);
+  ebus::BusMonitor monitor;
+  ebus::Bus bus(config, runtime, &req, &monitor);
 
   bus.start();
   force_request(req, 0x03);
@@ -71,7 +73,8 @@ TEST_CASE("Bus: SYN Timing", "[platform][bus]") {
       .address = 0x01, .window = 50, .offset = 5, .enable_syn = true};
 
   ebus::Request req;
-  ebus::Bus bus(config, runtime, &req);
+  ebus::BusMonitor monitor;
+  ebus::Bus bus(config, runtime, &req, &monitor);
   auto* queue = bus.getQueue();
 
   auto start = std::chrono::steady_clock::now();
@@ -119,7 +122,8 @@ TEST_CASE("Bus: Raw Reception (Broadcast Simulation)", "[platform][bus]") {
   ebus::RuntimeConfig runtime{
       .address = 0x01, .window = 50, .offset = 5, .enable_syn = false};
   ebus::Request req;
-  ebus::Bus bus(config, runtime, &req);
+  ebus::BusMonitor monitor;
+  ebus::Bus bus(config, runtime, &req, &monitor);
   auto* queue = bus.getQueue();
 
   bus.start();

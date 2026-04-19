@@ -42,6 +42,7 @@ To keep the library maintainable and portable, we follow these patterns:
 *   **Sequence**: Manages byte-stuffing/unstuffing and timing for multi-byte protocol sequences.
 *   **Handler**: The protocol engine. Drives the FSM to parse incoming streams byte-by-byte.
 *   **Request**: Implements the multi-master arbitration logic and collision detection.
+*   **BusMonitor**: Centralizes timing and performance statistics for the protocol engine.
 *   **Scheduler**: Manages master priority and enqueues messages for transmission.
 *   **PollManager**: Orchestrates recurring jobs and periodic slave polling.
 *   **DeviceManager**: Maintains the inventory of discovered devices and their properties.

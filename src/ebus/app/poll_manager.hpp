@@ -21,7 +21,7 @@ struct PollItem {
   uint32_t id;
   uint8_t priority;
   Sequence message;
-  std::chrono::seconds interval;
+  std::chrono::milliseconds interval;
   std::chrono::steady_clock::time_point next_due;
   std::function<void(ByteView data)> callback;
 
@@ -46,7 +46,7 @@ class PollManager {
 
   // Register a new recurring command. Returns a unique ID.
   uint32_t addPollItem(uint8_t priority, ByteView message,
-                       std::chrono::seconds interval,
+                       std::chrono::milliseconds interval,
                        std::function<void(ByteView)> callback = nullptr);
 
   // Remove a recurring command by ID.

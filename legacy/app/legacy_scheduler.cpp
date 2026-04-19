@@ -19,6 +19,7 @@
 
 #include "app/scheduler.hpp"
 #include "core/bus_handler.hpp"
+#include "core/bus_monitor.hpp"
 #include "core/handler.hpp"
 #include "core/request.hpp"
 #include "platform/bus.hpp"
@@ -185,8 +186,9 @@ int main() {
   runtime.address = 0x33;
   runtime.enable_syn = true;
 
-  ebus::Bus bus(config, runtime, &request);
-  ebus::Handler handler(ebus::DEFAULT_ADDRESS, &bus, &request);
+  ebus::BusMonitor monitor;
+  ebus::Bus bus(config, runtime, &request, &monitor);
+  ebus::Handler handler(ebus::DEFAULT_ADDRESS, &bus, &request, &monitor);
   ebus::BusHandler busHandler(&request, &handler, bus.getQueue());
 
   const uint8_t source = 0x33;

@@ -8,8 +8,11 @@
 #include <ebus/utils.hpp>
 #include <utility>
 
-ebus::Handler::Handler(uint8_t source_address, Bus* bus, Request* request)
-    : bus_(bus), request_(request) {
+#include "core/bus_monitor.hpp"
+
+ebus::Handler::Handler(uint8_t source_address, Bus* bus, Request* request,
+                       BusMonitor* monitor)
+    : bus_(bus), request_(request), monitor_(monitor) {
   setSourceAddress(source_address);
 
   request_->setHandlerBusRequestedCallback([this]() {
@@ -93,30 +96,34 @@ void ebus::Handler::run(const BusEventContext& ctx) {
   // record timing
   if (ctx.byte != sym_syn) {
     if (active_message_) {
-      if (measure_sync_)
-        active_first_.markEnd(ctx.timestamp);
-      else
-        active_data_.markEnd(ctx.timestamp);
+      if (measure_sync_ && monitor_)
+        monitor_->active_first.markEnd(ctx.timestamp);
+      else if (monitor_)
+        monitor_->active_data.markEnd(ctx.timestamp);
     } else {
-      if (measure_sync_)
-        passive_first_.markEnd(ctx.timestamp);
-      else
-        passive_data_.markEnd(ctx.timestamp);
+      if (measure_sync_ && monitor_)
+        monitor_->passive_first.markEnd(ctx.timestamp);
+      else if (monitor_)
+        monitor_->passive_data.markEnd(ctx.timestamp);
     }
     measure_sync_ = false;
   } else {
-    if (measure_sync_) sync_.markEnd(ctx.timestamp);
+    if (measure_sync_ && monitor_) monitor_->sync.markEnd(ctx.timestamp);
     measure_sync_ = true;
   }
 
   last_point_ = ctx.timestamp;
   if (measure_sync_) {
-    sync_.markBegin(last_point_);
-    active_first_.markBegin(last_point_);
-    passive_first_.markBegin(last_point_);
+    if (monitor_) {
+      monitor_->sync.markBegin(last_point_);
+      monitor_->active_first.markBegin(last_point_);
+      monitor_->passive_first.markBegin(last_point_);
+    }
   } else {
-    active_data_.markBegin(last_point_);
-    passive_data_.markBegin(last_point_);
+    if (monitor_) {
+      monitor_->active_data.markBegin(last_point_);
+      monitor_->passive_data.markBegin(last_point_);
+    }
   }
 
   pending_write_.reset();
@@ -127,38 +134,25 @@ void ebus::Handler::run(const BusEventContext& ctx) {
     auto exec_start = std::chrono::steady_clock::now();
     (this->*kStateHandlers[idx])(ctx.byte);  // handle byte
 
-    handler_timing_[static_cast<size_t>(idx)].addSample(
-        std::chrono::duration_cast<std::chrono::microseconds>(
-            std::chrono::steady_clock::now() - exec_start)
-            .count());
+    if (monitor_) {
+      monitor_->handler_timing[static_cast<size_t>(idx)].addSample(
+          std::chrono::duration_cast<std::chrono::microseconds>(
+              std::chrono::steady_clock::now() - exec_start)
+              .count());
+    }
   }
 
   // Defer actual bus I/O until after the logic step
   if (pending_write_ && bus_) {
-    write_.markBegin();
+    if (monitor_) monitor_->write.markBegin();
     bus_->writeByte(*pending_write_);
-    write_.markEnd();
+    if (monitor_) monitor_->write.markEnd();
   }
 }
 
 void ebus::Handler::resetMetrics() {
   metrics_storage_ = {};
-
-  sync_.reset();
-  write_.reset();
-  passive_first_.reset();
-  passive_data_.reset();
-  active_first_.reset();
-  active_data_.reset();
-  callback_won_.reset();
-  callback_lost_.reset();
-  callback_reactive_.reset();
-  callback_telegram_.reset();
-  callback_error_.reset();
-
-  for (ebus::TimingStats& stats : handler_timing_) {
-    stats.reset();
-  }
+  if (monitor_) monitor_->reset();
 }
 
 ebus::metrics::HandlerMetrics ebus::Handler::getMetrics() const {
@@ -195,22 +189,9 @@ ebus::metrics::HandlerMetrics ebus::Handler::getMetrics() const {
                    100.0;
   }
 
-  // 3. Map Timings
-  m.sync = sync_.getValues();
-  m.write = write_.getValues();
-  m.passive_first = passive_first_.getValues();
-  m.passive_data = passive_data_.getValues();
-  m.active_first = active_first_.getValues();
-  m.active_data = active_data_.getValues();
-  m.callback_won = callback_won_.getValues();
-  m.callback_lost = callback_lost_.getValues();
-  m.callback_reactive = callback_reactive_.getValues();
-  m.callback_telegram = callback_telegram_.getValues();
-  m.callback_error = callback_error_.getValues();
-
-  // 4. Map the state-specific timing array
-  for (size_t i = 0; i < handler_timing_.size(); ++i) {
-    m.state_timings[i] = handler_timing_[i].getValues();
+  // 3. Update with timing data from monitor
+  if (monitor_) {
+    monitor_->updateHandlerMetrics(m);
   }
 
   return m;
@@ -721,26 +702,26 @@ void ebus::Handler::callWrite(uint8_t byte) { pending_write_ = byte; }
 
 void ebus::Handler::callOnBusRequestWon() {
   if (bus_request_won_callback_) {
-    callback_won_.markBegin();
+    if (monitor_) monitor_->callback_won.markBegin();
     bus_request_won_callback_();
-    callback_won_.markEnd();
+    if (monitor_) monitor_->callback_won.markEnd();
   }
 }
 
 void ebus::Handler::callOnBusRequestLost() {
   if (bus_request_lost_callback_) {
-    callback_lost_.markBegin();
+    if (monitor_) monitor_->callback_lost.markBegin();
     bus_request_lost_callback_();
-    callback_lost_.markEnd();
+    if (monitor_) monitor_->callback_lost.markEnd();
   }
 }
 
 void ebus::Handler::callOnReactiveMasterSlave(ByteView master_view,
                                               Sequence& slave_response) {
   if (reactive_master_slave_callback_) {
-    callback_reactive_.markBegin();
+    if (monitor_) monitor_->callback_reactive.markBegin();
     reactive_master_slave_callback_(master_view, slave_response);
-    callback_reactive_.markEnd();
+    if (monitor_) monitor_->callback_reactive.markEnd();
   }
 }
 
@@ -748,17 +729,17 @@ void ebus::Handler::callOnTelegram(MessageType message_type,
                                    TelegramType telegram_type,
                                    ByteView master_view, ByteView slave_view) {
   if (telegram_callback_) {
-    callback_telegram_.markBegin();
+    if (monitor_) monitor_->callback_telegram.markBegin();
     telegram_callback_(message_type, telegram_type, master_view, slave_view);
-    callback_telegram_.markEnd();
+    if (monitor_) monitor_->callback_telegram.markEnd();
   }
 }
 
 void ebus::Handler::callOnError(std::string_view error_message,
                                 ByteView master_view, ByteView slave_view) {
   if (error_callback_) {
-    callback_error_.markBegin();
+    if (monitor_) monitor_->callback_error.markBegin();
     error_callback_(error_message, master_view, slave_view);
-    callback_error_.markEnd();
+    if (monitor_) monitor_->callback_error.markEnd();
   }
 }

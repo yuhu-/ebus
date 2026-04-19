@@ -5,6 +5,7 @@
 
 #pragma once
 
+#include <array>
 #include <cstdint>
 #include <iomanip>
 #include <sstream>
@@ -96,13 +97,74 @@ struct HandlerMetrics {
   MetricValues callback_error;
 
   // State-machine specific execution timings
-  MetricValues state_timings[15];
+  std::array<MetricValues, 15> state_timings;
 };
 
 /**
- * Serializes HandlerMetrics to a JSON object string.
+ * Performance and health metrics for bus requests.
  */
-inline std::string toJson(const HandlerMetrics& m) {
+struct RequestMetrics {
+  // Contention Rate (%)
+  double contention_rate = 0.0;
+
+  // Aggregated Counters
+  uint32_t won_total = 0;
+  uint32_t lost_total = 0;
+
+  // Individual Detailed Counters
+  uint32_t first_syn = 0;
+  uint32_t first_won = 0;
+  uint32_t first_retry = 0;
+  uint32_t first_lost = 0;
+  uint32_t first_error = 0;
+  uint32_t retry_syn = 0;
+  uint32_t retry_error = 0;
+  uint32_t second_won = 0;
+  uint32_t second_lost = 0;
+  uint32_t second_error = 0;
+};
+
+/**
+ * Performance and health metrics for the bus layer.
+ */
+struct BusMetrics {
+  // Physical Utilization (%)
+  double utilization = 0.0;
+
+  // Detailed Counters
+  uint32_t start_bit_errors = 0;
+
+  // Explicit phase timings
+  MetricValues delay;
+  MetricValues window;
+  MetricValues transmit;
+  MetricValues uptime;
+};
+
+/**
+ * Aggregate system telemetry.
+ */
+struct SystemMetrics {
+  HandlerMetrics handler;
+  RequestMetrics request;
+  BusMetrics bus;
+
+  // Quality Score (%)
+  double quality = 0.0;
+};
+
+}  // namespace metrics
+
+/**
+ * Top-level alias for the aggregate metrics.
+ */
+using Metrics = metrics::SystemMetrics;
+
+/**
+ * Global JSON Serialization Helpers
+ */
+
+inline std::string toJson(const metrics::HandlerMetrics& m) {
   std::ostringstream oss;
   oss << std::fixed << std::setprecision(2);
   oss << "{\"error_rate\":" << m.error_rate
@@ -131,34 +193,7 @@ inline std::string toJson(const HandlerMetrics& m) {
   return oss.str();
 }
 
-/**
- * Performance and health metrics for bus requests.
- */
-struct RequestMetrics {
-  // Contention Rate (%)
-  double contention_rate = 0.0;
-
-  // Aggregated Counters
-  uint32_t won_total = 0;
-  uint32_t lost_total = 0;
-
-  // Individual Detailed Counters
-  uint32_t first_syn = 0;
-  uint32_t first_won = 0;
-  uint32_t first_retry = 0;
-  uint32_t first_lost = 0;
-  uint32_t first_error = 0;
-  uint32_t retry_syn = 0;
-  uint32_t retry_error = 0;
-  uint32_t second_won = 0;
-  uint32_t second_lost = 0;
-  uint32_t second_error = 0;
-};
-
-/**
- * Serializes RequestMetrics to a JSON object string.
- */
-inline std::string toJson(const RequestMetrics& m) {
+inline std::string toJson(const metrics::RequestMetrics& m) {
   std::ostringstream oss;
   oss << std::fixed << std::setprecision(2);
   oss << "{\"contention_rate\":" << m.contention_rate
@@ -175,27 +210,7 @@ inline std::string toJson(const RequestMetrics& m) {
   return oss.str();
 }
 
-/**
- * Performance and health metrics for the bus layer.
- */
-struct BusMetrics {
-  // Physical Utilization (%)
-  double utilization = 0.0;
-
-  // Detailed Counters
-  uint32_t start_bit_errors = 0;
-
-  // Explicit phase timings
-  MetricValues delay;
-  MetricValues window;
-  MetricValues transmit;
-  MetricValues uptime;
-};
-
-/**
- * Serializes BusMetrics to a JSON object string.
- */
-inline std::string toJson(const BusMetrics& m) {
+inline std::string toJson(const metrics::BusMetrics& m) {
   std::ostringstream oss;
   oss << std::fixed << std::setprecision(2);
   oss << "{\"utilization\":" << m.utilization
@@ -207,21 +222,9 @@ inline std::string toJson(const BusMetrics& m) {
 }
 
 /**
- * Aggregate system telemetry.
- */
-struct SystemMetrics {
-  HandlerMetrics handler;
-  RequestMetrics request;
-  BusMetrics bus;
-
-  // Quality Score (%)
-  double quality = 0.0;
-};
-
-/**
  * Serializes the entire SystemMetrics tree to a JSON object string.
  */
-inline std::string toJson(const SystemMetrics& sm) {
+inline std::string toJson(const metrics::SystemMetrics& sm) {
   std::ostringstream oss;
   oss << std::fixed << std::setprecision(2);
   oss << "{\"handler\":" << toJson(sm.handler)
@@ -229,13 +232,6 @@ inline std::string toJson(const SystemMetrics& sm) {
       << ",\"quality\":" << sm.quality << "}";
   return oss.str();
 }
-
-}  // namespace metrics
-
-/**
- * Aggregate system telemetry.
- */
-using BusMetrics = metrics::SystemMetrics;
 
 /**
  * Math engine for online statistics calculation using Welford's algorithm.

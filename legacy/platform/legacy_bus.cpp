@@ -12,6 +12,7 @@
 #include <thread>
 #include <vector>
 
+#include "core/bus_monitor.hpp"
 #include "core/request.hpp"
 #include "platform/bus.hpp"
 #include "platform/queue.hpp"
@@ -40,7 +41,8 @@ void test_basic_communication() {
       .address = 0x01, .window = 50, .offset = 5, .enable_syn = true};
 
   ebus::Request req;
-  ebus::Bus bus(config, runtime, &req);
+  ebus::BusMonitor monitor;
+  ebus::Bus bus(config, runtime, &req, &monitor);
 
   std::cout << "\n=== Test: Basic Communication ===" << std::endl;
   bus.start();
@@ -93,7 +95,8 @@ void test_syn_timing() {
   ebus::RuntimeConfig runtime{
       .address = 0x01, .window = 50, .offset = 5, .enable_syn = true};
   ebus::Request req;
-  ebus::Bus bus(config, runtime, &req);
+  ebus::BusMonitor monitor;
+  ebus::Bus bus(config, runtime, &req, &monitor);
   auto* queue = bus.getQueue();
 
   auto start = std::chrono::steady_clock::now();
@@ -150,7 +153,8 @@ void test_raw_reception() {
       .address = 0x01, .window = 50, .offset = 5, .enable_syn = false};
 
   ebus::Request req;
-  ebus::Bus bus(config, runtime, &req);
+  ebus::BusMonitor monitor;
+  ebus::Bus bus(config, runtime, &req, &monitor);
   auto* queue = bus.getQueue();
 
   bus.start();

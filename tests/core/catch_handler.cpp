@@ -14,6 +14,7 @@
 #include <iostream>
 #include <string>
 
+#include "core/bus_monitor.hpp"
 #include "core/handler.hpp"
 #include "core/request.hpp"
 #include "core/telegram.hpp"
@@ -75,12 +76,13 @@ SCENARIO("Handler processes eBUS messages correctly", "[core][handler]") {
 
     for (const auto& tc : test_cases) {
       WHEN(tc.description) {
-        ebus::Request request;
         ebus::BusConfig config = {.device = "/dev/null", .simulate = true};
         ebus::RuntimeConfig runtime{
             .address = 0x33, .window = 50, .offset = 5, .enable_syn = true};
-        ebus::Bus bus(config, runtime, &request);
-        ebus::Handler handler(runtime.address, &bus, &request);
+        ebus::Request request;
+        ebus::BusMonitor monitor;
+        ebus::Bus bus(config, runtime, &request, &monitor);
+        ebus::Handler handler(runtime.address, &bus, &request, &monitor);
 
         int telegram_count = 0;
         int error_count = 0;

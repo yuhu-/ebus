@@ -54,7 +54,7 @@ class Controller {
                ResultCallback callback = nullptr);
 
   uint32_t addPollItem(uint8_t priority, ByteView message,
-                       std::chrono::seconds interval,
+                       std::chrono::milliseconds interval,
                        std::function<void(ByteView)> callback = nullptr);
   void removePollItem(uint32_t id);
 
@@ -73,7 +73,7 @@ class Controller {
   std::vector<DeviceInfo> getDeviceInfo() const;
 
   // Bus Health Metrics
-  ebus::BusMetrics getMetrics() const;
+  ebus::Metrics getMetrics() const;
 
   bool isConfigured() const noexcept;
   bool isRunning() const noexcept;

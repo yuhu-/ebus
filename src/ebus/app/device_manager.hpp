@@ -39,6 +39,9 @@ class DeviceManager {
   std::vector<std::pair<uint8_t, uint32_t>> getMasters() const;
   std::vector<std::pair<uint8_t, uint32_t>> getSlaves() const;
 
+  // Helper for unit tests to check address observation count
+  uint32_t findCounter(uint8_t address) const;
+
   std::bitset<256> getObservedSlaves() const;
   std::vector<Sequence> vendorScanCommands() const;
   std::vector<Sequence> createScanCommands(
@@ -49,7 +52,8 @@ class DeviceManager {
 
   mutable std::mutex mutex_;
 
-  std::map<uint8_t, Device> devices_;
+  std::array<Device, 256> devices_;
+  std::bitset<256> identified_devices_{};
   std::array<uint32_t, 256> masters_{};
   std::array<uint32_t, 256> slaves_{};
 };

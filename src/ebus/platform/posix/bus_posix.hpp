@@ -28,6 +28,7 @@
 #include <thread>
 #include <vector>
 
+#include "core/bus_monitor.hpp"
 #include "core/request.hpp"
 #include "platform/posix/virtual_line.hpp"
 #include "platform/queue.hpp"
@@ -42,14 +43,6 @@ struct BusEvent {
   std::chrono::steady_clock::time_point timestamp;
 };
 
-#define EBUS_BUS_COUNTER_LIST X(start_bit)
-
-#define EBUS_BUS_TIMING_LIST \
-  X(stats_delay)             \
-  X(stats_window)            \
-  X(stats_transmit)          \
-  X(stats_uptime)
-
 /**
  * POSIX-specific implementation of the eBUS physical layer.
  * Handles serial port configuration and asynchronous byte reading via a
@@ -62,7 +55,7 @@ class BusPosix {
   using SynListener = std::function<void()>;
 
   BusPosix(const BusConfig& config, const RuntimeConfig& runtime,
-           Request* request);
+           Request* request, BusMonitor* monitor);
   ~BusPosix();
 
   BusPosix(const BusPosix&) = delete;
@@ -94,6 +87,7 @@ class BusPosix {
   RuntimeConfig runtime_;
 
   Request* request_ = nullptr;
+  BusMonitor* monitor_ = nullptr;
 
   int fd_;
   std::unique_ptr<VirtualLine> virtual_line_;
@@ -127,13 +121,6 @@ class BusPosix {
 
   // Internal storage for detailed counters
   ebus::metrics::BusMetrics metrics_storage_;
-
-  TimingStats stats_delay_;
-  TimingStats stats_window_;
-  TimingStats stats_transmit_;
-  TimingStats stats_uptime_;
-
-  RollingStats stats_utilization_;  // TimingStats ?
 
   void recordUtilization(uint8_t byte);
 

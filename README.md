@@ -16,8 +16,8 @@ The library is designed with a clear separation between the public API and inter
 
 ### Diagnostics & Bus Health
 
-The library includes a unified telemetry system accessible via `Controller::getMetrics()`. It provides:
-- **Bus Utilization**: Physical line low-time calculation.
+The library includes a high-performance telemetry system accessible via `Controller::getMetrics()`. Metrics can be exported to JSON using `ebus::toJson(metrics)`. It provides:
+- **Bus Utilization**: Real-time physical wire occupancy (compliant with eBUS Spec 2.2).
 - **Error Rate**: Percentage-based protocol health.
 - **Contention Rate**: Collision monitoring during arbitration.
 - **Jitter Analysis**: Timing statistics for SYN symbols and response latencies.
