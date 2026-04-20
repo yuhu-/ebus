@@ -15,12 +15,10 @@
 
 // Public headers required for the API signatures
 #include "ebus/config.hpp"
-#include "ebus/data_types.hpp"
 #include "ebus/definitions.hpp"
 #include "ebus/device.hpp"
-#include "ebus/manufacturers.hpp"
 #include "ebus/metrics.hpp"
-#include "ebus/utils.hpp"
+#include "ebus/sequence.hpp"
 
 namespace ebus {
 

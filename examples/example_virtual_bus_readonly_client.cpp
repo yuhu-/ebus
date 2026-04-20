@@ -13,7 +13,7 @@
 #include <unistd.h>
 
 #include <chrono>
-#include <ebus/controller.hpp>
+#include <ebus.hpp>
 #include <iostream>
 #include <thread>
 #include <vector>
