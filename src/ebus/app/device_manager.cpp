@@ -11,17 +11,17 @@ void ebus::DeviceManager::setOwnAddress(uint8_t address) {
   own_address_ = address;
 }
 
-void ebus::DeviceManager::update(ByteView master, ByteView slave) {
+void ebus::DeviceManager::update(ByteView master_view, ByteView slave_view) {
   std::lock_guard<std::mutex> lock(mutex_);
   // Addresses
-  masters_[master[0]]++;
-  if (ebus::isSlave(master[1])) slaves_[master[1]]++;
+  masters_[master_view[0]]++;
+  if (ebus::isSlave(master_view[1])) slaves_[master_view[1]]++;
 
   // Devices
-  if (master[1] == ebus::slaveOf(own_address_)) return;
-  if (ebus::isSlave(master[1])) {
-    devices_[master[1]].update(master, slave);
-    identified_devices_.set(master[1]);
+  if (master_view[1] == ebus::slaveOf(own_address_)) return;
+  if (ebus::isSlave(master_view[1])) {
+    devices_[master_view[1]].update(master_view, slave_view);
+    identified_devices_.set(master_view[1]);
   }
 }
 

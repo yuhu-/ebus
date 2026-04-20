@@ -23,18 +23,18 @@ const std::vector<uint8_t> VEC_b5090127 = {0xb5, 0x09, 0x01, 0x27};
 
 uint8_t ebus::Device::getSlave() const { return slave_; }
 
-void ebus::Device::update(ByteView master, ByteView slave) {
-  slave_ = master[1];
-  if (ebus::matches(master, VEC_070400, 2))
-    vec_070400_.assign(slave);
-  else if (ebus::matches(master, VEC_b5090124, 2))
-    vec_b5090124_.assign(slave);
-  else if (ebus::matches(master, VEC_b5090125, 2))
-    vec_b5090125_.assign(slave);
-  else if (ebus::matches(master, VEC_b5090126, 2))
-    vec_b5090126_.assign(slave);
-  else if (ebus::matches(master, VEC_b5090127, 2))
-    vec_b5090127_.assign(slave);
+void ebus::Device::update(ByteView master_view, ByteView slave_view) {
+  slave_ = master_view[1];
+  if (ebus::matches(master_view, VEC_070400, 2))
+    vec_070400_.assign(slave_view);
+  else if (ebus::matches(master_view, VEC_b5090124, 2))
+    vec_b5090124_.assign(slave_view);
+  else if (ebus::matches(master_view, VEC_b5090125, 2))
+    vec_b5090125_.assign(slave_view);
+  else if (ebus::matches(master_view, VEC_b5090126, 2))
+    vec_b5090126_.assign(slave_view);
+  else if (ebus::matches(master_view, VEC_b5090127, 2))
+    vec_b5090127_.assign(slave_view);
 }
 
 std::vector<uint8_t> ebus::Device::getIdentificationData() const {

@@ -214,7 +214,8 @@ class Handler {
   void callOnBusRequestWon();
   void callOnBusRequestLost();
 
-  void callOnReactiveMasterSlave(ByteView master, Sequence& slave_response);
+  void callOnReactiveMasterSlave(ByteView master_view,
+                                 Sequence& slave_response);
 
   void callOnTelegram(MessageType message_type, TelegramType telegram_type,
                       ByteView master_view, ByteView slave_view);

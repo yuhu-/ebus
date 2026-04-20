@@ -23,7 +23,7 @@ class Device {
  public:
   uint8_t getSlave() const;
 
-  void update(ByteView master, ByteView slave);
+  void update(ByteView master_view, ByteView slave_view);
 
   std::vector<uint8_t> getIdentificationData() const;
   std::vector<uint8_t> getVendorData(uint8_t sub) const;

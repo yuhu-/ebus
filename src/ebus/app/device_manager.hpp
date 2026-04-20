@@ -30,7 +30,7 @@ class DeviceManager {
  public:
   void setOwnAddress(uint8_t address);
 
-  void update(ByteView master, ByteView slave);
+  void update(ByteView master_view, ByteView slave_view);
 
   void resetAddresses();
 
