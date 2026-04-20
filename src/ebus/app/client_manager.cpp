@@ -17,16 +17,17 @@
 #endif
 
 ebus::ClientManager::ClientManager(Bus* bus, BusHandler* bus_handler,
-                                   Request* request)
+                                   Request* request, BusMonitor* monitor)
     : bus_(bus),
       bus_handler_(bus_handler),
       request_(request),
+      monitor_(monitor),
       bus_byte_queue_(256),
       running_(false),
       session_state_(SessionState::idle),
       clients_version_(0),
       last_snapshot_version_(0),
-      active_timeout_(std::chrono::milliseconds(1000)) {
+      active_timeout_(std::chrono::milliseconds(500)) {
   if (bus_handler_) {
     bus_listener_id_ =
         bus_handler_->addByteListener([this](const BusEventContext& ctx) {
@@ -169,6 +170,8 @@ void ebus::ClientManager::run() {
       if (elapsed > timeout) {
         // stop active session safely
         stopActiveSession();
+        if (monitor_)
+          monitor_->updateRequest([](auto& m) { m.session_timeouts++; });
       } else if (session_state_ == SessionState::request) {
         if (request_->busAvailable()) {
           // read first byte from client outside any manager lock
@@ -210,12 +213,17 @@ void ebus::ClientManager::run() {
         s = session_state_;
       }
 
-      if (current_sender) {
-        if ((s == SessionState::response || s == SessionState::transmit) &&
-            bus_requested_.load(std::memory_order_acquire)) {
-          if (current_sender->onBusByte(bctx) == Action::stop_session) {
+       if (current_sender) {
+        // We forward all bytes to the current active sender so it can sniff
+        // while waiting for or performing arbitration.
+        if (s != SessionState::idle) {
+          Action act = current_sender->onBusByte(bctx);
+          if (act == Action::stop_session) {
             stopActiveSession();
-          } else {
+          } else if (bus_requested_.load(std::memory_order_acquire)) {
+            // Arbitration logic in Request FSM signaled completion (Won or
+            // Lost) onBusByte has already sent the bridge response
+            // (Started/Failed).
             std::lock_guard<std::mutex> lock(mutex_);
             session_state_ = SessionState::transmit;
             last_state_change = std::chrono::steady_clock::now();

@@ -15,6 +15,7 @@
 
 #include "app/client.hpp"
 #include "core/bus_handler.hpp"
+#include "core/bus_monitor.hpp"
 #include "core/request.hpp"
 #include "platform/bus.hpp"
 #include "platform/queue.hpp"
@@ -28,7 +29,8 @@ namespace ebus {
  */
 class ClientManager {
  public:
-  ClientManager(Bus* bus, BusHandler* bus_handler, Request* request);
+  ClientManager(Bus* bus, BusHandler* bus_handler, Request* request,
+                BusMonitor* monitor);
   ~ClientManager();
 
   void start();
@@ -43,6 +45,7 @@ class ClientManager {
   Bus* bus_;
   BusHandler* bus_handler_;
   Request* request_;
+  BusMonitor* monitor_;
 
   Queue<BusEventContext> bus_byte_queue_;
   std::atomic<bool> running_{false};

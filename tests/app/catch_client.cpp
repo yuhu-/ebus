@@ -79,12 +79,22 @@ TEST_CASE("EnhancedClient: Encoded responses mapping",
   // 1. Test: Arbitration Win
   if (req.busAvailable()) req.requestBus(0x33, true);
   req.busRequestCompleted();
+
+  // Transparent Sniffer: Bridge client must see the SYN that opens the window
+  req.run(ebus::sym_syn);
+  client.onBusByte({ebus::sym_syn, req.getState(), req.getResult(),
+                    req.getLockCounter(), std::chrono::steady_clock::now()});
+
   req.run(0x33);  // Move FSM to firstWon
 
   client.onBusByte({0x33, req.getState(), req.getResult(), req.getLockCounter(),
                     std::chrono::steady_clock::now()});
 
   uint8_t resp[2];
+  REQUIRE(readExact(sv[1], resp, 2));
+  REQUIRE(resp[0] == 0xc6);
+  REQUIRE(resp[1] == 0xaa);
+
   REQUIRE(readExact(sv[1], resp, 2));
   REQUIRE(resp[0] == 0xc8);
   REQUIRE(resp[1] == 0xb3);

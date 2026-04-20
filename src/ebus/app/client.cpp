@@ -139,13 +139,13 @@ ebus::Action ebus::RegularClient::onBusByte(const BusEventContext& ctx) {
 
   // Handle bus response according to last command
   switch (ctx.result) {
-    case RequestResult::observe_syn:
     case RequestResult::first_lost:
     case RequestResult::first_error:
     case RequestResult::retry_error:
     case RequestResult::second_lost:
     case RequestResult::second_error:
       return Action::stop_session;
+    case RequestResult::observe_syn:
     case RequestResult::observe_data:
       sendToClient(ByteView(&ctx.byte, 1));
       return Action::keep_active;
@@ -278,6 +278,7 @@ ebus::Action ebus::EnhancedClient::onBusByte(const BusEventContext& ctx) {
   switch (ctx.result) {
     case RequestResult::first_lost:
     case RequestResult::second_lost:
+      // Arbitration lost: return 0x0a + the master address that actually won
       sendEnhancedResponse(enhanced::Response::failed, ctx.byte);
       return Action::stop_session;
     case RequestResult::first_error:
@@ -288,15 +289,20 @@ ebus::Action ebus::EnhancedClient::onBusByte(const BusEventContext& ctx) {
       return Action::stop_session;
     case RequestResult::observe_syn:
     case RequestResult::observe_data:
+      // Ordinary bus traffic (sniffing): return 0x01 + data byte
       sendEnhancedResponse(enhanced::Response::received, ctx.byte);
       return Action::keep_active;
     case RequestResult::first_syn:
     case RequestResult::first_retry:
     case RequestResult::retry_syn:
-      // Hide micro-retry: session remains active but we send no bridge response
+      // Arbitration phase: return 0x01 + data byte to keep sniffer stream
+      // complete
+      sendEnhancedResponse(enhanced::Response::received, ctx.byte);
       return Action::keep_active;
     case RequestResult::first_won:
     case RequestResult::second_won:
+      // Arbitration won: return 0x02 + our own address (which is what we read
+      // back)
       sendEnhancedResponse(enhanced::Response::started, ctx.byte);
       return Action::keep_active;
     default:

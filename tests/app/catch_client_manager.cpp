@@ -40,7 +40,7 @@ TEST_CASE("ClientManager Orchestration (Regular + ReadOnly)") {
   ebus::Bus bus(config, runtime, &req, &monitor);
   ebus::Handler handler(runtime.address, &bus, &req, &monitor);
   ebus::BusHandler busHandler(&req, &handler, bus.getQueue());
-  ebus::ClientManager manager(&bus, &busHandler, &req);
+  ebus::ClientManager manager(&bus, &busHandler, &req, &monitor);
 
   int svReg[2];
   socketpair(AF_UNIX, SOCK_STREAM, 0, svReg);
@@ -61,23 +61,27 @@ TEST_CASE("ClientManager Orchestration (Regular + ReadOnly)") {
 
   bus.writeByte(ebus::sym_syn);
   std::this_thread::sleep_for(std::chrono::milliseconds(5));
-  bus.writeByte(ebus::sym_syn);
-  std::this_thread::sleep_for(std::chrono::milliseconds(5));
 
   send(svReg[1], &telegram[0], 1, 0);
   std::this_thread::sleep_for(std::chrono::milliseconds(5));
 
   bus.writeByte(ebus::sym_syn);
   std::this_thread::sleep_for(std::chrono::milliseconds(5));
+
   bus.writeByte(ebus::sym_syn);
   std::this_thread::sleep_for(std::chrono::milliseconds(5));
 
-  CHECK_TEST("Arbitration resolved and won",
+  CHECK_TEST("Request is pending", req.busRequestPending());
+
+  bus.writeByte(ebus::sym_syn);
+  std::this_thread::sleep_for(std::chrono::milliseconds(5));
+
+  CHECK_TEST("Request resolved and won",
              req.getResult() == ebus::RequestResult::first_won);
   CHECK_TEST("LockCounter reset to max", req.getLockCounter() == 3);
 
   uint8_t echo;
-  for (int i = 0; i < 2; ++i) {
+  for (int i = 0; i < 4; ++i) {
     REQUIRE(readExact(svReg[1], &echo, 1));
     CHECK_TEST("Regular received correct SYN echo", echo == ebus::sym_syn);
   }
@@ -117,7 +121,7 @@ TEST_CASE("ClientManager Enhanced Active Sending") {
   ebus::Bus bus(config, runtime, &req, &monitor);
   ebus::Handler handler(runtime.address, &bus, &req, &monitor);
   ebus::BusHandler busHandler(&req, &handler, bus.getQueue());
-  ebus::ClientManager manager(&bus, &busHandler, &req);
+  ebus::ClientManager manager(&bus, &busHandler, &req, &monitor);
 
   int svEnh[2], svRO[2];
   socketpair(AF_UNIX, SOCK_STREAM, 0, svEnh);
@@ -134,8 +138,6 @@ TEST_CASE("ClientManager Enhanced Active Sending") {
 
   bus.writeByte(ebus::sym_syn);
   std::this_thread::sleep_for(std::chrono::milliseconds(5));
-  bus.writeByte(ebus::sym_syn);
-  std::this_thread::sleep_for(std::chrono::milliseconds(5));
 
   uint8_t cmdStart[] = {0xc8, 0xb3};
   send(svEnh[1], cmdStart, 2, 0);
@@ -143,6 +145,12 @@ TEST_CASE("ClientManager Enhanced Active Sending") {
 
   bus.writeByte(ebus::sym_syn);
   std::this_thread::sleep_for(std::chrono::milliseconds(5));
+
+  bus.writeByte(ebus::sym_syn);
+  std::this_thread::sleep_for(std::chrono::milliseconds(5));
+
+  CHECK_TEST("Request is pending", req.busRequestPending());
+
   bus.writeByte(ebus::sym_syn);
   std::this_thread::sleep_for(std::chrono::milliseconds(5));
 
@@ -151,15 +159,14 @@ TEST_CASE("ClientManager Enhanced Active Sending") {
   CHECK_TEST("LockCounter reset to max", req.getLockCounter() == 3);
 
   uint8_t resp[2];
-  for (int i = 0; i < 2; ++i) {
+  for (int i = 0; i < 4; ++i) {
     readExact(svEnh[1], resp, 2);
     CHECK_TEST("Enhanced received correct SYN echo",
                (resp[0] == 0xc6 && resp[1] == 0xaa));
   }
 
   REQUIRE(readExact(svEnh[1], resp, 2));
-  CHECK_TEST("Enhanced received RESP_STARTED",
-             resp[0] == 0xc8 && resp[1] == 0xb3);
+  CHECK_TEST("Enhanced received STARTED", resp[0] == 0xc8 && resp[1] == 0xb3);
 
   uint8_t cmdSend[] = {0xc7, 0xbe};
   send(svEnh[1], cmdSend, 2, 0);
@@ -191,7 +198,7 @@ TEST_CASE("ClientManager Watchdog Timeout") {
   ebus::BusMonitor monitor;
   ebus::Bus bus(config, runtime, &req, &monitor);
   ebus::BusHandler busHandler(&req, nullptr, bus.getQueue());
-  ebus::ClientManager manager(&bus, &busHandler, &req);
+  ebus::ClientManager manager(&bus, &busHandler, &req, &monitor);
 
   int sv[2];
   socketpair(AF_UNIX, SOCK_STREAM, 0, sv);
@@ -227,7 +234,7 @@ TEST_CASE("Client Removal") {
   ebus::BusMonitor monitor;
   ebus::Bus bus(config, runtime, &req, &monitor);
   ebus::BusHandler busHandler(&req, nullptr, bus.getQueue());
-  ebus::ClientManager manager(&bus, &busHandler, &req);
+  ebus::ClientManager manager(&bus, &busHandler, &req, &monitor);
 
   int sv[2];
   socketpair(AF_UNIX, SOCK_STREAM, 0, sv);

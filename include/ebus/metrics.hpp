@@ -114,6 +114,8 @@ struct HandlerMetrics {
   void reset() {
     error_rate = 0.0;
     protocol_data_utilization_rate = 0.0;
+
+    // Aggregated Counters
     messages_total = 0;
     error_total = 0;
     error_passive = 0;
@@ -121,6 +123,8 @@ struct HandlerMetrics {
     error_active = 0;
     total_data_bytes_sent = 0;
     total_protocol_bytes_sent = 0;
+
+    // Detailed Counters
     messages_passive_master_slave = 0;
     messages_passive_master_master = 0;
     messages_passive_broadcast = 0;
@@ -147,6 +151,8 @@ struct HandlerMetrics {
     error_active_master_ack = 0;
     error_active_slave = 0;
     error_active_slave_ack = 0;
+
+    // Explicit phase timings
     sync = {};
     write = {};
     passive_first = {};
@@ -158,6 +164,8 @@ struct HandlerMetrics {
     callback_reactive = {};
     callback_telegram = {};
     callback_error = {};
+
+    // State-machine specific execution timings
     state_timings.fill({});
   }
 };
@@ -189,11 +197,16 @@ struct RequestMetrics {
   uint32_t second_error = 0;
   uint32_t bus_request_blocked = 0;
   uint32_t lock_counter_reset = 0;
+  uint32_t session_timeouts = 0;
 
   void reset() {
     contention_rate = 0.0;
+
+    // Aggregated Counters
     won_total = 0;
     lost_total = 0;
+
+    // Detailed Counters
     first_syn = 0;
     first_won = 0;
     first_retry = 0;
@@ -206,6 +219,7 @@ struct RequestMetrics {
     second_error = 0;
     bus_request_blocked = 0;
     lock_counter_reset = 0;
+    session_timeouts = 0;
   }
 };
 
@@ -230,7 +244,11 @@ struct BusMetrics {
 
   void reset() {
     utilization = 0.0;
+
+    // Detailed Counters
     start_bit_errors = 0;
+
+    // Explicit phase timings
     delay = {};
     window = {};
     transmit = {};
@@ -269,11 +287,54 @@ inline std::string toJson(const metrics::HandlerMetrics& m) {
   std::ostringstream oss;
   oss << std::fixed << std::setprecision(2);
   oss << "{\"error_rate\":" << m.error_rate
+      << ",\"protocol_data_utilization_rate\":"
+      << m.protocol_data_utilization_rate
+
+      // Aggregated Counters
       << ",\"messages_total\":" << m.messages_total
       << ",\"error_total\":" << m.error_total
       << ",\"error_passive\":" << m.error_passive
-      << ",\"error_active\":" << m.error_active
       << ",\"error_reactive\":" << m.error_reactive
+      << ",\"error_active\":" << m.error_active
+      << ",\"total_data_bytes_sent\":" << m.total_data_bytes_sent
+      << ",\"total_protocol_bytes_sent\":"
+      << m.total_protocol_bytes_sent
+
+      // Detailed Counters
+      << ",\"messages_passive_master_slave\":"
+      << m.messages_passive_master_slave
+      << ",\"messages_passive_master_master\":"
+      << m.messages_passive_master_master
+      << ",\"messages_passive_broadcast\":" << m.messages_passive_broadcast
+      << ",\"messages_reactive_master_slave\":"
+      << m.messages_reactive_master_slave
+      << ",\"messages_reactive_master_master\":"
+      << m.messages_reactive_master_master
+      << ",\"messages_active_master_slave\":" << m.messages_active_master_slave
+      << ",\"messages_active_master_master\":"
+      << m.messages_active_master_master
+      << ",\"messages_active_broadcast\":" << m.messages_active_broadcast
+      << ",\"reset_passive_00\":" << m.reset_passive_00
+      << ",\"reset_passive_0704\":" << m.reset_passive_0704
+      << ",\"reset_passive\":" << m.reset_passive
+      << ",\"reset_active_00\":" << m.reset_active_00
+      << ",\"reset_active_0704\":" << m.reset_active_0704
+      << ",\"reset_active\":" << m.reset_active
+      << ",\"error_passive_master\":" << m.error_passive_master
+      << ",\"error_passive_master_ack\":" << m.error_passive_master_ack
+      << ",\"error_passive_slave\":" << m.error_passive_slave
+      << ",\"error_passive_slave_ack\":" << m.error_passive_slave_ack
+      << ",\"error_reactive_master\":" << m.error_reactive_master
+      << ",\"error_reactive_master_ack\":" << m.error_reactive_master_ack
+      << ",\"error_reactive_slave\":" << m.error_reactive_slave
+      << ",\"error_reactive_slave_ack\":" << m.error_reactive_slave_ack
+      << ",\"error_active_master\":" << m.error_active_master
+      << ",\"error_active_master_ack\":" << m.error_active_master_ack
+      << ",\"error_active_slave\":" << m.error_active_slave
+      << ",\"error_active_slave_ack\":"
+      << m.error_active_slave_ack
+
+      // Explicit phase timings
       << ",\"sync\":" << toJson(m.sync) << ",\"write\":" << toJson(m.write)
       << ",\"passive_first\":" << toJson(m.passive_first)
       << ",\"passive_data\":" << toJson(m.passive_data)
@@ -286,6 +347,7 @@ inline std::string toJson(const metrics::HandlerMetrics& m) {
       << ",\"callback_error\":" << toJson(m.callback_error)
       << ",\"state_timings\":[";
 
+  // State-machine specific execution timings
   for (int i = 0; i < 15; ++i) {
     if (i > 0) oss << ",";
     oss << toJson(m.state_timings[i]);
@@ -297,8 +359,14 @@ inline std::string toJson(const metrics::HandlerMetrics& m) {
 inline std::string toJson(const metrics::RequestMetrics& m) {
   std::ostringstream oss;
   oss << std::fixed << std::setprecision(2);
-  oss << "{\"contention_rate\":" << m.contention_rate
-      << ",\"won_total\":" << m.won_total << ",\"lost_total\":" << m.lost_total
+  oss << "{\"contention_rate\":"
+      << m.contention_rate
+
+      // Aggregated Counters
+      << ",\"won_total\":" << m.won_total << ",\"lost_total\":"
+      << m.lost_total
+
+      // Detailed Counters
       << ",\"first_syn\":" << m.first_syn << ",\"first_won\":" << m.first_won
       << ",\"first_retry\":" << m.first_retry
       << ",\"first_lost\":" << m.first_lost
@@ -314,8 +382,14 @@ inline std::string toJson(const metrics::RequestMetrics& m) {
 inline std::string toJson(const metrics::BusMetrics& m) {
   std::ostringstream oss;
   oss << std::fixed << std::setprecision(2);
-  oss << "{\"utilization\":" << m.utilization
-      << ",\"start_bit_errors\":" << m.start_bit_errors
+  oss << "{\"utilization\":"
+      << m.utilization
+
+      // Detailed Counters
+      << ",\"start_bit_errors\":"
+      << m.start_bit_errors
+
+      // Explicit phase timings
       << ",\"delay\":" << toJson(m.delay) << ",\"window\":" << toJson(m.window)
       << ",\"transmit\":" << toJson(m.transmit)
       << ",\"uptime\":" << toJson(m.uptime) << "}";

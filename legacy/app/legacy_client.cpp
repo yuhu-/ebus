@@ -105,13 +105,19 @@ void test_enhanced_client_responses() {
   // 1. Test: Arbitration Win (driven via Request FSM)
   if (req.busAvailable()) req.requestBus(0x33, true);
   req.busRequestCompleted();
-  req.run(0x33);  // FSM sets result to firstWon
 
+  // Transparent Sniffer: Bridge client must see the SYN that opens the window
+  req.run(ebus::sym_syn);
+  client.onBusByte({ebus::sym_syn, req.getState(), req.getResult(),
+                    req.getLockCounter(), std::chrono::steady_clock::now()});
+
+  req.run(0x33);  // FSM sets result to firstWon
   client.onBusByte({0x33, req.getState(), req.getResult(), req.getLockCounter(),
                     std::chrono::steady_clock::now()});
 
-  // Verify RESP_STARTED (Logical 0x02, val 0x33 -> Encoded 0xc8, 0xb3)
   uint8_t resp[2];
+  run_test("Arbitration SYN forwarded",
+           readExact(sv[1], resp, 2) && resp[0] == 0xc6 && resp[1] == 0xaa);
   run_test("Encoded RESP_STARTED",
            readExact(sv[1], resp, 2) && resp[0] == 0xc8 && resp[1] == 0xb3);
 
