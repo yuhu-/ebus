@@ -177,6 +177,11 @@ using TelegramCallback =
 
 /**
  * Callback for protocol or hardware errors.
+ *
+ * IMPORTANT: The `error_message` parameter is a `std::string_view`.
+ * If the underlying string data is not static (e.g., a string literal)
+ * or does not outlive the processing of the error event, it can lead
+ * to dangling pointers. Ensure the lifetime of the string data.
  */
 using ErrorCallback = std::function<void(
     std::string_view error_message, ByteView master_view, ByteView slave_view)>;
