@@ -10,6 +10,7 @@
 #include <ebus/config.hpp>
 #include <functional>
 #include <map>
+#include "core/bus_monitor.hpp"
 
 #include "core/request.hpp"
 #include "driver/uart.h"
@@ -31,14 +32,6 @@ struct BusEvent {
   bool start_bit{false};
 };
 
-#define EBUS_BUS_COUNTER_LIST X(start_bit)
-
-#define EBUS_BUS_TIMING_LIST \
-  X(stats_delay)             \
-  X(stats_window)            \
-  X(stats_transmit)          \
-  X(stats_uptime)
-
 /**
  * FreeRtos-specific implementation of the eBUS physical layer.
  * Handles serial port configuration and asynchronous byte reading via a
@@ -46,8 +39,8 @@ struct BusEvent {
  */
 class BusFreeRtos {
  public:
-  explicit BusFreeRtos(const BusConfig& config, const RuntimeConfig& runtime,
-                       Request* request);
+  explicit BusFreeRtos(const BusConfig& config, const RuntimeConfig& runtime, Request* request,
+                       BusMonitor* monitor);
   ~BusFreeRtos();
 
   BusFreeRtos(const BusFreeRtos&) = delete;
@@ -66,6 +59,7 @@ class BusFreeRtos {
 
   void resetMetrics();
   ebus::metrics::BusMetrics getMetrics() const;
+  
   void recordUtilization(uint8_t byte);
 
  private:
@@ -75,6 +69,7 @@ class BusFreeRtos {
 
   BusConfig config_;
   RuntimeConfig runtime_;
+  BusMonitor* monitor_ = nullptr;
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
   gptimer_handle_t gp_timer_ = nullptr;
   gptimer_handle_t syn_gp_timer_ = nullptr;
@@ -124,21 +119,6 @@ class BusFreeRtos {
   // platform handles
   QueueHandle_t uart_event_queue_ = nullptr;
   portMUX_TYPE timer_mux_ = portMUX_INITIALIZER_UNLOCKED;
-
-  // metrics
-  struct Counter {
-#define X(name) uint32_t name##_ = 0;
-    EBUS_BUS_COUNTER_LIST
-#undef X
-  };
-
-  Counter counter_;
-
-  TimingStats stats_delay_;
-  TimingStats stats_window_;
-  TimingStats stats_transmit_;
-  RollingStats stats_utilization_;
-  TimingStats stats_uptime_;
 
   // setup helpers
   void configureUart();

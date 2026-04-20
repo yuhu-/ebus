@@ -5,7 +5,8 @@
 
 #include <catch2/catch_all.hpp>
 #include <cmath>
-#include <ebus/metrics.hpp>
+
+#include "utils/timing_stats.hpp"
 
 TEST_CASE("TimingStats: Basic statistics", "[utils][timingstats]") {
   ebus::RollingStats stats;

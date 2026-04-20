@@ -44,7 +44,19 @@ namespace metrics {
  */
 struct HandlerMetrics {
   // Error Rate (%)
+  // Error Rate is calculated as the total number of errors divided by the
+  // total number of messages (including errors). This provides insight into the
+  // reliability of the communication, with a lower error rate indicating better
+  // performance.
   double error_rate = 0.0;
+
+  // Protocol Data Utilization Rate (%)
+  // This metric represents the efficiency of data transmission, calculated as
+  // the ratio of protocol bytes (address + data) to total bytes sent on the bus
+  // (including overhead like SYN, ACK, etc.). A higher utilization rate
+  // indicates more efficient use of the bus bandwidth for actual data
+  // transmission.
+  double protocol_data_utilization_rate = 0.0;
 
   // Aggregated Counters
   uint32_t messages_total = 0;
@@ -52,36 +64,36 @@ struct HandlerMetrics {
   uint32_t error_passive = 0;
   uint32_t error_reactive = 0;
   uint32_t error_active = 0;
+  uint32_t total_data_bytes_sent = 0;
+  uint32_t total_protocol_bytes_sent = 0;
 
-  // Individual Detailed Counters
-  struct {
-    uint32_t messages_passive_master_slave = 0;
-    uint32_t messages_passive_master_master = 0;
-    uint32_t messages_passive_broadcast = 0;
-    uint32_t messages_reactive_master_slave = 0;
-    uint32_t messages_reactive_master_master = 0;
-    uint32_t messages_active_master_slave = 0;
-    uint32_t messages_active_master_master = 0;
-    uint32_t messages_active_broadcast = 0;
-    uint32_t reset_passive_00 = 0;
-    uint32_t reset_passive_0704 = 0;
-    uint32_t reset_passive = 0;
-    uint32_t reset_active_00 = 0;
-    uint32_t reset_active_0704 = 0;
-    uint32_t reset_active = 0;
-    uint32_t error_passive_master = 0;
-    uint32_t error_passive_master_ack = 0;
-    uint32_t error_passive_slave = 0;
-    uint32_t error_passive_slave_ack = 0;
-    uint32_t error_reactive_master = 0;
-    uint32_t error_reactive_master_ack = 0;
-    uint32_t error_reactive_slave = 0;
-    uint32_t error_reactive_slave_ack = 0;
-    uint32_t error_active_master = 0;
-    uint32_t error_active_master_ack = 0;
-    uint32_t error_active_slave = 0;
-    uint32_t error_active_slave_ack = 0;
-  } counters;
+  // Detailed Counters
+  uint32_t messages_passive_master_slave = 0;
+  uint32_t messages_passive_master_master = 0;
+  uint32_t messages_passive_broadcast = 0;
+  uint32_t messages_reactive_master_slave = 0;
+  uint32_t messages_reactive_master_master = 0;
+  uint32_t messages_active_master_slave = 0;
+  uint32_t messages_active_master_master = 0;
+  uint32_t messages_active_broadcast = 0;
+  uint32_t reset_passive_00 = 0;
+  uint32_t reset_passive_0704 = 0;
+  uint32_t reset_passive = 0;
+  uint32_t reset_active_00 = 0;
+  uint32_t reset_active_0704 = 0;
+  uint32_t reset_active = 0;
+  uint32_t error_passive_master = 0;
+  uint32_t error_passive_master_ack = 0;
+  uint32_t error_passive_slave = 0;
+  uint32_t error_passive_slave_ack = 0;
+  uint32_t error_reactive_master = 0;
+  uint32_t error_reactive_master_ack = 0;
+  uint32_t error_reactive_slave = 0;
+  uint32_t error_reactive_slave_ack = 0;
+  uint32_t error_active_master = 0;
+  uint32_t error_active_master_ack = 0;
+  uint32_t error_active_slave = 0;
+  uint32_t error_active_slave_ack = 0;
 
   // Explicit phase timings
   MetricValues sync;
@@ -98,6 +110,56 @@ struct HandlerMetrics {
 
   // State-machine specific execution timings
   std::array<MetricValues, 15> state_timings;
+
+  void reset() {
+    error_rate = 0.0;
+    protocol_data_utilization_rate = 0.0;
+    messages_total = 0;
+    error_total = 0;
+    error_passive = 0;
+    error_reactive = 0;
+    error_active = 0;
+    total_data_bytes_sent = 0;
+    total_protocol_bytes_sent = 0;
+    messages_passive_master_slave = 0;
+    messages_passive_master_master = 0;
+    messages_passive_broadcast = 0;
+    messages_reactive_master_slave = 0;
+    messages_reactive_master_master = 0;
+    messages_active_master_slave = 0;
+    messages_active_master_master = 0;
+    messages_active_broadcast = 0;
+    reset_passive_00 = 0;
+    reset_passive_0704 = 0;
+    reset_passive = 0;
+    reset_active_00 = 0;
+    reset_active_0704 = 0;
+    reset_active = 0;
+    error_passive_master = 0;
+    error_passive_master_ack = 0;
+    error_passive_slave = 0;
+    error_passive_slave_ack = 0;
+    error_reactive_master = 0;
+    error_reactive_master_ack = 0;
+    error_reactive_slave = 0;
+    error_reactive_slave_ack = 0;
+    error_active_master = 0;
+    error_active_master_ack = 0;
+    error_active_slave = 0;
+    error_active_slave_ack = 0;
+    sync = {};
+    write = {};
+    passive_first = {};
+    passive_data = {};
+    active_first = {};
+    active_data = {};
+    callback_won = {};
+    callback_lost = {};
+    callback_reactive = {};
+    callback_telegram = {};
+    callback_error = {};
+    state_timings.fill({});
+  }
 };
 
 /**
@@ -105,13 +167,16 @@ struct HandlerMetrics {
  */
 struct RequestMetrics {
   // Contention Rate (%)
+  // Contention happens when we lose arbitration (lost or retry) on the
+  // first attempt. This is calculated as the number of contention events
+  // divided by the total number of bus request attempts.
   double contention_rate = 0.0;
 
   // Aggregated Counters
   uint32_t won_total = 0;
   uint32_t lost_total = 0;
 
-  // Individual Detailed Counters
+  // Detailed Counters
   uint32_t first_syn = 0;
   uint32_t first_won = 0;
   uint32_t first_retry = 0;
@@ -122,6 +187,26 @@ struct RequestMetrics {
   uint32_t second_won = 0;
   uint32_t second_lost = 0;
   uint32_t second_error = 0;
+  uint32_t bus_request_blocked = 0;
+  uint32_t lock_counter_reset = 0;
+
+  void reset() {
+    contention_rate = 0.0;
+    won_total = 0;
+    lost_total = 0;
+    first_syn = 0;
+    first_won = 0;
+    first_retry = 0;
+    first_lost = 0;
+    first_error = 0;
+    retry_syn = 0;
+    retry_error = 0;
+    second_won = 0;
+    second_lost = 0;
+    second_error = 0;
+    bus_request_blocked = 0;
+    lock_counter_reset = 0;
+  }
 };
 
 /**
@@ -129,6 +214,9 @@ struct RequestMetrics {
  */
 struct BusMetrics {
   // Physical Utilization (%)
+  // Utilization is the percentage of time the bus is actively transmitting data
+  // versus idle. This is calculated based on the total time spent transmitting
+  // data compared to the overall uptime of the bus.
   double utilization = 0.0;
 
   // Detailed Counters
@@ -139,6 +227,15 @@ struct BusMetrics {
   MetricValues window;
   MetricValues transmit;
   MetricValues uptime;
+
+  void reset() {
+    utilization = 0.0;
+    start_bit_errors = 0;
+    delay = {};
+    window = {};
+    transmit = {};
+    uptime = {};
+  }
 };
 
 /**
@@ -150,6 +247,10 @@ struct SystemMetrics {
   BusMetrics bus;
 
   // Quality Score (%)
+  // Quality Score is a composite metric that combines error rate and
+  // contention rate to provide an overall health indicator of the bus
+  // communication. A higher score indicates better performance and
+  // reliability.
   double quality = 0.0;
 };
 
@@ -232,45 +333,5 @@ inline std::string toJson(const metrics::SystemMetrics& sm) {
       << ",\"quality\":" << sm.quality << "}";
   return oss.str();
 }
-
-/**
- * Math engine for online statistics calculation using Welford's algorithm.
- * This class is platform-independent and does not depend on chrono.
- */
-class RollingStats {
- public:
-  RollingStats();
-  virtual ~RollingStats() = default;
-
-  /**
-   * Adds a new data point to the dataset and updates rolling statistics.
-   */
-  void addSample(double value);
-
-  /**
-   * Resets all accumulated data.
-   */
-  void reset();
-
-  MetricValues getValues() const;
-
-  /**
-   * Returns the sum of all samples added.
-   */
-  double getSum() const { return mean_ * count_; }
-
-  double getLast() const { return last_; }
-  double getMean() const { return mean_; }
-  uint64_t getCount() const { return count_; }
-  double getStdDev() const;
-
- protected:
-  double last_;
-  double min_;
-  double max_;
-  uint64_t count_;
-  double mean_;
-  double m2_;  // Internal state for variance calculation
-};
 
 }  // namespace ebus

@@ -175,16 +175,15 @@ ebus::Metrics ebus::Controller::getMetrics() const {
   if (!configured_) return {};
 
   metrics::SystemMetrics sm;
-  sm.handler = impl_->handler_->getMetrics();
-  sm.request = impl_->request_->getMetrics();
-  sm.bus = impl_->bus_->getMetrics();
+  if (impl_->bus_monitor_) {
+    sm.handler = impl_->bus_monitor_->getHandlerMetrics();
+    sm.request = impl_->bus_monitor_->getRequestMetrics();
+    sm.bus = impl_->bus_monitor_->getBusMetrics();
 
-  // Calculate Quality Score (%)
-  // Quality Score is a composite metric that combines error rate and contention
-  // rate to provide an overall health indicator of the bus communication. A
-  // higher score indicates better performance and reliability.
-  sm.quality = (100.0 - sm.handler.error_rate) *
-               (1.0 - (sm.request.contention_rate / 100.0));
+    // Calculate Quality Score (%)
+    sm.quality = (100.0 - sm.handler.error_rate) *
+                 (1.0 - (sm.request.contention_rate / 100.0));
+  }
 
   return sm;
 }
@@ -194,9 +193,9 @@ bool ebus::Controller::isConfigured() const noexcept { return configured_; }
 bool ebus::Controller::isRunning() const noexcept { return running_; }
 
 void ebus::Controller::constructMembers() {
-  impl_->request_.reset(new Request());
-  impl_->request_->setMaxLockCounter(config_.runtime.lock_counter_max);
   impl_->bus_monitor_.reset(new BusMonitor());
+  impl_->request_.reset(new Request(impl_->bus_monitor_.get()));
+  impl_->request_->setMaxLockCounter(config_.runtime.lock_counter_max);
   impl_->bus_.reset(new Bus(config_.bus, config_.runtime, impl_->request_.get(),
                             impl_->bus_monitor_.get()));
   impl_->handler_.reset(new Handler(config_.runtime.address, impl_->bus_.get(),

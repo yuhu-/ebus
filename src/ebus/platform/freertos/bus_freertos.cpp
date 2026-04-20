@@ -21,7 +21,8 @@
 #include "utils/common.hpp"
 
 ebus::BusFreeRtos::BusFreeRtos(const BusConfig& config,
-                               const RuntimeConfig& runtime, Request* request)
+                               const RuntimeConfig& runtime, Request* request,
+                               BusMonitor* monitor)
     : uart_port_num_(static_cast<uart_port_t>(config.uart_port)),
       rx_pin_(config.rx_pin),
       tx_pin_(config.tx_pin),
@@ -30,7 +31,8 @@ ebus::BusFreeRtos::BusFreeRtos(const BusConfig& config,
       timer_group_num_(static_cast<timer_group_t>(config.timer_group)),
       timer_idx_num_(static_cast<timer_idx_t>(config.timer_idx)),
 #endif
-      request_(request) {
+      request_(request),
+      monitor_(monitor) {
   byte_queue_ = new ebus::Queue<ebus::BusEvent>();
 
   configureUart();
@@ -100,34 +102,17 @@ void ebus::BusFreeRtos::setOffset(const uint16_t offset) {
 }
 
 void ebus::BusFreeRtos::resetMetrics() {
-#define X(name) counter_.name##_ = 0;
-  EBUS_BUS_COUNTER_LIST
-#undef X
-
-#define X(name) name##_.reset();
-  EBUS_BUS_TIMING_LIST
-#undef X
+  if (monitor_) monitor_->reset();
 }
 
 ebus::metrics::BusMetrics ebus::BusFreeRtos::getMetrics() const {
-  metrics::BusMetrics m;
-  m.uptime = stats_uptime_.getValues();
-
-  // Calculate Physical Utilization (%)
-  double total_uptime = m.uptime.last;
-  if (total_uptime > 0) {
-    m.utilization = (stats_utilization_.getSum() / total_uptime) * 100.0;
-  } else {
-    m.utilization = 0.0;
-  }
-
-  return m;
+  return monitor_ ? monitor_->getBusMetrics() : metrics::BusMetrics{};
 }
 
 void ebus::BusFreeRtos::recordUtilization(uint8_t byte) {
   // 1 (start bit) + zero bits in data. eBUS bit time is ~416.67us
   double low_time = (countZeroBits(byte) + 1) * (1000000.0 / 2400.0);
-  stats_utilization_.addSample(low_time);
+  if (monitor_) monitor_->utilization.addSample(low_time);
 }
 
 void ebus::BusFreeRtos::configureUart() {
@@ -286,7 +271,8 @@ void ebus::BusFreeRtos::ebusUartEventRunner() {
             int64_t delta =
                 std::abs(expected_start_bit_time - micros_start_bit_);
 
-            if (delta < static_cast<int64_t>(bit_time_ * 1.5f)) {
+            if (delta < static_cast<int64_t>(bit_time_ *
+                                             1.5f)) {  // within 1.5 bit times
               int64_t micros_since_start_bit =
                   esp_timer_get_time() - micros_start_bit_;
               int64_t delay = window_ - micros_since_start_bit - offset_;
@@ -316,6 +302,7 @@ void ebus::BusFreeRtos::ebusUartEventRunner() {
             } else {
               portENTER_CRITICAL_ISR(&timer_mux_);
               start_bit_flag_ = true;
+              if (monitor_) monitor_->updateBus([](auto& m){ m.start_bit_errors++; });
               portEXIT_CRITICAL_ISR(&timer_mux_);
             }
           }
@@ -327,10 +314,19 @@ void ebus::BusFreeRtos::ebusUartEventRunner() {
           portENTER_CRITICAL_ISR(&timer_mux_);
           bus_event.bus_request = bus_request_flag_;
           bus_event.start_bit = start_bit_flag_;
-          if (micros_delay_flag_)
-            stats_delay_.addSample(static_cast<double>(micros_last_delay_));
-          if (micros_window_flag_)
-            stats_window_.addSample(static_cast<double>(micros_last_window_));
+          // TODO fix this
+          // if (micros_delay_flag_)
+          //   stats_delay_.addSample(static_cast<double>(micros_last_delay_));
+          // if (micros_window_flag_)
+          //   stats_window_.addSample(static_cast<double>(micros_last_window_));
+          if (monitor_) {
+            if (micros_delay_flag_)
+              monitor_->delay.addSample(
+                  static_cast<double>(micros_last_delay_));
+            if (micros_window_flag_)
+              monitor_->window.addSample(
+                  static_cast<double>(micros_last_window_));
+          }
 
           // Reset the global ISR flags after consumption
           bus_request_flag_ = false;

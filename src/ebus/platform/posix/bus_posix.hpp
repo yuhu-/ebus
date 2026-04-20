@@ -55,7 +55,7 @@ class BusPosix {
   using SynListener = std::function<void()>;
 
   BusPosix(const BusConfig& config, const RuntimeConfig& runtime,
-           Request* request, BusMonitor* monitor);
+           Request* request, BusMonitor* monitor = nullptr);
   ~BusPosix();
 
   BusPosix(const BusPosix&) = delete;
@@ -118,9 +118,6 @@ class BusPosix {
   bool syn_active_{false};
 
   std::atomic<bool> bus_request_flag_{false};
-
-  // Internal storage for detailed counters
-  ebus::metrics::BusMetrics metrics_storage_;
 
   void recordUtilization(uint8_t byte);
 

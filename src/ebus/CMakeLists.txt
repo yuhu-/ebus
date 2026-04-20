@@ -38,18 +38,11 @@ elseif(ESP32)
     list(APPEND PLATFORM_SOURCES platform/freertos/bus_freertos.cpp)
 endif()
 
-# Utilities
-set(UTIL_SOURCES
-    utils/utils.cpp
-    utils/timing_stats.cpp
-)
-
 set(SOURCES
     ${APP_SOURCES} 
     ${CORE_SOURCES} 
     ${MODELS_SOURCES}
     ${PLATFORM_SOURCES}
-    ${UTIL_SOURCES} 
 )
 
 add_library(ebus ${SOURCES})

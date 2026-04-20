@@ -15,14 +15,13 @@
 #include <string>
 #include <vector>
 
+#include "core/bus_monitor.hpp"
 #include "core/request.hpp"
 #include "core/telegram.hpp"
 #include "platform/bus.hpp"
 #include "platform/queue.hpp"
 
 namespace ebus {
-
-class BusMonitor;
 
 constexpr uint8_t DEFAULT_ADDRESS = 0xff;
 
@@ -135,9 +134,6 @@ class Handler {
   ReactiveMasterSlaveCallback reactive_master_slave_callback_ = nullptr;
   TelegramCallback telegram_callback_ = nullptr;
   ErrorCallback error_callback_ = nullptr;
-
-  // Internal storage for detailed counters
-  ebus::metrics::HandlerMetrics metrics_storage_;
 
   std::chrono::steady_clock::time_point last_point_;
   bool measure_sync_ = false;

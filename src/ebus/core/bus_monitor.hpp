@@ -6,6 +6,7 @@
 #pragma once
 
 #include <array>
+#include <mutex>
 
 #include "ebus/definitions.hpp"
 #include "ebus/metrics.hpp"
@@ -20,8 +21,19 @@ namespace ebus {
 class BusMonitor {
  public:
   void reset();
-  void updateHandlerMetrics(metrics::HandlerMetrics& m) const;
-  void updateBusMetrics(metrics::BusMetrics& m) const;
+
+  // Thread-safe update helpers
+  void updateHandler(std::function<void(metrics::HandlerMetrics&)> updater);
+  void updateRequest(std::function<void(metrics::RequestMetrics&)> updater);
+  void updateBus(std::function<void(metrics::BusMetrics&)> updater);
+
+  // Central access to snapshots
+  metrics::HandlerMetrics getHandlerMetrics() const;
+  metrics::RequestMetrics getRequestMetrics() const;
+  metrics::BusMetrics getBusMetrics() const;
+
+  // Accumulators
+  mutable std::mutex metrics_mutex;
 
   TimingStats sync;
   TimingStats write;
@@ -44,6 +56,11 @@ class BusMonitor {
 
   // State-machine execution timings
   std::array<TimingStats, NUM_HANDLER_STATES> handler_timing = {};
+
+ private:
+  metrics::HandlerMetrics handler_acc_;
+  metrics::RequestMetrics request_acc_;
+  metrics::BusMetrics bus_acc_;
 };
 
 }  // namespace ebus

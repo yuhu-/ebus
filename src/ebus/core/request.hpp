@@ -16,6 +16,7 @@
 #include <map>
 #include <string>
 
+#include "core/bus_monitor.hpp"
 #include "utils/timing_stats.hpp"
 
 namespace ebus {
@@ -61,7 +62,7 @@ using StartBitCallback = std::function<void()>;
  */
 class Request {
  public:
-  explicit Request();
+  explicit Request(BusMonitor* monitor = nullptr);
 
   void setMaxLockCounter(uint8_t max_counter);
   uint8_t getLockCounter() const;
@@ -97,6 +98,8 @@ class Request {
   metrics::RequestMetrics getMetrics() const;
 
  private:
+  BusMonitor* monitor_ = nullptr;
+
   uint8_t max_lock_counter_ = DEFAULT_LOCK_COUNTER;
   uint8_t lock_counter_ = DEFAULT_LOCK_COUNTER;
 
@@ -111,10 +114,8 @@ class Request {
   BusRequestedCallback handler_bus_requested_callback_ = nullptr;
   BusRequestedCallback external_bus_requested_callback_ = nullptr;
 
+  // TODO fix this - this will reset the handler - do we need this?
   StartBitCallback start_bit_callback_ = nullptr;
-
-  // Internal storage for detailed counters
-  ebus::metrics::RequestMetrics metrics_storage_;
 
   void observe(uint8_t byte);
   void first(uint8_t byte);

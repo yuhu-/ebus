@@ -19,7 +19,7 @@ ebus::BusPosix::BusPosix(const BusConfig& config, const RuntimeConfig& runtime,
       monitor_(monitor),
       fd_(-1),
       open_(false),
-      byte_queue_(new Queue<BusEvent>()),
+      byte_queue_(std::make_unique<Queue<BusEvent>>()),
       thread_(),
       running_(false) {}
 
@@ -187,16 +187,11 @@ void ebus::BusPosix::setRuntimeConfig(const RuntimeConfig& runtime) {
 }
 
 void ebus::BusPosix::resetMetrics() {
-  metrics_storage_ = {};
   if (monitor_) monitor_->reset();
 }
 
 ebus::metrics::BusMetrics ebus::BusPosix::getMetrics() const {
-  metrics::BusMetrics m;
-  if (monitor_) {
-    monitor_->updateBusMetrics(m);
-  }
-  return m;
+  return monitor_ ? monitor_->getBusMetrics() : metrics::BusMetrics{};
 }
 
 void ebus::BusPosix::addReadListener(ReadListener listener) {
@@ -248,6 +243,13 @@ void ebus::BusPosix::readerThread() {
       event.bus_request =
           bus_request_flag_.exchange(false, std::memory_order_acq_rel);
       event.start_bit = false;
+      // In POSIX, we don't have ISR-level start bit detection like ESP32.
+      // If a framing error occurs, it's a strong indicator of a start bit
+      // issue. For now, we'll increment this counter in the BusFreeRtos only.
+      // If POSIX serial drivers provide more granular error types, we could map
+      // them here.
+      // if (monitor_) monitor_->updateBus([](auto& m){ m.start_bit_errors++;
+      // });
       event.timestamp = arrival_time;
 
       if (byte_queue_) byte_queue_->push(event);
