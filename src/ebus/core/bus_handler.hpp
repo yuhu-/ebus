@@ -31,8 +31,11 @@ class BusHandler {
  public:
   using ByteListener = std::function<void(const BusEventContext& ctx)>;
 
-  BusHandler(Request* request, Handler* handler, Queue<BusEvent>* queue)
-      : request_(request), handler_(handler), queue_(queue), running_(false) {}
+  BusHandler(Request* request, Handler* handler, Queue<BusEvent>* queue,
+             size_t max_listeners = 16)
+      : request_(request), handler_(handler), queue_(queue), running_(false) {
+    listeners_cache_.reserve(max_listeners);
+  }
 
   ~BusHandler() { stop(); }
 

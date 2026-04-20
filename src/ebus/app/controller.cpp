@@ -244,7 +244,8 @@ void ebus::Controller::constructMembers() {
   impl_->poll_manager_.reset(new PollManager());
 
   impl_->bus_handler_.reset(new BusHandler(
-      impl_->request_.get(), impl_->handler_.get(), impl_->bus_->getQueue()));
+      impl_->request_.get(), impl_->handler_.get(), impl_->bus_->getQueue(),
+      16));  // Pre-allocate for up to 16 listeners
 
   impl_->client_manager_.reset(
       new ClientManager(impl_->bus_.get(), impl_->bus_handler_.get(),
