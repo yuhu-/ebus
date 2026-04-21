@@ -71,6 +71,7 @@ class Controller {
   std::vector<DeviceInfo> getDeviceInfo() const;
 
   // Bus Health Metrics
+  void resetMetrics();
   ebus::Metrics getMetrics() const;
 
   bool isConfigured() const noexcept;

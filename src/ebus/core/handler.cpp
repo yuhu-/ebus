@@ -151,14 +151,6 @@ void ebus::Handler::run(const BusEventContext& ctx) {
   }
 }
 
-void ebus::Handler::resetMetrics() {
-  if (monitor_) monitor_->reset();
-}
-
-ebus::metrics::HandlerMetrics ebus::Handler::getMetrics() const {
-  return monitor_ ? monitor_->getHandlerMetrics() : metrics::HandlerMetrics{};
-}
-
 void ebus::Handler::passiveReceiveMaster(uint8_t byte) {
   if (byte != sym_syn) {
     passive_master_.pushBack(byte);

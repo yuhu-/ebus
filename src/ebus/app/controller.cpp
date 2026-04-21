@@ -171,18 +171,16 @@ std::vector<ebus::DeviceInfo> ebus::Controller::getDeviceInfo() const {
                                 : std::vector<DeviceInfo>();
 }
 
+void ebus::Controller::resetMetrics() {
+  if (impl_->bus_monitor_) impl_->bus_monitor_->resetMetrics();
+}
+
 ebus::Metrics ebus::Controller::getMetrics() const {
   if (!configured_) return {};
 
   metrics::SystemMetrics sm;
   if (impl_->bus_monitor_) {
-    sm.handler = impl_->bus_monitor_->getHandlerMetrics();
-    sm.request = impl_->bus_monitor_->getRequestMetrics();
-    sm.bus = impl_->bus_monitor_->getBusMetrics();
-
-    // Calculate Quality Score (%)
-    sm.quality = (100.0 - sm.handler.error_rate) *
-                 (1.0 - (sm.request.contention_rate / 100.0));
+    sm = impl_->bus_monitor_->getMetrics();
   }
 
   return sm;
@@ -204,7 +202,7 @@ void ebus::Controller::constructMembers() {
 
   impl_->scheduler_.reset(new Scheduler(impl_->handler_.get()));
 
-  impl_->device_manager_.reset(new DeviceManager());
+  impl_->device_manager_.reset(new DeviceManager(impl_->bus_monitor_.get()));
   impl_->device_manager_->setOwnAddress(config_.runtime.address);
 
   if (impl_->user_reactive_callback_) {

@@ -55,7 +55,8 @@ TEST_CASE("DeviceScanner: Priority (Manual > Full > Startup)",
 }
 
 TEST_CASE("DeviceScanner: Startup Scan Logic", "[app][devicescanner]") {
-  ebus::DeviceManager dm;
+  ebus::BusMonitor monitor;
+  ebus::DeviceManager dm(&monitor);
   dm.setOwnAddress(0xff);
   ebus::DeviceScanner scanner(0xff, &dm);
 
@@ -80,7 +81,8 @@ TEST_CASE("DeviceScanner: Startup Scan Logic", "[app][devicescanner]") {
 }
 
 TEST_CASE("DeviceScanner: Timing & Vendor Scans", "[app][devicescanner]") {
-  ebus::DeviceManager dm;
+  ebus::BusMonitor monitor;
+  ebus::DeviceManager dm(&monitor);
   dm.setOwnAddress(0x10);
   ebus::DeviceScanner scanner(0x10, &dm);
 

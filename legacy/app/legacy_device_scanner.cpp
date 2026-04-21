@@ -67,8 +67,8 @@ void test_priority() {
 
 void test_startup_scan_logic() {
   std::cout << "[TEST] DeviceScanner Startup Scan Logic... ";
-  ebus::DeviceManager dm;
-  ebus::Request request;
+  ebus::BusMonitor monitor;
+  ebus::DeviceManager dm(&monitor);
   dm.setOwnAddress(0xff);
   ebus::DeviceScanner scanner(0xff, &dm);
 
@@ -103,8 +103,8 @@ void test_startup_scan_logic() {
 
 void test_timing_and_vendor_integration() {
   std::cout << "[TEST] DeviceScanner Timing & Vendor Scans... ";
-  ebus::DeviceManager dm;
-  ebus::Request request;
+  ebus::BusMonitor monitor;
+  ebus::DeviceManager dm(&monitor);
   dm.setOwnAddress(0x10);
   ebus::DeviceScanner scanner(0x10, &dm);
 

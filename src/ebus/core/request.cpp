@@ -88,14 +88,6 @@ ebus::RequestResult ebus::Request::run(uint8_t byte) {
   return result_;
 }
 
-void ebus::Request::resetMetrics() {
-  if (monitor_) monitor_->reset();
-}
-
-ebus::metrics::RequestMetrics ebus::Request::getMetrics() const {
-  return monitor_ ? monitor_->getRequestMetrics() : metrics::RequestMetrics{};
-}
-
 void ebus::Request::observe(uint8_t byte) {
   if (byte == sym_syn) {
     if (lock_counter_ > 0) lock_counter_--;

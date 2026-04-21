@@ -16,12 +16,11 @@
 #include "test_utils.hpp"
 
 TEST_CASE("DeviceManager: Address Tracking", "[app][devicemanager]") {
-  ebus::DeviceManager dm;
-
   ebus::BusConfig config{.device = "/dev/null", .simulate = true};
   ebus::RuntimeConfig runtime{.address = 0xff, .window = 50, .offset = 5};
   ebus::Request request;
   ebus::BusMonitor monitor;
+  ebus::DeviceManager dm(&monitor);
   ebus::Bus bus(config, runtime, &request, &monitor);
   ebus::Handler handler(runtime.address, &bus, &request, &monitor);
 
@@ -50,12 +49,11 @@ TEST_CASE("DeviceManager: Address Tracking", "[app][devicemanager]") {
 }
 
 TEST_CASE("DeviceManager: Device Update", "[app][devicemanager]") {
-  ebus::DeviceManager dm;
-
   ebus::BusConfig config{.device = "/dev/null", .simulate = true};
   ebus::RuntimeConfig runtime{.address = 0xff, .window = 50, .offset = 5};
   ebus::Request request;
   ebus::BusMonitor monitor;
+  ebus::DeviceManager dm(&monitor);
   ebus::Bus bus(config, runtime, &request, &monitor);
   ebus::Handler handler(runtime.address, &bus, &request, &monitor);
 
@@ -77,12 +75,11 @@ TEST_CASE("DeviceManager: Device Update", "[app][devicemanager]") {
 }
 
 TEST_CASE("DeviceManager: Create Scan Commands", "[app][devicemanager]") {
-  ebus::DeviceManager dm;
-
   ebus::BusConfig config{.device = "/dev/null", .simulate = true};
   ebus::RuntimeConfig runtime{.address = 0xff, .window = 50, .offset = 5};
   ebus::Request request;
   ebus::BusMonitor monitor;
+  ebus::DeviceManager dm(&monitor);
   ebus::Bus bus(config, runtime, &request, &monitor);
   ebus::Handler handler(runtime.address, &bus, &request, &monitor);
 

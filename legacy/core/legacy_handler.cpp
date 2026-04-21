@@ -120,20 +120,6 @@ void errorCallback(std::string_view error_message, ebus::ByteView master_view,
             << ebus::toString(slave_view) << "'" << std::endl;
 }
 
-void printMetrics() {
-  auto handlerMetrics = handler.getMetrics();
-  std::cout << "\n--- Handler Metrics ---" << std::endl;
-  std::cout << ebus::toJson(handlerMetrics) << std::endl;
-
-  auto requestMetrics = request.getMetrics();
-  std::cout << "\n--- Request Metrics ---" << std::endl;
-  std::cout << ebus::toJson(requestMetrics) << std::endl;
-
-  auto busMetrics = bus.getMetrics();
-  std::cout << "\n--- Bus Metrics ---" << std::endl;
-  std::cout << ebus::toJson(busMetrics) << std::endl;
-}
-
 bool run_test(const TestCase& tc) {
   if (g_detailed_output)
     std::cout << std::endl
@@ -266,8 +252,6 @@ int main() {
       exit(1);
     }
   }
-
-  printMetrics();
 
   std::cout << "\nAll handler tests passed!" << std::endl;
 

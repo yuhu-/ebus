@@ -10,8 +10,8 @@
 #include <ebus/config.hpp>
 #include <functional>
 #include <map>
-#include "core/bus_monitor.hpp"
 
+#include "core/bus_monitor.hpp"
 #include "core/request.hpp"
 #include "driver/uart.h"
 #include "esp_idf_version.h"
@@ -39,8 +39,8 @@ struct BusEvent {
  */
 class BusFreeRtos {
  public:
-  explicit BusFreeRtos(const BusConfig& config, const RuntimeConfig& runtime, Request* request,
-                       BusMonitor* monitor);
+  explicit BusFreeRtos(const BusConfig& config, const RuntimeConfig& runtime,
+                       Request* request, BusMonitor* monitor);
   ~BusFreeRtos();
 
   BusFreeRtos(const BusFreeRtos&) = delete;
@@ -57,9 +57,6 @@ class BusFreeRtos {
   void setOffset(const uint16_t offset);
   void setRuntimeConfig(const RuntimeConfig& runtime);
 
-  void resetMetrics();
-  ebus::metrics::BusMetrics getMetrics() const;
-  
   void recordUtilization(uint8_t byte);
 
  private:

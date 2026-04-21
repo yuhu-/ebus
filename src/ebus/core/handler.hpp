@@ -115,9 +115,6 @@ class Handler {
 
   void run(const BusEventContext& ctx);
 
-  void resetMetrics();
-  metrics::HandlerMetrics getMetrics() const;
-
  private:
   Bus* bus_ = nullptr;
   Request* request_ = nullptr;

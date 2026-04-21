@@ -71,12 +71,6 @@ void run_test(const TestCase& tc) {
   std::cout << "--- Test: " << tc.description << " ---" << std::endl;
 }
 
-void printMetrics() {
-  auto requestMetrics = request.getMetrics();
-  std::cout << "\n--- Request Metrics ---" << std::endl;
-  std::cout << ebus::toJson(requestMetrics) << std::endl;
-}
-
 // clang-format off
 std::vector<TestCase> test_cases = {
     {true, 0x33, "Normal", "33feb5050427002d00"},
@@ -116,8 +110,6 @@ std::vector<TestCase> test_cases = {
 int main() {
   for (const TestCase& tc : test_cases)
     if (tc.enabled) run_test(tc);
-
-  printMetrics();
 
   return EXIT_SUCCESS;
 }

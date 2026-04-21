@@ -23,13 +23,13 @@
 void test_address_tracking() {
   std::cout << "[TEST] DeviceManager Address Tracking... ";
 
-  ebus::DeviceManager dm;
   // Setup handler dependencies to avoid nullptr issues, though update() now
   // guards against it.
   ebus::BusConfig config{.device = "/dev/null", .simulate = true};
   ebus::RuntimeConfig runtime{.address = 0xff, .window = 50, .offset = 5};
   ebus::Request request;
   ebus::BusMonitor monitor;
+  ebus::DeviceManager dm(&monitor);
   ebus::Bus bus(config, runtime, &request, &monitor);
   ebus::Handler handler(runtime.address, &bus, &request, &monitor);
 
@@ -61,12 +61,12 @@ void test_address_tracking() {
 void test_device_update() {
   std::cout << "[TEST] DeviceManager Device Update... ";
 
-  ebus::DeviceManager dm;
   // Handler needed for filtering own address logic
   ebus::BusConfig config{.device = "/dev/null", .simulate = true};
   ebus::RuntimeConfig runtime{.address = 0xff, .window = 50, .offset = 5};
   ebus::Request request;
   ebus::BusMonitor monitor;
+  ebus::DeviceManager dm(&monitor);
   ebus::Bus bus(config, runtime, &request, &monitor);
   ebus::Handler handler(runtime.address, &bus, &request, &monitor);
 
@@ -96,12 +96,12 @@ void test_device_update() {
 void test_create_scan_commands() {
   std::cout << "[TEST] DeviceManager Create Scan Commands... ";
 
-  ebus::DeviceManager dm;
   // Use handler with address 0xff
   ebus::BusConfig config{.device = "/dev/null", .simulate = true};
   ebus::RuntimeConfig runtime{.address = 0xff, .window = 50, .offset = 5};
   ebus::Request request;
   ebus::BusMonitor monitor;
+  ebus::DeviceManager dm(&monitor);
   ebus::Bus bus(config, runtime, &request, &monitor);
   ebus::Handler handler(runtime.address, &bus, &request, &monitor);
 

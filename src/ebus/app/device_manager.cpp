@@ -7,28 +7,55 @@
 
 #include <set>
 
+ebus::DeviceManager::DeviceManager(BusMonitor* monitor) : monitor_(monitor) {}
+
 void ebus::DeviceManager::setOwnAddress(uint8_t address) {
   own_address_ = address;
 }
 
 void ebus::DeviceManager::update(ByteView master_view, ByteView slave_view) {
   std::lock_guard<std::mutex> lock(mutex_);
-  // Addresses
-  masters_[master_view[0]]++;
-  if (ebus::isSlave(master_view[1])) slaves_[master_view[1]]++;
+  uint8_t m_addr = master_view[0];
+  uint8_t s_addr = master_view[1];
+
+  if (monitor_) {
+    monitor_->updateDevice([&](metrics::DeviceMetrics& d) {
+      auto is_new = [&](uint8_t addr) {
+        uint8_t sa = ebus::isSlave(addr) ? addr : ebus::slaveOf(addr);
+        return d.masters[masterOf(sa)] == 0 && d.slaves[sa] == 0;
+      };
+
+      if (is_new(m_addr) && !identified_devices_.test(ebus::slaveOf(m_addr))) {
+        d.unknown_devices++;
+      }
+      d.masters[m_addr]++;
+
+      if (ebus::isSlave(s_addr)) {
+        if (is_new(s_addr) && !identified_devices_.test(s_addr)) {
+          d.unknown_devices++;
+        }
+        d.slaves[s_addr]++;
+      }
+    });
+  }
 
   // Devices
   if (master_view[1] == ebus::slaveOf(own_address_)) return;
   if (ebus::isSlave(master_view[1])) {
+    if (!identified_devices_.test(master_view[1])) {
+      if (monitor_) {
+        monitor_->updateDevice([](auto& d) {
+          if (d.unknown_devices > 0) d.unknown_devices--;
+        });
+      }
+      identified_devices_.set(master_view[1]);
+    }
     devices_[master_view[1]].update(master_view, slave_view);
-    identified_devices_.set(master_view[1]);
   }
 }
 
-void ebus::DeviceManager::resetAddresses() {
-  std::lock_guard<std::mutex> lock(mutex_);
-  masters_.fill(0);
-  slaves_.fill(0);
+void ebus::DeviceManager::resetDevices() {
+  
 }
 
 std::vector<ebus::DeviceInfo> ebus::DeviceManager::getDeviceInfo() const {
@@ -44,42 +71,44 @@ std::vector<ebus::DeviceInfo> ebus::DeviceManager::getDeviceInfo() const {
 
 std::vector<std::pair<uint8_t, uint32_t>> ebus::DeviceManager::getMasters()
     const {
-  std::lock_guard<std::mutex> lock(mutex_);
   std::vector<std::pair<uint8_t, uint32_t>> result;
-  for (size_t i = 0; i < masters_.size(); ++i) {
-    if (masters_[i] > 0)
-      result.push_back({static_cast<uint8_t>(i), masters_[i]});
+  if (monitor_) {
+    auto m = monitor_->getMetrics().devices;
+    for (size_t i = 0; i < m.masters.size(); ++i) {
+      if (m.masters[i] > 0)
+        result.push_back({static_cast<uint8_t>(i), m.masters[i]});
+    }
   }
   return result;
 }
 
 std::vector<std::pair<uint8_t, uint32_t>> ebus::DeviceManager::getSlaves()
     const {
-  std::lock_guard<std::mutex> lock(mutex_);
   std::vector<std::pair<uint8_t, uint32_t>> result;
-  for (size_t i = 0; i < slaves_.size(); ++i) {
-    if (slaves_[i] > 0) result.push_back({static_cast<uint8_t>(i), slaves_[i]});
+  if (monitor_) {
+    auto m = monitor_->getMetrics().devices;
+    for (size_t i = 0; i < m.slaves.size(); ++i) {
+      if (m.slaves[i] > 0)
+        result.push_back({static_cast<uint8_t>(i), m.slaves[i]});
+    }
   }
   return result;
 }
 
-uint32_t ebus::DeviceManager::findCounter(uint8_t address) const {
-  std::lock_guard<std::mutex> lock(mutex_);
-  return masters_[address] + slaves_[address];
-}
-
 std::bitset<256> ebus::DeviceManager::getObservedSlaves() const {
-  std::lock_guard<std::mutex> lock(mutex_);
   std::bitset<256> observed;
+  if (monitor_) {
+    auto m = monitor_->getMetrics().devices;
 
-  for (size_t i = 0; i < masters_.size(); ++i) {
-    if (masters_[i] > 0 && i != own_address_)
-      observed.set(ebus::slaveOf(static_cast<uint8_t>(i)));
-  }
+    for (size_t i = 0; i < m.masters.size(); ++i) {
+      if (m.masters[i] > 0 && i != own_address_)
+        observed.set(ebus::slaveOf(static_cast<uint8_t>(i)));
+    }
 
-  for (size_t i = 0; i < slaves_.size(); ++i) {
-    if (slaves_[i] > 0 && i != ebus::slaveOf(own_address_))
-      observed.set(static_cast<uint8_t>(i));
+    for (size_t i = 0; i < m.slaves.size(); ++i) {
+      if (m.slaves[i] > 0 && i != ebus::slaveOf(own_address_))
+        observed.set(static_cast<uint8_t>(i));
+    }
   }
   return observed;
 }

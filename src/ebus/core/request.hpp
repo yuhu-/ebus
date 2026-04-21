@@ -94,9 +94,6 @@ class Request {
 
   RequestResult run(uint8_t byte);
 
-  void resetMetrics();
-  metrics::RequestMetrics getMetrics() const;
-
  private:
   BusMonitor* monitor_ = nullptr;
 

@@ -101,14 +101,6 @@ void ebus::BusFreeRtos::setOffset(const uint16_t offset) {
   portEXIT_CRITICAL_ISR(&timer_mux_);
 }
 
-void ebus::BusFreeRtos::resetMetrics() {
-  if (monitor_) monitor_->reset();
-}
-
-ebus::metrics::BusMetrics ebus::BusFreeRtos::getMetrics() const {
-  return monitor_ ? monitor_->getBusMetrics() : metrics::BusMetrics{};
-}
-
 void ebus::BusFreeRtos::recordUtilization(uint8_t byte) {
   // 1 (start bit) + zero bits in data. eBUS bit time is ~416.67us
   double low_time = (countZeroBits(byte) + 1) * (1000000.0 / 2400.0);
@@ -302,7 +294,8 @@ void ebus::BusFreeRtos::ebusUartEventRunner() {
             } else {
               portENTER_CRITICAL_ISR(&timer_mux_);
               start_bit_flag_ = true;
-              if (monitor_) monitor_->updateBus([](auto& m){ m.start_bit_errors++; });
+              if (monitor_)
+                monitor_->updateBus([](auto& m) { m.start_bit_errors++; });
               portEXIT_CRITICAL_ISR(&timer_mux_);
             }
           }

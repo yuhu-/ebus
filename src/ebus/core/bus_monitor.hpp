@@ -20,17 +20,14 @@ namespace ebus {
  */
 class BusMonitor {
  public:
-  void reset();
+  void resetMetrics();
+  metrics::SystemMetrics getMetrics() const;
 
   // Thread-safe update helpers
   void updateHandler(std::function<void(metrics::HandlerMetrics&)> updater);
   void updateRequest(std::function<void(metrics::RequestMetrics&)> updater);
   void updateBus(std::function<void(metrics::BusMetrics&)> updater);
-
-  // Central access to snapshots
-  metrics::HandlerMetrics getHandlerMetrics() const;
-  metrics::RequestMetrics getRequestMetrics() const;
-  metrics::BusMetrics getBusMetrics() const;
+  void updateDevice(std::function<void(metrics::DeviceMetrics&)> updater);
 
   // Accumulators
   mutable std::mutex metrics_mutex;
@@ -61,6 +58,7 @@ class BusMonitor {
   metrics::HandlerMetrics handler_acc_;
   metrics::RequestMetrics request_acc_;
   metrics::BusMetrics bus_acc_;
+  metrics::DeviceMetrics device_acc_;
 };
 
 }  // namespace ebus

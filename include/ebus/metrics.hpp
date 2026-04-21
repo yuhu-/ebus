@@ -111,7 +111,7 @@ struct HandlerMetrics {
   // State-machine specific execution timings
   std::array<MetricValues, 15> state_timings;
 
-  void reset() {
+  void resetMetrics() {
     error_rate = 0.0;
     protocol_data_utilization_rate = 0.0;
 
@@ -199,7 +199,7 @@ struct RequestMetrics {
   uint32_t lock_counter_reset = 0;
   uint32_t session_timeouts = 0;
 
-  void reset() {
+  void resetMetrics() {
     contention_rate = 0.0;
 
     // Aggregated Counters
@@ -242,7 +242,7 @@ struct BusMetrics {
   MetricValues transmit;
   MetricValues uptime;
 
-  void reset() {
+  void resetMetrics() {
     utilization = 0.0;
 
     // Detailed Counters
@@ -257,12 +257,29 @@ struct BusMetrics {
 };
 
 /**
+ * Frequency metrics for observed bus participants.
+ */
+struct DeviceMetrics {
+  // Detailed Counters
+  uint32_t unknown_devices = 0;
+  std::array<uint32_t, 256> masters{};
+  std::array<uint32_t, 256> slaves{};
+
+  void resetMetrics() {
+    unknown_devices = 0;
+    masters.fill(0);
+    slaves.fill(0);
+  }
+};
+
+/**
  * Aggregate system telemetry.
  */
 struct SystemMetrics {
   HandlerMetrics handler;
   RequestMetrics request;
   BusMetrics bus;
+  DeviceMetrics devices;
 
   // Quality Score (%)
   // Quality Score is a composite metric that combines error rate and
@@ -396,6 +413,33 @@ inline std::string toJson(const metrics::BusMetrics& m) {
   return oss.str();
 }
 
+inline std::string toJson(const metrics::DeviceMetrics& m) {
+  std::ostringstream oss;
+  oss << "{\"unknown_devices\":" << m.unknown_devices << ",\"masters\":{";
+  bool first = true;
+  for (size_t i = 0; i < 256; ++i) {
+    if (m.masters[i] > 0) {
+      if (!first) oss << ",";
+      // Use hex keys for eBUS addresses
+      static constexpr char hex[] = "0123456789abcdef";
+      oss << "\"0x" << hex[i >> 4] << hex[i & 0xf] << "\":" << m.masters[i];
+      first = false;
+    }
+  }
+  oss << "},\"slaves\":{";
+  first = true;
+  for (size_t i = 0; i < 256; ++i) {
+    if (m.slaves[i] > 0) {
+      if (!first) oss << ",";
+      static constexpr char hex[] = "0123456789abcdef";
+      oss << "\"0x" << hex[i >> 4] << hex[i & 0xf] << "\":" << m.slaves[i];
+      first = false;
+    }
+  }
+  oss << "}}";
+  return oss.str();
+}
+
 /**
  * Serializes the entire SystemMetrics tree to a JSON object string.
  */
@@ -404,7 +448,8 @@ inline std::string toJson(const metrics::SystemMetrics& sm) {
   oss << std::fixed << std::setprecision(2);
   oss << "{\"handler\":" << toJson(sm.handler)
       << ",\"request\":" << toJson(sm.request) << ",\"bus\":" << toJson(sm.bus)
-      << ",\"quality\":" << sm.quality << "}";
+      << ",\"devices\":" << toJson(sm.devices) << ",\"quality\":" << sm.quality
+      << "}";
   return oss.str();
 }
 

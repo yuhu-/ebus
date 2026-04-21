@@ -186,14 +186,6 @@ void ebus::BusPosix::setRuntimeConfig(const RuntimeConfig& runtime) {
   }
 }
 
-void ebus::BusPosix::resetMetrics() {
-  if (monitor_) monitor_->reset();
-}
-
-ebus::metrics::BusMetrics ebus::BusPosix::getMetrics() const {
-  return monitor_ ? monitor_->getBusMetrics() : metrics::BusMetrics{};
-}
-
 void ebus::BusPosix::addReadListener(ReadListener listener) {
   read_listeners_.push_back(listener);
 }

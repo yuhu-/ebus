@@ -73,9 +73,6 @@ class BusPosix {
   void setOffset(const uint16_t offset);
   void setRuntimeConfig(const RuntimeConfig& runtime);
 
-  void resetMetrics();
-  ebus::metrics::BusMetrics getMetrics() const;
-
   // Listeners
   void addReadListener(ReadListener listener);
   void addWriteListener(WriteListener listener);
