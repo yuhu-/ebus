@@ -69,6 +69,13 @@ inline std::vector<uint8_t> toVector(const std::string& str) {
 }
 
 /**
+ * Converts a non-owning ByteView to an owning std::vector.
+ */
+inline std::vector<uint8_t> toVector(ByteView view) {
+  return {view.begin(), view.end()};
+}
+
+/**
  * Rounds a floating point value to a specific number of decimal places.
  */
 inline double roundDigits(double value, uint8_t digits) noexcept {
