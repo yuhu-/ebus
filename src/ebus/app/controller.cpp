@@ -37,6 +37,8 @@ struct ebus::Impl {
   std::unique_ptr<ebus::ServiceThread> worker_;
 };
 
+ebus::Controller::Controller() : impl_(new Impl()) {}
+
 ebus::Controller::Controller(const EbusConfig& config)
     : config_(config), impl_(new Impl()) {
   configured_ = true;

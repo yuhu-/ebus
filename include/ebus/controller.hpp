@@ -26,7 +26,7 @@ struct Impl;
 
 class Controller {
  public:
-  Controller() = default;
+  Controller();
   explicit Controller(const EbusConfig& config);
   ~Controller();
 
