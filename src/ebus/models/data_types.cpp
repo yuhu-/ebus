@@ -214,10 +214,9 @@ std::optional<DataValue> decode(DataType dt, ByteView bytes, Endian e) {
     float f;
     std::memcpy(&f, &raw, 4);
 #if defined(ESP_PLATFORM)
-    return static_cast<float_t>(f);  // On ESP32, use float
+    return static_cast<float_t>(f);
 #else
-    return static_cast<double_t>(
-        f);  // On POSIX, use double for higher precision
+    return static_cast<double_t>(f);
 #endif
   }
 
