@@ -24,58 +24,50 @@ struct Scale {
   int32_t den;
 };
 
-struct Meta {
-  DataType dt;
-  uint8_t size;
-  bool is_string;
-  bool is_float;
-  bool is_signed;
-  bool reversed;
-  Scale scale;
-  const char* name;
-  bool has_repl;
-  uint32_t replacement;
+struct Meta : DataTypeInfoBase {
+  bool reversed = false;
+  Scale scale = {1, 1};
 };
 
 // Table MUST be sorted alphabetically by 'name' for binary search in
 // stringToDataType
 // clang-format off
 constexpr Meta kMetaTable[] = {
-  {DataType::bcd, 1, false, false, false, false, {1, 1}, "BCD", true, 0xff},
-  {DataType::char1, 1, true, false, false, false, {1, 1}, "CHAR1", true, 0xff},
-  {DataType::char2, 2, true, false, false, false, {1, 1}, "CHAR2", true, 0xffff},
-  {DataType::char3, 3, true, false, false, false, {1, 1}, "CHAR3", false, 0},
-  {DataType::char4, 4, true, false, false, false, {1, 1}, "CHAR4", false, 0},
-  {DataType::char5, 5, true, false, false, false, {1, 1}, "CHAR5", false, 0},
-  {DataType::char6, 6, true, false, false, false, {1, 1}, "CHAR6", false, 0},
-  {DataType::char7, 7, true, false, false, false, {1, 1}, "CHAR7", false, 0},
-  {DataType::char8, 8, true, false, false, false, {1, 1}, "CHAR8", false, 0},
-  {DataType::data1b, 1, false, false, true, false, {1, 1}, "DATA1B", true, 0x80},
-  {DataType::data1c, 1, false, false, false, false, {1, 2}, "DATA1C", true, 0xff},
-  {DataType::data2b, 2, false, false, true, false, {1, 256}, "DATA2B", true, 0x8000},
-  {DataType::data2br, 2, false, false, true, true, {1, 256}, "DATA2BR", true, 0x8000},
-  {DataType::data2c, 2, false, false, true, false, {1, 16}, "DATA2C", true, 0x8000},
-  {DataType::data2cr, 2, false, false, true, true, {1, 16}, "DATA2CR", true, 0x8000},
-  {DataType::float4, 4, false, true, false, false, {1, 1}, "FLOAT4", false, 0},
-  {DataType::float4r, 4, false, true, false, true, {1, 1}, "FLOAT4R", false, 0},
-  {DataType::hex1, 1, true, false, false, false, {1, 1}, "HEX1", true, 0xff},
-  {DataType::hex2, 2, true, false, false, false, {1, 1}, "HEX2", true, 0xffff},
-  {DataType::hex3, 3, true, false, false, false, {1, 1}, "HEX3", false, 0},
-  {DataType::hex4, 4, true, false, false, false, {1, 1}, "HEX4", false, 0},
-  {DataType::hex5, 5, true, false, false, false, {1, 1}, "HEX5", false, 0},
-  {DataType::hex6, 6, true, false, false, false, {1, 1}, "HEX6", false, 0},
-  {DataType::hex7, 7, true, false, false, false, {1, 1}, "HEX7", false, 0},
-  {DataType::hex8, 8, true, false, false, false, {1, 1}, "HEX8", false, 0},
-  {DataType::int16, 2, false, false, true, false, {1, 1}, "INT16", true, 0x8000},
-  {DataType::int16r, 2, false, false, true, true, {1, 1}, "INT16R", true, 0x8000},
-  {DataType::int32, 4, false, false, true, false, {1, 1}, "INT32", true, 0x80000000},
-  {DataType::int32r, 4, false, false, true, true, {1, 1}, "INT32R", true, 0x80000000},
-  {DataType::int8, 1, false, false, true, false, {1, 1}, "INT8", true, 0x80},
-  {DataType::uint16, 2, false, false, false, false, {1, 1}, "UINT16", true, 0xffff},
-  {DataType::uint16r, 2, false, false, false, true, {1, 1}, "UINT16R", true, 0xffff},
-  {DataType::uint32, 4, false, false, false, false, {1, 1}, "UINT32", true, 0xffffffff},
-  {DataType::uint32r, 4, false, false, false, true, {1, 1}, "UINT32R", true, 0xffffffff},
-  {DataType::uint8, 1, false, false, false, false, {1, 1}, "UINT8", true, 0xff},
+  {{DataType::bcd, "BCD", 1, true, false, false, true, 0xff}, false, {1, 1}},
+  {{DataType::char1, "CHAR1", 1, false, false, false, true, 0xff}, false, {1, 1}},
+  {{DataType::char2, "CHAR2", 2, false, false, false, true, 0xffff}, false, {1, 1}},
+  {{DataType::char3, "CHAR3", 3, false, false, false, false, 0}, false, {1, 1}},
+  {{DataType::char4, "CHAR4", 4, false, false, false, false, 0}, false, {1, 1}},
+  {{DataType::char5, "CHAR5", 5, false, false, false, false, 0}, false, {1, 1}},
+  {{DataType::char6, "CHAR6", 6, false, false, false, false, 0}, false, {1, 1}},
+  {{DataType::char7, "CHAR7", 7, false, false, false, false, 0}, false, {1, 1}},
+  {{DataType::char8, "CHAR8", 8, false, false, false, false, 0}, false, {1, 1}},
+  {{DataType::data1b, "DATA1B", 1, true, true, false, true, 0x80}, false, {1, 1}},
+  {{DataType::data1c, "DATA1C", 1, true, false, false, true, 0xff}, false, {1, 2}},
+  {{DataType::data2b, "DATA2B", 2, true, true, false, true, 0x8000}, false, {1, 256}},
+  {{DataType::data2br, "DATA2BR", 2, true, true, false, true, 0x8000}, true, {1, 256}},
+  {{DataType::data2c, "DATA2C", 2, true, true, false, true, 0x8000}, false, {1, 16}},
+  {{DataType::data2cr, "DATA2CR", 2, true, true, false, true, 0x8000}, true, {1, 16}},
+  {{DataType::float4, "FLOAT4", 4, true, false, true, false, 0}, false, {1, 1}},
+  {{DataType::float4r, "FLOAT4R", 4, true, false, true, false, 0}, true, {1, 1}},
+  {{DataType::hex1, "HEX1", 1, false, false, false, true, 0xff}, false, {1, 1}},
+  {{DataType::hex2, "HEX2", 2, false, false, false, true, 0xffff}, false, {1, 1}},
+  {{DataType::hex3, "HEX3", 3, false, false, false, false, 0}, false, {1, 1}},
+  {{DataType::hex4, "HEX4", 4, false, false, false, false, 0}, false, {1, 1}},
+  {{DataType::hex5, "HEX5", 5, false, false, false, false, 0}, false, {1, 1}},
+  {{DataType::hex6, "HEX6", 6, false, false, false, false, 0}, false, {1, 1}},
+  {{DataType::hex7, "HEX7", 7, false, false, false, false, 0}, false, {1, 1}},
+  {{DataType::hex8, "HEX8", 8, false, false, false, false, 0}, false, {1, 1}},
+  {{DataType::int16, "INT16", 2, true, true, false, true, 0x8000}, false, {1, 1}},
+  {{DataType::int16r, "INT16R", 2, true, true, false, true, 0x8000}, true, {1, 1}},
+  {{DataType::int32, "INT32", 4, true, true, false, true, 0x80000000}, false, {1, 1}},
+  {{DataType::int32r, "INT32R", 4, true, true, false, true, 0x80000000}, true, {1, 1}},
+  {{DataType::int8, "INT8", 1, true, true, false, true, 0x80}, false, {1, 1}},
+  {{DataType::uint16, "UINT16", 2, true, false, false, true, 0xffff}, false, {1, 1}},
+  {{DataType::uint16r, "UINT16R", 2, true, false, false, true, 0xffff}, true, {1, 1}},
+  {{DataType::uint32, "UINT32", 4, true, false, false, true, 0xffffffff}, false, {1, 1}},
+  {{DataType::uint32r, "UINT32R", 4, true, false, false, true, 0xffffffff}, true, {1, 1}},
+  {{DataType::uint8, "UINT8", 1, true, false, false, true, 0xff}, false, {1, 1}},
 };
 // clang-format on
 
@@ -124,7 +116,49 @@ void writeInt(ebus::Sequence& s, IntType val, bool flip) {
     s.pushBack(static_cast<uint8_t>((to_write >> (8 * i)) & 0xff), false);
 }
 
+/**
+ * Scaled value using integer math to preserve precision and minimize FPU usage.
+ */
+template <typename T>
+constexpr int64_t integerScale(T val, int32_t num, int32_t den) {
+  if (den == 0) return 0;
+  int64_t numerator = static_cast<int64_t>(val) * num;
+  int64_t half = den / 2;
+  if (numerator >= 0) {
+    return (numerator + half) / den;
+  }
+  return (numerator - half) / den;
+}
+
+template <typename T>
+constexpr bool inRange(int64_t val, bool is_signed) {
+  if (is_signed) {
+    return val >=
+               std::numeric_limits<typename std::make_signed<T>::type>::min() &&
+           val <=
+               std::numeric_limits<typename std::make_signed<T>::type>::max();
+  }
+  return val >= 0 &&
+         static_cast<uint64_t>(val) <=
+             std::numeric_limits<typename std::make_unsigned<T>::type>::max();
+}
+
+bool validateRange(int64_t val, uint8_t size, bool is_signed) {
+  switch (size) {
+    case 1:
+      return inRange<int8_t>(val, is_signed);
+    case 2:
+      return inRange<int16_t>(val, is_signed);
+    case 4:
+      return inRange<int32_t>(val, is_signed);
+    default:
+      return true;
+  }
+}
+
 }  // namespace
+
+/* --- Core Operations --- */
 
 std::optional<DataValue> decode(DataType dt, ByteView bytes, Endian e) {
   const Meta* m = metaFor(dt);
@@ -132,7 +166,7 @@ std::optional<DataValue> decode(DataType dt, ByteView bytes, Endian e) {
 
   const bool flip = m->reversed ? (e == Endian::little) : (e == Endian::big);
 
-  if (m->is_string)
+  if (!m->is_numeric)
     return std::string(reinterpret_cast<const char*>(bytes.data()), m->size);
 
   // Check for Replacement Values (Sentinels)
@@ -151,7 +185,8 @@ std::optional<DataValue> decode(DataType dt, ByteView bytes, Endian e) {
       break;
   }
 
-  if (!m->is_float && m->has_repl && bit_pattern == m->replacement) {
+  if (!m->is_float && m->has_replacement &&
+      bit_pattern == m->replacement_value) {
     return nullValue();
   }
 
@@ -161,13 +196,7 @@ std::optional<DataValue> decode(DataType dt, ByteView bytes, Endian e) {
     return static_cast<uint8_t>((val >> 4) * 10 + (val & 0x0f));
   }
 
-  if (m->is_float) {
-    uint32_t raw = readInt<uint32_t>(bytes, flip);
-    float f;
-    std::memcpy(&f, &raw, 4);
-    return static_cast<double_t>(f);
-  }
-
+  // Read the raw integer value from bytes
   int64_t raw_val = 0;
   if (m->size == 1)
     raw_val = m->is_signed ? static_cast<int8_t>(bytes[0]) : bytes[0];
@@ -180,19 +209,41 @@ std::optional<DataValue> decode(DataType dt, ByteView bytes, Endian e) {
                   ? static_cast<int32_t>(readInt<uint32_t>(bytes, flip))
                   : static_cast<int64_t>(readInt<uint32_t>(bytes, flip));
 
-  if (m->scale.num == 1 && m->scale.den == 1) {
-    if (m->size == 1)
-      return m->is_signed ? DataValue(static_cast<int8_t>(raw_val))
-                          : DataValue(static_cast<uint8_t>(raw_val));
-    if (m->size == 2)
-      return m->is_signed ? DataValue(static_cast<int16_t>(raw_val))
-                          : DataValue(static_cast<uint16_t>(raw_val));
-    return m->is_signed ? DataValue(static_cast<int32_t>(raw_val))
-                        : DataValue(static_cast<uint32_t>(raw_val));
+  if (m->is_float) {
+    uint32_t raw = readInt<uint32_t>(bytes, flip);
+    float f;
+    std::memcpy(&f, &raw, 4);
+#if defined(ESP_PLATFORM)
+    return static_cast<float_t>(f);  // On ESP32, use float
+#else
+    return static_cast<double_t>(
+        f);  // On POSIX, use double for higher precision
+#endif
   }
 
-  return static_cast<double_t>(raw_val) * static_cast<double_t>(m->scale.num) /
-         m->scale.den;
+  // Handle scaled integer types (DATA1C, DATA2B, etc.)
+  if (m->scale.num != 1 || m->scale.den != 1) {
+    // Perform scaling in floating point to preserve fractional resolutions
+#if defined(ESP_PLATFORM)
+    return static_cast<float_t>(static_cast<float_t>(raw_val) *
+                                static_cast<float_t>(m->scale.num) /
+                                static_cast<float_t>(m->scale.den));
+#else
+    return static_cast<double_t>(static_cast<double_t>(raw_val) *
+                                 static_cast<double_t>(m->scale.num) /
+                                 static_cast<double_t>(m->scale.den));
+#endif
+  }
+
+  // Handle unscaled integer types
+  if (m->size == 1)
+    return m->is_signed ? DataValue(static_cast<int8_t>(raw_val))
+                        : DataValue(static_cast<uint8_t>(raw_val));
+  if (m->size == 2)
+    return m->is_signed ? DataValue(static_cast<int16_t>(raw_val))
+                        : DataValue(static_cast<uint16_t>(raw_val));
+  return m->is_signed ? DataValue(static_cast<int32_t>(raw_val))
+                      : DataValue(static_cast<uint32_t>(raw_val));
 }
 
 bool isValid(DataType dt, ByteView bytes) noexcept {
@@ -220,8 +271,27 @@ Sequence encode(DataType dt, const DataValue& value, Endian e) {
 
   const bool flip = m->reversed ? (e == Endian::little) : (e == Endian::big);
 
+  // Handle numeric null sentinel encoding
+  if (m->is_numeric && isNull(value)) {
+    if (!m->has_replacement) return Sequence{};  // no sentinel defined
+    if (m->size == 1) {
+      s.pushBack(static_cast<uint8_t>(m->replacement_value), false);
+    } else if (m->size == 2) {
+      writeInt<uint16_t>(s, static_cast<uint16_t>(m->replacement_value), flip);
+    } else if (m->size == 4) {
+      writeInt<uint32_t>(s, static_cast<uint32_t>(m->replacement_value), flip);
+    } else {
+      // Generic: write low bytes of replacement_value in little-first order
+      for (uint8_t i = 0; i < m->size; ++i)
+        s.pushBack(
+            static_cast<uint8_t>((m->replacement_value >> (8 * i)) & 0xff),
+            false);
+    }
+    return s;
+  }
+
   // Handle Strings
-  if (m->is_string) {
+  if (!m->is_numeric) {
     if (auto* str = std::get_if<std::string>(&value)) {
       s.assign(ByteView(reinterpret_cast<const uint8_t*>(str->data()),
                         std::min(str->size(), static_cast<size_t>(m->size))),
@@ -244,7 +314,7 @@ Sequence encode(DataType dt, const DataValue& value, Endian e) {
 
   // Handle Floats
   if (m->is_float) {
-    float f = static_cast<float>(asDouble(value));
+    float_t f = static_cast<float_t>(asDouble(value));
     uint32_t raw;
     std::memcpy(&raw, &f, 4);
     writeInt<uint32_t>(s, raw, flip);
@@ -253,22 +323,30 @@ Sequence encode(DataType dt, const DataValue& value, Endian e) {
 
   // Handle Integers and Fixed-Point
   int64_t raw_int = 0;
-  if (auto* d = std::get_if<double_t>(&value)) {
-    raw_int =
-        static_cast<int64_t>(std::round(*d * m->scale.den / m->scale.num));
+  if (std::holds_alternative<double_t>(value) ||
+      std::holds_alternative<float_t>(value)) {
+    raw_int = static_cast<int64_t>(
+        std::round(asDouble(value) * m->scale.den / m->scale.num));
   } else {
-    raw_int = asInt64(value);
+    raw_int = integerScale(asInt64(value), m->scale.den, m->scale.num);
   }
 
+  // Prevent bit-truncation by checking ranges
+  if (!validateRange(raw_int, m->size, m->is_signed)) return s;
+
   if (m->size == 1)
-    s.pushBack(static_cast<uint8_t>(raw_int & 0xff), false);
+    s.pushBack(static_cast<uint8_t>(raw_int), false);
   else if (m->size == 2)
-    writeInt<uint16_t>(s, static_cast<uint16_t>(raw_int & 0xffff), flip);
+    writeInt<uint16_t>(s, static_cast<uint16_t>(raw_int), flip);
   else if (m->size == 4)
-    writeInt<uint32_t>(s, static_cast<uint32_t>(raw_int & 0xffffffff), flip);
+    writeInt<uint32_t>(s, static_cast<uint32_t>(raw_int), flip);
 
   return s;
 }
+
+/* --- DataValue Utilities --- */
+
+DataValue nullValue() noexcept { return DataValue(std::monostate{}); }
 
 bool isNull(const DataValue& value) noexcept {
   return std::holds_alternative<std::monostate>(value);
@@ -278,13 +356,12 @@ bool isNumeric(const DataValue& value) noexcept {
   return std::visit(
       [](auto&& arg) -> bool {
         using T = std::decay_t<decltype(arg)>;
-        // std::monostate and std::string return false, all others are numeric
         return std::is_arithmetic_v<T>;
       },
       value);
 }
 
-DataValue nullValue() noexcept { return DataValue(std::monostate{}); }
+/* --- DataValue Conversion --- */
 
 double_t asDouble(const DataValue& value) noexcept {
   return std::visit(
@@ -336,20 +413,6 @@ std::string const& asString(const DataValue& value) noexcept {
   return empty;
 }
 
-std::string toHexString(const DataValue& value, char separator) {
-  if (const std::string* s = std::get_if<std::string>(&value)) {
-    if (s->empty()) return "";
-    std::string res;
-    res.reserve(s->size() + (separator ? s->size() / 2 : 0));
-    for (size_t i = 0; i < s->size(); ++i) {
-      if (i > 0 && i % 2 == 0 && separator != 0) res += separator;
-      res += (*s)[i];
-    }
-    return res;
-  }
-  return toString(value);
-}
-
 std::string toString(const DataValue& value, std::string_view unit) {
   return std::visit(
       [unit](auto&& arg) -> std::string {
@@ -379,12 +442,35 @@ std::string toString(const DataValue& value, std::string_view unit) {
       value);
 }
 
-std::vector<DataType> getSupportedDataTypes() {
-  std::vector<DataType> types;
-  types.reserve(sizeof(kMetaTable) / sizeof(kMetaTable[0]));
-  std::transform(std::begin(kMetaTable), std::end(kMetaTable),
-                 std::back_inserter(types), [](const Meta& m) { return m.dt; });
-  return types;
+std::string toHexString(const DataValue& value, char separator) {
+  if (const std::string* s = std::get_if<std::string>(&value)) {
+    if (s->empty()) return "";
+    std::string res;
+    res.reserve(s->size() + (separator ? s->size() / 2 : 0));
+    for (size_t i = 0; i < s->size(); ++i) {
+      if (i > 0 && i % 2 == 0 && separator != 0) res += separator;
+      res += (*s)[i];
+    }
+    return res;
+  }
+  return toString(value);
+}
+
+/* --- Metadata & Type Discovery --- */
+
+std::optional<DataTypeInfo> getMeta(DataType dt) {
+  const Meta* m = metaFor(dt);
+  if (!m) return std::nullopt;
+
+  DataTypeInfo info;
+  static_cast<DataTypeInfoBase&>(info) = *m;
+  info.factor = static_cast<double_t>(m->scale.num) / m->scale.den;
+  return info;
+}
+
+bool isNumeric(DataType dt) noexcept {
+  const Meta* m = metaFor(dt);
+  return m && m->is_numeric;
 }
 
 DataType getDataType(const DataValue& value) noexcept {
@@ -404,21 +490,12 @@ DataType getDataType(const DataValue& value) noexcept {
       value);
 }
 
-std::optional<DataTypeInfo> getMeta(DataType dt) {
-  const Meta* m = metaFor(dt);
-  if (!m) return std::nullopt;
-
-  DataTypeInfo info;
-  info.dt = m->dt;
-  info.name = m->name;
-  info.size = m->size;
-  info.is_numeric = !m->is_string;
-  info.is_signed = m->is_signed;
-  info.is_float = m->is_float;
-  info.factor = static_cast<double>(m->scale.num) / m->scale.den;
-  info.has_replacement = m->has_repl;
-  info.replacement_value = m->replacement;
-  return info;
+std::vector<DataType> getSupportedDataTypes() {
+  std::vector<DataType> types;
+  types.reserve(sizeof(kMetaTable) / sizeof(kMetaTable[0]));
+  std::transform(std::begin(kMetaTable), std::end(kMetaTable),
+                 std::back_inserter(types), [](const Meta& m) { return m.dt; });
+  return types;
 }
 
 const char* dataTypeToString(DataType data_type) noexcept {

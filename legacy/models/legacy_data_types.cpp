@@ -382,6 +382,21 @@ void test_get_as() {
   assert(!r3.has_value());
 }
 
+void test_encode_range_checking() {
+  // uint8 range is 0-255. 256 is out of range.
+  assert(ebus::encode(DataType::uint8, 255).size() == 1);
+  assert(ebus::encode(DataType::uint8, 256).empty());
+  assert(ebus::encode(DataType::uint8, -1).empty());
+
+  // int8 range is -128 to 127.
+  assert(ebus::encode(DataType::int8, -128).size() == 1);
+  assert(ebus::encode(DataType::int8, 127).size() == 1);
+  assert(ebus::encode(DataType::int8, 128).empty());
+
+  // uint16 range is 0-65535.
+  assert(ebus::encode(DataType::uint16, 65536).empty());
+}
+
 void test_isValid() {
   // BCD validation
   assert(ebus::isValid(DataType::bcd, ebus::ByteView({0x12})));  // "12"
@@ -413,6 +428,92 @@ void test_sentinels() {
   // UINT16 0xFFFF -> null
   auto v4 = ebus::decode(DataType::uint16, ebus::ByteView({0xff, 0xff}));
   assert(v4 && ebus::isNull(*v4));
+}
+
+void test_isNumeric() {
+  assert(ebus::isNumeric(DataType::uint8) == true);
+  assert(ebus::isNumeric(DataType::int8) == true);
+  assert(ebus::isNumeric(DataType::float4) == true);
+  assert(ebus::isNumeric(DataType::data1b) == true);
+  assert(ebus::isNumeric(DataType::bcd) == true);
+  assert(ebus::isNumeric(DataType::uint16) == true);
+  assert(ebus::isNumeric(DataType::int16) == true);
+  assert(ebus::isNumeric(DataType::uint32) == true);
+  assert(ebus::isNumeric(DataType::int32) == true);
+  assert(ebus::isNumeric(DataType::data1c) == true);
+  assert(ebus::isNumeric(DataType::data2b) == true);
+
+  assert(ebus::isNumeric(DataType::char1) == false);
+  assert(ebus::isNumeric(DataType::char8) == false);
+  assert(ebus::isNumeric(DataType::hex1) == false);
+  assert(ebus::isNumeric(DataType::hex8) == false);
+  assert(ebus::isNumeric(DataType::error) == false);
+  assert(ebus::isNumeric(DataType::auto_detect) == false);
+}
+
+void test_null_sentinel_encoding() {
+  // BCD has replacement_value 0xff
+  Sequence bcd_null = ebus::encode(DataType::bcd, ebus::nullValue());
+  assert(bcd_null.size() == 1);
+  assert(bcd_null[0] == 0xff);
+
+  // uint8 has replacement_value 0xff
+  Sequence uint8_null = ebus::encode(DataType::uint8, ebus::nullValue());
+  assert(uint8_null.size() == 1);
+  assert(uint8_null[0] == 0xff);
+
+  // int8 has replacement_value 0x80
+  Sequence int8_null = ebus::encode(DataType::int8, ebus::nullValue());
+  assert(int8_null.size() == 1);
+  assert(int8_null[0] == 0x80);
+
+  // data1b has replacement_value 0x80
+  Sequence data1b_null = ebus::encode(DataType::data1b, ebus::nullValue());
+  assert(data1b_null.size() == 1);
+  assert(data1b_null[0] == 0x80);
+
+  // data1c has replacement_value 0xff
+  Sequence data1c_null = ebus::encode(DataType::data1c, ebus::nullValue());
+  assert(data1c_null.size() == 1);
+  assert(data1c_null[0] == 0xff);
+
+  // uint16 has replacement_value 0xffff
+  Sequence uint16_null = ebus::encode(DataType::uint16, ebus::nullValue());
+  assert(uint16_null.size() == 2);
+  assert(uint16_null[0] == 0xff);
+  assert(uint16_null[1] == 0xff);
+
+  // int16 has replacement_value 0x8000 (little-endian: 0x00 0x80)
+  Sequence int16_null = ebus::encode(DataType::int16, ebus::nullValue());
+  assert(int16_null.size() == 2);
+  assert(int16_null[0] == 0x00);
+  assert(int16_null[1] == 0x80);
+
+  // uint32 has replacement_value 0xffffffff
+  Sequence uint32_null = ebus::encode(DataType::uint32, ebus::nullValue());
+  assert(uint32_null.size() == 4);
+  assert(uint32_null[0] == 0xff);
+  assert(uint32_null[1] == 0xff);
+  assert(uint32_null[2] == 0xff);
+  assert(uint32_null[3] == 0xff);
+
+  // int32 has replacement_value 0x80000000 (little-endian: 0x00 0x00 0x00 0x80)
+  Sequence int32_null = ebus::encode(DataType::int32, ebus::nullValue());
+  assert(int32_null.size() == 4);
+  assert(int32_null[0] == 0x00);
+  assert(int32_null[1] == 0x00);
+  assert(int32_null[2] == 0x00);
+  assert(int32_null[3] == 0x80);
+
+  // float4 does not have replacement_value, so encoding null should return
+  // empty sequence
+  Sequence float4_null = ebus::encode(DataType::float4, ebus::nullValue());
+  assert(float4_null.empty());
+
+  // char1 does not have replacement_value, so encoding null should return empty
+  // sequence
+  Sequence char1_null = ebus::encode(DataType::char1, ebus::nullValue());
+  assert(char1_null.empty());
 }
 
 void test_all_types_roundtrip() {
@@ -473,8 +574,11 @@ int main() {
   test_supported_types_metadata();
   test_auto_detect();
   test_get_as();
+  test_encode_range_checking();
   test_isValid();
   test_sentinels();
+  test_isNumeric();
+  test_null_sentinel_encoding();
   test_all_types_roundtrip();
 
   std::cout << "All datatype conversion tests passed!" << std::endl;

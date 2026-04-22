@@ -361,6 +361,21 @@ TEST_CASE("Datatypes: getAs", "[models][datatypes]") {
   REQUIRE(!r3.has_value());
 }
 
+TEST_CASE("Datatypes: encode range checking", "[models][datatypes]") {
+  // uint8 range is 0-255. 256 is out of range.
+  REQUIRE(ebus::encode(DataType::uint8, 255).size() == 1);
+  REQUIRE(ebus::encode(DataType::uint8, 256).empty());
+  REQUIRE(ebus::encode(DataType::uint8, -1).empty());
+
+  // int8 range is -128 to 127.
+  REQUIRE(ebus::encode(DataType::int8, -128).size() == 1);
+  REQUIRE(ebus::encode(DataType::int8, 127).size() == 1);
+  REQUIRE(ebus::encode(DataType::int8, 128).empty());
+
+  // uint16 range is 0-65535.
+  REQUIRE(ebus::encode(DataType::uint16, 65536).empty());
+}
+
 TEST_CASE("Datatypes: isValid", "[models][datatypes]") {
   // BCD validation
   REQUIRE(ebus::isValid(DataType::bcd, ebus::ByteView({0x12})));  // "12"
@@ -396,6 +411,90 @@ TEST_CASE("Datatypes: sentinels", "[models][datatypes]") {
   auto v4 = ebus::decode(DataType::uint16, ebus::ByteView({0xff, 0xff}));
   REQUIRE(v4);
   REQUIRE(ebus::isNull(*v4));
+}
+
+TEST_CASE("Datatypes: isNumeric(DataType)", "[models][datatypes]") {
+  REQUIRE(ebus::isNumeric(DataType::uint8) == true);
+  REQUIRE(ebus::isNumeric(DataType::int8) == true);
+  REQUIRE(ebus::isNumeric(DataType::float4) == true);
+  REQUIRE(ebus::isNumeric(DataType::data1b) == true);
+  REQUIRE(ebus::isNumeric(DataType::bcd) == true);
+  REQUIRE(ebus::isNumeric(DataType::uint16) == true);
+  REQUIRE(ebus::isNumeric(DataType::int16) == true);
+  REQUIRE(ebus::isNumeric(DataType::uint32) == true);
+  REQUIRE(ebus::isNumeric(DataType::int32) == true);
+  REQUIRE(ebus::isNumeric(DataType::data1c) == true);
+  REQUIRE(ebus::isNumeric(DataType::data2b) == true);
+
+  REQUIRE(ebus::isNumeric(DataType::char1) == false);
+  REQUIRE(ebus::isNumeric(DataType::char8) == false);
+  REQUIRE(ebus::isNumeric(DataType::hex1) == false);
+  REQUIRE(ebus::isNumeric(DataType::hex8) == false);
+  REQUIRE(ebus::isNumeric(DataType::error) == false);
+  REQUIRE(ebus::isNumeric(DataType::auto_detect) == false);
+}
+
+TEST_CASE("Datatypes: null sentinel encoding", "[models][datatypes]") {
+  // BCD has replacement_value 0xff
+  Sequence bcd_null = ebus::encode(DataType::bcd, ebus::nullValue());
+  REQUIRE(bcd_null.size() == 1);
+  REQUIRE(bcd_null[0] == 0xff);
+
+  // uint8 has replacement_value 0xff
+  Sequence uint8_null = ebus::encode(DataType::uint8, ebus::nullValue());
+  REQUIRE(uint8_null.size() == 1);
+  REQUIRE(uint8_null[0] == 0xff);
+
+  // int8 has replacement_value 0x80
+  Sequence int8_null = ebus::encode(DataType::int8, ebus::nullValue());
+  REQUIRE(int8_null.size() == 1);
+  REQUIRE(int8_null[0] == 0x80);
+
+  // data1b has replacement_value 0x80
+  Sequence data1b_null = ebus::encode(DataType::data1b, ebus::nullValue());
+  REQUIRE(data1b_null.size() == 1);
+  REQUIRE(data1b_null[0] == 0x80);
+
+  // data1c has replacement_value 0xff
+  Sequence data1c_null = ebus::encode(DataType::data1c, ebus::nullValue());
+  REQUIRE(data1c_null.size() == 1);
+  REQUIRE(data1c_null[0] == 0xff);
+
+  // uint16 has replacement_value 0xffff
+  Sequence uint16_null = ebus::encode(DataType::uint16, ebus::nullValue());
+  REQUIRE(uint16_null.size() == 2);
+  REQUIRE(uint16_null[0] == 0xff);
+  REQUIRE(uint16_null[1] == 0xff);
+
+  // int16 has replacement_value 0x8000 (little-endian: 0x00 0x80)
+  Sequence int16_null = ebus::encode(DataType::int16, ebus::nullValue());
+  REQUIRE(int16_null.size() == 2);
+  REQUIRE(int16_null[0] == 0x00);
+  REQUIRE(int16_null[1] == 0x80);
+
+  // uint32 has replacement_value 0xffffffff
+  Sequence uint32_null = ebus::encode(DataType::uint32, ebus::nullValue());
+  REQUIRE(uint32_null.size() == 4);
+  REQUIRE(uint32_null[0] == 0xff);
+  REQUIRE(uint32_null[1] == 0xff);
+  REQUIRE(uint32_null[2] == 0xff);
+  REQUIRE(uint32_null[3] == 0xff);
+
+  // int32 has replacement_value 0x80000000 (little-endian: 0x00 0x00 0x00 0x80)
+  Sequence int32_null = ebus::encode(DataType::int32, ebus::nullValue());
+  REQUIRE(int32_null.size() == 4);
+  REQUIRE(int32_null[0] == 0x00);
+  REQUIRE(int32_null[1] == 0x00);
+  REQUIRE(int32_null[2] == 0x00);
+  REQUIRE(int32_null[3] == 0x80);
+
+  // float4 does not have replacement_value, so encoding null should return empty sequence
+  Sequence float4_null = ebus::encode(DataType::float4, ebus::nullValue());
+  REQUIRE(float4_null.empty());
+
+  // char1 does not have replacement_value, so encoding null should return empty sequence
+  Sequence char1_null = ebus::encode(DataType::char1, ebus::nullValue());
+  REQUIRE(char1_null.empty());
 }
 
 TEST_CASE("Datatypes: all types roundtrip", "[models][datatypes]") {
