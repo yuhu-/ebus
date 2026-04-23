@@ -23,12 +23,15 @@ void ebus::BusMonitor::resetMetrics() {
   callback_reactive.reset();
   callback_telegram.reset();
   callback_error.reset();
+  syn_postpone.reset();
 
   delay.reset();
   window.reset();
   transmit.reset();
   uptime.reset();
   utilization.reset();
+  history_index_ = 0;
+  history_count_ = 0;
 
   for (auto& stat : handler_timing) {
     stat.reset();
@@ -123,6 +126,7 @@ ebus::metrics::SystemMetrics ebus::BusMonitor::getMetrics() const {
   bm.window = window.getValues();
   bm.transmit = transmit.getValues();
   bm.uptime = uptime.getValues();
+  bm.syn_postpone = syn_postpone.getValues();
 
   // 4. Populate Device Part
   metrics::DeviceMetrics& dm = sm.devices;
@@ -133,6 +137,31 @@ ebus::metrics::SystemMetrics ebus::BusMonitor::getMetrics() const {
                (1.0 - (sm.request.contention_rate / 100.0));
 
   return sm;
+}
+
+void ebus::BusMonitor::updateUtilizationHistory() {
+  std::lock_guard<std::mutex> lock(metrics_mutex);
+  double current_util = 0.0;
+  if (bus_acc_.uptime.last > 0) {
+    current_util = (utilization.getSum() / bus_acc_.uptime.last) * 100.0;
+  }
+
+  utilization_history_[history_index_] = static_cast<float>(current_util);
+  history_index_ = (history_index_ + 1) % MAX_HISTORY;
+  if (history_count_ < MAX_HISTORY) history_count_++;
+}
+
+std::vector<float> ebus::BusMonitor::getUtilizationHistory() const {
+  std::lock_guard<std::mutex> lock(metrics_mutex);
+  std::vector<float> result;
+  result.reserve(history_count_);
+
+  for (size_t i = 0; i < history_count_; ++i) {
+    size_t idx =
+        (history_index_ + MAX_HISTORY - history_count_ + i) % MAX_HISTORY;
+    result.push_back(utilization_history_[idx]);
+  }
+  return result;
 }
 
 void ebus::BusMonitor::updateHandler(

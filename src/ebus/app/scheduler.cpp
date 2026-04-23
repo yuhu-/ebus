@@ -149,6 +149,7 @@ void ebus::Scheduler::run() {
 
     bool sent = false;
     std::string last_error = "unknown";
+    RequestResult result = RequestResult::first_error;
     Sequence slave_response;
     uint32_t attempt_id = current_item.id;
 
@@ -189,6 +190,7 @@ void ebus::Scheduler::run() {
           break;
         } else if (ev.type == EventType::error) {
           last_error = ev.error;
+          result = ev.result;
           break;
         }
 
@@ -219,7 +221,7 @@ void ebus::Scheduler::run() {
         data_ready_cv_.notify_one();
       } else {
         if (extern_error_callback_) {
-          extern_error_callback_(last_error, current_item.message, {});
+          extern_error_callback_(last_error, result, current_item.message, {});
         }
         if (current_item.result_callback) {
           current_item.result_callback(false, current_item.message, {});
@@ -289,9 +291,10 @@ void ebus::Scheduler::attachHandlerCallbacks() {
       });
 
   handler_->setErrorCallback([this](std::string_view error,
-                                    ByteView master_view, ByteView slave_view) {
+                                    RequestResult result, ByteView master_view,
+                                    ByteView slave_view) {
     if (extern_error_callback_)
-      extern_error_callback_(error, master_view, slave_view);
+      extern_error_callback_(error, result, master_view, slave_view);
 
     // Reset on certain error conditions that indicate the bus is now free
     // again
@@ -301,6 +304,7 @@ void ebus::Scheduler::attachHandlerCallbacks() {
     Event ev;
     ev.type = EventType::error;
     ev.id = id;
+    ev.result = result;
     ev.error = error.data();  // Points to the error message literal
     ev.master.assign(master_view);
     ev.slave.assign(slave_view);

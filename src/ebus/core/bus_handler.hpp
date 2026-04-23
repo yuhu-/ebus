@@ -83,17 +83,18 @@ class BusHandler {
   std::vector<ByteListener> listeners_cache_;
 
   void run() {
-    BusEvent event;
+    BusEvent bus_event;
     while (running_) {
-      if (queue_->pop(event, std::chrono::milliseconds(100))) {
-        BusEventContext ctx{event.byte, RequestState::observe,
-                            RequestResult::observe_data, 0, event.timestamp};
+      if (queue_->pop(bus_event, std::chrono::milliseconds(100))) {
+        BusEventContext ctx{bus_event.byte, RequestState::observe,
+                            RequestResult::observe_data, 0,
+                            bus_event.timestamp};
 
         if (request_) {
-          if (event.bus_request) request_->busRequestCompleted();
-          if (event.start_bit) request_->startBit();
+          if (bus_event.bus_request) request_->busRequestCompleted();
+          if (bus_event.start_bit) request_->startBit();
           ctx.state = request_->getState();
-          ctx.result = request_->run(event.byte);
+          ctx.result = request_->run(bus_event.byte);
           ctx.lock_counter = request_->getLockCounter();
         }
         if (handler_) handler_->run(ctx);

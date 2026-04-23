@@ -33,7 +33,7 @@ void run_test(const TestCase& tc) {
 
   bool requestPending = true;
 
-  ebus::RequestResult testResult;
+  ebus::RequestResult result;
 
   std::cout << " address: " << ebus::toString(tc.address) << std::endl;
   std::cout << "sequence: " << seq.toString() << std::endl;
@@ -47,9 +47,9 @@ void run_test(const TestCase& tc) {
               << "   state: " << ebus::toString(state) << "\tlockCounter: "
               << static_cast<int>(request.getLockCounter());
 
-    testResult = request.run(byte);
+    result = request.run(byte);
 
-    std::cout << "\tresult: " << ebus::toString(testResult);
+    std::cout << "\tresult: " << ebus::toString(result);
 
     if (requestPending && request.requestBus(tc.address))
       requestPending = false;

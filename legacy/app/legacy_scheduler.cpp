@@ -210,13 +210,13 @@ int main() {
         std::cout << "[scheduler] telegram " << ebus::toString(master_view)
                   << " " << ebus::toString(slave_view) << std::endl;
       });
-  scheduler.setErrorCallback([](std::string_view error_message,
-                                ebus::ByteView master_view,
-                                ebus::ByteView slave_view) {
-    std::cout << "[scheduler] error " << error_message << " "
-              << ebus::toString(master_view) << " "
-              << ebus::toString(slave_view) << std::endl;
-  });
+  scheduler.setErrorCallback(
+      [](std::string_view error_message, ebus::RequestResult result,
+         ebus::ByteView master_view, ebus::ByteView slave_view) {
+        std::cout << "[scheduler] error " << error_message << " "
+                  << ebus::toString(master_view) << " "
+                  << ebus::toString(slave_view) << std::endl;
+      });
 
   scheduler.setMaxSendAttempts(3);
   scheduler.setBaseBackoff(std::chrono::milliseconds(50));

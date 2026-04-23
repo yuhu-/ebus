@@ -23,6 +23,9 @@ class BusMonitor {
   void resetMetrics();
   metrics::SystemMetrics getMetrics() const;
 
+  void updateUtilizationHistory();
+  std::vector<float> getUtilizationHistory() const;
+
   // Thread-safe update helpers
   void updateHandler(std::function<void(metrics::HandlerMetrics&)> updater);
   void updateRequest(std::function<void(metrics::RequestMetrics&)> updater);
@@ -49,7 +52,13 @@ class BusMonitor {
   TimingStats window;
   TimingStats transmit;
   TimingStats uptime;
+  TimingStats syn_postpone;
   RollingStats utilization;
+
+  static constexpr size_t MAX_HISTORY = 60;  // 1 minute at 1Hz
+  std::array<float, MAX_HISTORY> utilization_history_ = {};
+  size_t history_index_ = 0;
+  size_t history_count_ = 0;
 
   // State-machine execution timings
   std::array<TimingStats, NUM_HANDLER_STATES> handler_timing = {};

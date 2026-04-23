@@ -87,6 +87,7 @@ class Scheduler {
     uint32_t id;
     MessageType message_type;
     TelegramType telegram_type;
+    RequestResult result;
     Sequence master;
     Sequence slave;
     const char* error = nullptr;

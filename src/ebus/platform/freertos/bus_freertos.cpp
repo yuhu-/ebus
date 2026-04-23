@@ -17,8 +17,11 @@
 #include <freertos/task.h>
 #include <hal/uart_ll.h>
 
+#include <ebus/protocol_math.hpp>
+
+#include "core/bus_monitor.hpp"
+#include "core/request.hpp"
 #include "driver/gpio.h"
-#include "utils/common.hpp"
 
 ebus::BusFreeRtos::BusFreeRtos(const BusConfig& config,
                                const RuntimeConfig& runtime, Request* request,
@@ -32,8 +35,17 @@ ebus::BusFreeRtos::BusFreeRtos(const BusConfig& config,
       timer_idx_num_(static_cast<timer_idx_t>(config.timer_idx)),
 #endif
       request_(request),
-      monitor_(monitor) {
-  byte_queue_ = new ebus::Queue<ebus::BusEvent>();
+      monitor_(monitor),
+      byte_queue_(std::make_unique<ebus::Queue<ebus::BusEvent>>(256)) {
+
+  // Initialize postponement timer
+  const esp_timer_create_args_t postpone_args = {
+      .callback = &BusFreeRtos::s_onSynPostpone,
+      .arg = this,
+      .dispatch_method = ESP_TIMER_TASK,
+      .name = "ebusSynPostpone",
+      .skip_unhandled_events = true};
+  ESP_ERROR_CHECK(esp_timer_create(&postpone_args, &syn_postpone_timer_));
 
   configureUart();
   configureGpio();
@@ -42,13 +54,7 @@ ebus::BusFreeRtos::BusFreeRtos(const BusConfig& config,
   start();
 }
 
-ebus::BusFreeRtos::~BusFreeRtos() {
-  stop();
-  if (byte_queue_) {
-    delete byte_queue_;
-    byte_queue_ = nullptr;
-  }
-}
+ebus::BusFreeRtos::~BusFreeRtos() { stop(); }
 
 void ebus::BusFreeRtos::start() {
   xTaskCreate(&BusFreeRtos::s_ebusUartEventRunner, "ebusUartEventRunner", 2048,
@@ -59,6 +65,12 @@ void ebus::BusFreeRtos::stop() {
   gpio_isr_handler_remove(static_cast<gpio_num_t>(rx_pin_));
   gpio_intr_disable(static_cast<gpio_num_t>(rx_pin_));
   gpio_set_intr_type(static_cast<gpio_num_t>(rx_pin_), GPIO_INTR_DISABLE);
+
+  if (syn_postpone_timer_) {
+    esp_timer_stop(syn_postpone_timer_);
+    esp_timer_delete(syn_postpone_timer_);
+    syn_postpone_timer_ = nullptr;
+  }
 
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
   if (gp_timer_) {
@@ -75,18 +87,20 @@ void ebus::BusFreeRtos::stop() {
     uart_driver_delete(uart_port_num_);
     uart_event_queue_ = nullptr;
   }
-  if (byte_queue_) {
-    delete byte_queue_;
-    byte_queue_ = nullptr;
-  }
 }
 
 ebus::Queue<ebus::BusEvent>* ebus::BusFreeRtos::getQueue() const {
-  return byte_queue_;
+  return byte_queue_.get();
 }
 
 void ebus::BusFreeRtos::writeByte(const uint8_t byte) {
+  for (const auto& listener : write_listeners_) listener(byte);
+  if (monitor_) monitor_->transmit.markBegin();
+  portENTER_CRITICAL_ISR(&timer_mux_);
+  last_activity_micros_ = esp_timer_get_time();
+  portEXIT_CRITICAL_ISR(&timer_mux_);
   uart_write_bytes(uart_port_num_, static_cast<const void*>(&byte), 1);
+  if (monitor_) monitor_->transmit.markEnd();
 }
 
 void ebus::BusFreeRtos::setWindow(const uint16_t window) {
@@ -99,6 +113,47 @@ void ebus::BusFreeRtos::setOffset(const uint16_t offset) {
   portENTER_CRITICAL_ISR(&timer_mux_);
   offset_ = offset;
   portEXIT_CRITICAL_ISR(&timer_mux_);
+}
+
+void ebus::BusFreeRtos::setRuntimeConfig(const RuntimeConfig& runtime) {
+  bool was_enabled = runtime_.enable_syn;
+  runtime_ = runtime;
+
+  // Calculate microsecond timings for hardware timers
+  syn_base_us_ = static_cast<uint64_t>(runtime_.syn_base_ms) * 1000;
+  syn_unique_us_ = syn_base_us_ +
+                   (static_cast<uint64_t>(runtime_.address) * 10000) +
+                   (static_cast<uint64_t>(runtime_.syn_tolerance_ms) * 1000);
+
+  if (runtime_.enable_syn) {
+    gptimer_alarm_config_t alarm_config = {
+        .alarm_count = syn_unique_us_,  // Start with unique rate
+        .reload_count = 0,
+        .flags = {.auto_reload_on_alarm = true}};
+
+    gptimer_set_alarm_action(syn_gp_timer_, &alarm_config);
+
+    if (!was_enabled) {
+      syn_running_.store(true);
+      syn_active_ = false;
+      gptimer_start(syn_gp_timer_);
+    }
+  } else if (was_enabled) {
+    syn_running_.store(false);
+    gptimer_stop(syn_gp_timer_);
+  }
+}
+
+void ebus::BusFreeRtos::addReadListener(ReadListener listener) {
+  read_listeners_.push_back(std::move(listener));
+}
+
+void ebus::BusFreeRtos::addWriteListener(WriteListener listener) {
+  write_listeners_.push_back(std::move(listener));
+}
+
+void ebus::BusFreeRtos::addSynListener(SynListener listener) {
+  syn_listeners_.push_back(std::move(listener));
 }
 
 void ebus::BusFreeRtos::recordUtilization(uint8_t byte) {
@@ -165,24 +220,42 @@ void ebus::BusFreeRtos::configureGpio() {
 
 void ebus::BusFreeRtos::configureTimer() {
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
-  gptimer_config_t gpt_config = {
+  gptimer_config_t gpt_config_arb = {
       .clk_src = GPTIMER_CLK_SRC_DEFAULT,
       .direction = GPTIMER_COUNT_UP,
       .resolution_hz = 1000000,  // 1 Tick = 1 µs
       .intr_priority = 3,        //  high priority (1-3)
+      .flags = {.intr_shared = false,
+                .allow_pd = false,
+                .backup_before_sleep = false}};
+
+  ESP_ERROR_CHECK(gptimer_new_timer(&gpt_config_arb, &gp_timer_));
+
+  gptimer_config_t gpt_config_syn = {
+      .clk_src = GPTIMER_CLK_SRC_DEFAULT,
+      .direction = GPTIMER_COUNT_UP,
+      .resolution_hz = 1000000,
+      .intr_priority = 3,
       .flags = {
           .intr_shared = false,  // do not share interrupt - reduce jitter
           .allow_pd = false,
           .backup_before_sleep = false,
       }};
 
-  ESP_ERROR_CHECK(gptimer_new_timer(&gpt_config, &gp_timer_));
+  ESP_ERROR_CHECK(gptimer_new_timer(&gpt_config_syn, &syn_gp_timer_));
 
-  gptimer_event_callbacks_t cbs = {
+  gptimer_event_callbacks_t arb_cbs = {
       .on_alarm = s_onBusIsrTimer,
   };
-  ESP_ERROR_CHECK(gptimer_register_event_callbacks(gp_timer_, &cbs, this));
+  ESP_ERROR_CHECK(gptimer_register_event_callbacks(gp_timer_, &arb_cbs, this));
   ESP_ERROR_CHECK(gptimer_enable(gp_timer_));
+
+  gptimer_event_callbacks_t syn_cbs = {
+      .on_alarm = s_onSynGenTimer,
+  };
+  ESP_ERROR_CHECK(
+      gptimer_register_event_callbacks(syn_gp_timer_, &syn_cbs, this));
+  ESP_ERROR_CHECK(gptimer_enable(syn_gp_timer_));
 
 #else
   timer_config_t timer_config = {
@@ -220,14 +293,19 @@ void ebus::BusFreeRtos::s_ebusUartEventRunner(void* arg) {
 }
 
 void ebus::BusFreeRtos::ebusUartEventRunner() {
-  uart_event_t event;
+  uart_event_t uart_event;
   uint8_t data[128];
   for (;;) {
-    if (xQueueReceive(uart_event_queue_, &event, portMAX_DELAY)) {
-      if (event.type == UART_DATA) {
-        int len = uart_read_bytes(uart_port_num_, data, event.size, 0);
+    if (xQueueReceive(uart_event_queue_, &uart_event, portMAX_DELAY)) {
+      if (uart_event.type == UART_DATA) {
+        int len = uart_read_bytes(uart_port_num_, data, uart_event.size, 0);
         for (int i = 0; i < len; ++i) {
+          auto arrival_time = std::chrono::steady_clock::now();
           uint8_t byte = data[i];
+
+          for (const auto& listener : read_listeners_) listener(byte);
+
+          recordUtilization(byte);
 
           if (!byte_queue_) continue;
 
@@ -307,11 +385,7 @@ void ebus::BusFreeRtos::ebusUartEventRunner() {
           portENTER_CRITICAL_ISR(&timer_mux_);
           bus_event.bus_request = bus_request_flag_;
           bus_event.start_bit = start_bit_flag_;
-          // TODO fix this
-          // if (micros_delay_flag_)
-          //   stats_delay_.addSample(static_cast<double>(micros_last_delay_));
-          // if (micros_window_flag_)
-          //   stats_window_.addSample(static_cast<double>(micros_last_window_));
+
           if (monitor_) {
             if (micros_delay_flag_)
               monitor_->delay.addSample(
@@ -324,13 +398,45 @@ void ebus::BusFreeRtos::ebusUartEventRunner() {
           // Reset the global ISR flags after consumption
           bus_request_flag_ = false;
           start_bit_flag_ = false;
+          micros_delay_flag_ = false;
+          micros_window_flag_ = false;
           portEXIT_CRITICAL_ISR(&timer_mux_);
 
+          bus_event.timestamp = arrival_time;
+
           if (byte_queue_) byte_queue_->push(bus_event);
+
+          // 1. Reset SYN Timer (Arbitration Logic)
+          if (runtime_.enable_syn) {
+            uint64_t next_interval;
+            if (syn_active_ && byte == sym_syn) {
+              // We won! Continue at fast rate
+              next_interval = syn_base_us_;
+            } else {
+              // Someone else is master, or we collided. Switch to slow rate.
+              syn_active_ = false;
+              next_interval = syn_unique_us_;
+            }
+
+            // Update the hardware timer alarm
+            gptimer_alarm_config_t alarm_config = {
+                .alarm_count = next_interval,
+                .reload_count = 0,
+                .flags = {.auto_reload_on_alarm = true}};
+            gptimer_stop(syn_gp_timer_);  // Ensure thread-safe reconfiguration
+            gptimer_set_raw_count(syn_gp_timer_, 0);  // Restart count
+            gptimer_set_alarm_action(syn_gp_timer_, &alarm_config);
+            gptimer_start(syn_gp_timer_);
+          }
         }
       }
     }
   }
+}
+
+void ebus::BusFreeRtos::s_onSynPostpone(void* arg) {
+  BusFreeRtos* inst = static_cast<BusFreeRtos*>(arg);
+  if (inst) inst->onSynGenTimer();
 }
 
 // static ISR trampoline -> instance method
@@ -339,10 +445,11 @@ void IRAM_ATTR ebus::BusFreeRtos::s_onFallingEdge(void* arg) {
   if (inst) inst->onFallingEdge();
 }
 
-void ebus::BusFreeRtos::onFallingEdge() {
+void IRAM_ATTR ebus::BusFreeRtos::onFallingEdge() {
   int64_t now = esp_timer_get_time();
   portENTER_CRITICAL_ISR(&timer_mux_);
   buffer_index_ = (buffer_index_ + 1) % FALLING_EDGE_BUFFER_SIZE;
+  last_activity_micros_ = now;
   micros_edge_buffer_[buffer_index_] = now;
   portEXIT_CRITICAL_ISR(&timer_mux_);
 }
@@ -362,7 +469,7 @@ bool IRAM_ATTR ebus::BusFreeRtos::s_onBusIsrTimer(void* arg) {
 }
 #endif
 
-bool ebus::BusFreeRtos::onBusIsrTimer() {
+bool IRAM_ATTR ebus::BusFreeRtos::onBusIsrTimer() {
   uint8_t byte = request_->busRequestAddress();
   uart_ll_write_txfifo(UART_LL_GET_HW(uart_port_num_), &byte, 1);
   portENTER_CRITICAL_ISR(&timer_mux_);
@@ -387,15 +494,38 @@ bool IRAM_ATTR ebus::BusFreeRtos::s_onSynGenTimer(void* arg) {
 }
 #endif
 
-bool ebus::BusFreeRtos::onSynGenTimer() {
-  // Carrier Sense: Check if there was any activity very recently (e.g. within
-  // 500us) that hasn't been processed by the task runner yet. if
-  // (esp_timer_get_time() - lastActivityMicros_ < 500) {
-  //   // Postpone slightly
-  //   return true;
-  // }
+bool IRAM_ATTR ebus::BusFreeRtos::onSynGenTimer() {
+  int64_t now = esp_timer_get_time();
+
+  portENTER_CRITICAL_ISR(&timer_mux_);
+  int64_t last_activity = last_activity_micros_;
+  portEXIT_CRITICAL_ISR(&timer_mux_);
+
+  // Carrier Sense: yield and postpone if bus was active within the last 5ms
+  // (Duration of a byte at 2400 baud + safety margin)
+  if (now - last_activity < 5000) {
+    if (syn_intent_time_ == 0) syn_intent_time_ = now;
+    // Schedule a re-check in 2ms using the ISR-safe esp_timer
+    if (monitor_) {
+      monitor_->updateBus([](auto& m) { m.syn_postponed_count++; });
+    }
+    esp_timer_start_once(syn_postpone_timer_, 2000);
+    return false;
+  }
+
+  if (syn_intent_time_ > 0 && monitor_) {
+    monitor_->syn_postpone.addSample(
+        static_cast<double>(now - syn_intent_time_));
+    syn_intent_time_ = 0;
+  }
 
   syn_active_ = true;
+  portENTER_CRITICAL_ISR(&timer_mux_);
+  last_activity_micros_ = now;
+  portEXIT_CRITICAL_ISR(&timer_mux_);
+
+  for (const auto& listener : syn_listeners_) listener();
+
   uint8_t syn = sym_syn;
   uart_ll_write_txfifo(UART_LL_GET_HW(uart_port_num_), &syn, 1);
   return false;

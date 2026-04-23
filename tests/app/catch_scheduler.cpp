@@ -183,9 +183,9 @@ TEST_CASE("Scheduler: Simulation", "[app][scheduler]") {
   scheduler.setTelegramCallback(
       [](ebus::MessageType message_type, ebus::TelegramType telegram_type,
          ebus::ByteView master_view, ebus::ByteView slave_view) {});
-  scheduler.setErrorCallback([](std::string_view error_message,
-                                ebus::ByteView master_view,
-                                ebus::ByteView slave_view) {});
+  scheduler.setErrorCallback(
+      [](std::string_view error_message, ebus::RequestResult result,
+         ebus::ByteView master_view, ebus::ByteView slave_view) {});
 
   scheduler.setMaxSendAttempts(3);
   scheduler.setBaseBackoff(std::chrono::milliseconds(50));

@@ -235,24 +235,30 @@ struct BusMetrics {
 
   // Detailed Counters
   uint32_t start_bit_errors = 0;
+  uint32_t syn_postponed_count = 0;
+  std::chrono::system_clock::time_point last_error_timestamp{};
 
   // Explicit phase timings
   MetricValues delay;
   MetricValues window;
   MetricValues transmit;
   MetricValues uptime;
+  MetricValues syn_postpone;
 
   void resetMetrics() {
     utilization = 0.0;
 
     // Detailed Counters
     start_bit_errors = 0;
+    syn_postponed_count = 0;
+    last_error_timestamp = {};
 
     // Explicit phase timings
     delay = {};
     window = {};
     transmit = {};
     uptime = {};
+    syn_postpone = {};
   }
 };
 
@@ -403,13 +409,21 @@ inline std::string toJson(const metrics::BusMetrics& m) {
       << m.utilization
 
       // Detailed Counters
-      << ",\"start_bit_errors\":"
-      << m.start_bit_errors
+      << ",\"start_bit_errors\":" << m.start_bit_errors
+      << ",\"syn_postponed_count\":" << m.syn_postponed_count
+      << m.syn_postponed_count;
 
-      // Explicit phase timings
-      << ",\"delay\":" << toJson(m.delay) << ",\"window\":" << toJson(m.window)
+  if (m.last_error_timestamp != std::chrono::system_clock::time_point{}) {
+    auto t = std::chrono::system_clock::to_time_t(m.last_error_timestamp);
+    oss << ",\"last_error_timestamp\":\""
+        << std::put_time(std::gmtime(&t), "%Y-%m-%dT%H:%M:%SZ") << "\"";
+  }
+
+  // Explicit phase timings
+  oss << ",\"delay\":" << toJson(m.delay) << ",\"window\":" << toJson(m.window)
       << ",\"transmit\":" << toJson(m.transmit)
-      << ",\"uptime\":" << toJson(m.uptime) << "}";
+      << ",\"uptime\":" << toJson(m.uptime)
+      << ",\"syn_postpone\":" << toJson(m.syn_postpone) << "}";
   return oss.str();
 }
 

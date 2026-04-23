@@ -121,7 +121,6 @@ void ebus::BusPosix::writeByte(const uint8_t byte) {
   }
 
   if (monitor_) monitor_->transmit.markBegin();
-  recordUtilization(byte);
 
   if (simulate_) {
     if (virtual_line_) {
@@ -229,6 +228,8 @@ void ebus::BusPosix::readerThread() {
       auto arrival_time = std::chrono::steady_clock::now();
       for (const auto& listener : read_listeners_) listener(byte);
 
+      recordUtilization(byte);
+
       // Notify SYN generator that a symbol was recognised (end of char)
       resetSynTimer(byte);
 
@@ -299,8 +300,21 @@ void ebus::BusPosix::synThread() {
     // started), postpone generation to avoid colliding with the byte being
     // serialized.
     if (now - last_activity_time_ < std::chrono::milliseconds(5)) {
+      if (monitor_)
+        monitor_->updateBus([](auto& m) { m.syn_postponed_count++; });
+      if (syn_intent_time_ == std::chrono::steady_clock::time_point{})
+        syn_intent_time_ = now;
       next_syn_expiry_ = now + std::chrono::milliseconds(2);
       continue;
+    }
+
+    if (syn_intent_time_ != std::chrono::steady_clock::time_point{} &&
+        monitor_) {
+      monitor_->syn_postpone.addSample(static_cast<double>(
+          std::chrono::duration_cast<std::chrono::microseconds>(
+              now - syn_intent_time_)
+              .count()));
+      syn_intent_time_ = {};
     }
 
     // We are about to generate a SYN, mark ourselves as active

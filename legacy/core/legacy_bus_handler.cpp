@@ -43,8 +43,8 @@ void telegramCallback(ebus::MessageType message_type,
   }
 }
 
-void errorCallback(std::string_view error_message, ebus::ByteView master_view,
-                   ebus::ByteView slave_view) {
+void errorCallback(std::string_view error_message, ebus::RequestResult result,
+                   ebus::ByteView master_view, ebus::ByteView slave_view) {
   g_error_count++;
   if (g_detailed_output) {
     std::cout << "    Error: " << error_message << std::endl;

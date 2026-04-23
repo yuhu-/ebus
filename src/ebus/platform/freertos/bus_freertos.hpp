@@ -6,17 +6,16 @@
 #pragma once
 
 #if defined(ESP32)
+#include <atomic>
 #include <cstdint>
 #include <ebus/config.hpp>
+#include <ebus/definitions.hpp>
 #include <functional>
-#include <map>
 
-#include "core/bus_monitor.hpp"
-#include "core/request.hpp"
 #include "driver/uart.h"
 #include "esp_idf_version.h"
+#include "esp_timer.h"
 #include "platform/queue.hpp"
-#include "utils/timing_stats.hpp"
 
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
 #include "driver/gptimer.h"
@@ -26,11 +25,8 @@
 
 namespace ebus {
 
-struct BusEvent {
-  uint8_t byte;
-  bool bus_request{false};
-  bool start_bit{false};
-};
+class Request;
+class BusMonitor;
 
 /**
  * FreeRtos-specific implementation of the eBUS physical layer.
@@ -39,6 +35,10 @@ struct BusEvent {
  */
 class BusFreeRtos {
  public:
+  using ReadListener = std::function<void(const uint8_t& byte)>;
+  using WriteListener = std::function<void(const uint8_t& byte)>;
+  using SynListener = std::function<void()>;
+
   explicit BusFreeRtos(const BusConfig& config, const RuntimeConfig& runtime,
                        Request* request, BusMonitor* monitor);
   ~BusFreeRtos();
@@ -59,6 +59,11 @@ class BusFreeRtos {
 
   void recordUtilization(uint8_t byte);
 
+  // Listeners
+  void addReadListener(ReadListener listener);
+  void addWriteListener(WriteListener listener);
+  void addSynListener(SynListener listener);
+
  private:
   uart_port_t uart_port_num_;
   uint8_t rx_pin_;
@@ -66,19 +71,25 @@ class BusFreeRtos {
 
   BusConfig config_;
   RuntimeConfig runtime_;
-  BusMonitor* monitor_ = nullptr;
+
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
   gptimer_handle_t gp_timer_ = nullptr;
   gptimer_handle_t syn_gp_timer_ = nullptr;
+  esp_timer_handle_t syn_postpone_timer_ = nullptr;
 #else
   timer_group_t timer_group_num_ = TIMER_GROUP_1;
   timer_idx_t timer_idx_num_ = TIMER_0;
 #endif
 
   Request* request_ = nullptr;
+  BusMonitor* monitor_ = nullptr;
 
   // owned queue
-  Queue<BusEvent>* byte_queue_ = nullptr;
+  std::unique_ptr<Queue<BusEvent>> byte_queue_;
+
+  std::vector<ReadListener> read_listeners_;
+  std::vector<WriteListener> write_listeners_;
+  std::vector<SynListener> syn_listeners_;
 
   // ISR/state
   static constexpr uint8_t FALLING_EDGE_BUFFER_SIZE = 5;
@@ -108,6 +119,10 @@ class BusFreeRtos {
   volatile int64_t micros_last_delay_ = 0;
   volatile int64_t micros_last_window_ = 0;
 
+  volatile int64_t last_activity_micros_ = 0;
+  // Time when we first wanted to send SYN
+  volatile int64_t syn_intent_time_ = 0;
+
   std::atomic<bool> syn_running_{false};
   bool syn_active_{false};
   uint64_t syn_base_us_ = 0;
@@ -126,8 +141,7 @@ class BusFreeRtos {
   static void s_ebusUartEventRunner(void* arg);
   void ebusUartEventRunner();  // instance worker used by static trampoline
 
-  // SYN generation logic
-  void checkSynGenerator();
+  static void s_onSynPostpone(void* arg);
 
   // ISR: Save the falling edges in order to estimate the sync byte
   static void IRAM_ATTR s_onFallingEdge(void* arg);

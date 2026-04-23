@@ -106,6 +106,7 @@ class BusPosix {
 
   std::chrono::steady_clock::time_point last_activity_time_;
   std::chrono::steady_clock::time_point next_syn_expiry_;
+  std::chrono::steady_clock::time_point syn_intent_time_;
   bool syn_active_{false};
 
   std::atomic<bool> bus_request_flag_{false};

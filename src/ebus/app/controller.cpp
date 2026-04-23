@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+#include <deque>
 #include <ebus/controller.hpp>
 #include <ebus/device.hpp>
 #include <ebus/utils.hpp>
@@ -21,6 +22,10 @@
 #include "platform/system.hpp"
 
 struct ebus::Impl {
+  mutable std::mutex error_mutex_;
+  std::deque<ebus::ErrorEntry> error_buffer_;
+  static constexpr size_t MAX_ERROR_LOG = 10;
+
   ebus::ReactiveMasterSlaveCallback user_reactive_callback_;
   ebus::TelegramCallback user_telegram_callback_;
   ebus::ErrorCallback user_error_callback_;
@@ -188,6 +193,11 @@ ebus::Metrics ebus::Controller::getMetrics() const {
   return sm;
 }
 
+std::vector<ebus::ErrorEntry> ebus::Controller::getErrors() const {
+  std::lock_guard<std::mutex> lock(impl_->error_mutex_);
+  return {impl_->error_buffer_.begin(), impl_->error_buffer_.end()};
+}
+
 bool ebus::Controller::isConfigured() const noexcept { return configured_; }
 
 bool ebus::Controller::isRunning() const noexcept { return running_; }
@@ -230,13 +240,26 @@ void ebus::Controller::constructMembers() {
         }
       });
 
-  impl_->scheduler_->setErrorCallback([this](std::string_view error,
-                                             ByteView master_view,
-                                             ByteView slave_view) {
-    if (impl_->user_error_callback_) {
-      impl_->user_error_callback_(error, master_view, slave_view);
-    }
-  });
+  impl_->scheduler_->setErrorCallback(
+      [this](std::string_view error, RequestResult result, ByteView master_view,
+             ByteView slave_view) {
+        // 1. Update internal circular buffer
+        {
+          std::lock_guard<std::mutex> lock(impl_->error_mutex_);
+          impl_->error_buffer_.push_back(
+              {std::string(error), result, ebus::toVector(master_view),
+               ebus::toVector(slave_view), std::chrono::system_clock::now()});
+
+          if (impl_->error_buffer_.size() > Impl::MAX_ERROR_LOG) {
+            impl_->error_buffer_.pop_front();
+          }
+        }
+
+        // 2. Inform application
+        if (impl_->user_error_callback_) {
+          impl_->user_error_callback_(error, result, master_view, slave_view);
+        }
+      });
 
   impl_->device_scanner_.reset(
       new DeviceScanner(config_.runtime.address, impl_->device_manager_.get()));

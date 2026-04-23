@@ -22,6 +22,14 @@
 
 namespace ebus {
 
+struct ErrorEntry {
+  std::string message;
+  RequestResult result;
+  std::vector<uint8_t> master;
+  std::vector<uint8_t> slave;
+  std::chrono::system_clock::time_point timestamp;
+};
+
 struct Impl;
 
 class Controller {
@@ -73,6 +81,10 @@ class Controller {
   // Bus Health Metrics
   void resetMetrics();
   ebus::Metrics getMetrics() const;
+  std::vector<float> getUtilizationHistory() const;
+
+  // Diagnostic Log
+  std::vector<ErrorEntry> getErrors() const;
 
   bool isConfigured() const noexcept;
   bool isRunning() const noexcept;

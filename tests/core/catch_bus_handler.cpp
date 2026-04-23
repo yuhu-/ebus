@@ -37,6 +37,7 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
             ebus::ByteView master_view,
             ebus::ByteView slave_view) { telegram_count++; });
     handler.setErrorCallback([&](std::string_view error_message,
+                                 ebus::RequestResult result,
                                  ebus::ByteView master_view,
                                  ebus::ByteView slave_view) { error_count++; });
 

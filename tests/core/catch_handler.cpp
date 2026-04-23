@@ -110,14 +110,14 @@ SCENARIO("Handler processes eBUS messages correctly", "[core][handler]") {
           INFO("telegram: " << ebus::toString(master_view) << " "
                             << ebus::toString(slave_view));
         });
-        handler.setErrorCallback([&](std::string_view error_message,
-                                     ebus::ByteView master_view,
-                                     ebus::ByteView slave_view) {
-          error_count++;
-          INFO("error: " << error_message << " master '"
-                         << ebus::toString(master_view) << "' slave '"
-                         << ebus::toString(slave_view) << "'");
-        });
+        handler.setErrorCallback(
+            [&](std::string_view error_message, ebus::RequestResult result,
+                ebus::ByteView master_view, ebus::ByteView slave_view) {
+              error_count++;
+              INFO("error: " << error_message << " master '"
+                             << ebus::toString(master_view) << "' slave '"
+                             << ebus::toString(slave_view) << "'");
+            });
 
         bus.addWriteListener([&](const uint8_t& byte) {
           INFO("<- write: " << ebus::toString(byte));

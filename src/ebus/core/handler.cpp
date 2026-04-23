@@ -727,8 +727,13 @@ void ebus::Handler::callOnTelegram(MessageType message_type,
 void ebus::Handler::callOnError(std::string_view error_message,
                                 ByteView master_view, ByteView slave_view) {
   if (error_callback_) {
-    if (monitor_) monitor_->callback_error.markBegin();
-    error_callback_(error_message, master_view, slave_view);
+    if (monitor_) {
+      monitor_->callback_error.markBegin();
+      monitor_->updateBus([](auto& m) {
+        m.last_error_timestamp = std::chrono::system_clock::now();
+      });
+    }
+    error_callback_(error_message, last_result_, master_view, slave_view);
     if (monitor_) monitor_->callback_error.markEnd();
   }
 }

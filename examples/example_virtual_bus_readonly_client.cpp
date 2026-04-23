@@ -87,13 +87,13 @@ int main() {
       });
 
   // --- 6. Add a error callback handler to Device B ---
-  deviceB.setErrorCallback([](std::string_view error_message,
-                              ebus::ByteView master_view,
-                              ebus::ByteView slave_view) {
-    std::cout << "[Device B] Error message " << error_message << " master: '"
-              << ebus::toString(master_view) << "' slave: '"
-              << ebus::toString(slave_view) << "'" << std::endl;
-  });
+  deviceB.setErrorCallback(
+      [](std::string_view error_message, ebus::RequestResult result,
+         ebus::ByteView master_view, ebus::ByteView slave_view) {
+        std::cout << "[Device B] Error message " << error_message
+                  << " master: '" << ebus::toString(master_view) << "' slave: '"
+                  << ebus::toString(slave_view) << "'" << std::endl;
+      });
 
   // --- 7. Start the simulation ---
   std::cout << "Starting simulation on virtual bus..." << std::endl;
