@@ -13,6 +13,11 @@
     "maintainer": true
   },
   "license": "GPL-3.0",
-  "frameworks": "*",
-  "platforms": "*"
+  "frameworks": "espidf",
+  "platforms": "espressif32",
+  "build": {
+    "flags": [
+      "-I src/ebus"
+    ]
+  }
 }
