@@ -7,6 +7,8 @@
 
 #include <set>
 
+#include "core/bus_monitor.hpp"
+
 ebus::DeviceManager::DeviceManager(BusMonitor* monitor) : monitor_(monitor) {}
 
 void ebus::DeviceManager::setOwnAddress(uint8_t address) {
@@ -54,9 +56,7 @@ void ebus::DeviceManager::update(ByteView master_view, ByteView slave_view) {
   }
 }
 
-void ebus::DeviceManager::resetDevices() {
-  
-}
+void ebus::DeviceManager::resetDevices() {}
 
 std::vector<ebus::DeviceInfo> ebus::DeviceManager::getDeviceInfo() const {
   std::lock_guard<std::mutex> lock(mutex_);

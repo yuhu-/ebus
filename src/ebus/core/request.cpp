@@ -5,6 +5,7 @@
 
 #include "core/request.hpp"
 
+#include "core/bus_monitor.hpp"
 #include <ebus/utils.hpp>
 
 ebus::Request::Request(BusMonitor* monitor) : monitor_(monitor) {}

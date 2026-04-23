@@ -8,49 +8,17 @@
 #include <array>
 #include <atomic>
 #include <chrono>
-#include <cmath>
 #include <cstdint>
 #include <ebus/definitions.hpp>
 #include <ebus/metrics.hpp>
 #include <functional>
-#include <map>
-#include <string>
-
-#include "core/bus_monitor.hpp"
-#include "utils/timing_stats.hpp"
 
 namespace ebus {
 
+class BusMonitor;
+
 constexpr uint8_t DEFAULT_LOCK_COUNTER = 3;
 constexpr uint8_t MAX_LOCK_COUNTER = 25;
-
-enum class RequestState { observe, first, retry, second };
-
-constexpr const char* toString(RequestState state) {
-  switch (state) {
-    case RequestState::observe:
-      return "observe";
-    case RequestState::first:
-      return "first";
-    case RequestState::retry:
-      return "retry";
-    case RequestState::second:
-      return "second";
-    default:
-      return "unknown state";
-  }
-}
-
-/**
- * Snapshot of the eBUS FSM state at the moment a byte was processed.
- */
-struct BusEventContext {
-  uint8_t byte;
-  RequestState state;
-  RequestResult result;
-  uint8_t lock_counter;
-  std::chrono::steady_clock::time_point timestamp;
-};
 
 using BusRequestedCallback = std::function<void()>;
 using StartBitCallback = std::function<void()>;

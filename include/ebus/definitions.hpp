@@ -5,11 +5,13 @@
 
 #pragma once
 
+#include <chrono>
 #include <cstdint>
 #include <cstring>
 #include <functional>
 #include <string_view>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 namespace ebus {
@@ -30,6 +32,10 @@ constexpr uint8_t max_bytes = 0x10;  // 16 maximum data bytes (Spec 5.6)
 // --- FSM Limits ---
 constexpr size_t NUM_HANDLER_STATES = 15;
 constexpr size_t NUM_REQUEST_STATES = 4;
+
+// --- Protocol Enums ---
+enum class TelegramType { undefined, broadcast, master_master, master_slave };
+enum class MessageType { undefined, active, passive, reactive };
 
 // --- Protocol States ---
 enum class SequenceState {
@@ -70,6 +76,23 @@ constexpr const char* toString(SequenceState state) noexcept {
       return "acknowledge byte is missing";
     case SequenceState::err_ack_negative:
       return "acknowledge byte is negative";
+    default:
+      return "unknown state";
+  }
+}
+
+enum class RequestState { observe, first, retry, second };
+
+constexpr const char* toString(RequestState state) {
+  switch (state) {
+    case RequestState::observe:
+      return "observe";
+    case RequestState::first:
+      return "first";
+    case RequestState::retry:
+      return "retry";
+    case RequestState::second:
+      return "second";
     default:
       return "unknown state";
   }
@@ -121,9 +144,30 @@ constexpr const char* toString(RequestResult result) {
   }
 }
 
-// --- Protocol Enums ---
-enum class TelegramType { undefined, broadcast, master_master, master_slave };
-enum class MessageType { undefined, active, passive, reactive };
+// --- Protocol Structs ---
+
+/**
+ * Represents a single event on the bus, including the byte value, whether it
+ * was associated with a bus request or start bit, and the timestamp of when it
+ * was captured.
+ */
+struct BusEvent {
+  uint8_t byte;
+  bool bus_request{false};
+  bool start_bit{false};
+  std::chrono::steady_clock::time_point timestamp;
+};
+
+/**
+ * Snapshot of the eBUS FSM state at the moment a byte was processed.
+ */
+struct BusEventContext {
+  uint8_t byte;
+  RequestState state;
+  RequestResult result;
+  uint8_t lock_counter;
+  std::chrono::steady_clock::time_point timestamp;
+};
 
 /**
  * A lightweight, non-owning view of a byte sequence.

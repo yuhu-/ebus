@@ -11,6 +11,7 @@
 
 #include "app/device_manager.hpp"
 #include "app/device_scanner.hpp"
+#include "core/bus_monitor.hpp"
 #include "core/handler.hpp"
 #include "core/request.hpp"
 #include "platform/bus.hpp"

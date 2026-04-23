@@ -14,12 +14,13 @@
 #include <mutex>
 #include <set>
 
-#include "core/bus_monitor.hpp"
 #include "core/handler.hpp"
 #include "ebus/metrics.hpp"
 #include "models/device.hpp"
 
 namespace ebus {
+
+class BusMonitor;
 
 /**
  * Manages devices on the eBUS, identified by their slave address and

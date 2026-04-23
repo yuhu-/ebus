@@ -15,13 +15,14 @@
 
 #include "app/client.hpp"
 #include "core/bus_handler.hpp"
-#include "core/bus_monitor.hpp"
 #include "core/request.hpp"
 #include "platform/bus.hpp"
 #include "platform/queue.hpp"
 #include "platform/service_thread.hpp"
 
 namespace ebus {
+
+class BusMonitor;
 
 /**
  * ClientManager handles all connected clients and routes data between them and

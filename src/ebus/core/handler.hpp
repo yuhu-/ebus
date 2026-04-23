@@ -10,18 +10,17 @@
 #include <ebus/definitions.hpp>
 #include <ebus/metrics.hpp>
 #include <functional>
-#include <map>
 #include <optional>
-#include <string>
 #include <vector>
 
-#include "core/bus_monitor.hpp"
-#include "core/request.hpp"
 #include "core/telegram.hpp"
 #include "platform/bus.hpp"
 #include "platform/queue.hpp"
 
 namespace ebus {
+
+class Request;
+class BusMonitor;
 
 constexpr uint8_t DEFAULT_ADDRESS = 0xff;
 

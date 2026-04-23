@@ -9,6 +9,8 @@
 #include <condition_variable>
 #include <ebus/utils.hpp>
 
+#include "core/bus_monitor.hpp"
+
 #if defined(ESP32)
 #include <lwip/sockets.h>
 #elif defined(POSIX)
@@ -213,7 +215,7 @@ void ebus::ClientManager::run() {
         s = session_state_;
       }
 
-       if (current_sender) {
+      if (current_sender) {
         // We forward all bytes to the current active sender so it can sniff
         // while waiting for or performing arbitration.
         if (s != SessionState::idle) {
