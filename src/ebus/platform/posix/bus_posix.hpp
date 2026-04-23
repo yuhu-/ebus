@@ -19,6 +19,7 @@
 #include <cstdint>
 #include <cstring>
 #include <ebus/config.hpp>
+#include <ebus/definitions.hpp>
 #include <functional>
 #include <map>
 #include <memory>
@@ -28,20 +29,13 @@
 #include <thread>
 #include <vector>
 
-#include "core/bus_monitor.hpp"
-#include "core/request.hpp"
 #include "platform/posix/virtual_line.hpp"
 #include "platform/queue.hpp"
-#include "utils/timing_stats.hpp"
 
 namespace ebus {
 
-struct BusEvent {
-  uint8_t byte;
-  bool bus_request{false};
-  bool start_bit{false};
-  std::chrono::steady_clock::time_point timestamp;
-};
+class Request;
+class BusMonitor;
 
 /**
  * POSIX-specific implementation of the eBUS physical layer.
