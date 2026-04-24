@@ -5,6 +5,7 @@
 
 #pragma once
 
+#if defined(POSIX)
 #include <cstdint>
 #include <mutex>
 #include <vector>
@@ -39,3 +40,5 @@ class VirtualLine {
 };
 
 }  // namespace ebus
+
+#endif

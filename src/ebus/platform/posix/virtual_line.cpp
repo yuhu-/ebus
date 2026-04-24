@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+#if defined(POSIX)
 #include "platform/posix/virtual_line.hpp"
 
 #include <algorithm>
@@ -33,3 +34,5 @@ void ebus::VirtualLine::write(uint8_t byte) {
 bool ebus::VirtualLine::read(uint8_t& byte, int timeout_ms) {
   return rx_queue_.pop(byte, timeout_ms);
 }
+
+#endif
