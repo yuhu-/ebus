@@ -7,7 +7,8 @@
 
 #include <cstdint>
 
-#include "ebus/definitions.hpp"
+#include "ebus/constants.hpp"
+#include "ebus/enums.hpp"
 
 namespace ebus {
 

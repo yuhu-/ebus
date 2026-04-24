@@ -139,11 +139,14 @@ void ebus::BusPosix::writeByte(const uint8_t byte) {
 }
 
 void ebus::BusPosix::setWindow(const uint16_t window) {
-  runtime_.window = window;
+  // Validate window
+  runtime_.window =
+      (window < min_window || window > max_window) ? default_window : window;
 }
 
 void ebus::BusPosix::setOffset(const uint16_t offset) {
-  runtime_.offset = offset;
+  // Validate offset
+  runtime_.offset = (offset > max_offset) ? default_offset : offset;
 }
 
 void ebus::BusPosix::setRuntimeConfig(const RuntimeConfig& runtime) {
@@ -154,6 +157,11 @@ void ebus::BusPosix::setRuntimeConfig(const RuntimeConfig& runtime) {
     std::lock_guard<std::mutex> lock(syn_mutex_);
     bool was_enabled = runtime_.enable_syn;
     runtime_ = runtime;
+
+    // Validate window and offset
+    if (runtime_.window < min_window || runtime_.window > max_window)
+      runtime_.window = default_window;
+    if (runtime_.offset > max_offset) runtime_.offset = default_offset;
 
     // Always recalculate timing durations based on the new configuration
     syn_base_ms_dur_ = std::chrono::milliseconds(runtime_.syn_base_ms);

@@ -17,12 +17,13 @@
 #include <string>
 #include <vector>
 
-ebus::Scheduler::Scheduler(Handler* handler)
+ebus::Scheduler::Scheduler(Handler* handler, int max_send_attempts,
+                           Duration base_backoff)
     : handler_(handler),
       stop_flag_(true),
       next_id_(1),
-      max_send_attempts_(3),
-      base_backoff_(std::chrono::milliseconds(100)) {
+      max_send_attempts_(max_send_attempts),
+      base_backoff_(base_backoff) {
   // Reserve space for typical traffic bursts
   item_queue_.reserve(32);
   attachHandlerCallbacks();
@@ -75,12 +76,20 @@ void ebus::Scheduler::enqueueAt(uint8_t priority, ByteView message,
   pushItem(std::move(it));
 }
 
-void ebus::Scheduler::setMaxSendAttempts(int send_attempts) {
-  max_send_attempts_ = std::max(1, send_attempts);
+void ebus::Scheduler::setMaxSendAttempts(int max_send_attempts) {
+  max_send_attempts_ = std::max(1, max_send_attempts);
 }
 
-void ebus::Scheduler::setBaseBackoff(Duration duration) {
-  base_backoff_ = duration;
+void ebus::Scheduler::setBaseBackoff(Duration base_backoff) {
+  base_backoff_ = base_backoff;
+}
+
+void ebus::Scheduler::setFsmTimeout(std::chrono::milliseconds timeout) {
+  fsm_timeout_ms_ = timeout;
+}
+
+void ebus::Scheduler::setTotalTimeout(std::chrono::milliseconds timeout) {
+  total_timeout_ms_ = timeout;
 }
 
 void ebus::Scheduler::setReactiveMasterSlaveCallback(
@@ -149,7 +158,8 @@ void ebus::Scheduler::run() {
 
     bool sent = false;
     std::string last_error = "unknown";
-    RequestResult result = RequestResult::first_error;
+    LogLevel result_level = LogLevel::error;
+    RequestResult result_code = RequestResult::first_error;
     Sequence slave_response;
     uint32_t attempt_id = current_item.id;
 
@@ -173,7 +183,8 @@ void ebus::Scheduler::run() {
       auto start = Clock::now();
       while (!stop_flag_.load()) {
         Event ev;
-        if (!event_queue_.pop(ev, 2000)) {
+        if (!event_queue_.pop(ev,
+                              static_cast<uint32_t>(fsm_timeout_ms_.count()))) {
           last_error = "FSM timeout";
           handler_->reset();  // Serious error: FSM stuck.
           break;
@@ -190,11 +201,12 @@ void ebus::Scheduler::run() {
           break;
         } else if (ev.type == EventType::error) {
           last_error = ev.error;
-          result = ev.result;
+          result_code = ev.result;
+          result_level = ev.level;
           break;
         }
 
-        if (Clock::now() - start > std::chrono::seconds(4)) {
+        if (Clock::now() - start > total_timeout_ms_) {
           last_error = "Total transfer timeout";
           handler_->reset();
           break;
@@ -207,8 +219,8 @@ void ebus::Scheduler::run() {
 
     if (sent) {
       if (current_item.result_callback)
-        current_item.result_callback(true, current_item.message,
-                                     slave_response);
+        current_item.result_callback(
+            {current_item.id, true, current_item.message, slave_response});
       lock.lock();
     } else {
       ++current_item.send_attempts;
@@ -221,10 +233,16 @@ void ebus::Scheduler::run() {
         data_ready_cv_.notify_one();
       } else {
         if (extern_error_callback_) {
-          extern_error_callback_(last_error, result, current_item.message, {});
+          extern_error_callback_({current_item.id,
+                                  result_level,
+                                  last_error,
+                                  result_code,
+                                  current_item.message,
+                                  {}});
         }
         if (current_item.result_callback) {
-          current_item.result_callback(false, current_item.message, {});
+          current_item.result_callback(
+              {current_item.id, false, current_item.message, {}});
         }
         lock.lock();
       }
@@ -268,46 +286,60 @@ void ebus::Scheduler::attachHandlerCallbacks() {
     event_queue_.tryPush(ev);
   });
 
-  handler_->setReactiveMasterSlaveCallback(extern_reactive_callback_);
+  handler_->setReactiveMasterSlaveCallback([this](const ReactiveInfo& info) {
+    if (extern_reactive_callback_) extern_reactive_callback_(info);
+  });
 
-  handler_->setTelegramCallback(
-      [this](MessageType message_type, TelegramType telegram_type,
-             ByteView master_view, ByteView slave_view) {
-        if (extern_telegram_callback_)
-          extern_telegram_callback_(message_type, telegram_type, master_view,
-                                    slave_view);
+  handler_->setTelegramCallback([this](const TelegramInfo& info) {
+    uint32_t id = current_attempt_id_.load(std::memory_order_relaxed);
 
-        uint32_t id = current_attempt_id_.load(std::memory_order_relaxed);
-        if (id == 0) return;
+    if (extern_telegram_callback_) {
+      if (id != 0 && info.message_type == MessageType::active) {
+        auto correlated = info;
+        correlated.session_id = id;
+        extern_telegram_callback_(correlated);
+      } else {
+        extern_telegram_callback_(info);
+      }
+    }
 
-        Event ev;
-        ev.type = EventType::telegram;
-        ev.id = id;
-        ev.message_type = message_type;
-        ev.telegram_type = telegram_type;
-        ev.master.assign(master_view);
-        ev.slave.assign(slave_view);
-        event_queue_.tryPush(ev);
-      });
+    if (id == 0) return;
 
-  handler_->setErrorCallback([this](std::string_view error,
-                                    RequestResult result, ByteView master_view,
-                                    ByteView slave_view) {
-    if (extern_error_callback_)
-      extern_error_callback_(error, result, master_view, slave_view);
+    Event ev;
+    ev.type = EventType::telegram;
+    ev.id = id;
+    ev.message_type = info.message_type;
+    ev.telegram_type = info.telegram_type;
+    ev.master.assign(info.master);
+    ev.slave.assign(info.slave);
+    event_queue_.tryPush(ev);
+  });
 
+  handler_->setErrorCallback([this](const ErrorInfo& info) {
     // Reset on certain error conditions that indicate the bus is now free
     // again
     uint32_t id = current_attempt_id_.load(std::memory_order_relaxed);
+
+    if (extern_error_callback_) {
+      if (id != 0) {
+        auto correlated = info;
+        correlated.session_id = id;
+        extern_error_callback_(correlated);
+      } else {
+        extern_error_callback_(info);
+      }
+    }
+
     if (id == 0) return;
 
     Event ev;
     ev.type = EventType::error;
     ev.id = id;
-    ev.result = result;
-    ev.error = error.data();  // Points to the error message literal
-    ev.master.assign(master_view);
-    ev.slave.assign(slave_view);
+    ev.level = info.level;
+    ev.result = info.result;
+    ev.error = info.message.data();  // Points to the error message literal
+    ev.master.assign(info.master);
+    ev.slave.assign(info.slave);
     event_queue_.tryPush(ev);
   });
 }

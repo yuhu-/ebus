@@ -5,13 +5,14 @@
 
 #include "core/request.hpp"
 
-#include "core/bus_monitor.hpp"
 #include <ebus/utils.hpp>
+
+#include "core/bus_monitor.hpp"
 
 ebus::Request::Request(BusMonitor* monitor) : monitor_(monitor) {}
 
 void ebus::Request::setMaxLockCounter(uint8_t max_counter) {
-  max_lock_counter_ = std::min(max_counter, MAX_LOCK_COUNTER);
+  max_lock_counter_ = std::min(max_counter, ebus::max_lock_counter);
   if (lock_counter_ > max_lock_counter_) lock_counter_ = max_lock_counter_;
 }
 
@@ -83,7 +84,7 @@ void ebus::Request::reset() {
 
 ebus::RequestResult ebus::Request::run(uint8_t byte) {
   size_t idx = static_cast<size_t>(state_);
-  if (idx < NUM_REQUEST_STATES && kStateRequests[idx])
+  if (idx < num_request_states && kStateRequests[idx])
     (this->*kStateRequests[idx])(byte);
 
   return result_;

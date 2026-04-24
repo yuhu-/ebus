@@ -52,6 +52,10 @@ class BusHandler {
     if (worker_) worker_->join();
   }
 
+  void setWatchdogTimeout(std::chrono::milliseconds timeout) {
+    watchdog_timeout_ms_ = timeout;
+  }
+
   uint32_t addByteListener(ByteListener listener) {
     std::lock_guard<std::mutex> lock(mutex_);
     uint32_t id = next_listener_id_++;
@@ -74,6 +78,8 @@ class BusHandler {
   Handler* handler_;
   Queue<BusEvent>* queue_;
   std::atomic<bool> running_;
+  std::chrono::milliseconds watchdog_timeout_ms_{
+      ebus::default_watchdog_timeout_ms};
 
   std::unique_ptr<ServiceThread> worker_;
 
@@ -85,7 +91,7 @@ class BusHandler {
   void run() {
     BusEvent bus_event;
     while (running_) {
-      if (queue_->pop(bus_event, std::chrono::milliseconds(100))) {
+      if (queue_->pop(bus_event, watchdog_timeout_ms_)) {
         BusEventContext ctx{bus_event.byte, RequestState::observe,
                             RequestResult::observe_data, 0,
                             bus_event.timestamp};

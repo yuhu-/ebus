@@ -23,11 +23,18 @@
 namespace ebus {
 
 struct ErrorEntry {
+  LogLevel level;
   std::string message;
   RequestResult result;
   std::vector<uint8_t> master;
   std::vector<uint8_t> slave;
+  double utilization;
   std::chrono::system_clock::time_point timestamp;
+
+  // Custom stringifier for human-readable logs
+  std::string toString() const {
+    return message + " (Result: " + ebus::toString(result) + ")";
+  }
 };
 
 struct Impl;
@@ -48,6 +55,11 @@ class Controller {
   void setAddress(const uint8_t& address);
   void setWindow(const uint16_t& window);
   void setOffset(const uint16_t& offset);
+  void setErrorLogSize(size_t size);
+  void setMaxSendAttempts(int max_send_attempts);
+  void setBaseBackoff(std::chrono::milliseconds base_backoff);
+  void setFsmTimeout(std::chrono::milliseconds timeout);
+  void setWatchdogTimeout(std::chrono::milliseconds timeout);
   void setClientActiveTimeout(std::chrono::milliseconds timeout);
 
   // Unified Bus Listeners
@@ -85,6 +97,7 @@ class Controller {
 
   // Diagnostic Log
   std::vector<ErrorEntry> getErrors() const;
+  void clearErrors();
 
   bool isConfigured() const noexcept;
   bool isRunning() const noexcept;

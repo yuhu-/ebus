@@ -94,12 +94,9 @@ class BusFreeRtos {
   // ISR/state
   static constexpr uint8_t FALLING_EDGE_BUFFER_SIZE = 5;
 
-  // The bit time at 2400 baud is approximately 416.67 us
-  static constexpr float bit_time_ = 1000000.0 / 2400.0;  // ~416.67 us
-
   // The byte time at 2400 baud for 10 bits with a 0.5-bit offset is
-  // approximately 9.5 * bitTime_ = 9.5 * 416.67 us = 3958.33 us
-  static constexpr int64_t byte_time_ = 9.5 * bit_time_;  // ~3958.33 us
+  // approximately 9.5 * bit_time_us = 9.5 * 416.67 us = 3958.33 us
+  static constexpr int64_t byte_time_center_us_ = 9.5 * bit_time_us;
 
   // This value can be adjusted if the bus ISR is not working as expected.
   volatile uint16_t window_ = 4300;  // usually between 4300-4456 us

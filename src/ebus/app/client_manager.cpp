@@ -219,8 +219,8 @@ void ebus::ClientManager::run() {
         // We forward all bytes to the current active sender so it can sniff
         // while waiting for or performing arbitration.
         if (s != SessionState::idle) {
-          Action act = current_sender->onBusByte(bctx);
-          if (act == Action::stop_session) {
+          BridgeAction act = current_sender->onBusByte(bctx);
+          if (act == BridgeAction::stop_session) {
             stopActiveSession();
           } else if (bus_requested_.load(std::memory_order_acquire)) {
             // Arbitration logic in Request FSM signaled completion (Won or

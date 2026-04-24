@@ -105,19 +105,27 @@ void ebus::BusFreeRtos::writeByte(const uint8_t byte) {
 
 void ebus::BusFreeRtos::setWindow(const uint16_t window) {
   portENTER_CRITICAL_ISR(&timer_mux_);
-  window_ = window;
+  // Validate window
+  window_ =
+      (window < min_window || window > max_window) ? default_window : window;
   portEXIT_CRITICAL_ISR(&timer_mux_);
 }
 
 void ebus::BusFreeRtos::setOffset(const uint16_t offset) {
   portENTER_CRITICAL_ISR(&timer_mux_);
-  offset_ = offset;
+  // Validate offset
+  offset_ = (offset > max_offset) ? default_offset : offset;
   portEXIT_CRITICAL_ISR(&timer_mux_);
 }
 
 void ebus::BusFreeRtos::setRuntimeConfig(const RuntimeConfig& runtime) {
   bool was_enabled = runtime_.enable_syn;
   runtime_ = runtime;
+
+  // Validate window and offset
+  if (runtime_.window < min_window || runtime_.window > max_window)
+    runtime_.window = default_window;
+  if (runtime_.offset > max_offset) runtime_.offset = default_offset;
 
   // Calculate microsecond timings for hardware timers
   syn_base_us_ = static_cast<uint64_t>(runtime_.syn_base_ms) * 1000;
@@ -316,7 +324,7 @@ void ebus::BusFreeRtos::ebusUartEventRunner() {
             // time and the bit time with a 0.5-bit offset. The expected start
             // bit time is calculated as follows:
             // now - (10 * 416.67) + (0.5 * 416.67) or: now - 9.5 * 416.67
-            int64_t expected_start_bit_time = now - byte_time_;
+            int64_t expected_start_bit_time = now - byte_time_center_us_;
 
             // Retrieving the start time of the last sync byte. Due to the
             // nature of the sync byte (0xaa), the buffer size used, and
@@ -341,7 +349,7 @@ void ebus::BusFreeRtos::ebusUartEventRunner() {
             int64_t delta =
                 std::abs(expected_start_bit_time - micros_start_bit_);
 
-            if (delta < static_cast<int64_t>(bit_time_ *
+            if (delta < static_cast<int64_t>(bit_time_us *
                                              1.5f)) {  // within 1.5 bit times
               int64_t micros_since_start_bit =
                   esp_timer_get_time() - micros_start_bit_;

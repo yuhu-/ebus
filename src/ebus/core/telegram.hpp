@@ -44,7 +44,7 @@ namespace ebus {
  * ACK..Acknowledgement byte (0x00 OK, 0xff NOK)
  * SYN..Synchronisation byte (0xaa)
  */
-template <size_t kInlineCapacity = 64>
+template <size_t kInlineCapacity = default_sequence_capacity>
 class TelegramImpl {
  public:
   TelegramImpl() = default;
@@ -392,12 +392,12 @@ class TelegramImpl {
 /**
  * Default eBUS telegram with 64-byte SBO buffers.
  */
-using Telegram = TelegramImpl<64>;
+using Telegram = TelegramImpl<default_sequence_capacity>;
 
 /**
  * Factory function to create and parse a telegram from a raw ByteView.
  */
-template <size_t N = 64>
+template <size_t N = default_sequence_capacity>
 TelegramImpl<N> makeTelegram(ByteView data) {
   SequenceImpl<N> seq;
   seq.assign(data, true);  // Assume extended wire format

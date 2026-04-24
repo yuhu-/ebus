@@ -55,13 +55,12 @@ class BusMonitor {
   TimingStats syn_postpone;
   RollingStats utilization;
 
-  static constexpr size_t MAX_HISTORY = 60;  // 1 minute at 1Hz
-  std::array<float, MAX_HISTORY> utilization_history_ = {};
+  std::array<float, default_history_size> utilization_history_ = {};
   size_t history_index_ = 0;
   size_t history_count_ = 0;
 
   // State-machine execution timings
-  std::array<TimingStats, NUM_HANDLER_STATES> handler_timing = {};
+  std::array<TimingStats, num_handler_states> handler_timing = {};
 
  private:
   metrics::HandlerMetrics handler_acc_;

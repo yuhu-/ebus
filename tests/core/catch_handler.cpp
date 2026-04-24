@@ -63,9 +63,9 @@ SCENARIO("Handler processes eBUS messages correctly", "[core][handler]") {
         {ebus::MessageType::active, 0x33, "active BC: Request Bus - Normal", "33feb5050427002d002c", "feb5050427002d00", {1, 0}},
         {ebus::MessageType::active, 0x33, "active BC: Request Bus - Priority lost", "01feb5050427002d007b", "feb505042700cc00", {1, 0}},
         {ebus::MessageType::active, 0x33, "active BC: Request Bus - Priority lost/wrong byte", "01ab", "feb505042700cc00", {0, 1}},
-        {ebus::MessageType::active, 0x33, "active BC: Request Bus - Priority fit/won", "13aa33feb505042700cc0010", "feb505042700cc00", {1, 0}},
-        {ebus::MessageType::active, 0x33, "active BC: Request Bus - Priority fit/lost", "13aa13feb5050427002d0088", "feb505042700cc00", {1, 0}},
-        {ebus::MessageType::active, 0x33, "active BC: Request Bus - Priority retry/error", "13a0", "feb505042700cc00", {0, 0}},
+        {ebus::MessageType::active, 0x33, "active BC: Request Bus - Priority fit/won", "13aa33feb505042700cc0010", "feb505042700cc00", {1, 1}},
+        {ebus::MessageType::active, 0x33, "active BC: Request Bus - Priority fit/lost", "13aa13feb5050427002d0088", "feb505042700cc00", {1, 1}},
+        {ebus::MessageType::active, 0x33, "active BC: Request Bus - Priority retry/error", "13a0", "feb505042700cc00", {0, 1}},
         {ebus::MessageType::active, 0x33, "active MS: Normal", "3352b509030d46003600013fa400", "52b509030d4600", {1, 0}},
         {ebus::MessageType::active, 0x33, "active MS: Master valid -> NAK -> Retry OK - Slave CRC error -> NAK -> Retry OK", "3352b509030d460036ff3352b509030d46003600013fa3ff013fa400", "52b509030d4600", {1, 1}},
         {ebus::MessageType::active, 0x33, "active MS: Master valid -> NAK -> Retry OK - Slave CRC error -> NAK -> Retry NAK", "3352b509030d460036ff3352b509030d46003600013fa3ff013fa3ff", "52b509030d4600", {0, 3}},
@@ -77,8 +77,7 @@ SCENARIO("Handler processes eBUS messages correctly", "[core][handler]") {
     for (const auto& tc : test_cases) {
       WHEN(tc.description) {
         ebus::BusConfig config = {.device = "/dev/null", .simulate = true};
-        ebus::RuntimeConfig runtime{
-            .address = 0x33, .window = 50, .offset = 5, .enable_syn = true};
+        ebus::RuntimeConfig runtime{.address = 0x33, .window = 50, .offset = 5};
         ebus::Request request;
         ebus::BusMonitor monitor;
         ebus::Bus bus(config, runtime, &request, &monitor);
@@ -90,34 +89,29 @@ SCENARIO("Handler processes eBUS messages correctly", "[core][handler]") {
         handler.setBusRequestWonCallback([&]() { INFO("request: won"); });
         handler.setBusRequestLostCallback([&]() { INFO("request: lost"); });
         handler.setReactiveMasterSlaveCallback(
-            [&](ebus::ByteView master, ebus::Sequence& slave_response) {
+            [&](const ebus::ReactiveInfo& info) {
               std::vector<uint8_t> search;
               search = {0x07, 0x04};
-              if (ebus::contains(master, search))
-                slave_response.assign(ebus::toVector("0ab5504d53303001074302"));
+              if (ebus::contains(info.master, search))
+                info.response.assign(ebus::toVector("0ab5504d53303001074302"));
               search = {0x07, 0x05};
-              if (ebus::contains(master, search))
-                slave_response.assign(
+              if (ebus::contains(info.master, search))
+                info.response.assign(
                     ebus::toVector("0ab5504d533030010743"));  // defect
-              INFO("reactive: " << ebus::toString(master) << " "
-                                << ebus::toString(slave_response));
+              INFO("reactive: " << ebus::toString(info.master) << " "
+                                << ebus::toString(info.response));
             });
-        handler.setTelegramCallback([&](ebus::MessageType message_type,
-                                        ebus::TelegramType telegram_type,
-                                        ebus::ByteView master_view,
-                                        ebus::ByteView slave_view) {
+        handler.setTelegramCallback([&](const ebus::TelegramInfo& info) {
           telegram_count++;
-          INFO("telegram: " << ebus::toString(master_view) << " "
-                            << ebus::toString(slave_view));
+          INFO("telegram: " << ebus::toString(info.master) << " "
+                            << ebus::toString(info.slave));
         });
-        handler.setErrorCallback(
-            [&](std::string_view error_message, ebus::RequestResult result,
-                ebus::ByteView master_view, ebus::ByteView slave_view) {
-              error_count++;
-              INFO("error: " << error_message << " master '"
-                             << ebus::toString(master_view) << "' slave '"
-                             << ebus::toString(slave_view) << "'");
-            });
+        handler.setErrorCallback([&](const ebus::ErrorInfo& info) {
+          error_count++;
+          INFO("error: " << info.message << " master '"
+                         << ebus::toString(info.master) << "' slave '"
+                         << ebus::toString(info.slave) << "'");
+        });
 
         bus.addWriteListener([&](const uint8_t& byte) {
           INFO("<- write: " << ebus::toString(byte));

@@ -94,7 +94,8 @@ void ebus::ReadOnlyClient::sendToClient(ByteView data) {
   if (fd_ < 0 || data.empty()) return;
   {
     std::lock_guard<std::mutex> lock(buffer_mutex_);
-    if (outbound_buffer_.size() + data.size() > MAX_OUTBOUND_BUFFER_SIZE) {
+    if (outbound_buffer_.size() + data.size() >
+        ebus::max_client_outbound_buffer) {
       stop();
       return;
     }
@@ -103,10 +104,10 @@ void ebus::ReadOnlyClient::sendToClient(ByteView data) {
   }
 }
 
-ebus::Action ebus::ReadOnlyClient::onBusByte(const BusEventContext& ctx) {
-  if (!isConnected()) return Action::stop_session;
+ebus::BridgeAction ebus::ReadOnlyClient::onBusByte(const BusEventContext& ctx) {
+  if (!isConnected()) return BridgeAction::stop_session;
   (void)ctx;
-  return Action::stop_session;
+  return BridgeAction::stop_session;
 }
 
 ebus::RegularClient::RegularClient(int fd, Request* request)
@@ -125,7 +126,8 @@ void ebus::RegularClient::sendToClient(ByteView data) {
   if (fd_ < 0 || data.empty()) return;
   {
     std::lock_guard<std::mutex> lock(buffer_mutex_);
-    if (outbound_buffer_.size() + data.size() > MAX_OUTBOUND_BUFFER_SIZE) {
+    if (outbound_buffer_.size() + data.size() >
+        ebus::max_client_outbound_buffer) {
       stop();
       return;
     }
@@ -134,8 +136,8 @@ void ebus::RegularClient::sendToClient(ByteView data) {
   }
 }
 
-ebus::Action ebus::RegularClient::onBusByte(const BusEventContext& ctx) {
-  if (!isConnected()) return Action::stop_session;
+ebus::BridgeAction ebus::RegularClient::onBusByte(const BusEventContext& ctx) {
+  if (!isConnected()) return BridgeAction::stop_session;
 
   // Handle bus response according to last command
   switch (ctx.result) {
@@ -144,24 +146,24 @@ ebus::Action ebus::RegularClient::onBusByte(const BusEventContext& ctx) {
     case RequestResult::retry_error:
     case RequestResult::second_lost:
     case RequestResult::second_error:
-      return Action::stop_session;
+      return BridgeAction::stop_session;
     case RequestResult::observe_syn:
     case RequestResult::observe_data:
       sendToClient(ByteView(&ctx.byte, 1));
-      return Action::keep_active;
+      return BridgeAction::keep_active;
     case RequestResult::first_syn:
     case RequestResult::first_retry:
     case RequestResult::retry_syn:
       // Hide micro-retry: session remains active but we send no bridge response
-      return Action::keep_active;
+      return BridgeAction::keep_active;
     case RequestResult::first_won:
     case RequestResult::second_won:
       sendToClient(ByteView(&ctx.byte, 1));
-      return Action::keep_active;
+      return BridgeAction::keep_active;
     default:
       break;
   }
-  return Action::stop_session;
+  return BridgeAction::stop_session;
 }
 
 ebus::EnhancedClient::EnhancedClient(int fd, Request* request)
@@ -253,7 +255,7 @@ void ebus::EnhancedClient::sendToClient(ByteView data) {
 
   {
     std::lock_guard<std::mutex> lock(buffer_mutex_);
-    if (outbound_buffer_.size() + 2 > MAX_OUTBOUND_BUFFER_SIZE) {
+    if (outbound_buffer_.size() + 2 > ebus::max_client_outbound_buffer) {
       stop();
       return;
     }
@@ -271,8 +273,8 @@ void ebus::EnhancedClient::sendToClient(ByteView data) {
   }
 }
 
-ebus::Action ebus::EnhancedClient::onBusByte(const BusEventContext& ctx) {
-  if (!isConnected()) return Action::stop_session;
+ebus::BridgeAction ebus::EnhancedClient::onBusByte(const BusEventContext& ctx) {
+  if (!isConnected()) return BridgeAction::stop_session;
 
   // Handle bus response according to last command
   switch (ctx.result) {
@@ -280,35 +282,35 @@ ebus::Action ebus::EnhancedClient::onBusByte(const BusEventContext& ctx) {
     case RequestResult::second_lost:
       // Arbitration lost: return 0x0a + the master address that actually won
       sendEnhancedResponse(enhanced::Response::failed, ctx.byte);
-      return Action::stop_session;
+      return BridgeAction::stop_session;
     case RequestResult::first_error:
     case RequestResult::retry_error:
     case RequestResult::second_error:
       sendEnhancedResponse(enhanced::Response::error_ebus,
                            static_cast<uint8_t>(enhanced::Error::framing));
-      return Action::stop_session;
+      return BridgeAction::stop_session;
     case RequestResult::observe_syn:
     case RequestResult::observe_data:
       // Ordinary bus traffic (sniffing): return 0x01 + data byte
       sendEnhancedResponse(enhanced::Response::received, ctx.byte);
-      return Action::keep_active;
+      return BridgeAction::keep_active;
     case RequestResult::first_syn:
     case RequestResult::first_retry:
     case RequestResult::retry_syn:
       // Arbitration phase: return 0x01 + data byte to keep sniffer stream
       // complete
       sendEnhancedResponse(enhanced::Response::received, ctx.byte);
-      return Action::keep_active;
+      return BridgeAction::keep_active;
     case RequestResult::first_won:
     case RequestResult::second_won:
       // Arbitration won: return 0x02 + our own address (which is what we read
       // back)
       sendEnhancedResponse(enhanced::Response::started, ctx.byte);
-      return Action::keep_active;
+      return BridgeAction::keep_active;
     default:
       break;
   }
-  return Action::stop_session;
+  return BridgeAction::stop_session;
 }
 
 std::unique_ptr<ebus::AbstractClient> ebus::createClient(int fd, Request* req,

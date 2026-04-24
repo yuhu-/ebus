@@ -37,7 +37,7 @@ ebus::Handler::Handler(uint8_t source_address, Bus* bus, Request* request,
 
 void ebus::Handler::setSourceAddress(uint8_t source_address) {
   source_address_ =
-      ebus::isMaster(source_address) ? source_address : DEFAULT_ADDRESS;
+      ebus::isMaster(source_address) ? source_address : ebus::default_address;
   target_address_ = slaveOf(source_address_);
 }
 
@@ -78,7 +78,7 @@ bool ebus::Handler::sendActiveMessage(ByteView message) {
   } else {
     if (monitor_)
       monitor_->updateHandler([](auto& m) { m.error_active_master++; });
-    callOnError("errorActiveMaster",
+    callOnError(LogLevel::error, "errorActiveMaster",
                 {active_master_.data(), active_master_.size()},
                 {active_slave_.data(), active_slave_.size()});
   }
@@ -132,7 +132,7 @@ void ebus::Handler::run(const BusEventContext& ctx) {
   pending_write_.reset();
 
   size_t idx = static_cast<size_t>(state_);
-  if (idx < NUM_HANDLER_STATES && kStateHandlers[idx]) {
+  if (idx < num_handler_states && kStateHandlers[idx]) {
     // Use a fresh "now" for the execution timing sample to measure CPU overhead
     auto exec_start = std::chrono::steady_clock::now();
     (this->*kStateHandlers[idx])(ctx.byte);  // handle byte
@@ -195,7 +195,7 @@ void ebus::Handler::passiveReceiveMaster(uint8_t byte) {
             if (monitor_)
               monitor_->updateHandler(
                   [](auto& m) { m.error_reactive_slave++; });
-            callOnError("errorReactiveSlave",
+            callOnError(LogLevel::error, "errorReactiveSlave",
                         {passive_master_.data(), passive_master_.size()},
                         {passive_slave_.data(), passive_slave_.size()});
             callPassiveReset();
@@ -210,7 +210,7 @@ void ebus::Handler::passiveReceiveMaster(uint8_t byte) {
             passive_master_[1] == target_address_) {
           if (monitor_)
             monitor_->updateHandler([](auto& m) { m.error_reactive_master++; });
-          callOnError("errorReactiveMaster",
+          callOnError(LogLevel::error, "errorReactiveMaster",
                       {passive_master_.data(), passive_master_.size()},
                       {passive_slave_.data(), passive_slave_.size()});
           passive_telegram_.clear();
@@ -224,7 +224,7 @@ void ebus::Handler::passiveReceiveMaster(uint8_t byte) {
         } else {
           if (monitor_)
             monitor_->updateHandler([](auto& m) { m.error_passive_master++; });
-          callOnError("errorPassiveMaster",
+          callOnError(LogLevel::error, "errorPassiveMaster",
                       {passive_master_.data(), passive_master_.size()},
                       {passive_slave_.data(), passive_slave_.size()});
           callPassiveReset();
@@ -271,7 +271,7 @@ void ebus::Handler::passiveReceiveMasterAcknowledge(uint8_t byte) {
         monitor_->updateHandler([](auto& m) { m.reset_passive_0704++; });
     }
 
-    callOnError("errorPassiveMasterACK",
+    callOnError(LogLevel::error, "errorPassiveMasterACK",
                 {passive_master_.data(), passive_master_.size()},
                 {passive_slave_.data(), passive_slave_.size()});
     callPassiveReset();
@@ -293,7 +293,7 @@ void ebus::Handler::passiveReceiveSlave(uint8_t byte) {
     if (passive_telegram_.getSlaveState() != SequenceState::seq_ok) {
       if (monitor_)
         monitor_->updateHandler([](auto& m) { m.error_passive_slave++; });
-      callOnError("errorPassiveSlave",
+      callOnError(LogLevel::error, "errorPassiveSlave",
                   {passive_master_.data(), passive_master_.size()},
                   {passive_slave_.data(), passive_slave_.size()});
     }
@@ -321,7 +321,7 @@ void ebus::Handler::passiveReceiveSlaveAcknowledge(uint8_t byte) {
   } else {
     if (monitor_)
       monitor_->updateHandler([](auto& m) { m.error_passive_slave_ack++; });
-    callOnError("errorPassiveSlaveACK",
+    callOnError(LogLevel::error, "errorPassiveSlaveACK",
                 {passive_master_.data(), passive_master_.size()},
                 {passive_slave_.data(), passive_slave_.size()});
     callPassiveReset();
@@ -356,7 +356,7 @@ void ebus::Handler::reactiveSendMasterNegativeAcknowledge(
   } else {
     if (monitor_)
       monitor_->updateHandler([](auto& m) { m.error_reactive_master_ack++; });
-    callOnError("errorReactiveMasterACK",
+    callOnError(LogLevel::error, "errorReactiveMasterACK",
                 {passive_master_.data(), passive_master_.size()},
                 {passive_slave_.data(), passive_slave_.size()});
     callPassiveReset();
@@ -391,7 +391,7 @@ void ebus::Handler::reactiveReceiveSlaveAcknowledge(uint8_t byte) {
   } else {
     if (monitor_)
       monitor_->updateHandler([](auto& m) { m.error_reactive_slave_ack++; });
-    callOnError("errorReactiveSlaveACK",
+    callOnError(LogLevel::error, "errorReactiveSlaveACK",
                 {passive_master_.data(), passive_master_.size()},
                 {passive_slave_.data(), passive_slave_.size()});
     callPassiveReset();
@@ -486,7 +486,7 @@ void ebus::Handler::activeSendMaster(uint8_t byte) {
   if (byte != active_master_[active_master_index_]) {
     if (monitor_)
       monitor_->updateHandler([](auto& m) { m.error_active_master++; });
-    callOnError("errorActiveMasterEcho",
+    callOnError(LogLevel::error, "errorActiveMasterEcho",
                 {active_master_.data(), active_master_.size()},
                 {active_slave_.data(), active_slave_.size()});
     callActiveReset();
@@ -542,7 +542,7 @@ void ebus::Handler::activeReceiveMasterAcknowledge(uint8_t byte) {
       if (monitor_)
         monitor_->updateHandler([](auto& m) { m.reset_active_0704++; });
     }
-    callOnError("errorActiveMasterACK",
+    callOnError(LogLevel::error, "errorActiveMasterACK",
                 {active_master_.data(), active_master_.size()},
                 {active_slave_.data(), active_slave_.size()});
     callActiveReset();
@@ -568,7 +568,7 @@ void ebus::Handler::activeReceiveSlave(uint8_t byte) {
     } else {
       if (monitor_)
         monitor_->updateHandler([](auto& m) { m.error_active_slave++; });
-      callOnError("errorActiveSlave",
+      callOnError(LogLevel::error, "errorActiveSlave",
                   {active_master_.data(), active_master_.size()},
                   {active_slave_.data(), active_slave_.size()});
       active_slave_.clear();
@@ -601,7 +601,7 @@ void ebus::Handler::activeSendSlaveNegativeAcknowledge(
   } else {
     if (monitor_)
       monitor_->updateHandler([](auto& m) { m.error_active_slave_ack++; });
-    callOnError("errorActiveSlaveACK",
+    callOnError(LogLevel::error, "errorActiveSlaveACK",
                 {active_master_.data(), active_master_.size()},
                 {active_slave_.data(), active_slave_.size()});
     callActiveReset();
@@ -624,7 +624,7 @@ void ebus::Handler::releaseBus([[maybe_unused]] uint8_t byte) {
  */
 void ebus::Handler::checkPassiveBuffers() {
   if (passive_master_.size() > 0 || passive_slave_.size() > 0) {
-    callOnError("checkPassiveBuffers",
+    callOnError(LogLevel::info, "checkPassiveBuffers",
                 {passive_master_.data(), passive_master_.size()},
                 {passive_slave_.data(), passive_slave_.size()});
 
@@ -651,7 +651,7 @@ void ebus::Handler::checkPassiveBuffers() {
  */
 void ebus::Handler::checkActiveBuffers() {
   if (active_master_.size() > 0 || active_slave_.size() > 0) {
-    callOnError("checkActiveBuffers",
+    callOnError(LogLevel::info, "checkActiveBuffers",
                 {active_master_.data(), active_master_.size()},
                 {active_slave_.data(), active_slave_.size()});
 
@@ -709,31 +709,34 @@ void ebus::Handler::callOnReactiveMasterSlave(ByteView master_view,
                                               Sequence& slave_response) {
   if (reactive_master_slave_callback_) {
     if (monitor_) monitor_->callback_reactive.markBegin();
-    reactive_master_slave_callback_(master_view, slave_response);
+    reactive_master_slave_callback_({0, master_view, slave_response});
     if (monitor_) monitor_->callback_reactive.markEnd();
   }
 }
 
 void ebus::Handler::callOnTelegram(MessageType message_type,
-                                   TelegramType telegram_type,
-                                   ByteView master_view, ByteView slave_view) {
+                                   TelegramType telegram_type, ByteView master,
+                                   ByteView slave) {
   if (telegram_callback_) {
     if (monitor_) monitor_->callback_telegram.markBegin();
-    telegram_callback_(message_type, telegram_type, master_view, slave_view);
+    telegram_callback_({0, 0, message_type, telegram_type, master, slave});
     if (monitor_) monitor_->callback_telegram.markEnd();
   }
 }
 
-void ebus::Handler::callOnError(std::string_view error_message,
-                                ByteView master_view, ByteView slave_view) {
+void ebus::Handler::callOnError(LogLevel level, std::string_view error_message,
+                                ByteView master, ByteView slave) {
   if (error_callback_) {
+    double current_util = 0.0;
     if (monitor_) {
       monitor_->callback_error.markBegin();
       monitor_->updateBus([](auto& m) {
         m.last_error_timestamp = std::chrono::system_clock::now();
       });
+      current_util = monitor_->getMetrics().bus.utilization;
     }
-    error_callback_(error_message, last_result_, master_view, slave_view);
+    error_callback_(
+        {0, level, error_message, last_result_, master, slave, current_util});
     if (monitor_) monitor_->callback_error.markEnd();
   }
 }

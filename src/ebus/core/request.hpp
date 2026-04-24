@@ -17,9 +17,6 @@ namespace ebus {
 
 class BusMonitor;
 
-constexpr uint8_t DEFAULT_LOCK_COUNTER = 3;
-constexpr uint8_t MAX_LOCK_COUNTER = 25;
-
 using BusRequestedCallback = std::function<void()>;
 using StartBitCallback = std::function<void()>;
 
@@ -65,8 +62,8 @@ class Request {
  private:
   BusMonitor* monitor_ = nullptr;
 
-  uint8_t max_lock_counter_ = DEFAULT_LOCK_COUNTER;
-  uint8_t lock_counter_ = DEFAULT_LOCK_COUNTER;
+  uint8_t max_lock_counter_ = ebus::default_lock_counter;
+  uint8_t lock_counter_ = ebus::max_lock_counter;
 
   uint8_t request_address_ = 0;
 
@@ -92,7 +89,7 @@ class Request {
       &Request::observe, &Request::first, &Request::retry, &Request::second};
 
   static_assert(sizeof(kStateRequests) / sizeof(kStateRequests[0]) ==
-                    NUM_REQUEST_STATES,
+                    num_request_states,
                 "kStateRequests table size does not match NUM_REQUEST_STATES");
 
   RequestState state_ = RequestState::observe;

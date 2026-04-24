@@ -22,63 +22,6 @@ namespace ebus {
 class Request;
 class BusMonitor;
 
-constexpr uint8_t DEFAULT_ADDRESS = 0xff;
-
-enum class HandlerState {
-  passive_receive_master,
-  passive_receive_master_acknowledge,
-  passive_receive_slave,
-  passive_receive_slave_acknowledge,
-  reactive_send_master_positive_acknowledge,
-  reactive_send_master_negative_acknowledge,
-  reactive_send_slave,
-  reactive_receive_slave_acknowledge,
-  request_bus,
-  active_send_master,
-  active_receive_master_acknowledge,
-  active_receive_slave,
-  active_send_slave_positive_acknowledge,
-  active_send_slave_negative_acknowledge,
-  release_bus
-};
-
-constexpr const char* toString(HandlerState state) {
-  switch (state) {
-    case HandlerState::passive_receive_master:
-      return "passive_receive_master";
-    case HandlerState::passive_receive_master_acknowledge:
-      return "passive_receive_master_acknowledge";
-    case HandlerState::passive_receive_slave:
-      return "passive_receive_slave";
-    case HandlerState::passive_receive_slave_acknowledge:
-      return "passive_receive_slave_acknowledge";
-    case HandlerState::reactive_send_master_positive_acknowledge:
-      return "reactive_send_master_positive_acknowledge";
-    case HandlerState::reactive_send_master_negative_acknowledge:
-      return "reactive_send_master_negative_acknowledge";
-    case HandlerState::reactive_send_slave:
-      return "reactive_send_slave";
-    case HandlerState::reactive_receive_slave_acknowledge:
-      return "reactive_receive_slave_acknowledge";
-    case HandlerState::request_bus:
-      return "request_bus";
-    case HandlerState::active_send_master:
-      return "active_send_master";
-    case HandlerState::active_receive_master_acknowledge:
-      return "active_receive_master_acknowledge";
-    case HandlerState::active_receive_slave:
-      return "active_receive_slave";
-    case HandlerState::active_send_slave_positive_acknowledge:
-      return "active_send_slave_positive_acknowledge";
-    case HandlerState::active_send_slave_negative_acknowledge:
-      return "active_send_slave_negative_acknowledge";
-    case HandlerState::release_bus:
-      return "release_bus";
-    default:
-      return "unknown_state";
-  }
-}
-
 using BusRequestWonCallback = std::function<void()>;
 using BusRequestLostCallback = std::function<void()>;
 
@@ -193,7 +136,7 @@ class Handler {
       &Handler::releaseBus};
 
   static_assert(sizeof(kStateHandlers) / sizeof(kStateHandlers[0]) ==
-                    NUM_HANDLER_STATES,
+                    num_handler_states,
                 "kStateHandlers table size does not match NUM_HANDLER_STATES");
 
   HandlerState state_ = HandlerState::passive_receive_master;
@@ -216,8 +159,8 @@ class Handler {
   void callOnTelegram(MessageType message_type, TelegramType telegram_type,
                       ByteView master_view, ByteView slave_view);
 
-  void callOnError(std::string_view error_message, ByteView master_view,
-                   ByteView slave_view);
+  void callOnError(LogLevel level, std::string_view error_message,
+                   ByteView master_view, ByteView slave_view);
 };
 
 }  // namespace ebus

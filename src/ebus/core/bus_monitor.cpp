@@ -92,7 +92,7 @@ ebus::metrics::SystemMetrics ebus::BusMonitor::getMetrics() const {
   hm.callback_telegram = callback_telegram.getValues();
   hm.callback_error = callback_error.getValues();
 
-  for (size_t i = 0; i < NUM_HANDLER_STATES; ++i) {
+  for (size_t i = 0; i < num_handler_states; ++i) {
     hm.state_timings[i] = handler_timing[i].getValues();
   }
 
@@ -147,8 +147,8 @@ void ebus::BusMonitor::updateUtilizationHistory() {
   }
 
   utilization_history_[history_index_] = static_cast<float>(current_util);
-  history_index_ = (history_index_ + 1) % MAX_HISTORY;
-  if (history_count_ < MAX_HISTORY) history_count_++;
+  history_index_ = (history_index_ + 1) % ebus::default_history_size;
+  if (history_count_ < ebus::default_history_size) history_count_++;
 }
 
 std::vector<float> ebus::BusMonitor::getUtilizationHistory() const {
@@ -158,7 +158,8 @@ std::vector<float> ebus::BusMonitor::getUtilizationHistory() const {
 
   for (size_t i = 0; i < history_count_; ++i) {
     size_t idx =
-        (history_index_ + MAX_HISTORY - history_count_ + i) % MAX_HISTORY;
+        (history_index_ + ebus::default_history_size - history_count_ + i) %
+        ebus::default_history_size;
     result.push_back(utilization_history_[idx]);
   }
   return result;

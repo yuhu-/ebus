@@ -24,8 +24,6 @@
 struct ebus::Impl {
   mutable std::mutex error_mutex_;
   std::deque<ebus::ErrorEntry> error_buffer_;
-  static constexpr size_t MAX_ERROR_LOG = 10;
-
   ebus::ReactiveMasterSlaveCallback user_reactive_callback_;
   ebus::TelegramCallback user_telegram_callback_;
   ebus::ErrorCallback user_error_callback_;
@@ -104,9 +102,48 @@ void ebus::Controller::setOffset(const uint16_t& offset) {
   if (configured_) impl_->bus_->setOffset(offset);
 }
 
+void ebus::Controller::setErrorLogSize(size_t size) {
+  config_.runtime.error_log_size = size;
+  if (configured_) {
+    std::lock_guard<std::mutex> lock(impl_->error_mutex_);
+    while (impl_->error_buffer_.size() > size) {
+      impl_->error_buffer_.pop_front();
+    }
+  }
+}
+
 void ebus::Controller::setClientActiveTimeout(
     std::chrono::milliseconds timeout) {
-  if (impl_->client_manager_) impl_->client_manager_->setActiveTimeout(timeout);
+  config_.runtime.client_timeout_ms = timeout;
+  if (impl_->client_manager_) {
+    impl_->client_manager_->setActiveTimeout(timeout);
+  }
+}
+
+void ebus::Controller::setMaxSendAttempts(int max_send_attempts) {
+  config_.runtime.max_send_attempts = max_send_attempts;
+  if (impl_->scheduler_) {
+    impl_->scheduler_->setMaxSendAttempts(max_send_attempts);
+  }
+}
+
+void ebus::Controller::setBaseBackoff(std::chrono::milliseconds base_backoff) {
+  config_.runtime.base_backoff_ms = base_backoff;
+  if (impl_->scheduler_) impl_->scheduler_->setBaseBackoff(base_backoff);
+}
+
+void ebus::Controller::setFsmTimeout(std::chrono::milliseconds timeout) {
+  config_.runtime.fsm_timeout_ms = timeout;
+  if (impl_->scheduler_) {
+    impl_->scheduler_->setFsmTimeout(timeout);
+  }
+}
+
+void ebus::Controller::setWatchdogTimeout(std::chrono::milliseconds timeout) {
+  config_.runtime.watchdog_timeout_ms = timeout;
+  if (impl_->bus_handler_) {
+    impl_->bus_handler_->setWatchdogTimeout(timeout);
+  }
 }
 
 void ebus::Controller::setReactiveMasterSlaveCallback(
@@ -174,8 +211,8 @@ void ebus::Controller::removeClient(int fd) {
 }
 
 std::vector<ebus::DeviceInfo> ebus::Controller::getDeviceInfo() const {
-  return impl_->device_manager_ ? impl_->device_manager_->getDeviceInfo()
-                                : std::vector<DeviceInfo>();
+  if (!impl_->device_manager_) return {};
+  return impl_->device_manager_->getDeviceInfo();
 }
 
 void ebus::Controller::resetMetrics() {
@@ -183,14 +220,9 @@ void ebus::Controller::resetMetrics() {
 }
 
 ebus::Metrics ebus::Controller::getMetrics() const {
-  if (!configured_) return {};
-
-  metrics::SystemMetrics sm;
-  if (impl_->bus_monitor_) {
-    sm = impl_->bus_monitor_->getMetrics();
-  }
-
-  return sm;
+  return (configured_ && impl_->bus_monitor_)
+             ? impl_->bus_monitor_->getMetrics()
+             : Metrics{};
 }
 
 std::vector<ebus::ErrorEntry> ebus::Controller::getErrors() const {
@@ -198,23 +230,33 @@ std::vector<ebus::ErrorEntry> ebus::Controller::getErrors() const {
   return {impl_->error_buffer_.begin(), impl_->error_buffer_.end()};
 }
 
+void ebus::Controller::clearErrors() {
+  std::lock_guard<std::mutex> lock(impl_->error_mutex_);
+  impl_->error_buffer_.clear();
+}
+
 bool ebus::Controller::isConfigured() const noexcept { return configured_; }
 
 bool ebus::Controller::isRunning() const noexcept { return running_; }
 
 void ebus::Controller::constructMembers() {
-  impl_->bus_monitor_.reset(new BusMonitor());
-  impl_->request_.reset(new Request(impl_->bus_monitor_.get()));
+  impl_->bus_monitor_ = std::make_unique<BusMonitor>();
+  impl_->request_ = std::make_unique<Request>(impl_->bus_monitor_.get());
   impl_->request_->setMaxLockCounter(config_.runtime.lock_counter_max);
-  impl_->bus_.reset(new Bus(config_.bus, config_.runtime, impl_->request_.get(),
-                            impl_->bus_monitor_.get()));
-  impl_->handler_.reset(new Handler(config_.runtime.address, impl_->bus_.get(),
-                                    impl_->request_.get(),
-                                    impl_->bus_monitor_.get()));
+  impl_->bus_ =
+      std::make_unique<Bus>(config_.bus, config_.runtime, impl_->request_.get(),
+                            impl_->bus_monitor_.get());
+  impl_->handler_ = std::make_unique<Handler>(
+      config_.runtime.address, impl_->bus_.get(), impl_->request_.get(),
+      impl_->bus_monitor_.get());
 
-  impl_->scheduler_.reset(new Scheduler(impl_->handler_.get()));
+  impl_->scheduler_ = std::make_unique<Scheduler>(
+      impl_->handler_.get(), config_.runtime.max_send_attempts,
+      config_.runtime.base_backoff_ms);
+  impl_->scheduler_->setFsmTimeout(config_.runtime.fsm_timeout_ms);
 
-  impl_->device_manager_.reset(new DeviceManager(impl_->bus_monitor_.get()));
+  impl_->device_manager_ =
+      std::make_unique<DeviceManager>(impl_->bus_monitor_.get());
   impl_->device_manager_->setOwnAddress(config_.runtime.address);
 
   if (impl_->user_reactive_callback_) {
@@ -226,54 +268,51 @@ void ebus::Controller::constructMembers() {
   // The Scheduler handles the timing-critical Handler interaction and
   // provides an 'extern' callback hook which we use to feed the rest of the
   // app.
-  impl_->scheduler_->setTelegramCallback(
-      [this](MessageType message_type, TelegramType telegram_type,
-             ByteView master_view, ByteView slave_view) {
-        // 1. Update Internal State (Device Discovery)
-        if (impl_->device_manager_) {
-          impl_->device_manager_->update(master_view, slave_view);
-        }
-        // 2. Inform the Application (Active, Passive, and Reactive)
-        if (impl_->user_telegram_callback_) {
-          impl_->user_telegram_callback_(message_type, telegram_type,
-                                         master_view, slave_view);
-        }
-      });
+  impl_->scheduler_->setTelegramCallback([this](const TelegramInfo& info) {
+    // 1. Update Internal State (Device Discovery)
+    if (impl_->device_manager_) {
+      impl_->device_manager_->update(info.master, info.slave);
+    }
+    // 2. Inform the Application (Active, Passive, and Reactive)
+    if (impl_->user_telegram_callback_) {
+      impl_->user_telegram_callback_(info);
+    }
+  });
 
-  impl_->scheduler_->setErrorCallback(
-      [this](std::string_view error, RequestResult result, ByteView master_view,
-             ByteView slave_view) {
-        // 1. Update internal circular buffer
-        {
-          std::lock_guard<std::mutex> lock(impl_->error_mutex_);
-          impl_->error_buffer_.push_back(
-              {std::string(error), result, ebus::toVector(master_view),
-               ebus::toVector(slave_view), std::chrono::system_clock::now()});
+  impl_->scheduler_->setErrorCallback([this](const ErrorInfo& info) {
+    // 1. Update internal circular buffer
+    {
+      std::lock_guard<std::mutex> lock(impl_->error_mutex_);
+      impl_->error_buffer_.push_back(
+          {info.level, std::string(info.message), info.result,
+           ebus::toVector(info.master), ebus::toVector(info.slave),
+           info.utilization, std::chrono::system_clock::now()});
 
-          if (impl_->error_buffer_.size() > Impl::MAX_ERROR_LOG) {
-            impl_->error_buffer_.pop_front();
-          }
-        }
+      if (impl_->error_buffer_.size() > config_.runtime.error_log_size) {
+        impl_->error_buffer_.pop_front();
+      }
+    }
 
-        // 2. Inform application
-        if (impl_->user_error_callback_) {
-          impl_->user_error_callback_(error, result, master_view, slave_view);
-        }
-      });
+    // 2. Inform application
+    if (impl_->user_error_callback_ &&
+        info.level <= config_.runtime.log_level) {
+      impl_->user_error_callback_(info);
+    }
+  });
 
-  impl_->device_scanner_.reset(
-      new DeviceScanner(config_.runtime.address, impl_->device_manager_.get()));
+  impl_->device_scanner_ = std::make_unique<DeviceScanner>(
+      config_.runtime.address, impl_->device_manager_.get());
 
-  impl_->poll_manager_.reset(new PollManager());
+  impl_->poll_manager_ = std::make_unique<PollManager>();
 
-  impl_->bus_handler_.reset(new BusHandler(
+  impl_->bus_handler_ = std::make_unique<BusHandler>(
       impl_->request_.get(), impl_->handler_.get(), impl_->bus_->getQueue(),
-      16));  // Pre-allocate for up to 16 listeners
+      event_queue_capacity);
 
-  impl_->client_manager_.reset(
-      new ClientManager(impl_->bus_.get(), impl_->bus_handler_.get(),
-                        impl_->request_.get(), impl_->bus_monitor_.get()));
-  impl_->client_manager_->setActiveTimeout(config_.client_timeout_ms);
+  impl_->client_manager_ = std::make_unique<ClientManager>(
+      impl_->bus_.get(), impl_->bus_handler_.get(), impl_->request_.get(),
+      impl_->bus_monitor_.get());
+  impl_->client_manager_->setActiveTimeout(config_.runtime.client_timeout_ms);
 
   impl_->bus_->setWindow(config_.runtime.window);
   impl_->bus_->setOffset(config_.runtime.offset);

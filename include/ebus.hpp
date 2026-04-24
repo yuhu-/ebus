@@ -11,13 +11,16 @@
  */
 
 #include "ebus/addressing.hpp"
+#include "ebus/callbacks.hpp"
 #include "ebus/config.hpp"
+#include "ebus/constants.hpp"
 #include "ebus/controller.hpp"
 #include "ebus/data_types.hpp"
-#include "ebus/definitions.hpp"
 #include "ebus/device.hpp"
+#include "ebus/enums.hpp"
 #include "ebus/manufacturers.hpp"
 #include "ebus/metrics.hpp"
 #include "ebus/protocol_math.hpp"
 #include "ebus/sequence.hpp"
+#include "ebus/types.hpp"
 #include "ebus/utils.hpp"

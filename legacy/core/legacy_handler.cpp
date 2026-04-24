@@ -43,14 +43,13 @@ void printByte(const std::string& prefix, const uint8_t& byte,
   if (!g_detailed_output) return;
   std::cout << prefix << ebus::toString(byte) << " " << postfix << std::endl;
 }
-ebus::Request request;
 
-ebus::BusConfig config = {.device = "/dev/simulation", .simulate = true};
-ebus::RuntimeConfig runtime = {.address = 0x33, .window = 50, .offset = 5};
-
-ebus::BusMonitor monitor;
-ebus::Bus bus(config, runtime, &request, &monitor);
-ebus::Handler handler(runtime.address, &bus, &request, &monitor);
+// ebus::BusConfig config = {.device = "/dev/null", .simulate = true};
+// ebus::RuntimeConfig runtime = {.address = 0x33, .window = 50, .offset = 5};
+// ebus::Request request;
+// ebus::BusMonitor monitor;
+// ebus::Bus bus(config, runtime, &request, &monitor);
+// ebus::Handler handler(runtime.address, &bus, &request, &monitor);
 
 void readFunction(const uint8_t& byte) {
   if (!g_detailed_output) return;
@@ -65,27 +64,24 @@ void busRequestLostCallback() {
   if (g_detailed_output) std::cout << " request: lost" << std::endl;
 }
 
-void reactiveMasterSlaveCallback(ebus::ByteView master,
-                                 ebus::Sequence& slave_response) {
+void reactiveMasterSlaveCallback(const ebus::ReactiveInfo& info) {
   std::vector<uint8_t> search;
   search = {0x07, 0x04};  // 0008070400
-  if (ebus::contains(master, search))
-    slave_response.assign(ebus::toVector("0ab5504d53303001074302"));
+  if (ebus::contains(info.master, search))
+    info.response.assign(ebus::toVector("0ab5504d53303001074302"));
   search = {0x07, 0x05};  // 0008070500
-  if (ebus::contains(master, search))
-    slave_response.assign(ebus::toVector("0ab5504d533030010743"));  // defect
+  if (ebus::contains(info.master, search))
+    info.response.assign(ebus::toVector("0ab5504d533030010743"));  // defect
 
   if (!g_detailed_output) return;
-  std::cout << "reactive: " << ebus::toString(master) << " "
-            << ebus::toString(slave_response) << std::endl;
+  std::cout << "reactive: " << ebus::toString(info.master) << " "
+            << ebus::toString(info.response) << std::endl;
 }
 
-void telegramCallback(ebus::MessageType message_type,
-                      ebus::TelegramType telegramType,
-                      ebus::ByteView master_view, ebus::ByteView slave_view) {
+void telegramCallback(const ebus::TelegramInfo& info) {
   g_telegram_count++;
   if (!g_detailed_output) return;
-  switch (telegramType) {
+  switch (info.telegram_type) {
     case ebus::TelegramType::broadcast:
       std::cout << "    type: broadcast" << std::endl;
       break;
@@ -96,7 +92,7 @@ void telegramCallback(ebus::MessageType message_type,
       std::cout << "    type: master slave" << std::endl;
       break;
   }
-  switch (message_type) {
+  switch (info.message_type) {
     case ebus::MessageType::active:
       std::cout << "  active: ";
       break;
@@ -107,17 +103,16 @@ void telegramCallback(ebus::MessageType message_type,
       std::cout << "reactive: ";
       break;
   }
-  std::cout << ebus::toString(master_view) << " " << ebus::toString(slave_view)
+  std::cout << ebus::toString(info.master) << " " << ebus::toString(info.slave)
             << std::endl;
 }
 
-void errorCallback(std::string_view error_message, ebus::RequestResult result,
-                   ebus::ByteView master_view, ebus::ByteView slave_view) {
+void errorCallback(const ebus::ErrorInfo& info) {
   g_error_count++;
   if (!g_detailed_output) return;
-  std::cout << "   error: " << error_message << " master '"
-            << ebus::toString(master_view) << "' slave '"
-            << ebus::toString(slave_view) << "'" << std::endl;
+  std::cout << "   error: " << info.message << " master '"
+            << ebus::toString(info.master) << "' slave '"
+            << ebus::toString(info.slave) << "'" << std::endl;
 }
 
 bool run_test(const TestCase& tc) {
@@ -127,8 +122,23 @@ bool run_test(const TestCase& tc) {
   g_error_count = 0;
   g_telegram_count = 0;
 
-  request.reset();
-  handler.reset();
+  ebus::BusConfig config = {.device = "/dev/null", .simulate = true};
+  ebus::RuntimeConfig runtime = {.address = 0x33, .window = 50, .offset = 5};
+  ebus::Request request;
+  ebus::BusMonitor monitor;
+  ebus::Bus bus(config, runtime, &request, &monitor);
+  ebus::Handler handler(runtime.address, &bus, &request, &monitor);
+
+  handler.setBusRequestWonCallback(busRequestWonCallback);
+  handler.setBusRequestLostCallback(busRequestLostCallback);
+  handler.setReactiveMasterSlaveCallback(reactiveMasterSlaveCallback);
+  handler.setTelegramCallback(telegramCallback);
+  handler.setErrorCallback(errorCallback);
+
+  bus.addWriteListener([](const uint8_t& byte) {
+    if (g_detailed_output)
+      std::cout << "<- write: " << ebus::toString(byte) << std::endl;
+  });
 
   handler.setSourceAddress(tc.address);
 
@@ -220,9 +230,9 @@ std::vector<TestCase> test_cases = {
   {ebus::MessageType::active, 0x33, "active BC: Request Bus - Normal", "33feb5050427002d002c", "feb5050427002d00", {1, 0}},
   {ebus::MessageType::active, 0x33, "active BC: Request Bus - Priority lost", "01feb5050427002d007b", "feb505042700cc00", {1, 0}},
   {ebus::MessageType::active, 0x33, "active BC: Request Bus - Priority lost/wrong byte", "01ab", "feb505042700cc00", {0, 1}},
-  {ebus::MessageType::active, 0x33, "active BC: Request Bus - Priority fit/won", "13aa33feb505042700cc0010", "feb505042700cc00", {1, 0}},
-  {ebus::MessageType::active, 0x33, "active BC: Request Bus - Priority fit/lost", "13aa13feb5050427002d0088", "feb505042700cc00", {1, 0}},
-  {ebus::MessageType::active, 0x33, "active BC: Request Bus - Priority retry/error", "13a0", "feb505042700cc00", {0, 0}},
+  {ebus::MessageType::active, 0x33, "active BC: Request Bus - Priority fit/won", "13aa33feb505042700cc0010", "feb505042700cc00", {1, 1}},
+  {ebus::MessageType::active, 0x33, "active BC: Request Bus - Priority fit/lost", "13aa13feb5050427002d0088", "feb505042700cc00", {1, 1}},
+  {ebus::MessageType::active, 0x33, "active BC: Request Bus - Priority retry/error", "13a0", "feb505042700cc00", {0, 1}},
   {ebus::MessageType::active, 0x33, "active MS: Normal", "3352b509030d46003600013fa400", "52b509030d4600", {1, 0}},
   {ebus::MessageType::active, 0x33, "active MS: Master valid -> NAK -> Retry OK - Slave CRC error -> NAK -> Retry OK", "3352b509030d460036ff3352b509030d46003600013fa3ff013fa400", "52b509030d4600", {1, 1}},
   {ebus::MessageType::active, 0x33, "active MS: Master valid -> NAK -> Retry OK - Slave CRC error -> NAK -> Retry NAK", "3352b509030d460036ff3352b509030d46003600013fa3ff013fa3ff", "52b509030d4600", {0, 3}},
@@ -232,18 +242,6 @@ std::vector<TestCase> test_cases = {
 // clang-format on
 
 int main() {
-  handler.setBusRequestWonCallback(busRequestWonCallback);
-  handler.setBusRequestLostCallback(busRequestLostCallback);
-  handler.setReactiveMasterSlaveCallback(reactiveMasterSlaveCallback);
-  handler.setTelegramCallback(telegramCallback);
-  handler.setErrorCallback(errorCallback);
-
-  // Register write listener for synchronous logging
-  bus.addWriteListener([](const uint8_t& byte) {
-    if (g_detailed_output)
-      std::cout << "<- write: " << ebus::toString(byte) << std::endl;
-  });
-
   for (const TestCase& tc : test_cases) {
     g_detailed_output = false;
     if (!run_test(tc)) {

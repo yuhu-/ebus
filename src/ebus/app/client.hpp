@@ -18,20 +18,6 @@
 
 namespace ebus {
 
-/**
- * Maximum size of the outbound buffer before a client is considered stalled.
- */
-static constexpr size_t MAX_OUTBOUND_BUFFER_SIZE = 4096;
-
-/**
- * Action to be taken by the ClientManager after a byte is processed.
- */
-enum class Action {
-  keep_active,  // Keep the client active
-  stop_session  // The session is over (success, failure, or end of telegram),
-                // ClientManager will remove this client.
-};
-
 class Request;
 
 /**
@@ -64,7 +50,7 @@ class AbstractClient {
   virtual void sendToClient(ByteView data) = 0;
 
   // Logic to determine if the client wants to continue sending after a byte
-  virtual Action onBusByte(const BusEventContext& ctx) = 0;
+  virtual BridgeAction onBusByte(const BusEventContext& ctx) = 0;
 
  protected:
   int fd_;
@@ -88,7 +74,7 @@ class ReadOnlyClient : public AbstractClient {
   bool recvFromClient(uint8_t& out) override;
   void sendToClient(ByteView data) override;
 
-  Action onBusByte(const BusEventContext& ctx) override;
+  BridgeAction onBusByte(const BusEventContext& ctx) override;
 };
 
 /**
@@ -103,7 +89,7 @@ class RegularClient : public AbstractClient {
   bool recvFromClient(uint8_t& out) override;
   void sendToClient(ByteView data) override;
 
-  Action onBusByte(const BusEventContext& ctx) override;
+  BridgeAction onBusByte(const BusEventContext& ctx) override;
 };
 
 /**
@@ -118,7 +104,7 @@ class EnhancedClient : public AbstractClient {
   bool recvFromClient(uint8_t& out) override;
   void sendToClient(ByteView data) override;
 
-  Action onBusByte(const BusEventContext& ctx) override;
+  BridgeAction onBusByte(const BusEventContext& ctx) override;
 
  private:
   // The Enhanced protocol accumulation buffer (max 2 bytes for escaped

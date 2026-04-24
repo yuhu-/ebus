@@ -140,10 +140,9 @@ bool runSchedulerTest(ebus::Scheduler& scheduler, const TestCase& tc,
 
   scheduler.enqueue(
       tc.priority, ebus::toVector(tc.payloadHexNoCrc),
-      [promise, description = tc.description](
-          bool success, ebus::ByteView master_view, ebus::ByteView slave_view) {
+      [promise, description = tc.description](const ebus::ResultInfo& info) {
         if (!promise) return;
-        promise->set_value(success);
+        promise->set_value(info.success);
       });
 
   if (future.wait_for(std::chrono::seconds(8)) != std::future_status::ready) {
@@ -165,7 +164,7 @@ TEST_CASE("Scheduler: Simulation", "[app][scheduler]") {
 
   ebus::BusMonitor monitor;
   ebus::Bus bus(config, runtime, &request, &monitor);
-  ebus::Handler handler(ebus::DEFAULT_ADDRESS, &bus, &request, &monitor);
+  ebus::Handler handler(ebus::default_address, &bus, &request, &monitor);
   ebus::BusHandler busHandler(&request, &handler, bus.getQueue());
 
   const uint8_t source = 0x33;
@@ -179,13 +178,10 @@ TEST_CASE("Scheduler: Simulation", "[app][scheduler]") {
 
   installSimulatorResponses(bus, tests, source);
 
-  ebus::Scheduler scheduler(&handler);
-  scheduler.setTelegramCallback(
-      [](ebus::MessageType message_type, ebus::TelegramType telegram_type,
-         ebus::ByteView master_view, ebus::ByteView slave_view) {});
-  scheduler.setErrorCallback(
-      [](std::string_view error_message, ebus::RequestResult result,
-         ebus::ByteView master_view, ebus::ByteView slave_view) {});
+  ebus::Scheduler scheduler(&handler, runtime.max_send_attempts,
+                            runtime.base_backoff_ms);
+  scheduler.setTelegramCallback([](const ebus::TelegramInfo& info) {});
+  scheduler.setErrorCallback([](const ebus::ErrorInfo& info) {});
 
   scheduler.setMaxSendAttempts(3);
   scheduler.setBaseBackoff(std::chrono::milliseconds(50));

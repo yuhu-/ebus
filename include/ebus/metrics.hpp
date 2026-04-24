@@ -11,6 +11,9 @@
 #include <sstream>
 #include <string>
 
+#include "ebus/constants.hpp"
+#include "ebus/enums.hpp"
+
 namespace ebus {
 
 /**
@@ -109,7 +112,7 @@ struct HandlerMetrics {
   MetricValues callback_error;
 
   // State-machine specific execution timings
-  std::array<MetricValues, 15> state_timings;
+  std::array<MetricValues, ebus::num_handler_states> state_timings;
 
   void resetMetrics() {
     error_rate = 0.0;
@@ -367,15 +370,16 @@ inline std::string toJson(const metrics::HandlerMetrics& m) {
       << ",\"callback_lost\":" << toJson(m.callback_lost)
       << ",\"callback_reactive\":" << toJson(m.callback_reactive)
       << ",\"callback_telegram\":" << toJson(m.callback_telegram)
-      << ",\"callback_error\":" << toJson(m.callback_error)
-      << ",\"state_timings\":[";
+      << ",\"callback_error\":" << toJson(m.callback_error);
 
   // State-machine specific execution timings
-  for (int i = 0; i < 15; ++i) {
+  oss << ",\"state_timings\":{";
+  for (size_t i = 0; i < num_handler_states; ++i) {
     if (i > 0) oss << ",";
-    oss << toJson(m.state_timings[i]);
+    oss << "\"" << toString(static_cast<HandlerState>(i))
+        << "\":" << toJson(m.state_timings[i]);
   }
-  oss << "]}";
+  oss << "}}";
   return oss.str();
 }
 

@@ -25,9 +25,7 @@ TEST_CASE("Controller: Lifecycle and API", "[app][controller]") {
   // Central dispatcher callback
   std::atomic<bool> telegramSeen{false};
   controller.setTelegramCallback(
-      [&](ebus::MessageType message_type, ebus::TelegramType telegram_type,
-          ebus::ByteView master_view,
-          ebus::ByteView slave_view) { telegramSeen = true; });
+      [&](const ebus::TelegramInfo& info) { telegramSeen = true; });
 
   // Start service
   controller.start();
@@ -37,12 +35,10 @@ TEST_CASE("Controller: Lifecycle and API", "[app][controller]") {
   std::vector<uint8_t> msg = {0xfe, 0xb5, 0x05, 0x04, 0x27, 0x00, 0x2d, 0x00};
   std::atomic<bool> resultCallbackFired{false};
 
-  controller.enqueue(
-      1, msg,
-      [&](bool success, ebus::ByteView master_view, ebus::ByteView slave_view) {
-        REQUIRE(success);
-        resultCallbackFired = true;
-      });
+  controller.enqueue(1, msg, [&](const ebus::ResultInfo& info) {
+    REQUIRE(info.success);
+    resultCallbackFired = true;
+  });
 
   // Allow background processing (SYN/arbitration/dispatch)
   std::this_thread::sleep_for(std::chrono::milliseconds(1000));

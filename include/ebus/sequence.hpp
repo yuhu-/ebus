@@ -17,8 +17,8 @@
 #include <vector>
 
 #include "ebus/addressing.hpp"
-#include "ebus/definitions.hpp"
 #include "ebus/protocol_math.hpp"
+#include "ebus/types.hpp"
 
 namespace ebus {
 
@@ -28,7 +28,8 @@ namespace detail {
  * A minimal vector-like container for uint8_t with Small Buffer Optimization
  * (SBO). Avoids heap allocations for sequences up to 64 bytes.
  */
-template <typename T = uint8_t, size_t kInlineCapacity = 64>
+template <typename T = uint8_t,
+          size_t kInlineCapacity = default_sequence_capacity>
 class SmallByteVector {
  public:
   static_assert(std::is_trivially_copyable_v<T>,
@@ -162,7 +163,7 @@ class SmallByteVector {
  * (reduced) 0xaa <-> 0xa9 0x01 (extended)
  * (reduced) 0xa9 <-> 0xa9 0x00 (extended)
  */
-template <size_t kInlineCapacity = 64>
+template <size_t kInlineCapacity = default_sequence_capacity>
 class SequenceImpl {
  public:
   static_assert(kInlineCapacity >= 48, "Sequence capacity too small");
@@ -426,26 +427,12 @@ class SequenceImpl {
 /**
  * Default eBUS sequence with 64-byte SBO buffer.
  */
-using Sequence = SequenceImpl<64>;
-
-/**
- * Callback for reactive master-slave interactions, where the slave response is
- * generated based on the master message. The callback receives the master
- * message and must populate the slave response sequence.
- */
-using ReactiveMasterSlaveCallback =
-    std::function<void(ByteView master_view, Sequence& slave_response)>;
-
-/**
- * Result of an active bus message enqueued via the Scheduler.
- */
-using ResultCallback = std::function<void(bool success, ByteView master_view,
-                                          ByteView slave_view)>;
+using Sequence = SequenceImpl<default_sequence_capacity>;
 
 /**
  * Factory function to create a sequence from a raw ByteView.
  */
-template <size_t N = 64>
+template <size_t N = default_sequence_capacity>
 SequenceImpl<N> makeSequence(ByteView data, bool extended = false) {
   SequenceImpl<N> seq;
   seq.assign(data, extended);

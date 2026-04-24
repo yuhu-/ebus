@@ -33,21 +33,18 @@ std::atomic<int> g_telegram_count(0);
 std::atomic<int> g_error_count(0);
 bool g_detailed_output = false;
 
-void telegramCallback(ebus::MessageType message_type,
-                      ebus::TelegramType telegram_type,
-                      ebus::ByteView master_view, ebus::ByteView slave_view) {
+void telegramCallback(const ebus::TelegramInfo& info) {
   g_telegram_count++;
   if (g_detailed_output) {
-    std::cout << "    Telegram: " << ebus::toString(master_view) << " "
-              << ebus::toString(slave_view) << std::endl;
+    std::cout << "    Telegram: " << ebus::toString(info.master) << " "
+              << ebus::toString(info.slave) << std::endl;
   }
 }
 
-void errorCallback(std::string_view error_message, ebus::RequestResult result,
-                   ebus::ByteView master_view, ebus::ByteView slave_view) {
+void errorCallback(const ebus::ErrorInfo& info) {
   g_error_count++;
   if (g_detailed_output) {
-    std::cout << "    Error: " << error_message << std::endl;
+    std::cout << "    Error: " << info.message << std::endl;
   }
 }
 

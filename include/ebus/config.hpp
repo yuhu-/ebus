@@ -9,6 +9,8 @@
 #include <cstdint>
 #include <string>
 
+#include "ebus/definitions.hpp"
+
 namespace ebus {
 
 /**
@@ -16,13 +18,22 @@ namespace ebus {
  * hardware.
  */
 struct RuntimeConfig {
-  uint8_t address = 0xff;
-  uint16_t window = 4300;
-  uint16_t offset = 80;
-  uint8_t lock_counter_max = 3;
-  uint32_t syn_base_ms = 50;
-  uint32_t syn_tolerance_ms = 5;
+  uint8_t address = default_address;
+  uint16_t window = default_window;
+  uint16_t offset = default_offset;
+  uint8_t lock_counter_max = default_lock_counter;
+  LogLevel log_level = LogLevel::error;
+  size_t error_log_size = default_error_log_size;
+  uint32_t syn_base_ms = default_syn_base_ms;
+  uint32_t syn_tolerance_ms = default_syn_tolerance_ms;
   bool enable_syn = false;
+  int max_send_attempts = default_max_send_attempts;
+  std::chrono::milliseconds base_backoff_ms{default_base_backoff_ms};
+  std::chrono::milliseconds client_timeout_ms{default_client_timeout_ms};
+  std::chrono::milliseconds fsm_timeout_ms{default_fsm_timeout_ms};
+  std::chrono::milliseconds watchdog_timeout_ms{default_watchdog_timeout_ms};
+  std::chrono::milliseconds scheduler_total_timeout_ms{
+      default_scheduler_total_timeout_ms};
 };
 
 /**
@@ -38,8 +49,8 @@ struct BusConfig {
 };
 #elif defined(POSIX)
 struct BusConfig {
-  std::string device = "/dev/ttyUSB0";
-  uint32_t baud = 2400;
+  std::string device = default_device_path;
+  uint32_t baud = default_baud_rate;
   bool simulate = false;
 };
 #endif
@@ -49,13 +60,7 @@ struct BusConfig {
  */
 struct EbusConfig {
   RuntimeConfig runtime = {};
-  std::chrono::milliseconds client_timeout_ms{500};
   BusConfig bus = {};
 };
-
-/**
- * Available client types.
- */
-enum class ClientType { read_only, regular, enhanced };
 
 }  // namespace ebus
