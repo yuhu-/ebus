@@ -8,10 +8,11 @@
 #if defined(ESP32)
 #include <atomic>
 #include <cstdint>
-#include <ebus/callbacks.hpp>
 #include <ebus/config.hpp>
 #include <ebus/defaults.hpp>
 #include <functional>
+#include <memory>
+#include <vector>
 
 #include "core/bus_events.hpp"
 #include "driver/uart.h"

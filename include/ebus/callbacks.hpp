@@ -8,10 +8,16 @@
 #include <functional>
 #include <string_view>
 
-#include "ebus/sequence.hpp"
+#include "ebus/defaults.hpp"
 #include "ebus/types.hpp"
 
 namespace ebus {
+
+/**
+ * Forward declaration to avoid pulling in the heavy sequence.hpp
+ */
+template <std::size_t kInlineCapacity> class SequenceImpl;
+using Sequence = SequenceImpl<defaults::Sequence::default_capacity>;
 
 struct TelegramInfo {
   uint32_t session_id = 0;

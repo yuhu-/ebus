@@ -9,7 +9,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
-#include <functional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -305,18 +304,21 @@ struct ErrorEntry {
   }
 
   void setMessage(std::string_view msg) {
-    size_t len = std::min(msg.size(), sizeof(message) - 1);
+    const size_t max_len = sizeof(message) - 1;
+    size_t len = (msg.size() < max_len) ? msg.size() : max_len;
     std::memcpy(message, msg.data(), len);
     message[len] = '\0';
   }
 
   void setMaster(const uint8_t* data, size_t size) {
-    master_len = static_cast<uint8_t>(std::min(size, sizeof(master)));
+    const size_t max_len = sizeof(master);
+    master_len = static_cast<uint8_t>((size < max_len) ? size : max_len);
     if (master_len > 0) std::memcpy(master, data, master_len);
   }
 
   void setSlave(const uint8_t* data, size_t size) {
-    slave_len = static_cast<uint8_t>(std::min(size, sizeof(slave)));
+    const size_t max_len = sizeof(slave);
+    slave_len = static_cast<uint8_t>((size < max_len) ? size : max_len);
     if (slave_len > 0) std::memcpy(slave, data, slave_len);
   }
 };

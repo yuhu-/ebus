@@ -5,8 +5,6 @@
 
 #include <deque>
 #include <ebus/controller.hpp>
-#include <ebus/defaults.hpp>
-#include <ebus/device.hpp>
 #include <ebus/utils.hpp>
 
 #include "app/client_manager.hpp"

@@ -5,8 +5,6 @@
 
 #include "core/bus_monitor.hpp"
 
-#include <ebus/defaults.hpp>
-
 ebus::BusMonitor::BusMonitor()
     : utilization_history_(defaults::Logging::history_size) {}
 

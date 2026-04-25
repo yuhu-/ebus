@@ -6,17 +6,9 @@
 #include "app/scheduler.hpp"
 
 #include <algorithm>
-#include <atomic>
-#include <chrono>
-#include <condition_variable>
 #include <ebus/types.hpp>
 #include <ebus/utils.hpp>
-#include <functional>
 #include <memory>
-#include <mutex>
-#include <queue>
-#include <string>
-#include <vector>
 
 ebus::Scheduler::Scheduler(Handler* handler)
     : handler_(handler), stop_flag_(true), next_id_(1) {

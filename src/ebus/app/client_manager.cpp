@@ -6,7 +6,6 @@
 #include "app/client_manager.hpp"
 
 #include <algorithm>
-#include <condition_variable>
 #include <ebus/defaults.hpp>
 #include <ebus/utils.hpp>
 

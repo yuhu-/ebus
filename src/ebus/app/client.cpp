@@ -7,8 +7,6 @@
 
 #include <ebus/utils.hpp>
 
-#include "core/request.hpp"
-
 #if defined(ESP32)
 #include <lwip/sockets.h>
 #elif defined(POSIX)

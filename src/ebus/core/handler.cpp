@@ -10,7 +10,6 @@
 
 #include "core/bus_monitor.hpp"
 #include "core/request.hpp"
-#include "platform/bus.hpp"
 
 ebus::Handler::Handler(uint8_t source_address, Bus* bus, Request* request,
                        BusMonitor* monitor)
