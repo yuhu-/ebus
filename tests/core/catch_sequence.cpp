@@ -25,7 +25,7 @@ TEST_CASE("Sequence Extend and Reduce logic", "[core][sequence]") {
     REQUIRE(seq.toVector() == data);
   }
 
-  SECTION("SYN (0xaa) is escaped to a9 01") {
+  SECTION("syn (0xaa) is escaped to a9 01") {
     seq.assign(ebus::toVector("01aa03"), false);
     seq.extend();
     REQUIRE(seq.toVector() == ebus::toVector("01a90103"));
@@ -100,6 +100,6 @@ TEST_CASE("Sequence Logical Comparison", "[core][sequence]") {
   reduced.assign(ebus::toVector("01aa03"), false);
   extended.assign(ebus::toVector("01a90103"), true);
 
-  REQUIRE(reduced != extended); // Physical bytes differ
-  REQUIRE(reduced.logicallyEquals(extended)); // Protocol meaning is the same
+  REQUIRE(reduced != extended);                // Physical bytes differ
+  REQUIRE(reduced.logicallyEquals(extended));  // Protocol meaning is the same
 }

@@ -16,25 +16,24 @@
 
 namespace ebus {
 
-// --- Physical Constants ---
-constexpr double bit_time_us = 1000000.0 / 2400.0;  // ~416.67 us
-
-// --- Protocol Constants ---
-struct Protocol {
-  static constexpr uint8_t sym_zero = 0x00;     // zero byte
-  static constexpr uint8_t sym_syn = 0xaa;      // synchronization byte
-  static constexpr uint8_t sym_ext = 0xa9;      // extend byte
-  static constexpr uint8_t sym_syn_ext = 0x01;  // extended synchronization byte
-  static constexpr uint8_t sym_ext_ext = 0x00;  // extended extend byte
-  static constexpr uint8_t sym_ack = 0x00;      // positive acknowledge
-  static constexpr uint8_t sym_nak = 0xff;      // negative acknowledge
-  static constexpr uint8_t sym_broad = 0xfe;    // broadcast destination address
+/**
+ * Core eBUS byte symbols as defined in the specification.
+ */
+struct Symbols {
+  static constexpr uint8_t zero = 0x00;     // zero byte
+  static constexpr uint8_t syn = 0xaa;      // synchronization byte
+  static constexpr uint8_t ext = 0xa9;      // extend byte
+  static constexpr uint8_t syn_ext = 0x01;  // extended synchronization byte
+  static constexpr uint8_t ext_ext = 0x00;  // extended extend byte
+  static constexpr uint8_t ack = 0x00;      // positive acknowledge
+  static constexpr uint8_t nak = 0xff;      // negative acknowledge
+  static constexpr uint8_t broad = 0xfe;    // broadcast destination address
 
   /**
    * Returns true if the byte requires eBUS stuffing (0xAA or 0xA9).
    */
   static constexpr bool needsEscape(uint8_t byte) {
-    return byte == sym_syn || byte == sym_ext;
+    return byte == syn || byte == ext;
   }
 
   /**
@@ -42,8 +41,8 @@ struct Protocol {
    * out[0] is the escape byte (0xA9), out[1] is the escaped value.
    */
   static constexpr void escape(uint8_t byte, uint8_t out[2]) {
-    out[0] = sym_ext;
-    out[1] = (byte == sym_syn) ? sym_syn_ext : sym_ext_ext;
+    out[0] = ext;
+    out[1] = (byte == syn) ? syn_ext : ext_ext;
   }
 
   /**
@@ -51,79 +50,18 @@ struct Protocol {
    * Returns true if the sequence was a valid escape sequence.
    */
   static constexpr bool unescape(uint8_t b1, uint8_t b2, uint8_t& out) {
-    if (b1 != sym_ext) return false;
-    if (b2 == sym_syn_ext) {
-      out = sym_syn;
+    if (b1 != ext) return false;
+    if (b2 == syn_ext) {
+      out = syn;
       return true;
     }
-    if (b2 == sym_ext_ext) {
-      out = sym_ext;
+    if (b2 == ext_ext) {
+      out = ext;
       return true;
     }
     return false;
   }
 };
-
-// --- Protocol Limits ---
-namespace limits {
-static constexpr uint8_t max_data_bytes = 16;  // Maximum data bytes (Spec 5.6)
-static constexpr uint8_t max_telegram_bytes =
-    48;  // Safe upper bound for MS telegrams
-static constexpr uint8_t max_lock_counter = 25;
-static constexpr uint16_t min_window = 4000;
-static constexpr uint16_t max_window = 5000;
-static constexpr uint16_t max_offset = 500;
-static constexpr double byte_center_bits = 9.5;  // midpoint of the stop bit
-}  // namespace limits
-
-constexpr size_t default_sequence_capacity = 64;
-
-// --- Number FSM States ---
-constexpr size_t num_handler_states = 15;
-constexpr size_t num_request_states = 4;
-
-// --- Defaults ---
-namespace defaults {
-
-constexpr uint8_t address = 0xff;
-
-struct Arbitration {                          // Arbitration defaults
-  static constexpr uint8_t lock_counter = 3;  // Default lock counter
-};
-
-struct Bus {
-  static constexpr uint16_t window = 4300;  // us
-  static constexpr uint16_t offset = 80;    // us
-  static constexpr uint32_t baud_rate = 2400;
-  static constexpr const char* device_path = "/dev/ttyUSB0";
-  struct Syn {
-    static constexpr uint32_t base_ms = 50;
-    static constexpr uint32_t tolerance_ms = 5;
-  };
-};
-
-struct Scheduler {
-  static constexpr int max_send_attempts = 3;
-  static constexpr uint32_t base_backoff_ms = 100;
-  static constexpr uint32_t fsm_timeout_ms = 2000;
-  static constexpr uint32_t total_timeout_ms = 4000;
-};
-
-struct Network {
-  static constexpr uint32_t client_timeout_ms = 1000;
-  static constexpr uint32_t watchdog_timeout_ms = 5000;
-  static constexpr size_t outbound_buffer_size = 4096;
-};
-
-struct Logging {
-  static constexpr size_t log_size = 10;
-};
-
-}  // namespace defaults
-
-static_assert(defaults::Bus::offset < limits::min_window,
-              "The default offset must be smaller than the minimum arbitration "
-              "window to prevent timing underflow.");
 
 // --- enums ---
 
@@ -314,12 +252,12 @@ constexpr bool isMaster(uint8_t byte) {
 }
 
 constexpr bool isSlave(uint8_t byte) {
-  return !isMaster(byte) && byte != Protocol::sym_syn &&
-         byte != Protocol::sym_ext && byte != Protocol::sym_broad;
+  return !isMaster(byte) && byte != Symbols::syn && byte != Symbols::ext &&
+         byte != Symbols::broad;
 }
 
 constexpr bool isTarget(uint8_t byte) {
-  return byte != Protocol::sym_syn && byte != Protocol::sym_ext;
+  return byte != Symbols::syn && byte != Symbols::ext;
 }
 
 constexpr uint8_t masterOf(uint8_t byte) {
@@ -337,7 +275,7 @@ constexpr uint8_t slaveOf(uint8_t byte) {
 }
 
 constexpr TelegramType typeOf(uint8_t byte) {
-  if (byte == Protocol::sym_broad) return TelegramType::broadcast;
+  if (byte == Symbols::broad) return TelegramType::broadcast;
   if (isMaster(byte)) return TelegramType::master_master;
   return TelegramType::master_slave;
 }

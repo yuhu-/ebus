@@ -4,6 +4,7 @@
  */
 
 #include <catch2/catch_all.hpp>
+#include <ebus/defaults.hpp>
 #include <ebus/utils.hpp>
 #include <memory>
 
@@ -49,7 +50,7 @@ TEST_CASE("ClientManager: Mock Orchestration", "[app][clientmanager][mock]") {
     REQUIRE(waitCondition([&] { return req.busRequestPending(); }));
 
     // 2. Simulate the Bus providing the SYN to start arbitration
-    bus.writeByte(ebus::Protocol::sym_syn);
+    bus.writeByte(ebus::Symbols::syn);
 
     // Wait for FSM to move to 'first_won' and clear pending flag
     REQUIRE(waitCondition([&] { return !req.busRequestPending(); }));
@@ -57,7 +58,7 @@ TEST_CASE("ClientManager: Mock Orchestration", "[app][clientmanager][mock]") {
 
     // 3. Client should have received the SYN echo and the address echo
     REQUIRE(waitCondition([&] { return !mockClient->getOutput().empty(); }));
-    REQUIRE(mockClient->getOutput()[0] == ebus::Protocol::sym_syn);
+    REQUIRE(mockClient->getOutput()[0] == ebus::Symbols::syn);
 
     // 4. Continue sending the rest of the telegram (Broadcast to fe)
     std::vector<uint8_t> body = {0xfe, 0xb5, 0x05, 0x01, 0xec};
@@ -77,7 +78,7 @@ TEST_CASE("ClientManager: Mock Orchestration", "[app][clientmanager][mock]") {
     REQUIRE(waitCondition([&] { return smallClient->isConnected(); }));
 
     // 2. Send bytes from bus. 1st byte (SYN) -> ok (buffer size 1)
-    bus.writeByte(ebus::Protocol::sym_syn);
+    bus.writeByte(ebus::Symbols::syn);
     REQUIRE(
         waitCondition([&] { return smallClient->getOutput().size() == 1; }));
     REQUIRE(smallClient->isConnected());

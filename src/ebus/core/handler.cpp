@@ -97,7 +97,7 @@ void ebus::Handler::reset() {
 void ebus::Handler::run(const BusEventContext& ctx) {
   last_result_ = ctx.result;
   // record timing
-  if (ctx.byte != Protocol::sym_syn) {
+  if (ctx.byte != Symbols::syn) {
     if (active_message_) {
       if (measure_sync_ && monitor_)
         monitor_->active_first.markEnd(ctx.timestamp);
@@ -132,7 +132,7 @@ void ebus::Handler::run(const BusEventContext& ctx) {
   pending_write_.reset();
 
   size_t idx = static_cast<size_t>(state_);
-  if (idx < num_handler_states && kStateHandlers[idx]) {
+  if (idx < FSM::num_handler_states && kStateHandlers[idx]) {
     // Use a fresh "now" for the execution timing sample to measure CPU overhead
     auto exec_start = std::chrono::steady_clock::now();
     (this->*kStateHandlers[idx])(ctx.byte);  // handle byte
@@ -154,13 +154,13 @@ void ebus::Handler::run(const BusEventContext& ctx) {
 }
 
 void ebus::Handler::passiveReceiveMaster(uint8_t byte) {
-  if (byte != Protocol::sym_syn) {
+  if (byte != Symbols::syn) {
     passive_master_.pushBack(byte);
 
     if (passive_master_.size() == 5) passive_master_dbx_ = passive_master_[4];
 
     // AA >> A9 + 01 || A9 >> A9 + 00
-    if (byte == Protocol::sym_ext) passive_master_dbx_++;
+    if (byte == Symbols::ext) passive_master_dbx_++;
 
     // size() > ZZ QQ PB SB NN + DBx + CRC
     if (passive_master_.size() >=
@@ -178,7 +178,7 @@ void ebus::Handler::passiveReceiveMaster(uint8_t byte) {
                 [](auto& m) { m.messages_passive_broadcast++; });
           callPassiveReset();
         } else if (passive_master_[1] == source_address_) {
-          callWrite(Protocol::sym_ack);
+          callWrite(Symbols::ack);
           state_ = HandlerState::reactive_send_master_positive_acknowledge;
         } else if (passive_master_[1] == target_address_) {
           passive_slave_.clear();
@@ -191,7 +191,7 @@ void ebus::Handler::passiveReceiveMaster(uint8_t byte) {
                 passive_telegram_.getSlave();  // Copy the slave response
             passive_slave_.pushBack(passive_telegram_.getSlaveCRC(), false);
             passive_slave_.extend();
-            callWrite(Protocol::sym_ack);
+            callWrite(Symbols::ack);
             state_ = HandlerState::reactive_send_master_positive_acknowledge;
           } else {
             if (monitor_)
@@ -201,7 +201,7 @@ void ebus::Handler::passiveReceiveMaster(uint8_t byte) {
                         {passive_master_.data(), passive_master_.size()},
                         {passive_slave_.data(), passive_slave_.size()});
             callPassiveReset();
-            callWrite(Protocol::sym_syn);
+            callWrite(Symbols::syn);
             state_ = HandlerState::release_bus;
           }
         } else {
@@ -218,7 +218,7 @@ void ebus::Handler::passiveReceiveMaster(uint8_t byte) {
           passive_telegram_.clear();
           passive_master_.clear();
           passive_master_dbx_ = 0;
-          callWrite(Protocol::sym_nak);
+          callWrite(Symbols::nak);
           state_ = HandlerState::reactive_send_master_negative_acknowledge;
         } else if (passive_telegram_.getType() == TelegramType::master_master ||
                    passive_telegram_.getType() == TelegramType::master_slave) {
@@ -244,7 +244,7 @@ void ebus::Handler::passiveReceiveMaster(uint8_t byte) {
 }
 
 void ebus::Handler::passiveReceiveMasterAcknowledge(uint8_t byte) {
-  if (byte == Protocol::sym_ack) {
+  if (byte == Symbols::ack) {
     if (passive_telegram_.getType() == TelegramType::master_master) {
       callOnTelegram(MessageType::passive, TelegramType::master_master,
                      {passive_telegram_.getMaster().data(),
@@ -259,7 +259,7 @@ void ebus::Handler::passiveReceiveMasterAcknowledge(uint8_t byte) {
     } else {
       state_ = HandlerState::passive_receive_slave;
     }
-  } else if (byte != Protocol::sym_syn && !passive_master_repeated_) {
+  } else if (byte != Symbols::syn && !passive_master_repeated_) {
     passive_master_repeated_ = true;
     passive_telegram_.clear();
     passive_master_.clear();
@@ -288,7 +288,7 @@ void ebus::Handler::passiveReceiveSlave(uint8_t byte) {
   if (passive_slave_.size() == 1) passive_slave_dbx_ = byte;
 
   // AA >> A9 + 01 || A9 >> A9 + 00
-  if (byte == Protocol::sym_ext) passive_slave_dbx_++;
+  if (byte == Symbols::ext) passive_slave_dbx_++;
 
   // size() > NN + DBx + CRC
   if (passive_slave_.size() >=
@@ -306,7 +306,7 @@ void ebus::Handler::passiveReceiveSlave(uint8_t byte) {
 }
 
 void ebus::Handler::passiveReceiveSlaveAcknowledge(uint8_t byte) {
-  if (byte == Protocol::sym_ack) {
+  if (byte == Symbols::ack) {
     callOnTelegram(MessageType::passive, TelegramType::master_slave,
                    {passive_telegram_.getMaster().data(),
                     passive_telegram_.getMaster().size()},
@@ -317,7 +317,7 @@ void ebus::Handler::passiveReceiveSlaveAcknowledge(uint8_t byte) {
           [](auto& m) { m.messages_passive_master_slave++; });
     callPassiveReset();
     state_ = HandlerState::passive_receive_master;
-  } else if (byte == Protocol::sym_nak && !passive_slave_repeated_) {
+  } else if (byte == Symbols::nak && !passive_slave_repeated_) {
     passive_slave_repeated_ = true;
     passive_slave_.clear();
     passive_slave_dbx_ = 0;
@@ -376,7 +376,7 @@ void ebus::Handler::reactiveSendSlave([[maybe_unused]] uint8_t byte) {
 }
 
 void ebus::Handler::reactiveReceiveSlaveAcknowledge(uint8_t byte) {
-  if (byte == Protocol::sym_ack) {
+  if (byte == Symbols::ack) {
     callOnTelegram(MessageType::reactive,
                    TelegramType::master_slave,  // Successful reactive response
                    {passive_telegram_.getMaster().data(),
@@ -388,8 +388,9 @@ void ebus::Handler::reactiveReceiveSlaveAcknowledge(uint8_t byte) {
           [](auto& m) { m.messages_reactive_master_slave++; });
     callPassiveReset();
     state_ = HandlerState::passive_receive_master;
-  } else if (byte == Protocol::sym_nak &&
-             !passive_slave_repeated_) {  // Negative ACK, retry slave response
+  } else if (byte == Symbols::nak &&
+             !passive_slave_repeated_) {  // Negative Symbols::ack, retry slave
+                                          // response
     passive_slave_repeated_ = true;
     passive_slave_index_ = 0;
     callWrite(passive_slave_[passive_slave_index_]);
@@ -422,7 +423,7 @@ void ebus::Handler::requestBus(uint8_t byte) {
       active_message_ = false;
       active_telegram_.clear();  // Clear active message state
       active_master_.clear();
-      callWrite(Protocol::sym_syn);
+      callWrite(Symbols::syn);
       state_ = HandlerState::release_bus;
     }
   };
@@ -510,7 +511,7 @@ void ebus::Handler::activeSendMaster(uint8_t byte) {
       if (monitor_)
         monitor_->updateHandler([](auto& m) { m.messages_active_broadcast++; });
       callActiveReset();  // Reset active state
-      callWrite(Protocol::sym_syn);
+      callWrite(Symbols::syn);
       state_ = HandlerState::release_bus;
     } else {
       state_ = HandlerState::active_receive_master_acknowledge;
@@ -521,7 +522,7 @@ void ebus::Handler::activeSendMaster(uint8_t byte) {
 }
 
 void ebus::Handler::activeReceiveMasterAcknowledge(uint8_t byte) {
-  if (byte == Protocol::sym_ack) {
+  if (byte == Symbols::ack) {
     if (active_telegram_.getType() == TelegramType::master_master) {
       callOnTelegram(MessageType::active, TelegramType::master_master,
                      {active_master_.data(), active_master_.size()},
@@ -530,12 +531,12 @@ void ebus::Handler::activeReceiveMasterAcknowledge(uint8_t byte) {
         monitor_->updateHandler(
             [](auto& m) { m.messages_active_master_master++; });
       callActiveReset();  // Reset active state
-      callWrite(Protocol::sym_syn);
+      callWrite(Symbols::syn);
       state_ = HandlerState::release_bus;
     } else {
       state_ = HandlerState::active_receive_slave;
     }
-  } else if (byte == Protocol::sym_nak &&
+  } else if (byte == Symbols::nak &&
              !active_master_repeated_) {  // Negative ACK, retry master
                                           // message
     active_master_repeated_ = true;
@@ -554,7 +555,7 @@ void ebus::Handler::activeReceiveMasterAcknowledge(uint8_t byte) {
                 {active_master_.data(), active_master_.size()},
                 {active_slave_.data(), active_slave_.size()});
     callActiveReset();  // Reset active state
-    callWrite(Protocol::sym_syn);
+    callWrite(Symbols::syn);
     state_ = HandlerState::release_bus;
   }
 }
@@ -565,14 +566,14 @@ void ebus::Handler::activeReceiveSlave(uint8_t byte) {
   if (active_slave_.size() == 1) active_slave_dbx_ = byte;
 
   // AA >> A9 + 01 || A9 >> A9 + 00
-  if (byte == Protocol::sym_ext) active_slave_dbx_++;
+  if (byte == Symbols::ext) active_slave_dbx_++;
 
   // size() > NN + DBx + CRC
   if (active_slave_.size() >=
       1 + active_slave_dbx_ + 1) {  // 1 byte NN + data + CRC
     active_telegram_.createSlave(active_slave_);
     if (active_telegram_.getSlaveState() == SequenceState::seq_ok) {
-      callWrite(Protocol::sym_ack);
+      callWrite(Symbols::ack);
       state_ = HandlerState::active_send_slave_positive_acknowledge;
     } else {
       if (monitor_)
@@ -582,7 +583,7 @@ void ebus::Handler::activeReceiveSlave(uint8_t byte) {
                   {active_slave_.data(), active_slave_.size()});
       active_slave_.clear();  // Clear slave response
       active_slave_dbx_ = 0;
-      callWrite(Protocol::sym_nak);
+      callWrite(Symbols::nak);
       state_ = HandlerState::active_send_slave_negative_acknowledge;
     }
   }
@@ -598,7 +599,7 @@ void ebus::Handler::activeSendSlavePositiveAcknowledge(
   if (monitor_)
     monitor_->updateHandler([](auto& m) { m.messages_active_master_slave++; });
   callActiveReset();  // Reset active state
-  callWrite(Protocol::sym_syn);
+  callWrite(Symbols::syn);
   state_ = HandlerState::release_bus;
 }
 
@@ -614,7 +615,7 @@ void ebus::Handler::activeSendSlaveNegativeAcknowledge(
                 {active_master_.data(), active_master_.size()},
                 {active_slave_.data(), active_slave_.size()});
     callActiveReset();  // Reset active state
-    callWrite(Protocol::sym_syn);
+    callWrite(Symbols::syn);
     state_ = HandlerState::release_bus;
   }
 }

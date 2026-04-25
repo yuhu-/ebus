@@ -136,7 +136,7 @@ std::string collect(uint8_t byte) {
 
   if (raw) std::cout << ebus::toString(byte) << std::endl;
 
-  if (byte == ebus::Protocol::sym_syn) {
+  if (byte == ebus::Symbols::syn) {
     static bool running = false;
     if (sequence.size() > 0 && running) {
       ebus::Telegram tel(sequence);
@@ -347,7 +347,7 @@ void run(const char* hostname, const char* port, int max_retries = 5) {
                 waiting_for_c6 = true;
               }
             } else {  // waiting for 0xaa
-              if (byte == ebus::Protocol::sym_syn) {
+              if (byte == ebus::Symbols::syn) {
                 enhanced_seq_count++;
                 if (enhanced_seq_count >= ENHANCED_THRESHOLD) {
                   mode_enhanced = true;

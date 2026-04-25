@@ -36,7 +36,8 @@ ebus::BusFreeRtos::BusFreeRtos(const BusConfig& config,
 #endif
       request_(request),
       monitor_(monitor),
-      byte_queue_(std::make_unique<ebus::Queue<ebus::BusEvent>>(256)) {
+      byte_queue_(std::make_unique<ebus::Queue<ebus::BusEvent>>(
+          defaults::Bus::queue_size)) {
 
   // Initialize postponement timer
   const esp_timer_create_args_t postpone_args = {
@@ -106,16 +107,18 @@ void ebus::BusFreeRtos::writeByte(const uint8_t byte) {
 void ebus::BusFreeRtos::setWindow(const uint16_t window) {
   portENTER_CRITICAL_ISR(&timer_mux_);
   // Validate window against limits
-  window_ = (window < limits::min_window || window > limits::max_window)
-                ? defaults::Bus::window
-                : window;
+  window_ =
+      (window < defaults::Bus::min_window || window > defaults::Bus::max_window)
+          ? defaults::Bus::window
+          : window;
   portEXIT_CRITICAL_ISR(&timer_mux_);
 }
 
 void ebus::BusFreeRtos::setOffset(const uint16_t offset) {
   portENTER_CRITICAL_ISR(&timer_mux_);
   // Validate offset against limits
-  offset_ = (offset > limits::max_offset) ? defaults::Bus::offset : offset;
+  offset_ =
+      (offset > defaults::Bus::max_offset) ? defaults::Bus::offset : offset;
   portEXIT_CRITICAL_ISR(&timer_mux_);
 }
 
@@ -124,16 +127,18 @@ void ebus::BusFreeRtos::setRuntimeConfig(const RuntimeConfig& runtime) {
   runtime_ = runtime;
 
   // Validate window and offset
-  if (runtime_.bus.timing.window < limits::min_window ||
-      runtime_.bus.timing.window > limits::max_window)
+  if (runtime_.bus.timing.window < defaults::Bus::min_window ||
+      runtime_.bus.timing.window > defaults::Bus::max_window)
     runtime_.bus.timing.window = defaults::Bus::window;
-  if (runtime_.bus.timing.offset > limits::max_offset)
+  if (runtime_.bus.timing.offset > defaults::Bus::max_offset)
     runtime_.bus.timing.offset = defaults::Bus::offset;
 
   // Calculate microsecond timings for hardware timers
   syn_base_us_ = static_cast<uint64_t>(runtime_.bus.syn.base_ms) * 1000;
   syn_unique_us_ =
-      syn_base_us_ + (static_cast<uint64_t>(runtime_.address) * 10000) +
+      syn_base_us_ +
+      (static_cast<uint64_t>(runtime_.address) *
+       static_cast<uint64_t>(defaults::Bus::Syn::address_factor_ms) * 1000) +
       (static_cast<uint64_t>(runtime_.bus.syn.tolerance_ms) * 1000);
 
   if (runtime_.bus.syn.enabled) {
@@ -169,13 +174,13 @@ void ebus::BusFreeRtos::addSynListener(SynListener listener) {
 
 void ebus::BusFreeRtos::recordUtilization(uint8_t byte) {
   // 1 (start bit) + zero bits in data. eBUS bit time is ~416.67us
-  double low_time = (countZeroBits(byte) + 1) * (1000000.0 / 2400.0);
+  double low_time = (countZeroBits(byte) + 1) * ebus::Physical::bit_time_us;
   if (monitor_) monitor_->utilization.addSample(low_time);
 }
 
 void ebus::BusFreeRtos::configureUart() {
   uart_config_t uart_config = {
-      .baud_rate = 2400,
+      .baud_rate = ebus::Physical::baud_rate,
       .data_bits = UART_DATA_8_BITS,
       .parity = UART_PARITY_DISABLE,
       .stop_bits = UART_STOP_BITS_1,
@@ -320,7 +325,7 @@ void ebus::BusFreeRtos::ebusUartEventRunner() {
 
           if (!byte_queue_) continue;
 
-          if (byte == Protocol::sym_syn && request_->busRequestPending()) {
+          if (byte == Symbols::syn && request_->busRequestPending()) {
             int64_t now = esp_timer_get_time();  // Current time in microseconds
 
             // Calculation of the expected start bit time based on the current
@@ -352,8 +357,8 @@ void ebus::BusFreeRtos::ebusUartEventRunner() {
             int64_t delta =
                 std::abs(expected_start_bit_time - micros_start_bit_);
 
-            if (delta < static_cast<int64_t>(bit_time_us *
-                                             1.5f)) {  // within 1.5 bit times
+            if (delta <  // within 1.5 bit times
+                static_cast<int64_t>(ebus::Physical::bit_time_us * 1.5f)) {
               int64_t micros_since_start_bit =
                   esp_timer_get_time() - micros_start_bit_;
               int64_t delay = window_ - micros_since_start_bit - offset_;
@@ -420,7 +425,7 @@ void ebus::BusFreeRtos::ebusUartEventRunner() {
           // Reset SYN Timer (Arbitration Logic)
           if (runtime_.bus.syn.enabled) {
             uint64_t next_interval;
-            if (syn_active_ && byte == Protocol::sym_syn) {
+            if (syn_active_ && byte == Symbols::syn) {
               // We won! Continue at fast rate
               next_interval = syn_base_us_;
             } else {
@@ -514,7 +519,7 @@ bool IRAM_ATTR ebus::BusFreeRtos::onSynGenTimer() {
 
   // Carrier Sense: yield and postpone if bus was active within the last 5ms
   // (Duration of a byte at 2400 baud + safety margin)
-  if (now - last_activity < (defaults::Bus::carrier_sense_ms * 1000)) {
+  if (now - last_activity < (defaults::Bus::Syn::carrier_sense_ms * 1000)) {
     if (syn_intent_time_ == 0) syn_intent_time_ = now;
     // Schedule a re-check in 2ms using the ISR-safe esp_timer
     if (monitor_) {
@@ -538,7 +543,7 @@ bool IRAM_ATTR ebus::BusFreeRtos::onSynGenTimer() {
 
   for (const auto& listener : syn_listeners_) listener();
 
-  uint8_t syn = Protocol::sym_syn;
+  uint8_t syn = Symbols::syn;
   uart_ll_write_txfifo(UART_LL_GET_HW(uart_port_num_), &syn, 1);
   return false;
 }

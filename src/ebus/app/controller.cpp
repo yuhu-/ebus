@@ -5,6 +5,7 @@
 
 #include <deque>
 #include <ebus/controller.hpp>
+#include <ebus/defaults.hpp>
 #include <ebus/device.hpp>
 #include <ebus/utils.hpp>
 
@@ -15,7 +16,6 @@
 #include "app/scheduler.hpp"
 #include "core/bus_handler.hpp"
 #include "core/bus_monitor.hpp"
-#include "core/constants.hpp"
 #include "core/handler.hpp"
 #include "core/request.hpp"
 #include "platform/bus.hpp"
@@ -69,7 +69,8 @@ void ebus::Controller::start() {
   impl_->scheduler_->start();
   impl_->client_manager_->start();
   impl_->worker_ = std::make_unique<ServiceThread>(
-      "ebusController", [this] { run(); }, 4096, 1, 0);
+      "ebusController", [this] { run(); }, defaults::Orchestration::stack_size,
+      defaults::Orchestration::priority_low, 0);
   impl_->worker_->start();
 }
 
@@ -349,7 +350,7 @@ void ebus::Controller::constructMembers() {
 
   impl_->bus_handler_ = std::make_unique<BusHandler>(
       impl_->request_.get(), impl_->handler_.get(), impl_->bus_->getQueue(),
-      internal::event_queue_capacity);
+      defaults::Bus::event_queue_capacity);
 
   impl_->client_manager_ = std::make_unique<ClientManager>(
       impl_->bus_.get(), impl_->bus_handler_.get(), impl_->request_.get(),
@@ -369,13 +370,13 @@ void ebus::Controller::run() {
       impl_->scheduler_->enqueue(item.priority, item.message);
     });
 
-    if (impl_->scheduler_->queueSize() < internal::Scheduler::scan_threshold) {
+    if (impl_->scheduler_->queueSize() < defaults::Scheduler::scan_threshold) {
       auto scan_cmd = impl_->device_scanner_->nextCommand();
       if (!scan_cmd.empty()) {
-        impl_->scheduler_->enqueue(5, scan_cmd);
+        impl_->scheduler_->enqueue(defaults::Scanner::scan_priority, scan_cmd);
       }
     }
 
-    ebus::sleepMs(internal::controller_tick_ms);
+    ebus::sleepMs(defaults::Scheduler::controller_tick_ms);
   }
 }

@@ -33,7 +33,7 @@ class BusHandler {
   using ByteListener = std::function<void(const BusEventContext& ctx)>;
 
   BusHandler(Request* request, Handler* handler, Queue<BusEvent>* queue,
-             size_t max_listeners = 16)
+             size_t max_listeners = defaults::Bus::max_listeners)
       : request_(request), handler_(handler), queue_(queue), running_(false) {
     listeners_cache_.reserve(max_listeners);
   }
@@ -44,7 +44,9 @@ class BusHandler {
     if (running_) return;
     running_ = true;
     worker_ = std::make_unique<ServiceThread>(
-        "ebusBusQueueRunner", [this] { this->run(); }, 4096, 1);
+        "ebusBusQueueRunner", [this] { this->run(); },
+        defaults::Orchestration::stack_size,
+        defaults::Orchestration::priority_low);
     worker_->start();
   }
 

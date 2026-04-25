@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <string>
 
+#include "ebus/defaults.hpp"
 #include "ebus/types.hpp"
 
 namespace ebus {
@@ -37,17 +38,10 @@ struct RuntimeConfig {
     } syn;
   } bus;
 
-  struct Scheduler {
-    int max_send_attempts = defaults::Scheduler::max_send_attempts;
-    struct Timing {
-      std::chrono::milliseconds base_backoff{
-          defaults::Scheduler::base_backoff_ms};
-      std::chrono::milliseconds fsm_timeout{
-          defaults::Scheduler::fsm_timeout_ms};
-      std::chrono::milliseconds total_timeout{
-          defaults::Scheduler::total_timeout_ms};
-    } timing;
-  } scheduler;
+  struct Logging {
+    LogLevel level = LogLevel::error;
+    size_t log_size = defaults::Logging::log_size;
+  } logging;
 
   struct Network {
     struct Timing {
@@ -59,10 +53,17 @@ struct RuntimeConfig {
     size_t outbound_buffer_size = defaults::Network::outbound_buffer_size;
   } network;
 
-  struct Logging {
-    LogLevel level = LogLevel::error;
-    size_t log_size = defaults::Logging::log_size;
-  } logging;
+  struct Scheduler {
+    int max_send_attempts = defaults::Scheduler::max_send_attempts;
+    struct Timing {
+      std::chrono::milliseconds base_backoff{
+          defaults::Scheduler::base_backoff_ms};
+      std::chrono::milliseconds fsm_timeout{
+          defaults::Scheduler::fsm_timeout_ms};
+      std::chrono::milliseconds total_timeout{
+          defaults::Scheduler::total_timeout_ms};
+    } timing;
+  } scheduler;
 };
 
 /**
@@ -78,8 +79,7 @@ struct BusConfig {
 };
 #elif defined(POSIX)
 struct BusConfig {
-  std::string device = defaults::Bus::device_path;
-  uint32_t baud = defaults::Bus::baud_rate;
+  std::string device = defaults::Bus::Posix::device_path;
   bool simulate = false;
 };
 #endif

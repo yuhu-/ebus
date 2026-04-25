@@ -147,8 +147,7 @@ SCENARIO("Handler processes eBUS messages correctly", "[core][handler]") {
                        request.getLockCounter(),
                        std::chrono::steady_clock::now()});
 
-          if (seq[i] == ebus::Protocol::sym_syn &&
-              request.busRequestPending()) {
+          if (seq[i] == ebus::Symbols::syn && request.busRequestPending()) {
             INFO("ISR - write address");
             bus.writeByte(request.busRequestAddress());
             busRequestFlag = true;

@@ -8,6 +8,7 @@
 
 #include <catch2/catch_all.hpp>
 #include <chrono>
+#include <ebus/defaults.hpp>
 #include <ebus/types.hpp>
 #include <vector>
 
@@ -84,8 +85,8 @@ TEST_CASE("EnhancedClient: Encoded responses mapping",
   req.busRequestCompleted();
 
   // Transparent Sniffer: Bridge client must see the SYN that opens the window
-  req.run(ebus::Protocol::sym_syn);
-  client.onBusByte({ebus::Protocol::sym_syn, req.getState(), req.getResult(),
+  req.run(ebus::Symbols::syn);
+  client.onBusByte({ebus::Symbols::syn, req.getState(), req.getResult(),
                     req.getLockCounter(), std::chrono::steady_clock::now()});
 
   req.run(0x33);  // Move FSM to firstWon

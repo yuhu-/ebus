@@ -20,11 +20,11 @@ TEST_CASE("Utils: Addressing logic", "[utils][utils]") {
   REQUIRE(!ebus::isMaster(0x02));
   REQUIRE(!ebus::isMaster(0x04));
   REQUIRE(!ebus::isMaster(0x05));
-  REQUIRE(!ebus::isMaster(ebus::Protocol::sym_syn));
+  REQUIRE(!ebus::isMaster(ebus::Symbols::syn));
 
   REQUIRE(ebus::isSlave(0x05));
   REQUIRE(!ebus::isSlave(0x00));
-  REQUIRE(!ebus::isSlave(ebus::Protocol::sym_syn));
+  REQUIRE(!ebus::isSlave(ebus::Symbols::syn));
 
   REQUIRE(ebus::masterOf(0x05) == 0x00);
   REQUIRE(ebus::masterOf(0x00) == 0x00);

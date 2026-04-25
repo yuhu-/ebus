@@ -21,7 +21,7 @@
 ebus::Scheduler::Scheduler(Handler* handler)
     : handler_(handler), stop_flag_(true), next_id_(1) {
   // Reserve space for typical traffic bursts
-  item_queue_.reserve(32);
+  item_queue_.reserve(defaults::Scheduler::queue_reserve);
   attachHandlerCallbacks();
 }
 
@@ -31,7 +31,8 @@ void ebus::Scheduler::start() {
   bool expected = true;
   if (stop_flag_.compare_exchange_strong(expected, false)) {
     worker_ = std::make_unique<ServiceThread>(
-        "ebusScheduler", [this] { run(); }, 4096, 5, 1);
+        "ebusScheduler", [this] { run(); }, defaults::Orchestration::stack_size,
+        defaults::Orchestration::priority_high, 1);
     worker_->start();
   }
 }

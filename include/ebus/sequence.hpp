@@ -16,6 +16,7 @@
 #include <type_traits>
 #include <vector>
 
+#include "ebus/defaults.hpp"
 #include "ebus/protocol_math.hpp"
 #include "ebus/types.hpp"
 
@@ -28,7 +29,7 @@ namespace detail {
  * (SBO). Avoids heap allocations for sequences up to 64 bytes.
  */
 template <typename T = uint8_t,
-          size_t kInlineCapacity = default_sequence_capacity>
+          size_t kInlineCapacity = defaults::Sequence::default_capacity>
 class SmallByteVector {
  public:
   static_assert(std::is_trivially_copyable_v<T>,
@@ -162,10 +163,10 @@ class SmallByteVector {
  * (reduced) 0xaa <-> 0xa9 0x01 (extended)
  * (reduced) 0xa9 <-> 0xa9 0x00 (extended)
  */
-template <size_t kInlineCapacity = default_sequence_capacity>
+template <size_t kInlineCapacity = defaults::Sequence::default_capacity>
 class SequenceImpl {
  public:
-  static_assert(kInlineCapacity >= limits::max_telegram_bytes,
+  static_assert(kInlineCapacity >= defaults::Sequence::max_telegram_bytes,
                 "Sequence capacity too small");
 
   SequenceImpl() = default;
@@ -302,7 +303,7 @@ class SequenceImpl {
    */
   bool needsExtension() const noexcept {
     return std::any_of(sequence_.begin(), sequence_.end(),
-                       [](uint8_t b) { return Protocol::needsEscape(b); });
+                       [](uint8_t b) { return Symbols::needsEscape(b); });
   }
 
   /**
@@ -312,7 +313,7 @@ class SequenceImpl {
   bool needsReduction() const noexcept {
     if (!extended_) return false;
     return std::any_of(sequence_.begin(), sequence_.end(),
-                       [](uint8_t b) { return b == Protocol::sym_ext; });
+                       [](uint8_t b) { return b == Symbols::ext; });
   }
 
   void extend() {
@@ -320,7 +321,7 @@ class SequenceImpl {
 
     const size_t extra =
         std::count_if(sequence_.begin(), sequence_.end(),
-                      [](uint8_t b) { return Protocol::needsEscape(b); });
+                      [](uint8_t b) { return Symbols::needsEscape(b); });
 
     if (extra == 0) {
       extended_ = true;
@@ -333,9 +334,9 @@ class SequenceImpl {
     size_t write_idx = new_size - 1;
     for (int i = static_cast<int>(old_size) - 1; i >= 0; --i) {
       uint8_t b = sequence_[i];
-      if (Protocol::needsEscape(b)) {
+      if (Symbols::needsEscape(b)) {
         uint8_t escaped[2];
-        Protocol::escape(b, escaped);
+        Symbols::escape(b, escaped);
         sequence_[write_idx--] = escaped[1];
         sequence_[write_idx--] = escaped[0];
       } else {
@@ -356,8 +357,8 @@ class SequenceImpl {
     for (size_t read_idx = 0; read_idx < sequence_.size(); ++read_idx) {
       uint8_t unescaped;
       if (read_idx + 1 < sequence_.size() &&
-          Protocol::unescape(sequence_[read_idx], sequence_[read_idx + 1],
-                             unescaped)) {
+          Symbols::unescape(sequence_[read_idx], sequence_[read_idx + 1],
+                            unescaped)) {
         sequence_[write_idx++] = unescaped;
         ++read_idx;
       } else {
@@ -369,12 +370,12 @@ class SequenceImpl {
   }
 
   uint8_t crc() const {
-    uint8_t current_crc = Protocol::sym_zero;
+    uint8_t current_crc = Symbols::zero;
     for (uint8_t byte : sequence_) {
       if (!extended_) {
-        if (Protocol::needsEscape(byte)) {
+        if (Symbols::needsEscape(byte)) {
           uint8_t escaped[2];
-          Protocol::escape(byte, escaped);
+          Symbols::escape(byte, escaped);
           current_crc = calcCRC(escaped[0], current_crc);
           current_crc = calcCRC(escaped[1], current_crc);
         } else {
@@ -421,12 +422,12 @@ class SequenceImpl {
 /**
  * Default eBUS sequence with 64-byte SBO buffer.
  */
-using Sequence = SequenceImpl<default_sequence_capacity>;
+using Sequence = SequenceImpl<defaults::Sequence::default_capacity>;
 
 /**
  * Factory function to create a sequence from a raw ByteView.
  */
-template <size_t N = default_sequence_capacity>
+template <size_t N = defaults::Sequence::default_capacity>
 SequenceImpl<N> makeSequence(ByteView data, bool extended = false) {
   SequenceImpl<N> seq;
   seq.assign(data, extended);

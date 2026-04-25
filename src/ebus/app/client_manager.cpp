@@ -7,10 +7,10 @@
 
 #include <algorithm>
 #include <condition_variable>
+#include <ebus/defaults.hpp>
 #include <ebus/utils.hpp>
 
 #include "core/bus_monitor.hpp"
-#include "core/constants.hpp"
 
 #if defined(ESP32)
 #include <lwip/sockets.h>
@@ -61,7 +61,9 @@ void ebus::ClientManager::start() {
   if (running_.load(std::memory_order_acquire)) return;
   running_.store(true, std::memory_order_release);
   worker_ = std::make_unique<ServiceThread>(
-      "ebusClientManager", [this] { run(); }, 4096, 3, 0);
+      "ebusClientManager", [this] { run(); },
+      defaults::Orchestration::stack_size,
+      defaults::Orchestration::priority_med, 0);
   worker_->start();
   notifyWake();
 }
@@ -189,7 +191,7 @@ void ebus::ClientManager::run() {
       auto elapsed = now - last_state_change;
       auto timeout = (session_state_ == SessionState::transmit)
                          ? std::chrono::milliseconds(
-                               internal::Network::transmit_timeout_ms)
+                               defaults::Network::transmit_timeout_ms)
                          : active_timeout_;
       if (elapsed > timeout) {
         // stop active session safely
@@ -282,7 +284,7 @@ void ebus::ClientManager::run() {
     if (!activity) {
       std::unique_lock<std::mutex> lk(wake_mutex_);
       wake_cv_.wait_for(
-          lk, std::chrono::milliseconds(internal::Network::wake_interval_ms),
+          lk, std::chrono::milliseconds(defaults::Network::wake_interval_ms),
           [&] {
             return wake_flag_.load(std::memory_order_acquire) == true ||
                    !running_.load(std::memory_order_acquire);

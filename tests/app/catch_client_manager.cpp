@@ -58,18 +58,18 @@ TEST_CASE("ClientManager Orchestration (Regular + ReadOnly)") {
   std::vector<uint8_t> telegram = {0x33, 0xfe, 0xb5, 0x05, 0x04,
                                    0x27, 0x00, 0x2d, 0x00, 0x2c};
 
-  bus.writeByte(ebus::Protocol::sym_syn);
+  bus.writeByte(ebus::Symbols::syn);
 
   send(svReg[1], &telegram[0], 1, 0);
   manager.wake();  // Immediate wake
 
-  bus.writeByte(ebus::Protocol::sym_syn);
-  bus.writeByte(ebus::Protocol::sym_syn);
+  bus.writeByte(ebus::Symbols::syn);
+  bus.writeByte(ebus::Symbols::syn);
 
   CHECK_TEST("Request is pending",
              (waitCondition([&] { return req.busRequestPending(); })));
 
-  bus.writeByte(ebus::Protocol::sym_syn);
+  bus.writeByte(ebus::Symbols::syn);
 
   CHECK_TEST("Request resolved and won", (waitCondition([&] {
                return req.getResult() == ebus::RequestResult::first_won;
@@ -79,8 +79,7 @@ TEST_CASE("ClientManager Orchestration (Regular + ReadOnly)") {
   uint8_t echo;
   for (int i = 0; i < 4; ++i) {
     REQUIRE(readExact(svReg[1], &echo, 1));
-    CHECK_TEST("Regular received correct SYN echo",
-               echo == ebus::Protocol::sym_syn);
+    CHECK_TEST("Regular received correct SYN echo", echo == ebus::Symbols::syn);
   }
 
   REQUIRE(readExact(svReg[1], &echo, 1));
@@ -133,19 +132,19 @@ TEST_CASE("ClientManager Enhanced Active Sending") {
 
   REQUIRE((waitCondition([&] { return bus.getQueue() != nullptr; })));
 
-  bus.writeByte(ebus::Protocol::sym_syn);
+  bus.writeByte(ebus::Symbols::syn);
 
   uint8_t cmdStart[] = {0xc8, 0xb3};
   send(svEnh[1], cmdStart, 2, 0);
   manager.wake();
 
-  bus.writeByte(ebus::Protocol::sym_syn);
-  bus.writeByte(ebus::Protocol::sym_syn);
+  bus.writeByte(ebus::Symbols::syn);
+  bus.writeByte(ebus::Symbols::syn);
 
   CHECK_TEST("Request is pending",
              (waitCondition([&] { return req.busRequestPending(); })));
 
-  bus.writeByte(ebus::Protocol::sym_syn);
+  bus.writeByte(ebus::Symbols::syn);
 
   CHECK_TEST("Arbitration resolved and won", (waitCondition([&] {
                return req.getResult() == ebus::RequestResult::first_won;

@@ -56,7 +56,7 @@ TEST_CASE("Scheduler: Simulation", "[app][scheduler]") {
   // Retry Success: Master to fe. Simulate NAK (ff) twice, then success on 3rd
   // try.
   auto retry_trigger = ebus::toVector(frameMasterHex(source, "fe070400"));
-  simulator.addResponse({retry_trigger, {ebus::Protocol::sym_nak}, 5, 2});
+  simulator.addResponse({retry_trigger, {ebus::Symbols::nak}, 5, 2});
   simulator.addResponse(
       {retry_trigger, ebus::toVector(frameSlaveHex("013f")), 5, 1});
 

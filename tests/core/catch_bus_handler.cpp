@@ -125,7 +125,7 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
 
     // Pump SYNs until arbitration starts.
     for (int i = 0; i < 4; ++i) {
-      bus.writeByte(ebus::Protocol::sym_syn);
+      bus.writeByte(ebus::Symbols::syn);
       std::this_thread::sleep_for(std::chrono::milliseconds(50));
       if (handler.getState() != ebus::HandlerState::passive_receive_master)
         break;
@@ -149,15 +149,15 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
     telegram_count.store(0);
     handler.sendActiveMessage(msg);
 
-    bus.writeByte(ebus::Protocol::sym_syn);
+    bus.writeByte(ebus::Symbols::syn);
     std::this_thread::sleep_for(std::chrono::milliseconds(20));
     REQUIRE(request.getLockCounter() == 1);
 
-    bus.writeByte(ebus::Protocol::sym_syn);
+    bus.writeByte(ebus::Symbols::syn);
     std::this_thread::sleep_for(std::chrono::milliseconds(20));
     REQUIRE(request.getLockCounter() == 0);
 
-    bus.writeByte(ebus::Protocol::sym_syn);
+    bus.writeByte(ebus::Symbols::syn);
     // wait for completion
     for (int i = 0; i < 50 && telegram_count.load() == 0; ++i)
       std::this_thread::sleep_for(std::chrono::milliseconds(10));

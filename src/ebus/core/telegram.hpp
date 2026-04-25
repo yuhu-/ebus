@@ -6,6 +6,7 @@
 #pragma once
 
 #include <cstddef>
+#include <ebus/defaults.hpp>
 #include <ebus/sequence.hpp>
 #include <ebus/types.hpp>
 #include <ebus/utils.hpp>
@@ -44,7 +45,7 @@ namespace ebus {
  * ACK..Acknowledgement byte (0x00 OK, 0xff NOK)
  * SYN..Synchronisation byte (0xaa)
  */
-template <size_t kInlineCapacity = default_sequence_capacity>
+template <size_t kInlineCapacity = defaults::Sequence::default_capacity>
 class TelegramImpl {
  public:
   TelegramImpl() = default;
@@ -66,10 +67,10 @@ class TelegramImpl {
     if (!parseSequencePart(sequence, cursor, true)) return;
 
     if (telegram_type_ != TelegramType::broadcast &&
-        master_ack_ == Protocol::sym_nak) {
+        master_ack_ == Symbols::nak) {
       if (!parseSequencePart(sequence, cursor, true)) return;
       // If second attempt also results in NAK, it's a protocol failure.
-      if (master_ack_ == Protocol::sym_nak)
+      if (master_ack_ == Symbols::nak)
         master_state_ = SequenceState::err_ack_negative;
     }
 
@@ -78,9 +79,9 @@ class TelegramImpl {
     // 2. Parse Slave Part for MS telegrams.
     if (telegram_type_ == TelegramType::master_slave) {
       if (!parseSequencePart(sequence, cursor, false)) return;
-      if (slave_ack_ == Protocol::sym_nak) {
+      if (slave_ack_ == Symbols::nak) {
         if (!parseSequencePart(sequence, cursor, false)) return;
-        if (slave_ack_ == Protocol::sym_nak)
+        if (slave_ack_ == Symbols::nak)
           slave_state_ = SequenceState::err_ack_negative;
       }
     }
@@ -109,7 +110,7 @@ class TelegramImpl {
       master_state_ = SequenceState::err_target_address;
       return;
     }
-    if (uint8_t(sequence[4]) > limits::max_data_bytes) {
+    if (uint8_t(sequence[4]) > defaults::Sequence::max_data_bytes) {
       master_state_ = SequenceState::err_data_byte;
       return;
     }
@@ -146,7 +147,7 @@ class TelegramImpl {
       slave_state_ = SequenceState::err_seq_too_short;
       return;
     }
-    if (uint8_t(sequence[0]) > limits::max_data_bytes) {
+    if (uint8_t(sequence[0]) > defaults::Sequence::max_data_bytes) {
       slave_state_ = SequenceState::err_data_byte;
       return;
     }
@@ -171,13 +172,13 @@ class TelegramImpl {
     telegram_type_ = TelegramType::undefined;
     master_.clear();
     master_nn_ = 0;
-    master_crc_ = Protocol::sym_zero;
-    master_ack_ = Protocol::sym_zero;
+    master_crc_ = Symbols::zero;
+    master_ack_ = Symbols::zero;
     master_state_ = SequenceState::seq_empty;
     slave_.clear();
     slave_nn_ = 0;
-    slave_crc_ = Protocol::sym_zero;
-    slave_ack_ = Protocol::sym_zero;
+    slave_crc_ = Symbols::zero;
+    slave_ack_ = Symbols::zero;
     slave_state_ = SequenceState::seq_empty;
   }
 
@@ -275,7 +276,7 @@ class TelegramImpl {
     return res;
   }
   static TelegramType typeOf(uint8_t byte) {
-    if (byte == Protocol::sym_broad)
+    if (byte == Symbols::broad)
       return TelegramType::broadcast;
     else if (isMaster(byte))
       return TelegramType::master_master;
@@ -298,7 +299,7 @@ class TelegramImpl {
       return SequenceState::err_target_address;
 
     // data byte is invalid
-    if (uint8_t(sequence[offset + 4]) > limits::max_data_bytes)
+    if (uint8_t(sequence[offset + 4]) > defaults::Sequence::max_data_bytes)
       return SequenceState::err_data_byte;
 
     // sequence is too short (incl. CRC)
@@ -316,7 +317,7 @@ class TelegramImpl {
     if (sequence.size() < offset + 1) return SequenceState::err_seq_too_short;
 
     // data byte is invalid
-    if (uint8_t(sequence[offset + 0]) > limits::max_data_bytes)
+    if (uint8_t(sequence[offset + 0]) > defaults::Sequence::max_data_bytes)
       return SequenceState::err_data_byte;
 
     // sequence is too short (incl. CRC)
@@ -332,14 +333,14 @@ class TelegramImpl {
 
   SequenceImpl<kInlineCapacity> master_;
   size_t master_nn_ = 0;
-  uint8_t master_crc_ = Protocol::sym_zero;
-  uint8_t master_ack_ = Protocol::sym_zero;
+  uint8_t master_crc_ = Symbols::zero;
+  uint8_t master_ack_ = Symbols::zero;
   SequenceState master_state_ = SequenceState::seq_empty;
 
   SequenceImpl<kInlineCapacity> slave_;
   size_t slave_nn_ = 0;
-  uint8_t slave_crc_ = Protocol::sym_zero;
-  uint8_t slave_ack_ = Protocol::sym_zero;
+  uint8_t slave_crc_ = Symbols::zero;
+  uint8_t slave_ack_ = Symbols::zero;
   SequenceState slave_state_ = SequenceState::seq_empty;
 
   template <size_t C>
@@ -362,8 +363,7 @@ class TelegramImpl {
           return false;
         }
         master_ack_ = sequence[offset++];
-        if (master_ack_ != Protocol::sym_ack &&
-            master_ack_ != Protocol::sym_nak) {
+        if (master_ack_ != Symbols::ack && master_ack_ != Symbols::nak) {
           master_state_ = SequenceState::err_ack_invalid;
           return false;
         }
@@ -384,7 +384,7 @@ class TelegramImpl {
         return false;
       }
       slave_ack_ = sequence[offset++];
-      if (slave_ack_ != Protocol::sym_ack && slave_ack_ != Protocol::sym_nak) {
+      if (slave_ack_ != Symbols::ack && slave_ack_ != Symbols::nak) {
         slave_state_ = SequenceState::err_ack_invalid;
         return false;
       }
@@ -396,12 +396,12 @@ class TelegramImpl {
 /**
  * Default eBUS telegram with 64-byte SBO buffers.
  */
-using Telegram = TelegramImpl<default_sequence_capacity>;
+using Telegram = TelegramImpl<defaults::Sequence::default_capacity>;
 
 /**
  * Factory function to create and parse a telegram from a raw ByteView.
  */
-template <size_t N = default_sequence_capacity>
+template <size_t N = defaults::Sequence::default_capacity>
 TelegramImpl<N> makeTelegram(ByteView data) {
   SequenceImpl<N> seq;
   seq.assign(data, true);  // Assume extended wire format

@@ -42,7 +42,7 @@ TEST_CASE("Request: first -> firstWon flow", "[core][request]") {
   r.requestBus(0x33);
   r.busRequestCompleted();  // moves to first
 
-  auto res = r.run(ebus::Protocol::sym_syn);
+  auto res = r.run(ebus::Symbols::syn);
   REQUIRE(res == ebus::RequestResult::first_syn);
 
   res = r.run(0x33);  // our address observed -> won
@@ -59,7 +59,7 @@ TEST_CASE("Request: first -> firstRetry -> retry -> second -> secondWon",
   r.busRequestCompleted();  // state = first
 
   // observe SYN first
-  auto res = r.run(ebus::Protocol::sym_syn);
+  auto res = r.run(ebus::Symbols::syn);
   REQUIRE(res == ebus::RequestResult::first_syn);
 
   // simulate arbitration loss but same priority class (lower nibble match)
@@ -70,7 +70,7 @@ TEST_CASE("Request: first -> firstRetry -> retry -> second -> secondWon",
   REQUIRE(r.busRequestPending() == true);  // re-armed
 
   // retry phase: see SYN -> move to second
-  res = r.run(ebus::Protocol::sym_syn);
+  res = r.run(ebus::Symbols::syn);
   REQUIRE(res == ebus::RequestResult::retry_syn);
   REQUIRE(r.getState() == ebus::RequestState::second);
 
@@ -104,7 +104,7 @@ TEST_CASE("Request: Legacy Edge Cases", "[core][request][legacy]") {
     r.requestBus(0x33);
     r.busRequestCompleted();
 
-    r.run(ebus::Protocol::sym_syn);
+    r.run(ebus::Symbols::syn);
     auto res = r.run(0x5c);
 
     REQUIRE(res == ebus::RequestResult::first_error);
@@ -115,7 +115,7 @@ TEST_CASE("Request: Legacy Edge Cases", "[core][request][legacy]") {
     // We share priority class (0x3), so we enter retry...
     r.requestBus(0x33);
     r.busRequestCompleted();
-    r.run(ebus::Protocol::sym_syn);
+    r.run(ebus::Symbols::syn);
     r.run(0x13);
     REQUIRE(r.getState() == ebus::RequestState::retry);
 
@@ -129,7 +129,7 @@ TEST_CASE("Request: Legacy Edge Cases", "[core][request][legacy]") {
     // Test from legacy: We are 0x30, bus is 0x10. Same Prio Class (0).
     r.requestBus(0x30);
     r.busRequestCompleted();
-    r.run(ebus::Protocol::sym_syn);
+    r.run(ebus::Symbols::syn);
 
     auto res = r.run(0x10);
     REQUIRE(res == ebus::RequestResult::first_retry);

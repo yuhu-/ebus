@@ -5,9 +5,10 @@
 
 #include "core/bus_monitor.hpp"
 
-#include "core/constants.hpp"
+#include <ebus/defaults.hpp>
 
-ebus::BusMonitor::BusMonitor() : utilization_history_(internal::history_size) {}
+ebus::BusMonitor::BusMonitor()
+    : utilization_history_(defaults::Logging::history_size) {}
 
 void ebus::BusMonitor::resetMetrics() {
   std::lock_guard<std::mutex> lock(metrics_mutex);
@@ -94,7 +95,7 @@ ebus::metrics::SystemMetrics ebus::BusMonitor::getMetrics() const {
   hm.callback_telegram = callback_telegram.getValues();
   hm.callback_error = callback_error.getValues();
 
-  for (size_t i = 0; i < num_handler_states; ++i) {
+  for (size_t i = 0; i < FSM::num_handler_states; ++i) {
     hm.state_timings[i] = handler_timing[i].getValues();
   }
 

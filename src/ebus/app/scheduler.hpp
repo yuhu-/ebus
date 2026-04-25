@@ -8,6 +8,7 @@
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
+#include <ebus/defaults.hpp>
 #include <ebus/sequence.hpp>
 #include <functional>
 #include <mutex>
@@ -15,7 +16,6 @@
 #include <string>
 #include <vector>
 
-#include "core/constants.hpp"
 #include "core/handler.hpp"
 #include "platform/queue.hpp"
 #include "platform/service_thread.hpp"
@@ -113,7 +113,7 @@ class Scheduler {
 
   // Active transfer state
   std::atomic<uint32_t> current_attempt_id_{0};
-  Queue<Event> event_queue_{internal::event_queue_capacity};
+  Queue<Event> event_queue_{defaults::Scheduler::queue_reserve};
 
   // Configuration
   int max_send_attempts_ = defaults::Scheduler::max_send_attempts;

@@ -9,6 +9,7 @@
 #include <atomic>
 #include <chrono>
 #include <cstdint>
+#include <ebus/defaults.hpp>
 #include <ebus/metrics.hpp>
 #include <ebus/types.hpp>
 #include <functional>
@@ -89,7 +90,7 @@ class Request {
       &Request::observe, &Request::first, &Request::retry, &Request::second};
 
   static_assert(sizeof(kStateRequests) / sizeof(kStateRequests[0]) ==
-                    num_request_states,
+                    ebus::FSM::num_request_states,
                 "kStateRequests table size does not match NUM_REQUEST_STATES");
 
   RequestState state_ = RequestState::observe;

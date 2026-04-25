@@ -21,7 +21,7 @@ static void force_request(ebus::Request& req, uint8_t addr) {
   req.setMaxLockCounter(0);
   for (int i = 0; i < 30; ++i) {
     if (req.getLockCounter() == 0) break;
-    req.run(ebus::Protocol::sym_syn);
+    req.run(ebus::Symbols::syn);
   }
   req.requestBus(addr);
 }
@@ -50,8 +50,8 @@ TEST_CASE("Bus: Basic Communication", "[platform][bus]") {
   }
 
   REQUIRE(received.size() >= 2);
-  REQUIRE(received[0].byte == ebus::Protocol::sym_syn);  // SYN
-  REQUIRE(received[1].byte == 0x03);                     // address
+  REQUIRE(received[0].byte == ebus::Symbols::syn);  // SYN
+  REQUIRE(received[1].byte == 0x03);                // address
 
   // Ensure no premature SYN during traffic
   bool prematureSyn = false;
@@ -60,7 +60,7 @@ TEST_CASE("Bus: Basic Communication", "[platform][bus]") {
     std::this_thread::sleep_for(std::chrono::milliseconds(20));
     ebus::BusEvent tempEv;
     while (queue->tryPop(tempEv)) {
-      if (tempEv.byte == ebus::Protocol::sym_syn) prematureSyn = true;
+      if (tempEv.byte == ebus::Symbols::syn) prematureSyn = true;
     }
   }
   REQUIRE(!prematureSyn);
@@ -87,7 +87,7 @@ TEST_CASE("Bus: SYN Timing", "[platform][bus]") {
 
   for (int i = 0; i < 4; ++i) {
     if (queue->pop(ev, std::chrono::milliseconds(200))) {
-      if (ev.byte == ebus::Protocol::sym_syn)
+      if (ev.byte == ebus::Symbols::syn)
         timestamps.push_back(std::chrono::steady_clock::now());
     }
   }

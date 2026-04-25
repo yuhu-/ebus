@@ -15,6 +15,7 @@
 // Public headers required for the API signatures
 #include "ebus/callbacks.hpp"
 #include "ebus/config.hpp"
+#include "ebus/defaults.hpp"
 #include "ebus/device.hpp"
 #include "ebus/metrics.hpp"
 #include "ebus/sequence.hpp"

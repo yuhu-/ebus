@@ -6,11 +6,11 @@
 #pragma once
 
 #include <array>
+#include <ebus/defaults.hpp>
+#include <ebus/metrics.hpp>
 #include <functional>
 #include <mutex>
 
-#include "core/constants.hpp"
-#include "ebus/metrics.hpp"
 #include "utils/circular_buffer.hpp"
 #include "utils/timing_stats.hpp"
 
@@ -80,7 +80,7 @@ class BusMonitor {
   detail::CircularBuffer<float> utilization_history_;
 
   // State-machine execution timings
-  std::array<TimingStats, num_handler_states> handler_timing = {};
+  std::array<TimingStats, FSM::num_handler_states> handler_timing = {};
 
  private:
   metrics::HandlerMetrics handler_acc_;

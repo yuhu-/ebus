@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <ebus/callbacks.hpp>
 #include <ebus/config.hpp>
+#include <ebus/defaults.hpp>
 #include <functional>
 
 #include "core/bus_events.hpp"
@@ -97,8 +98,8 @@ class BusFreeRtos {
 
   // The byte time at 2400 baud for 10 bits with a 0.5-bit offset is
   // approximately 9.5 * bit_time_us = 9.5 * 416.67 us = 3958.33 us
-  static constexpr int64_t byte_time_center_us_ =
-      static_cast<int64_t>(limits::byte_center_bits * bit_time_us);
+  static constexpr int64_t byte_time_center_us_ = static_cast<int64_t>(
+      ebus::Physical::byte_center_bits * ebus::Physical::bit_time_us);
 
   // This value can be adjusted if the bus ISR is not working as expected.
   volatile uint16_t window_ = 4300;  // usually between 4300-4456 us
