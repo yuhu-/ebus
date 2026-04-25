@@ -63,9 +63,9 @@ SCENARIO("Handler processes eBUS messages correctly", "[core][handler]") {
         {ebus::MessageType::active, 0x33, "active BC: Request Bus - Normal", "33feb5050427002d002c", "feb5050427002d00", {1, 0}},
         {ebus::MessageType::active, 0x33, "active BC: Request Bus - Priority lost", "01feb5050427002d007b", "feb505042700cc00", {1, 0}},
         {ebus::MessageType::active, 0x33, "active BC: Request Bus - Priority lost/wrong byte", "01ab", "feb505042700cc00", {0, 1}},
-        {ebus::MessageType::active, 0x33, "active BC: Request Bus - Priority fit/won", "13aa33feb505042700cc0010", "feb505042700cc00", {1, 1}},
-        {ebus::MessageType::active, 0x33, "active BC: Request Bus - Priority fit/lost", "13aa13feb5050427002d0088", "feb505042700cc00", {1, 1}},
-        {ebus::MessageType::active, 0x33, "active BC: Request Bus - Priority retry/error", "13a0", "feb505042700cc00", {0, 1}},
+        {ebus::MessageType::active, 0x33, "active BC: Request Bus - Priority fit/won", "13aa33feb505042700cc0010", "feb505042700cc00", {1, 0}},
+        {ebus::MessageType::active, 0x33, "active BC: Request Bus - Priority fit/lost", "13aa13feb5050427002d0088", "feb505042700cc00", {1, 0}},
+        {ebus::MessageType::active, 0x33, "active BC: Request Bus - Priority retry/error", "13a0", "feb505042700cc00", {0, 0}},
         {ebus::MessageType::active, 0x33, "active MS: Normal", "3352b509030d46003600013fa400", "52b509030d4600", {1, 0}},
         {ebus::MessageType::active, 0x33, "active MS: Master valid -> NAK -> Retry OK - Slave CRC error -> NAK -> Retry OK", "3352b509030d460036ff3352b509030d46003600013fa3ff013fa400", "52b509030d4600", {1, 1}},
         {ebus::MessageType::active, 0x33, "active MS: Master valid -> NAK -> Retry OK - Slave CRC error -> NAK -> Retry NAK", "3352b509030d460036ff3352b509030d46003600013fa3ff013fa3ff", "52b509030d4600", {0, 3}},
@@ -77,7 +77,7 @@ SCENARIO("Handler processes eBUS messages correctly", "[core][handler]") {
     for (const auto& tc : test_cases) {
       WHEN(tc.description) {
         ebus::BusConfig config = {.device = "/dev/null", .simulate = true};
-        ebus::RuntimeConfig runtime{.address = 0x33, .window = 50, .offset = 5};
+        ebus::RuntimeConfig runtime = {.address = 0x33};
         ebus::Request request;
         ebus::BusMonitor monitor;
         ebus::Bus bus(config, runtime, &request, &monitor);
@@ -147,7 +147,8 @@ SCENARIO("Handler processes eBUS messages correctly", "[core][handler]") {
                        request.getLockCounter(),
                        std::chrono::steady_clock::now()});
 
-          if (seq[i] == ebus::sym_syn && request.busRequestPending()) {
+          if (seq[i] == ebus::Protocol::sym_syn &&
+              request.busRequestPending()) {
             INFO("ISR - write address");
             bus.writeByte(request.busRequestAddress());
             busRequestFlag = true;

@@ -6,9 +6,9 @@
 #pragma once
 
 #include <algorithm>
+#include <charconv>
 #include <cmath>
 #include <cstdint>
-#include <charconv>
 #include <initializer_list>
 #include <iterator>
 #include <string>
@@ -16,11 +16,53 @@
 #include <utility>
 #include <vector>
 
-#include "ebus/addressing.hpp"
-#include "ebus/definitions.hpp"
 #include "ebus/protocol_math.hpp"
+#include "ebus/types.hpp"
 
 namespace ebus {
+
+/**
+ * Escapes a string for use in a JSON value.
+ */
+inline std::string escapeJson(const std::string& s) {
+  std::string res;
+  res.reserve(s.length());
+  for (char c : s) {
+    switch (c) {
+      case '"':
+        res += "\\\"";
+        break;
+      case '\\':
+        res += "\\\\";
+        break;
+      case '\b':
+        res += "\\b";
+        break;
+      case '\f':
+        res += "\\f";
+        break;
+      case '\n':
+        res += "\\n";
+        break;
+      case '\r':
+        res += "\\r";
+        break;
+      case '\t':
+        res += "\\t";
+        break;
+      default:
+        if (static_cast<unsigned char>(c) < 0x20) {
+          static const char hex[] = "0123456789abcdef";
+          res += "\\u00";
+          res += hex[(static_cast<unsigned char>(c) >> 4) & 0xf];
+          res += hex[static_cast<unsigned char>(c) & 0xf];
+        } else {
+          res += c;
+        }
+    }
+  }
+  return res;
+}
 
 // --- Hex and String Conversion ---
 inline std::string toString(uint8_t byte) {
@@ -60,7 +102,8 @@ inline std::vector<uint8_t> toVector(const std::string& str) {
   result.reserve(str.size() / 2);
   for (size_t i = 0; i + 1 < str.size(); i += 2) {
     uint8_t value = 0;
-    auto [ptr, ec] = std::from_chars(str.data() + i, str.data() + i + 2, value, 16);
+    auto [ptr, ec] =
+        std::from_chars(str.data() + i, str.data() + i + 2, value, 16);
     if (ec == std::errc{}) {
       result.push_back(value);
     }

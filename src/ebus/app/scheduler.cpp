@@ -9,6 +9,7 @@
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
+#include <ebus/types.hpp>
 #include <ebus/utils.hpp>
 #include <functional>
 #include <memory>
@@ -17,13 +18,8 @@
 #include <string>
 #include <vector>
 
-ebus::Scheduler::Scheduler(Handler* handler, int max_send_attempts,
-                           Duration base_backoff)
-    : handler_(handler),
-      stop_flag_(true),
-      next_id_(1),
-      max_send_attempts_(max_send_attempts),
-      base_backoff_(base_backoff) {
+ebus::Scheduler::Scheduler(Handler* handler)
+    : handler_(handler), stop_flag_(true), next_id_(1) {
   // Reserve space for typical traffic bursts
   item_queue_.reserve(32);
   attachHandlerCallbacks();
@@ -160,6 +156,8 @@ void ebus::Scheduler::run() {
     std::string last_error = "unknown";
     LogLevel result_level = LogLevel::error;
     RequestResult result_code = RequestResult::first_error;
+    HandlerState result_h_state = HandlerState::passive_receive_master;
+    RequestState result_r_state = RequestState::observe;
     Sequence slave_response;
     uint32_t attempt_id = current_item.id;
 
@@ -203,6 +201,8 @@ void ebus::Scheduler::run() {
           last_error = ev.error;
           result_code = ev.result;
           result_level = ev.level;
+          result_h_state = ev.handler_state;
+          result_r_state = ev.request_state;
           break;
         }
 
@@ -237,6 +237,8 @@ void ebus::Scheduler::run() {
                                   result_level,
                                   last_error,
                                   result_code,
+                                  result_h_state,
+                                  result_r_state,
                                   current_item.message,
                                   {}});
         }
@@ -310,6 +312,8 @@ void ebus::Scheduler::attachHandlerCallbacks() {
     ev.id = id;
     ev.message_type = info.message_type;
     ev.telegram_type = info.telegram_type;
+    ev.handler_state = info.handler_state;
+    ev.request_state = info.request_state;
     ev.master.assign(info.master);
     ev.slave.assign(info.slave);
     event_queue_.tryPush(ev);
@@ -337,6 +341,8 @@ void ebus::Scheduler::attachHandlerCallbacks() {
     ev.id = id;
     ev.level = info.level;
     ev.result = info.result;
+    ev.handler_state = info.handler_state;
+    ev.request_state = info.request_state;
     ev.error = info.message.data();  // Points to the error message literal
     ev.master.assign(info.master);
     ev.slave.assign(info.slave);

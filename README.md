@@ -39,17 +39,6 @@ make
 ctest
 ```
 
-### Legacy Development Tests
-
-The project includes a collection of legacy tests used during development. These tests often provide detailed protocol traces and insights that are useful for debugging complex arbitration or timing issues.
-
-These tests are excluded from the default build to keep build times fast. To enable them, use the `EBUS_BUILD_LEGACY_TESTS` CMake option:
-
-```bash
-cmake -DEBUS_BUILD_LEGACY_TESTS=ON ..
-make
-```
-
 For reporting bugs and requesting features, please use the GitHub [Issues](https://github.com/yuhu-/ebus/issues) page.
 
 ---

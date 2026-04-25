@@ -8,34 +8,19 @@
 #include <chrono>
 #include <cstdint>
 #include <functional>
-#include <map>
 #include <memory>
 #include <string>
 #include <vector>
 
 // Public headers required for the API signatures
+#include "ebus/callbacks.hpp"
 #include "ebus/config.hpp"
-#include "ebus/definitions.hpp"
 #include "ebus/device.hpp"
 #include "ebus/metrics.hpp"
 #include "ebus/sequence.hpp"
+#include "ebus/types.hpp"
 
 namespace ebus {
-
-struct ErrorEntry {
-  LogLevel level;
-  std::string message;
-  RequestResult result;
-  std::vector<uint8_t> master;
-  std::vector<uint8_t> slave;
-  double utilization;
-  std::chrono::system_clock::time_point timestamp;
-
-  // Custom stringifier for human-readable logs
-  std::string toString() const {
-    return message + " (Result: " + ebus::toString(result) + ")";
-  }
-};
 
 struct Impl;
 
@@ -61,6 +46,7 @@ class Controller {
   void setFsmTimeout(std::chrono::milliseconds timeout);
   void setWatchdogTimeout(std::chrono::milliseconds timeout);
   void setClientActiveTimeout(std::chrono::milliseconds timeout);
+  void setOutboundBufferSize(size_t size);
 
   // Unified Bus Listeners
   void setReactiveMasterSlaveCallback(ReactiveMasterSlaveCallback callback);
@@ -89,6 +75,7 @@ class Controller {
 
   // Device & Network State
   std::vector<DeviceInfo> getDeviceInfo() const;
+  std::string getDeviceInfoJson() const;
 
   // Bus Health Metrics
   void resetMetrics();
@@ -97,6 +84,8 @@ class Controller {
 
   // Diagnostic Log
   std::vector<ErrorEntry> getErrors() const;
+  std::string getErrorsJson() const;
+  size_t getErrorLogCapacity() const;
   void clearErrors();
 
   bool isConfigured() const noexcept;

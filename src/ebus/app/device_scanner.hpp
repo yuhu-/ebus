@@ -18,6 +18,7 @@
 #include <vector>
 
 #include "app/device_manager.hpp"
+#include "core/constants.hpp"
 #include "core/handler.hpp"
 
 namespace ebus {
@@ -56,7 +57,7 @@ class DeviceScanner {
 
  private:
   DeviceManager* device_manager_ = nullptr;
-  uint8_t own_address_ = ebus::default_address;
+  uint8_t own_address_ = defaults::address;
 
   // Protects all internal state across threads (Controller and Scheduler)
   mutable std::mutex mutex_;
@@ -66,8 +67,9 @@ class DeviceScanner {
   std::queue<Sequence> manual_queue_;
 
   // Timing configuration for the discovery/startup phase.
-  std::chrono::seconds initial_scan_delay_{default_initial_scan_delay_s};
-  std::chrono::seconds startup_scan_interval_{default_startup_scan_interval_s};
+  std::chrono::seconds initial_scan_delay_{internal::Scanner::initial_delay_s};
+  std::chrono::seconds startup_scan_interval_{
+      internal::Scanner::startup_interval_s};
 
   // The wall-clock time when the next startup scan iteration is allowed to run
   std::chrono::steady_clock::time_point next_startup_scan_time_;
@@ -82,7 +84,7 @@ class DeviceScanner {
   // Number of full discovery iterations performed so far
   uint8_t startup_scan_count_ = 0;
   // Threshold to stop periodic discovery
-  uint8_t max_startup_scans_ = default_max_startup_scans;
+  uint8_t max_startup_scans_ = internal::Scanner::max_startup_scans;
   // Buffer of commands for the currently active startup scan iteration
   std::queue<Sequence> startup_queue_;
 

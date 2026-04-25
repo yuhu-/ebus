@@ -8,7 +8,7 @@
 
 #include <catch2/catch_all.hpp>
 #include <chrono>
-#include <ebus/definitions.hpp>
+#include <ebus/types.hpp>
 #include <vector>
 
 #include "app/client.hpp"
@@ -21,7 +21,8 @@ TEST_CASE("ReadOnlyClient: capability checks", "[app][client][readonly]") {
   REQUIRE(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
 
   ebus::Request req;
-  ebus::ReadOnlyClient client(sv[0], &req);
+  ebus::ReadOnlyClient client(sv[0], &req,
+                              ebus::defaults::Network::outbound_buffer_size);
 
   REQUIRE(!client.isWriteCapable());
   REQUIRE(!client.wantsToSend());
@@ -35,7 +36,8 @@ TEST_CASE("EnhancedClient: Protocol basics", "[app][client][enhanced]") {
   REQUIRE(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
 
   ebus::Request req;
-  ebus::EnhancedClient client(sv[0], &req);
+  ebus::EnhancedClient client(sv[0], &req,
+                              ebus::defaults::Network::outbound_buffer_size);
 
   // Simple data byte (< 0x80)
   uint8_t out;
@@ -74,15 +76,16 @@ TEST_CASE("EnhancedClient: Encoded responses mapping",
 
   ebus::Request req;
   req.setMaxLockCounter(0);
-  ebus::EnhancedClient client(sv[0], &req);
+  ebus::EnhancedClient client(sv[0], &req,
+                              ebus::defaults::Network::outbound_buffer_size);
 
   // 1. Test: Arbitration Win
   if (req.busAvailable()) req.requestBus(0x33, true);
   req.busRequestCompleted();
 
   // Transparent Sniffer: Bridge client must see the SYN that opens the window
-  req.run(ebus::sym_syn);
-  client.onBusByte({ebus::sym_syn, req.getState(), req.getResult(),
+  req.run(ebus::Protocol::sym_syn);
+  client.onBusByte({ebus::Protocol::sym_syn, req.getState(), req.getResult(),
                     req.getLockCounter(), std::chrono::steady_clock::now()});
 
   req.run(0x33);  // Move FSM to firstWon
@@ -127,7 +130,8 @@ TEST_CASE("EnhancedClient: Invalid protocol handling",
   REQUIRE(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
 
   ebus::Request req;
-  ebus::EnhancedClient client(sv[0], &req);
+  ebus::EnhancedClient client(sv[0], &req,
+                              ebus::defaults::Network::outbound_buffer_size);
 
   uint8_t out;
   uint8_t err_resp[2];
@@ -146,7 +150,8 @@ TEST_CASE("EnhancedClient: Invalid protocol handling",
 
   // Re-establish and test invalid second-byte prefix
   REQUIRE(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
-  ebus::EnhancedClient client2(sv[0], &req);
+  ebus::EnhancedClient client2(sv[0], &req,
+                               ebus::defaults::Network::outbound_buffer_size);
 
   uint8_t invalid_b2_prefix[] = {0xc6, 0x00};
   send(sv[1], invalid_b2_prefix, 2, 0);

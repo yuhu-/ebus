@@ -9,8 +9,8 @@
 #include <atomic>
 #include <chrono>
 #include <cstdint>
-#include <ebus/definitions.hpp>
 #include <ebus/metrics.hpp>
+#include <ebus/types.hpp>
 #include <functional>
 
 namespace ebus {
@@ -62,8 +62,8 @@ class Request {
  private:
   BusMonitor* monitor_ = nullptr;
 
-  uint8_t max_lock_counter_ = ebus::default_lock_counter;
-  uint8_t lock_counter_ = ebus::max_lock_counter;
+  uint8_t max_lock_counter_ = defaults::Arbitration::lock_counter;
+  uint8_t lock_counter_ = defaults::Arbitration::lock_counter;
 
   uint8_t request_address_ = 0;
 

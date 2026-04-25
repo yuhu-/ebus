@@ -8,8 +8,7 @@
 #include <functional>
 #include <string_view>
 
-#include "ebus/enums.hpp"
-#include "ebus/sequence.hpp" 
+#include "ebus/sequence.hpp"
 #include "ebus/types.hpp"
 
 namespace ebus {
@@ -19,6 +18,8 @@ struct TelegramInfo {
   uint32_t retry_count = 0;
   MessageType message_type;
   TelegramType telegram_type;
+  HandlerState handler_state;
+  RequestState request_state;
   ByteView master;
   ByteView slave;
 };
@@ -28,6 +29,8 @@ struct ErrorInfo {
   LogLevel level;
   std::string_view message;
   RequestResult result;
+  HandlerState handler_state;
+  RequestState request_state;
   ByteView master;
   ByteView slave;
   double utilization = 0.0;
@@ -45,6 +48,11 @@ struct ResultInfo {
   ByteView master;
   ByteView slave;
 };
+
+/**
+ * Serializes ErrorInfo to a JSON object string.
+ */
+std::string toJson(const ErrorInfo& info);
 
 /**
  * Callback signatures

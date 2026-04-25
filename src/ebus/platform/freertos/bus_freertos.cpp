@@ -105,35 +105,38 @@ void ebus::BusFreeRtos::writeByte(const uint8_t byte) {
 
 void ebus::BusFreeRtos::setWindow(const uint16_t window) {
   portENTER_CRITICAL_ISR(&timer_mux_);
-  // Validate window
-  window_ =
-      (window < min_window || window > max_window) ? default_window : window;
+  // Validate window against limits
+  window_ = (window < limits::min_window || window > limits::max_window)
+                ? defaults::Bus::window
+                : window;
   portEXIT_CRITICAL_ISR(&timer_mux_);
 }
 
 void ebus::BusFreeRtos::setOffset(const uint16_t offset) {
   portENTER_CRITICAL_ISR(&timer_mux_);
-  // Validate offset
-  offset_ = (offset > max_offset) ? default_offset : offset;
+  // Validate offset against limits
+  offset_ = (offset > limits::max_offset) ? defaults::Bus::offset : offset;
   portEXIT_CRITICAL_ISR(&timer_mux_);
 }
 
 void ebus::BusFreeRtos::setRuntimeConfig(const RuntimeConfig& runtime) {
-  bool was_enabled = runtime_.enable_syn;
+  bool was_enabled = runtime_.bus.syn.enabled;
   runtime_ = runtime;
 
   // Validate window and offset
-  if (runtime_.window < min_window || runtime_.window > max_window)
-    runtime_.window = default_window;
-  if (runtime_.offset > max_offset) runtime_.offset = default_offset;
+  if (runtime_.bus.timing.window < limits::min_window ||
+      runtime_.bus.timing.window > limits::max_window)
+    runtime_.bus.timing.window = defaults::Bus::window;
+  if (runtime_.bus.timing.offset > limits::max_offset)
+    runtime_.bus.timing.offset = defaults::Bus::offset;
 
   // Calculate microsecond timings for hardware timers
-  syn_base_us_ = static_cast<uint64_t>(runtime_.syn_base_ms) * 1000;
-  syn_unique_us_ = syn_base_us_ +
-                   (static_cast<uint64_t>(runtime_.address) * 10000) +
-                   (static_cast<uint64_t>(runtime_.syn_tolerance_ms) * 1000);
+  syn_base_us_ = static_cast<uint64_t>(runtime_.bus.syn.base_ms) * 1000;
+  syn_unique_us_ =
+      syn_base_us_ + (static_cast<uint64_t>(runtime_.address) * 10000) +
+      (static_cast<uint64_t>(runtime_.bus.syn.tolerance_ms) * 1000);
 
-  if (runtime_.enable_syn) {
+  if (runtime_.bus.syn.enabled) {
     gptimer_alarm_config_t alarm_config = {
         .alarm_count = syn_unique_us_,  // Start with unique rate
         .reload_count = 0,
@@ -317,8 +320,8 @@ void ebus::BusFreeRtos::ebusUartEventRunner() {
 
           if (!byte_queue_) continue;
 
-          if (byte == sym_syn && request_->busRequestPending()) {
-            int64_t now = esp_timer_get_time();
+          if (byte == Protocol::sym_syn && request_->busRequestPending()) {
+            int64_t now = esp_timer_get_time();  // Current time in microseconds
 
             // Calculation of the expected start bit time based on the current
             // time and the bit time with a 0.5-bit offset. The expected start
@@ -414,10 +417,10 @@ void ebus::BusFreeRtos::ebusUartEventRunner() {
 
           if (byte_queue_) byte_queue_->push(bus_event);
 
-          // 1. Reset SYN Timer (Arbitration Logic)
-          if (runtime_.enable_syn) {
+          // Reset SYN Timer (Arbitration Logic)
+          if (runtime_.bus.syn.enabled) {
             uint64_t next_interval;
-            if (syn_active_ && byte == sym_syn) {
+            if (syn_active_ && byte == Protocol::sym_syn) {
               // We won! Continue at fast rate
               next_interval = syn_base_us_;
             } else {
@@ -511,13 +514,14 @@ bool IRAM_ATTR ebus::BusFreeRtos::onSynGenTimer() {
 
   // Carrier Sense: yield and postpone if bus was active within the last 5ms
   // (Duration of a byte at 2400 baud + safety margin)
-  if (now - last_activity < 5000) {
+  if (now - last_activity < (defaults::Bus::carrier_sense_ms * 1000)) {
     if (syn_intent_time_ == 0) syn_intent_time_ = now;
     // Schedule a re-check in 2ms using the ISR-safe esp_timer
     if (monitor_) {
       monitor_->updateBus([](auto& m) { m.syn_postponed_count++; });
     }
-    esp_timer_start_once(syn_postpone_timer_, 2000);
+    esp_timer_start_once(syn_postpone_timer_,
+                         defaults::Bus::Syn::postpone_ms * 1000);
     return false;
   }
 
@@ -527,14 +531,14 @@ bool IRAM_ATTR ebus::BusFreeRtos::onSynGenTimer() {
     syn_intent_time_ = 0;
   }
 
-  syn_active_ = true;
+  syn_active_ = true;  // Mark SYN generator as active
   portENTER_CRITICAL_ISR(&timer_mux_);
   last_activity_micros_ = now;
   portEXIT_CRITICAL_ISR(&timer_mux_);
 
   for (const auto& listener : syn_listeners_) listener();
 
-  uint8_t syn = sym_syn;
+  uint8_t syn = Protocol::sym_syn;
   uart_ll_write_txfifo(UART_LL_GET_HW(uart_port_num_), &syn, 1);
   return false;
 }

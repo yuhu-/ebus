@@ -8,7 +8,7 @@
 
 #include <catch2/catch_all.hpp>
 #include <chrono>
-#include <ebus/definitions.hpp>
+#include <ebus/types.hpp>
 #include <iostream>
 #include <thread>
 #include <vector>
@@ -33,8 +33,7 @@ TEST_CASE("ClientManager Orchestration (Regular + ReadOnly)") {
   req.reset();
 
   ebus::BusConfig config = {.device = "/dev/null", .simulate = true};
-  ebus::RuntimeConfig runtime{
-      .address = 0x01, .window = 50, .offset = 5, .enable_syn = false};
+  ebus::RuntimeConfig runtime = {.address = 0x01};
 
   ebus::BusMonitor monitor;
   ebus::Bus bus(config, runtime, &req, &monitor);
@@ -54,36 +53,34 @@ TEST_CASE("ClientManager Orchestration (Regular + ReadOnly)") {
   busHandler.start();
   manager.start();
 
-  std::this_thread::sleep_for(std::chrono::milliseconds(500));
+  REQUIRE((waitCondition([&] { return bus.getQueue() != nullptr; })));
 
   std::vector<uint8_t> telegram = {0x33, 0xfe, 0xb5, 0x05, 0x04,
                                    0x27, 0x00, 0x2d, 0x00, 0x2c};
 
-  bus.writeByte(ebus::sym_syn);
-  std::this_thread::sleep_for(std::chrono::milliseconds(5));
+  bus.writeByte(ebus::Protocol::sym_syn);
 
   send(svReg[1], &telegram[0], 1, 0);
-  std::this_thread::sleep_for(std::chrono::milliseconds(5));
+  manager.wake();  // Immediate wake
 
-  bus.writeByte(ebus::sym_syn);
-  std::this_thread::sleep_for(std::chrono::milliseconds(5));
+  bus.writeByte(ebus::Protocol::sym_syn);
+  bus.writeByte(ebus::Protocol::sym_syn);
 
-  bus.writeByte(ebus::sym_syn);
-  std::this_thread::sleep_for(std::chrono::milliseconds(5));
+  CHECK_TEST("Request is pending",
+             (waitCondition([&] { return req.busRequestPending(); })));
 
-  CHECK_TEST("Request is pending", req.busRequestPending());
+  bus.writeByte(ebus::Protocol::sym_syn);
 
-  bus.writeByte(ebus::sym_syn);
-  std::this_thread::sleep_for(std::chrono::milliseconds(5));
-
-  CHECK_TEST("Request resolved and won",
-             req.getResult() == ebus::RequestResult::first_won);
+  CHECK_TEST("Request resolved and won", (waitCondition([&] {
+               return req.getResult() == ebus::RequestResult::first_won;
+             })));
   CHECK_TEST("LockCounter reset to max", req.getLockCounter() == 3);
 
   uint8_t echo;
   for (int i = 0; i < 4; ++i) {
     REQUIRE(readExact(svReg[1], &echo, 1));
-    CHECK_TEST("Regular received correct SYN echo", echo == ebus::sym_syn);
+    CHECK_TEST("Regular received correct SYN echo",
+               echo == ebus::Protocol::sym_syn);
   }
 
   REQUIRE(readExact(svReg[1], &echo, 1));
@@ -91,7 +88,7 @@ TEST_CASE("ClientManager Orchestration (Regular + ReadOnly)") {
 
   for (size_t i = 1; i < telegram.size(); ++i) {
     send(svReg[1], &telegram[i], 1, 0);
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    manager.wake();
     REQUIRE(readExact(svReg[1], &echo, 1));
     CHECK_TEST("Client received correct byte echo", echo == telegram[i]);
   }
@@ -115,7 +112,7 @@ TEST_CASE("ClientManager Enhanced Active Sending") {
   req.reset();
 
   ebus::BusConfig config = {.device = "/dev/null", .simulate = true};
-  ebus::RuntimeConfig runtime{.address = 0x01, .window = 50, .offset = 5};
+  ebus::RuntimeConfig runtime = {.address = 0x01};
 
   ebus::BusMonitor monitor;
   ebus::Bus bus(config, runtime, &req, &monitor);
@@ -134,28 +131,25 @@ TEST_CASE("ClientManager Enhanced Active Sending") {
   busHandler.start();
   manager.start();
 
-  std::this_thread::sleep_for(std::chrono::milliseconds(500));
+  REQUIRE((waitCondition([&] { return bus.getQueue() != nullptr; })));
 
-  bus.writeByte(ebus::sym_syn);
-  std::this_thread::sleep_for(std::chrono::milliseconds(5));
+  bus.writeByte(ebus::Protocol::sym_syn);
 
   uint8_t cmdStart[] = {0xc8, 0xb3};
   send(svEnh[1], cmdStart, 2, 0);
-  std::this_thread::sleep_for(std::chrono::milliseconds(5));
+  manager.wake();
 
-  bus.writeByte(ebus::sym_syn);
-  std::this_thread::sleep_for(std::chrono::milliseconds(5));
+  bus.writeByte(ebus::Protocol::sym_syn);
+  bus.writeByte(ebus::Protocol::sym_syn);
 
-  bus.writeByte(ebus::sym_syn);
-  std::this_thread::sleep_for(std::chrono::milliseconds(5));
+  CHECK_TEST("Request is pending",
+             (waitCondition([&] { return req.busRequestPending(); })));
 
-  CHECK_TEST("Request is pending", req.busRequestPending());
+  bus.writeByte(ebus::Protocol::sym_syn);
 
-  bus.writeByte(ebus::sym_syn);
-  std::this_thread::sleep_for(std::chrono::milliseconds(5));
-
-  CHECK_TEST("Arbitration resolved and won",
-             req.getResult() == ebus::RequestResult::first_won);
+  CHECK_TEST("Arbitration resolved and won", (waitCondition([&] {
+               return req.getResult() == ebus::RequestResult::first_won;
+             })));
   CHECK_TEST("LockCounter reset to max", req.getLockCounter() == 3);
 
   uint8_t resp[2];
@@ -170,7 +164,7 @@ TEST_CASE("ClientManager Enhanced Active Sending") {
 
   uint8_t cmdSend[] = {0xc7, 0xbe};
   send(svEnh[1], cmdSend, 2, 0);
-  std::this_thread::sleep_for(std::chrono::milliseconds(5));
+  manager.wake();
 
   REQUIRE(readExact(svEnh[1], resp, 2));
   CHECK_TEST("Enhanced received encoded 0xfe",
@@ -192,8 +186,7 @@ TEST_CASE("ClientManager Watchdog Timeout") {
   ebus::Request req;
   req.setMaxLockCounter(0);
   ebus::BusConfig config = {.device = "/dev/null", .simulate = true};
-  ebus::RuntimeConfig runtime{
-      .address = 0xff, .window = 50, .offset = 5, .enable_syn = false};
+  ebus::RuntimeConfig runtime = {.address = 0xff};
 
   ebus::BusMonitor monitor;
   ebus::Bus bus(config, runtime, &req, &monitor);
@@ -228,8 +221,7 @@ TEST_CASE("ClientManager Watchdog Timeout") {
 TEST_CASE("Client Removal") {
   ebus::Request req;
   ebus::BusConfig config = {.device = "/dev/null", .simulate = true};
-  ebus::RuntimeConfig runtime{
-      .address = 0xff, .window = 50, .offset = 5, .enable_syn = false};
+  ebus::RuntimeConfig runtime = {.address = 0xff};
 
   ebus::BusMonitor monitor;
   ebus::Bus bus(config, runtime, &req, &monitor);

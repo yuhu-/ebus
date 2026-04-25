@@ -9,7 +9,7 @@
 #include <cstdint>
 #include <string>
 
-#include "ebus/definitions.hpp"
+#include "ebus/types.hpp"
 
 namespace ebus {
 
@@ -18,22 +18,51 @@ namespace ebus {
  * hardware.
  */
 struct RuntimeConfig {
-  uint8_t address = default_address;
-  uint16_t window = default_window;
-  uint16_t offset = default_offset;
-  uint8_t lock_counter_max = default_lock_counter;
-  LogLevel log_level = LogLevel::error;
-  size_t error_log_size = default_error_log_size;
-  uint32_t syn_base_ms = default_syn_base_ms;
-  uint32_t syn_tolerance_ms = default_syn_tolerance_ms;
-  bool enable_syn = false;
-  int max_send_attempts = default_max_send_attempts;
-  std::chrono::milliseconds base_backoff_ms{default_base_backoff_ms};
-  std::chrono::milliseconds client_timeout_ms{default_client_timeout_ms};
-  std::chrono::milliseconds fsm_timeout_ms{default_fsm_timeout_ms};
-  std::chrono::milliseconds watchdog_timeout_ms{default_watchdog_timeout_ms};
-  std::chrono::milliseconds scheduler_total_timeout_ms{
-      default_scheduler_total_timeout_ms};
+  uint8_t address = defaults::address;
+
+  struct Arbitration {
+    uint8_t lock_counter_max = defaults::Arbitration::lock_counter;
+  } arbitration;
+
+  struct Bus {
+    struct Timing {
+      uint16_t window = defaults::Bus::window;
+      uint16_t offset = defaults::Bus::offset;
+    } timing;
+
+    struct Syn {
+      bool enabled = false;
+      uint32_t base_ms = defaults::Bus::Syn::base_ms;
+      uint32_t tolerance_ms = defaults::Bus::Syn::tolerance_ms;
+    } syn;
+  } bus;
+
+  struct Scheduler {
+    int max_send_attempts = defaults::Scheduler::max_send_attempts;
+    struct Timing {
+      std::chrono::milliseconds base_backoff{
+          defaults::Scheduler::base_backoff_ms};
+      std::chrono::milliseconds fsm_timeout{
+          defaults::Scheduler::fsm_timeout_ms};
+      std::chrono::milliseconds total_timeout{
+          defaults::Scheduler::total_timeout_ms};
+    } timing;
+  } scheduler;
+
+  struct Network {
+    struct Timing {
+      std::chrono::milliseconds client_timeout{
+          defaults::Network::client_timeout_ms};
+      std::chrono::milliseconds watchdog_timeout{
+          defaults::Network::watchdog_timeout_ms};
+    } timing;
+    size_t outbound_buffer_size = defaults::Network::outbound_buffer_size;
+  } network;
+
+  struct Logging {
+    LogLevel level = LogLevel::error;
+    size_t log_size = defaults::Logging::log_size;
+  } logging;
 };
 
 /**
@@ -49,8 +78,8 @@ struct BusConfig {
 };
 #elif defined(POSIX)
 struct BusConfig {
-  std::string device = default_device_path;
-  uint32_t baud = default_baud_rate;
+  std::string device = defaults::Bus::device_path;
+  uint32_t baud = defaults::Bus::baud_rate;
   bool simulate = false;
 };
 #endif

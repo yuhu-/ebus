@@ -14,6 +14,7 @@
 #include <utility>
 #include <vector>
 
+#include "core/bus_events.hpp"
 #include "core/handler.hpp"
 #include "core/request.hpp"
 #include "platform/bus.hpp"
@@ -79,7 +80,7 @@ class BusHandler {
   Queue<BusEvent>* queue_;
   std::atomic<bool> running_;
   std::chrono::milliseconds watchdog_timeout_ms_{
-      ebus::default_watchdog_timeout_ms};
+      defaults::Network::watchdog_timeout_ms};
 
   std::unique_ptr<ServiceThread> worker_;
 

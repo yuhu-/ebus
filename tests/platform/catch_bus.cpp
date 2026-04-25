@@ -21,15 +21,16 @@ static void force_request(ebus::Request& req, uint8_t addr) {
   req.setMaxLockCounter(0);
   for (int i = 0; i < 30; ++i) {
     if (req.getLockCounter() == 0) break;
-    req.run(ebus::sym_syn);
+    req.run(ebus::Protocol::sym_syn);
   }
   req.requestBus(addr);
 }
 
 TEST_CASE("Bus: Basic Communication", "[platform][bus]") {
   ebus::BusConfig config = {.device = "/dev/null", .simulate = true};
-  ebus::RuntimeConfig runtime{
-      .address = 0x01, .window = 50, .offset = 5, .enable_syn = true};
+  ebus::RuntimeConfig runtime;
+  runtime.address = 0x01;
+  runtime.bus.syn.enabled = true;
 
   ebus::Request req;
   ebus::BusMonitor monitor;
@@ -49,8 +50,8 @@ TEST_CASE("Bus: Basic Communication", "[platform][bus]") {
   }
 
   REQUIRE(received.size() >= 2);
-  REQUIRE(received[0].byte == ebus::sym_syn);  // SYN
-  REQUIRE(received[1].byte == 0x03);           // address
+  REQUIRE(received[0].byte == ebus::Protocol::sym_syn);  // SYN
+  REQUIRE(received[1].byte == 0x03);                     // address
 
   // Ensure no premature SYN during traffic
   bool prematureSyn = false;
@@ -59,7 +60,7 @@ TEST_CASE("Bus: Basic Communication", "[platform][bus]") {
     std::this_thread::sleep_for(std::chrono::milliseconds(20));
     ebus::BusEvent tempEv;
     while (queue->tryPop(tempEv)) {
-      if (tempEv.byte == ebus::sym_syn) prematureSyn = true;
+      if (tempEv.byte == ebus::Protocol::sym_syn) prematureSyn = true;
     }
   }
   REQUIRE(!prematureSyn);
@@ -69,8 +70,9 @@ TEST_CASE("Bus: Basic Communication", "[platform][bus]") {
 
 TEST_CASE("Bus: SYN Timing", "[platform][bus]") {
   ebus::BusConfig config = {.device = "/dev/null", .simulate = true};
-  ebus::RuntimeConfig runtime{
-      .address = 0x01, .window = 50, .offset = 5, .enable_syn = true};
+  ebus::RuntimeConfig runtime;
+  runtime.address = 0x01;
+  runtime.bus.syn.enabled = true;
 
   ebus::Request req;
   ebus::BusMonitor monitor;
@@ -85,7 +87,7 @@ TEST_CASE("Bus: SYN Timing", "[platform][bus]") {
 
   for (int i = 0; i < 4; ++i) {
     if (queue->pop(ev, std::chrono::milliseconds(200))) {
-      if (ev.byte == ebus::sym_syn)
+      if (ev.byte == ebus::Protocol::sym_syn)
         timestamps.push_back(std::chrono::steady_clock::now());
     }
   }
@@ -119,8 +121,7 @@ TEST_CASE("Bus: SYN Timing", "[platform][bus]") {
 
 TEST_CASE("Bus: Raw Reception (Broadcast Simulation)", "[platform][bus]") {
   ebus::BusConfig config = {.device = "/dev/null", .simulate = true};
-  ebus::RuntimeConfig runtime{
-      .address = 0x01, .window = 50, .offset = 5, .enable_syn = false};
+  ebus::RuntimeConfig runtime = {.address = 0x01};
   ebus::Request req;
   ebus::BusMonitor monitor;
   ebus::Bus bus(config, runtime, &req, &monitor);

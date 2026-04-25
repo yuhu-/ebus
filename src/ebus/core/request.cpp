@@ -12,7 +12,7 @@
 ebus::Request::Request(BusMonitor* monitor) : monitor_(monitor) {}
 
 void ebus::Request::setMaxLockCounter(uint8_t max_counter) {
-  max_lock_counter_ = std::min(max_counter, ebus::max_lock_counter);
+  max_lock_counter_ = std::min(max_counter, limits::max_lock_counter);
   if (lock_counter_ > max_lock_counter_) lock_counter_ = max_lock_counter_;
 }
 
@@ -91,7 +91,7 @@ ebus::RequestResult ebus::Request::run(uint8_t byte) {
 }
 
 void ebus::Request::observe(uint8_t byte) {
-  if (byte == sym_syn) {
+  if (byte == Protocol::sym_syn) {
     if (lock_counter_ > 0) lock_counter_--;
     result_ = RequestResult::observe_syn;
   } else {
@@ -100,7 +100,7 @@ void ebus::Request::observe(uint8_t byte) {
 }
 
 void ebus::Request::first(uint8_t byte) {
-  if (byte == sym_syn) {
+  if (byte == Protocol::sym_syn) {
     if (monitor_) monitor_->updateRequest([](auto& m) { m.first_syn++; });
     state_ = RequestState::first;
     result_ = RequestResult::first_syn;
@@ -139,7 +139,7 @@ void ebus::Request::first(uint8_t byte) {
 }
 
 void ebus::Request::retry(uint8_t byte) {
-  if (byte == sym_syn) {
+  if (byte == Protocol::sym_syn) {
     if (monitor_) monitor_->updateRequest([](auto& m) { m.retry_syn++; });
     state_ = RequestState::second;
     result_ = RequestResult::retry_syn;

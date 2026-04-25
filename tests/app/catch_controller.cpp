@@ -9,6 +9,7 @@
 #include <ebus/controller.hpp>
 #include <ebus/utils.hpp>
 #include <iostream>
+#include "test_utils.hpp"
 #include <thread>
 #include <vector>
 
@@ -17,7 +18,7 @@ TEST_CASE("Controller: Lifecycle and API", "[app][controller]") {
   ebus::EbusConfig config;
   config.runtime.address = 0x31;
   config.bus.simulate = true;
-  config.runtime.enable_syn = true;
+  config.runtime.bus.syn.enabled = true;
 
   ebus::Controller controller(config);
   REQUIRE(controller.isConfigured());
@@ -40,11 +41,9 @@ TEST_CASE("Controller: Lifecycle and API", "[app][controller]") {
     resultCallbackFired = true;
   });
 
-  // Allow background processing (SYN/arbitration/dispatch)
-  std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-
-  REQUIRE(resultCallbackFired.load());
-  REQUIRE(telegramSeen.load());
+  // Replace 1s sleep with deterministic wait
+  REQUIRE((waitCondition([&] { return resultCallbackFired.load(); }, 2000)));
+  REQUIRE((waitCondition([&] { return telegramSeen.load(); }, 100)));
 
   // Metrics
   auto metrics = controller.getMetrics();

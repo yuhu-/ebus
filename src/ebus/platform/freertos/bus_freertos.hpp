@@ -8,10 +8,11 @@
 #if defined(ESP32)
 #include <atomic>
 #include <cstdint>
+#include <ebus/callbacks.hpp>
 #include <ebus/config.hpp>
-#include <ebus/definitions.hpp>
 #include <functional>
 
+#include "core/bus_events.hpp"
 #include "driver/uart.h"
 #include "esp_idf_version.h"
 #include "esp_timer.h"
@@ -96,7 +97,8 @@ class BusFreeRtos {
 
   // The byte time at 2400 baud for 10 bits with a 0.5-bit offset is
   // approximately 9.5 * bit_time_us = 9.5 * 416.67 us = 3958.33 us
-  static constexpr int64_t byte_time_center_us_ = 9.5 * bit_time_us;
+  static constexpr int64_t byte_time_center_us_ =
+      static_cast<int64_t>(limits::byte_center_bits * bit_time_us);
 
   // This value can be adjusted if the bus ISR is not working as expected.
   volatile uint16_t window_ = 4300;  // usually between 4300-4456 us
@@ -121,9 +123,9 @@ class BusFreeRtos {
   volatile int64_t syn_intent_time_ = 0;
 
   std::atomic<bool> syn_running_{false};
-  bool syn_active_{false};
-  uint64_t syn_base_us_ = 0;
-  uint64_t syn_unique_us_ = 0;
+  bool syn_active_{false};    // True if this generator is actively sending SYNs
+  uint64_t syn_base_us_ = 0;  // Base SYN interval in microseconds
+  uint64_t syn_unique_us_ = 0;  // Unique SYN interval in microseconds
 
   // platform handles
   QueueHandle_t uart_event_queue_ = nullptr;

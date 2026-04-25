@@ -25,164 +25,42 @@
 #include "platform/bus.hpp"
 #include "test_utils.hpp"
 
-struct TestCase {
-  std::string description;
-  uint8_t priority;
-  std::string payloadHexNoCrc;
-  bool expectSuccess;
-};
-
-static std::vector<uint8_t> writeBuffer;
-static std::mutex writeMutex;
-static std::atomic<int> retryFailureCount{0};
-
-bool matchTail(const std::vector<uint8_t>& buffer,
-               const std::vector<uint8_t>& pattern) {
-  if (buffer.size() < pattern.size()) return false;
-  return std::equal(pattern.rbegin(), pattern.rend(), buffer.rbegin());
-}
-
-static uint8_t compute_crc_for_message(
-    uint8_t source, const std::vector<uint8_t>& payload_no_crc) {
-  uint8_t crc = source;
-  for (auto b : payload_no_crc) crc = ebus::calcCRC(b, crc);
-  return crc;
-}
-
-static std::string byte_to_hex(uint8_t b) {
-  std::ostringstream oss;
-  oss << std::nouppercase << std::hex << std::setw(2) << std::setfill('0')
-      << static_cast<int>(b);
-  return oss.str();
-}
-
-static std::string msg_with_crc_hex(uint8_t source,
-                                    const std::string& payloadHexNoCrc) {
-  auto payload = ebus::toVector(payloadHexNoCrc);
-  uint8_t crc = compute_crc_for_message(source, payload);
-  std::ostringstream oss;
-  oss << byte_to_hex(source);
-  oss << payloadHexNoCrc;
-  oss << byte_to_hex(crc);
-  return oss.str();
-}
-
-void installSimulatorResponses(ebus::Bus& bus,
-                               const std::vector<TestCase>& tests,
-                               uint8_t source) {
-  std::vector<std::vector<uint8_t>> expectedMasters;
-  expectedMasters.reserve(tests.size());
-  for (const auto& tc : tests) {
-    expectedMasters.push_back(
-        ebus::toVector(msg_with_crc_hex(source, tc.payloadHexNoCrc)));
-  }
-
-  bus.addWriteListener([&bus, expectedMasters, tests,
-                        source](const uint8_t byte) {
-    std::lock_guard<std::mutex> lock(writeMutex);
-    writeBuffer.push_back(byte);
-
-    if (writeBuffer.size() > 256)
-      writeBuffer.erase(writeBuffer.begin(),
-                        writeBuffer.begin() + (writeBuffer.size() - 256));
-
-    for (size_t i = 0; i < expectedMasters.size(); ++i) {
-      const auto& pattern = expectedMasters[i];
-      if (pattern.empty()) continue;
-      if (!matchTail(writeBuffer, pattern)) continue;
-
-      const auto& tc = tests[i];
-
-      if (tc.description == "BC Success") {
-        return;
-      }
-
-      if (tc.description == "MS Success") {
-        std::thread([&bus]() {
-          std::this_thread::sleep_for(std::chrono::milliseconds(5));
-          const std::vector<uint8_t> response = ebus::toVector("00013fa4");
-          for (uint8_t b : response) {
-            bus.writeByte(b);
-            std::this_thread::sleep_for(std::chrono::milliseconds(2));
-          }
-        }).detach();
-        return;
-      }
-
-      if (tc.description == "Retry Success") {
-        int count = retryFailureCount.load();
-        if (count < 2) {
-          retryFailureCount.fetch_add(1);
-          std::thread([&bus]() {
-            std::this_thread::sleep_for(std::chrono::milliseconds(5));
-            bus.writeByte(0xff);
-          }).detach();
-        } else {
-          std::thread([&bus]() {
-            std::this_thread::sleep_for(std::chrono::milliseconds(5));
-            const std::vector<uint8_t> response = ebus::toVector("00013fa4");
-            for (uint8_t b : response) {
-              bus.writeByte(b);
-              std::this_thread::sleep_for(std::chrono::milliseconds(2));
-            }
-          }).detach();
-        }
-        return;
-      }
-    }
-  });
-}
-
-bool runSchedulerTest(ebus::Scheduler& scheduler, const TestCase& tc,
-                      uint8_t source) {
-  auto promise = std::make_shared<std::promise<bool>>();
-  auto future = promise->get_future();
-
-  scheduler.enqueue(
-      tc.priority, ebus::toVector(tc.payloadHexNoCrc),
-      [promise, description = tc.description](const ebus::ResultInfo& info) {
-        if (!promise) return;
-        promise->set_value(info.success);
-      });
-
-  if (future.wait_for(std::chrono::seconds(8)) != std::future_status::ready) {
-    return false;
-  }
-
-  return future.get();
-}
-
 TEST_CASE("Scheduler: Simulation", "[app][scheduler]") {
   ebus::Request request;
   ebus::BusConfig config;
-  config.device = "/dev/simulation";
+  config.device = "/dev/null";
   config.simulate = true;
 
   ebus::RuntimeConfig runtime;
   runtime.address = 0x33;
-  runtime.enable_syn = true;
+  runtime.bus.syn.enabled = true;
 
   ebus::BusMonitor monitor;
   ebus::Bus bus(config, runtime, &request, &monitor);
-  ebus::Handler handler(ebus::default_address, &bus, &request, &monitor);
+  ebus::Handler handler(ebus::defaults::address, &bus, &request, &monitor);
   ebus::BusHandler busHandler(&request, &handler, bus.getQueue());
 
   const uint8_t source = 0x33;
   handler.setSourceAddress(source);
 
-  std::vector<TestCase> tests = {
-      {"BC Success", 1, "feb5050327002d", true},
-      {"MS Success", 1, "52b509030d4600", true},
-      {"Retry Success", 1, "fe070400", true},
-  };
+  ebus::BusSimulator simulator(bus);
 
-  installSimulatorResponses(bus, tests, source);
+  // BC Success: Broadcast to fe. No slave response.
+  simulator.addResponse(
+      {ebus::toVector(frameMasterHex(source, "feb5050327002d")), {}, 0});
 
-  ebus::Scheduler scheduler(&handler, runtime.max_send_attempts,
-                            runtime.base_backoff_ms);
-  scheduler.setTelegramCallback([](const ebus::TelegramInfo& info) {});
-  scheduler.setErrorCallback([](const ebus::ErrorInfo& info) {});
+  // MS Success: Master to 52. Slave responds with payload 01 3f (plus ACK and
+  // CRC).
+  simulator.addMasterSlaveResponse(source, "52b509030d4600", "013f", 5);
 
+  // Retry Success: Master to fe. Simulate NAK (ff) twice, then success on 3rd
+  // try.
+  auto retry_trigger = ebus::toVector(frameMasterHex(source, "fe070400"));
+  simulator.addResponse({retry_trigger, {ebus::Protocol::sym_nak}, 5, 2});
+  simulator.addResponse(
+      {retry_trigger, ebus::toVector(frameSlaveHex("013f")), 5, 1});
+
+  ebus::Scheduler scheduler(&handler);
   scheduler.setMaxSendAttempts(3);
   scheduler.setBaseBackoff(std::chrono::milliseconds(50));
 
@@ -190,9 +68,21 @@ TEST_CASE("Scheduler: Simulation", "[app][scheduler]") {
   busHandler.start();
   scheduler.start();
 
-  for (const auto& tc : tests) {
-    REQUIRE(runSchedulerTest(scheduler, tc, source));
-  }
+  auto run_test = [&](const std::string& payload) {
+    auto promise = std::make_shared<std::promise<bool>>();
+    auto future = promise->get_future();
+    scheduler.enqueue(1, ebus::toVector(payload),
+                      [promise](const ebus::ResultInfo& info) {
+                        promise->set_value(info.success);
+                      });
+    return future.wait_for(std::chrono::seconds(2)) ==
+               std::future_status::ready &&
+           future.get();
+  };
+
+  REQUIRE(run_test("feb5050327002d"));
+  REQUIRE(run_test("52b509030d4600"));
+  REQUIRE(run_test("fe070400"));
 
   scheduler.stop();
   busHandler.stop();

@@ -66,17 +66,7 @@ To keep the library maintainable and portable, we follow these patterns:
 
 Every contribution should be accompanied by appropriate tests.
 
-*   **Catch2**: Our preferred framework for unit testing. New tests should be added to the `tests/` directory.
-*   **Legacy Tests**: Used for timing-sensitive arbitration debugging and protocol tracing. 
-
-### Legacy Development Tests
-
-These tests often provide detailed protocol traces and insights that are useful for debugging complex arbitration or timing issues. They are excluded from the default build to keep build times fast. To enable them, use the `EBUS_BUILD_LEGACY_TESTS` CMake option:
-
-```bash
-cmake -DEBUS_BUILD_LEGACY_TESTS=ON ..
-make
-```
+*   **Catch2**: ist our preferred framework for unit testing. New tests should be added to the `tests/` directory.
 
 ### Running Tests
 

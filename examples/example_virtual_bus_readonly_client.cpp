@@ -26,7 +26,7 @@ int main() {
   ebus::EbusConfig configA;
   configA.runtime.address = 0x01;
   configA.bus.simulate = true;
-  configA.runtime.enable_syn = true;  // One device should act as SYN generator
+  configA.runtime.bus.syn.enabled = true;
 
   ebus::Controller deviceA(configA);
 

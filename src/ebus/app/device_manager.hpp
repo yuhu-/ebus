@@ -37,13 +37,8 @@ class DeviceManager {
 
   void update(ByteView master_view, ByteView slave_view);
 
-  void resetDevices();
-
   std::vector<DeviceInfo> getDeviceInfo() const;
-
-  // TODO what for ???
-  std::vector<std::pair<uint8_t, uint32_t>> getMasters() const;
-  std::vector<std::pair<uint8_t, uint32_t>> getSlaves() const;
+  std::string getDeviceInfoJson() const;
 
   std::bitset<256> getObservedSlaves() const;
   std::vector<Sequence> vendorScanCommands() const;

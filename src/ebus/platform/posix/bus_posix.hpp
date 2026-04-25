@@ -18,10 +18,10 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <ebus/callbacks.hpp>
 #include <ebus/config.hpp>
-#include <ebus/definitions.hpp>
+#include <ebus/types.hpp>
 #include <functional>
-#include <map>
 #include <memory>
 #include <mutex>
 #include <stdexcept>
@@ -29,6 +29,7 @@
 #include <thread>
 #include <vector>
 
+#include "core/bus_events.hpp"
 #include "platform/posix/virtual_line.hpp"
 #include "platform/queue.hpp"
 

@@ -16,7 +16,6 @@
 #include <type_traits>
 #include <vector>
 
-#include "ebus/addressing.hpp"
 #include "ebus/protocol_math.hpp"
 #include "ebus/types.hpp"
 
@@ -166,7 +165,8 @@ class SmallByteVector {
 template <size_t kInlineCapacity = default_sequence_capacity>
 class SequenceImpl {
  public:
-  static_assert(kInlineCapacity >= 48, "Sequence capacity too small");
+  static_assert(kInlineCapacity >= limits::max_telegram_bytes,
+                "Sequence capacity too small");
 
   SequenceImpl() = default;
 
@@ -302,7 +302,7 @@ class SequenceImpl {
    */
   bool needsExtension() const noexcept {
     return std::any_of(sequence_.begin(), sequence_.end(),
-                       [](uint8_t b) { return b == sym_syn || b == sym_ext; });
+                       [](uint8_t b) { return Protocol::needsEscape(b); });
   }
 
   /**
@@ -312,7 +312,7 @@ class SequenceImpl {
   bool needsReduction() const noexcept {
     if (!extended_) return false;
     return std::any_of(sequence_.begin(), sequence_.end(),
-                       [](uint8_t b) { return b == sym_ext; });
+                       [](uint8_t b) { return b == Protocol::sym_ext; });
   }
 
   void extend() {
@@ -320,7 +320,7 @@ class SequenceImpl {
 
     const size_t extra =
         std::count_if(sequence_.begin(), sequence_.end(),
-                      [](uint8_t b) { return b == sym_syn || b == sym_ext; });
+                      [](uint8_t b) { return Protocol::needsEscape(b); });
 
     if (extra == 0) {
       extended_ = true;
@@ -333,12 +333,11 @@ class SequenceImpl {
     size_t write_idx = new_size - 1;
     for (int i = static_cast<int>(old_size) - 1; i >= 0; --i) {
       uint8_t b = sequence_[i];
-      if (b == sym_syn) {
-        sequence_[write_idx--] = sym_syn_ext;
-        sequence_[write_idx--] = sym_ext;
-      } else if (b == sym_ext) {
-        sequence_[write_idx--] = sym_ext_ext;
-        sequence_[write_idx--] = sym_ext;
+      if (Protocol::needsEscape(b)) {
+        uint8_t escaped[2];
+        Protocol::escape(b, escaped);
+        sequence_[write_idx--] = escaped[1];
+        sequence_[write_idx--] = escaped[0];
       } else {
         sequence_[write_idx--] = b;
       }
@@ -355,16 +354,12 @@ class SequenceImpl {
 
     size_t write_idx = 0;
     for (size_t read_idx = 0; read_idx < sequence_.size(); ++read_idx) {
-      if (sequence_[read_idx] == sym_ext && read_idx + 1 < sequence_.size()) {
-        uint8_t next = sequence_[++read_idx];
-        if (next == sym_syn_ext)
-          sequence_[write_idx++] = sym_syn;
-        else if (next == sym_ext_ext)
-          sequence_[write_idx++] = sym_ext;
-        else {
-          sequence_[write_idx++] = sym_ext;
-          sequence_[write_idx++] = next;
-        }
+      uint8_t unescaped;
+      if (read_idx + 1 < sequence_.size() &&
+          Protocol::unescape(sequence_[read_idx], sequence_[read_idx + 1],
+                             unescaped)) {
+        sequence_[write_idx++] = unescaped;
+        ++read_idx;
       } else {
         sequence_[write_idx++] = sequence_[read_idx];
       }
@@ -374,15 +369,14 @@ class SequenceImpl {
   }
 
   uint8_t crc() const {
-    uint8_t current_crc = sym_zero;
+    uint8_t current_crc = Protocol::sym_zero;
     for (uint8_t byte : sequence_) {
       if (!extended_) {
-        if (byte == sym_syn) {
-          current_crc = calcCRC(sym_ext, current_crc);
-          current_crc = calcCRC(sym_syn_ext, current_crc);
-        } else if (byte == sym_ext) {
-          current_crc = calcCRC(sym_ext, current_crc);
-          current_crc = calcCRC(sym_ext_ext, current_crc);
+        if (Protocol::needsEscape(byte)) {
+          uint8_t escaped[2];
+          Protocol::escape(byte, escaped);
+          current_crc = calcCRC(escaped[0], current_crc);
+          current_crc = calcCRC(escaped[1], current_crc);
         } else {
           current_crc = calcCRC(byte, current_crc);
         }

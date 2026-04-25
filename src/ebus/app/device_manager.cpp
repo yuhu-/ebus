@@ -56,8 +56,6 @@ void ebus::DeviceManager::update(ByteView master_view, ByteView slave_view) {
   }
 }
 
-void ebus::DeviceManager::resetDevices() {}
-
 std::vector<ebus::DeviceInfo> ebus::DeviceManager::getDeviceInfo() const {
   std::lock_guard<std::mutex> lock(mutex_);
   std::vector<DeviceInfo> result;
@@ -69,30 +67,8 @@ std::vector<ebus::DeviceInfo> ebus::DeviceManager::getDeviceInfo() const {
   return result;
 }
 
-std::vector<std::pair<uint8_t, uint32_t>> ebus::DeviceManager::getMasters()
-    const {
-  std::vector<std::pair<uint8_t, uint32_t>> result;
-  if (monitor_) {
-    auto m = monitor_->getMetrics().devices;
-    for (size_t i = 0; i < m.masters.size(); ++i) {
-      if (m.masters[i] > 0)
-        result.push_back({static_cast<uint8_t>(i), m.masters[i]});
-    }
-  }
-  return result;
-}
-
-std::vector<std::pair<uint8_t, uint32_t>> ebus::DeviceManager::getSlaves()
-    const {
-  std::vector<std::pair<uint8_t, uint32_t>> result;
-  if (monitor_) {
-    auto m = monitor_->getMetrics().devices;
-    for (size_t i = 0; i < m.slaves.size(); ++i) {
-      if (m.slaves[i] > 0)
-        result.push_back({static_cast<uint8_t>(i), m.slaves[i]});
-    }
-  }
-  return result;
+std::string ebus::DeviceManager::getDeviceInfoJson() const {
+  return ebus::toJson(getDeviceInfo());
 }
 
 std::bitset<256> ebus::DeviceManager::getObservedSlaves() const {

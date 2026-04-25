@@ -7,8 +7,9 @@
 
 #include <array>
 #include <chrono>
-#include <ebus/definitions.hpp>
+#include <ebus/callbacks.hpp>
 #include <ebus/metrics.hpp>
+#include <ebus/types.hpp>
 #include <functional>
 #include <optional>
 #include <vector>

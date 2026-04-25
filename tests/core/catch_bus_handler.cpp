@@ -20,8 +20,9 @@
 TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
   SECTION("Integration vectors (passive/reactive/active BC happy paths)") {
     ebus::BusConfig config = {.device = "/dev/null", .simulate = true};
-    ebus::RuntimeConfig runtime{
-        .address = 0x01, .window = 50, .offset = 5, .enable_syn = true};
+    ebus::RuntimeConfig runtime;
+    runtime.address = 0x01;
+    runtime.bus.syn.enabled = true;
 
     ebus::Request request;
     ebus::BusMonitor monitor;
@@ -101,7 +102,7 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
 
   SECTION("Lock counter behavior and arbitration pumping") {
     ebus::BusConfig config = {.device = "/dev/null", .simulate = true};
-    ebus::RuntimeConfig runtime{.address = 0x33, .window = 50, .offset = 5};
+    ebus::RuntimeConfig runtime = {.address = 0x33};
 
     ebus::Request request;
     ebus::BusMonitor monitor;
@@ -124,7 +125,7 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
 
     // Pump SYNs until arbitration starts.
     for (int i = 0; i < 4; ++i) {
-      bus.writeByte(ebus::sym_syn);
+      bus.writeByte(ebus::Protocol::sym_syn);
       std::this_thread::sleep_for(std::chrono::milliseconds(50));
       if (handler.getState() != ebus::HandlerState::passive_receive_master)
         break;
@@ -148,15 +149,15 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
     telegram_count.store(0);
     handler.sendActiveMessage(msg);
 
-    bus.writeByte(ebus::sym_syn);
+    bus.writeByte(ebus::Protocol::sym_syn);
     std::this_thread::sleep_for(std::chrono::milliseconds(20));
     REQUIRE(request.getLockCounter() == 1);
 
-    bus.writeByte(ebus::sym_syn);
+    bus.writeByte(ebus::Protocol::sym_syn);
     std::this_thread::sleep_for(std::chrono::milliseconds(20));
     REQUIRE(request.getLockCounter() == 0);
 
-    bus.writeByte(ebus::sym_syn);
+    bus.writeByte(ebus::Protocol::sym_syn);
     // wait for completion
     for (int i = 0; i < 50 && telegram_count.load() == 0; ++i)
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -169,8 +170,9 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
 
   SECTION("External client callback path") {
     ebus::BusConfig config = {.device = "/dev/null", .simulate = true};
-    ebus::RuntimeConfig runtime{
-        .address = 0x33, .window = 50, .offset = 5, .enable_syn = true};
+    ebus::RuntimeConfig runtime;
+    runtime.address = 0x33;
+    runtime.bus.syn.enabled = true;
 
     ebus::Request request;
     request.setMaxLockCounter(0);

@@ -13,8 +13,8 @@
 #include <variant>
 #include <vector>
 
-#include "ebus/enums.hpp"
 #include "ebus/sequence.hpp"
+#include "ebus/types.hpp"
 
 namespace ebus {
 

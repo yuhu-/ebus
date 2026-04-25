@@ -7,13 +7,14 @@
 
 #include <cstdint>
 #include <ebus/config.hpp>
-#include <ebus/definitions.hpp>
+#include <ebus/types.hpp>
 #include <memory>
 #include <mutex>
 #include <string>
 #include <vector>
 
 #include "app/enhanced_protocol.hpp"
+#include "core/bus_events.hpp"
 #include "core/request.hpp"
 
 namespace ebus {
@@ -25,7 +26,8 @@ class Request;
  */
 class AbstractClient {
  public:
-  AbstractClient(int fd, Request* request, bool write_capable);
+  AbstractClient(int fd, Request* request, bool write_capable,
+                 size_t max_buffer);
   virtual ~AbstractClient();
 
   void stop();
@@ -57,6 +59,7 @@ class AbstractClient {
   std::vector<uint8_t> outbound_buffer_;  // Per-client outbound buffer
   mutable std::mutex buffer_mutex_;       // Protects outboundBuffer_
   Request* request_;
+  size_t max_buffer_size_;
   bool write_capable_;
 
   bool flushLocked();  // Internal flush logic; returns false if connection lost
@@ -68,7 +71,7 @@ class AbstractClient {
  */
 class ReadOnlyClient : public AbstractClient {
  public:
-  ReadOnlyClient(int fd, Request* request);
+  ReadOnlyClient(int fd, Request* request, size_t max_buffer);
 
   bool wantsToSend() override;
   bool recvFromClient(uint8_t& out) override;
@@ -83,7 +86,7 @@ class ReadOnlyClient : public AbstractClient {
  */
 class RegularClient : public AbstractClient {
  public:
-  RegularClient(int fd, Request* request);
+  RegularClient(int fd, Request* request, size_t max_buffer);
 
   bool wantsToSend() override;
   bool recvFromClient(uint8_t& out) override;
@@ -98,7 +101,7 @@ class RegularClient : public AbstractClient {
  */
 class EnhancedClient : public AbstractClient {
  public:
-  EnhancedClient(int fd, Request* request);
+  EnhancedClient(int fd, Request* request, size_t max_buffer);
 
   bool wantsToSend() override;
   bool recvFromClient(uint8_t& out) override;
@@ -116,6 +119,7 @@ class EnhancedClient : public AbstractClient {
 };
 
 std::unique_ptr<AbstractClient> createClient(int fd, Request* req,
-                                             ClientType type);
+                                             ClientType type,
+                                             size_t max_buffer);
 
 }  // namespace ebus

@@ -15,6 +15,7 @@
 #include <string>
 #include <vector>
 
+#include "core/constants.hpp"
 #include "core/handler.hpp"
 #include "platform/queue.hpp"
 #include "platform/service_thread.hpp"
@@ -46,7 +47,7 @@ class Scheduler {
     ResultCallback result_callback = nullptr;
   };
 
-  Scheduler(Handler* handler, int max_send_attempts, Duration base_backoff);
+  explicit Scheduler(Handler* handler);
   ~Scheduler();
 
   Scheduler(const Scheduler&) = delete;
@@ -89,6 +90,8 @@ class Scheduler {
     uint32_t id;
     MessageType message_type;
     TelegramType telegram_type;
+    HandlerState handler_state;
+    RequestState request_state;
     LogLevel level;
     RequestResult result;
     Sequence master;
@@ -110,14 +113,16 @@ class Scheduler {
 
   // Active transfer state
   std::atomic<uint32_t> current_attempt_id_{0};
-  Queue<Event> event_queue_{event_queue_capacity};
+  Queue<Event> event_queue_{internal::event_queue_capacity};
 
   // Configuration
-  int max_send_attempts_;
-  Duration base_backoff_;
-  std::chrono::milliseconds fsm_timeout_ms_{default_fsm_timeout_ms};
+  int max_send_attempts_ = defaults::Scheduler::max_send_attempts;
+  Duration base_backoff_ =
+      std::chrono::milliseconds(defaults::Scheduler::base_backoff_ms);
+  std::chrono::milliseconds fsm_timeout_ms_{
+      defaults::Scheduler::fsm_timeout_ms};
   std::chrono::milliseconds total_timeout_ms_{
-      default_scheduler_total_timeout_ms};
+      defaults::Scheduler::total_timeout_ms};
 
   // Forwarded callbacks
   ReactiveMasterSlaveCallback extern_reactive_callback_ = nullptr;

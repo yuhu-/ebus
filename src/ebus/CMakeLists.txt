@@ -22,13 +22,17 @@ set(CORE_SOURCES
 set(MODELS_SOURCES
     models/data_types.cpp
     models/device.cpp
-    models/manufacturers.cpp
 )
 
 # Platform Abstraction Layer
 set(PLATFORM_SOURCES
     platform/service_thread.cpp
     platform/system.cpp
+)
+
+# Utils
+set(UTILS_SOURCES
+    utils/json_utils.cpp
 )
 
 if(POSIX AND NOT APPLE)
@@ -43,6 +47,7 @@ set(SOURCES
     ${CORE_SOURCES} 
     ${MODELS_SOURCES}
     ${PLATFORM_SOURCES}
+    ${UTILS_SOURCES}
 )
 
 add_library(ebus ${SOURCES})

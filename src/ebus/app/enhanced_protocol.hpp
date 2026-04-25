@@ -43,13 +43,15 @@ struct Protocol {
   }
 
   static inline void encode(uint8_t code, uint8_t val, uint8_t out[2]) {
-    out[0] = 0xc0 | (code << 2) | (val >> 6);
-    out[1] = 0x80 | (val & 0x3f);
+    out[0] = 0xc0 | (code << 2) | (val >> 6);  // First byte: 11cc ccdd
+    out[1] = 0x80 | (val & 0x3f);              // Second byte: 10dd dddd
   }
 
   static inline void decode(const uint8_t buf[2], Command& cmd, uint8_t& val) {
-    cmd = static_cast<Command>((buf[0] >> 2) & 0x0f);
-    val = ((buf[0] & 0x03) << 6) | (buf[1] & 0x3f);
+    cmd = static_cast<Command>((buf[0] >> 2) &
+                               0x0f);  // Extract command from first byte
+    val = ((buf[0] & 0x03) << 6) |
+          (buf[1] & 0x3f);  // Reconstruct value from both bytes
   }
 
   static inline bool isValidSequence(uint8_t b1, uint8_t b2) {

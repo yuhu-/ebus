@@ -6,10 +6,12 @@
 #pragma once
 
 #include <array>
+#include <functional>
 #include <mutex>
 
-#include "ebus/definitions.hpp"
+#include "core/constants.hpp"
 #include "ebus/metrics.hpp"
+#include "utils/circular_buffer.hpp"
 #include "utils/timing_stats.hpp"
 
 namespace ebus {
@@ -20,6 +22,7 @@ namespace ebus {
  */
 class BusMonitor {
  public:
+  BusMonitor();
   void resetMetrics();
   metrics::SystemMetrics getMetrics() const;
 
@@ -27,10 +30,29 @@ class BusMonitor {
   std::vector<float> getUtilizationHistory() const;
 
   // Thread-safe update helpers
-  void updateHandler(std::function<void(metrics::HandlerMetrics&)> updater);
-  void updateRequest(std::function<void(metrics::RequestMetrics&)> updater);
-  void updateBus(std::function<void(metrics::BusMetrics&)> updater);
-  void updateDevice(std::function<void(metrics::DeviceMetrics&)> updater);
+  template <typename F>
+  void updateHandler(F&& updater) {
+    std::lock_guard<std::mutex> lock(metrics_mutex);
+    updater(handler_acc_);
+  }
+
+  template <typename F>
+  void updateRequest(F&& updater) {
+    std::lock_guard<std::mutex> lock(metrics_mutex);
+    updater(request_acc_);
+  }
+
+  template <typename F>
+  void updateBus(F&& updater) {
+    std::lock_guard<std::mutex> lock(metrics_mutex);
+    updater(bus_acc_);
+  }
+
+  template <typename F>
+  void updateDevice(F&& updater) {
+    std::lock_guard<std::mutex> lock(metrics_mutex);
+    updater(device_acc_);
+  }
 
   // Accumulators
   mutable std::mutex metrics_mutex;
@@ -55,9 +77,7 @@ class BusMonitor {
   TimingStats syn_postpone;
   RollingStats utilization;
 
-  std::array<float, default_history_size> utilization_history_ = {};
-  size_t history_index_ = 0;
-  size_t history_count_ = 0;
+  detail::CircularBuffer<float> utilization_history_;
 
   // State-machine execution timings
   std::array<TimingStats, num_handler_states> handler_timing = {};

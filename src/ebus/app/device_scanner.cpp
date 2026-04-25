@@ -6,6 +6,7 @@
 #include "app/device_scanner.hpp"
 
 #include <bitset>
+#include <ebus/types.hpp>
 #include <ebus/utils.hpp>
 
 ebus::DeviceScanner::DeviceScanner(uint8_t address,

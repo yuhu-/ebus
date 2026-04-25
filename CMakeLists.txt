@@ -9,9 +9,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Ensure all libraries and executables are built with PIC for modern linkers
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-# Build legacy development and insight tests. These provide deep protocol traces.
-option(EBUS_BUILD_LEGACY_TESTS "Build legacy development and insight tests" OFF)
-
 # Default to Debug build if not specified
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug)
@@ -35,8 +32,5 @@ enable_testing()
 
 add_subdirectory(src/ebus)
 add_subdirectory(tests)
-if(EBUS_BUILD_LEGACY_TESTS)
-    add_subdirectory(legacy)
-endif()
 add_subdirectory(tools)
 add_subdirectory(examples)

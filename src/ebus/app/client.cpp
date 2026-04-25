@@ -19,8 +19,11 @@
 #endif
 
 ebus::AbstractClient::AbstractClient(int fd, Request* request,
-                                     bool write_capable)
-    : fd_(fd), request_(request), write_capable_(write_capable) {
+                                     bool write_capable, size_t max_buffer)
+    : fd_(fd),
+      request_(request),
+      max_buffer_size_(max_buffer),
+      write_capable_(write_capable) {
   if (fd_ >= 0) {
     // All network clients must be non-blocking for the Manager's poll loop
     int flags = fcntl(fd_, F_GETFL, 0);
@@ -80,8 +83,9 @@ bool ebus::AbstractClient::flushLocked() {
   return true;
 }
 
-ebus::ReadOnlyClient::ReadOnlyClient(int fd, Request* request)
-    : AbstractClient(fd, request, false) {}
+ebus::ReadOnlyClient::ReadOnlyClient(int fd, Request* request,
+                                     size_t max_buffer)
+    : AbstractClient(fd, request, false, max_buffer) {}
 
 bool ebus::ReadOnlyClient::wantsToSend() { return false; }
 
@@ -94,8 +98,7 @@ void ebus::ReadOnlyClient::sendToClient(ByteView data) {
   if (fd_ < 0 || data.empty()) return;
   {
     std::lock_guard<std::mutex> lock(buffer_mutex_);
-    if (outbound_buffer_.size() + data.size() >
-        ebus::max_client_outbound_buffer) {
+    if (outbound_buffer_.size() + data.size() > max_buffer_size_) {
       stop();
       return;
     }
@@ -106,12 +109,13 @@ void ebus::ReadOnlyClient::sendToClient(ByteView data) {
 
 ebus::BridgeAction ebus::ReadOnlyClient::onBusByte(const BusEventContext& ctx) {
   if (!isConnected()) return BridgeAction::stop_session;
+  // This should never happen, because ReadOnlyClient is never allowed to write
   (void)ctx;
   return BridgeAction::stop_session;
 }
 
-ebus::RegularClient::RegularClient(int fd, Request* request)
-    : AbstractClient(fd, request, true) {}
+ebus::RegularClient::RegularClient(int fd, Request* request, size_t max_buffer)
+    : AbstractClient(fd, request, true, max_buffer) {}
 
 bool ebus::RegularClient::wantsToSend() {
   uint8_t dummy;
@@ -126,8 +130,7 @@ void ebus::RegularClient::sendToClient(ByteView data) {
   if (fd_ < 0 || data.empty()) return;
   {
     std::lock_guard<std::mutex> lock(buffer_mutex_);
-    if (outbound_buffer_.size() + data.size() >
-        ebus::max_client_outbound_buffer) {
+    if (outbound_buffer_.size() + data.size() > max_buffer_size_) {
       stop();
       return;
     }
@@ -139,35 +142,40 @@ void ebus::RegularClient::sendToClient(ByteView data) {
 ebus::BridgeAction ebus::RegularClient::onBusByte(const BusEventContext& ctx) {
   if (!isConnected()) return BridgeAction::stop_session;
 
+  // Regular clients always echo all bus traffic
+  sendToClient(ByteView(&ctx.byte, 1));
+  return BridgeAction::keep_active;
+
   // Handle bus response according to last command
-  switch (ctx.result) {
-    case RequestResult::first_lost:
-    case RequestResult::first_error:
-    case RequestResult::retry_error:
-    case RequestResult::second_lost:
-    case RequestResult::second_error:
-      return BridgeAction::stop_session;
-    case RequestResult::observe_syn:
-    case RequestResult::observe_data:
-      sendToClient(ByteView(&ctx.byte, 1));
-      return BridgeAction::keep_active;
-    case RequestResult::first_syn:
-    case RequestResult::first_retry:
-    case RequestResult::retry_syn:
-      // Hide micro-retry: session remains active but we send no bridge response
-      return BridgeAction::keep_active;
-    case RequestResult::first_won:
-    case RequestResult::second_won:
-      sendToClient(ByteView(&ctx.byte, 1));
-      return BridgeAction::keep_active;
-    default:
-      break;
-  }
-  return BridgeAction::stop_session;
+  // switch (ctx.result) {
+  //   case RequestResult::first_lost:
+  //   case RequestResult::first_error:
+  //   case RequestResult::retry_error:
+  //   case RequestResult::second_lost:
+  //   case RequestResult::second_error:
+  //     return BridgeAction::stop_session;
+  //   case RequestResult::observe_syn:
+  //   case RequestResult::observe_data:
+  //     sendToClient(ByteView(&ctx.byte, 1));
+  //     return BridgeAction::keep_active;
+  //   case RequestResult::first_syn:
+  //   case RequestResult::first_retry:
+  //   case RequestResult::retry_syn:
+  //     // Hide micro-retry: session remains active but we send no bridge
+  //     response return BridgeAction::keep_active;
+  //   case RequestResult::first_won:
+  //   case RequestResult::second_won:
+  //     sendToClient(ByteView(&ctx.byte, 1));
+  //     return BridgeAction::keep_active;
+  //   default:
+  //     break;
+  // }
+  // return BridgeAction::stop_session;
 }
 
-ebus::EnhancedClient::EnhancedClient(int fd, Request* request)
-    : AbstractClient(fd, request, true) {}
+ebus::EnhancedClient::EnhancedClient(int fd, Request* request,
+                                     size_t max_buffer)
+    : AbstractClient(fd, request, true, max_buffer) {}
 
 bool ebus::EnhancedClient::wantsToSend() {
   if (inbound_len_ > 0) return true;
@@ -255,7 +263,7 @@ void ebus::EnhancedClient::sendToClient(ByteView data) {
 
   {
     std::lock_guard<std::mutex> lock(buffer_mutex_);
-    if (outbound_buffer_.size() + 2 > ebus::max_client_outbound_buffer) {
+    if (outbound_buffer_.size() + 2 > max_buffer_size_) {
       stop();
       return;
     }
@@ -314,14 +322,18 @@ ebus::BridgeAction ebus::EnhancedClient::onBusByte(const BusEventContext& ctx) {
 }
 
 std::unique_ptr<ebus::AbstractClient> ebus::createClient(int fd, Request* req,
-                                                         ClientType type) {
+                                                         ClientType type,
+                                                         size_t max_buffer) {
   switch (type) {
     case ClientType::read_only:
-      return std::unique_ptr<AbstractClient>(new ReadOnlyClient(fd, req));
+      return std::unique_ptr<AbstractClient>(
+          new ReadOnlyClient(fd, req, max_buffer));
     case ClientType::regular:
-      return std::unique_ptr<AbstractClient>(new RegularClient(fd, req));
+      return std::unique_ptr<AbstractClient>(
+          new RegularClient(fd, req, max_buffer));
     case ClientType::enhanced:
-      return std::unique_ptr<AbstractClient>(new EnhancedClient(fd, req));
+      return std::unique_ptr<AbstractClient>(
+          new EnhancedClient(fd, req, max_buffer));
     default:
       return nullptr;
   }

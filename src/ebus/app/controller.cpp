@@ -15,15 +15,18 @@
 #include "app/scheduler.hpp"
 #include "core/bus_handler.hpp"
 #include "core/bus_monitor.hpp"
+#include "core/constants.hpp"
 #include "core/handler.hpp"
 #include "core/request.hpp"
 #include "platform/bus.hpp"
 #include "platform/service_thread.hpp"
 #include "platform/system.hpp"
+#include "utils/circular_buffer.hpp"
 
 struct ebus::Impl {
   mutable std::mutex error_mutex_;
-  std::deque<ebus::ErrorEntry> error_buffer_;
+  detail::CircularBuffer<ebus::ErrorEntry> error_buffer_{
+      defaults::Logging::log_size};
   ebus::ReactiveMasterSlaveCallback user_reactive_callback_;
   ebus::TelegramCallback user_telegram_callback_;
   ebus::ErrorCallback user_error_callback_;
@@ -88,59 +91,65 @@ void ebus::Controller::setAddress(const uint8_t& address) {
     impl_->device_manager_->setOwnAddress(address);
     impl_->device_scanner_->setOwnAddress(address);
     impl_->bus_->setRuntimeConfig(config_.runtime);
-    impl_->request_->setMaxLockCounter(config_.runtime.lock_counter_max);
+    impl_->request_->setMaxLockCounter(
+        config_.runtime.arbitration.lock_counter_max);
   }
 }
 
 void ebus::Controller::setWindow(const uint16_t& window) {
-  config_.runtime.window = window;
+  config_.runtime.bus.timing.window = window;
   if (configured_) impl_->bus_->setWindow(window);
 }
 
 void ebus::Controller::setOffset(const uint16_t& offset) {
-  config_.runtime.offset = offset;
+  config_.runtime.bus.timing.offset = offset;
   if (configured_) impl_->bus_->setOffset(offset);
 }
 
 void ebus::Controller::setErrorLogSize(size_t size) {
-  config_.runtime.error_log_size = size;
+  config_.runtime.logging.log_size = size;
   if (configured_) {
     std::lock_guard<std::mutex> lock(impl_->error_mutex_);
-    while (impl_->error_buffer_.size() > size) {
-      impl_->error_buffer_.pop_front();
-    }
+    impl_->error_buffer_.set_capacity(size);
   }
 }
 
 void ebus::Controller::setClientActiveTimeout(
     std::chrono::milliseconds timeout) {
-  config_.runtime.client_timeout_ms = timeout;
+  config_.runtime.network.timing.client_timeout = timeout;
   if (impl_->client_manager_) {
     impl_->client_manager_->setActiveTimeout(timeout);
   }
 }
 
+void ebus::Controller::setOutboundBufferSize(size_t size) {
+  config_.runtime.network.outbound_buffer_size = size;
+  if (impl_->client_manager_) {
+    impl_->client_manager_->setOutboundBufferSize(size);
+  }
+}
+
 void ebus::Controller::setMaxSendAttempts(int max_send_attempts) {
-  config_.runtime.max_send_attempts = max_send_attempts;
+  config_.runtime.scheduler.max_send_attempts = max_send_attempts;
   if (impl_->scheduler_) {
     impl_->scheduler_->setMaxSendAttempts(max_send_attempts);
   }
 }
 
 void ebus::Controller::setBaseBackoff(std::chrono::milliseconds base_backoff) {
-  config_.runtime.base_backoff_ms = base_backoff;
+  config_.runtime.scheduler.timing.base_backoff = base_backoff;
   if (impl_->scheduler_) impl_->scheduler_->setBaseBackoff(base_backoff);
 }
 
 void ebus::Controller::setFsmTimeout(std::chrono::milliseconds timeout) {
-  config_.runtime.fsm_timeout_ms = timeout;
+  config_.runtime.scheduler.timing.fsm_timeout = timeout;
   if (impl_->scheduler_) {
     impl_->scheduler_->setFsmTimeout(timeout);
   }
 }
 
 void ebus::Controller::setWatchdogTimeout(std::chrono::milliseconds timeout) {
-  config_.runtime.watchdog_timeout_ms = timeout;
+  config_.runtime.network.timing.watchdog_timeout = timeout;
   if (impl_->bus_handler_) {
     impl_->bus_handler_->setWatchdogTimeout(timeout);
   }
@@ -215,6 +224,11 @@ std::vector<ebus::DeviceInfo> ebus::Controller::getDeviceInfo() const {
   return impl_->device_manager_->getDeviceInfo();
 }
 
+std::string ebus::Controller::getDeviceInfoJson() const {
+  if (!impl_->device_manager_) return "[]";
+  return impl_->device_manager_->getDeviceInfoJson();
+}
+
 void ebus::Controller::resetMetrics() {
   if (impl_->bus_monitor_) impl_->bus_monitor_->resetMetrics();
 }
@@ -227,7 +241,25 @@ ebus::Metrics ebus::Controller::getMetrics() const {
 
 std::vector<ebus::ErrorEntry> ebus::Controller::getErrors() const {
   std::lock_guard<std::mutex> lock(impl_->error_mutex_);
-  return {impl_->error_buffer_.begin(), impl_->error_buffer_.end()};
+  if (impl_->error_buffer_.empty()) return {};
+
+  std::vector<ErrorEntry> result;
+  result.reserve(impl_->error_buffer_.size());
+
+  // CircularBuffer provides chronological indexing internally
+  for (size_t i = 0; i < impl_->error_buffer_.size(); ++i) {
+    result.push_back(impl_->error_buffer_[i]);
+  }
+  return result;
+}
+
+std::string ebus::Controller::getErrorsJson() const {
+  return ebus::toJson(getErrors());
+}
+
+size_t ebus::Controller::getErrorLogCapacity() const {
+  std::lock_guard<std::mutex> lock(impl_->error_mutex_);
+  return impl_->error_buffer_.capacity();
 }
 
 void ebus::Controller::clearErrors() {
@@ -242,7 +274,8 @@ bool ebus::Controller::isRunning() const noexcept { return running_; }
 void ebus::Controller::constructMembers() {
   impl_->bus_monitor_ = std::make_unique<BusMonitor>();
   impl_->request_ = std::make_unique<Request>(impl_->bus_monitor_.get());
-  impl_->request_->setMaxLockCounter(config_.runtime.lock_counter_max);
+  impl_->request_->setMaxLockCounter(
+      config_.runtime.arbitration.lock_counter_max);
   impl_->bus_ =
       std::make_unique<Bus>(config_.bus, config_.runtime, impl_->request_.get(),
                             impl_->bus_monitor_.get());
@@ -250,10 +283,13 @@ void ebus::Controller::constructMembers() {
       config_.runtime.address, impl_->bus_.get(), impl_->request_.get(),
       impl_->bus_monitor_.get());
 
-  impl_->scheduler_ = std::make_unique<Scheduler>(
-      impl_->handler_.get(), config_.runtime.max_send_attempts,
-      config_.runtime.base_backoff_ms);
-  impl_->scheduler_->setFsmTimeout(config_.runtime.fsm_timeout_ms);
+  impl_->scheduler_ = std::make_unique<Scheduler>(impl_->handler_.get());
+  impl_->scheduler_->setMaxSendAttempts(
+      config_.runtime.scheduler.max_send_attempts);
+  impl_->scheduler_->setBaseBackoff(
+      config_.runtime.scheduler.timing.base_backoff);
+  impl_->scheduler_->setFsmTimeout(
+      config_.runtime.scheduler.timing.fsm_timeout);
 
   impl_->device_manager_ =
       std::make_unique<DeviceManager>(impl_->bus_monitor_.get());
@@ -283,19 +319,25 @@ void ebus::Controller::constructMembers() {
     // 1. Update internal circular buffer
     {
       std::lock_guard<std::mutex> lock(impl_->error_mutex_);
-      impl_->error_buffer_.push_back(
-          {info.level, std::string(info.message), info.result,
-           ebus::toVector(info.master), ebus::toVector(info.slave),
-           info.utilization, std::chrono::system_clock::now()});
+      if (config_.runtime.logging.log_size > 0) {
+        ErrorEntry entry;
+        entry.level = info.level;
+        entry.setMessage(info.message);
+        entry.result = info.result;
+        entry.handler_state = info.handler_state;
+        entry.request_state = info.request_state;
+        entry.setMaster(info.master.data(), info.master.size());
+        entry.setSlave(info.slave.data(), info.slave.size());
+        entry.utilization = info.utilization;
+        entry.timestamp = std::chrono::system_clock::now();
 
-      if (impl_->error_buffer_.size() > config_.runtime.error_log_size) {
-        impl_->error_buffer_.pop_front();
+        impl_->error_buffer_.push_back(std::move(entry));
       }
     }
 
     // 2. Inform application
     if (impl_->user_error_callback_ &&
-        info.level <= config_.runtime.log_level) {
+        info.level <= config_.runtime.logging.level) {
       impl_->user_error_callback_(info);
     }
   });
@@ -307,15 +349,18 @@ void ebus::Controller::constructMembers() {
 
   impl_->bus_handler_ = std::make_unique<BusHandler>(
       impl_->request_.get(), impl_->handler_.get(), impl_->bus_->getQueue(),
-      event_queue_capacity);
+      internal::event_queue_capacity);
 
   impl_->client_manager_ = std::make_unique<ClientManager>(
       impl_->bus_.get(), impl_->bus_handler_.get(), impl_->request_.get(),
       impl_->bus_monitor_.get());
-  impl_->client_manager_->setActiveTimeout(config_.runtime.client_timeout_ms);
+  impl_->client_manager_->setActiveTimeout(
+      config_.runtime.network.timing.client_timeout);
+  impl_->client_manager_->setOutboundBufferSize(
+      config_.runtime.network.outbound_buffer_size);
 
-  impl_->bus_->setWindow(config_.runtime.window);
-  impl_->bus_->setOffset(config_.runtime.offset);
+  impl_->bus_->setWindow(config_.runtime.bus.timing.window);
+  impl_->bus_->setOffset(config_.runtime.bus.timing.offset);
 }
 
 void ebus::Controller::run() {
@@ -324,14 +369,13 @@ void ebus::Controller::run() {
       impl_->scheduler_->enqueue(item.priority, item.message);
     });
 
-    if (impl_->scheduler_->queueSize() < 5) {
+    if (impl_->scheduler_->queueSize() < internal::Scheduler::scan_threshold) {
       auto scan_cmd = impl_->device_scanner_->nextCommand();
       if (!scan_cmd.empty()) {
         impl_->scheduler_->enqueue(5, scan_cmd);
       }
     }
 
-    // High-level "Tick" rate (100ms is enough for register polling resolution)
-    ebus::sleepMs(100);
+    ebus::sleepMs(internal::controller_tick_ms);
   }
 }

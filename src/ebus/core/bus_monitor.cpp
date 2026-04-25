@@ -5,6 +5,10 @@
 
 #include "core/bus_monitor.hpp"
 
+#include "core/constants.hpp"
+
+ebus::BusMonitor::BusMonitor() : utilization_history_(internal::history_size) {}
+
 void ebus::BusMonitor::resetMetrics() {
   std::lock_guard<std::mutex> lock(metrics_mutex);
   handler_acc_.resetMetrics();
@@ -30,8 +34,6 @@ void ebus::BusMonitor::resetMetrics() {
   transmit.reset();
   uptime.reset();
   utilization.reset();
-  history_index_ = 0;
-  history_count_ = 0;
 
   for (auto& stat : handler_timing) {
     stat.reset();
@@ -146,45 +148,16 @@ void ebus::BusMonitor::updateUtilizationHistory() {
     current_util = (utilization.getSum() / bus_acc_.uptime.last) * 100.0;
   }
 
-  utilization_history_[history_index_] = static_cast<float>(current_util);
-  history_index_ = (history_index_ + 1) % ebus::default_history_size;
-  if (history_count_ < ebus::default_history_size) history_count_++;
+  utilization_history_.push_back(static_cast<float>(current_util));
 }
 
 std::vector<float> ebus::BusMonitor::getUtilizationHistory() const {
   std::lock_guard<std::mutex> lock(metrics_mutex);
   std::vector<float> result;
-  result.reserve(history_count_);
+  result.reserve(utilization_history_.size());
 
-  for (size_t i = 0; i < history_count_; ++i) {
-    size_t idx =
-        (history_index_ + ebus::default_history_size - history_count_ + i) %
-        ebus::default_history_size;
-    result.push_back(utilization_history_[idx]);
+  for (size_t i = 0; i < utilization_history_.size(); ++i) {
+    result.push_back(utilization_history_[i]);  // Access chronologically
   }
   return result;
-}
-
-void ebus::BusMonitor::updateHandler(
-    std::function<void(metrics::HandlerMetrics&)> updater) {
-  std::lock_guard<std::mutex> lock(metrics_mutex);
-  updater(handler_acc_);
-}
-
-void ebus::BusMonitor::updateRequest(
-    std::function<void(metrics::RequestMetrics&)> updater) {
-  std::lock_guard<std::mutex> lock(metrics_mutex);
-  updater(request_acc_);
-}
-
-void ebus::BusMonitor::updateBus(
-    std::function<void(metrics::BusMetrics&)> updater) {
-  std::lock_guard<std::mutex> lock(metrics_mutex);
-  updater(bus_acc_);
-}
-
-void ebus::BusMonitor::updateDevice(
-    std::function<void(metrics::DeviceMetrics&)> updater) {
-  std::lock_guard<std::mutex> lock(metrics_mutex);
-  updater(device_acc_);
 }

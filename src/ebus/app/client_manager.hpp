@@ -14,6 +14,7 @@
 #include <vector>
 
 #include "app/client.hpp"
+#include "core/bus_events.hpp"
 #include "core/bus_handler.hpp"
 #include "core/request.hpp"
 #include "platform/bus.hpp"
@@ -38,9 +39,16 @@ class ClientManager {
   void stop();
 
   void setActiveTimeout(std::chrono::milliseconds timeout);
+  void setOutboundBufferSize(size_t size);
 
   void addClient(int fd, ClientType type);
+  void addClient(std::shared_ptr<AbstractClient> client);
   void removeClient(int fd);
+
+  /**
+   * Signals the manager loop to wake up and process pending work immediately.
+   */
+  void wake();
 
  private:
   Bus* bus_;
@@ -83,6 +91,8 @@ class ClientManager {
 
   // Configurable timeout for active session
   std::chrono::milliseconds active_timeout_{1000};
+
+  size_t outbound_buffer_size_ = defaults::Network::outbound_buffer_size;
 
   void run();
 

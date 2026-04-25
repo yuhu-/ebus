@@ -8,8 +8,8 @@
 #include <cctype>
 #include <cmath>
 #include <ebus/data_types.hpp>
-#include <ebus/definitions.hpp>
 #include <ebus/sequence.hpp>
+#include <ebus/types.hpp>
 #include <ebus/utils.hpp>
 #include <limits>
 #include <vector>
@@ -488,11 +488,13 @@ TEST_CASE("Datatypes: null sentinel encoding", "[models][datatypes]") {
   REQUIRE(int32_null[2] == 0x00);
   REQUIRE(int32_null[3] == 0x80);
 
-  // float4 does not have replacement_value, so encoding null should return empty sequence
+  // float4 does not have replacement_value, so encoding null should return
+  // empty sequence
   Sequence float4_null = ebus::encode(DataType::float4, ebus::nullValue());
   REQUIRE(float4_null.empty());
 
-  // char1 does not have replacement_value, so encoding null should return empty sequence
+  // char1 does not have replacement_value, so encoding null should return empty
+  // sequence
   Sequence char1_null = ebus::encode(DataType::char1, ebus::nullValue());
   REQUIRE(char1_null.empty());
 }
