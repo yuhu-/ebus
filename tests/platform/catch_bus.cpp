@@ -15,6 +15,7 @@
 #include "core/request.hpp"
 #include "platform/bus.hpp"
 #include "platform/queue.hpp"
+#include "platform/system.hpp"
 
 using namespace ebus::detail;
 
@@ -59,7 +60,7 @@ TEST_CASE("Bus: Basic Communication", "[platform][bus]") {
   bool prematureSyn = false;
   for (int i = 0; i < 5; ++i) {
     bus.writeByte(0xff);
-    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    sleepMs(20);
     BusEvent tempEv;
     while (queue->tryPop(tempEv)) {
       if (tempEv.byte == ebus::Symbols::syn) prematureSyn = true;
@@ -135,7 +136,7 @@ TEST_CASE("Bus: Raw Reception (Broadcast Simulation)", "[platform][bus]") {
 
   for (auto b : msg) {
     bus.writeByte(b);
-    std::this_thread::sleep_for(std::chrono::microseconds(500));
+    sleepMs(500);
   }
 
   std::vector<uint8_t> received;

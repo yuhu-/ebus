@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "app/poll_manager.hpp"
+#include "platform/system.hpp"
 
 using namespace ebus;
 using namespace ebus::detail;
@@ -40,7 +41,7 @@ TEST_CASE("PollManager: Timing and Recurrence", "[app][pollmanager]") {
   pm.processDueItems([&](const PollItem&) { count++; });
   REQUIRE(count == 0);
 
-  std::this_thread::sleep_for(std::chrono::milliseconds(1100));
+  sleepMs(1100);
   count = 0;
   pm.processDueItems([&](const PollItem& item) {
     count++;
@@ -53,7 +54,7 @@ TEST_CASE("PollManager: Timing and Recurrence", "[app][pollmanager]") {
   pm.processDueItems([&](const PollItem&) { count++; });
   REQUIRE(count == 0);
 
-  std::this_thread::sleep_for(std::chrono::milliseconds(1100));
+  sleepMs(1100);
 
   count = 0;
   pm.processDueItems([&](const PollItem&) { count++; });
@@ -64,14 +65,14 @@ TEST_CASE("PollManager: Removal", "[app][pollmanager]") {
   PollManager pm;
 
   uint32_t id = pm.addPollItem(1, ::ByteView({0xff}), std::chrono::seconds(1));
-  std::this_thread::sleep_for(std::chrono::milliseconds(1100));
+  sleepMs(1100);
 
   size_t count = 0;
   pm.processDueItems([&](const PollItem&) { count++; });
   REQUIRE(count == 1);
 
   pm.removePollItem(id);
-  std::this_thread::sleep_for(std::chrono::milliseconds(1100));
+  sleepMs(1100);
   count = 0;
   pm.processDueItems([&](const PollItem&) { count++; });
   REQUIRE(count == 0);

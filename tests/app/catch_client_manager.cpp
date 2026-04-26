@@ -19,6 +19,7 @@
 #include "core/handler.hpp"
 #include "core/request.hpp"
 #include "platform/bus.hpp"
+#include "platform/system.hpp"
 #include "test_utils.hpp"
 
 // using namespace ebus;
@@ -238,7 +239,7 @@ TEST_CASE("Client Removal") {
 
   bus.writeByte(0xaa);
   manager.start();
-  std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  sleepMs(10);
 
   // Reaching here indicates manager handled closed socket without hang/crash
   CHECK_TEST("Manager handled closed socket", true);

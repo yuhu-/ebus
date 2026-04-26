@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "platform/queue.hpp"
+#include "platform/system.hpp"
 
 using namespace ebus::detail;
 
@@ -60,7 +61,7 @@ TEST_CASE("Queue: Blocking Pop", "[platform][queue]") {
   Queue<int> q(5);
 
   std::thread producer([&q]() {
-    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    sleepMs(50);
     q.push(42);
   });
 

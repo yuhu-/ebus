@@ -9,6 +9,7 @@
 #include <thread>
 
 #include "platform/service_thread.hpp"
+#include "platform/system.hpp"
 
 using namespace ebus::detail;
 
@@ -41,7 +42,7 @@ TEST_CASE("ServiceThread: Destructor performs implicit join",
     ServiceThread worker(
         "testDestructor",
         [&]() {
-          std::this_thread::sleep_for(std::chrono::milliseconds(50));
+          sleepMs(50);
           threadStarted = true;
           counter++;
         },

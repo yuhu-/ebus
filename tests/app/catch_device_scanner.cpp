@@ -15,6 +15,7 @@
 #include "core/handler.hpp"
 #include "core/request.hpp"
 #include "platform/bus.hpp"
+#include "platform/system.hpp"
 #include "test_utils.hpp"
 
 using namespace ebus::detail;
@@ -98,7 +99,7 @@ TEST_CASE("DeviceScanner: Timing & Vendor Scans", "[app][devicescanner]") {
 
   REQUIRE(scanner.nextCommand().empty());
 
-  std::this_thread::sleep_for(std::chrono::milliseconds(1100));
+  sleepMs(1100);
 
   auto cmd1 = scanner.nextCommand();
   REQUIRE(!cmd1.empty());
