@@ -4,6 +4,11 @@
 #if defined(ESP32)
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
+#if __has_include(<esp_rom_sys.h>)
+#include <esp_rom_sys.h>
+#else
+#include <rom/ets_sys.h>
+#endif
 #elif defined(POSIX)
 #include <chrono>
 #include <thread>
@@ -16,6 +21,14 @@ void sleepMs(uint32_t ms) {
   vTaskDelay(pdMS_TO_TICKS(ms));
 #elif defined(POSIX)
   std::this_thread::sleep_for(std::chrono::milliseconds(ms));
+#endif
+}
+
+void sleepUs(uint32_t us) {
+#if defined(ESP32)
+  esp_rom_delay_us(us);
+#elif defined(POSIX)
+  std::this_thread::sleep_for(std::chrono::microseconds(us));
 #endif
 }
 
