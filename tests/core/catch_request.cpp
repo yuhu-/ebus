@@ -8,8 +8,10 @@
 
 #include "core/request.hpp"
 
+using namespace ebus::detail;
+
 TEST_CASE("Request: defaults", "[core][request]") {
-  ebus::Request r;
+  Request r;
   REQUIRE(r.busRequestPending() == false);
   REQUIRE(r.getState() == ebus::RequestState::observe);
   REQUIRE(r.getResult() == ebus::RequestResult::observe_syn);
@@ -17,7 +19,7 @@ TEST_CASE("Request: defaults", "[core][request]") {
 
 TEST_CASE("Request: requestBus, completion and handler callback",
           "[core][request]") {
-  ebus::Request r;
+  Request r;
   r.setMaxLockCounter(0);
   r.reset();  // lockCounter == maxLockCounter (0)
   REQUIRE(r.busAvailable() == true);
@@ -36,7 +38,7 @@ TEST_CASE("Request: requestBus, completion and handler callback",
 }
 
 TEST_CASE("Request: first -> firstWon flow", "[core][request]") {
-  ebus::Request r;
+  Request r;
   r.setMaxLockCounter(0);
   r.reset();
   r.requestBus(0x33);
@@ -52,7 +54,7 @@ TEST_CASE("Request: first -> firstWon flow", "[core][request]") {
 
 TEST_CASE("Request: first -> firstRetry -> retry -> second -> secondWon",
           "[core][request]") {
-  ebus::Request r;
+  Request r;
   r.setMaxLockCounter(0);
   r.reset();
   r.requestBus(0x33);
@@ -82,7 +84,7 @@ TEST_CASE("Request: first -> firstRetry -> retry -> second -> secondWon",
 
 TEST_CASE("Request: startBit resets state and clears pending request",
           "[core][request]") {
-  ebus::Request r;
+  Request r;
   r.setMaxLockCounter(0);
   r.reset();
   r.requestBus(0x33);
@@ -94,7 +96,7 @@ TEST_CASE("Request: startBit resets state and clears pending request",
 }
 
 TEST_CASE("Request: Legacy Edge Cases", "[core][request][legacy]") {
-  ebus::Request r;
+  Request r;
   r.setMaxLockCounter(0);
   r.reset();
 

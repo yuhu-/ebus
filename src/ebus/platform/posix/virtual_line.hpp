@@ -12,7 +12,7 @@
 
 #include "platform/queue.hpp"
 
-namespace ebus {
+namespace ebus::detail {
 
 /**
  * VirtualLine simulates the physical eBUS wire.
@@ -39,6 +39,6 @@ class VirtualLine {
   static std::vector<VirtualLine*> instances_;
 };
 
-}  // namespace ebus
+}  // namespace ebus::detail
 
 #endif

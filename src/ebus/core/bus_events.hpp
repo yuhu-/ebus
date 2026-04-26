@@ -10,7 +10,7 @@
 
 #include "ebus/types.hpp"
 
-namespace ebus {
+namespace ebus::detail {
 
 /**
  * Represents a single event on the bus, including the byte value, whether it
@@ -35,4 +35,4 @@ struct BusEventContext {
   std::chrono::steady_clock::time_point timestamp;
 };
 
-}  // namespace ebus
+}  // namespace ebus::detail

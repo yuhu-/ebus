@@ -5,10 +5,12 @@
 
 #include "core/bus_monitor.hpp"
 
-ebus::BusMonitor::BusMonitor()
+namespace ebus::detail {
+
+BusMonitor::BusMonitor()
     : utilization_history_(defaults::Logging::history_size) {}
 
-void ebus::BusMonitor::resetMetrics() {
+void BusMonitor::resetMetrics() {
   std::lock_guard<std::mutex> lock(metrics_mutex);
   handler_acc_.resetMetrics();
   request_acc_.resetMetrics();
@@ -39,7 +41,7 @@ void ebus::BusMonitor::resetMetrics() {
   }
 }
 
-ebus::metrics::SystemMetrics ebus::BusMonitor::getMetrics() const {
+ebus::metrics::SystemMetrics BusMonitor::getMetrics() const {
   std::lock_guard<std::mutex> lock(metrics_mutex);
   metrics::SystemMetrics sm;
 
@@ -140,7 +142,7 @@ ebus::metrics::SystemMetrics ebus::BusMonitor::getMetrics() const {
   return sm;
 }
 
-void ebus::BusMonitor::updateUtilizationHistory() {
+void BusMonitor::updateUtilizationHistory() {
   std::lock_guard<std::mutex> lock(metrics_mutex);
   double current_util = 0.0;
   if (bus_acc_.uptime.last > 0) {
@@ -150,7 +152,7 @@ void ebus::BusMonitor::updateUtilizationHistory() {
   utilization_history_.push_back(static_cast<float>(current_util));
 }
 
-std::vector<float> ebus::BusMonitor::getUtilizationHistory() const {
+std::vector<float> BusMonitor::getUtilizationHistory() const {
   std::lock_guard<std::mutex> lock(metrics_mutex);
   std::vector<float> result;
   result.reserve(utilization_history_.size());
@@ -160,3 +162,5 @@ std::vector<float> ebus::BusMonitor::getUtilizationHistory() const {
   }
   return result;
 }
+
+}  // namespace ebus::detail

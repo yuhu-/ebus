@@ -9,8 +9,11 @@
 
 #include "core/telegram.hpp"
 
+// using namespace ebus;
+using namespace ebus::detail;
+
 TEST_CASE("Telegram: creation", "[core][telegram]") {
-  ebus::Telegram tel;
+  Telegram tel;
 
   SECTION("Create Master") {
     tel.createMaster(0x10, ebus::toVector("08b509030d0600"));
@@ -31,7 +34,7 @@ TEST_CASE("Telegram: creation", "[core][telegram]") {
 
 TEST_CASE("Telegram: parsing", "[core][telegram]") {
   ebus::Sequence seq;
-  ebus::Telegram tel;
+  Telegram tel;
 
   SECTION("Master-Slave normal") {
     seq.assign(ebus::toVector("1008b509030d0600e10003b0fba901d000"), true);

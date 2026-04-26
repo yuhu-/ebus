@@ -18,7 +18,7 @@
 #include "ebus/metrics.hpp"
 #include "models/device.hpp"
 
-namespace ebus {
+namespace ebus::detail {
 
 class BusMonitor;
 
@@ -55,4 +55,4 @@ class DeviceManager {
   std::bitset<256> identified_devices_{};
 };
 
-}  // namespace ebus
+}  // namespace ebus::detail

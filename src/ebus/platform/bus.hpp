@@ -7,12 +7,12 @@
 
 #if defined(ESP32)
 #include "freertos/bus_freertos.hpp"
-namespace ebus {
+namespace ebus::detail {
 using Bus = BusFreeRtos;
-}
+}  // namespace ebus::detail
 #elif defined(POSIX)
 #include "posix/bus_posix.hpp"
-namespace ebus {
+namespace ebus::detail {
 using Bus = BusPosix;
-}
+}  // namespace ebus::detail
 #endif

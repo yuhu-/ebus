@@ -7,13 +7,13 @@
 
 #include "core/bus_monitor.hpp"
 
-ebus::DeviceManager::DeviceManager(BusMonitor* monitor) : monitor_(monitor) {}
+namespace ebus::detail {
 
-void ebus::DeviceManager::setOwnAddress(uint8_t address) {
-  own_address_ = address;
-}
+DeviceManager::DeviceManager(BusMonitor* monitor) : monitor_(monitor) {}
 
-void ebus::DeviceManager::update(ByteView master_view, ByteView slave_view) {
+void DeviceManager::setOwnAddress(uint8_t address) { own_address_ = address; }
+
+void DeviceManager::update(ByteView master_view, ByteView slave_view) {
   std::lock_guard<std::mutex> lock(mutex_);
   uint8_t m_addr = master_view[0];
   uint8_t s_addr = master_view[1];
@@ -54,7 +54,7 @@ void ebus::DeviceManager::update(ByteView master_view, ByteView slave_view) {
   }
 }
 
-std::vector<ebus::DeviceInfo> ebus::DeviceManager::getDeviceInfo() const {
+std::vector<ebus::DeviceInfo> DeviceManager::getDeviceInfo() const {
   std::lock_guard<std::mutex> lock(mutex_);
   std::vector<DeviceInfo> result;
   for (size_t i = 0; i < 256; ++i) {
@@ -65,11 +65,11 @@ std::vector<ebus::DeviceInfo> ebus::DeviceManager::getDeviceInfo() const {
   return result;
 }
 
-std::string ebus::DeviceManager::getDeviceInfoJson() const {
+std::string DeviceManager::getDeviceInfoJson() const {
   return ebus::toJson(getDeviceInfo());
 }
 
-std::bitset<256> ebus::DeviceManager::getObservedSlaves() const {
+std::bitset<256> DeviceManager::getObservedSlaves() const {
   std::bitset<256> observed;
   if (monitor_) {
     auto m = monitor_->getMetrics().devices;
@@ -87,7 +87,7 @@ std::bitset<256> ebus::DeviceManager::getObservedSlaves() const {
   return observed;
 }
 
-std::vector<ebus::Sequence> ebus::DeviceManager::vendorScanCommands() const {
+std::vector<ebus::Sequence> DeviceManager::vendorScanCommands() const {
   std::lock_guard<std::mutex> lock(mutex_);
   std::vector<Sequence> result;
   for (size_t i = 0; i < 256; ++i) {
@@ -100,7 +100,7 @@ std::vector<ebus::Sequence> ebus::DeviceManager::vendorScanCommands() const {
   return result;
 }
 
-std::vector<ebus::Sequence> ebus::DeviceManager::createScanCommands(
+std::vector<ebus::Sequence> DeviceManager::createScanCommands(
     const std::vector<std::string>& addresses) const {
   std::set<uint8_t> scan_slaves;
   for (const std::string& address : addresses) {
@@ -116,3 +116,5 @@ std::vector<ebus::Sequence> ebus::DeviceManager::createScanCommands(
     result.push_back(Device::createScanCommand(slave));
   return result;
 }
+
+}  // namespace ebus::detail

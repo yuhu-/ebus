@@ -20,7 +20,7 @@
 #include "platform/queue.hpp"
 #include "platform/service_thread.hpp"
 
-namespace ebus {
+namespace ebus::detail {
 
 /**
  * The Scheduler manages the timing and prioritization of active eBUS messages.
@@ -99,7 +99,7 @@ class Scheduler {
     const char* error = nullptr;
   };
 
-  Handler* handler_ = nullptr;
+  detail::Handler* handler_ = nullptr;
 
   // Queue management
   std::vector<Item> item_queue_;
@@ -107,13 +107,13 @@ class Scheduler {
   std::condition_variable data_ready_cv_;
 
   // Worker thread
-  std::unique_ptr<ServiceThread> worker_;
+  std::unique_ptr<detail::ServiceThread> worker_;
   std::atomic<bool> stop_flag_;
   std::atomic<uint32_t> next_id_;
 
   // Active transfer state
   std::atomic<uint32_t> current_attempt_id_{0};
-  Queue<Event> event_queue_{defaults::Scheduler::queue_reserve};
+  detail::Queue<Event> event_queue_{defaults::Scheduler::queue_reserve};
 
   // Configuration
   int max_send_attempts_ = defaults::Scheduler::max_send_attempts;
@@ -136,4 +136,4 @@ class Scheduler {
   void detachHandlerCallbacks();
 };
 
-}  // namespace ebus
+}  // namespace ebus::detail

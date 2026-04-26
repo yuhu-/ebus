@@ -10,12 +10,14 @@
 
 #include "platform/service_thread.hpp"
 
+using namespace ebus::detail;
+
 TEST_CASE("ServiceThread: Basic execution and join",
           "[platform][servicethread]") {
   std::atomic<int> counter{0};
   bool threadStarted = false;
 
-  ebus::ServiceThread worker(
+  ServiceThread worker(
       "testThread",
       [&]() {
         threadStarted = true;
@@ -36,7 +38,7 @@ TEST_CASE("ServiceThread: Destructor performs implicit join",
   bool threadStarted = false;
 
   {
-    ebus::ServiceThread worker(
+    ServiceThread worker(
         "testDestructor",
         [&]() {
           std::this_thread::sleep_for(std::chrono::milliseconds(50));

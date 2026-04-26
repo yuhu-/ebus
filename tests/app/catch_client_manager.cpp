@@ -21,6 +21,9 @@
 #include "platform/bus.hpp"
 #include "test_utils.hpp"
 
+// using namespace ebus;
+using namespace ebus::detail;
+
 // Helper to mimic run_test behaviour but using Catch2
 static void CHECK_TEST(const std::string& name, bool condition) {
   INFO(name);
@@ -28,18 +31,18 @@ static void CHECK_TEST(const std::string& name, bool condition) {
 }
 
 TEST_CASE("ClientManager Orchestration (Regular + ReadOnly)") {
-  ebus::Request req;
+  Request req;
   req.setMaxLockCounter(3);
   req.reset();
 
   ebus::BusConfig config = {.device = "/dev/null", .simulate = true};
   ebus::RuntimeConfig runtime = {.address = 0x01};
 
-  ebus::BusMonitor monitor;
-  ebus::Bus bus(config, runtime, &req, &monitor);
-  ebus::Handler handler(runtime.address, &bus, &req, &monitor);
-  ebus::BusHandler busHandler(&req, &handler, bus.getQueue());
-  ebus::ClientManager manager(&bus, &busHandler, &req, &monitor);
+  BusMonitor monitor;
+  Bus bus(config, runtime, &req, &monitor);
+  Handler handler(runtime.address, &bus, &req, &monitor);
+  BusHandler busHandler(&req, &handler, bus.getQueue());
+  ClientManager manager(&bus, &busHandler, &req, &monitor);
 
   int svReg[2];
   socketpair(AF_UNIX, SOCK_STREAM, 0, svReg);
@@ -106,18 +109,18 @@ TEST_CASE("ClientManager Orchestration (Regular + ReadOnly)") {
 }
 
 TEST_CASE("ClientManager Enhanced Active Sending") {
-  ebus::Request req;
+  Request req;
   req.setMaxLockCounter(3);
   req.reset();
 
   ebus::BusConfig config = {.device = "/dev/null", .simulate = true};
   ebus::RuntimeConfig runtime = {.address = 0x01};
 
-  ebus::BusMonitor monitor;
-  ebus::Bus bus(config, runtime, &req, &monitor);
-  ebus::Handler handler(runtime.address, &bus, &req, &monitor);
-  ebus::BusHandler busHandler(&req, &handler, bus.getQueue());
-  ebus::ClientManager manager(&bus, &busHandler, &req, &monitor);
+  BusMonitor monitor;
+  Bus bus(config, runtime, &req, &monitor);
+  Handler handler(runtime.address, &bus, &req, &monitor);
+  BusHandler busHandler(&req, &handler, bus.getQueue());
+  ClientManager manager(&bus, &busHandler, &req, &monitor);
 
   int svEnh[2], svRO[2];
   socketpair(AF_UNIX, SOCK_STREAM, 0, svEnh);
@@ -182,15 +185,15 @@ TEST_CASE("ClientManager Enhanced Active Sending") {
 }
 
 TEST_CASE("ClientManager Watchdog Timeout") {
-  ebus::Request req;
+  Request req;
   req.setMaxLockCounter(0);
   ebus::BusConfig config = {.device = "/dev/null", .simulate = true};
   ebus::RuntimeConfig runtime = {.address = 0xff};
 
-  ebus::BusMonitor monitor;
-  ebus::Bus bus(config, runtime, &req, &monitor);
-  ebus::BusHandler busHandler(&req, nullptr, bus.getQueue());
-  ebus::ClientManager manager(&bus, &busHandler, &req, &monitor);
+  BusMonitor monitor;
+  Bus bus(config, runtime, &req, &monitor);
+  BusHandler busHandler(&req, nullptr, bus.getQueue());
+  ClientManager manager(&bus, &busHandler, &req, &monitor);
 
   int sv[2];
   socketpair(AF_UNIX, SOCK_STREAM, 0, sv);
@@ -218,14 +221,14 @@ TEST_CASE("ClientManager Watchdog Timeout") {
 }
 
 TEST_CASE("Client Removal") {
-  ebus::Request req;
+  Request req;
   ebus::BusConfig config = {.device = "/dev/null", .simulate = true};
   ebus::RuntimeConfig runtime = {.address = 0xff};
 
-  ebus::BusMonitor monitor;
-  ebus::Bus bus(config, runtime, &req, &monitor);
-  ebus::BusHandler busHandler(&req, nullptr, bus.getQueue());
-  ebus::ClientManager manager(&bus, &busHandler, &req, &monitor);
+  BusMonitor monitor;
+  Bus bus(config, runtime, &req, &monitor);
+  BusHandler busHandler(&req, nullptr, bus.getQueue());
+  ClientManager manager(&bus, &busHandler, &req, &monitor);
 
   int sv[2];
   socketpair(AF_UNIX, SOCK_STREAM, 0, sv);

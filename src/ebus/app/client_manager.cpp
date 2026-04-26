@@ -18,8 +18,10 @@
 #include <sys/socket.h>
 #endif
 
-ebus::ClientManager::ClientManager(Bus* bus, BusHandler* bus_handler,
-                                   Request* request, BusMonitor* monitor)
+namespace ebus::detail {
+
+ClientManager::ClientManager(Bus* bus, BusHandler* bus_handler,
+                             Request* request, BusMonitor* monitor)
     : bus_(bus),
       bus_handler_(bus_handler),
       request_(request),
@@ -48,7 +50,7 @@ ebus::ClientManager::ClientManager(Bus* bus, BusHandler* bus_handler,
   }
 }
 
-ebus::ClientManager::~ClientManager() {
+ClientManager::~ClientManager() {
   stop();
   if (bus_handler_ && bus_listener_id_ != 0) {
     bus_handler_->removeByteListener(bus_listener_id_);
@@ -56,33 +58,33 @@ ebus::ClientManager::~ClientManager() {
   }
 }
 
-void ebus::ClientManager::start() {
+void ClientManager::start() {
   if (running_.load(std::memory_order_acquire)) return;
   running_.store(true, std::memory_order_release);
-  worker_ = std::make_unique<ServiceThread>(
+  worker_ = std::make_unique<detail::ServiceThread>(
       "ebusClientManager", [this] { run(); },
-      defaults::Orchestration::stack_size,
-      defaults::Orchestration::priority_med, 0);
+      defaults::detail::Orchestration::stack_size,
+      defaults::detail::Orchestration::priority_med, 0);
   worker_->start();
   notifyWake();
 }
 
-void ebus::ClientManager::stop() {
+void ClientManager::stop() {
   running_.store(false, std::memory_order_release);
   notifyWake();
   if (worker_) worker_->join();
 }
 
-void ebus::ClientManager::setActiveTimeout(std::chrono::milliseconds timeout) {
+void ClientManager::setActiveTimeout(std::chrono::milliseconds timeout) {
   active_timeout_ = timeout;
 }
 
-void ebus::ClientManager::setOutboundBufferSize(size_t size) {
+void ClientManager::setOutboundBufferSize(size_t size) {
   outbound_buffer_size_ = size;
 }
 
-void ebus::ClientManager::addClient(int fd, ClientType type) {
-  auto client = createClient(fd, request_, type, outbound_buffer_size_);
+void ClientManager::addClient(int fd, ClientType type) {
+  auto client = detail::createClient(fd, request_, type, outbound_buffer_size_);
   if (!client) return;
   {
     std::lock_guard<std::mutex> lock(mutex_);
@@ -92,7 +94,7 @@ void ebus::ClientManager::addClient(int fd, ClientType type) {
   notifyWake();
 }
 
-void ebus::ClientManager::addClient(std::shared_ptr<AbstractClient> client) {
+void ClientManager::addClient(std::shared_ptr<detail::AbstractClient> client) {
   if (!client) return;
   {
     std::lock_guard<std::mutex> lock(mutex_);
@@ -102,12 +104,12 @@ void ebus::ClientManager::addClient(std::shared_ptr<AbstractClient> client) {
   notifyWake();
 }
 
-void ebus::ClientManager::removeClient(int fd) {
+void ClientManager::removeClient(int fd) {
   {
     std::lock_guard<std::mutex> lock(mutex_);
     clients_.erase(
         std::remove_if(clients_.begin(), clients_.end(),
-                       [fd](const std::shared_ptr<AbstractClient>& c) {
+                       [fd](const std::shared_ptr<detail::AbstractClient>& c) {
                          return c->getFd() == fd;
                        }),
         clients_.end());
@@ -116,9 +118,9 @@ void ebus::ClientManager::removeClient(int fd) {
   notifyWake();
 }
 
-void ebus::ClientManager::wake() { notifyWake(); }
+void ClientManager::wake() { notifyWake(); }
 
-void ebus::ClientManager::run() {
+void ClientManager::run() {
   BusEventContext ctx;
 
   auto last_state_change = std::chrono::steady_clock::now();
@@ -179,7 +181,7 @@ void ebus::ClientManager::run() {
 
     // 3. Outbound logic: operate on a local copy of active sender to avoid
     // holding lock
-    std::shared_ptr<AbstractClient> active_sender;
+    std::shared_ptr<detail::AbstractClient> active_sender;
     {
       std::lock_guard<std::mutex> lock(mutex_);
       active_sender = current_active_sender_;
@@ -232,7 +234,7 @@ void ebus::ClientManager::run() {
 
     // 4. Inbound logic: process bus byte(s)
     auto process_byte = [&](const BusEventContext& bctx) {
-      std::shared_ptr<AbstractClient> current_sender;
+      std::shared_ptr<detail::AbstractClient> current_sender;
       SessionState s;
       {
         std::lock_guard<std::mutex> lock(mutex_);
@@ -244,7 +246,8 @@ void ebus::ClientManager::run() {
         // We forward all bytes to the current active sender so it can sniff
         // while waiting for or performing arbitration.
         if (s != SessionState::idle) {
-          if (current_sender->onBusByte(bctx) == BridgeAction::stop_session) {
+          if (current_sender->onBusByte(bctx) ==
+              detail::BridgeAction::stop_session) {
             stopActiveSession();
           } else if (bus_requested_.load(std::memory_order_acquire) ||
                      s == SessionState::response) {
@@ -293,7 +296,7 @@ void ebus::ClientManager::run() {
   }  // while(running)
 }
 
-void ebus::ClientManager::stopActiveSession() {
+void ClientManager::stopActiveSession() {
   std::shared_ptr<AbstractClient> old_sender;
   {
     std::lock_guard<std::mutex> lock(mutex_);
@@ -308,10 +311,12 @@ void ebus::ClientManager::stopActiveSession() {
   if (request_) request_->reset();
 }
 
-void ebus::ClientManager::notifyWake() {
+void ClientManager::notifyWake() {
   {
     std::lock_guard<std::mutex> lk(wake_mutex_);
     wake_flag_.store(true, std::memory_order_release);
   }
   wake_cv_.notify_one();
 }
+
+}  // namespace ebus::detail

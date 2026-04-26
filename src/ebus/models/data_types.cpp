@@ -98,12 +98,12 @@ const Meta* metaFor(DataType dt) {
 }
 
 template <typename IntType>
-constexpr IntType readInt(ebus::ByteView bytes, bool flip) {
+constexpr IntType readInt(ebus::ByteView data, bool flip) {
   IntType val = 0;
   // Spec 2.4.3: Low-byte first. By using shifts we reconstruct the integer
   // in a host-endian independent way.
   for (size_t i = 0; i < sizeof(IntType); ++i) {
-    val |= (static_cast<IntType>(bytes[i]) << (8 * i));
+    val |= (static_cast<IntType>(data[i]) << (8 * i));
   }
   return flip ? swapEndian(val) : val;
 }
@@ -160,26 +160,26 @@ bool validateRange(int64_t val, uint8_t size, bool is_signed) {
 
 /* --- Core Operations --- */
 
-std::optional<DataValue> decode(DataType dt, ByteView bytes, Endian e) {
+std::optional<DataValue> decode(DataType dt, ByteView data, Endian e) {
   const Meta* m = metaFor(dt);
-  if (!m || bytes.size() < m->size) return std::nullopt;
+  if (!m || data.size() < m->size) return std::nullopt;
 
   const bool flip = m->reversed ? (e == Endian::little) : (e == Endian::big);
 
   if (!m->is_numeric)
-    return std::string(reinterpret_cast<const char*>(bytes.data()), m->size);
+    return std::string(reinterpret_cast<const char*>(data.data()), m->size);
 
   // Check for Replacement Values (Sentinels)
   uint32_t bit_pattern = 0;
   switch (m->size) {
     case 1:
-      bit_pattern = bytes[0];
+      bit_pattern = data[0];
       break;
     case 2:
-      bit_pattern = readInt<uint16_t>(bytes, flip);
+      bit_pattern = readInt<uint16_t>(data, flip);
       break;
     case 4:
-      bit_pattern = readInt<uint32_t>(bytes, flip);
+      bit_pattern = readInt<uint32_t>(data, flip);
       break;
     default:
       break;
@@ -191,7 +191,7 @@ std::optional<DataValue> decode(DataType dt, ByteView bytes, Endian e) {
   }
 
   if (dt == DataType::bcd) {
-    uint8_t val = bytes[0];
+    uint8_t val = data[0];
     if ((val & 0x0f) > 9 || ((val >> 4) & 0x0f) > 9) return std::nullopt;
     return static_cast<uint8_t>((val >> 4) * 10 + (val & 0x0f));
   }
@@ -199,18 +199,18 @@ std::optional<DataValue> decode(DataType dt, ByteView bytes, Endian e) {
   // Read the raw integer value from bytes
   int64_t raw_val = 0;
   if (m->size == 1)
-    raw_val = m->is_signed ? static_cast<int8_t>(bytes[0]) : bytes[0];
+    raw_val = m->is_signed ? static_cast<int8_t>(data[0]) : data[0];
   else if (m->size == 2)
     raw_val = m->is_signed
-                  ? static_cast<int16_t>(readInt<uint16_t>(bytes, flip))
-                  : static_cast<int64_t>(readInt<uint16_t>(bytes, flip));
+                  ? static_cast<int16_t>(readInt<uint16_t>(data, flip))
+                  : static_cast<int64_t>(readInt<uint16_t>(data, flip));
   else if (m->size == 4)
     raw_val = m->is_signed
-                  ? static_cast<int32_t>(readInt<uint32_t>(bytes, flip))
-                  : static_cast<int64_t>(readInt<uint32_t>(bytes, flip));
+                  ? static_cast<int32_t>(readInt<uint32_t>(data, flip))
+                  : static_cast<int64_t>(readInt<uint32_t>(data, flip));
 
   if (m->is_float) {
-    uint32_t raw = readInt<uint32_t>(bytes, flip);
+    uint32_t raw = readInt<uint32_t>(data, flip);
     float f;
     std::memcpy(&f, &raw, 4);
 #if defined(ESP_PLATFORM)
@@ -245,12 +245,12 @@ std::optional<DataValue> decode(DataType dt, ByteView bytes, Endian e) {
                       : DataValue(static_cast<uint32_t>(raw_val));
 }
 
-bool isValid(DataType dt, ByteView bytes) noexcept {
+bool isValid(DataType dt, ByteView data) noexcept {
   const Meta* m = metaFor(dt);
-  if (!m || bytes.size() < m->size) return false;
+  if (!m || data.size() < m->size) return false;
 
   if (dt == DataType::bcd) {
-    uint8_t val = bytes[0];
+    uint8_t val = data[0];
     // Sentinel 0xFF is valid as a "null" result, not a protocol error.
     if (val == 0xFF) return true;
     return (val & 0x0f) <= 9 && ((val >> 4) & 0x0f) <= 9;

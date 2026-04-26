@@ -8,6 +8,7 @@
 #include <functional>
 #include <string_view>
 
+#include "ebus/byte_view.hpp"
 #include "ebus/defaults.hpp"
 #include "ebus/types.hpp"
 
@@ -16,8 +17,9 @@ namespace ebus {
 /**
  * Forward declaration to avoid pulling in the heavy sequence.hpp
  */
-template <std::size_t kInlineCapacity> class SequenceImpl;
-using Sequence = SequenceImpl<defaults::Sequence::default_capacity>;
+template <std::size_t kInlineCapacity>
+class SequenceImpl;
+using Sequence = SequenceImpl<defaults::detail::Sequence::default_capacity>;
 
 struct TelegramInfo {
   uint32_t session_id = 0;
@@ -26,8 +28,8 @@ struct TelegramInfo {
   TelegramType telegram_type;
   HandlerState handler_state;
   RequestState request_state;
-  ByteView master;
-  ByteView slave;
+  ByteView master_view;
+  ByteView slave_view;
 };
 
 struct ErrorInfo {
@@ -37,22 +39,22 @@ struct ErrorInfo {
   RequestResult result;
   HandlerState handler_state;
   RequestState request_state;
-  ByteView master;
-  ByteView slave;
+  ByteView master_view;
+  ByteView slave_view;
   double utilization = 0.0;
 };
 
 struct ReactiveInfo {
   uint32_t session_id = 0;
-  ByteView master;
-  Sequence& response;
+  ByteView master_view;
+  Sequence& slave_response;
 };
 
 struct ResultInfo {
   uint32_t session_id = 0;
   bool success;
-  ByteView master;
-  ByteView slave;
+  ByteView master_view;
+  ByteView slave_view;
 };
 
 /**

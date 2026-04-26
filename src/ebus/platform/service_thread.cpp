@@ -13,7 +13,9 @@
 #include <thread>
 #endif
 
-struct ebus::ServiceThread::Impl {
+namespace ebus::detail {
+
+struct ServiceThread::Impl {
   std::string name;
   std::function<void()> func;
   uint32_t stack_size;
@@ -27,23 +29,22 @@ struct ebus::ServiceThread::Impl {
 #endif
 };
 
-ebus::ServiceThread::ServiceThread(std::string name, std::function<void()> func,
-                                   uint32_t stack_size, uint8_t priority,
-                                   int core)
+ServiceThread::ServiceThread(std::string name, std::function<void()> func,
+                             uint32_t stack_size, uint8_t priority, int core)
     : impl_(new Impl{name, std::move(func), stack_size, priority, core}) {
 #if defined(ESP32)
   impl_->done_sem = xSemaphoreCreateBinary();
 #endif
 }
 
-ebus::ServiceThread::~ServiceThread() {
+ServiceThread::~ServiceThread() {
   join();
 #if defined(ESP32)
   if (impl_->done_sem) vSemaphoreDelete(impl_->done_sem);
 #endif
 }
 
-void ebus::ServiceThread::start() {
+void ServiceThread::start() {
 #if defined(ESP32)
   xTaskCreatePinnedToCore(
       [](void* arg) {
@@ -61,7 +62,7 @@ void ebus::ServiceThread::start() {
 #endif
 }
 
-void ebus::ServiceThread::join() {
+void ServiceThread::join() {
 #if defined(ESP32)
   if (impl_->handle) {
     // Wait for task to finish or timeout
@@ -73,3 +74,5 @@ void ebus::ServiceThread::join() {
   }
 #endif
 }
+
+}  // namespace ebus::detail

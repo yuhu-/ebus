@@ -13,8 +13,10 @@
 #include "core/bus_monitor.hpp"
 #include "core/request.hpp"
 
-ebus::BusPosix::BusPosix(const BusConfig& config, const RuntimeConfig& runtime,
-                         Request* request, BusMonitor* monitor)
+namespace ebus::detail {
+
+BusPosix::BusPosix(const BusConfig& config, const ebus::RuntimeConfig& runtime,
+                   Request* request, BusMonitor* monitor)
     : device_(config.device),
       simulate_(config.simulate),
       runtime_(runtime),
@@ -26,9 +28,9 @@ ebus::BusPosix::BusPosix(const BusConfig& config, const RuntimeConfig& runtime,
       thread_(),
       running_(false) {}
 
-ebus::BusPosix::~BusPosix() { stop(); }
+BusPosix::~BusPosix() { stop(); }
 
-void ebus::BusPosix::start() {
+void BusPosix::start() {
   if (open_) return;
 
   if (simulate_) {
@@ -79,7 +81,7 @@ void ebus::BusPosix::start() {
   }
 }
 
-void ebus::BusPosix::stop() {
+void BusPosix::stop() {
   if (!open_) return;
   if (monitor_) monitor_->uptime.markEnd();
 
@@ -106,11 +108,9 @@ void ebus::BusPosix::stop() {
   open_ = false;
 }
 
-ebus::Queue<ebus::BusEvent>* ebus::BusPosix::getQueue() const {
-  return byte_queue_.get();
-}
+Queue<BusEvent>* BusPosix::getQueue() const { return byte_queue_.get(); }
 
-void ebus::BusPosix::writeByte(const uint8_t byte) {
+void BusPosix::writeByte(const uint8_t byte) {
   {
     std::lock_guard<std::mutex> lock(syn_mutex_);
     auto now = std::chrono::steady_clock::now();
@@ -143,7 +143,7 @@ void ebus::BusPosix::writeByte(const uint8_t byte) {
   if (monitor_) monitor_->transmit.markEnd();
 }
 
-void ebus::BusPosix::setWindow(const uint16_t window) {
+void BusPosix::setWindow(const uint16_t window) {
   // Validate window
   runtime_.bus.timing.window =
       (window < defaults::Bus::min_window || window > defaults::Bus::max_window)
@@ -151,13 +151,13 @@ void ebus::BusPosix::setWindow(const uint16_t window) {
           : window;
 }
 
-void ebus::BusPosix::setOffset(const uint16_t offset) {
+void BusPosix::setOffset(const uint16_t offset) {
   // Validate offset
   runtime_.bus.timing.offset =
       (offset > defaults::Bus::max_offset) ? defaults::Bus::offset : offset;
 }
 
-void ebus::BusPosix::setRuntimeConfig(const RuntimeConfig& runtime) {
+void BusPosix::setRuntimeConfig(const RuntimeConfig& runtime) {
   bool should_start = false;
   bool should_stop = false;
 
@@ -208,29 +208,29 @@ void ebus::BusPosix::setRuntimeConfig(const RuntimeConfig& runtime) {
   }
 }
 
-void ebus::BusPosix::addReadListener(ReadListener listener) {
+void BusPosix::addReadListener(ReadListener listener) {
   read_listeners_.push_back(listener);
 }
 
-void ebus::BusPosix::addWriteListener(WriteListener listener) {
+void BusPosix::addWriteListener(WriteListener listener) {
   write_listeners_.push_back(listener);
 }
 
-void ebus::BusPosix::addSynListener(SynListener listener) {
+void BusPosix::addSynListener(SynListener listener) {
   syn_listeners_.push_back(listener);
 }
 
-void ebus::BusPosix::recordUtilization(uint8_t byte) {
+void BusPosix::recordUtilization(uint8_t byte) {
   // 1 (start bit) + zero bits in data. eBUS bit time is ~416.67us
-  double low_time = (countZeroBits(byte) + 1) * ebus::Physical::bit_time_us;
+  double low_time = (countZeroBits(byte) + 1) * detail::Physical::bit_time_us;
   if (monitor_) monitor_->utilization.addSample(low_time);
 }
 
-void ebus::BusPosix::ensureOpen() const {
+void BusPosix::ensureOpen() const {
   if (!open_ || fd_ < 0) throw std::runtime_error("BusPosix: device not open");
 }
 
-void ebus::BusPosix::readerThread() {
+void BusPosix::readerThread() {
   while (running_.load()) {
     uint8_t byte;
     ssize_t n = 0;
@@ -289,7 +289,7 @@ void ebus::BusPosix::readerThread() {
   running_.store(false);
 }
 
-void ebus::BusPosix::resetSynTimer(uint8_t byte) {
+void BusPosix::resetSynTimer(uint8_t byte) {
   std::lock_guard<std::mutex> lock(syn_mutex_);
   auto now = std::chrono::steady_clock::now();
   last_activity_time_ = now;
@@ -308,7 +308,7 @@ void ebus::BusPosix::resetSynTimer(uint8_t byte) {
   syn_cv_.notify_one();
 }
 
-void ebus::BusPosix::synThread() {
+void BusPosix::synThread() {
   while (syn_running_.load()) {
     std::unique_lock<std::mutex> lock(syn_mutex_);
 
@@ -359,4 +359,6 @@ void ebus::BusPosix::synThread() {
   }
 }
 
-#endif
+}  // namespace ebus::detail
+
+#endif  // POSIX

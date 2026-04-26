@@ -64,18 +64,16 @@ struct Symbols {
 
 // --- enums ---
 
+enum class LogLevel { none, error, info, debug };
+
 // --- Protocol Enums ---
 enum class TelegramType { undefined, broadcast, master_master, master_slave };
 enum class MessageType { undefined, active, passive, reactive };
-
-enum class LogLevel { none, error, info, debug };
 
 /**
  * Available client types for the network bridge.
  */
 enum class ClientType { read_only, regular, enhanced };
-
-enum class BridgeAction { keep_active, stop_session };
 
 enum class SequenceState {
   seq_empty,
@@ -332,46 +330,5 @@ std::string toJson(const ErrorEntry& entry);
  * Serializes a vector of ErrorEntry to a JSON array string.
  */
 std::string toJson(const std::vector<ErrorEntry>& errors);
-
-/**
- * A lightweight, non-owning view of a byte sequence.
- * Similar to std::string_view but for uint8_t.
- */
-struct ByteView {
-  constexpr ByteView() = default;
-  constexpr ByteView(const uint8_t* data, size_t size)
-      : data_(data), size_(size) {}
-
-  // Implicit conversion from std::vector is intentional to allow transparent
-  // usage of owning containers in functions accepting views.
-  ByteView(const std::vector<uint8_t>& v) : data_(v.data()), size_(v.size()) {}
-
-  constexpr const uint8_t* data() const noexcept { return data_; }
-  constexpr size_t size() const noexcept { return size_; }
-  constexpr bool empty() const noexcept { return size_ == 0; }
-
-  constexpr const uint8_t* begin() const noexcept { return data_; }
-  constexpr const uint8_t* end() const noexcept { return data_ + size_; }
-
-  constexpr uint8_t operator[](size_t i) const { return data_[i]; }
-
-  bool operator==(ByteView other) const {
-    if (this == &other) return true;
-    if (size_ != other.size_) return false;
-    return size_ == 0 || std::memcmp(data_, other.data_, size_) == 0;
-  }
-  bool operator!=(ByteView other) const { return !(*this == other); }
-
- private:
-  const uint8_t* data_ = nullptr;
-  size_t size_ = 0;
-};
-
-// Ensure definitions.hpp remains lean and free of heavy template logic
-static_assert(std::is_standard_layout_v<ByteView>,
-              "ByteView must maintain standard layout for ABI compatibility.");
-static_assert(std::is_trivially_copyable_v<ByteView>,
-              "ByteView must be trivially copyable to remain heap-free in the "
-              "hot path.");
 
 }  // namespace ebus

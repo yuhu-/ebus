@@ -16,8 +16,10 @@
 #include <unistd.h>
 #endif
 
-ebus::AbstractClient::AbstractClient(int fd, Request* request,
-                                     bool write_capable, size_t max_buffer)
+namespace ebus::detail {
+
+AbstractClient::AbstractClient(int fd, Request* request, bool write_capable,
+                               size_t max_buffer)
     : fd_(fd),
       request_(request),
       max_buffer_size_(max_buffer),
@@ -29,9 +31,9 @@ ebus::AbstractClient::AbstractClient(int fd, Request* request,
   }
 }
 
-ebus::AbstractClient::~AbstractClient() { stop(); }
+AbstractClient::~AbstractClient() { stop(); }
 
-void ebus::AbstractClient::stop() {
+void AbstractClient::stop() {
   if (fd_ >= 0) {
     int type;
     socklen_t optlen = sizeof(type);
@@ -47,12 +49,12 @@ void ebus::AbstractClient::stop() {
   }
 }
 
-bool ebus::AbstractClient::tryFlushOutboundBuffer() {
+bool AbstractClient::tryFlushOutboundBuffer() {
   std::lock_guard<std::mutex> lock(buffer_mutex_);
   return flushLocked();
 }
 
-bool ebus::AbstractClient::flushLocked() {
+bool AbstractClient::flushLocked() {
   if (fd_ < 0) return false;
   if (outbound_buffer_.empty()) return true;
 
@@ -81,18 +83,17 @@ bool ebus::AbstractClient::flushLocked() {
   return true;
 }
 
-ebus::ReadOnlyClient::ReadOnlyClient(int fd, Request* request,
-                                     size_t max_buffer)
+ReadOnlyClient::ReadOnlyClient(int fd, Request* request, size_t max_buffer)
     : AbstractClient(fd, request, false, max_buffer) {}
 
-bool ebus::ReadOnlyClient::wantsToSend() { return false; }
+bool ReadOnlyClient::wantsToSend() { return false; }
 
-bool ebus::ReadOnlyClient::recvFromClient(uint8_t& out) {
+bool ReadOnlyClient::recvFromClient(uint8_t& out) {
   (void)out;  // unused
   return false;
 }
 
-void ebus::ReadOnlyClient::sendToClient(ByteView data) {
+void ReadOnlyClient::sendToClient(ByteView data) {
   if (fd_ < 0 || data.empty()) return;
   {
     std::lock_guard<std::mutex> lock(buffer_mutex_);
@@ -105,26 +106,26 @@ void ebus::ReadOnlyClient::sendToClient(ByteView data) {
   }
 }
 
-ebus::BridgeAction ebus::ReadOnlyClient::onBusByte(const BusEventContext& ctx) {
+BridgeAction ReadOnlyClient::onBusByte(const BusEventContext& ctx) {
   if (!isConnected()) return BridgeAction::stop_session;
   // This should never happen, because ReadOnlyClient is never allowed to write
   (void)ctx;
   return BridgeAction::stop_session;
 }
 
-ebus::RegularClient::RegularClient(int fd, Request* request, size_t max_buffer)
+RegularClient::RegularClient(int fd, Request* request, size_t max_buffer)
     : AbstractClient(fd, request, true, max_buffer) {}
 
-bool ebus::RegularClient::wantsToSend() {
+bool RegularClient::wantsToSend() {
   uint8_t dummy;
   return ::recv(fd_, &dummy, 1, MSG_PEEK | MSG_DONTWAIT) > 0;
 }
 
-bool ebus::RegularClient::recvFromClient(uint8_t& out) {
+bool RegularClient::recvFromClient(uint8_t& out) {
   return ::recv(fd_, &out, 1, MSG_DONTWAIT) == 1;
 }
 
-void ebus::RegularClient::sendToClient(ByteView data) {
+void RegularClient::sendToClient(ByteView data) {
   if (fd_ < 0 || data.empty()) return;
   {
     std::lock_guard<std::mutex> lock(buffer_mutex_);
@@ -137,7 +138,7 @@ void ebus::RegularClient::sendToClient(ByteView data) {
   }
 }
 
-ebus::BridgeAction ebus::RegularClient::onBusByte(const BusEventContext& ctx) {
+BridgeAction RegularClient::onBusByte(const BusEventContext& ctx) {
   if (!isConnected()) return BridgeAction::stop_session;
 
   // Regular clients always echo all bus traffic
@@ -171,17 +172,16 @@ ebus::BridgeAction ebus::RegularClient::onBusByte(const BusEventContext& ctx) {
   // return BridgeAction::stop_session;
 }
 
-ebus::EnhancedClient::EnhancedClient(int fd, Request* request,
-                                     size_t max_buffer)
+EnhancedClient::EnhancedClient(int fd, Request* request, size_t max_buffer)
     : AbstractClient(fd, request, true, max_buffer) {}
 
-bool ebus::EnhancedClient::wantsToSend() {
+bool EnhancedClient::wantsToSend() {
   if (inbound_len_ > 0) return true;
   uint8_t dummy;
   return ::recv(fd_, &dummy, 1, MSG_PEEK | MSG_DONTWAIT) > 0;
 }
 
-bool ebus::EnhancedClient::recvFromClient(uint8_t& out) {
+bool EnhancedClient::recvFromClient(uint8_t& out) {
   // If we have an incomplete command in the buffer, try to finish it
   if (inbound_len_ == 0) {
     uint8_t b;
@@ -238,13 +238,12 @@ bool ebus::EnhancedClient::recvFromClient(uint8_t& out) {
   return false;
 }
 
-void ebus::EnhancedClient::sendEnhancedResponse(enhanced::Response res,
-                                                uint8_t val) {
-  uint8_t raw[2] = {static_cast<uint8_t>(res), val};
+void EnhancedClient::sendEnhancedResponse(enhanced::Response res, uint8_t val) {
+  const uint8_t raw[2] = {static_cast<uint8_t>(res), val};
   sendToClient(ByteView(raw, 2));
 }
 
-void ebus::EnhancedClient::sendToClient(ByteView data) {
+void EnhancedClient::sendToClient(ByteView data) {
   if (fd_ < 0 || data.empty()) return;
 
   uint8_t cmd;
@@ -279,7 +278,7 @@ void ebus::EnhancedClient::sendToClient(ByteView data) {
   }
 }
 
-ebus::BridgeAction ebus::EnhancedClient::onBusByte(const BusEventContext& ctx) {
+BridgeAction EnhancedClient::onBusByte(const BusEventContext& ctx) {
   if (!isConnected()) return BridgeAction::stop_session;
 
   // Handle bus response according to last command
@@ -319,9 +318,9 @@ ebus::BridgeAction ebus::EnhancedClient::onBusByte(const BusEventContext& ctx) {
   return BridgeAction::stop_session;
 }
 
-std::unique_ptr<ebus::AbstractClient> ebus::createClient(int fd, Request* req,
-                                                         ClientType type,
-                                                         size_t max_buffer) {
+std::unique_ptr<AbstractClient> createClient(int fd, Request* req,
+                                             ClientType type,
+                                             size_t max_buffer) {
   switch (type) {
     case ClientType::read_only:
       return std::unique_ptr<AbstractClient>(
@@ -336,3 +335,5 @@ std::unique_ptr<ebus::AbstractClient> ebus::createClient(int fd, Request* req,
       return nullptr;
   }
 }
+
+}  // namespace ebus::detail

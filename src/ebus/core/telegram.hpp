@@ -13,7 +13,7 @@
 #include <string>
 #include <vector>
 
-namespace ebus {
+namespace ebus::detail {
 
 /**
  * Based on the eBUS specification, the Telegram class can parse, create, and
@@ -45,7 +45,7 @@ namespace ebus {
  * ACK..Acknowledgement byte (0x00 OK, 0xff NOK)
  * SYN..Synchronisation byte (0xaa)
  */
-template <size_t kInlineCapacity = defaults::Sequence::default_capacity>
+template <size_t kInlineCapacity = defaults::detail::Sequence::default_capacity>
 class TelegramImpl {
  public:
   TelegramImpl() = default;
@@ -110,7 +110,7 @@ class TelegramImpl {
       master_state_ = SequenceState::err_target_address;
       return;
     }
-    if (uint8_t(sequence[4]) > defaults::Sequence::max_data_bytes) {
+    if (uint8_t(sequence[4]) > defaults::detail::Sequence::max_data_bytes) {
       master_state_ = SequenceState::err_data_byte;
       return;
     }
@@ -147,7 +147,7 @@ class TelegramImpl {
       slave_state_ = SequenceState::err_seq_too_short;
       return;
     }
-    if (uint8_t(sequence[0]) > defaults::Sequence::max_data_bytes) {
+    if (uint8_t(sequence[0]) > defaults::detail::Sequence::max_data_bytes) {
       slave_state_ = SequenceState::err_data_byte;
       return;
     }
@@ -299,7 +299,8 @@ class TelegramImpl {
       return SequenceState::err_target_address;
 
     // data byte is invalid
-    if (uint8_t(sequence[offset + 4]) > defaults::Sequence::max_data_bytes)
+    if (uint8_t(sequence[offset + 4]) >
+        defaults::detail::Sequence::max_data_bytes)
       return SequenceState::err_data_byte;
 
     // sequence is too short (incl. CRC)
@@ -317,7 +318,8 @@ class TelegramImpl {
     if (sequence.size() < offset + 1) return SequenceState::err_seq_too_short;
 
     // data byte is invalid
-    if (uint8_t(sequence[offset + 0]) > defaults::Sequence::max_data_bytes)
+    if (uint8_t(sequence[offset + 0]) >
+        defaults::detail::Sequence::max_data_bytes)
       return SequenceState::err_data_byte;
 
     // sequence is too short (incl. CRC)
@@ -396,12 +398,12 @@ class TelegramImpl {
 /**
  * Default eBUS telegram with 64-byte SBO buffers.
  */
-using Telegram = TelegramImpl<defaults::Sequence::default_capacity>;
+using Telegram = TelegramImpl<defaults::detail::Sequence::default_capacity>;
 
 /**
  * Factory function to create and parse a telegram from a raw ByteView.
  */
-template <size_t N = defaults::Sequence::default_capacity>
+template <size_t N = defaults::detail::Sequence::default_capacity>
 TelegramImpl<N> makeTelegram(ByteView data) {
   SequenceImpl<N> seq;
   seq.assign(data, true);  // Assume extended wire format
@@ -410,4 +412,4 @@ TelegramImpl<N> makeTelegram(ByteView data) {
   return tel;
 }
 
-}  // namespace ebus
+}  // namespace ebus::detail

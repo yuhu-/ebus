@@ -16,6 +16,7 @@
 #include <utility>
 #include <vector>
 
+#include "ebus/byte_view.hpp"
 #include "ebus/protocol_math.hpp"
 #include "ebus/types.hpp"
 
@@ -47,11 +48,11 @@ std::string toString(const T& container) {
   return res;
 }
 
-inline std::string byteToChar(ByteView view) {
-  return std::string(reinterpret_cast<const char*>(view.data()), view.size());
+inline std::string byteToChar(ByteView data) {
+  return std::string(reinterpret_cast<const char*>(data.data()), data.size());
 }
 
-inline std::string byteToHex(ByteView view) { return toString(view); }
+inline std::string byteToHex(ByteView data) { return toString(data); }
 
 inline std::vector<uint8_t> toVector(const std::string& str) {
   if (str.empty()) return {};
@@ -71,8 +72,8 @@ inline std::vector<uint8_t> toVector(const std::string& str) {
 /**
  * Converts a non-owning ByteView to an owning std::vector.
  */
-inline std::vector<uint8_t> toVector(ByteView view) {
-  return {view.begin(), view.end()};
+inline std::vector<uint8_t> toVector(ByteView data) {
+  return {data.begin(), data.end()};
 }
 
 /**

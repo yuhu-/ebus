@@ -7,12 +7,11 @@
 
 #include <cstdint>
 
-namespace ebus {
+namespace ebus::detail::enhanced {
 
 /**
  * ebusd Enhanced Protocol (binary) constants and logic.
  */
-namespace enhanced {
 
 enum class Command : uint8_t {
   init = 0x00,
@@ -59,6 +58,4 @@ struct Protocol {
   }
 };
 
-}  // namespace enhanced
-
-}  // namespace ebus
+}  // namespace ebus::detail::enhanced

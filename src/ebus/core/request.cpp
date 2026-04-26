@@ -9,22 +9,24 @@
 
 #include "core/bus_monitor.hpp"
 
-ebus::Request::Request(BusMonitor* monitor) : monitor_(monitor) {}
+namespace ebus::detail {
 
-void ebus::Request::setMaxLockCounter(uint8_t max_counter) {
+Request::Request(BusMonitor* monitor) : monitor_(monitor) {}
+
+void Request::setMaxLockCounter(uint8_t max_counter) {
   max_lock_counter_ =
       std::min(max_counter, defaults::Arbitration::max_lock_counter);
   if (lock_counter_ > max_lock_counter_) lock_counter_ = max_lock_counter_;
 }
 
-uint8_t ebus::Request::getLockCounter() const { return lock_counter_; }
+uint8_t Request::getLockCounter() const { return lock_counter_; }
 
-bool ebus::Request::busAvailable() const {
+bool Request::busAvailable() const {
   return result_ == RequestResult::observe_syn && lock_counter_ == 0 &&
          !bus_request_.load(std::memory_order_acquire);
 }
 
-bool ebus::Request::requestBus(uint8_t address, bool external) {
+bool Request::requestBus(uint8_t address, bool external) {
   if (busAvailable()) {
     request_address_ = address;
     external_bus_request_ = external;
@@ -36,17 +38,15 @@ bool ebus::Request::requestBus(uint8_t address, bool external) {
   return bus_request_.load(std::memory_order_acquire);
 }
 
-void ebus::Request::setHandlerBusRequestedCallback(
-    BusRequestedCallback callback) {
+void Request::setHandlerBusRequestedCallback(BusRequestedCallback callback) {
   handler_bus_requested_callback_ = std::move(callback);
 }
 
-void ebus::Request::setExternalBusRequestedCallback(
-    BusRequestedCallback callback) {
+void Request::setExternalBusRequestedCallback(BusRequestedCallback callback) {
   external_bus_requested_callback_ = std::move(callback);
 }
 
-void ebus::Request::busRequestCompleted() {
+void Request::busRequestCompleted() {
   bus_request_.store(false, std::memory_order_release);
   if (state_ == RequestState::observe) state_ = RequestState::first;
 
@@ -57,7 +57,7 @@ void ebus::Request::busRequestCompleted() {
   }
 }
 
-void ebus::Request::startBit() {
+void Request::startBit() {
   // This is typically called on a bus error, like a framing error, which
   // could be caused by a spurious start bit from an interference impulse.
   // We can no longer trust the bus state, so we abort any pending request
@@ -67,15 +67,15 @@ void ebus::Request::startBit() {
   result_ = RequestResult::observe_syn;
 }
 
-void ebus::Request::setStartBitCallback(StartBitCallback callback) {
+void Request::setStartBitCallback(StartBitCallback callback) {
   start_bit_callback_ = std::move(callback);
 }
 
-ebus::RequestState ebus::Request::getState() const { return state_; }
+ebus::RequestState Request::getState() const { return state_; }
 
-ebus::RequestResult ebus::Request::getResult() const { return result_; }
+ebus::RequestResult Request::getResult() const { return result_; }
 
-void ebus::Request::reset() {
+void Request::reset() {
   lock_counter_ = max_lock_counter_;
   if (monitor_)
     monitor_->updateRequest([](auto& m) { m.lock_counter_reset++; });
@@ -83,15 +83,15 @@ void ebus::Request::reset() {
   state_ = RequestState::observe;
 }
 
-ebus::RequestResult ebus::Request::run(uint8_t byte) {
+ebus::RequestResult Request::run(uint8_t byte) {
   size_t idx = static_cast<size_t>(state_);
-  if (idx < ebus::FSM::num_request_states && kStateRequests[idx])
+  if (idx < FSM::num_request_states && kStateRequests[idx])
     (this->*kStateRequests[idx])(byte);
 
   return result_;
 }
 
-void ebus::Request::observe(uint8_t byte) {
+void Request::observe(uint8_t byte) {
   if (byte == Symbols::syn) {
     if (lock_counter_ > 0) lock_counter_--;
     result_ = RequestResult::observe_syn;
@@ -100,7 +100,7 @@ void ebus::Request::observe(uint8_t byte) {
   }
 }
 
-void ebus::Request::first(uint8_t byte) {
+void Request::first(uint8_t byte) {
   if (byte == Symbols::syn) {
     if (monitor_) monitor_->updateRequest([](auto& m) { m.first_syn++; });
     state_ = RequestState::first;
@@ -139,7 +139,7 @@ void ebus::Request::first(uint8_t byte) {
   }
 }
 
-void ebus::Request::retry(uint8_t byte) {
+void Request::retry(uint8_t byte) {
   if (byte == Symbols::syn) {
     if (monitor_) monitor_->updateRequest([](auto& m) { m.retry_syn++; });
     state_ = RequestState::second;
@@ -151,7 +151,7 @@ void ebus::Request::retry(uint8_t byte) {
   }
 }
 
-void ebus::Request::second(uint8_t byte) {
+void Request::second(uint8_t byte) {
   if (byte == request_address_) {
     if (monitor_) monitor_->updateRequest([](auto& m) { m.second_won++; });
     lock_counter_ = max_lock_counter_;
@@ -167,3 +167,5 @@ void ebus::Request::second(uint8_t byte) {
     result_ = RequestResult::second_error;
   }
 }
+
+}  // namespace ebus::detail

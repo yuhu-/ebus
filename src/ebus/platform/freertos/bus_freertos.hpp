@@ -26,7 +26,7 @@
 #include "driver/timer.h"
 #endif
 
-namespace ebus {
+namespace ebus::detail {
 
 class Request;
 class BusMonitor;
@@ -164,6 +164,6 @@ class BusFreeRtos {
   bool onSynGenTimer();
 };
 
-}  // namespace ebus
+}  // namespace ebus::detail
 
-#endif
+#endif  // ESP32

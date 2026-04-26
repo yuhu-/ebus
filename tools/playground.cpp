@@ -31,7 +31,7 @@ void printMasterSlave(const std::string& strMaster,
   ebus::Sequence slave;
   slave.assign(ebus::toVector(strSlave));
 
-  ebus::Telegram tel;
+  ebus::detail::Telegram tel;
   tel.createMaster(master);
   tel.createSlave(slave);
 
@@ -46,7 +46,7 @@ void createTelegram(const std::string& strSequence) {
   ebus::Sequence sequence;
   sequence.assign(ebus::toVector(strSequence));
 
-  ebus::Telegram tel(sequence);
+  ebus::detail::Telegram tel(sequence);
 
   std::ostringstream ostr;
   ostr << "telegram: " << sequence.toString() << std::endl;

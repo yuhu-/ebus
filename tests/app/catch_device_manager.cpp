@@ -15,14 +15,17 @@
 #include "platform/bus.hpp"
 #include "test_utils.hpp"
 
+using namespace ebus;
+using namespace ebus::detail;
+
 TEST_CASE("DeviceManager: Address Tracking", "[app][devicemanager]") {
-  ebus::BusConfig config{.device = "/dev/null", .simulate = true};
-  ebus::RuntimeConfig runtime = {.address = 0xff};
-  ebus::Request request;
-  ebus::BusMonitor monitor;
-  ebus::DeviceManager dm(&monitor);
-  ebus::Bus bus(config, runtime, &request, &monitor);
-  ebus::Handler handler(runtime.address, &bus, &request, &monitor);
+  BusConfig config{.device = "/dev/null", .simulate = true};
+  RuntimeConfig runtime = {.address = 0xff};
+  Request request;
+  BusMonitor monitor;
+  DeviceManager dm(&monitor);
+  Bus bus(config, runtime, &request, &monitor);
+  Handler handler(runtime.address, &bus, &request, &monitor);
 
   dm.setOwnAddress(runtime.address);
 
@@ -38,13 +41,13 @@ TEST_CASE("DeviceManager: Address Tracking", "[app][devicemanager]") {
 }
 
 TEST_CASE("DeviceManager: Device Update", "[app][devicemanager]") {
-  ebus::BusConfig config{.device = "/dev/null", .simulate = true};
-  ebus::RuntimeConfig runtime = {.address = 0xff};
-  ebus::Request request;
-  ebus::BusMonitor monitor;
-  ebus::DeviceManager dm(&monitor);
-  ebus::Bus bus(config, runtime, &request, &monitor);
-  ebus::Handler handler(runtime.address, &bus, &request, &monitor);
+  BusConfig config{.device = "/dev/null", .simulate = true};
+  RuntimeConfig runtime = {.address = 0xff};
+  Request request;
+  BusMonitor monitor;
+  DeviceManager dm(&monitor);
+  Bus bus(config, runtime, &request, &monitor);
+  Handler handler(runtime.address, &bus, &request, &monitor);
 
   dm.setOwnAddress(runtime.address);
 
@@ -64,13 +67,13 @@ TEST_CASE("DeviceManager: Device Update", "[app][devicemanager]") {
 }
 
 TEST_CASE("DeviceManager: Create Scan Commands", "[app][devicemanager]") {
-  ebus::BusConfig config{.device = "/dev/null", .simulate = true};
-  ebus::RuntimeConfig runtime = {.address = 0xff};
-  ebus::Request request;
-  ebus::BusMonitor monitor;
-  ebus::DeviceManager dm(&monitor);
-  ebus::Bus bus(config, runtime, &request, &monitor);
-  ebus::Handler handler(runtime.address, &bus, &request, &monitor);
+  BusConfig config{.device = "/dev/null", .simulate = true};
+  RuntimeConfig runtime = {.address = 0xff};
+  Request request;
+  BusMonitor monitor;
+  DeviceManager dm(&monitor);
+  Bus bus(config, runtime, &request, &monitor);
+  Handler handler(runtime.address, &bus, &request, &monitor);
 
   std::vector<std::string> inputs = {"08", "15", "50"};
   auto cmds = dm.createScanCommands(inputs);

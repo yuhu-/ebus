@@ -23,6 +23,8 @@
 #include "core/request.hpp"
 #include "driver/gpio.h"
 
+namespace ebus::detail {
+
 ebus::BusFreeRtos::BusFreeRtos(const BusConfig& config,
                                const RuntimeConfig& runtime, Request* request,
                                BusMonitor* monitor)
@@ -548,4 +550,5 @@ bool IRAM_ATTR ebus::BusFreeRtos::onSynGenTimer() {
   return false;
 }
 
-#endif
+}  // namespace ebus::detail
+#endif  // ESP32

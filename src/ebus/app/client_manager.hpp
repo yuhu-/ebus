@@ -21,7 +21,7 @@
 #include "platform/queue.hpp"
 #include "platform/service_thread.hpp"
 
-namespace ebus {
+namespace ebus::detail {
 
 class BusMonitor;
 
@@ -56,7 +56,7 @@ class ClientManager {
   Request* request_;
   BusMonitor* monitor_;
 
-  Queue<BusEventContext> bus_byte_queue_;
+  detail::Queue<BusEventContext> bus_byte_queue_;
   std::atomic<bool> running_{false};
 
   enum class SessionState {
@@ -69,16 +69,16 @@ class ClientManager {
   SessionState session_state_ = SessionState::idle;
 
   mutable std::mutex mutex_;
-  std::vector<std::shared_ptr<AbstractClient>> clients_;
-  std::vector<std::shared_ptr<AbstractClient>> clients_cache_;
+  std::vector<std::shared_ptr<detail::AbstractClient>> clients_;
+  std::vector<std::shared_ptr<detail::AbstractClient>> clients_cache_;
 
   // Versioning to avoid copying clients_ every loop iteration unless changed.
   std::atomic<uint64_t> clients_version_{0};
   uint64_t last_snapshot_version_{0};
 
-  std::unique_ptr<ServiceThread> worker_;
+  std::unique_ptr<detail::ServiceThread> worker_;
 
-  std::shared_ptr<AbstractClient> current_active_sender_ = nullptr;
+  std::shared_ptr<detail::AbstractClient> current_active_sender_ = nullptr;
   std::atomic<bool> bus_requested_{false};
 
   // Wake primitives to reduce busy-waiting
@@ -101,4 +101,4 @@ class ClientManager {
   void notifyWake();
 };
 
-}  // namespace ebus
+}  // namespace ebus::detail

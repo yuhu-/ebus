@@ -13,8 +13,10 @@
 
 #include "platform/queue.hpp"
 
+using namespace ebus::detail;
+
 TEST_CASE("Queue: Basic Operations", "[platform][queue]") {
-  ebus::Queue<int> q(5);
+  Queue<int> q(5);
 
   REQUIRE(q.size() == 0);
 
@@ -36,7 +38,7 @@ TEST_CASE("Queue: Basic Operations", "[platform][queue]") {
 }
 
 TEST_CASE("Queue: Capacity", "[platform][queue]") {
-  ebus::Queue<int> q(2);  // Small capacity
+  Queue<int> q(2);  // Small capacity
 
   REQUIRE(q.push(1));
   REQUIRE(q.push(2));
@@ -55,7 +57,7 @@ TEST_CASE("Queue: Capacity", "[platform][queue]") {
 }
 
 TEST_CASE("Queue: Blocking Pop", "[platform][queue]") {
-  ebus::Queue<int> q(5);
+  Queue<int> q(5);
 
   std::thread producer([&q]() {
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
@@ -72,7 +74,7 @@ TEST_CASE("Queue: Blocking Pop", "[platform][queue]") {
 }
 
 TEST_CASE("Queue: Multi-threaded", "[platform][queue]") {
-  ebus::Queue<int> q(100);
+  Queue<int> q(100);
   const int count = 1000;
   std::atomic<int> sum_consumed(0);
 
@@ -99,7 +101,7 @@ TEST_CASE("Queue: Multi-threaded", "[platform][queue]") {
 }
 
 TEST_CASE("Queue: Clear", "[platform][queue]") {
-  ebus::Queue<int> q(5);
+  Queue<int> q(5);
   q.push(1);
   q.push(2);
   REQUIRE(q.size() == 2);
@@ -110,7 +112,7 @@ TEST_CASE("Queue: Clear", "[platform][queue]") {
 }
 
 TEST_CASE("Queue: Move Only (std::unique_ptr)", "[platform][queue]") {
-  ebus::Queue<std::unique_ptr<int>> q(5);
+  Queue<std::unique_ptr<int>> q(5);
 
   q.push(std::make_unique<int>(10));
   REQUIRE(q.tryPush(std::make_unique<int>(20)));

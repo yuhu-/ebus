@@ -33,7 +33,7 @@
 #include "platform/posix/virtual_line.hpp"
 #include "platform/queue.hpp"
 
-namespace ebus {
+namespace ebus::detail {
 
 class Request;
 class BusMonitor;
@@ -49,7 +49,7 @@ class BusPosix {
   using WriteListener = std::function<void(const uint8_t& byte)>;
   using SynListener = std::function<void()>;
 
-  BusPosix(const BusConfig& config, const RuntimeConfig& runtime,
+  BusPosix(const BusConfig& config, const ebus::RuntimeConfig& runtime,
            Request* request, BusMonitor* monitor = nullptr);
   ~BusPosix();
 
@@ -126,6 +126,6 @@ class BusPosix {
   void resetSynTimer(uint8_t byte);
 };
 
-}  // namespace ebus
+}  // namespace ebus::detail
 
-#endif
+#endif  // POSIX

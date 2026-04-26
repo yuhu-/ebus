@@ -6,6 +6,7 @@
 #pragma once
 
 #include <cstdint>
+#include <ebus/byte_view.hpp>
 #include <ebus/config.hpp>
 #include <ebus/types.hpp>
 #include <memory>
@@ -17,9 +18,11 @@
 #include "core/bus_events.hpp"
 #include "core/request.hpp"
 
-namespace ebus {
+namespace ebus::detail {
 
 class Request;
+
+enum class BridgeAction { keep_active, stop_session };
 
 /**
  * Abstract base for WiFi/Network clients (e.g. ebusd bridges).
@@ -115,11 +118,11 @@ class EnhancedClient : public AbstractClient {
   uint8_t inbound_buf_[2];
   size_t inbound_len_ = 0;
 
-  void sendEnhancedResponse(ebus::enhanced::Response res, uint8_t val);
+  void sendEnhancedResponse(enhanced::Response res, uint8_t val);
 };
 
 std::unique_ptr<AbstractClient> createClient(int fd, Request* req,
                                              ClientType type,
                                              size_t max_buffer);
 
-}  // namespace ebus
+}  // namespace ebus::detail

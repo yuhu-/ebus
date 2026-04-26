@@ -8,8 +8,10 @@
 
 #include "utils/timing_stats.hpp"
 
+using namespace ebus::detail;
+
 TEST_CASE("TimingStats: Basic statistics", "[utils][timingstats]") {
-  ebus::RollingStats stats;
+  RollingStats stats;
 
   stats.addSample(10.0);
   stats.addSample(20.0);
@@ -23,7 +25,7 @@ TEST_CASE("TimingStats: Basic statistics", "[utils][timingstats]") {
 }
 
 TEST_CASE("TimingStats: Reset and edge cases", "[utils][timingstats]") {
-  ebus::RollingStats stats;
+  RollingStats stats;
   stats.addSample(1.0);
   stats.reset();
 

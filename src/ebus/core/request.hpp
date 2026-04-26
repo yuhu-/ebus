@@ -14,7 +14,7 @@
 #include <ebus/types.hpp>
 #include <functional>
 
-namespace ebus {
+namespace ebus::detail {
 
 class BusMonitor;
 
@@ -90,11 +90,11 @@ class Request {
       &Request::observe, &Request::first, &Request::retry, &Request::second};
 
   static_assert(sizeof(kStateRequests) / sizeof(kStateRequests[0]) ==
-                    ebus::FSM::num_request_states,
+                    FSM::num_request_states,
                 "kStateRequests table size does not match NUM_REQUEST_STATES");
 
   RequestState state_ = RequestState::observe;
   RequestResult result_ = RequestResult::observe_syn;
 };
 
-}  // namespace ebus
+}  // namespace ebus::detail

@@ -14,7 +14,7 @@
 #include <utility>
 #include <vector>
 
-namespace ebus {
+namespace ebus::detail {
 
 template <typename T>
 class QueuePosix {
@@ -223,6 +223,6 @@ class QueuePosix {
   size_t size_;
 };
 
-}  // namespace ebus
+}  // namespace ebus::detail
 
-#endif
+#endif  // POSIX

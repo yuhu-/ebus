@@ -17,21 +17,24 @@
 #include "platform/system.hpp"
 #include "test_utils.hpp"
 
+using namespace ebus;
+using namespace ebus::detail;
+
 TEST_CASE("ClientManager: Mock Orchestration", "[app][clientmanager][mock]") {
-  ebus::Request req;
+  Request req;
   req.setMaxLockCounter(0);
   req.reset();
 
-  ebus::BusConfig config = {.device = "/dev/null", .simulate = true};
-  ebus::RuntimeConfig runtime = {.address = 0x01};
+  BusConfig config = {.device = "/dev/null", .simulate = true};
+  RuntimeConfig runtime = {.address = 0x01};
 
-  ebus::BusMonitor monitor;
-  ebus::Bus bus(config, runtime, &req, &monitor);
-  ebus::Handler handler(runtime.address, &bus, &req, &monitor);
-  ebus::BusHandler busHandler(&req, &handler, bus.getQueue());
-  ebus::ClientManager manager(&bus, &busHandler, &req, &monitor);
+  BusMonitor monitor;
+  Bus bus(config, runtime, &req, &monitor);
+  Handler handler(runtime.address, &bus, &req, &monitor);
+  BusHandler busHandler(&req, &handler, bus.getQueue());
+  ClientManager manager(&bus, &busHandler, &req, &monitor);
 
-  auto mockClient = std::make_shared<ebus::MockClient>(&req);
+  auto mockClient = std::make_shared<MockClient>(&req);
   manager.addClient(mockClient);
 
   bus.start();
@@ -73,7 +76,7 @@ TEST_CASE("ClientManager: Mock Orchestration", "[app][clientmanager][mock]") {
 
   SECTION("Outbound buffer overflow detection") {
     // 1. Setup client with very small buffer (2 bytes)
-    auto smallClient = std::make_shared<ebus::MockClient>(&req, true, 2);
+    auto smallClient = std::make_shared<MockClient>(&req, true, 2);
     manager.addClient(smallClient);
     REQUIRE(waitCondition([&] { return smallClient->isConnected(); }));
 

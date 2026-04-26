@@ -139,7 +139,7 @@ std::string collect(uint8_t byte) {
   if (byte == ebus::Symbols::syn) {
     static bool running = false;
     if (sequence.size() > 0 && running) {
-      ebus::Telegram tel(sequence);
+      ebus::detail::Telegram tel(sequence);
       std::ostringstream ostr;
 
       if (tel.isValid()) {

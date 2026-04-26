@@ -7,8 +7,8 @@
 
 #include <cstdint>
 
-namespace ebus {
+namespace ebus::detail {
 
 void sleepMs(uint32_t ms);
 
-}  // namespace ebus
+}  // namespace ebus::detail

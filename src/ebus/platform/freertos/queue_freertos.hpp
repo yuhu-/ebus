@@ -11,7 +11,7 @@
 
 #include <chrono>
 
-namespace ebus {
+namespace ebus::detail {
 
 template <typename T>
 class QueueFreeRtos {
@@ -125,6 +125,6 @@ class QueueFreeRtos {
   size_t capacity_;
 };
 
-}  // namespace ebus
+}  // namespace ebus::detail
 
-#endif
+#endif  // ESP32

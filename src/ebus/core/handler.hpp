@@ -18,10 +18,10 @@
 #include "platform/bus.hpp"
 #include "platform/queue.hpp"
 
-namespace ebus {
+namespace ebus::detail {
 
-class Request;
 class BusMonitor;
+class Request;
 
 using BusRequestWonCallback = std::function<void()>;
 using BusRequestLostCallback = std::function<void()>;
@@ -36,8 +36,8 @@ using BusRequestLostCallback = std::function<void()>;
  */
 class Handler {
  public:
-  Handler(uint8_t source_address, Bus* bus, Request* request,
-          BusMonitor* monitor);
+  Handler(uint8_t source_address, Bus* bus, detail::Request* request,
+          detail::BusMonitor* monitor);
 
   void setSourceAddress(uint8_t source_address);
   uint8_t getSourceAddress() const;
@@ -164,4 +164,4 @@ class Handler {
                    ByteView master_view, ByteView slave_view);
 };
 
-}  // namespace ebus
+}  // namespace ebus::detail

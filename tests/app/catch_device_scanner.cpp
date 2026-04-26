@@ -17,8 +17,10 @@
 #include "platform/bus.hpp"
 #include "test_utils.hpp"
 
+using namespace ebus::detail;
+
 TEST_CASE("DeviceScanner: Manual Scan & Stop", "[app][devicescanner]") {
-  ebus::DeviceScanner scanner(0xff, nullptr);
+  DeviceScanner scanner(0xff, nullptr);
 
   scanner.scanAddress(0x15);
   scanner.scanAddress(0x16);
@@ -35,8 +37,8 @@ TEST_CASE("DeviceScanner: Manual Scan & Stop", "[app][devicescanner]") {
 
 TEST_CASE("DeviceScanner: Priority (Manual > Full > Startup)",
           "[app][devicescanner]") {
-  ebus::DeviceManager dm;
-  ebus::DeviceScanner scanner(0xff, &dm);
+  DeviceManager dm;
+  DeviceScanner scanner(0xff, &dm);
 
   scanner.setFullScan(true);
   scanner.setScanOnStartup(true);
@@ -56,10 +58,10 @@ TEST_CASE("DeviceScanner: Priority (Manual > Full > Startup)",
 }
 
 TEST_CASE("DeviceScanner: Startup Scan Logic", "[app][devicescanner]") {
-  ebus::BusMonitor monitor;
-  ebus::DeviceManager dm(&monitor);
+  BusMonitor monitor;
+  DeviceManager dm(&monitor);
   dm.setOwnAddress(0xff);
-  ebus::DeviceScanner scanner(0xff, &dm);
+  DeviceScanner scanner(0xff, &dm);
 
   scanner.setInitialScanDelay(std::chrono::seconds(0));
   scanner.setStartupScanInterval(std::chrono::seconds(0));
@@ -82,10 +84,10 @@ TEST_CASE("DeviceScanner: Startup Scan Logic", "[app][devicescanner]") {
 }
 
 TEST_CASE("DeviceScanner: Timing & Vendor Scans", "[app][devicescanner]") {
-  ebus::BusMonitor monitor;
-  ebus::DeviceManager dm(&monitor);
+  BusMonitor monitor;
+  DeviceManager dm(&monitor);
   dm.setOwnAddress(0x10);
-  ebus::DeviceScanner scanner(0x10, &dm);
+  DeviceScanner scanner(0x10, &dm);
 
   std::vector<uint8_t> m = {0x10, 0x08, 0x07, 0x04, 0x00};
   std::vector<uint8_t> s = {0x0a, 0xb5, 0x00, 0x00, 0x00, 0x00, 0x00};

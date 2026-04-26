@@ -10,7 +10,7 @@
 #include <cstdint>
 #include <ebus/metrics.hpp>
 
-namespace ebus {
+namespace ebus::detail {
 
 /**
  * Math engine for online statistics calculation using Welford's algorithm.
@@ -102,4 +102,4 @@ class TimingStats : public RollingStats {
   std::chrono::steady_clock::time_point begin_time_;
 };
 
-}  // namespace ebus
+}  // namespace ebus::detail

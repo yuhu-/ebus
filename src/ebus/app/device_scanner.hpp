@@ -21,7 +21,7 @@
 #include "app/device_manager.hpp"
 #include "core/handler.hpp"
 
-namespace ebus {
+namespace ebus::detail {
 
 /**
  * The DeviceScanner is responsible for generating eBUS scan commands to
@@ -67,9 +67,10 @@ class DeviceScanner {
   std::queue<Sequence> manual_queue_;
 
   // Timing configuration for the discovery/startup phase.
-  std::chrono::seconds initial_scan_delay_{defaults::Scanner::initial_delay_s};
+  std::chrono::seconds initial_scan_delay_{
+      defaults::detail::Scanner::initial_delay_s};
   std::chrono::seconds startup_scan_interval_{
-      defaults::Scanner::startup_interval_s};
+      defaults::detail::Scanner::startup_interval_s};
 
   // The wall-clock time when the next startup scan iteration is allowed to run
   std::chrono::steady_clock::time_point next_startup_scan_time_;
@@ -84,7 +85,7 @@ class DeviceScanner {
   // Number of full discovery iterations performed so far
   uint8_t startup_scan_count_ = 0;
   // Threshold to stop periodic discovery
-  uint8_t max_startup_scans_ = defaults::Scanner::max_startup_scans;
+  uint8_t max_startup_scans_ = defaults::detail::Scanner::max_startup_scans;
   // Buffer of commands for the currently active startup scan iteration
   std::queue<Sequence> startup_queue_;
 
@@ -93,4 +94,4 @@ class DeviceScanner {
   void scanAddressLocked(uint8_t address);
 };
 
-}  // namespace ebus
+}  // namespace ebus::detail

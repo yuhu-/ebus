@@ -9,13 +9,14 @@
 
 #include <chrono>
 #include <cstdint>
+#include <ebus/callbacks.hpp>
 #include <ebus/sequence.hpp>
 #include <functional>
 #include <mutex>
 #include <set>
 #include <vector>
 
-namespace ebus {
+namespace ebus::detail {
 
 struct PollItem {
   uint32_t id;
@@ -23,7 +24,7 @@ struct PollItem {
   Sequence message;
   std::chrono::milliseconds interval;
   std::chrono::steady_clock::time_point next_due;
-  std::function<void(ByteView data)> callback;
+  ResultCallback callback;
 
   bool operator<(const PollItem& other) const {
     if (next_due != other.next_due) return next_due < other.next_due;
@@ -47,7 +48,7 @@ class PollManager {
   // Register a new recurring command. Returns a unique ID.
   uint32_t addPollItem(uint8_t priority, ByteView message,
                        std::chrono::milliseconds interval,
-                       std::function<void(ByteView)> callback = nullptr);
+                       ResultCallback callback = nullptr);
 
   // Remove a recurring command by ID.
   void removePollItem(uint32_t id);
@@ -64,4 +65,4 @@ class PollManager {
   uint32_t next_id_;
 };
 
-}  // namespace ebus
+}  // namespace ebus::detail

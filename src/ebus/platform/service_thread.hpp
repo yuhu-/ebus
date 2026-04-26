@@ -10,7 +10,7 @@
 #include <memory>
 #include <string>
 
-namespace ebus {
+namespace ebus::detail {
 
 /**
  * Platform-independent abstraction for a background worker.
@@ -31,4 +31,4 @@ class ServiceThread {
   std::unique_ptr<Impl> impl_;
 };
 
-}  // namespace ebus
+}  // namespace ebus::detail

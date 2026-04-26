@@ -10,26 +10,29 @@
 #include <ebus/utils.hpp>
 #include <memory>
 
-ebus::Scheduler::Scheduler(Handler* handler)
+namespace ebus::detail {
+
+Scheduler::Scheduler(Handler* handler)
     : handler_(handler), stop_flag_(true), next_id_(1) {
   // Reserve space for typical traffic bursts
   item_queue_.reserve(defaults::Scheduler::queue_reserve);
   attachHandlerCallbacks();
 }
 
-ebus::Scheduler::~Scheduler() { stop(); }
+Scheduler::~Scheduler() { stop(); }
 
-void ebus::Scheduler::start() {
+void Scheduler::start() {
   bool expected = true;
   if (stop_flag_.compare_exchange_strong(expected, false)) {
     worker_ = std::make_unique<ServiceThread>(
-        "ebusScheduler", [this] { run(); }, defaults::Orchestration::stack_size,
-        defaults::Orchestration::priority_high, 1);
+        "ebusScheduler", [this] { run(); },
+        defaults::detail::Orchestration::stack_size,
+        defaults::detail::Orchestration::priority_high, 1);
     worker_->start();
   }
 }
 
-void ebus::Scheduler::stop() {
+void Scheduler::stop() {
   bool expected = false;
   if (stop_flag_.compare_exchange_strong(expected, true)) {
     {
@@ -43,8 +46,8 @@ void ebus::Scheduler::stop() {
   }
 }
 
-void ebus::Scheduler::enqueue(uint8_t priority, ByteView message,
-                              ResultCallback callback) {
+void Scheduler::enqueue(uint8_t priority, ByteView message,
+                        ResultCallback callback) {
   Item it;
   it.priority = priority;
   it.due = Clock::now();
@@ -54,8 +57,8 @@ void ebus::Scheduler::enqueue(uint8_t priority, ByteView message,
   pushItem(std::move(it));
 }
 
-void ebus::Scheduler::enqueueAt(uint8_t priority, ByteView message,
-                                TimePoint when, ResultCallback callback) {
+void Scheduler::enqueueAt(uint8_t priority, ByteView message, TimePoint when,
+                          ResultCallback callback) {
   Item it;
   it.priority = priority;
   it.due = when;
@@ -65,56 +68,56 @@ void ebus::Scheduler::enqueueAt(uint8_t priority, ByteView message,
   pushItem(std::move(it));
 }
 
-void ebus::Scheduler::setMaxSendAttempts(int max_send_attempts) {
+void Scheduler::setMaxSendAttempts(int max_send_attempts) {
   max_send_attempts_ = std::max(1, max_send_attempts);
 }
 
-void ebus::Scheduler::setBaseBackoff(Duration base_backoff) {
+void Scheduler::setBaseBackoff(Duration base_backoff) {
   base_backoff_ = base_backoff;
 }
 
-void ebus::Scheduler::setFsmTimeout(std::chrono::milliseconds timeout) {
+void Scheduler::setFsmTimeout(std::chrono::milliseconds timeout) {
   fsm_timeout_ms_ = timeout;
 }
 
-void ebus::Scheduler::setTotalTimeout(std::chrono::milliseconds timeout) {
+void Scheduler::setTotalTimeout(std::chrono::milliseconds timeout) {
   total_timeout_ms_ = timeout;
 }
 
-void ebus::Scheduler::setReactiveMasterSlaveCallback(
+void Scheduler::setReactiveMasterSlaveCallback(
     ReactiveMasterSlaveCallback callback) {
   extern_reactive_callback_ = std::move(callback);
   if (handler_)
     handler_->setReactiveMasterSlaveCallback(extern_reactive_callback_);
 }
 
-void ebus::Scheduler::setTelegramCallback(TelegramCallback callback) {
+void Scheduler::setTelegramCallback(TelegramCallback callback) {
   extern_telegram_callback_ = std::move(callback);
 }
 
-void ebus::Scheduler::setErrorCallback(ErrorCallback callback) {
+void Scheduler::setErrorCallback(ErrorCallback callback) {
   extern_error_callback_ = std::move(callback);
 }
 
-size_t ebus::Scheduler::queueSize() {
+size_t Scheduler::queueSize() {
   std::lock_guard<std::mutex> lock(data_mutex_);
   return item_queue_.size();
 }
 
-void ebus::Scheduler::clear() {
+void Scheduler::clear() {
   std::lock_guard<std::mutex> lock(data_mutex_);
   item_queue_.clear();
   std::make_heap(item_queue_.begin(), item_queue_.end(), Compare());
 }
 
-void ebus::Scheduler::pushItem(Item&& it) {
+void Scheduler::pushItem(Item&& it) {
   std::lock_guard<std::mutex> lock(data_mutex_);
   item_queue_.push_back(std::move(it));
   std::push_heap(item_queue_.begin(), item_queue_.end(), Compare());
   data_ready_cv_.notify_one();
 }
 
-void ebus::Scheduler::run() {
+void Scheduler::run() {
   std::unique_lock<std::mutex> lock(data_mutex_);
 
   // Main loop: wait for next due item, attempt to send, and handle retries if
@@ -245,7 +248,7 @@ void ebus::Scheduler::run() {
   }
 }
 
-ebus::Scheduler::Duration ebus::Scheduler::backoffDuration(int attempt) const {
+Scheduler::Duration Scheduler::backoffDuration(int attempt) const {
   // Pre-calculated multipliers for 2^(attempt-1) to avoid runtime bit-shifts.
   using Rep = typename Duration::rep;
   static constexpr Rep kMultipliers[] = {1, 2, 4, 8, 16, 32, 64, 128, 256, 512};
@@ -258,7 +261,7 @@ ebus::Scheduler::Duration ebus::Scheduler::backoffDuration(int attempt) const {
   return Duration(static_cast<Rep>(base_backoff_.count() * factor));
 }
 
-void ebus::Scheduler::attachHandlerCallbacks() {
+void Scheduler::attachHandlerCallbacks() {
   if (!handler_) return;
 
   handler_->setBusRequestWonCallback([this]() {
@@ -307,8 +310,8 @@ void ebus::Scheduler::attachHandlerCallbacks() {
     ev.telegram_type = info.telegram_type;
     ev.handler_state = info.handler_state;
     ev.request_state = info.request_state;
-    ev.master.assign(info.master);
-    ev.slave.assign(info.slave);
+    ev.master.assign(info.master_view);
+    ev.slave.assign(info.slave_view);
     event_queue_.tryPush(ev);
   });
 
@@ -337,13 +340,13 @@ void ebus::Scheduler::attachHandlerCallbacks() {
     ev.handler_state = info.handler_state;
     ev.request_state = info.request_state;
     ev.error = info.message.data();  // Points to the error message literal
-    ev.master.assign(info.master);
-    ev.slave.assign(info.slave);
+    ev.master.assign(info.master_view);
+    ev.slave.assign(info.slave_view);
     event_queue_.tryPush(ev);
   });
 }
 
-void ebus::Scheduler::detachHandlerCallbacks() {
+void Scheduler::detachHandlerCallbacks() {
   if (!handler_) return;
   handler_->setBusRequestWonCallback(nullptr);
   handler_->setBusRequestLostCallback(nullptr);
@@ -351,3 +354,5 @@ void ebus::Scheduler::detachHandlerCallbacks() {
   handler_->setTelegramCallback(nullptr);
   handler_->setErrorCallback(nullptr);
 }
+
+}  // namespace ebus::detail

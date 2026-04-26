@@ -67,8 +67,8 @@ std::string toJson(const ErrorInfo& info) {
       << "\"result\":\"" << toString(info.result) << "\","
       << "\"handler_state\":\"" << toString(info.handler_state) << "\","
       << "\"request_state\":\"" << toString(info.request_state) << "\","
-      << "\"master\":\"" << toString(info.master) << "\","
-      << "\"slave\":\"" << toString(info.slave) << "\","
+      << "\"master\":\"" << toString(info.master_view) << "\","
+      << "\"slave\":\"" << toString(info.slave_view) << "\","
       << "\"utilization\":" << std::fixed << std::setprecision(2)
       << info.utilization << "}";
   return oss.str();
@@ -173,7 +173,7 @@ std::string toJson(const metrics::HandlerMetrics& m) {
       << ",\"callback_error\":" << toJson(m.callback_error);
 
   oss << ",\"state_timings\":{";
-  for (size_t i = 0; i < FSM::num_handler_states; ++i) {
+  for (size_t i = 0; i < detail::FSM::num_handler_states; ++i) {
     if (i > 0) oss << ",";
     oss << "\"" << toString(static_cast<HandlerState>(i))
         << "\":" << toJson(m.state_timings[i]);

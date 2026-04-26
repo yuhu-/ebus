@@ -9,9 +9,12 @@
 #include <ebus/controller.hpp>
 #include <ebus/utils.hpp>
 #include <iostream>
-#include "test_utils.hpp"
 #include <thread>
 #include <vector>
+
+#include "test_utils.hpp"
+
+using namespace ebus::detail;
 
 TEST_CASE("Controller: Lifecycle and API", "[app][controller]") {
   // Configuration

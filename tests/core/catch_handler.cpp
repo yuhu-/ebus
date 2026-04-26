@@ -21,6 +21,8 @@
 #include "platform/bus.hpp"
 #include "test_utils.hpp"
 
+using namespace ebus::detail;
+
 struct TestCase {
   ebus::MessageType message_type;
   uint8_t address;
@@ -78,10 +80,10 @@ SCENARIO("Handler processes eBUS messages correctly", "[core][handler]") {
       WHEN(tc.description) {
         ebus::BusConfig config = {.device = "/dev/null", .simulate = true};
         ebus::RuntimeConfig runtime = {.address = 0x33};
-        ebus::Request request;
-        ebus::BusMonitor monitor;
-        ebus::Bus bus(config, runtime, &request, &monitor);
-        ebus::Handler handler(runtime.address, &bus, &request, &monitor);
+        Request request;
+        BusMonitor monitor;
+        Bus bus(config, runtime, &request, &monitor);
+        Handler handler(runtime.address, &bus, &request, &monitor);
 
         int telegram_count = 0;
         int error_count = 0;
@@ -92,25 +94,26 @@ SCENARIO("Handler processes eBUS messages correctly", "[core][handler]") {
             [&](const ebus::ReactiveInfo& info) {
               std::vector<uint8_t> search;
               search = {0x07, 0x04};
-              if (ebus::contains(info.master, search))
-                info.response.assign(ebus::toVector("0ab5504d53303001074302"));
+              if (ebus::contains(info.master_view, search))
+                info.slave_response.assign(
+                    ebus::toVector("0ab5504d53303001074302"));
               search = {0x07, 0x05};
-              if (ebus::contains(info.master, search))
-                info.response.assign(
+              if (ebus::contains(info.master_view, search))
+                info.slave_response.assign(
                     ebus::toVector("0ab5504d533030010743"));  // defect
-              INFO("reactive: " << ebus::toString(info.master) << " "
-                                << ebus::toString(info.response));
+              INFO("reactive: " << ebus::toString(info.master_view) << " "
+                                << ebus::toString(info.slave_response));
             });
         handler.setTelegramCallback([&](const ebus::TelegramInfo& info) {
           telegram_count++;
-          INFO("telegram: " << ebus::toString(info.master) << " "
-                            << ebus::toString(info.slave));
+          INFO("telegram: " << ebus::toString(info.master_view) << " "
+                            << ebus::toString(info.slave_view));
         });
         handler.setErrorCallback([&](const ebus::ErrorInfo& info) {
           error_count++;
           INFO("error: " << info.message << " master '"
-                         << ebus::toString(info.master) << "' slave '"
-                         << ebus::toString(info.slave) << "'");
+                         << ebus::toString(info.master_view) << "' slave '"
+                         << ebus::toString(info.slave_view) << "'");
         });
 
         bus.addWriteListener([&](const uint8_t& byte) {

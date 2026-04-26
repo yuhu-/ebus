@@ -8,7 +8,7 @@
 #include <cstddef>
 #include <cstdint>
 
-namespace ebus {
+namespace ebus::detail {
 
 // --- Physical Layer ---
 struct Physical {
@@ -23,16 +23,22 @@ struct FSM {
   static constexpr size_t num_request_states = 4;
 };
 
+}  // namespace ebus::detail
+
+namespace ebus {
+
 // --- Defaults ---
 namespace defaults {
 constexpr uint8_t address = 0xff;
 
+namespace detail {
 struct Orchestration {
   static constexpr size_t stack_size = 4096;
   static constexpr uint8_t priority_high = 5;
   static constexpr uint8_t priority_med = 3;
   static constexpr uint8_t priority_low = 1;
 };
+}  // namespace detail
 
 struct Arbitration {
   static constexpr uint8_t lock_counter = 3;
@@ -47,9 +53,11 @@ struct Bus {
   static constexpr uint16_t offset = 80;  // us
   static constexpr uint16_t max_offset = 500;
 
-  static constexpr size_t queue_size = 256;
-  static constexpr size_t event_queue_capacity = 16;
-  static constexpr size_t max_listeners = 16;
+  struct detail {
+    static constexpr size_t queue_size = 256;
+    static constexpr size_t event_queue_capacity = 16;
+    static constexpr size_t max_listeners = 16;
+  };
 
   struct Syn {
     static constexpr uint32_t base_ms = 50;
@@ -81,9 +89,11 @@ struct Network {
   static constexpr uint32_t wake_interval_ms = 20;
 };
 
+namespace detail {
 struct PollManager {
   static constexpr uint32_t default_interval_ms = 5000;
 };
+}  // namespace detail
 
 struct Scheduler {
   static constexpr size_t queue_reserve = 32;
@@ -96,6 +106,7 @@ struct Scheduler {
   static constexpr uint32_t total_timeout_ms = 4000;
 };
 
+namespace detail {
 struct Scanner {
   static constexpr uint32_t initial_delay_s = 10;
   static constexpr uint32_t startup_interval_s = 60;
@@ -104,13 +115,11 @@ struct Scanner {
 };
 
 struct Sequence {
-  // Default SBO size
   static constexpr size_t default_capacity = 64;
-  // Safe upper bound for MS telegrams
   static constexpr uint8_t max_telegram_bytes = 48;
-  // Maximum data bytes (Spec 5.6)
   static constexpr uint8_t max_data_bytes = 16;
 };
+}  // namespace detail
 
 static_assert(defaults::Bus::offset < defaults::Bus::min_window,
               "The default offset must be smaller than the minimum arbitration "

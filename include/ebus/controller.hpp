@@ -6,6 +6,7 @@
 #pragma once
 
 #include <chrono>
+#include <condition_variable>
 #include <cstdint>
 #include <functional>
 #include <memory>
@@ -58,7 +59,7 @@ class Controller {
 
   uint32_t addPollItem(uint8_t priority, ByteView message,
                        std::chrono::milliseconds interval,
-                       std::function<void(ByteView)> callback = nullptr);
+                       ResultCallback callback = nullptr);
   void removePollItem(uint32_t id);
 
   // Scanning
@@ -96,6 +97,9 @@ class Controller {
 
   bool configured_ = false;
   bool running_ = false;
+
+  mutable std::mutex wake_mutex_;
+  std::condition_variable wake_cv_;
 
   void constructMembers();
   void run();

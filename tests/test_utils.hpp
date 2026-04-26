@@ -27,6 +27,8 @@
 #include "platform/bus.hpp"
 #include "platform/system.hpp"
 
+namespace ebus::detail {
+
 /**
  * Robust read helper to handle partial TCP/Socket reads.
  */
@@ -49,7 +51,7 @@ inline bool waitCondition(Predicate&& pred, int timeout_ms = 1000) {
   while (std::chrono::steady_clock::now() - start <
          std::chrono::milliseconds(timeout_ms)) {
     if (pred()) return true;
-    ebus::sleepMs(5);
+    sleepMs(5);
   }
   return pred();
 }
@@ -88,12 +90,10 @@ inline std::string frameSlaveHex(const std::string& payloadHex) {
   return oss.str();
 }
 
-namespace ebus {
-
 /**
  * In-memory client for testing ClientManager without real sockets.
  */
-class MockClient : public AbstractClient {
+class MockClient : public detail::AbstractClient {
  public:
   explicit MockClient(Request* req, bool write_capable = true,
                       size_t max_buffer = 1024)
@@ -110,14 +110,14 @@ class MockClient : public AbstractClient {
   }
   void sendToClient(ByteView data) override {
     if (outbound_.size() + data.size() > max_buffer_size_) {
-      stop();  // Simulate socket closing on overflow
+      this->stop();  // Simulate socket closing on overflow
       return;
     }
     outbound_.insert(outbound_.end(), data.begin(), data.end());
   }
 
   BridgeAction onBusByte(const BusEventContext& ctx) override {
-    if (!isConnected()) return BridgeAction::stop_session;
+    if (!this->isConnected()) return BridgeAction::stop_session;
     sendToClient(ByteView(&ctx.byte, 1));
     return BridgeAction::keep_active;
   }
@@ -157,7 +157,7 @@ class BusSimulator {
    * @param masterPayloadHex The hex string of master data (ZZ PB SB NN DB...).
    * @param slavePayloadHex The hex string of slave data (NN DB...).
    */
-  void addMasterSlaveResponse(uint8_t source,
+  void addMasterSlaveResponse(uint8_t source,  // NOLINT
                               const std::string& masterPayloadHex,
                               const std::string& slavePayloadHex,
                               uint32_t delay_ms = 5) {
@@ -191,9 +191,9 @@ class BusSimulator {
           if (!infinite) resp.repeat_count--;
 
           uint32_t delay = resp.delay_ms;
-          std::vector<uint8_t> data = resp.response_data;
+          std::vector<uint8_t> data = resp.response_data;  // NOLINT
           std::thread([this, delay, data]() {
-            ebus::sleepMs(delay);
+            sleepMs(delay);
             for (uint8_t byte : data) bus_.writeByte(byte);
           }).detach();
         }
@@ -202,4 +202,4 @@ class BusSimulator {
   }
 };
 
-}  // namespace ebus
+}  // namespace ebus::detail

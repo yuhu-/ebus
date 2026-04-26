@@ -9,10 +9,14 @@
 #include <thread>
 #endif
 
-void ebus::sleepMs(uint32_t ms) {
+namespace ebus::detail {
+
+void sleepMs(uint32_t ms) {
 #if defined(ESP32)
   vTaskDelay(pdMS_TO_TICKS(ms));
 #elif defined(POSIX)
   std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 #endif
 }
+
+}  // namespace ebus::detail

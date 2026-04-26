@@ -108,7 +108,7 @@ using DataValue =
  * @return A DataValue containing the decoded value, or nullopt if size/format
  * is invalid.
  */
-std::optional<DataValue> decode(DataType dt, ByteView bytes,
+std::optional<DataValue> decode(DataType dt, ByteView data,
                                 Endian e = Endian::little);
 
 /**
@@ -120,7 +120,7 @@ std::optional<DataValue> decode(DataType dt, ByteView bytes,
  * @param bytes The bytes to validate.
  * @return True if the bytes are plausible for the given type.
  */
-bool isValid(DataType dt, ByteView bytes) noexcept;
+bool isValid(DataType dt, ByteView data) noexcept;
 
 /**
  * Encodes a high-level DataValue into a sequence of eBUS-compatible bytes.

@@ -16,20 +16,19 @@
 #include <type_traits>
 #include <vector>
 
+#include "ebus/byte_view.hpp"
 #include "ebus/defaults.hpp"
 #include "ebus/protocol_math.hpp"
 #include "ebus/types.hpp"
 
-namespace ebus {
-
-namespace detail {
+namespace ebus::detail {
 
 /**
  * A minimal vector-like container for uint8_t with Small Buffer Optimization
  * (SBO). Avoids heap allocations for sequences up to 64 bytes.
  */
 template <typename T = uint8_t,
-          size_t kInlineCapacity = defaults::Sequence::default_capacity>
+          size_t kInlineCapacity = defaults::detail::Sequence::default_capacity>
 class SmallByteVector {
  public:
   static_assert(std::is_trivially_copyable_v<T>,
@@ -151,8 +150,9 @@ class SmallByteVector {
   }
 };
 
-}  // namespace detail
+}  // namespace ebus::detail
 
+namespace ebus {
 /**
  * Sequence class that represents a sequence of bytes in the eBUS protocol. It
  * provides methods for constructing sequences from vectors, comparing
@@ -163,10 +163,11 @@ class SmallByteVector {
  * (reduced) 0xaa <-> 0xa9 0x01 (extended)
  * (reduced) 0xa9 <-> 0xa9 0x00 (extended)
  */
-template <size_t kInlineCapacity = defaults::Sequence::default_capacity>
+template <size_t kInlineCapacity = defaults::detail::Sequence::default_capacity>
 class SequenceImpl {
  public:
-  static_assert(kInlineCapacity >= defaults::Sequence::max_telegram_bytes,
+  static_assert(kInlineCapacity >=
+                    defaults::detail::Sequence::max_telegram_bytes,
                 "Sequence capacity too small");
 
   SequenceImpl() = default;
@@ -217,8 +218,8 @@ class SequenceImpl {
   /**
    * Assigns data from a ByteView.
    */
-  void assign(ByteView view, bool extended = false) {
-    sequence_.assign(view.begin(), view.end());
+  void assign(ByteView data, bool extended = false) {
+    sequence_.assign(data.begin(), data.end());
     extended_ = extended;
   }
 
@@ -422,12 +423,12 @@ class SequenceImpl {
 /**
  * Default eBUS sequence with 64-byte SBO buffer.
  */
-using Sequence = SequenceImpl<defaults::Sequence::default_capacity>;
+using Sequence = SequenceImpl<defaults::detail::Sequence::default_capacity>;
 
 /**
  * Factory function to create a sequence from a raw ByteView.
  */
-template <size_t N = defaults::Sequence::default_capacity>
+template <size_t N = defaults::detail::Sequence::default_capacity>
 SequenceImpl<N> makeSequence(ByteView data, bool extended = false) {
   SequenceImpl<N> seq;
   seq.assign(data, extended);

@@ -9,13 +9,14 @@
 #include <ebus/types.hpp>
 #include <ebus/utils.hpp>
 
-ebus::DeviceScanner::DeviceScanner(uint8_t address,
-                                   DeviceManager* device_manager)
+namespace ebus::detail {
+
+DeviceScanner::DeviceScanner(uint8_t address, DeviceManager* device_manager)
     : device_manager_(device_manager),
       own_address_(address),
       next_startup_scan_time_(std::chrono::steady_clock::time_point::max()) {}
 
-void ebus::DeviceScanner::setFullScan(bool enable) {
+void DeviceScanner::setFullScan(bool enable) {
   std::lock_guard<std::mutex> lock(mutex_);
   full_scan_ = enable;
   if (enable) {
@@ -23,12 +24,12 @@ void ebus::DeviceScanner::setFullScan(bool enable) {
   }
 }
 
-bool ebus::DeviceScanner::isFullScan() const {
+bool DeviceScanner::isFullScan() const {
   std::lock_guard<std::mutex> lock(mutex_);
   return full_scan_;
 }
 
-void ebus::DeviceScanner::setScanOnStartup(bool enable) {
+void DeviceScanner::setScanOnStartup(bool enable) {
   std::lock_guard<std::mutex> lock(mutex_);
   scan_on_startup_ = enable;
   if (enable) {
@@ -41,33 +42,32 @@ void ebus::DeviceScanner::setScanOnStartup(bool enable) {
   }
 }
 
-bool ebus::DeviceScanner::isScanOnStartup() const {
+bool DeviceScanner::isScanOnStartup() const {
   std::lock_guard<std::mutex> lock(mutex_);
   return scan_on_startup_;
 }
 
-void ebus::DeviceScanner::setOwnAddress(uint8_t address) {
+void DeviceScanner::setOwnAddress(uint8_t address) {
   std::lock_guard<std::mutex> lock(mutex_);
   own_address_ = address;
 }
 
-void ebus::DeviceScanner::setMaxStartupScans(uint8_t max) {
+void DeviceScanner::setMaxStartupScans(uint8_t max) {
   std::lock_guard<std::mutex> lock(mutex_);
   max_startup_scans_ = max;
 }
 
-void ebus::DeviceScanner::setInitialScanDelay(std::chrono::seconds delay) {
+void DeviceScanner::setInitialScanDelay(std::chrono::seconds delay) {
   std::lock_guard<std::mutex> lock(mutex_);
   initial_scan_delay_ = delay;
 }
 
-void ebus::DeviceScanner::setStartupScanInterval(
-    std::chrono::seconds interval) {
+void DeviceScanner::setStartupScanInterval(std::chrono::seconds interval) {
   std::lock_guard<std::mutex> lock(mutex_);
   startup_scan_interval_ = interval;
 }
 
-void ebus::DeviceScanner::scanObservedDevices() {
+void DeviceScanner::scanObservedDevices() {
   // device_manager is thread-safe, so we can query it outside our lock
   // to reduce contention, although getObservedSlaves copies the set anyway.
   std::bitset<256> observed;
@@ -91,31 +91,31 @@ void ebus::DeviceScanner::scanObservedDevices() {
   }
 }
 
-void ebus::DeviceScanner::scanAddress(uint8_t address) {
+void DeviceScanner::scanAddress(uint8_t address) {
   std::lock_guard<std::mutex> lock(mutex_);
   scanAddressLocked(address);
 }
 
-void ebus::DeviceScanner::scanAddressLocked(uint8_t address) {
+void DeviceScanner::scanAddressLocked(uint8_t address) {
   if (ebus::isSlave(address) && (address != ebus::slaveOf(own_address_))) {
     manual_queue_.push(Device::createScanCommand(address));
   }
 }
 
-void ebus::DeviceScanner::scanAddresses(const std::vector<uint8_t>& addresses) {
+void DeviceScanner::scanAddresses(const std::vector<uint8_t>& addresses) {
   std::lock_guard<std::mutex> lock(mutex_);
   for (uint8_t addr : addresses) {
     scanAddressLocked(addr);
   }
 }
 
-bool ebus::DeviceScanner::isScanning() const {
+bool DeviceScanner::isScanning() const {
   std::lock_guard<std::mutex> lock(mutex_);
   return full_scan_ || scan_on_startup_ || !manual_queue_.empty() ||
          !startup_queue_.empty();
 }
 
-void ebus::DeviceScanner::stop() {
+void DeviceScanner::stop() {
   std::lock_guard<std::mutex> lock(mutex_);
   full_scan_ = false;
   scan_on_startup_ = false;
@@ -129,7 +129,7 @@ void ebus::DeviceScanner::stop() {
   next_startup_scan_time_ = std::chrono::steady_clock::time_point::max();
 }
 
-ebus::Sequence ebus::DeviceScanner::nextCommand() {
+ebus::Sequence DeviceScanner::nextCommand() {
   std::lock_guard<std::mutex> lock(mutex_);
   // Priority 1: Manual Scan
   if (!manual_queue_.empty()) {
@@ -203,3 +203,5 @@ ebus::Sequence ebus::DeviceScanner::nextCommand() {
 
   return {};
 }
+
+}  // namespace ebus::detail

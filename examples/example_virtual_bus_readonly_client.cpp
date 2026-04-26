@@ -58,14 +58,14 @@ int main() {
   // * Data: 9.25°C - DATA2B -> 0x40, 0x09
   std::vector<uint8_t> broadcastMsg = {0xfe, 0xb5, 0x16, 0x03,
                                        0x01, 0x40, 0x09};
-  deviceB.addPollItem(10, broadcastMsg, 5s, [](ebus::ByteView byte_view) {
+  deviceB.addPollItem(10, broadcastMsg, 5s, [](const ebus::ResultInfo& info) {
     std::cout << "[Device B] Periodic broadcast sent." << std::endl;
   });
 
   // Try to enqueue a faulty broadcast message every 7 seconds.
   // This library offers several helper functions, such as...ebus::to_vector("")
   deviceB.addPollItem(
-      15, ebus::toVector("feb5160301"), 7s, [](ebus::ByteView byte_view) {
+      15, ebus::toVector("feb5160301"), 7s, [](const ebus::ResultInfo& info) {
         std::cout << "[Device B] Periodic faulty broadcast sent." << std::endl;
       });
 
@@ -73,12 +73,12 @@ int main() {
   // We set a callback to decode the received message from DeviceB.
   deviceA.setTelegramCallback([](const ebus::TelegramInfo& info) {
     if (info.telegram_type == ebus::TelegramType::broadcast) {
-      if (ebus::matches(info.master, {0xfe, 0xb5, 0x16, 0x03, 0x01}, 1))
+      if (ebus::matches(info.master_view, {0xfe, 0xb5, 0x16, 0x03, 0x01}, 1))
         std::cout << "[Device A] Observed broadcast from "
-                  << ebus::toString(info.master[0]) << " with data: "
+                  << ebus::toString(info.master_view[0]) << " with data: "
                   << ebus::toString(
                          *ebus::decode(ebus::DataType::data2b,
-                                       ebus::range(info.master, 6, 2)),
+                                       ebus::range(info.master_view, 6, 2)),
                          "°C")
                   << std::endl;
     }
@@ -87,8 +87,8 @@ int main() {
   // --- 6. Add a error callback handler to Device B ---
   deviceB.setErrorCallback([](const ebus::ErrorInfo& info) {
     std::cout << "[Device B] Error message " << info.message << " master: '"
-              << ebus::toString(info.master) << "' slave: '"
-              << ebus::toString(info.slave) << "'" << std::endl;
+              << ebus::toString(info.master_view) << "' slave: '"
+              << ebus::toString(info.slave_view) << "'" << std::endl;
   });
 
   // --- 7. Start the simulation ---

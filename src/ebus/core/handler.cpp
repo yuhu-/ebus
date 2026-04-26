@@ -11,8 +11,10 @@
 #include "core/bus_monitor.hpp"
 #include "core/request.hpp"
 
-ebus::Handler::Handler(uint8_t source_address, Bus* bus, Request* request,
-                       BusMonitor* monitor)
+namespace ebus::detail {
+
+Handler::Handler(uint8_t source_address, Bus* bus, detail::Request* request,
+                 BusMonitor* monitor)
     : bus_(bus), request_(request), monitor_(monitor) {
   setSourceAddress(source_address);
 
@@ -34,40 +36,40 @@ ebus::Handler::Handler(uint8_t source_address, Bus* bus, Request* request,
   last_point_ = std::chrono::steady_clock::now();
 }
 
-void ebus::Handler::setSourceAddress(uint8_t source_address) {
+void Handler::setSourceAddress(uint8_t source_address) {
   source_address_ =
       ebus::isMaster(source_address) ? source_address : defaults::address;
   target_address_ = slaveOf(source_address_);
 }
 
-uint8_t ebus::Handler::getSourceAddress() const { return source_address_; }
+uint8_t Handler::getSourceAddress() const { return source_address_; }
 
-uint8_t ebus::Handler::getTargetAddress() const { return target_address_; }
+uint8_t Handler::getTargetAddress() const { return target_address_; }
 
-void ebus::Handler::setBusRequestWonCallback(BusRequestWonCallback callback) {
+void Handler::setBusRequestWonCallback(BusRequestWonCallback callback) {
   bus_request_won_callback_ = std::move(callback);
 }
 
-void ebus::Handler::setBusRequestLostCallback(BusRequestLostCallback callback) {
+void Handler::setBusRequestLostCallback(BusRequestLostCallback callback) {
   bus_request_lost_callback_ = std::move(callback);
 }
 
-void ebus::Handler::setReactiveMasterSlaveCallback(
+void Handler::setReactiveMasterSlaveCallback(
     ReactiveMasterSlaveCallback callback) {
   reactive_master_slave_callback_ = std::move(callback);
 }
 
-void ebus::Handler::setTelegramCallback(TelegramCallback callback) {
+void Handler::setTelegramCallback(TelegramCallback callback) {
   telegram_callback_ = std::move(callback);
 }
 
-void ebus::Handler::setErrorCallback(ErrorCallback callback) {
+void Handler::setErrorCallback(ErrorCallback callback) {
   error_callback_ = std::move(callback);
 }
 
-ebus::HandlerState ebus::Handler::getState() const { return state_; }
+ebus::HandlerState Handler::getState() const { return state_; }
 
-bool ebus::Handler::sendActiveMessage(ByteView message) {
+bool Handler::sendActiveMessage(ByteView message) {
   if (active_message_) return false;
   if (message.empty()) return false;
 
@@ -85,15 +87,15 @@ bool ebus::Handler::sendActiveMessage(ByteView message) {
   return active_message_;
 }
 
-bool ebus::Handler::isActiveMessagePending() const { return active_message_; }
+bool Handler::isActiveMessagePending() const { return active_message_; }
 
-void ebus::Handler::reset() {
+void Handler::reset() {
   state_ = HandlerState::passive_receive_master;
   callActiveReset();
   callPassiveReset();
 }
 
-void ebus::Handler::run(const BusEventContext& ctx) {
+void Handler::run(const BusEventContext& ctx) {
   last_result_ = ctx.result;
   // record timing
   if (ctx.byte != Symbols::syn) {
@@ -152,7 +154,7 @@ void ebus::Handler::run(const BusEventContext& ctx) {
   }
 }
 
-void ebus::Handler::passiveReceiveMaster(uint8_t byte) {
+void Handler::passiveReceiveMaster(uint8_t byte) {
   if (byte != Symbols::syn) {
     passive_master_.pushBack(byte);
 
@@ -242,7 +244,7 @@ void ebus::Handler::passiveReceiveMaster(uint8_t byte) {
   }
 }
 
-void ebus::Handler::passiveReceiveMasterAcknowledge(uint8_t byte) {
+void Handler::passiveReceiveMasterAcknowledge(uint8_t byte) {
   if (byte == Symbols::ack) {
     if (passive_telegram_.getType() == TelegramType::master_master) {
       callOnTelegram(MessageType::passive, TelegramType::master_master,
@@ -281,7 +283,7 @@ void ebus::Handler::passiveReceiveMasterAcknowledge(uint8_t byte) {
   }
 }
 
-void ebus::Handler::passiveReceiveSlave(uint8_t byte) {
+void Handler::passiveReceiveSlave(uint8_t byte) {
   passive_slave_.pushBack(byte);
 
   if (passive_slave_.size() == 1) passive_slave_dbx_ = byte;
@@ -304,7 +306,7 @@ void ebus::Handler::passiveReceiveSlave(uint8_t byte) {
   }
 }
 
-void ebus::Handler::passiveReceiveSlaveAcknowledge(uint8_t byte) {
+void Handler::passiveReceiveSlaveAcknowledge(uint8_t byte) {
   if (byte == Symbols::ack) {
     callOnTelegram(MessageType::passive, TelegramType::master_slave,
                    {passive_telegram_.getMaster().data(),
@@ -332,7 +334,7 @@ void ebus::Handler::passiveReceiveSlaveAcknowledge(uint8_t byte) {
   }
 }
 
-void ebus::Handler::reactiveSendMasterPositiveAcknowledge(
+void Handler::reactiveSendMasterPositiveAcknowledge(
     [[maybe_unused]] uint8_t byte) {
   if (passive_telegram_.getType() == TelegramType::master_master) {
     callOnTelegram(MessageType::reactive, TelegramType::master_master,
@@ -351,7 +353,7 @@ void ebus::Handler::reactiveSendMasterPositiveAcknowledge(
   }
 }
 
-void ebus::Handler::reactiveSendMasterNegativeAcknowledge(
+void Handler::reactiveSendMasterNegativeAcknowledge(
     [[maybe_unused]] uint8_t byte) {
   state_ = HandlerState::passive_receive_master;
   if (!passive_master_repeated_) {
@@ -366,7 +368,7 @@ void ebus::Handler::reactiveSendMasterNegativeAcknowledge(
   }
 }
 
-void ebus::Handler::reactiveSendSlave([[maybe_unused]] uint8_t byte) {
+void Handler::reactiveSendSlave([[maybe_unused]] uint8_t byte) {
   passive_slave_index_++;
   if (passive_slave_index_ >= passive_slave_.size())  // All slave bytes sent
     state_ = HandlerState::reactive_receive_slave_acknowledge;
@@ -374,7 +376,7 @@ void ebus::Handler::reactiveSendSlave([[maybe_unused]] uint8_t byte) {
     callWrite(passive_slave_[passive_slave_index_]);
 }
 
-void ebus::Handler::reactiveReceiveSlaveAcknowledge(uint8_t byte) {
+void Handler::reactiveReceiveSlaveAcknowledge(uint8_t byte) {
   if (byte == Symbols::ack) {
     callOnTelegram(MessageType::reactive,
                    TelegramType::master_slave,  // Successful reactive response
@@ -405,7 +407,7 @@ void ebus::Handler::reactiveReceiveSlaveAcknowledge(uint8_t byte) {
   }
 }
 
-void ebus::Handler::requestBus(uint8_t byte) {
+void Handler::requestBus(uint8_t byte) {
   auto won = [&]() {
     active_master_ = active_telegram_.getMaster();
     active_master_.pushBack(active_telegram_.getMasterCRC(), false);
@@ -484,7 +486,7 @@ void ebus::Handler::requestBus(uint8_t byte) {
   }
 }
 
-void ebus::Handler::activeSendMaster(uint8_t byte) {
+void Handler::activeSendMaster(uint8_t byte) {
   // Verify that the byte we just read from the bus matches what we sent
   // (Echo check). The index hasn't been incremented yet, so it points to
   // the byte we sent in the previous step.
@@ -520,7 +522,7 @@ void ebus::Handler::activeSendMaster(uint8_t byte) {
   }
 }
 
-void ebus::Handler::activeReceiveMasterAcknowledge(uint8_t byte) {
+void Handler::activeReceiveMasterAcknowledge(uint8_t byte) {
   if (byte == Symbols::ack) {
     if (active_telegram_.getType() == TelegramType::master_master) {
       callOnTelegram(MessageType::active, TelegramType::master_master,
@@ -559,7 +561,7 @@ void ebus::Handler::activeReceiveMasterAcknowledge(uint8_t byte) {
   }
 }
 
-void ebus::Handler::activeReceiveSlave(uint8_t byte) {
+void Handler::activeReceiveSlave(uint8_t byte) {
   active_slave_.pushBack(byte);
 
   if (active_slave_.size() == 1) active_slave_dbx_ = byte;
@@ -588,7 +590,7 @@ void ebus::Handler::activeReceiveSlave(uint8_t byte) {
   }
 }
 
-void ebus::Handler::activeSendSlavePositiveAcknowledge(
+void Handler::activeSendSlavePositiveAcknowledge(
     [[maybe_unused]] uint8_t byte) {
   callOnTelegram(
       MessageType::active, TelegramType::master_slave,
@@ -602,7 +604,7 @@ void ebus::Handler::activeSendSlavePositiveAcknowledge(
   state_ = HandlerState::release_bus;
 }
 
-void ebus::Handler::activeSendSlaveNegativeAcknowledge(
+void Handler::activeSendSlaveNegativeAcknowledge(
     [[maybe_unused]] uint8_t byte) {
   if (!active_slave_repeated_) {
     active_slave_repeated_ = true;
@@ -619,7 +621,7 @@ void ebus::Handler::activeSendSlaveNegativeAcknowledge(
   }
 }
 
-void ebus::Handler::releaseBus([[maybe_unused]] uint8_t byte) {
+void Handler::releaseBus([[maybe_unused]] uint8_t byte) {
   state_ = HandlerState::passive_receive_master;
 }
 
@@ -631,7 +633,7 @@ void ebus::Handler::releaseBus([[maybe_unused]] uint8_t byte) {
  * It logs the error details using the onErrorCallback if available,
  * updates the appropriate counters, and resets the passive state.
  */
-void ebus::Handler::checkPassiveBuffers() {
+void Handler::checkPassiveBuffers() {
   if (passive_master_.size() > 0 || passive_slave_.size() > 0) {
     callOnError(LogLevel::info, "checkPassiveBuffers",
                 {passive_master_.data(), passive_master_.size()},
@@ -658,7 +660,7 @@ void ebus::Handler::checkPassiveBuffers() {
  * Finally, it resets the active communication state to ensure the system
  * can recover and continue operating.
  */
-void ebus::Handler::checkActiveBuffers() {
+void Handler::checkActiveBuffers() {
   if (active_master_.size() > 0 || active_slave_.size() > 0) {
     callOnError(LogLevel::info, "checkActiveBuffers",
                 {active_master_.data(), active_master_.size()},
@@ -670,7 +672,7 @@ void ebus::Handler::checkActiveBuffers() {
   }
 }
 
-void ebus::Handler::callPassiveReset() {
+void Handler::callPassiveReset() {
   passive_telegram_.clear();
 
   passive_master_.clear();
@@ -683,7 +685,7 @@ void ebus::Handler::callPassiveReset() {
   passive_slave_repeated_ = false;
 }
 
-void ebus::Handler::callActiveReset() {
+void Handler::callActiveReset() {
   active_message_ = false;
   active_telegram_.clear();
 
@@ -696,9 +698,9 @@ void ebus::Handler::callActiveReset() {
   active_slave_repeated_ = false;
 }
 
-void ebus::Handler::callWrite(uint8_t byte) { pending_write_ = byte; }
+void Handler::callWrite(uint8_t byte) { pending_write_ = byte; }
 
-void ebus::Handler::callOnBusRequestWon() {
+void Handler::callOnBusRequestWon() {
   if (bus_request_won_callback_) {
     if (monitor_) monitor_->callback_won.markBegin();
     bus_request_won_callback_();
@@ -706,7 +708,7 @@ void ebus::Handler::callOnBusRequestWon() {
   }
 }
 
-void ebus::Handler::callOnBusRequestLost() {
+void Handler::callOnBusRequestLost() {
   if (bus_request_lost_callback_) {
     if (monitor_) monitor_->callback_lost.markBegin();
     bus_request_lost_callback_();
@@ -714,8 +716,8 @@ void ebus::Handler::callOnBusRequestLost() {
   }
 }
 
-void ebus::Handler::callOnReactiveMasterSlave(ByteView master_view,
-                                              Sequence& slave_response) {
+void Handler::callOnReactiveMasterSlave(ByteView master_view,
+                                        Sequence& slave_response) {
   if (reactive_master_slave_callback_) {
     if (monitor_) monitor_->callback_reactive.markBegin();
     reactive_master_slave_callback_({0, master_view, slave_response});
@@ -723,19 +725,19 @@ void ebus::Handler::callOnReactiveMasterSlave(ByteView master_view,
   }
 }
 
-void ebus::Handler::callOnTelegram(MessageType message_type,
-                                   TelegramType telegram_type, ByteView master,
-                                   ByteView slave) {
+void Handler::callOnTelegram(MessageType message_type,
+                             TelegramType telegram_type, ByteView master_view,
+                             ByteView slave_view) {
   if (telegram_callback_) {
     if (monitor_) monitor_->callback_telegram.markBegin();
     telegram_callback_({0, 0, message_type, telegram_type, state_,
-                        request_->getState(), master, slave});
+                        request_->getState(), master_view, slave_view});
     if (monitor_) monitor_->callback_telegram.markEnd();
   }
 }
 
-void ebus::Handler::callOnError(LogLevel level, std::string_view error_message,
-                                ByteView master, ByteView slave) {
+void Handler::callOnError(LogLevel level, std::string_view error_message,
+                          ByteView master_view, ByteView slave_view) {
   if (error_callback_) {
     double current_util = 0.0;
     if (monitor_) {
@@ -746,7 +748,10 @@ void ebus::Handler::callOnError(LogLevel level, std::string_view error_message,
       current_util = monitor_->getMetrics().bus.utilization;
     }
     error_callback_({0, level, error_message, last_result_, state_,
-                     request_->getState(), master, slave, current_util});
+                     request_->getState(), master_view, slave_view,
+                     current_util});
     if (monitor_) monitor_->callback_error.markEnd();
   }
 }
+
+}  // namespace ebus::detail

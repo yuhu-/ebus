@@ -25,8 +25,11 @@
 #include "platform/bus.hpp"
 #include "test_utils.hpp"
 
+// using namespace ebus;
+using namespace ebus::detail;
+
 TEST_CASE("Scheduler: Simulation", "[app][scheduler]") {
-  ebus::Request request;
+  Request request;
   ebus::BusConfig config;
   config.device = "/dev/null";
   config.simulate = true;
@@ -35,15 +38,15 @@ TEST_CASE("Scheduler: Simulation", "[app][scheduler]") {
   runtime.address = 0x33;
   runtime.bus.syn.enabled = true;
 
-  ebus::BusMonitor monitor;
-  ebus::Bus bus(config, runtime, &request, &monitor);
-  ebus::Handler handler(ebus::defaults::address, &bus, &request, &monitor);
-  ebus::BusHandler busHandler(&request, &handler, bus.getQueue());
+  BusMonitor monitor;
+  Bus bus(config, runtime, &request, &monitor);
+  Handler handler(ebus::defaults::address, &bus, &request, &monitor);
+  BusHandler busHandler(&request, &handler, bus.getQueue());
 
   const uint8_t source = 0x33;
   handler.setSourceAddress(source);
 
-  ebus::BusSimulator simulator(bus);
+  BusSimulator simulator(bus);
 
   // BC Success: Broadcast to fe. No slave response.
   simulator.addResponse(
@@ -60,7 +63,7 @@ TEST_CASE("Scheduler: Simulation", "[app][scheduler]") {
   simulator.addResponse(
       {retry_trigger, ebus::toVector(frameSlaveHex("013f")), 5, 1});
 
-  ebus::Scheduler scheduler(&handler);
+  Scheduler scheduler(&handler);
   scheduler.setMaxSendAttempts(3);
   scheduler.setBaseBackoff(std::chrono::milliseconds(50));
 

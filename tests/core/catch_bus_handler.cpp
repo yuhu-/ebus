@@ -17,6 +17,8 @@
 #include "core/request.hpp"
 #include "platform/bus.hpp"
 
+using namespace ebus::detail;
+
 TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
   SECTION("Integration vectors (passive/reactive/active BC happy paths)") {
     ebus::BusConfig config = {.device = "/dev/null", .simulate = true};
@@ -24,11 +26,11 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
     runtime.address = 0x01;
     runtime.bus.syn.enabled = true;
 
-    ebus::Request request;
-    ebus::BusMonitor monitor;
-    ebus::Bus bus(config, runtime, &request, &monitor);
-    ebus::Handler handler(runtime.address, &bus, &request, &monitor);
-    ebus::BusHandler busHandler(&request, &handler, bus.getQueue());
+    Request request;
+    BusMonitor monitor;
+    Bus bus(config, runtime, &request, &monitor);
+    Handler handler(runtime.address, &bus, &request, &monitor);
+    BusHandler busHandler(&request, &handler, bus.getQueue());
 
     std::atomic<int> telegram_count{0};
     std::atomic<int> error_count{0};
@@ -104,11 +106,11 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
     ebus::BusConfig config = {.device = "/dev/null", .simulate = true};
     ebus::RuntimeConfig runtime = {.address = 0x33};
 
-    ebus::Request request;
-    ebus::BusMonitor monitor;
-    ebus::Bus bus(config, runtime, &request, &monitor);
-    ebus::Handler handler(runtime.address, &bus, &request, &monitor);
-    ebus::BusHandler busHandler(&request, &handler, bus.getQueue());
+    Request request;
+    BusMonitor monitor;
+    Bus bus(config, runtime, &request, &monitor);
+    Handler handler(runtime.address, &bus, &request, &monitor);
+    BusHandler busHandler(&request, &handler, bus.getQueue());
 
     std::atomic<int> telegram_count{0};
     handler.setTelegramCallback(
@@ -174,12 +176,12 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
     runtime.address = 0x33;
     runtime.bus.syn.enabled = true;
 
-    ebus::Request request;
+    Request request;
     request.setMaxLockCounter(0);
-    ebus::BusMonitor monitor;
-    ebus::Bus bus(config, runtime, &request, &monitor);
-    ebus::Handler handler(runtime.address, &bus, &request, &monitor);
-    ebus::BusHandler busHandler(&request, &handler, bus.getQueue());
+    BusMonitor monitor;
+    Bus bus(config, runtime, &request, &monitor);
+    Handler handler(runtime.address, &bus, &request, &monitor);
+    BusHandler busHandler(&request, &handler, bus.getQueue());
 
     std::atomic<int> telegram_count{0};
     handler.setTelegramCallback(

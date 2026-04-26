@@ -10,8 +10,10 @@
 
 #include "models/device.hpp"
 
+using namespace ebus::detail;
+
 TEST_CASE("Device: createScanCommand", "[models][device]") {
-  auto cmd = ebus::Device::createScanCommand(0x15);
+  auto cmd = Device::createScanCommand(0x15);
   REQUIRE(cmd.size() == 4);
   REQUIRE(cmd[0] == 0x15);
   REQUIRE(cmd[1] == 0x07);
@@ -20,7 +22,7 @@ TEST_CASE("Device: createScanCommand", "[models][device]") {
 }
 
 TEST_CASE("Device: update parsing", "[models][device]") {
-  ebus::Device dev;
+  Device dev;
 
   std::vector<uint8_t> master = {0x10, 0x15, 0x07, 0x04, 0x00};
   std::vector<uint8_t> slave = {0x0a, 0xda, 0x45, 0x53, 0x50, 0x44,
@@ -36,7 +38,7 @@ TEST_CASE("Device: update parsing", "[models][device]") {
 }
 
 TEST_CASE("Device: Vaillant vendor scan commands", "[models][device]") {
-  ebus::Device dev;
+  Device dev;
 
   std::vector<uint8_t> master = {0x10, 0x15, 0x07, 0x04, 0x00};
   std::vector<uint8_t> slave = {0x0a, 0xb5, 0x00, 0x00, 0x00, 0x00, 0x00};
@@ -52,7 +54,7 @@ TEST_CASE("Device: Vaillant vendor scan commands", "[models][device]") {
 }
 
 TEST_CASE("Device: Vaillant full identification", "[models][device]") {
-  ebus::Device dev;
+  Device dev;
 
   std::vector<uint8_t> m1 = {0x30, 0x52, 0xb5, 0x09, 0x01, 0x24};
   std::vector<uint8_t> s1 = {0x09, 0x00, 0x32, 0x31, 0x31,

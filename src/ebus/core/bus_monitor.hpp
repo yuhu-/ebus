@@ -14,7 +14,7 @@
 #include "utils/circular_buffer.hpp"
 #include "utils/timing_stats.hpp"
 
-namespace ebus {
+namespace ebus::detail {
 
 /**
  * BusMonitor centralizes timing and performance statistics for the bus.
@@ -89,4 +89,4 @@ class BusMonitor {
   metrics::DeviceMetrics device_acc_;
 };
 
-}  // namespace ebus
+}  // namespace ebus::detail

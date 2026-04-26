@@ -11,7 +11,7 @@
 #include <string>
 #include <vector>
 
-namespace ebus {
+namespace ebus::detail {
 
 /**
  * Represents a device on the eBUS, identified by its slave address and
@@ -47,4 +47,4 @@ class Device {
   bool isVaillantValid() const;
 };
 
-}  // namespace ebus
+}  // namespace ebus::detail
