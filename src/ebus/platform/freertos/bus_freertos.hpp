@@ -57,8 +57,8 @@ class BusFreeRtos {
 
   void writeByte(const uint8_t byte);
 
-  void setWindow(const uint16_t window);
-  void setOffset(const uint16_t offset);
+  void setWindow(const uint16_t window_us);
+  void setOffset(const uint16_t offset_us);
   void setRuntimeConfig(const RuntimeConfig& runtime);
 
   void recordUtilization(uint8_t byte);
@@ -107,8 +107,8 @@ class BusFreeRtos {
       static_cast<int64_t>(Physical::byte_center_bits * Physical::bit_time_us);
 
   // This value can be adjusted if the bus ISR is not working as expected.
-  volatile uint16_t window_ = 4300;  // usually between 4300-4456 us
-  volatile uint16_t offset_ = 80;    // mainly for context switch and write
+  volatile uint16_t window_us_ = 4300;  // usually between 4300-4456 us
+  volatile uint16_t offset_us_ = 80;    // mainly for context switch and write
 
   volatile uint8_t buffer_index_ = 0;  // index for falling edge buffer
   volatile int64_t micros_edge_buffer_[FALLING_EDGE_BUFFER_SIZE] = {0};

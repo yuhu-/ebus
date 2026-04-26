@@ -111,22 +111,22 @@ void BusFreeRtos::writeByte(const uint8_t byte) {
   if (monitor_) monitor_->transmit.markEnd();
 }
 
-void BusFreeRtos::setWindow(const uint16_t window) {
+void BusFreeRtos::setWindow(const uint16_t window_us) {
   portENTER_CRITICAL(&timer_mux_);
   // Validate window against limits
-  window_ =
-      (window < BusLimits::window_min_us || window > BusLimits::window_max_us)
-          ? ebus::RuntimeConfig{}.bus.window_us
-          : window;
+  window_us_ = (window_us < BusLimits::window_min_us ||
+                window_us > BusLimits::window_max_us)
+                   ? ebus::RuntimeConfig{}.bus.window_us
+                   : window_us;
   portEXIT_CRITICAL(&timer_mux_);
 }
 
-void BusFreeRtos::setOffset(const uint16_t offset) {
+void BusFreeRtos::setOffset(const uint16_t offset_us) {
   portENTER_CRITICAL(&timer_mux_);
   // Validate offset against limits
-  offset_ = (offset > BusLimits::offset_max_us)
-                ? ebus::RuntimeConfig{}.bus.offset_us
-                : offset;
+  offset_us_ = (offset_us > BusLimits::offset_max_us)
+                   ? ebus::RuntimeConfig{}.bus.offset_us
+                   : offset_us;
   portEXIT_CRITICAL(&timer_mux_);
 }
 
@@ -380,8 +380,8 @@ void BusFreeRtos::ebusUartEventRunner() {
               const int64_t micros_since_start_bit =
                   esp_timer_get_time() - micros_start_bit_;
               const int64_t delay =
-                  (window_ > micros_since_start_bit + offset_)
-                      ? (window_ - micros_since_start_bit - offset_)
+                  (window_us_ > micros_since_start_bit + offset_us_)
+                      ? (window_us_ - micros_since_start_bit - offset_us_)
                       : 0;
 
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
