@@ -38,8 +38,8 @@ class Controller {
   void stop();
 
   void setAddress(const uint8_t& address);
-  void setWindow(const uint16_t& window);
-  void setOffset(const uint16_t& offset);
+  void setWindow(const uint16_t& window_us);
+  void setOffset(const uint16_t& offset_us);
   void setErrorLogSize(size_t size);
   void setMaxSendAttempts(int max_send_attempts);
   void setBaseBackoff(uint32_t base_backoff_ms);
