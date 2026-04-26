@@ -137,7 +137,7 @@ class Handler {
       &Handler::releaseBus};
 
   static_assert(sizeof(kStateHandlers) / sizeof(kStateHandlers[0]) ==
-                    FSM::num_handler_states,
+                    FsmLimits::num_handler_states,
                 "kStateHandlers table size does not match NUM_HANDLER_STATES");
 
   HandlerState state_ = HandlerState::passive_receive_master;

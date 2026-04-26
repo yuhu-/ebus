@@ -9,7 +9,6 @@
 #include <cstdint>
 #include <string>
 
-#include "ebus/defaults.hpp"
 #include "ebus/types.hpp"
 
 namespace ebus {
@@ -19,51 +18,42 @@ namespace ebus {
  * hardware.
  */
 struct RuntimeConfig {
-  uint8_t address = defaults::address;
-
-  struct Arbitration {
-    uint8_t lock_counter_max = defaults::Arbitration::lock_counter;
-  } arbitration;
+  uint8_t address = 0xff;
+  uint8_t lock_counter = 3;  // max 25
 
   struct Bus {
-    struct Timing {
-      uint16_t window = defaults::Bus::window;
-      uint16_t offset = defaults::Bus::offset;
-    } timing;
+    uint16_t window_us = 4300;  // us
+    uint16_t offset_us = 80;    // us
 
     struct Syn {
       bool enabled = false;
-      uint32_t base_ms = defaults::Bus::Syn::base_ms;
-      uint32_t tolerance_ms = defaults::Bus::Syn::tolerance_ms;
+      uint32_t base_ms = 50;
+      uint32_t tolerance_ms = 5;
     } syn;
   } bus;
 
   struct Logging {
     LogLevel level = LogLevel::error;
-    size_t log_size = defaults::Logging::log_size;
+    size_t log_size = 10;
   } logging;
 
   struct Network {
-    struct Timing {
-      std::chrono::milliseconds client_timeout{
-          defaults::Network::client_timeout_ms};
-      std::chrono::milliseconds watchdog_timeout{
-          defaults::Network::watchdog_timeout_ms};
-    } timing;
-    size_t outbound_buffer_size = defaults::Network::outbound_buffer_size;
+    uint32_t client_timeout_ms = 1000;
+    uint32_t watchdog_timeout_ms = 5000;
+    size_t outbound_buffer_size = 4096;
   } network;
 
   struct Scheduler {
-    int max_send_attempts = defaults::Scheduler::max_send_attempts;
-    struct Timing {
-      std::chrono::milliseconds base_backoff{
-          defaults::Scheduler::base_backoff_ms};
-      std::chrono::milliseconds fsm_timeout{
-          defaults::Scheduler::fsm_timeout_ms};
-      std::chrono::milliseconds total_timeout{
-          defaults::Scheduler::total_timeout_ms};
-    } timing;
+    int max_send_attempts = 3;
+    uint32_t base_backoff_ms = 100;
+    uint32_t fsm_timeout_ms = 2000;
+    uint32_t total_timeout_ms = 4000;
   } scheduler;
+
+  /**
+   * Resets all fields to their default hardcoded values.
+   */
+  void reset() { *this = RuntimeConfig{}; }
 };
 
 /**
@@ -79,7 +69,7 @@ struct BusConfig {
 };
 #elif defined(POSIX)
 struct BusConfig {
-  std::string device = defaults::Bus::Posix::device_path;
+  std::string device = "/dev/null";
   bool simulate = false;
 };
 #endif

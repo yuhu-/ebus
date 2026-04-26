@@ -20,7 +20,7 @@ TEST_CASE("Request: defaults", "[core][request]") {
 TEST_CASE("Request: requestBus, completion and handler callback",
           "[core][request]") {
   Request r;
-  r.setMaxLockCounter(0);
+  r.setLockCounter(0);
   r.reset();  // lockCounter == maxLockCounter (0)
   REQUIRE(r.busAvailable() == true);
 
@@ -39,7 +39,7 @@ TEST_CASE("Request: requestBus, completion and handler callback",
 
 TEST_CASE("Request: first -> firstWon flow", "[core][request]") {
   Request r;
-  r.setMaxLockCounter(0);
+  r.setLockCounter(0);
   r.reset();
   r.requestBus(0x33);
   r.busRequestCompleted();  // moves to first
@@ -55,7 +55,7 @@ TEST_CASE("Request: first -> firstWon flow", "[core][request]") {
 TEST_CASE("Request: first -> firstRetry -> retry -> second -> secondWon",
           "[core][request]") {
   Request r;
-  r.setMaxLockCounter(0);
+  r.setLockCounter(0);
   r.reset();
   r.requestBus(0x33);
   r.busRequestCompleted();  // state = first
@@ -85,7 +85,7 @@ TEST_CASE("Request: first -> firstRetry -> retry -> second -> secondWon",
 TEST_CASE("Request: startBit resets state and clears pending request",
           "[core][request]") {
   Request r;
-  r.setMaxLockCounter(0);
+  r.setLockCounter(0);
   r.reset();
   r.requestBus(0x33);
   REQUIRE(r.busRequestPending() == true);
@@ -97,7 +97,7 @@ TEST_CASE("Request: startBit resets state and clears pending request",
 
 TEST_CASE("Request: Legacy Edge Cases", "[core][request][legacy]") {
   Request r;
-  r.setMaxLockCounter(0);
+  r.setLockCounter(0);
   r.reset();
 
   SECTION("Wrong byte (Wire-AND violation)") {

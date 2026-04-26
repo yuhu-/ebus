@@ -6,7 +6,7 @@
 #include "app/client_manager.hpp"
 
 #include <algorithm>
-#include <ebus/defaults.hpp>
+#include <ebus/detail/protocol_limits.hpp>
 #include <ebus/utils.hpp>
 
 #include "core/bus_monitor.hpp"
@@ -31,9 +31,10 @@ ClientManager::ClientManager(Bus* bus, BusHandler* bus_handler,
       session_state_(SessionState::idle),
       clients_version_(0),
       last_snapshot_version_(0),
-      active_timeout_(
-          std::chrono::milliseconds(defaults::Network::client_timeout_ms)),
-      outbound_buffer_size_(defaults::Network::outbound_buffer_size) {
+      active_timeout_(std::chrono::milliseconds(
+          ebus::RuntimeConfig{}.network.client_timeout_ms)),
+      outbound_buffer_size_(
+          ebus::RuntimeConfig{}.network.outbound_buffer_size) {
   if (bus_handler_) {
     bus_listener_id_ =
         bus_handler_->addByteListener([this](const BusEventContext& ctx) {
@@ -62,8 +63,8 @@ void ClientManager::start() {
   if (running_.load(std::memory_order_acquire)) return;
   running_.store(true, std::memory_order_release);
   worker_ = std::make_unique<detail::ServiceThread>(
-      "ebusClientManager", [this] { run(); }, Orchestration::stack_size,
-      Orchestration::priority_med, 0);
+      "ebusClientManager", [this] { run(); }, OrchestrationLimits::stack_size,
+      OrchestrationLimits::priority_med, 0);
   worker_->start();
   notifyWake();
 }
@@ -74,8 +75,8 @@ void ClientManager::stop() {
   if (worker_) worker_->join();
 }
 
-void ClientManager::setActiveTimeout(std::chrono::milliseconds timeout) {
-  active_timeout_ = timeout;
+void ClientManager::setActiveTimeout(uint32_t timeout_ms) {
+  active_timeout_ = std::chrono::milliseconds(timeout_ms);
 }
 
 void ClientManager::setOutboundBufferSize(size_t size) {
@@ -189,10 +190,10 @@ void ClientManager::run() {
     if (active_sender) {
       auto now = std::chrono::steady_clock::now();
       auto elapsed = now - last_state_change;
-      auto timeout = (session_state_ == SessionState::transmit)
-                         ? std::chrono::milliseconds(
-                               defaults::Network::transmit_timeout_ms)
-                         : active_timeout_;
+      auto timeout =
+          (session_state_ == SessionState::transmit)
+              ? std::chrono::milliseconds(detail::NetworkLimits::transmit_timeout_ms)
+              : active_timeout_;
       if (elapsed > timeout) {
         // stop active session safely
         stopActiveSession();
@@ -285,7 +286,7 @@ void ClientManager::run() {
     if (!activity) {
       std::unique_lock<std::mutex> lk(wake_mutex_);
       wake_cv_.wait_for(
-          lk, std::chrono::milliseconds(defaults::Network::wake_interval_ms),
+          lk, std::chrono::milliseconds(detail::NetworkLimits::wake_interval_ms),
           [&] {
             return wake_flag_.load(std::memory_order_acquire) == true ||
                    !running_.load(std::memory_order_acquire);

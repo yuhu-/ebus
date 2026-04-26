@@ -9,7 +9,8 @@
 #include <atomic>
 #include <chrono>
 #include <cstdint>
-#include <ebus/defaults.hpp>
+#include <ebus/config.hpp>
+#include <ebus/detail/protocol_limits.hpp>
 #include <ebus/metrics.hpp>
 #include <ebus/types.hpp>
 #include <functional>
@@ -30,7 +31,7 @@ class Request {
  public:
   explicit Request(BusMonitor* monitor = nullptr);
 
-  void setMaxLockCounter(uint8_t max_counter);
+  void setLockCounter(uint8_t lock_counter);
   uint8_t getLockCounter() const;
 
   bool busAvailable() const;
@@ -63,8 +64,8 @@ class Request {
  private:
   BusMonitor* monitor_ = nullptr;
 
-  uint8_t max_lock_counter_ = defaults::Arbitration::lock_counter;
-  uint8_t lock_counter_ = defaults::Arbitration::lock_counter;
+  uint8_t lock_counter_max_ = ebus::RuntimeConfig{}.lock_counter;
+  uint8_t lock_counter_ = ebus::RuntimeConfig{}.lock_counter;
 
   uint8_t request_address_ = 0;
 
@@ -90,7 +91,7 @@ class Request {
       &Request::observe, &Request::first, &Request::retry, &Request::second};
 
   static_assert(sizeof(kStateRequests) / sizeof(kStateRequests[0]) ==
-                    FSM::num_request_states,
+                    FsmLimits::num_request_states,
                 "kStateRequests table size does not match NUM_REQUEST_STATES");
 
   RequestState state_ = RequestState::observe;

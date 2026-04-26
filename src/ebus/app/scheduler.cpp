@@ -15,7 +15,7 @@ namespace ebus::detail {
 Scheduler::Scheduler(Handler* handler)
     : handler_(handler), stop_flag_(true), next_id_(1) {
   // Reserve space for typical traffic bursts
-  item_queue_.reserve(defaults::Scheduler::queue_reserve);
+  item_queue_.reserve(SchedulerLimits::queue_reserve);
   attachHandlerCallbacks();
 }
 
@@ -25,8 +25,8 @@ void Scheduler::start() {
   bool expected = true;
   if (stop_flag_.compare_exchange_strong(expected, false)) {
     worker_ = std::make_unique<ServiceThread>(
-        "ebusScheduler", [this] { run(); }, Orchestration::stack_size,
-        Orchestration::priority_high, 1);
+        "ebusScheduler", [this] { run(); }, OrchestrationLimits::stack_size,
+        OrchestrationLimits::priority_high, 1);
     worker_->start();
   }
 }
@@ -71,16 +71,16 @@ void Scheduler::setMaxSendAttempts(int max_send_attempts) {
   max_send_attempts_ = std::max(1, max_send_attempts);
 }
 
-void Scheduler::setBaseBackoff(Duration base_backoff) {
-  base_backoff_ = base_backoff;
+void Scheduler::setBaseBackoff(uint32_t base_backoff_ms) {
+  base_backoff_ = std::chrono::milliseconds(base_backoff_ms);
 }
 
-void Scheduler::setFsmTimeout(std::chrono::milliseconds timeout) {
-  fsm_timeout_ms_ = timeout;
+void Scheduler::setFsmTimeout(uint32_t timeout_ms) {
+  fsm_timeout_ = std::chrono::milliseconds(timeout_ms);
 }
 
-void Scheduler::setTotalTimeout(std::chrono::milliseconds timeout) {
-  total_timeout_ms_ = timeout;
+void Scheduler::setTotalTimeout(uint32_t timeout_ms) {
+  total_timeout_ = std::chrono::milliseconds(timeout_ms);
 }
 
 void Scheduler::setReactiveMasterSlaveCallback(
@@ -177,7 +177,7 @@ void Scheduler::run() {
       while (!stop_flag_.load()) {
         Event ev;
         if (!event_queue_.pop(ev,
-                              static_cast<uint32_t>(fsm_timeout_ms_.count()))) {
+                              static_cast<uint32_t>(fsm_timeout_.count()))) {
           last_error = "FSM timeout";
           handler_->reset();  // Serious error: FSM stuck.
           break;
@@ -201,7 +201,7 @@ void Scheduler::run() {
           break;
         }
 
-        if (Clock::now() - start > total_timeout_ms_) {
+        if (Clock::now() - start > total_timeout_) {
           last_error = "Total transfer timeout";
           handler_->reset();
           break;

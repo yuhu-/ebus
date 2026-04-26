@@ -9,7 +9,7 @@
 #include <string_view>
 
 #include "ebus/byte_view.hpp"
-#include "ebus/defaults.hpp"
+#include "ebus/detail/protocol_limits.hpp"
 #include "ebus/types.hpp"
 
 namespace ebus {
@@ -19,7 +19,7 @@ namespace ebus {
  */
 template <std::size_t kInlineCapacity>
 class SequenceImpl;
-using Sequence = SequenceImpl<defaults::detail::Sequence::default_capacity>;
+using Sequence = SequenceImpl<detail::SequenceLimits::default_capacity>;
 
 struct TelegramInfo {
   uint32_t session_id = 0;

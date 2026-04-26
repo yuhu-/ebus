@@ -40,7 +40,7 @@ TEST_CASE("Scheduler: Simulation", "[app][scheduler]") {
 
   BusMonitor monitor;
   Bus bus(config, runtime, &request, &monitor);
-  Handler handler(ebus::defaults::address, &bus, &request, &monitor);
+  Handler handler(ebus::RuntimeConfig{}.address, &bus, &request, &monitor);
   BusHandler busHandler(&request, &handler, bus.getQueue());
 
   const uint8_t source = 0x33;
@@ -65,7 +65,7 @@ TEST_CASE("Scheduler: Simulation", "[app][scheduler]") {
 
   Scheduler scheduler(&handler);
   scheduler.setMaxSendAttempts(3);
-  scheduler.setBaseBackoff(std::chrono::milliseconds(50));
+  scheduler.setBaseBackoff(50);
 
   bus.start();
   busHandler.start();

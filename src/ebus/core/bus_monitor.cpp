@@ -7,8 +7,7 @@
 
 namespace ebus::detail {
 
-BusMonitor::BusMonitor()
-    : utilization_history_(defaults::Logging::history_size) {}
+BusMonitor::BusMonitor() : utilization_history_(LoggingLimits::history_size) {}
 
 void BusMonitor::resetMetrics() {
   std::lock_guard<std::mutex> lock(metrics_mutex);
@@ -95,7 +94,7 @@ ebus::metrics::SystemMetrics BusMonitor::getMetrics() const {
   hm.callback_telegram = callback_telegram.getValues();
   hm.callback_error = callback_error.getValues();
 
-  for (size_t i = 0; i < FSM::num_handler_states; ++i) {
+  for (size_t i = 0; i < FsmLimits::num_handler_states; ++i) {
     hm.state_timings[i] = handler_timing[i].getValues();
   }
 

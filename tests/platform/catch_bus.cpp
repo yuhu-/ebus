@@ -20,7 +20,7 @@ using namespace ebus::detail;
 
 // Helper to force a bus request for testing without waiting for lockCounter
 static void force_request(Request& req, uint8_t addr) {
-  req.setMaxLockCounter(0);
+  req.setLockCounter(0);
   for (int i = 0; i < 30; ++i) {
     if (req.getLockCounter() == 0) break;
     req.run(ebus::Symbols::syn);

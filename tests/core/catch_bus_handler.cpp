@@ -119,7 +119,7 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
     bus.start();
     busHandler.start();
 
-    request.setMaxLockCounter(3);
+    request.setLockCounter(3);
 
     // send active BC message
     std::vector<uint8_t> msg = ebus::toVector("feb5050427002d00");
@@ -177,7 +177,7 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
     runtime.bus.syn.enabled = true;
 
     Request request;
-    request.setMaxLockCounter(0);
+    request.setLockCounter(0);
     BusMonitor monitor;
     Bus bus(config, runtime, &request, &monitor);
     Handler handler(runtime.address, &bus, &request, &monitor);

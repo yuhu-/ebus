@@ -32,7 +32,7 @@ static void CHECK_TEST(const std::string& name, bool condition) {
 
 TEST_CASE("ClientManager Orchestration (Regular + ReadOnly)") {
   Request req;
-  req.setMaxLockCounter(3);
+  req.setLockCounter(3);
   req.reset();
 
   ebus::BusConfig config = {.device = "/dev/null", .simulate = true};
@@ -110,7 +110,7 @@ TEST_CASE("ClientManager Orchestration (Regular + ReadOnly)") {
 
 TEST_CASE("ClientManager Enhanced Active Sending") {
   Request req;
-  req.setMaxLockCounter(3);
+  req.setLockCounter(3);
   req.reset();
 
   ebus::BusConfig config = {.device = "/dev/null", .simulate = true};
@@ -186,7 +186,7 @@ TEST_CASE("ClientManager Enhanced Active Sending") {
 
 TEST_CASE("ClientManager Watchdog Timeout") {
   Request req;
-  req.setMaxLockCounter(0);
+  req.setLockCounter(0);
   ebus::BusConfig config = {.device = "/dev/null", .simulate = true};
   ebus::RuntimeConfig runtime = {.address = 0xff};
 

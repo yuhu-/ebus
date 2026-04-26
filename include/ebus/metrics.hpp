@@ -9,7 +9,7 @@
 #include <cstdint>
 #include <string>
 
-#include "ebus/defaults.hpp"
+#include "ebus/detail/protocol_limits.hpp"
 #include "ebus/types.hpp"
 
 namespace ebus {
@@ -111,7 +111,7 @@ struct HandlerMetrics {
   MetricValues callback_error;
 
   // State-machine specific execution timings
-  std::array<MetricValues, detail::FSM::num_handler_states> state_timings;
+  std::array<MetricValues, detail::FsmLimits::num_handler_states> state_timings;
 
   void resetMetrics() {
     error_rate = 0.0;

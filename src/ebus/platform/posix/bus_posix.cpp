@@ -7,7 +7,7 @@
 #include "platform/posix/bus_posix.hpp"
 
 #include <algorithm>
-#include <ebus/defaults.hpp>
+#include <ebus/detail/protocol_limits.hpp>
 #include <ebus/protocol_math.hpp>
 
 #include "core/bus_monitor.hpp"
@@ -71,7 +71,7 @@ void BusPosix::start() {
     current_t_unique_ =
         syn_base_ms_dur_ +
         std::chrono::milliseconds(runtime_.address *
-                                  defaults::Bus::Syn::address_factor_ms) +
+                                  BusLimits::Syn::address_factor_ms) +
         syn_tolerance_ms_dur_;
     next_syn_expiry_ = std::chrono::steady_clock::now() + current_t_unique_;
 
@@ -121,7 +121,7 @@ void BusPosix::writeByte(const uint8_t byte) {
     }
     next_syn_expiry_ =
         now + current_t_unique_ +
-        std::chrono::milliseconds(defaults::Bus::Syn::serialization_delay_ms);
+        std::chrono::milliseconds(BusLimits::Syn::serialization_delay_ms);
     syn_cv_.notify_one();
   }
 
@@ -143,18 +143,19 @@ void BusPosix::writeByte(const uint8_t byte) {
   if (monitor_) monitor_->transmit.markEnd();
 }
 
-void BusPosix::setWindow(const uint16_t window) {
+void BusPosix::setWindow(const uint16_t window_us) {
   // Validate window
-  runtime_.bus.timing.window =
-      (window < defaults::Bus::min_window || window > defaults::Bus::max_window)
-          ? defaults::Bus::window
-          : window;
+  runtime_.bus.window_us = (window_us < BusLimits::window_min_us ||
+                            window_us > BusLimits::window_max_us)
+                               ? ebus::RuntimeConfig{}.bus.window_us
+                               : window_us;
 }
 
-void BusPosix::setOffset(const uint16_t offset) {
+void BusPosix::setOffset(const uint16_t offset_us) {
   // Validate offset
-  runtime_.bus.timing.offset =
-      (offset > defaults::Bus::max_offset) ? defaults::Bus::offset : offset;
+  runtime_.bus.offset_us = (offset_us > BusLimits::offset_max_us)
+                               ? ebus::RuntimeConfig{}.bus.offset_us
+                               : offset_us;
 }
 
 void BusPosix::setRuntimeConfig(const RuntimeConfig& runtime) {
@@ -167,11 +168,11 @@ void BusPosix::setRuntimeConfig(const RuntimeConfig& runtime) {
     runtime_ = runtime;
 
     // Validate window and offset
-    if (runtime_.bus.timing.window < defaults::Bus::min_window ||
-        runtime_.bus.timing.window > defaults::Bus::max_window)
-      runtime_.bus.timing.window = defaults::Bus::window;
-    if (runtime_.bus.timing.offset > defaults::Bus::max_offset)
-      runtime_.bus.timing.offset = defaults::Bus::offset;
+    if (runtime_.bus.window_us < BusLimits::window_min_us ||
+        runtime_.bus.window_us > BusLimits::window_max_us)
+      runtime_.bus.window_us = ebus::RuntimeConfig{}.bus.window_us;
+    if (runtime_.bus.offset_us > BusLimits::offset_max_us)
+      runtime_.bus.offset_us = ebus::RuntimeConfig{}.bus.offset_us;
 
     // Always recalculate timing durations based on the new configuration
     syn_base_ms_dur_ = std::chrono::milliseconds(runtime_.bus.syn.base_ms);
@@ -180,7 +181,7 @@ void BusPosix::setRuntimeConfig(const RuntimeConfig& runtime) {
     current_t_unique_ =
         syn_base_ms_dur_ +
         std::chrono::milliseconds(runtime_.address *
-                                  defaults::Bus::Syn::address_factor_ms) +
+                                  BusLimits::Syn::address_factor_ms) +
         syn_tolerance_ms_dur_;
 
     // Manage thread transitions only if the bus is currently active
@@ -237,8 +238,7 @@ void BusPosix::readerThread() {
 
     if (simulate_) {
       // Use the memory-based simulation queue
-      if (virtual_line_->read(byte,
-                              defaults::Bus::Posix::virtual_read_timeout_ms))
+      if (virtual_line_->read(byte, BusLimits::Posix::virtual_read_timeout_ms))
         n = 1;
       else
         continue;  // timeout, check running_ flag again
@@ -273,7 +273,7 @@ void BusPosix::readerThread() {
 
       // Hit the 4300-4456us window (approx 200us after SYN reception)
       if (byte == Symbols::syn && request_->busRequestPending()) {
-        usleep(defaults::Bus::Posix::arbitration_delay_us);
+        usleep(BusLimits::Posix::request_delay_us);
         writeByte(request_->busRequestAddress());
         bus_request_flag_.store(true, std::memory_order_release);
       }
@@ -322,13 +322,13 @@ void BusPosix::synThread() {
     // started), postpone generation to avoid colliding with the byte being
     // serialized.
     if (now - last_activity_time_ <
-        std::chrono::milliseconds(defaults::Bus::Syn::carrier_sense_ms)) {
+        std::chrono::milliseconds(BusLimits::Syn::carrier_sense_ms)) {
       if (monitor_)
         monitor_->updateBus([](auto& m) { m.syn_postponed_count++; });
       if (syn_intent_time_ == std::chrono::steady_clock::time_point{})
         syn_intent_time_ = now;
       next_syn_expiry_ =
-          now + std::chrono::milliseconds(defaults::Bus::Syn::postpone_ms);
+          now + std::chrono::milliseconds(BusLimits::Syn::postpone_ms);
       continue;
     }
 

@@ -42,10 +42,10 @@ class Controller {
   void setOffset(const uint16_t& offset);
   void setErrorLogSize(size_t size);
   void setMaxSendAttempts(int max_send_attempts);
-  void setBaseBackoff(std::chrono::milliseconds base_backoff);
-  void setFsmTimeout(std::chrono::milliseconds timeout);
-  void setWatchdogTimeout(std::chrono::milliseconds timeout);
-  void setClientActiveTimeout(std::chrono::milliseconds timeout);
+  void setBaseBackoff(uint32_t base_backoff_ms);
+  void setFsmTimeout(uint32_t timeout_ms);
+  void setWatchdogTimeout(uint32_t timeout_ms);
+  void setClientActiveTimeout(uint32_t timeout_ms);
   void setOutboundBufferSize(size_t size);
 
   // Unified Bus Listeners

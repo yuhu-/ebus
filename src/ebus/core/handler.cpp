@@ -37,8 +37,9 @@ Handler::Handler(uint8_t source_address, Bus* bus, detail::Request* request,
 }
 
 void Handler::setSourceAddress(uint8_t source_address) {
-  source_address_ =
-      ebus::isMaster(source_address) ? source_address : defaults::address;
+  source_address_ = ebus::isMaster(source_address)
+                        ? source_address
+                        : ebus::RuntimeConfig{}.address;
   target_address_ = slaveOf(source_address_);
 }
 
@@ -133,7 +134,7 @@ void Handler::run(const BusEventContext& ctx) {
   pending_write_.reset();
 
   size_t idx = static_cast<size_t>(state_);
-  if (idx < FSM::num_handler_states && kStateHandlers[idx]) {
+  if (idx < FsmLimits::num_handler_states && kStateHandlers[idx]) {
     // Use a fresh "now" for the execution timing sample to measure CPU overhead
     auto exec_start = std::chrono::steady_clock::now();
     (this->*kStateHandlers[idx])(ctx.byte);  // handle byte

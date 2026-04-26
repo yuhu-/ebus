@@ -4,7 +4,7 @@
  */
 
 #include <catch2/catch_all.hpp>
-#include <ebus/defaults.hpp>
+#include <ebus/detail/protocol_limits.hpp>
 #include <ebus/utils.hpp>
 #include <memory>
 
@@ -22,7 +22,7 @@ using namespace ebus::detail;
 
 TEST_CASE("ClientManager: Mock Orchestration", "[app][clientmanager][mock]") {
   Request req;
-  req.setMaxLockCounter(0);
+  req.setLockCounter(0);
   req.reset();
 
   BusConfig config = {.device = "/dev/null", .simulate = true};

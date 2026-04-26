@@ -8,7 +8,8 @@
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
-#include <ebus/defaults.hpp>
+#include <ebus/config.hpp>
+#include <ebus/detail/protocol_limits.hpp>
 #include <ebus/sequence.hpp>
 #include <functional>
 #include <mutex>
@@ -34,9 +35,8 @@ namespace ebus::detail {
  */
 class Scheduler {
  public:
-  using Clock = std::chrono::steady_clock;
-  using TimePoint = Clock::time_point;
-  using Duration = Clock::duration;
+  using TimePoint = ebus::Clock::time_point;
+  using Duration = ebus::Clock::duration;
 
   struct Item {
     uint8_t priority = 0;  // larger = higher priority (e.g. 255 is top)
@@ -62,9 +62,9 @@ class Scheduler {
                  ResultCallback callback = nullptr);
 
   void setMaxSendAttempts(int send_attempts);
-  void setBaseBackoff(Duration duration);
-  void setFsmTimeout(std::chrono::milliseconds timeout);
-  void setTotalTimeout(std::chrono::milliseconds timeout);
+  void setBaseBackoff(uint32_t base_backoff_ms);
+  void setFsmTimeout(uint32_t timeout_ms);
+  void setTotalTimeout(uint32_t timeout_ms);
 
   void setReactiveMasterSlaveCallback(ReactiveMasterSlaveCallback callback);
   void setTelegramCallback(TelegramCallback callback);
@@ -113,16 +113,16 @@ class Scheduler {
 
   // Active transfer state
   std::atomic<uint32_t> current_attempt_id_{0};
-  detail::Queue<Event> event_queue_{defaults::Scheduler::queue_reserve};
+  detail::Queue<Event> event_queue_{SchedulerLimits::queue_reserve};
 
   // Configuration
-  int max_send_attempts_ = defaults::Scheduler::max_send_attempts;
-  Duration base_backoff_ =
-      std::chrono::milliseconds(defaults::Scheduler::base_backoff_ms);
-  std::chrono::milliseconds fsm_timeout_ms_{
-      defaults::Scheduler::fsm_timeout_ms};
-  std::chrono::milliseconds total_timeout_ms_{
-      defaults::Scheduler::total_timeout_ms};
+  int max_send_attempts_ = ebus::RuntimeConfig{}.scheduler.max_send_attempts;
+  Duration base_backoff_ = std::chrono::milliseconds(
+      ebus::RuntimeConfig{}.scheduler.base_backoff_ms);
+  std::chrono::milliseconds fsm_timeout_ =
+      std::chrono::milliseconds(ebus::RuntimeConfig{}.scheduler.fsm_timeout_ms);
+  std::chrono::milliseconds total_timeout_ = std::chrono::milliseconds(
+      ebus::RuntimeConfig{}.scheduler.total_timeout_ms);
 
   // Forwarded callbacks
   ReactiveMasterSlaveCallback extern_reactive_callback_ = nullptr;

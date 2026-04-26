@@ -13,10 +13,9 @@ namespace ebus::detail {
 
 Request::Request(BusMonitor* monitor) : monitor_(monitor) {}
 
-void Request::setMaxLockCounter(uint8_t max_counter) {
-  max_lock_counter_ =
-      std::min(max_counter, defaults::Arbitration::max_lock_counter);
-  if (lock_counter_ > max_lock_counter_) lock_counter_ = max_lock_counter_;
+void Request::setLockCounter(uint8_t lock_counter) {
+  lock_counter_max_ = std::min(lock_counter, RequestLimits::lock_counter_max);
+  if (lock_counter_ > lock_counter_max_) lock_counter_ = lock_counter_max_;
 }
 
 uint8_t Request::getLockCounter() const { return lock_counter_; }
@@ -76,7 +75,7 @@ ebus::RequestState Request::getState() const { return state_; }
 ebus::RequestResult Request::getResult() const { return result_; }
 
 void Request::reset() {
-  lock_counter_ = max_lock_counter_;
+  lock_counter_ = lock_counter_max_;
   if (monitor_)
     monitor_->updateRequest([](auto& m) { m.lock_counter_reset++; });
   bus_request_.store(false, std::memory_order_release);
@@ -85,7 +84,7 @@ void Request::reset() {
 
 ebus::RequestResult Request::run(uint8_t byte) {
   size_t idx = static_cast<size_t>(state_);
-  if (idx < FSM::num_request_states && kStateRequests[idx])
+  if (idx < FsmLimits::num_request_states && kStateRequests[idx])
     (this->*kStateRequests[idx])(byte);
 
   return result_;
@@ -107,7 +106,7 @@ void Request::first(uint8_t byte) {
     result_ = RequestResult::first_syn;
   } else if (byte == request_address_) {
     if (monitor_) monitor_->updateRequest([](auto& m) { m.first_won++; });
-    lock_counter_ = max_lock_counter_;
+    lock_counter_ = lock_counter_max_;
     state_ = RequestState::observe;
     result_ = RequestResult::first_won;
   } else if (isMaster(byte)) {
@@ -154,7 +153,7 @@ void Request::retry(uint8_t byte) {
 void Request::second(uint8_t byte) {
   if (byte == request_address_) {
     if (monitor_) monitor_->updateRequest([](auto& m) { m.second_won++; });
-    lock_counter_ = max_lock_counter_;
+    lock_counter_ = lock_counter_max_;
     state_ = RequestState::observe;
     result_ = RequestResult::second_won;
   } else if (isMaster(byte)) {

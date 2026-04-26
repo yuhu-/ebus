@@ -8,6 +8,8 @@
 #include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <ebus/config.hpp>
+#include <ebus/detail/protocol_limits.hpp>
 #include <functional>
 #include <memory>
 #include <mutex>
@@ -34,7 +36,7 @@ class BusHandler {
 
   BusHandler(detail::Request* request, detail::Handler* handler,
              detail::Queue<BusEvent>* queue,
-             size_t max_listeners = defaults::Bus::detail::max_listeners)
+             size_t max_listeners = detail::BusLimits::max_listeners)
       : request_(request), handler_(handler), queue_(queue), running_(false) {
     listeners_cache_.reserve(max_listeners);
   }
@@ -46,8 +48,7 @@ class BusHandler {
     running_ = true;
     worker_ = std::make_unique<detail::ServiceThread>(
         "ebusBusQueueRunner", [this] { this->run(); },
-        Orchestration::stack_size,
-        Orchestration::priority_low);
+        OrchestrationLimits::stack_size, OrchestrationLimits::priority_low);
     worker_->start();
   }
 
@@ -56,8 +57,8 @@ class BusHandler {
     if (worker_) worker_->join();
   }
 
-  void setWatchdogTimeout(std::chrono::milliseconds timeout) {
-    watchdog_timeout_ms_ = timeout;
+  void setWatchdogTimeout(uint32_t timeout_ms) {
+    watchdog_timeout_ms_ = std::chrono::milliseconds(timeout_ms);
   }
 
   uint32_t addByteListener(ByteListener listener) {
@@ -83,7 +84,7 @@ class BusHandler {
   detail::Queue<BusEvent>* queue_;
   std::atomic<bool> running_;
   std::chrono::milliseconds watchdog_timeout_ms_{
-      defaults::Network::watchdog_timeout_ms};
+      ebus::RuntimeConfig{}.network.watchdog_timeout_ms};
 
   std::unique_ptr<detail::ServiceThread> worker_;
 

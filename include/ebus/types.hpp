@@ -16,6 +16,13 @@
 namespace ebus {
 
 /**
+ * The source of truth for monotonic time within the library.
+ * Using an alias allows for platform-specific overrides or
+ * clock injection during unit testing.
+ */
+using Clock = std::chrono::steady_clock;
+
+/**
  * Core eBUS byte symbols as defined in the specification.
  */
 struct Symbols {
