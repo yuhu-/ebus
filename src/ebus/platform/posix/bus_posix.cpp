@@ -25,9 +25,10 @@ BusPosix::BusPosix(const BusConfig& config, const ebus::RuntimeConfig& runtime,
       monitor_(monitor),
       fd_(-1),
       open_(false),
-      byte_queue_(std::make_unique<Queue<BusEvent>>()),
-      thread_(),
-      running_(false) {}
+      byte_queue_(std::make_unique<Queue<BusEvent>>(BusLimits::queue_size)),
+      worker_(),
+      running_(false),  // Initialize running_ before syn_worker_
+      syn_worker_() {}  // Initialize syn_worker_ after running_
 
 BusPosix::~BusPosix() { stop(); }
 
@@ -61,7 +62,10 @@ void BusPosix::start() {
   }
 
   running_.store(true);
-  thread_ = std::thread(&BusPosix::readerThread, this);
+  worker_ = std::make_unique<ServiceThread>(
+      "ebusBusReader", [this] { readerThread(); },
+      OrchestrationLimits::stack_size, OrchestrationLimits::priority_high);
+  worker_->start();
 
   // start SYN generator if enabled in config
   if (monitor_) monitor_->uptime.markBegin();
@@ -78,7 +82,10 @@ void BusPosix::start() {
 
     syn_active_ = false;
     syn_running_.store(true);
-    syn_thread_ = std::thread(&BusPosix::synThread, this);
+    syn_worker_ = std::make_unique<ServiceThread>(
+        "ebusSynGen", [this] { synThread(); }, OrchestrationLimits::stack_size,
+        OrchestrationLimits::priority_med);
+    syn_worker_->start();
   }
 }
 
@@ -96,9 +103,8 @@ void BusPosix::stop() {
 
   if (!simulate_ && fd_ != -1) ::tcflush(fd_, TCIOFLUSH);
 
-  if (syn_thread_.joinable()) syn_thread_.join();
-
-  if (thread_.joinable()) thread_.join();
+  if (syn_worker_) syn_worker_->join();
+  if (worker_) worker_->join();
 
   if (!simulate_ && fd_ != -1) {
     ::tcsetattr(fd_, TCSANOW, &old_settings_);
@@ -203,10 +209,14 @@ void BusPosix::setRuntimeConfig(const RuntimeConfig& runtime) {
 
   // Execute thread lifecycle actions outside of the lock to prevent deadlocks
   if (should_start) {
-    if (syn_thread_.joinable()) syn_thread_.join();
-    syn_thread_ = std::thread(&BusPosix::synThread, this);
+    if (syn_worker_) syn_worker_->join();  // Join existing thread if any
+    syn_worker_ = std::make_unique<ServiceThread>(  // Create new ServiceThread
+        "ebusSynGen", [this] { synThread(); }, OrchestrationLimits::stack_size,
+        OrchestrationLimits::priority_med);
+    syn_worker_->start();  // Start the new ServiceThread
   } else if (should_stop) {
-    if (syn_thread_.joinable()) syn_thread_.join();
+    if (syn_worker_) syn_worker_->join();  // Join existing thread if any
+    syn_worker_.reset();                   // Release the unique_ptr
   }
 }
 

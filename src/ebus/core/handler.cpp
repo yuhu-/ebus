@@ -5,6 +5,7 @@
 
 #include "core/handler.hpp"
 
+#include <ebus/detail/protocol_limits.hpp>
 #include <ebus/utils.hpp>
 #include <utility>
 
@@ -28,10 +29,10 @@ Handler::Handler(uint8_t source_address, Bus* bus, detail::Request* request,
   });
 
   // Pre-allocate core buffers to avoid heap allocations in the hot path
-  passive_master_.reserve(64);
-  passive_slave_.reserve(64);
-  active_master_.reserve(64);
-  active_slave_.reserve(64);
+  passive_master_.reserve(SequenceLimits::default_capacity);
+  passive_slave_.reserve(SequenceLimits::default_capacity);
+  active_master_.reserve(SequenceLimits::default_capacity);
+  active_slave_.reserve(SequenceLimits::default_capacity);
 
   last_point_ = std::chrono::steady_clock::now();
 }

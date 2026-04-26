@@ -65,8 +65,9 @@ void ServiceThread::start() {
 void ServiceThread::join() {
 #if defined(ESP32)
   if (impl_->handle) {
-    // Wait for task to finish or timeout
-    xSemaphoreTake(impl_->done_sem, pdMS_TO_TICKS(2000));
+    // Wait for task to finish or timeout according to orchestration limits
+    xSemaphoreTake(impl_->done_sem,
+                   pdMS_TO_TICKS(OrchestrationLimits::termination_timeout_ms));
   }
 #elif defined(POSIX)
   if (impl_->thread.joinable()) {

@@ -13,6 +13,12 @@ The ClientManager monitors network sockets. When a remote tool (like ebusd) send
 it bypasses the Scheduler and attempts to request the bus via the Request tracker
 immediately, mimicking a local master.
 
+### Priority and Preemption: ###
+The Scheduler manages bus access using a priority queue. Background tasks like the
+`DeviceScanner` enqueue commands with a low priority (default 5). Application-level
+requests can specify higher priorities (up to 255) to preempt this background traffic,
+ensuring that user commands are prioritized over routine discovery tasks.
+
 ### Data Path: ###
 ```
                                  [ User Application ]

@@ -5,6 +5,7 @@
 
 /*
  * Example: Virtual Bus eBUS Simulation with Read-Only Client
+ *
  * This example demonstrates how to run multiple controllers on a virtual bus.
  */
 

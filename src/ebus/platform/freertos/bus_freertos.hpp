@@ -19,6 +19,7 @@
 #include "esp_idf_version.h"
 #include "esp_timer.h"
 #include "platform/queue.hpp"
+#include "platform/service_thread.hpp"
 
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
 #include "driver/gptimer.h"
@@ -89,6 +90,9 @@ class BusFreeRtos {
 
   // owned queue
   std::unique_ptr<Queue<BusEvent>> byte_queue_;
+
+  std::unique_ptr<ServiceThread> worker_;
+  std::atomic<bool> running_{false};
 
   std::vector<ReadListener> read_listeners_;
   std::vector<WriteListener> write_listeners_;

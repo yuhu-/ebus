@@ -32,9 +32,10 @@ inline constexpr size_t num_request_states = 4;
 // --- Orchestration Layer (Thread Priorities & Stacks) ---
 namespace OrchestrationLimits {
 inline constexpr size_t stack_size = 4096;
-inline constexpr uint8_t priority_high = 5;
-inline constexpr uint8_t priority_med = 3;
-inline constexpr uint8_t priority_low = 1;
+inline constexpr uint8_t priority_high = 15;
+inline constexpr uint8_t priority_med = 10;
+inline constexpr uint8_t priority_low = 5;
+inline constexpr uint32_t termination_timeout_ms = 2000;
 }  // namespace OrchestrationLimits
 
 // --- Internal Engine Limits ---

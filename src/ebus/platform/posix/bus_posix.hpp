@@ -26,12 +26,12 @@
 #include <mutex>
 #include <stdexcept>
 #include <string>
-#include <thread>
 #include <vector>
 
 #include "core/bus_events.hpp"
 #include "platform/posix/virtual_line.hpp"
 #include "platform/queue.hpp"
+#include "platform/service_thread.hpp"
 
 namespace ebus::detail {
 
@@ -88,7 +88,7 @@ class BusPosix {
   struct termios old_settings_{};
 
   std::unique_ptr<Queue<BusEvent>> byte_queue_;
-  std::thread thread_;
+  std::unique_ptr<ServiceThread> worker_;
   std::atomic<bool> running_;
 
   std::vector<ReadListener> read_listeners_;
@@ -96,7 +96,7 @@ class BusPosix {
   std::vector<SynListener> syn_listeners_;
 
   // SYN generator members
-  std::thread syn_thread_;
+  std::unique_ptr<ServiceThread> syn_worker_;
   std::atomic<bool> syn_running_{false};
   std::mutex syn_mutex_;
   std::condition_variable syn_cv_;

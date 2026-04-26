@@ -58,11 +58,18 @@ BusFreeRtos::BusFreeRtos(const BusConfig& config, const RuntimeConfig& runtime,
 BusFreeRtos::~BusFreeRtos() { stop(); }
 
 void BusFreeRtos::start() {
-  xTaskCreate(&BusFreeRtos::s_ebusUartEventRunner, "ebusUartEventRunner", 2048,
-              this, configMAX_PRIORITIES - 1, nullptr);
+  if (running_.load(std::memory_order_acquire)) return;
+  running_.store(true, std::memory_order_release);
+  worker_ = std::make_unique<ServiceThread>(
+      "ebusUartEventRunner", [this] { ebusUartEventRunner(); },
+      OrchestrationLimits::stack_size, OrchestrationLimits::priority_high);
+  worker_->start();
 }
 
 void BusFreeRtos::stop() {
+  if (!running_.load(std::memory_order_acquire)) return;
+  running_.store(false, std::memory_order_release);
+
   gpio_isr_handler_remove(static_cast<gpio_num_t>(rx_pin_));
   gpio_intr_disable(static_cast<gpio_num_t>(rx_pin_));
   gpio_set_intr_type(static_cast<gpio_num_t>(rx_pin_), GPIO_INTR_DISABLE);
@@ -84,6 +91,8 @@ void BusFreeRtos::stop() {
   timer_pause(timer_group_num_, timer_idx_num_);
 #endif
 
+  if (worker_) worker_->join();
+
   if (uart_event_queue_) {
     uart_driver_delete(uart_port_num_);
     uart_event_queue_ = nullptr;
@@ -95,50 +104,55 @@ Queue<BusEvent>* BusFreeRtos::getQueue() const { return byte_queue_.get(); }
 void BusFreeRtos::writeByte(const uint8_t byte) {
   for (const auto& listener : write_listeners_) listener(byte);
   if (monitor_) monitor_->transmit.markBegin();
-  portENTER_CRITICAL_ISR(&timer_mux_);
+  portENTER_CRITICAL(&timer_mux_);
   last_activity_micros_ = esp_timer_get_time();
-  portEXIT_CRITICAL_ISR(&timer_mux_);
+  portEXIT_CRITICAL(&timer_mux_);
   uart_write_bytes(uart_port_num_, static_cast<const void*>(&byte), 1);
   if (monitor_) monitor_->transmit.markEnd();
 }
 
 void BusFreeRtos::setWindow(const uint16_t window) {
-  portENTER_CRITICAL_ISR(&timer_mux_);
+  portENTER_CRITICAL(&timer_mux_);
   // Validate window against limits
   window_ =
       (window < BusLimits::window_min_us || window > BusLimits::window_max_us)
           ? ebus::RuntimeConfig{}.bus.window_us
           : window;
-  portEXIT_CRITICAL_ISR(&timer_mux_);
+  portEXIT_CRITICAL(&timer_mux_);
 }
 
 void BusFreeRtos::setOffset(const uint16_t offset) {
-  portENTER_CRITICAL_ISR(&timer_mux_);
+  portENTER_CRITICAL(&timer_mux_);
   // Validate offset against limits
   offset_ = (offset > BusLimits::offset_max_us)
                 ? ebus::RuntimeConfig{}.bus.offset_us
                 : offset;
-  portEXIT_CRITICAL_ISR(&timer_mux_);
+  portEXIT_CRITICAL(&timer_mux_);
 }
 
 void BusFreeRtos::setRuntimeConfig(const RuntimeConfig& runtime) {
-  bool was_enabled = runtime_.bus.syn.enabled;
+  bool was_enabled;
+  uint64_t base_us = static_cast<uint64_t>(runtime.bus.syn.base_ms) * 1000;
+  uint64_t unique_us =
+      base_us +
+      (static_cast<uint64_t>(runtime.address) *
+       static_cast<uint64_t>(BusLimits::Syn::address_factor_ms) * 1000) +
+      (static_cast<uint64_t>(runtime.bus.syn.tolerance_ms) * 1000);
+
+  portENTER_CRITICAL(&timer_mux_);
+  was_enabled = runtime_.bus.syn.enabled;
   runtime_ = runtime;
 
-  // Validate window and offset
+  // Validate window and offset inside the critical section
   if (runtime_.bus.window_us < BusLimits::window_min_us ||
       runtime_.bus.window_us > BusLimits::window_max_us)
     runtime_.bus.window_us = ebus::RuntimeConfig{}.bus.window_us;
   if (runtime_.bus.offset_us > BusLimits::offset_max_us)
     runtime_.bus.offset_us = ebus::RuntimeConfig{}.bus.offset_us;
 
-  // Calculate microsecond timings for hardware timers
-  syn_base_us_ = static_cast<uint64_t>(runtime_.bus.syn.base_ms) * 1000;
-  syn_unique_us_ =
-      syn_base_us_ +
-      (static_cast<uint64_t>(runtime_.address) *
-       static_cast<uint64_t>(BusLimits::Syn::address_factor_ms) * 1000) +
-      (static_cast<uint64_t>(runtime_.bus.syn.tolerance_ms) * 1000);
+  syn_base_us_ = base_us;
+  syn_unique_us_ = unique_us;
+  portEXIT_CRITICAL(&timer_mux_);
 
   if (runtime_.bus.syn.enabled) {
     gptimer_alarm_config_t alarm_config = {
@@ -208,8 +222,9 @@ void BusFreeRtos::configureUart() {
   uart_set_pin(uart_port_num_, tx_pin_, rx_pin_, UART_PIN_NO_CHANGE,
                UART_PIN_NO_CHANGE);
 
-  // Install UART driver with event queue
-  uart_driver_install(uart_port_num_, 256, 256, 1, &uart_event_queue_, 0);
+  // Install UART driver with synchronized event queue sizes
+  uart_driver_install(uart_port_num_, BusLimits::queue_size,
+                      BusLimits::queue_size, 1, &uart_event_queue_, 0);
   uart_set_rx_full_threshold(uart_port_num_, 1);
   uart_set_rx_timeout(uart_port_num_, 1);
 }
@@ -310,8 +325,8 @@ void BusFreeRtos::s_ebusUartEventRunner(void* arg) {
 void BusFreeRtos::ebusUartEventRunner() {
   uart_event_t uart_event;
   uint8_t data[128];
-  for (;;) {
-    if (xQueueReceive(uart_event_queue_, &uart_event, portMAX_DELAY)) {
+  while (running_.load(std::memory_order_acquire)) {
+    if (xQueueReceive(uart_event_queue_, &uart_event, pdMS_TO_TICKS(10))) {
       if (uart_event.type == UART_DATA) {
         int len = uart_read_bytes(uart_port_num_, data, uart_event.size, 0);
         for (int i = 0; i < len; ++i) {
@@ -341,10 +356,10 @@ void BusFreeRtos::ebusUartEventRunner() {
             // with the sync byte. The buffer index is incremented in the
             // onFallingEdge ISR. Therefore, we need to access the position
             // bufferIndex + 2. This is the index of the last start bit.
-            portENTER_CRITICAL_ISR(&timer_mux_);
+            portENTER_CRITICAL(&timer_mux_);
             micros_start_bit_ = micros_edge_buffer_[(buffer_index_ + 2) %
                                                     FALLING_EDGE_BUFFER_SIZE];
-            portEXIT_CRITICAL_ISR(&timer_mux_);
+            portEXIT_CRITICAL(&timer_mux_);
 
             // Calculate the difference between the expected start bit time
             // and the actual start bit time. If the difference is within 1.5
@@ -380,16 +395,16 @@ void BusFreeRtos::ebusUartEventRunner() {
               timer_set_alarm(timer_group_num_, timer_idx_num_, TIMER_ALARM_EN);
 #endif
 
-              portENTER_CRITICAL_ISR(&timer_mux_);
+              portENTER_CRITICAL(&timer_mux_);
               micros_last_delay_ = delay;
               micros_delay_flag_ = true;
-              portEXIT_CRITICAL_ISR(&timer_mux_);
+              portEXIT_CRITICAL(&timer_mux_);
             } else {
-              portENTER_CRITICAL_ISR(&timer_mux_);
+              portENTER_CRITICAL(&timer_mux_);
               start_bit_flag_ = true;
               if (monitor_)
                 monitor_->updateBus([](auto& m) { m.start_bit_errors++; });
-              portEXIT_CRITICAL_ISR(&timer_mux_);
+              portEXIT_CRITICAL(&timer_mux_);
             }
           }
 
@@ -397,7 +412,7 @@ void BusFreeRtos::ebusUartEventRunner() {
           BusEvent bus_event;
           bus_event.byte = byte;
 
-          portENTER_CRITICAL_ISR(&timer_mux_);
+          portENTER_CRITICAL(&timer_mux_);
           bus_event.bus_request = bus_request_flag_;
           bus_event.start_bit = start_bit_flag_;
 
@@ -415,23 +430,29 @@ void BusFreeRtos::ebusUartEventRunner() {
           start_bit_flag_ = false;
           micros_delay_flag_ = false;
           micros_window_flag_ = false;
-          portEXIT_CRITICAL_ISR(&timer_mux_);
+          portEXIT_CRITICAL(&timer_mux_);
 
           bus_event.timestamp = arrival_time;
 
           if (byte_queue_) byte_queue_->push(bus_event);
 
           // Reset SYN Timer (Arbitration Logic)
-          if (runtime_.bus.syn.enabled) {
+          portENTER_CRITICAL(&timer_mux_);
+          bool syn_enabled = runtime_.bus.syn.enabled;
+          uint64_t base_us = syn_base_us_;
+          uint64_t unique_us = syn_unique_us_;
+          portEXIT_CRITICAL(&timer_mux_);
+
+          if (syn_enabled) {
             uint64_t next_interval;
+            portENTER_CRITICAL(&timer_mux_);
             if (syn_active_ && byte == Symbols::syn) {
-              // We won! Continue at fast rate
-              next_interval = syn_base_us_;
+              next_interval = base_us;
             } else {
-              // Someone else is master, or we collided. Switch to slow rate.
               syn_active_ = false;
-              next_interval = syn_unique_us_;
+              next_interval = unique_us;
             }
+            portEXIT_CRITICAL(&timer_mux_);
 
             // Update the hardware timer alarm
             gptimer_alarm_config_t alarm_config = {

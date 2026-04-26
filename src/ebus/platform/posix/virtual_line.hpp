@@ -7,6 +7,7 @@
 
 #if defined(POSIX)
 #include <cstdint>
+#include <ebus/detail/protocol_limits.hpp>
 #include <mutex>
 #include <vector>
 
@@ -28,11 +29,12 @@ class VirtualLine {
   void write(uint8_t byte);
 
   // Reads a byte from this specific instance's receive buffer
-  bool read(uint8_t& byte, int timeoutMs = 10);
+  bool read(uint8_t& byte,
+            int timeout_ms = BusLimits::Posix::virtual_read_timeout_ms);
 
  private:
   // Internal queue for bytes arriving from the "wire"
-  Queue<uint8_t> rx_queue_{256};
+  Queue<uint8_t> rx_queue_{BusLimits::queue_size};
 
   // Static registry members to bridge multiple instances
   static std::mutex registry_mutex_;

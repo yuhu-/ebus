@@ -25,6 +25,7 @@
 
 #include "core/handler.hpp"
 #include "platform/bus.hpp"
+#include "platform/service_thread.hpp"
 #include "platform/system.hpp"
 
 namespace ebus::detail {
@@ -139,6 +140,12 @@ class BusSimulator {
     bus_.addWriteListener([this](uint8_t b) { this->onWrite(b); });
   }
 
+  ~BusSimulator() {
+    for (auto& w : response_workers_) {
+      if (w) w->join();
+    }
+  }
+
   struct AutoResponse {
     std::vector<uint8_t> trigger_pattern;
     std::vector<uint8_t> response_data;
@@ -166,9 +173,16 @@ class BusSimulator {
   }
 
   void clear() {
-    std::lock_guard<std::mutex> lock(mtx_);
-    responses_.clear();
-    write_history_.clear();
+    std::vector<std::unique_ptr<ServiceThread>> workers_to_join;
+    {
+      std::lock_guard<std::mutex> lock(mtx_);
+      responses_.clear();
+      write_history_.clear();
+      workers_to_join = std::move(response_workers_);
+    }
+    for (auto& w : workers_to_join) {
+      w->join();
+    }
   }
 
  private:
@@ -176,6 +190,7 @@ class BusSimulator {
   std::mutex mtx_;
   std::vector<uint8_t> write_history_;
   std::vector<AutoResponse> responses_;
+  std::vector<std::unique_ptr<ServiceThread>> response_workers_;
 
   void onWrite(uint8_t b) {
     std::lock_guard<std::mutex> lock(mtx_);
@@ -192,10 +207,14 @@ class BusSimulator {
 
           uint32_t delay = resp.delay_ms;
           std::vector<uint8_t> data = resp.response_data;  // NOLINT
-          std::thread([this, delay, data]() {
-            sleepMilli(delay);
-            for (uint8_t byte : data) bus_.writeByte(byte);
-          }).detach();
+
+          auto worker = std::make_unique<ServiceThread>(
+              "busSimResp", [this, delay, data]() {
+                sleepMilli(delay);
+                for (uint8_t byte : data) bus_.writeByte(byte);
+              });
+          worker->start();
+          response_workers_.push_back(std::move(worker));
         }
       }
     }

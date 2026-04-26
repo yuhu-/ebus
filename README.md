@@ -4,11 +4,16 @@ This library enables communication with systems based on the eBUS protocol. eBUS
 
 ### eBUS Overview
 
-- The eBUS works on a two-wire bus with a speed of 2400 baud.
-- Realisation with Standard UART with 8 bits + start bit + stop bit. 
-- A maximum of 25 master and 228 slave participants are possible.
-- The eBUS protocol is byte-oriented with byte-oriented arbitration.
-- Data protection through 8-bit CRC.
+*   **Baud Rate:** Fixed 2400 Baud.
+*   **Physical:** Two-wire, Standard UART (8N1).
+*   **Capacity:** Max 25 masters, 228 slaves.
+*   **Protocol:** Byte-oriented arbitration and CRC-8 protection.
+
+### Supported Platforms
+
+*   **Linux / POSIX:** For gateway applications and diagnostics on PCs/Raspberry Pi.
+*   **ESP32 / FreeRTOS:** For dedicated low-power hardware bridges (ESP-IDF).
+*   **Virtual Bus:** Full protocol simulation mode for development without hardware.
 
 ### Architecture and Development
 
@@ -18,9 +23,19 @@ The library is designed with a clear separation between the public API and inter
 
 The library includes a high-performance telemetry system accessible via `Controller::getMetrics()`. Metrics can be exported to JSON using `ebus::toJson(metrics)`. It provides:
 - **Bus Utilization**: Real-time physical wire occupancy (compliant with eBUS Spec 2.2).
+- **ebusd Compatibility:** Supports the Enhanced binary protocol for high-speed bridging.
 - **Error Rate**: Percentage-based protocol health.
 - **Contention Rate**: Collision monitoring during arbitration.
 - **Jitter Analysis**: Timing statistics for SYN symbols and response latencies.
+
+### Key Features
+*   **Data Decoding**: Native support for 30+ eBUS data types including BCD, fixed-point (DATA2B/C), and float.
+*   **Device Discovery**: Automatic identification of manufacturers and device roles. Includes specialized support for Vaillant service identification and serial number reconstruction.
+*   **Zero-Allocation Path**: Core protocol FSM and byte stuffing utilize Small Buffer Optimization (SBO) to eliminate heap allocations during active bus communication.
+
+### Scheduling and Priorities
+
+The library features a priority-based `Scheduler`. Background tasks, such as the `DeviceScanner`, operate at a low priority (default 5). Applications can use the `Controller::enqueue` method with higher priority values (up to 255) to ensure critical messages preempt background traffic, guaranteeing minimal latency for user-initiated commands.
 
 ### Tools
 
