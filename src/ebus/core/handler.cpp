@@ -71,6 +71,10 @@ void Handler::setErrorCallback(ErrorCallback callback) {
 
 ebus::HandlerState Handler::getState() const { return state_; }
 
+ebus::SequenceState Handler::getActiveSequenceState() const {
+  return active_telegram_.getMasterState();
+}
+
 bool Handler::sendActiveMessage(ByteView message) {
   if (active_message_) return false;
   if (message.empty()) return false;
@@ -82,6 +86,7 @@ bool Handler::sendActiveMessage(ByteView message) {
     if (monitor_)
       monitor_->updateHandler([](auto& m) { m.error_active_master++; });
     callOnError(LogLevel::error, "errorActiveMaster",
+                active_telegram_.getMasterState(),
                 {active_master_.data(), active_master_.size()},
                 {active_slave_.data(), active_slave_.size()});
   }
@@ -201,6 +206,7 @@ void Handler::passiveReceiveMaster(uint8_t byte) {
               monitor_->updateHandler(
                   [](auto& m) { m.error_reactive_slave++; });
             callOnError(LogLevel::error, "errorReactiveSlave",
+                        passive_telegram_.getSlaveState(),
                         {passive_master_.data(), passive_master_.size()},
                         {passive_slave_.data(), passive_slave_.size()});
             callPassiveReset();
@@ -216,6 +222,7 @@ void Handler::passiveReceiveMaster(uint8_t byte) {
           if (monitor_)
             monitor_->updateHandler([](auto& m) { m.error_reactive_master++; });
           callOnError(LogLevel::error, "errorReactiveMaster",
+                      passive_telegram_.getMasterState(),
                       {passive_master_.data(), passive_master_.size()},
                       {passive_slave_.data(), passive_slave_.size()});
           passive_telegram_.clear();
@@ -231,6 +238,7 @@ void Handler::passiveReceiveMaster(uint8_t byte) {
             monitor_->updateHandler(
                 [](auto& m) { m.error_passive_master++; });  // Protocol error
           callOnError(LogLevel::error, "errorPassiveMaster",
+                      passive_telegram_.getMasterState(),
                       {passive_master_.data(), passive_master_.size()},
                       {passive_slave_.data(), passive_slave_.size()});
           callPassiveReset();
@@ -278,6 +286,7 @@ void Handler::passiveReceiveMasterAcknowledge(uint8_t byte) {
     }
 
     callOnError(LogLevel::error, "errorPassiveMasterACK",
+                passive_telegram_.getMasterState(),
                 {passive_master_.data(), passive_master_.size()},
                 {passive_slave_.data(), passive_slave_.size()});
     callPassiveReset();
@@ -301,6 +310,7 @@ void Handler::passiveReceiveSlave(uint8_t byte) {
       if (monitor_)
         monitor_->updateHandler([](auto& m) { m.error_passive_slave++; });
       callOnError(LogLevel::error, "errorPassiveSlave",
+                  passive_telegram_.getSlaveState(),
                   {passive_master_.data(), passive_master_.size()},
                   {passive_slave_.data(), passive_slave_.size()});
     }
@@ -329,6 +339,7 @@ void Handler::passiveReceiveSlaveAcknowledge(uint8_t byte) {
     if (monitor_)
       monitor_->updateHandler([](auto& m) { m.error_passive_slave_ack++; });
     callOnError(LogLevel::error, "errorPassiveSlaveACK",
+                passive_telegram_.getSlaveState(),
                 {passive_master_.data(), passive_master_.size()},
                 {passive_slave_.data(), passive_slave_.size()});
     callPassiveReset();
@@ -364,6 +375,7 @@ void Handler::reactiveSendMasterNegativeAcknowledge(
     if (monitor_)
       monitor_->updateHandler([](auto& m) { m.error_reactive_master_ack++; });
     callOnError(LogLevel::error, "errorReactiveMasterACK",
+                passive_telegram_.getMasterState(),
                 {passive_master_.data(), passive_master_.size()},
                 {passive_slave_.data(), passive_slave_.size()});
     callPassiveReset();
@@ -402,6 +414,7 @@ void Handler::reactiveReceiveSlaveAcknowledge(uint8_t byte) {
     if (monitor_)
       monitor_->updateHandler([](auto& m) { m.error_reactive_slave_ack++; });
     callOnError(LogLevel::error, "errorReactiveSlaveACK",
+                passive_telegram_.getSlaveState(),
                 {passive_master_.data(), passive_master_.size()},
                 {passive_slave_.data(), passive_slave_.size()});
     callPassiveReset();
@@ -497,6 +510,7 @@ void Handler::activeSendMaster(uint8_t byte) {
     if (monitor_)
       monitor_->updateHandler([](auto& m) { m.error_active_master++; });
     callOnError(LogLevel::error, "errorActiveMasterEcho",
+                passive_telegram_.getMasterState(),
                 {active_master_.data(), active_master_.size()},
                 {active_slave_.data(), active_slave_.size()});
     callActiveReset();
@@ -555,6 +569,7 @@ void Handler::activeReceiveMasterAcknowledge(uint8_t byte) {
         monitor_->updateHandler([](auto& m) { m.reset_active_0704++; });
     }
     callOnError(LogLevel::error, "errorActiveMasterACK",
+                passive_telegram_.getMasterState(),
                 {active_master_.data(), active_master_.size()},
                 {active_slave_.data(), active_slave_.size()});
     callActiveReset();  // Reset active state
@@ -582,6 +597,7 @@ void Handler::activeReceiveSlave(uint8_t byte) {
       if (monitor_)
         monitor_->updateHandler([](auto& m) { m.error_active_slave++; });
       callOnError(LogLevel::error, "errorActiveSlave",
+                  passive_telegram_.getSlaveState(),
                   {active_master_.data(), active_master_.size()},
                   {active_slave_.data(), active_slave_.size()});
       active_slave_.clear();  // Clear slave response
@@ -615,6 +631,7 @@ void Handler::activeSendSlaveNegativeAcknowledge(
     if (monitor_)
       monitor_->updateHandler([](auto& m) { m.error_active_slave_ack++; });
     callOnError(LogLevel::error, "errorActiveSlaveACK",
+                passive_telegram_.getSlaveState(),
                 {active_master_.data(), active_master_.size()},
                 {active_slave_.data(), active_slave_.size()});
     callActiveReset();  // Reset active state
@@ -637,7 +654,11 @@ void Handler::releaseBus([[maybe_unused]] uint8_t byte) {
  */
 void Handler::checkPassiveBuffers() {
   if (passive_master_.size() > 0 || passive_slave_.size() > 0) {
-    callOnError(LogLevel::info, "checkPassiveBuffers",
+    auto sequence_state = passive_telegram_.getMasterState();
+    if (sequence_state != SequenceState::seq_ok) {
+      sequence_state = passive_telegram_.getSlaveState();
+    }
+    callOnError(LogLevel::info, "checkPassiveBuffers", sequence_state,
                 {passive_master_.data(), passive_master_.size()},
                 {passive_slave_.data(), passive_slave_.size()});
 
@@ -664,7 +685,11 @@ void Handler::checkPassiveBuffers() {
  */
 void Handler::checkActiveBuffers() {
   if (active_master_.size() > 0 || active_slave_.size() > 0) {
-    callOnError(LogLevel::info, "checkActiveBuffers",
+    auto sequence_state = active_telegram_.getMasterState();
+    if (sequence_state != SequenceState::seq_ok) {
+      sequence_state = active_telegram_.getSlaveState();
+    }
+    callOnError(LogLevel::info, "checkActiveBuffers", sequence_state,
                 {active_master_.data(), active_master_.size()},
                 {active_slave_.data(), active_slave_.size()});
 
@@ -739,18 +764,22 @@ void Handler::callOnTelegram(MessageType message_type,
 }
 
 void Handler::callOnError(LogLevel level, std::string_view error_message,
-                          ByteView master_view, ByteView slave_view) {
+                          SequenceState sequence_state, ByteView master_view,
+                          ByteView slave_view) {
   if (error_callback_) {
     double current_util = 0.0;
     if (monitor_) {
       monitor_->callback_error.markBegin();
       monitor_->updateBus([](auto& m) {
-        m.last_error_timestamp = std::chrono::system_clock::now();
+        m.last_error_timestamp =
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::system_clock::now().time_since_epoch())
+                .count();
       });
       current_util = monitor_->getMetrics().bus.utilization;
     }
-    error_callback_({0, level, error_message, last_result_, state_,
-                     request_->getState(), master_view, slave_view,
+    error_callback_({0, level, error_message, last_result_, sequence_state,
+                     state_, request_->getState(), master_view, slave_view,
                      current_util});
     if (monitor_) monitor_->callback_error.markEnd();
   }

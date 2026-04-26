@@ -324,14 +324,17 @@ void BusFreeRtos::s_ebusUartEventRunner(void* arg) {
 
 void BusFreeRtos::ebusUartEventRunner() {
   uart_event_t uart_event;
-  uint8_t data[128];
+  uint8_t data[SequenceLimits::default_capacity * 2];
+
   while (running_.load(std::memory_order_acquire)) {
-    if (xQueueReceive(uart_event_queue_, &uart_event, pdMS_TO_TICKS(10))) {
+    if (xQueueReceive(uart_event_queue_, &uart_event,
+                      pdMS_TO_TICKS(BusLimits::FreeRTOS::event_timeout_ms))) {
       if (uart_event.type == UART_DATA) {
-        int len = uart_read_bytes(uart_port_num_, data, uart_event.size, 0);
+        const int len =
+            uart_read_bytes(uart_port_num_, data, uart_event.size, 0);
         for (int i = 0; i < len; ++i) {
-          auto arrival_time = std::chrono::steady_clock::now();
-          uint8_t byte = data[i];
+          const auto arrival_time = std::chrono::steady_clock::now();
+          const uint8_t byte = data[i];
 
           for (const auto& listener : read_listeners_) listener(byte);
 
@@ -340,13 +343,14 @@ void BusFreeRtos::ebusUartEventRunner() {
           if (!byte_queue_) continue;
 
           if (byte == Symbols::syn && request_->busRequestPending()) {
-            int64_t now = esp_timer_get_time();  // Current time in microseconds
+            const int64_t now =
+                esp_timer_get_time();  // Current time in microseconds
 
             // Calculation of the expected start bit time based on the current
             // time and the bit time with a 0.5-bit offset. The expected start
             // bit time is calculated as follows:
             // now - (10 * 416.67) + (0.5 * 416.67) or: now - 9.5 * 416.67
-            int64_t expected_start_bit_time = now - byte_time_center_us_;
+            const int64_t expected_start_bit_time = now - byte_time_center_us_;
 
             // Retrieving the start time of the last sync byte. Due to the
             // nature of the sync byte (0xaa), the buffer size used, and
@@ -368,15 +372,17 @@ void BusFreeRtos::ebusUartEventRunner() {
             // other factors. If the difference is larger than 1.5 bit times, we
             // consider it an unexpected start bit, and we set the
             // start_bit_flag_ to true.
-            int64_t delta =
+            const int64_t delta =
                 std::abs(expected_start_bit_time - micros_start_bit_);
 
-            if (delta <  // within 1.5 bit times
-                static_cast<int64_t>(Physical::bit_time_us * 1.5f)) {
-              int64_t micros_since_start_bit =
+            if (delta < static_cast<int64_t>(Physical::bit_time_us *
+                                             Physical::start_bit_tolerance)) {
+              const int64_t micros_since_start_bit =
                   esp_timer_get_time() - micros_start_bit_;
-              int64_t delay = window_ - micros_since_start_bit - offset_;
-              if (delay < 0) delay = 0;
+              const int64_t delay =
+                  (window_ > micros_since_start_bit + offset_)
+                      ? (window_ - micros_since_start_bit - offset_)
+                      : 0;
 
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
               gptimer_alarm_config_t alarm_config = {
@@ -438,9 +444,9 @@ void BusFreeRtos::ebusUartEventRunner() {
 
           // Reset SYN Timer (Arbitration Logic)
           portENTER_CRITICAL(&timer_mux_);
-          bool syn_enabled = runtime_.bus.syn.enabled;
-          uint64_t base_us = syn_base_us_;
-          uint64_t unique_us = syn_unique_us_;
+          const bool syn_enabled = runtime_.bus.syn.enabled;
+          const uint64_t base_us = syn_base_us_;
+          const uint64_t unique_us = syn_unique_us_;
           portEXIT_CRITICAL(&timer_mux_);
 
           if (syn_enabled) {
@@ -484,7 +490,8 @@ void IRAM_ATTR BusFreeRtos::s_onFallingEdge(void* arg) {
 void IRAM_ATTR BusFreeRtos::onFallingEdge() {
   int64_t now = esp_timer_get_time();
   portENTER_CRITICAL_ISR(&timer_mux_);
-  buffer_index_ = (buffer_index_ + 1) % FALLING_EDGE_BUFFER_SIZE;
+  buffer_index_ =
+      (buffer_index_ + 1) % BusLimits::FreeRTOS::falling_edge_history;
   last_activity_micros_ = now;
   micros_edge_buffer_[buffer_index_] = now;
   portEXIT_CRITICAL_ISR(&timer_mux_);

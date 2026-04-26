@@ -195,7 +195,7 @@ class BusSimulator {
   void onWrite(uint8_t b) {
     std::lock_guard<std::mutex> lock(mtx_);
     write_history_.push_back(b);
-    if (write_history_.size() > 64)
+    if (write_history_.size() > SequenceLimits::default_capacity)
       write_history_.erase(write_history_.begin());
 
     for (auto& resp : responses_) {

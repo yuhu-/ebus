@@ -45,9 +45,11 @@ class PollManager {
  public:
   PollManager() : next_id_(1) {}
 
+  // Sets the current master address and purges items that would poll itself.
+  void setOwnAddress(uint8_t address);
+
   // Register a new recurring command. Returns a unique ID.
-  uint32_t addPollItem(uint8_t priority, ByteView message,
-                       std::chrono::milliseconds interval,
+  uint32_t addPollItem(uint8_t priority, ByteView message, uint32_t interval_ms,
                        ResultCallback callback = nullptr);
 
   // Remove a recurring command by ID.

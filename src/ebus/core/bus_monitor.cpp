@@ -121,7 +121,30 @@ ebus::metrics::SystemMetrics BusMonitor::getMetrics() const {
   // Physical Utilization (%)
   if (bm.uptime.last > 0) {
     bm.utilization = (utilization.getSum() / bm.uptime.last) * 100.0;
+
+    // Congestion Logic: > 70% for > 10 seconds
+    if (bm.utilization > 70.0) {
+      auto now = std::chrono::steady_clock::now();
+      if (congestion_start_point_ == std::chrono::steady_clock::time_point{}) {
+        congestion_start_point_ = now;
+      } else {
+        auto duration = std::chrono::duration_cast<std::chrono::seconds>(
+                            now - congestion_start_point_)
+                            .count();
+        if (duration >= 10) {
+          congestion_active_ = true;
+        }
+      }
+    } else {
+      congestion_start_point_ = {};
+      congestion_active_ = false;
+    }
   }
+  bm.congestion = congestion_active_;
+
+  // High Jitter Logic: Standard deviation of SYN intervals > 10ms
+  // (Standard eBUS unique timer tolerance is 5ms per Spec 9.2.2)
+  bm.high_jitter = hm.sync.stddev > 10000.0;
 
   // Map Timing
   bm.delay = delay.getValues();

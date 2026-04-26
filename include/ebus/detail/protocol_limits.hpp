@@ -20,7 +20,8 @@ namespace ebus::detail {
 namespace Physical {
 inline constexpr uint32_t baud_rate = 2400;
 inline constexpr double bit_time_us = 1000000.0 / 2400.0;  // ~416.67 us
-inline constexpr double byte_center_bits = 9.5;  // midpoint of the stop bit
+inline constexpr double byte_center_bits = 9.5;     // midpoint of the stop bit
+inline constexpr float start_bit_tolerance = 1.5f;  // bit times
 }  // namespace Physical
 
 // --- Component Layer ---
@@ -59,6 +60,11 @@ inline constexpr uint32_t carrier_sense_ms = 5;
 inline constexpr uint32_t serialization_delay_ms = 4;
 }  // namespace Syn
 
+namespace FreeRTOS {
+inline constexpr uint32_t event_timeout_ms = 10;
+inline constexpr uint8_t falling_edge_history = 5;
+}  // namespace FreeRTOS
+
 namespace Posix {
 inline constexpr uint32_t request_delay_us = 200;
 inline constexpr uint32_t virtual_read_timeout_ms = 10;
@@ -84,6 +90,7 @@ inline constexpr uint8_t scan_priority = 5;
 namespace SchedulerLimits {
 inline constexpr size_t queue_reserve = 32;
 inline constexpr size_t scan_threshold = 5;
+inline constexpr uint32_t jitter_threshold_ms = 2;
 inline constexpr uint32_t controller_tick_ms = 20;
 }  // namespace SchedulerLimits
 

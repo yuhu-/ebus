@@ -65,6 +65,7 @@ std::string toJson(const ErrorInfo& info) {
       << "\"level\":" << static_cast<int>(info.level) << ","
       << "\"message\":\"" << escapeJson(std::string(info.message)) << "\","
       << "\"result\":\"" << toString(info.result) << "\","
+      << "\"sequence_state\":" << static_cast<int>(info.sequence_state) << ","
       << "\"handler_state\":\"" << toString(info.handler_state) << "\","
       << "\"request_state\":\"" << toString(info.request_state) << "\","
       << "\"master\":\"" << toString(info.master_view) << "\","
@@ -76,11 +77,12 @@ std::string toJson(const ErrorInfo& info) {
 
 std::string toJson(const ErrorEntry& entry) {
   std::ostringstream oss;
-  auto t = std::chrono::system_clock::to_time_t(entry.timestamp);
+  time_t t = static_cast<time_t>(entry.timestamp / 1000);
   oss << "{"
       << "\"level\":" << static_cast<int>(entry.level) << ","
       << "\"message\":\"" << escapeJson(entry.message) << "\","
       << "\"result\":\"" << toString(entry.result) << "\","
+      << "\"sequence_state\":" << toString(entry.sequence_state) << ","
       << "\"handler_state\":\"" << toString(entry.handler_state) << "\","
       << "\"request_state\":\"" << toString(entry.request_state) << "\","
       << "\"master\":\"" << toString(ByteView(entry.master, entry.master_len))
@@ -205,9 +207,11 @@ std::string toJson(const metrics::BusMetrics& m) {
   oss << "{\"utilization\":" << m.utilization
       << ",\"start_bit_errors\":" << m.start_bit_errors
       << ",\"syn_postponed_count\":" << m.syn_postponed_count;
+  oss << ",\"congestion\":" << (m.congestion ? "true" : "false")
+      << ",\"high_jitter\":" << (m.high_jitter ? "true" : "false");
 
-  if (m.last_error_timestamp != std::chrono::system_clock::time_point{}) {
-    auto t = std::chrono::system_clock::to_time_t(m.last_error_timestamp);
+  if (m.last_error_timestamp > 0) {
+    time_t t = static_cast<time_t>(m.last_error_timestamp / 1000);
     oss << ",\"last_error_timestamp\":\""
         << std::put_time(std::gmtime(&t), "%Y-%m-%dT%H:%M:%SZ") << "\"";
   }

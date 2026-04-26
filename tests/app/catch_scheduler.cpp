@@ -7,6 +7,7 @@
 #include <catch2/catch_all.hpp>
 #include <chrono>
 #include <ebus/data_types.hpp>
+#include <ebus/types.hpp>
 #include <ebus/utils.hpp>
 #include <future>
 #include <iomanip>
@@ -90,4 +91,77 @@ TEST_CASE("Scheduler: Simulation", "[app][scheduler]") {
   scheduler.stop();
   busHandler.stop();
   bus.stop();
+}
+
+TEST_CASE("Scheduler: Priority Preemption", "[app][scheduler][priority]") {
+  Request request;
+  ebus::BusConfig config;
+  config.device = "/dev/null";
+  config.simulate = true;
+
+  ebus::RuntimeConfig runtime;
+  runtime.address = 0x01;
+  runtime.bus.syn.enabled = true;
+  runtime.lock_counter = 0;  // Send immediately
+
+  BusMonitor monitor;
+  Bus bus(config, runtime, &request, &monitor);
+  Handler handler(runtime.address, &bus, &request, &monitor);
+  BusHandler busHandler(&request, &handler, bus.getQueue());
+
+  BusSimulator simulator(bus);
+  const uint8_t source = 0x01;
+
+  // Setup responses for both test messages
+  // High priority trigger
+  simulator.addResponse(
+      {ebus::toVector(frameMasterHex(source, "feb50500")), {}, 0});
+  // Low priority trigger
+  simulator.addResponse(
+      {ebus::toVector(frameMasterHex(source, "fe070400")), {}, 0});
+
+  Scheduler scheduler(&handler);
+  scheduler.start();
+  bus.start();
+  busHandler.start();
+
+  std::vector<uint8_t> execution_order;
+  std::mutex order_mutex;
+
+  // We use a future timestamp to ensure both items are in the queue
+  // before the scheduler picks the next one.
+  auto start_time = ebus::Clock::now() + std::chrono::milliseconds(100);
+
+  // 1. Enqueue Low Priority (5) first
+  scheduler.enqueueAt(5, ebus::toVector("fe070400"), start_time,
+                      [&](const ebus::ResultInfo&) {
+                        std::lock_guard<std::mutex> lock(order_mutex);
+                        execution_order.push_back(5);
+                      });
+
+  // 2. Enqueue High Priority (255) second
+  scheduler.enqueueAt(255, ebus::toVector("feb50500"), start_time,
+                      [&](const ebus::ResultInfo&) {
+                        std::lock_guard<std::mutex> lock(order_mutex);
+                        execution_order.push_back(255);
+                      });
+
+  // Wait for both tasks to complete
+  bool completed = waitCondition(
+      [&] {
+        std::lock_guard<std::mutex> lock(order_mutex);
+        return execution_order.size() == 2;
+      },
+      3000);  // Increased timeout for robustness
+
+  scheduler.stop();  // Stop scheduler before checking local variables
+  busHandler.stop();
+  bus.stop();
+  simulator.clear();  // Clear simulator workers
+
+  REQUIRE(completed);  // Check completion after stopping threads
+
+  // Verify that 255 preempted 5
+  REQUIRE(execution_order[0] == 255);
+  REQUIRE(execution_order[1] == 5);
 }

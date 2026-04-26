@@ -21,6 +21,12 @@ void DeviceScanner::setFullScan(bool enable) {
   full_scan_ = enable;
   if (enable) {
     full_scan_address_ = 0;
+    // Arm the timer for the initial delay if not already active
+    if (next_startup_scan_time_ ==
+        std::chrono::steady_clock::time_point::max()) {
+      next_startup_scan_time_ =
+          std::chrono::steady_clock::now() + initial_scan_delay_;
+    }
   }
 }
 
@@ -50,6 +56,17 @@ bool DeviceScanner::isScanOnStartup() const {
 void DeviceScanner::setOwnAddress(uint8_t address) {
   std::lock_guard<std::mutex> lock(mutex_);
   own_address_ = address;
+
+  // Purge any pending manual retries that now target our own slave address
+  // to prevent self-probing after an address change.
+  std::queue<Sequence> filtered;
+  const uint8_t own_slave = ebus::slaveOf(own_address_);
+  while (!manual_queue_.empty()) {
+    auto cmd = manual_queue_.front();
+    manual_queue_.pop();
+    if (cmd.empty() || cmd[0] != own_slave) filtered.push(std::move(cmd));
+  }
+  manual_queue_ = std::move(filtered);
 }
 
 void DeviceScanner::setMaxStartupScans(uint8_t max) {
@@ -57,14 +74,14 @@ void DeviceScanner::setMaxStartupScans(uint8_t max) {
   max_startup_scans_ = max;
 }
 
-void DeviceScanner::setInitialScanDelay(std::chrono::seconds delay) {
+void DeviceScanner::setInitialScanDelay(uint32_t delay_s) {
   std::lock_guard<std::mutex> lock(mutex_);
-  initial_scan_delay_ = delay;
+  initial_scan_delay_ = std::chrono::seconds(delay_s);
 }
 
-void DeviceScanner::setStartupScanInterval(std::chrono::seconds interval) {
+void DeviceScanner::setStartupScanInterval(uint32_t interval_s) {
   std::lock_guard<std::mutex> lock(mutex_);
-  startup_scan_interval_ = interval;
+  startup_scan_interval_ = std::chrono::seconds(interval_s);
 }
 
 void DeviceScanner::scanObservedDevices() {
@@ -138,23 +155,30 @@ ebus::Sequence DeviceScanner::nextCommand() {
     return cmd;
   }
 
-  // Priority 2: Full Scan (generates one command at a time)
-  if (full_scan_) {
-    while (full_scan_address_ <= 0xff) {
-      uint8_t addr = static_cast<uint8_t>(full_scan_address_);
-      full_scan_address_++;
+  auto now = std::chrono::steady_clock::now();
 
-      if (ebus::isSlave(addr) && (addr != ebus::slaveOf(own_address_))) {
-        return Device::createScanCommand(addr);
+  // Autonomous scans (Full and Startup) must respect the initial delay
+  // guard
+  if (now >= next_startup_scan_time_) {
+    // Priority 2: Full Scan (generates one command at a time)
+    if (full_scan_) {
+      while (full_scan_address_ <= 0xff) {
+        uint8_t addr = static_cast<uint8_t>(full_scan_address_);
+        full_scan_address_++;
+
+        if (ebus::isSlave(addr) && (addr != ebus::slaveOf(own_address_))) {
+          return Device::createScanCommand(addr);
+        }
       }
+      // Finished full scan
+      full_scan_ = false;
     }
-    // Finished full scan
-    full_scan_ = false;
   }
 
   // Priority 3: Startup Scan (Discovery of observed devices)
   if (scan_on_startup_) {
-    // If the queue for the current iteration is empty, try to populate it.
+    // If the queue for the current iteration is empty, try to populate
+    // it.
     if (startup_queue_.empty()) {
       // Stop if we have completed all scan iterations.
       if (startup_scan_count_ >= max_startup_scans_) {
@@ -162,7 +186,6 @@ ebus::Sequence DeviceScanner::nextCommand() {
         return {};
       }
 
-      auto now = std::chrono::steady_clock::now();
       // Check if it's time for the next iteration.
       if (now >= next_startup_scan_time_) {
         startup_scan_count_++;

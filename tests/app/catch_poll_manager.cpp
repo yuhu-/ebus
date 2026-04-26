@@ -17,10 +17,8 @@ using namespace ebus::detail;
 TEST_CASE("PollManager: Registration", "[app][pollmanager]") {
   PollManager pm;
 
-  uint32_t id1 =
-      pm.addPollItem(1, ByteView({0x01, 0x02}), std::chrono::seconds(5));
-  uint32_t id2 =
-      pm.addPollItem(2, ByteView({0x03, 0x04}), std::chrono::seconds(10));
+  uint32_t id1 = pm.addPollItem(1, ByteView({0x01, 0x02}), 5000);
+  uint32_t id2 = pm.addPollItem(2, ByteView({0x03, 0x04}), 10000);
 
   size_t count = 0;
   pm.processDueItems([&](const PollItem&) { count++; });
@@ -31,7 +29,7 @@ TEST_CASE("PollManager: Registration", "[app][pollmanager]") {
 TEST_CASE("PollManager: Timing and Recurrence", "[app][pollmanager]") {
   PollManager pm;
 
-  pm.addPollItem(5, ByteView({0xaa, 0xbb}), std::chrono::seconds(1));
+  pm.addPollItem(5, ByteView({0xaa, 0xbb}), 1000);
 
   size_t count = 0;
   pm.processDueItems([&](const detail::PollItem&) { count++; });
@@ -64,7 +62,7 @@ TEST_CASE("PollManager: Timing and Recurrence", "[app][pollmanager]") {
 TEST_CASE("PollManager: Removal", "[app][pollmanager]") {
   PollManager pm;
 
-  uint32_t id = pm.addPollItem(1, ::ByteView({0xff}), std::chrono::seconds(1));
+  uint32_t id = pm.addPollItem(1, ::ByteView({0xff}), 1000);
   sleepMilli(1100);
 
   size_t count = 0;

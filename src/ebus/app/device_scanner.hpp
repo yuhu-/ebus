@@ -42,8 +42,8 @@ class DeviceScanner {
   void setOwnAddress(uint8_t address);
   bool isScanOnStartup() const;
   void setMaxStartupScans(uint8_t max);
-  void setInitialScanDelay(std::chrono::seconds delay);
-  void setStartupScanInterval(std::chrono::seconds interval);
+  void setInitialScanDelay(uint32_t delay_s);
+  void setStartupScanInterval(uint32_t interval_s);
 
   // Manual scanning
   void scanObservedDevices();

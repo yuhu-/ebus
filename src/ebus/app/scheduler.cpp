@@ -38,6 +38,8 @@ void Scheduler::stop() {
       std::lock_guard<std::mutex> lock(data_mutex_);
       data_ready_cv_.notify_all();
     }
+    clear();  // Clear any pending items and their callbacks to prevent UAF
+              // during test teardown
 
     detachHandlerCallbacks();
 
@@ -130,11 +132,13 @@ void Scheduler::run() {
 
     // copy next due while holding lock
     auto next_due = item_queue_.front().due;
+    auto next_id = item_queue_.front().id;
 
-    data_ready_cv_.wait_until(lock, next_due, [this, next_due] {
+    data_ready_cv_.wait_until(lock, next_due, [this, next_due, next_id] {
       return stop_flag_.load() || item_queue_.empty() ||
              item_queue_.front().due <= Clock::now() ||
-             item_queue_.front().due < next_due;
+             item_queue_.front().due < next_due ||
+             item_queue_.front().id != next_id;
     });
 
     if (stop_flag_.load()) break;
@@ -148,9 +152,10 @@ void Scheduler::run() {
     lock.unlock();
 
     bool sent = false;
-    std::string last_error = "unknown";
+    const char* last_error = nullptr;
     LogLevel result_level = LogLevel::error;
     RequestResult result_code = RequestResult::first_error;
+    SequenceState result_s_state = SequenceState::seq_ok;
     HandlerState result_h_state = HandlerState::passive_receive_master;
     RequestState result_r_state = RequestState::observe;
     Sequence slave_response;
@@ -169,10 +174,13 @@ void Scheduler::run() {
       last_error = "Handler busy";
     } else if (!handler_->sendActiveMessage(current_item.message)) {
       last_error = "Invalid message";
+      result_s_state = handler_->getActiveSequenceState();
+      // Structural error: structure or address invalid. Retry will not help.
+      current_item.send_attempts = max_send_attempts_;
     }
 
-    // If arming succeeded, wait for terminal events
-    if (last_error == "unknown") {
+    // If arming succeeded (no immediate error), wait for terminal events
+    if (last_error == nullptr) {
       auto start = Clock::now();
       while (!stop_flag_.load()) {
         Event ev;
@@ -195,6 +203,7 @@ void Scheduler::run() {
         } else if (ev.type == EventType::error) {
           last_error = ev.error;
           result_code = ev.result;
+          result_s_state = ev.sequence_state;
           result_level = ev.level;
           result_h_state = ev.handler_state;
           result_r_state = ev.request_state;
@@ -212,10 +221,19 @@ void Scheduler::run() {
     // clear attempt id so stray callbacks are ignored
     current_attempt_id_.store(0, std::memory_order_relaxed);
 
+    /**
+     * Reliability Logic:
+     * The eBUS specification (Section 7.4) restricts immediate repetitions
+     * (on NAK) to a repeat rate of 1. This library complies by handling the
+     * physical retry inside the Handler FSM.
+     * The Scheduler implements application-level retries with exponential
+     * backoff, which occurs after the bus has been released.
+     */
     if (sent) {
       if (current_item.result_callback)
         current_item.result_callback(
-            {current_item.id, true, current_item.message, slave_response});
+            {current_item.id, true, RequestResult::first_won,
+             SequenceState::seq_ok, current_item.message, slave_response});
       lock.lock();
     } else {
       ++current_item.send_attempts;
@@ -232,14 +250,19 @@ void Scheduler::run() {
                                   result_level,
                                   last_error,
                                   result_code,
+                                  result_s_state,
                                   result_h_state,
                                   result_r_state,
                                   current_item.message,
                                   {}});
         }
         if (current_item.result_callback) {
-          current_item.result_callback(
-              {current_item.id, false, current_item.message, {}});
+          current_item.result_callback({current_item.id,
+                                        false,
+                                        result_code,
+                                        result_s_state,
+                                        current_item.message,
+                                        {}});
         }
         lock.lock();
       }
@@ -264,6 +287,7 @@ void Scheduler::attachHandlerCallbacks() {
   if (!handler_) return;
 
   handler_->setBusRequestWonCallback([this]() {
+    if (stop_flag_.load(std::memory_order_relaxed)) return;
     uint32_t id = current_attempt_id_.load(std::memory_order_relaxed);
     if (id == 0) return;
 
@@ -274,6 +298,7 @@ void Scheduler::attachHandlerCallbacks() {
   });
 
   handler_->setBusRequestLostCallback([this]() {
+    if (stop_flag_.load(std::memory_order_relaxed)) return;
     uint32_t id = current_attempt_id_.load(std::memory_order_relaxed);
     if (id == 0) return;
 
@@ -284,10 +309,12 @@ void Scheduler::attachHandlerCallbacks() {
   });
 
   handler_->setReactiveMasterSlaveCallback([this](const ReactiveInfo& info) {
+    if (stop_flag_.load(std::memory_order_relaxed)) return;
     if (extern_reactive_callback_) extern_reactive_callback_(info);
   });
 
   handler_->setTelegramCallback([this](const TelegramInfo& info) {
+    if (stop_flag_.load(std::memory_order_relaxed)) return;
     uint32_t id = current_attempt_id_.load(std::memory_order_relaxed);
 
     if (extern_telegram_callback_) {
@@ -315,6 +342,7 @@ void Scheduler::attachHandlerCallbacks() {
   });
 
   handler_->setErrorCallback([this](const ErrorInfo& info) {
+    if (stop_flag_.load(std::memory_order_relaxed)) return;
     // Reset on certain error conditions that indicate the bus is now free
     // again
     uint32_t id = current_attempt_id_.load(std::memory_order_relaxed);
@@ -336,6 +364,7 @@ void Scheduler::attachHandlerCallbacks() {
     ev.id = id;
     ev.level = info.level;
     ev.result = info.result;
+    ev.sequence_state = info.sequence_state;
     ev.handler_state = info.handler_state;
     ev.request_state = info.request_state;
     ev.error = info.message.data();  // Points to the error message literal

@@ -51,6 +51,8 @@ class Handler {
 
   HandlerState getState() const;
 
+  ebus::SequenceState getActiveSequenceState() const;
+
   bool sendActiveMessage(ByteView message);
   bool isActiveMessagePending() const;
 
@@ -161,7 +163,8 @@ class Handler {
                       ByteView master_view, ByteView slave_view);
 
   void callOnError(LogLevel level, std::string_view error_message,
-                   ByteView master_view, ByteView slave_view);
+                   SequenceState sequence_state, ByteView master_view,
+                   ByteView slave_view);
 };
 
 }  // namespace ebus::detail

@@ -290,8 +290,9 @@ constexpr TelegramType typeOf(uint8_t byte) {
  */
 struct ErrorEntry {
   LogLevel level;
-  char message[48];  // Sufficient for protocol error literals
+  char message[64];  // Sufficient for protocol and vendor error literals
   RequestResult result;
+  SequenceState sequence_state;
   HandlerState handler_state;
   RequestState request_state;
   uint8_t master[32];
@@ -299,13 +300,18 @@ struct ErrorEntry {
   uint8_t slave[32];
   uint8_t slave_len;
   double utilization;
-  std::chrono::system_clock::time_point timestamp;
+  uint64_t timestamp;  // ms since epoch
 
   // Custom stringifier for human-readable logs
   std::string toString() const {
-    return "[" + std::string(ebus::toString(handler_state)) + "][" +
-           ebus::toString(request_state) + "] " + message +
-           " (Result: " + ebus::toString(result) + ")";
+    std::string res = "[" + std::string(ebus::toString(handler_state)) + "][" +
+                      ebus::toString(request_state) + "] " + message;
+    if (sequence_state != SequenceState::seq_ok &&
+        sequence_state != SequenceState::seq_empty) {
+      res += " (" + std::string(ebus::toString(sequence_state)) + ")";
+    }
+    res += " (Result: " + std::string(ebus::toString(result)) + ")";
+    return res;
   }
 
   void setMessage(std::string_view msg) {

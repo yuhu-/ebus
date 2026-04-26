@@ -59,14 +59,14 @@ int main() {
   // * Data: 9.25°C - DATA2B -> 0x40, 0x09
   std::vector<uint8_t> broadcastMsg = {0xfe, 0xb5, 0x16, 0x03,
                                        0x01, 0x40, 0x09};
-  deviceB.addPollItem(10, broadcastMsg, 5s, [](const ebus::ResultInfo& info) {
+  deviceB.addPollItem(10, broadcastMsg, 5000, [](const ebus::ResultInfo& info) {
     std::cout << "[Device B] Periodic broadcast sent." << std::endl;
   });
 
   // Try to enqueue a faulty broadcast message every 7 seconds.
   // This library offers several helper functions, such as...ebus::to_vector("")
   deviceB.addPollItem(
-      15, ebus::toVector("feb5160301"), 7s, [](const ebus::ResultInfo& info) {
+      15, ebus::toVector("feb5160301"), 7000, [](const ebus::ResultInfo& info) {
         std::cout << "[Device B] Periodic faulty broadcast sent." << std::endl;
       });
 

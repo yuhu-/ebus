@@ -44,6 +44,9 @@ class Controller {
   void setMaxSendAttempts(int max_send_attempts);
   void setBaseBackoff(uint32_t base_backoff_ms);
   void setFsmTimeout(uint32_t timeout_ms);
+  void setInitialScanDelay(uint32_t delay_s);
+  void setStartupScanInterval(uint32_t interval_s);
+  void setMaxStartupScans(uint8_t max_scans);
   void setWatchdogTimeout(uint32_t timeout_ms);
   void setClientActiveTimeout(uint32_t timeout_ms);
   void setOutboundBufferSize(size_t size);
@@ -58,7 +61,7 @@ class Controller {
                ResultCallback callback = nullptr);
 
   uint32_t addPollItem(uint8_t priority, ByteView message,
-                       std::chrono::milliseconds interval,
+                       uint32_t interval_ms,
                        ResultCallback callback = nullptr);
   void removePollItem(uint32_t id);
 

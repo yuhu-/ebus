@@ -9,8 +9,22 @@
 
 namespace ebus::detail {
 
+void PollManager::setOwnAddress(uint8_t address) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  const uint8_t own_slave = ebus::slaveOf(address);
+
+  auto it = items_.begin();
+  while (it != items_.end()) {
+    if (!it->message.empty() && it->message[0] == own_slave) {
+      it = items_.erase(it);
+    } else {
+      ++it;
+    }
+  }
+}
+
 uint32_t PollManager::addPollItem(uint8_t priority, ByteView message,
-                                  std::chrono::milliseconds interval,
+                                  uint32_t interval_ms,
                                   ResultCallback callback) {
   std::lock_guard<std::mutex> lock(mutex_);
   uint32_t id = next_id_++;
@@ -18,7 +32,7 @@ uint32_t PollManager::addPollItem(uint8_t priority, ByteView message,
   item.id = id;
   item.priority = priority;
   item.message.assign(message);
-  item.interval = interval;
+  item.interval = std::chrono::milliseconds(interval_ms);
   // Schedule immediately to ensure data is available as soon as possible
   item.next_due = std::chrono::steady_clock::now();
   item.callback = std::move(callback);

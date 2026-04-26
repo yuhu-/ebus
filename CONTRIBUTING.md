@@ -34,6 +34,11 @@ Thank you for your interest in contributing to the eBUS library! To maintain hig
 ### Error Handling
 *   **Metrics Over Exceptions**: Use the internal `Metrics` system for protocol-level errors. Avoid using exceptions in the hot path.
 
+### Protocol Compliance & Retries
+*   **NAK Repetition**: The eBUS spec (Section 7.4) allows only one immediate repeat if a NAK is received. This is handled internally by the `Handler` FSM.
+*   **Application Retries**: The `Scheduler` provides a configurable `max_send_attempts` (default 3) which implements a high-level retry loop with exponential backoff. This is not part of the eBUS spec but improves reliability in noisy environments.
+*   **Scan Filtering**: When implementing background tasks, only re-enqueue failed tasks if the failure was transient (e.g., arbitration loss). Whitelist whitelisted `RequestResult` values (won/lost) rather than whitelisting `!success`.
+
 ## Architectural Patterns
 
 To keep the library maintainable and portable, we follow these patterns:

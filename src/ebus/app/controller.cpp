@@ -92,6 +92,7 @@ void Controller::setAddress(const uint8_t& address) {
     impl_->handler_->setSourceAddress(address);
     impl_->device_manager_->setOwnAddress(address);
     impl_->device_scanner_->setOwnAddress(address);
+    impl_->poll_manager_->setOwnAddress(address);
     impl_->bus_->setRuntimeConfig(config_.runtime);
     impl_->request_->setLockCounter(config_.runtime.lock_counter);
   }
@@ -148,6 +149,27 @@ void Controller::setFsmTimeout(uint32_t timeout_ms) {
   }
 }
 
+void Controller::setInitialScanDelay(uint32_t delay_s) {
+  config_.runtime.scanner.initial_delay_s = delay_s;
+  if (impl_->device_scanner_) {
+    impl_->device_scanner_->setInitialScanDelay(delay_s);
+  }
+}
+
+void Controller::setStartupScanInterval(uint32_t interval_s) {
+  config_.runtime.scanner.startup_interval_s = interval_s;
+  if (impl_->device_scanner_) {
+    impl_->device_scanner_->setStartupScanInterval(interval_s);
+  }
+}
+
+void Controller::setMaxStartupScans(uint8_t max_scans) {
+  config_.runtime.scanner.max_startup_scans = max_scans;
+  if (impl_->device_scanner_) {
+    impl_->device_scanner_->setMaxStartupScans(max_scans);
+  }
+}
+
 void Controller::setWatchdogTimeout(uint32_t timeout_ms) {
   config_.runtime.network.watchdog_timeout_ms = timeout_ms;
   if (impl_->bus_handler_) {
@@ -179,11 +201,11 @@ void Controller::enqueue(uint8_t priority, ByteView message,
 }
 
 uint32_t Controller::addPollItem(uint8_t priority, ByteView message,
-                                 std::chrono::milliseconds interval,
+                                 uint32_t interval_ms,
                                  ResultCallback callback) {
   uint32_t id = impl_->poll_manager_
                     ? impl_->poll_manager_->addPollItem(
-                          priority, message, interval, std::move(callback))
+                          priority, message, interval_ms, std::move(callback))
                     : 0;
   wake_cv_.notify_one();
   return id;
@@ -324,12 +346,16 @@ void Controller::constructMembers() {
         entry.level = info.level;
         entry.setMessage(info.message);
         entry.result = info.result;
+        entry.sequence_state = info.sequence_state;
         entry.handler_state = info.handler_state;
         entry.request_state = info.request_state;
         entry.setMaster(info.master_view.data(), info.master_view.size());
         entry.setSlave(info.slave_view.data(), info.slave_view.size());
         entry.utilization = info.utilization;
-        entry.timestamp = std::chrono::system_clock::now();
+        entry.timestamp =
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::system_clock::now().time_since_epoch())
+                .count();
 
         impl_->error_buffer_.push_back(std::move(entry));
       }
@@ -344,6 +370,12 @@ void Controller::constructMembers() {
 
   impl_->device_scanner_ = std::make_unique<detail::DeviceScanner>(
       config_.runtime.address, impl_->device_manager_.get());
+  impl_->device_scanner_->setInitialScanDelay(
+      config_.runtime.scanner.initial_delay_s);
+  impl_->device_scanner_->setStartupScanInterval(
+      config_.runtime.scanner.startup_interval_s);
+  impl_->device_scanner_->setMaxStartupScans(
+      config_.runtime.scanner.max_startup_scans);
 
   impl_->poll_manager_ = std::make_unique<detail::PollManager>();
 
@@ -374,8 +406,22 @@ void Controller::run() {
         detail::SchedulerLimits::scan_threshold) {
       auto scan_cmd = impl_->device_scanner_->nextCommand();
       if (!scan_cmd.empty()) {
-        impl_->scheduler_->enqueue(detail::ScannerLimits::scan_priority,
-                                   scan_cmd);
+        impl_->scheduler_->enqueue(
+            detail::ScannerLimits::scan_priority, scan_cmd,
+            [this](const ebus::ResultInfo& info) {
+              if (!info.success &&
+                  (info.result == RequestResult::first_lost ||
+                   info.result == RequestResult::second_lost)) {
+                // Re-enqueue address for scan if we lost arbitration.
+                // Note: We whiltelist arbitration loss to avoid re-probing on
+                // structural protocol errors (SequenceState) which would be
+                // futile. Noise (first_error) is handled by the Scheduler's
+                // own retry logic.
+                if (info.master_view.size() > 1) {
+                  impl_->device_scanner_->scanAddress(info.master_view[1]);
+                }
+              }
+            });
         activity = true;
       }
     }

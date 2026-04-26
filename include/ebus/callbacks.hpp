@@ -37,6 +37,7 @@ struct ErrorInfo {
   LogLevel level;
   std::string_view message;
   RequestResult result;
+  SequenceState sequence_state;
   HandlerState handler_state;
   RequestState request_state;
   ByteView master_view;
@@ -53,6 +54,8 @@ struct ReactiveInfo {
 struct ResultInfo {
   uint32_t session_id = 0;
   bool success;
+  RequestResult result;
+  SequenceState sequence_state;
   ByteView master_view;
   ByteView slave_view;
 };

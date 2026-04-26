@@ -238,7 +238,9 @@ struct BusMetrics {
   // Detailed Counters
   uint32_t start_bit_errors = 0;
   uint32_t syn_postponed_count = 0;
-  std::chrono::system_clock::time_point last_error_timestamp{};
+  bool congestion = false;
+  bool high_jitter = false;
+  uint64_t last_error_timestamp = 0;  // ms since epoch
 
   // Explicit phase timings
   MetricValues delay;

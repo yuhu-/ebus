@@ -15,6 +15,14 @@
 
 namespace ebus::detail {
 
+namespace {
+// Protocol header sizes excluding data and CRC
+constexpr size_t kMasterHeaderSize = 5;  // QQ ZZ PB SB NN
+constexpr size_t kSlaveHeaderSize = 1;   // NN
+constexpr size_t kCrcSize = 1;
+constexpr size_t kAckSize = 1;
+}  // namespace
+
 /**
  * Based on the eBUS specification, the Telegram class can parse, create, and
  * evaluate sequences of bytes that represent Master-Slave, Master-Master, and
@@ -98,7 +106,7 @@ class TelegramImpl {
   void createMaster(SequenceImpl<C>& sequence) {
     master_state_ = SequenceState::seq_ok;
     sequence.reduce();
-    if (sequence.size() < 5) {
+    if (sequence.size() < kMasterHeaderSize) {
       master_state_ = SequenceState::err_seq_too_short;
       return;
     }
@@ -114,7 +122,14 @@ class TelegramImpl {
       master_state_ = SequenceState::err_data_byte;
       return;
     }
-    if (sequence.size() < static_cast<size_t>(5 + uint8_t(sequence[4]))) {
+    // Spec 5.4 & 5.5: Primary and Secondary commands cannot be AAh or A9h
+    if (sequence[2] == Symbols::syn || sequence[2] == Symbols::ext ||
+        sequence[3] == Symbols::syn || sequence[3] == Symbols::ext) {
+      master_state_ = SequenceState::err_data_byte;
+      return;
+    }
+    if (sequence.size() <
+        static_cast<size_t>(kMasterHeaderSize + uint8_t(sequence[4]))) {
       master_state_ = SequenceState::err_seq_too_short;
       return;
     }
@@ -122,14 +137,19 @@ class TelegramImpl {
     telegram_type_ = typeOf(sequence[1]);
     master_nn_ = static_cast<size_t>(uint8_t(sequence[4]));
 
-    if (sequence.size() == static_cast<size_t>(5 + master_nn_)) {
+    if (sequence.size() ==
+        static_cast<size_t>(kMasterHeaderSize + master_nn_)) {
       master_.assignSlice(sequence, 0);
       master_crc_ = sequence.crc();
-    } else {
-      master_.assignSlice(sequence, 0, 5 + master_nn_);
-      master_crc_ = sequence[5 + master_nn_];
+    } else if (sequence.size() ==
+               static_cast<size_t>(kMasterHeaderSize + master_nn_ + kCrcSize)) {
+      master_.assignSlice(sequence, 0, kMasterHeaderSize + master_nn_);
+      master_crc_ = sequence[kMasterHeaderSize + master_nn_];
       if (master_.crc() != master_crc_)
         master_state_ = SequenceState::err_crc_invalid;
+    } else {
+      master_state_ = SequenceState::err_seq_too_long;
+      return;
     }
   }
 
@@ -160,11 +180,14 @@ class TelegramImpl {
     if (sequence.size() == (1 + slave_nn_)) {
       slave_.assignSlice(sequence, 0);
       slave_crc_ = sequence.crc();
-    } else {
+    } else if (sequence.size() == (1 + slave_nn_ + 1)) {
       slave_.assignSlice(sequence, 0, 1 + slave_nn_);
       slave_crc_ = sequence[1 + slave_nn_];
       if (slave_.crc() != slave_crc_)
         slave_state_ = SequenceState::err_crc_invalid;
+    } else {
+      slave_state_ = SequenceState::err_seq_too_long;
+      return;
     }
   }
 

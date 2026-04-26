@@ -77,9 +77,21 @@ class Scheduler {
  private:
   struct Compare {
     bool operator()(Item const& lhs, Item const& rhs) const {
-      if (lhs.due != rhs.due)
-        return lhs.due > rhs.due;          // earlier due time first
-      return lhs.priority < rhs.priority;  // larger priority value second
+      // Group items enqueued within the jitter window as logically concurrent
+      const auto diff =
+          (lhs.due > rhs.due) ? (lhs.due - rhs.due) : (rhs.due - lhs.due);
+      if (diff >
+          std::chrono::milliseconds(SchedulerLimits::jitter_threshold_ms)) {
+        return lhs.due > rhs.due;  // Earlier due time first
+      }
+
+      // Within the jitter window, higher priority items are "greater" (top of
+      // heap)
+      if (lhs.priority != rhs.priority) {
+        return lhs.priority < rhs.priority;
+      }
+      // Maintain stability via ID if everything else is equal
+      return lhs.id > rhs.id;
     }
   };
 
@@ -94,6 +106,7 @@ class Scheduler {
     RequestState request_state;
     LogLevel level;
     RequestResult result;
+    SequenceState sequence_state;
     Sequence master;
     Sequence slave;
     const char* error = nullptr;

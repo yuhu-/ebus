@@ -41,6 +41,7 @@ TEST_CASE("DeviceScanner: Priority (Manual > Full > Startup)",
   DeviceManager dm;
   DeviceScanner scanner(0xff, &dm);
 
+  scanner.setInitialScanDelay(0);
   scanner.setFullScan(true);
   scanner.setScanOnStartup(true);
   scanner.scanAddress(0x50);  // Manual scan
@@ -54,7 +55,7 @@ TEST_CASE("DeviceScanner: Priority (Manual > Full > Startup)",
   REQUIRE(cmd2[0] == 0x02);
 
   scanner.setFullScan(false);
-  scanner.setInitialScanDelay(std::chrono::seconds(0));
+  scanner.setInitialScanDelay(0);
   REQUIRE(scanner.nextCommand().empty());
 }
 
@@ -64,8 +65,8 @@ TEST_CASE("DeviceScanner: Startup Scan Logic", "[app][devicescanner]") {
   dm.setOwnAddress(0xff);
   DeviceScanner scanner(0xff, &dm);
 
-  scanner.setInitialScanDelay(std::chrono::seconds(0));
-  scanner.setStartupScanInterval(std::chrono::seconds(0));
+  scanner.setInitialScanDelay(0);
+  scanner.setStartupScanInterval(0);
   scanner.setMaxStartupScans(2);
 
   scanner.setScanOnStartup(true);
@@ -94,7 +95,7 @@ TEST_CASE("DeviceScanner: Timing & Vendor Scans", "[app][devicescanner]") {
   std::vector<uint8_t> s = {0x0a, 0xb5, 0x00, 0x00, 0x00, 0x00, 0x00};
   dm.update(m, s);
 
-  scanner.setInitialScanDelay(std::chrono::seconds(1));
+  scanner.setInitialScanDelay(1);
   scanner.setScanOnStartup(true);
 
   REQUIRE(scanner.nextCommand().empty());
