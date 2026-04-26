@@ -42,7 +42,7 @@ TEST_CASE("ServiceThread: Destructor performs implicit join",
     ServiceThread worker(
         "testDestructor",
         [&]() {
-          sleepMs(50);
+          sleepMilli(50);
           threadStarted = true;
           counter++;
         },

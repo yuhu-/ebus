@@ -12,11 +12,11 @@ namespace ebus::detail {
 /**
  * Suspends execution for a given number of milliseconds.
  */
-void sleepMs(uint32_t ms);
+void sleepMilli(uint32_t ms);
 
 /**
  * Suspends execution for a given number of microseconds.
  */
-void sleepUs(uint32_t us);
+void sleepMicro(uint32_t us);
 
 }  // namespace ebus::detail

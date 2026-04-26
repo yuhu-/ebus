@@ -208,11 +208,11 @@ TEST_CASE("ClientManager Watchdog Timeout") {
 
   int timeout = 100;
   while (timeout-- > 0 && !req.busRequestPending()) {
-    usleep(1000);
+    sleepMilli(1);
   }
   CHECK_TEST("Client is now active", req.busRequestPending());
 
-  usleep(1100000);
+  sleepMilli(11000);
 
   CHECK_TEST("Watchdog cleared active client", !req.busRequestPending());
 
@@ -239,7 +239,7 @@ TEST_CASE("Client Removal") {
 
   bus.writeByte(0xaa);
   manager.start();
-  sleepMs(10);
+  sleepMilli(10);
 
   // Reaching here indicates manager handled closed socket without hang/crash
   CHECK_TEST("Manager handled closed socket", true);

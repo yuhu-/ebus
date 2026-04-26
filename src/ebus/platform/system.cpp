@@ -16,7 +16,7 @@
 
 namespace ebus::detail {
 
-void sleepMs(uint32_t ms) {
+void sleepMilli(uint32_t ms) {
 #if defined(ESP32)
   vTaskDelay(pdMS_TO_TICKS(ms));
 #elif defined(POSIX)
@@ -24,7 +24,7 @@ void sleepMs(uint32_t ms) {
 #endif
 }
 
-void sleepUs(uint32_t us) {
+void sleepMicro(uint32_t us) {
 #if defined(ESP32)
   esp_rom_delay_us(us);
 #elif defined(POSIX)

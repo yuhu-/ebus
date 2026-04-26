@@ -61,7 +61,7 @@ TEST_CASE("Queue: Blocking Pop", "[platform][queue]") {
   Queue<int> q(5);
 
   std::thread producer([&q]() {
-    sleepMs(50);
+    sleepMilli(50);
     q.push(42);
   });
 

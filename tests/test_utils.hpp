@@ -51,7 +51,7 @@ inline bool waitCondition(Predicate&& pred, int timeout_ms = 1000) {
   while (std::chrono::steady_clock::now() - start <
          std::chrono::milliseconds(timeout_ms)) {
     if (pred()) return true;
-    sleepMs(5);
+    sleepMilli(5);
   }
   return pred();
 }
@@ -193,7 +193,7 @@ class BusSimulator {
           uint32_t delay = resp.delay_ms;
           std::vector<uint8_t> data = resp.response_data;  // NOLINT
           std::thread([this, delay, data]() {
-            sleepMs(delay);
+            sleepMilli(delay);
             for (uint8_t byte : data) bus_.writeByte(byte);
           }).detach();
         }

@@ -12,6 +12,7 @@
 
 #include "core/bus_monitor.hpp"
 #include "core/request.hpp"
+#include "platform/system.hpp"
 
 namespace ebus::detail {
 
@@ -273,7 +274,7 @@ void BusPosix::readerThread() {
 
       // Hit the 4300-4456us window (approx 200us after SYN reception)
       if (byte == Symbols::syn && request_->busRequestPending()) {
-        usleep(BusLimits::Posix::request_delay_us);
+        sleepMicro(BusLimits::Posix::request_delay_us);
         writeByte(request_->busRequestAddress());
         bus_request_flag_.store(true, std::memory_order_release);
       }

@@ -41,7 +41,7 @@ TEST_CASE("PollManager: Timing and Recurrence", "[app][pollmanager]") {
   pm.processDueItems([&](const PollItem&) { count++; });
   REQUIRE(count == 0);
 
-  sleepMs(1100);
+  sleepMilli(1100);
   count = 0;
   pm.processDueItems([&](const PollItem& item) {
     count++;
@@ -54,7 +54,7 @@ TEST_CASE("PollManager: Timing and Recurrence", "[app][pollmanager]") {
   pm.processDueItems([&](const PollItem&) { count++; });
   REQUIRE(count == 0);
 
-  sleepMs(1100);
+  sleepMilli(1100);
 
   count = 0;
   pm.processDueItems([&](const PollItem&) { count++; });
@@ -65,14 +65,14 @@ TEST_CASE("PollManager: Removal", "[app][pollmanager]") {
   PollManager pm;
 
   uint32_t id = pm.addPollItem(1, ::ByteView({0xff}), std::chrono::seconds(1));
-  sleepMs(1100);
+  sleepMilli(1100);
 
   size_t count = 0;
   pm.processDueItems([&](const PollItem&) { count++; });
   REQUIRE(count == 1);
 
   pm.removePollItem(id);
-  sleepMs(1100);
+  sleepMilli(1100);
   count = 0;
   pm.processDueItems([&](const PollItem&) { count++; });
   REQUIRE(count == 0);

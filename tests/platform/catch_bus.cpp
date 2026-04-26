@@ -60,7 +60,7 @@ TEST_CASE("Bus: Basic Communication", "[platform][bus]") {
   bool prematureSyn = false;
   for (int i = 0; i < 5; ++i) {
     bus.writeByte(0xff);
-    sleepMs(20);
+    sleepMilli(20);
     BusEvent tempEv;
     while (queue->tryPop(tempEv)) {
       if (tempEv.byte == ebus::Symbols::syn) prematureSyn = true;
@@ -136,7 +136,7 @@ TEST_CASE("Bus: Raw Reception (Broadcast Simulation)", "[platform][bus]") {
 
   for (auto b : msg) {
     bus.writeByte(b);
-    sleepMs(500);
+    sleepMilli(10);
   }
 
   std::vector<uint8_t> received;
