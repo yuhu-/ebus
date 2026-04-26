@@ -23,6 +23,14 @@ struct FSM {
   static constexpr size_t num_request_states = 4;
 };
 
+// --- Orchestration Layer (Thread Priorities & Stacks) ---
+struct Orchestration {
+  static constexpr size_t stack_size = 4096;
+  static constexpr uint8_t priority_high = 5;
+  static constexpr uint8_t priority_med = 3;
+  static constexpr uint8_t priority_low = 1;
+};
+
 }  // namespace ebus::detail
 
 namespace ebus {
@@ -30,15 +38,6 @@ namespace ebus {
 // --- Defaults ---
 namespace defaults {
 constexpr uint8_t address = 0xff;
-
-namespace detail {
-struct Orchestration {
-  static constexpr size_t stack_size = 4096;
-  static constexpr uint8_t priority_high = 5;
-  static constexpr uint8_t priority_med = 3;
-  static constexpr uint8_t priority_low = 1;
-};
-}  // namespace detail
 
 struct Arbitration {
   static constexpr uint8_t lock_counter = 3;

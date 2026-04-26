@@ -69,9 +69,8 @@ void Controller::start() {
   impl_->scheduler_->start();
   impl_->client_manager_->start();
   impl_->worker_ = std::make_unique<detail::ServiceThread>(
-      "ebusController", [this] { run(); },
-      defaults::detail::Orchestration::stack_size,
-      defaults::detail::Orchestration::priority_low, 0);
+      "ebusController", [this] { run(); }, detail::Orchestration::stack_size,
+      detail::Orchestration::priority_low, 0);
   impl_->worker_->start();
 }
 

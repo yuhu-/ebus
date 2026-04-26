@@ -46,8 +46,8 @@ class BusHandler {
     running_ = true;
     worker_ = std::make_unique<detail::ServiceThread>(
         "ebusBusQueueRunner", [this] { this->run(); },
-        defaults::detail::Orchestration::stack_size,
-        defaults::detail::Orchestration::priority_low);
+        Orchestration::stack_size,
+        Orchestration::priority_low);
     worker_->start();
   }
 

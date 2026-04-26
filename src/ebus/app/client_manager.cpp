@@ -62,9 +62,8 @@ void ClientManager::start() {
   if (running_.load(std::memory_order_acquire)) return;
   running_.store(true, std::memory_order_release);
   worker_ = std::make_unique<detail::ServiceThread>(
-      "ebusClientManager", [this] { run(); },
-      defaults::detail::Orchestration::stack_size,
-      defaults::detail::Orchestration::priority_med, 0);
+      "ebusClientManager", [this] { run(); }, Orchestration::stack_size,
+      Orchestration::priority_med, 0);
   worker_->start();
   notifyWake();
 }
