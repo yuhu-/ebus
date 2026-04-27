@@ -6,10 +6,10 @@
 #pragma once
 
 #if defined(ESP_PLATFORM)
-#include "freertos/queue_freertos.hpp"
+#include "esp/queue_esp.hpp"
 namespace ebus::detail::platform {
 template <typename T>
-using Queue = QueueFreeRtos<T>;
+using Queue = QueueEsp<T>;
 }  // namespace ebus::detail::platform
 #elif defined(POSIX)
 #include "posix/queue_posix.hpp"

@@ -6,9 +6,9 @@
 #pragma once
 
 #if defined(ESP_PLATFORM)
-#include "freertos/bus_freertos.hpp"
+#include "esp/bus_esp.hpp"
 namespace ebus::detail::platform {
-using Bus = BusFreeRtos;
+using Bus = BusEsp;
 }  // namespace ebus::detail::platform
 #elif defined(POSIX)
 #include "posix/bus_posix.hpp"

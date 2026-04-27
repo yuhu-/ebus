@@ -35,22 +35,22 @@ class BusMonitor;
 namespace ebus::detail::platform {
 
 /**
- * FreeRtos-specific implementation of the eBUS physical layer.
+ * ESP-specific implementation of the eBUS physical layer.
  * Handles serial port configuration and asynchronous byte reading via a
  * background thread.
  */
-class BusFreeRtos {
+class BusEsp {
  public:
   using ReadListener = std::function<void(const uint8_t& byte)>;
   using WriteListener = std::function<void(const uint8_t& byte)>;
   using SynListener = std::function<void()>;
 
-  explicit BusFreeRtos(const BusConfig& config, const RuntimeConfig& runtime,
-                       detail::Request* request, detail::BusMonitor* monitor);
-  ~BusFreeRtos();
+  explicit BusEsp(const BusConfig& config, const RuntimeConfig& runtime,
+                  detail::Request* request, detail::BusMonitor* monitor);
+  ~BusEsp();
 
-  BusFreeRtos(const BusFreeRtos&) = delete;
-  BusFreeRtos& operator=(const BusFreeRtos&) = delete;
+  BusEsp(const BusEsp&) = delete;
+  BusEsp& operator=(const BusEsp&) = delete;
 
   void start();
   void stop();

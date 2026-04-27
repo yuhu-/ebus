@@ -14,12 +14,12 @@
 namespace ebus::detail::platform {
 
 template <typename T>
-class QueueFreeRtos {
+class QueueEsp {
  public:
-  explicit QueueFreeRtos(size_t capacity = 32)
+  explicit QueueEsp(size_t capacity = 32)
       : queue_(xQueueCreate(capacity, sizeof(T))), capacity_(capacity) {}
 
-  ~QueueFreeRtos() {
+  ~QueueEsp() {
     if (queue_) vQueueDelete(queue_);
   }
 

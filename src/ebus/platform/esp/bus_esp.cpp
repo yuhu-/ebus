@@ -4,7 +4,7 @@
  */
 
 #if defined(ESP_PLATFORM)
-#include "platform/freertos/bus_freertos.hpp"
+#include "platform/esp/bus_esp.hpp"
 
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
 #include "esp_clk_tree.h"
@@ -26,8 +26,8 @@
 
 namespace ebus::detail::platform {
 
-BusFreeRtos::BusFreeRtos(const BusConfig& config, const RuntimeConfig& runtime,
-                         Request* request, BusMonitor* monitor)
+BusEsp::BusEsp(const BusConfig& config, const RuntimeConfig& runtime,
+               Request* request, BusMonitor* monitor)
     : uart_port_num_(static_cast<uart_port_t>(config.uart_port)),
       rx_pin_(config.rx_pin),
       tx_pin_(config.tx_pin),
@@ -42,7 +42,7 @@ BusFreeRtos::BusFreeRtos(const BusConfig& config, const RuntimeConfig& runtime,
 
   // Initialize postponement timer
   const esp_timer_create_args_t postpone_args = {
-      .callback = &BusFreeRtos::s_onSynPostpone,
+      .callback = &BusEsp::s_onSynPostpone,
       .arg = this,
       .dispatch_method = ESP_TIMER_TASK,
       .name = "ebusSynPostpone",
@@ -56,9 +56,9 @@ BusFreeRtos::BusFreeRtos(const BusConfig& config, const RuntimeConfig& runtime,
   start();
 }
 
-BusFreeRtos::~BusFreeRtos() { stop(); }
+BusEsp::~BusEsp() { stop(); }
 
-void BusFreeRtos::start() {
+void BusEsp::start() {
   if (running_.load(std::memory_order_acquire)) return;
   running_.store(true, std::memory_order_release);
   worker_ = std::make_unique<ServiceThread>(
@@ -67,7 +67,7 @@ void BusFreeRtos::start() {
   worker_->start();
 }
 
-void BusFreeRtos::stop() {
+void BusEsp::stop() {
   if (!running_.load(std::memory_order_acquire)) return;
   running_.store(false, std::memory_order_release);
 
@@ -100,9 +100,9 @@ void BusFreeRtos::stop() {
   }
 }
 
-Queue<BusEvent>* BusFreeRtos::getQueue() const { return byte_queue_.get(); }
+Queue<BusEvent>* BusEsp::getQueue() const { return byte_queue_.get(); }
 
-void BusFreeRtos::writeByte(const uint8_t byte) {
+void BusEsp::writeByte(const uint8_t byte) {
   for (const auto& listener : write_listeners_) listener(byte);
   if (monitor_) monitor_->transmit.markBegin();
   portENTER_CRITICAL(&timer_mux_);
@@ -112,7 +112,7 @@ void BusFreeRtos::writeByte(const uint8_t byte) {
   if (monitor_) monitor_->transmit.markEnd();
 }
 
-void BusFreeRtos::setWindow(const uint16_t window_us) {
+void BusEsp::setWindow(const uint16_t window_us) {
   portENTER_CRITICAL(&timer_mux_);
   // Validate window against limits
   window_us_ = (window_us < BusLimits::window_min_us ||
@@ -122,7 +122,7 @@ void BusFreeRtos::setWindow(const uint16_t window_us) {
   portEXIT_CRITICAL(&timer_mux_);
 }
 
-void BusFreeRtos::setOffset(const uint16_t offset_us) {
+void BusEsp::setOffset(const uint16_t offset_us) {
   portENTER_CRITICAL(&timer_mux_);
   // Validate offset against limits
   offset_us_ = (offset_us > BusLimits::offset_max_us)
@@ -131,7 +131,7 @@ void BusFreeRtos::setOffset(const uint16_t offset_us) {
   portEXIT_CRITICAL(&timer_mux_);
 }
 
-void BusFreeRtos::setRuntimeConfig(const RuntimeConfig& runtime) {
+void BusEsp::setRuntimeConfig(const RuntimeConfig& runtime) {
   bool was_enabled;
   uint64_t base_us = static_cast<uint64_t>(runtime.bus.syn.base_ms) * 1000;
   uint64_t unique_us =
@@ -174,25 +174,25 @@ void BusFreeRtos::setRuntimeConfig(const RuntimeConfig& runtime) {
   }
 }
 
-void BusFreeRtos::addReadListener(ReadListener listener) {
+void BusEsp::addReadListener(ReadListener listener) {
   read_listeners_.push_back(std::move(listener));
 }
 
-void BusFreeRtos::addWriteListener(WriteListener listener) {
+void BusEsp::addWriteListener(WriteListener listener) {
   write_listeners_.push_back(std::move(listener));
 }
 
-void BusFreeRtos::addSynListener(SynListener listener) {
+void BusEsp::addSynListener(SynListener listener) {
   syn_listeners_.push_back(std::move(listener));
 }
 
-void BusFreeRtos::recordUtilization(uint8_t byte) {
+void BusEsp::recordUtilization(uint8_t byte) {
   // 1 (start bit) + zero bits in data. eBUS bit time is ~416.67us
   double low_time = (countZeroBits(byte) + 1) * Physical::bit_time_us;
   if (monitor_) monitor_->utilization.addSample(low_time);
 }
 
-void BusFreeRtos::configureUart() {
+void BusEsp::configureUart() {
   uart_config_t uart_config = {
       .baud_rate = Physical::baud_rate,
       .data_bits = UART_DATA_8_BITS,
@@ -230,7 +230,7 @@ void BusFreeRtos::configureUart() {
   uart_set_rx_timeout(uart_port_num_, 1);
 }
 
-void BusFreeRtos::configureGpio() {
+void BusEsp::configureGpio() {
   gpio_config_t gpio_conf = {
       .pin_bit_mask = (1ULL << rx_pin_),
       .mode = GPIO_MODE_INPUT,
@@ -249,7 +249,7 @@ void BusFreeRtos::configureGpio() {
                        this);
 }
 
-void BusFreeRtos::configureTimer() {
+void BusEsp::configureTimer() {
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
   gptimer_config_t gpt_config_arb = {
       .clk_src = GPTIMER_CLK_SRC_DEFAULT,
@@ -318,18 +318,19 @@ void BusFreeRtos::configureTimer() {
 }
 
 // static trampoline for FreeRTOS task
-void BusFreeRtos::s_ebusUartEventRunner(void* arg) {
-  BusFreeRtos* self = static_cast<BusFreeRtos*>(arg);
+void BusEsp::s_ebusUartEventRunner(void* arg) {
+  BusEsp* self = static_cast<BusEsp*>(arg);
   if (self) self->ebusUartEventRunner();
 }
 
-void BusFreeRtos::ebusUartEventRunner() {
+void BusEsp::ebusUartEventRunner() {
   uart_event_t uart_event;
   uint8_t data[SequenceLimits::default_capacity * 2];
 
   while (running_.load(std::memory_order_acquire)) {
-    if (xQueueReceive(uart_event_queue_, &uart_event,
-                      pdMS_TO_TICKS(BusLimits::FreeRTOS::event_timeout_ms))) {
+    if (xQueueReceive(
+            uart_event_queue_, &uart_event,
+            pdMS_TO_TICKS(BusLimits::platform::Esp::event_timeout_ms))) {
       if (uart_event.type == UART_DATA) {
         const int len =
             uart_read_bytes(uart_port_num_, data, uart_event.size, 0);
@@ -477,22 +478,22 @@ void BusFreeRtos::ebusUartEventRunner() {
   }
 }
 
-void BusFreeRtos::s_onSynPostpone(void* arg) {
-  BusFreeRtos* inst = static_cast<BusFreeRtos*>(arg);
+void BusEsp::s_onSynPostpone(void* arg) {
+  BusEsp* inst = static_cast<BusEsp*>(arg);
   if (inst) inst->onSynGenTimer();
 }
 
 // static ISR trampoline -> instance method
-void IRAM_ATTR BusFreeRtos::s_onFallingEdge(void* arg) {
-  BusFreeRtos* inst = reinterpret_cast<BusFreeRtos*>(arg);
+void IRAM_ATTR BusEsp::s_onFallingEdge(void* arg) {
+  BusEsp* inst = reinterpret_cast<BusEsp*>(arg);
   if (inst) inst->onFallingEdge();
 }
 
-void IRAM_ATTR BusFreeRtos::onFallingEdge() {
+void IRAM_ATTR BusEsp::onFallingEdge() {
   int64_t now = esp_timer_get_time();
   portENTER_CRITICAL_ISR(&timer_mux_);
   buffer_index_ =
-      (buffer_index_ + 1) % BusLimits::FreeRTOS::falling_edge_history;
+      (buffer_index_ + 1) % BusLimits::platform::Esp::falling_edge_history;
   last_activity_micros_ = now;
   micros_edge_buffer_[buffer_index_] = now;
   portEXIT_CRITICAL_ISR(&timer_mux_);
@@ -500,20 +501,20 @@ void IRAM_ATTR BusFreeRtos::onFallingEdge() {
 
 // static ISR trampoline -> instance method
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
-bool IRAM_ATTR BusFreeRtos::s_onBusIsrTimer(
-    gptimer_handle_t timer, const gptimer_alarm_event_data_t* edata,
-    void* user_ctx) {
-  BusFreeRtos* inst = reinterpret_cast<BusFreeRtos*>(user_ctx);
+bool IRAM_ATTR BusEsp::s_onBusIsrTimer(gptimer_handle_t timer,
+                                       const gptimer_alarm_event_data_t* edata,
+                                       void* user_ctx) {
+  BusEsp* inst = reinterpret_cast<BusEsp*>(user_ctx);
   return inst ? inst->onBusIsrTimer() : false;
 }
 #else
-bool IRAM_ATTR BusFreeRtos::s_onBusIsrTimer(void* arg) {
-  BusFreeRtos* inst = reinterpret_cast<BusFreeRtos*>(arg);
+bool IRAM_ATTR BusEsp::s_onBusIsrTimer(void* arg) {
+  BusEsp* inst = reinterpret_cast<BusEsp*>(arg);
   return inst ? inst->onBusIsrTimer() : false;
 }
 #endif
 
-bool IRAM_ATTR BusFreeRtos::onBusIsrTimer() {
+bool IRAM_ATTR BusEsp::onBusIsrTimer() {
   uint8_t byte = request_->busRequestAddress();
   uart_ll_write_txfifo(UART_LL_GET_HW(uart_port_num_), &byte, 1);
   portENTER_CRITICAL_ISR(&timer_mux_);
@@ -525,20 +526,20 @@ bool IRAM_ATTR BusFreeRtos::onBusIsrTimer() {
 }
 
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
-bool IRAM_ATTR BusFreeRtos::s_onSynGenTimer(
-    gptimer_handle_t timer, const gptimer_alarm_event_data_t* edata,
-    void* user_ctx) {
-  BusFreeRtos* inst = reinterpret_cast<BusFreeRtos*>(user_ctx);
+bool IRAM_ATTR BusEsp::s_onSynGenTimer(gptimer_handle_t timer,
+                                       const gptimer_alarm_event_data_t* edata,
+                                       void* user_ctx) {
+  BusEsp* inst = reinterpret_cast<BusEsp*>(user_ctx);
   return inst ? inst->onSynGenTimer() : false;
 }
 #else
-bool IRAM_ATTR BusFreeRtos::s_onSynGenTimer(void* arg) {
-  BusFreeRtos* inst = reinterpret_cast<BusFreeRtos*>(arg);
+bool IRAM_ATTR BusEsp::s_onSynGenTimer(void* arg) {
+  BusEsp* inst = reinterpret_cast<BusEsp*>(arg);
   return inst ? inst->onSynGenTimer() : false;
 }
 #endif
 
-bool IRAM_ATTR BusFreeRtos::onSynGenTimer() {
+bool IRAM_ATTR BusEsp::onSynGenTimer() {
   int64_t now = esp_timer_get_time();
 
   portENTER_CRITICAL_ISR(&timer_mux_);
