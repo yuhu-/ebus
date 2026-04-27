@@ -80,7 +80,7 @@ class BusMonitor {
   TimingStats syn_postpone;
   RollingStats utilization;
 
-  detail::CircularBuffer<float> utilization_history_;
+  CircularBuffer<float> utilization_history_;
 
   // State-machine execution timings
   std::array<TimingStats, FsmLimits::num_handler_states> handler_timing = {};

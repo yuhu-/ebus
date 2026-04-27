@@ -52,7 +52,7 @@ inline bool waitCondition(Predicate&& pred, int timeout_ms = 1000) {
   while (std::chrono::steady_clock::now() - start <
          std::chrono::milliseconds(timeout_ms)) {
     if (pred()) return true;
-    sleepMilli(5);
+    platform::sleepMilli(5);
   }
   return pred();
 }
@@ -136,7 +136,7 @@ class MockClient : public detail::AbstractClient {
  */
 class BusSimulator {
  public:
-  explicit BusSimulator(Bus& bus) : bus_(bus) {
+  explicit BusSimulator(platform::Bus& bus) : bus_(bus) {
     bus_.addWriteListener([this](uint8_t b) { this->onWrite(b); });
   }
 
@@ -173,7 +173,7 @@ class BusSimulator {
   }
 
   void clear() {
-    std::vector<std::unique_ptr<ServiceThread>> workers_to_join;
+    std::vector<std::unique_ptr<platform::ServiceThread>> workers_to_join;
     {
       std::lock_guard<std::mutex> lock(mtx_);
       responses_.clear();
@@ -186,11 +186,11 @@ class BusSimulator {
   }
 
  private:
-  Bus& bus_;
+  platform::Bus& bus_;
   std::mutex mtx_;
   std::vector<uint8_t> write_history_;
   std::vector<AutoResponse> responses_;
-  std::vector<std::unique_ptr<ServiceThread>> response_workers_;
+  std::vector<std::unique_ptr<platform::ServiceThread>> response_workers_;
 
   void onWrite(uint8_t b) {
     std::lock_guard<std::mutex> lock(mtx_);
@@ -208,9 +208,9 @@ class BusSimulator {
           uint32_t delay = resp.delay_ms;
           std::vector<uint8_t> data = resp.response_data;  // NOLINT
 
-          auto worker = std::make_unique<ServiceThread>(
+          auto worker = std::make_unique<platform::ServiceThread>(
               "busSimResp", [this, delay, data]() {
-                sleepMilli(delay);
+                platform::sleepMilli(delay);
                 for (uint8_t byte : data) bus_.writeByte(byte);
               });
           worker->start();

@@ -40,7 +40,7 @@ TEST_CASE("Scheduler: Simulation", "[app][scheduler]") {
   runtime.bus.syn.enabled = true;
 
   BusMonitor monitor;
-  Bus bus(config, runtime, &request, &monitor);
+  platform::Bus bus(config, runtime, &request, &monitor);
   Handler handler(ebus::RuntimeConfig{}.address, &bus, &request, &monitor);
   BusHandler busHandler(&request, &handler, bus.getQueue());
 
@@ -105,7 +105,7 @@ TEST_CASE("Scheduler: Priority Preemption", "[app][scheduler][priority]") {
   runtime.lock_counter = 0;  // Send immediately
 
   BusMonitor monitor;
-  Bus bus(config, runtime, &request, &monitor);
+  platform::Bus bus(config, runtime, &request, &monitor);
   Handler handler(runtime.address, &bus, &request, &monitor);
   BusHandler busHandler(&request, &handler, bus.getQueue());
 

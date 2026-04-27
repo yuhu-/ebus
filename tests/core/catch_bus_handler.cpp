@@ -29,7 +29,7 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
 
     Request request;
     BusMonitor monitor;
-    Bus bus(config, runtime, &request, &monitor);
+    platform::Bus bus(config, runtime, &request, &monitor);
     Handler handler(runtime.address, &bus, &request, &monitor);
     BusHandler busHandler(&request, &handler, bus.getQueue());
 
@@ -84,7 +84,7 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
         auto seq = ebus::toVector(tc.read_string);
         for (uint8_t b : seq) {
           bus.writeByte(b);
-          sleepMicro(100);
+          platform::sleepMicro(100);
         }
       }
 
@@ -92,7 +92,7 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
       for (int i = 0; i < 500 && (telegram_count.load() < tc.expect_tel ||
                                   error_count.load() < tc.expect_err);
            ++i) {
-        sleepMilli(10);
+        platform::sleepMilli(10);
       }
 
       REQUIRE(telegram_count.load() == tc.expect_tel);
@@ -109,7 +109,7 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
 
     Request request;
     BusMonitor monitor;
-    Bus bus(config, runtime, &request, &monitor);
+    platform::Bus bus(config, runtime, &request, &monitor);
     Handler handler(runtime.address, &bus, &request, &monitor);
     BusHandler busHandler(&request, &handler, bus.getQueue());
 
@@ -129,20 +129,21 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
     // Pump SYNs until arbitration starts.
     for (int i = 0; i < 4; ++i) {
       bus.writeByte(ebus::Symbols::syn);
-      sleepMilli(50);
+      platform::sleepMilli(50);
       if (handler.getState() != ebus::HandlerState::passive_receive_master)
         break;
     }
 
     // wait for completion
-    for (int i = 0; i < 50 && telegram_count.load() == 0; ++i) sleepMilli(10);
+    for (int i = 0; i < 50 && telegram_count.load() == 0; ++i)
+      platform::sleepMilli(10);
 
     REQUIRE(telegram_count.load() == 1);
 
     // after release bus a SYN was generated: check lock counter behavior
     // Wait for the background BusHandler to process the trailing SYN
     for (int i = 0; i < 50 && request.getLockCounter() != 2; ++i) {
-      sleepMilli(10);
+      platform::sleepMilli(10);
     }
 
     REQUIRE(request.getLockCounter() == 2);
@@ -152,16 +153,17 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
     handler.sendActiveMessage(msg);
 
     bus.writeByte(ebus::Symbols::syn);
-    sleepMilli(20);
+    platform::sleepMilli(20);
     REQUIRE(request.getLockCounter() == 1);
 
     bus.writeByte(ebus::Symbols::syn);
-    sleepMilli(20);
+    platform::sleepMilli(20);
     REQUIRE(request.getLockCounter() == 0);
 
     bus.writeByte(ebus::Symbols::syn);
     // wait for completion
-    for (int i = 0; i < 50 && telegram_count.load() == 0; ++i) sleepMilli(10);
+    for (int i = 0; i < 50 && telegram_count.load() == 0; ++i)
+      platform::sleepMilli(10);
 
     REQUIRE(telegram_count.load() == 1);
 
@@ -178,7 +180,7 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
     Request request;
     request.setLockCounter(0);
     BusMonitor monitor;
-    Bus bus(config, runtime, &request, &monitor);
+    platform::Bus bus(config, runtime, &request, &monitor);
     Handler handler(runtime.address, &bus, &request, &monitor);
     BusHandler busHandler(&request, &handler, bus.getQueue());
 
@@ -196,7 +198,7 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
       callbackFired.store(true);
       for (uint8_t b : clientData) {
         bus.writeByte(b);
-        sleepMicro(500);
+        platform::sleepMicro(500);
       }
     });
 
@@ -207,7 +209,7 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
       if (!callbackFired.load() && !request.busRequestPending()) {
         request.requestBus(0x33, true);
       }
-      sleepMilli(10);
+      platform::sleepMilli(10);
     }
 
     REQUIRE(callbackFired.load() == true);

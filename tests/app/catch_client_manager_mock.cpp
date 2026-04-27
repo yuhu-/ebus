@@ -29,7 +29,7 @@ TEST_CASE("ClientManager: Mock Orchestration", "[app][clientmanager][mock]") {
   RuntimeConfig runtime = {.address = 0x01};
 
   BusMonitor monitor;
-  Bus bus(config, runtime, &req, &monitor);
+  platform::Bus bus(config, runtime, &req, &monitor);
   Handler handler(runtime.address, &bus, &req, &monitor);
   BusHandler busHandler(&req, &handler, bus.getQueue());
   ClientManager manager(&bus, &busHandler, &req, &monitor);

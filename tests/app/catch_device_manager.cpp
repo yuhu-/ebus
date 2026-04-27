@@ -24,7 +24,7 @@ TEST_CASE("DeviceManager: Address Tracking", "[app][devicemanager]") {
   Request request;
   BusMonitor monitor;
   DeviceManager dm(&monitor);
-  Bus bus(config, runtime, &request, &monitor);
+  platform::Bus bus(config, runtime, &request, &monitor);
   Handler handler(runtime.address, &bus, &request, &monitor);
 
   dm.setOwnAddress(runtime.address);
@@ -46,7 +46,7 @@ TEST_CASE("DeviceManager: Device Update", "[app][devicemanager]") {
   Request request;
   BusMonitor monitor;
   DeviceManager dm(&monitor);
-  Bus bus(config, runtime, &request, &monitor);
+  platform::Bus bus(config, runtime, &request, &monitor);
   Handler handler(runtime.address, &bus, &request, &monitor);
 
   dm.setOwnAddress(runtime.address);
@@ -72,7 +72,7 @@ TEST_CASE("DeviceManager: Create Scan Commands", "[app][devicemanager]") {
   Request request;
   BusMonitor monitor;
   DeviceManager dm(&monitor);
-  Bus bus(config, runtime, &request, &monitor);
+  platform::Bus bus(config, runtime, &request, &monitor);
   Handler handler(runtime.address, &bus, &request, &monitor);
 
   std::vector<std::string> inputs = {"08", "15", "50"};

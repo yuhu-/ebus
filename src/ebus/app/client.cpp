@@ -7,14 +7,7 @@
 
 #include <ebus/utils.hpp>
 
-#if defined(ESP32)
-#include <lwip/sockets.h>
-#elif defined(POSIX)
-#include <errno.h>
-#include <fcntl.h>
-#include <sys/socket.h>
-#include <unistd.h>
-#endif
+#include "platform/socket.hpp"
 
 namespace ebus::detail {
 
@@ -26,8 +19,7 @@ AbstractClient::AbstractClient(int fd, Request* request, bool write_capable,
       write_capable_(write_capable) {
   if (fd_ >= 0) {
     // All network clients must be non-blocking for the Manager's poll loop
-    int flags = fcntl(fd_, F_GETFL, 0);
-    fcntl(fd_, F_SETFL, flags | O_NONBLOCK);
+    platform::setNonBlocking(fd_);
   }
 }
 
@@ -35,16 +27,7 @@ AbstractClient::~AbstractClient() { stop(); }
 
 void AbstractClient::stop() {
   if (fd_ >= 0) {
-    int type;
-    socklen_t optlen = sizeof(type);
-    if (::getsockopt(fd_, SOL_SOCKET, SO_TYPE, &type, &optlen) == 0) {
-      ::shutdown(fd_, SHUT_RDWR);
-    }
-#if defined(ESP32)
-    lwip_close(fd_);
-#else
-    ::close(fd_);
-#endif
+    platform::close(fd_);
     fd_ = -1;
   }
 }
@@ -61,13 +44,14 @@ bool AbstractClient::flushLocked() {
   size_t total_sent = 0;
   const size_t to_send = outbound_buffer_.size();
   while (total_sent < to_send) {
-    ssize_t n = ::send(fd_, outbound_buffer_.data() + total_sent,
-                       to_send - total_sent, MSG_DONTWAIT);
+    ssize_t n =
+        platform::send(fd_, outbound_buffer_.data() + total_sent,
+                       to_send - total_sent, platform::Flags::dont_wait);
     if (n > 0) {
       total_sent += static_cast<size_t>(n);
     } else if (n < 0) {
-      if (errno == EINTR) continue;
-      if (errno == EAGAIN || errno == EWOULDBLOCK) break;
+      if (platform::isInterrupted()) continue;
+      if (platform::isWouldBlock()) break;
       stop();
       return false;
     } else {
@@ -118,11 +102,11 @@ RegularClient::RegularClient(int fd, Request* request, size_t max_buffer)
 
 bool RegularClient::wantsToSend() {
   uint8_t dummy;
-  return ::recv(fd_, &dummy, 1, MSG_PEEK | MSG_DONTWAIT) > 0;
+  return platform::recv(fd_, &dummy, 1, platform::Flags::peek) > 0;
 }
 
 bool RegularClient::recvFromClient(uint8_t& out) {
-  return ::recv(fd_, &out, 1, MSG_DONTWAIT) == 1;
+  return platform::recv(fd_, &out, 1, platform::Flags::dont_wait) == 1;
 }
 
 void RegularClient::sendToClient(ByteView data) {
@@ -178,14 +162,15 @@ EnhancedClient::EnhancedClient(int fd, Request* request, size_t max_buffer)
 bool EnhancedClient::wantsToSend() {
   if (inbound_len_ > 0) return true;
   uint8_t dummy;
-  return ::recv(fd_, &dummy, 1, MSG_PEEK | MSG_DONTWAIT) > 0;
+  return platform::recv(fd_, &dummy, 1, platform::Flags::peek) > 0;
 }
 
 bool EnhancedClient::recvFromClient(uint8_t& out) {
   // If we have an incomplete command in the buffer, try to finish it
   if (inbound_len_ == 0) {
     uint8_t b;
-    if (::recv(fd_, &b, 1, MSG_DONTWAIT) != 1) return false;
+    if (platform::recv(fd_, &b, 1, platform::Flags::dont_wait) != 1)
+      return false;
     inbound_buf_[inbound_len_++] = b;
   }
 
@@ -201,7 +186,8 @@ bool EnhancedClient::recvFromClient(uint8_t& out) {
   // Enhanced sequences are always 2 bytes
   if (inbound_len_ < 2) {
     uint8_t b2;
-    if (::recv(fd_, &b2, 1, MSG_DONTWAIT) != 1) return false;
+    if (platform::recv(fd_, &b2, 1, platform::Flags::dont_wait) != 1)
+      return false;
     inbound_buf_[inbound_len_++] = b2;
   }
 

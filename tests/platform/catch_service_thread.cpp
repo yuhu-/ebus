@@ -18,7 +18,7 @@ TEST_CASE("ServiceThread: Basic execution and join",
   std::atomic<int> counter{0};
   bool threadStarted = false;
 
-  ServiceThread worker(
+  platform::ServiceThread worker(
       "testThread",
       [&]() {
         threadStarted = true;
@@ -39,10 +39,10 @@ TEST_CASE("ServiceThread: Destructor performs implicit join",
   bool threadStarted = false;
 
   {
-    ServiceThread worker(
+    platform::ServiceThread worker(
         "testDestructor",
         [&]() {
-          sleepMilli(50);
+          platform::sleepMilli(50);
           threadStarted = true;
           counter++;
         },

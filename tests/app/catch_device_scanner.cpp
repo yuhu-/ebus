@@ -100,7 +100,7 @@ TEST_CASE("DeviceScanner: Timing & Vendor Scans", "[app][devicescanner]") {
 
   REQUIRE(scanner.nextCommand().empty());
 
-  sleepMilli(1100);
+  platform::sleepMilli(1100);
 
   auto cmd1 = scanner.nextCommand();
   REQUIRE(!cmd1.empty());

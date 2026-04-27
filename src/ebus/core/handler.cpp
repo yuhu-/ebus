@@ -14,7 +14,7 @@
 
 namespace ebus::detail {
 
-Handler::Handler(uint8_t source_address, Bus* bus, detail::Request* request,
+Handler::Handler(uint8_t source_address, platform::Bus* bus, Request* request,
                  BusMonitor* monitor)
     : bus_(bus), request_(request), monitor_(monitor) {
   setSourceAddress(source_address);

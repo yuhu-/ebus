@@ -31,7 +31,7 @@ class BusMonitor;
  */
 class ClientManager {
  public:
-  ClientManager(Bus* bus, BusHandler* bus_handler, Request* request,
+  ClientManager(platform::Bus* bus, BusHandler* bus_handler, Request* request,
                 BusMonitor* monitor);
   ~ClientManager();
 
@@ -51,12 +51,12 @@ class ClientManager {
   void wake();
 
  private:
-  Bus* bus_;
+  platform::Bus* bus_;
   BusHandler* bus_handler_;
   Request* request_;
   BusMonitor* monitor_;
 
-  detail::Queue<BusEventContext> bus_byte_queue_;
+  platform::Queue<BusEventContext> bus_byte_queue_;
   std::atomic<bool> running_{false};
 
   enum class SessionState {
@@ -69,16 +69,16 @@ class ClientManager {
   SessionState session_state_ = SessionState::idle;
 
   mutable std::mutex mutex_;
-  std::vector<std::shared_ptr<detail::AbstractClient>> clients_;
-  std::vector<std::shared_ptr<detail::AbstractClient>> clients_cache_;
+  std::vector<std::shared_ptr<AbstractClient>> clients_;
+  std::vector<std::shared_ptr<AbstractClient>> clients_cache_;
 
   // Versioning to avoid copying clients_ every loop iteration unless changed.
   std::atomic<uint64_t> clients_version_{0};
   uint64_t last_snapshot_version_{0};
 
-  std::unique_ptr<detail::ServiceThread> worker_;
+  std::unique_ptr<platform::ServiceThread> worker_;
 
-  std::shared_ptr<detail::AbstractClient> current_active_sender_ = nullptr;
+  std::shared_ptr<AbstractClient> current_active_sender_ = nullptr;
   std::atomic<bool> bus_requested_{false};
 
   // Wake primitives to reduce busy-waiting

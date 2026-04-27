@@ -8,7 +8,7 @@
 
 #include <algorithm>
 
-namespace ebus::detail {
+namespace ebus::detail::platform {
 
 // Initialize static members
 std::mutex VirtualLine::registry_mutex_;
@@ -37,6 +37,6 @@ bool VirtualLine::read(uint8_t& byte, int timeout_ms) {
   return rx_queue_.pop(byte, timeout_ms);
 }
 
-}  // namespace ebus::detail
+}  // namespace ebus::detail::platform
 
 #endif  // POSIX

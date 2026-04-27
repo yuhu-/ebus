@@ -34,9 +34,9 @@ class BusHandler {
  public:
   using ByteListener = std::function<void(const BusEventContext& ctx)>;
 
-  BusHandler(detail::Request* request, detail::Handler* handler,
-             detail::Queue<BusEvent>* queue,
-             size_t max_listeners = detail::BusLimits::max_listeners)
+  BusHandler(Request* request, Handler* handler,
+             platform::Queue<BusEvent>* queue,
+             size_t max_listeners = BusLimits::max_listeners)
       : request_(request), handler_(handler), queue_(queue), running_(false) {
     listeners_cache_.reserve(max_listeners);
   }
@@ -46,7 +46,7 @@ class BusHandler {
   void start() {
     if (running_) return;
     running_ = true;
-    worker_ = std::make_unique<detail::ServiceThread>(
+    worker_ = std::make_unique<platform::ServiceThread>(
         "ebusBusQueueRunner", [this] { this->run(); },
         OrchestrationLimits::stack_size, OrchestrationLimits::priority_low);
     worker_->start();
@@ -79,14 +79,14 @@ class BusHandler {
   }
 
  private:
-  detail::Request* request_;
-  detail::Handler* handler_;
-  detail::Queue<BusEvent>* queue_;
+  Request* request_;
+  Handler* handler_;
+  platform::Queue<BusEvent>* queue_;
   std::atomic<bool> running_;
   std::chrono::milliseconds watchdog_timeout_ms_{
       ebus::RuntimeConfig{}.network.watchdog_timeout_ms};
 
-  std::unique_ptr<detail::ServiceThread> worker_;
+  std::unique_ptr<platform::ServiceThread> worker_;
 
   uint32_t next_listener_id_ = 0;
   mutable std::mutex mutex_;

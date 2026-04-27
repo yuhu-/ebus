@@ -24,7 +24,7 @@ Scheduler::~Scheduler() { stop(); }
 void Scheduler::start() {
   bool expected = true;
   if (stop_flag_.compare_exchange_strong(expected, false)) {
-    worker_ = std::make_unique<ServiceThread>(
+    worker_ = std::make_unique<platform::ServiceThread>(
         "ebusScheduler", [this] { run(); }, OrchestrationLimits::stack_size,
         OrchestrationLimits::priority_high, 1);
     worker_->start();

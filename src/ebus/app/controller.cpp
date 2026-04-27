@@ -6,6 +6,7 @@
 #include <deque>
 #include <ebus/controller.hpp>
 #include <ebus/utils.hpp>
+#include <mutex>
 
 #include "app/client_manager.hpp"
 #include "app/device_manager.hpp"
@@ -32,7 +33,7 @@ struct Impl {
   ebus::ErrorCallback user_error_callback_;
   std::unique_ptr<detail::Request> request_;
   std::unique_ptr<detail::BusMonitor> bus_monitor_;
-  std::unique_ptr<detail::Bus> bus_;
+  std::unique_ptr<detail::platform::Bus> bus_;
   std::unique_ptr<detail::BusHandler> bus_handler_;
   std::unique_ptr<detail::Handler> handler_;
   std::unique_ptr<detail::DeviceManager> device_manager_;
@@ -40,7 +41,7 @@ struct Impl {
   std::unique_ptr<detail::PollManager> poll_manager_;
   std::unique_ptr<detail::Scheduler> scheduler_;
   std::unique_ptr<detail::ClientManager> client_manager_;
-  std::unique_ptr<detail::ServiceThread> worker_;
+  std::unique_ptr<detail::platform::ServiceThread> worker_;
 };
 
 Controller::Controller() : impl_(new Impl()) {}
@@ -68,7 +69,7 @@ void Controller::start() {
   impl_->bus_handler_->start();
   impl_->scheduler_->start();
   impl_->client_manager_->start();
-  impl_->worker_ = std::make_unique<detail::ServiceThread>(
+  impl_->worker_ = std::make_unique<detail::platform::ServiceThread>(
       "ebusController", [this] { run(); },
       detail::OrchestrationLimits::stack_size,
       detail::OrchestrationLimits::priority_low, 0);
@@ -299,9 +300,9 @@ void Controller::constructMembers() {
   impl_->request_ =
       std::make_unique<detail::Request>(impl_->bus_monitor_.get());
   impl_->request_->setLockCounter(config_.runtime.lock_counter);
-  impl_->bus_ = std::make_unique<detail::Bus>(config_.bus, config_.runtime,
-                                              impl_->request_.get(),
-                                              impl_->bus_monitor_.get());
+  impl_->bus_ = std::make_unique<detail::platform::Bus>(
+      config_.bus, config_.runtime, impl_->request_.get(),
+      impl_->bus_monitor_.get());
   impl_->handler_ = std::make_unique<detail::Handler>(
       config_.runtime.address, impl_->bus_.get(), impl_->request_.get(),
       impl_->bus_monitor_.get());

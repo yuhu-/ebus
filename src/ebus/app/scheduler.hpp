@@ -112,7 +112,7 @@ class Scheduler {
     const char* error = nullptr;
   };
 
-  detail::Handler* handler_ = nullptr;
+  Handler* handler_ = nullptr;
 
   // Queue management
   std::vector<Item> item_queue_;
@@ -120,13 +120,13 @@ class Scheduler {
   std::condition_variable data_ready_cv_;
 
   // Worker thread
-  std::unique_ptr<detail::ServiceThread> worker_;
+  std::unique_ptr<platform::ServiceThread> worker_;
   std::atomic<bool> stop_flag_;
   std::atomic<uint32_t> next_id_;
 
   // Active transfer state
   std::atomic<uint32_t> current_attempt_id_{0};
-  detail::Queue<Event> event_queue_{SchedulerLimits::queue_reserve};
+  platform::Queue<Event> event_queue_{SchedulerLimits::queue_reserve};
 
   // Configuration
   int max_send_attempts_ = ebus::RuntimeConfig{}.scheduler.max_send_attempts;

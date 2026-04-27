@@ -65,7 +65,7 @@ struct RuntimeConfig {
 /**
  * Platform-dependent bus configuration.
  */
-#if defined(ESP32)
+#if defined(ESP_PLATFORM)
 struct BusConfig {
   uint8_t uart_port;
   uint8_t rx_pin;

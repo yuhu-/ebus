@@ -40,7 +40,7 @@ TEST_CASE("ClientManager Orchestration (Regular + ReadOnly)") {
   ebus::RuntimeConfig runtime = {.address = 0x01};
 
   BusMonitor monitor;
-  Bus bus(config, runtime, &req, &monitor);
+  platform::Bus bus(config, runtime, &req, &monitor);
   Handler handler(runtime.address, &bus, &req, &monitor);
   BusHandler busHandler(&req, &handler, bus.getQueue());
   ClientManager manager(&bus, &busHandler, &req, &monitor);
@@ -118,7 +118,7 @@ TEST_CASE("ClientManager Enhanced Active Sending") {
   ebus::RuntimeConfig runtime = {.address = 0x01};
 
   BusMonitor monitor;
-  Bus bus(config, runtime, &req, &monitor);
+  platform::Bus bus(config, runtime, &req, &monitor);
   Handler handler(runtime.address, &bus, &req, &monitor);
   BusHandler busHandler(&req, &handler, bus.getQueue());
   ClientManager manager(&bus, &busHandler, &req, &monitor);
@@ -192,7 +192,7 @@ TEST_CASE("ClientManager Watchdog Timeout") {
   ebus::RuntimeConfig runtime = {.address = 0xff};
 
   BusMonitor monitor;
-  Bus bus(config, runtime, &req, &monitor);
+  platform::Bus bus(config, runtime, &req, &monitor);
   BusHandler busHandler(&req, nullptr, bus.getQueue());
   ClientManager manager(&bus, &busHandler, &req, &monitor);
 
@@ -208,11 +208,11 @@ TEST_CASE("ClientManager Watchdog Timeout") {
 
   int timeout = 100;
   while (timeout-- > 0 && !req.busRequestPending()) {
-    sleepMilli(1);
+    platform::sleepMilli(1);
   }
   CHECK_TEST("Client is now active", req.busRequestPending());
 
-  sleepMilli(11000);
+  platform::sleepMilli(11000);
 
   CHECK_TEST("Watchdog cleared active client", !req.busRequestPending());
 
@@ -227,7 +227,7 @@ TEST_CASE("Client Removal") {
   ebus::RuntimeConfig runtime = {.address = 0xff};
 
   BusMonitor monitor;
-  Bus bus(config, runtime, &req, &monitor);
+  platform::Bus bus(config, runtime, &req, &monitor);
   BusHandler busHandler(&req, nullptr, bus.getQueue());
   ClientManager manager(&bus, &busHandler, &req, &monitor);
 
@@ -239,7 +239,7 @@ TEST_CASE("Client Removal") {
 
   bus.writeByte(0xaa);
   manager.start();
-  sleepMilli(10);
+  platform::sleepMilli(10);
 
   // Reaching here indicates manager handled closed socket without hang/crash
   CHECK_TEST("Manager handled closed socket", true);

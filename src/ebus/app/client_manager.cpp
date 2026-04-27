@@ -11,7 +11,7 @@
 
 #include "core/bus_monitor.hpp"
 
-#if defined(ESP32)
+#if defined(ESP_PLATFORM)
 #include <lwip/sockets.h>
 #elif defined(POSIX)
 #include <poll.h>
@@ -20,7 +20,7 @@
 
 namespace ebus::detail {
 
-ClientManager::ClientManager(Bus* bus, BusHandler* bus_handler,
+ClientManager::ClientManager(platform::Bus* bus, BusHandler* bus_handler,
                              Request* request, BusMonitor* monitor)
     : bus_(bus),
       bus_handler_(bus_handler),
@@ -31,7 +31,7 @@ ClientManager::ClientManager(Bus* bus, BusHandler* bus_handler,
       session_state_(SessionState::idle),
       clients_version_(0),
       last_snapshot_version_(0),
-      active_timeout_(std::chrono::milliseconds(
+      active_timeout_(::std::chrono::milliseconds(
           ebus::RuntimeConfig{}.network.client_timeout_ms)),
       outbound_buffer_size_(
           ebus::RuntimeConfig{}.network.outbound_buffer_size) {
@@ -62,7 +62,7 @@ ClientManager::~ClientManager() {
 void ClientManager::start() {
   if (running_.load(std::memory_order_acquire)) return;
   running_.store(true, std::memory_order_release);
-  worker_ = std::make_unique<detail::ServiceThread>(
+  worker_ = std::make_unique<platform::ServiceThread>(
       "ebusClientManager", [this] { run(); }, OrchestrationLimits::stack_size,
       OrchestrationLimits::priority_med, 0);
   worker_->start();
@@ -84,7 +84,7 @@ void ClientManager::setOutboundBufferSize(size_t size) {
 }
 
 void ClientManager::addClient(int fd, ClientType type) {
-  auto client = detail::createClient(fd, request_, type, outbound_buffer_size_);
+  auto client = createClient(fd, request_, type, outbound_buffer_size_);
   if (!client) return;
   {
     std::lock_guard<std::mutex> lock(mutex_);
@@ -94,7 +94,7 @@ void ClientManager::addClient(int fd, ClientType type) {
   notifyWake();
 }
 
-void ClientManager::addClient(std::shared_ptr<detail::AbstractClient> client) {
+void ClientManager::addClient(std::shared_ptr<AbstractClient> client) {
   if (!client) return;
   {
     std::lock_guard<std::mutex> lock(mutex_);
@@ -109,7 +109,7 @@ void ClientManager::removeClient(int fd) {
     std::lock_guard<std::mutex> lock(mutex_);
     clients_.erase(
         std::remove_if(clients_.begin(), clients_.end(),
-                       [fd](const std::shared_ptr<detail::AbstractClient>& c) {
+                       [fd](const std::shared_ptr<AbstractClient>& c) {
                          return c->getFd() == fd;
                        }),
         clients_.end());
@@ -181,7 +181,7 @@ void ClientManager::run() {
 
     // 3. Outbound logic: operate on a local copy of active sender to avoid
     // holding lock
-    std::shared_ptr<detail::AbstractClient> active_sender;
+    std::shared_ptr<AbstractClient> active_sender;
     {
       std::lock_guard<std::mutex> lock(mutex_);
       active_sender = current_active_sender_;
@@ -192,7 +192,7 @@ void ClientManager::run() {
       auto elapsed = now - last_state_change;
       auto timeout =
           (session_state_ == SessionState::transmit)
-              ? std::chrono::milliseconds(detail::NetworkLimits::transmit_timeout_ms)
+              ? std::chrono::milliseconds(NetworkLimits::transmit_timeout_ms)
               : active_timeout_;
       if (elapsed > timeout) {
         // stop active session safely
@@ -234,7 +234,7 @@ void ClientManager::run() {
 
     // 4. Inbound logic: process bus byte(s)
     auto process_byte = [&](const BusEventContext& bctx) {
-      std::shared_ptr<detail::AbstractClient> current_sender;
+      std::shared_ptr<AbstractClient> current_sender;
       SessionState s;
       {
         std::lock_guard<std::mutex> lock(mutex_);
@@ -246,8 +246,7 @@ void ClientManager::run() {
         // We forward all bytes to the current active sender so it can sniff
         // while waiting for or performing arbitration.
         if (s != SessionState::idle) {
-          if (current_sender->onBusByte(bctx) ==
-              detail::BridgeAction::stop_session) {
+          if (current_sender->onBusByte(bctx) == BridgeAction::stop_session) {
             stopActiveSession();
           } else if (bus_requested_.load(std::memory_order_acquire) ||
                      s == SessionState::response) {
@@ -286,8 +285,7 @@ void ClientManager::run() {
     if (!activity) {
       std::unique_lock<std::mutex> lk(wake_mutex_);
       wake_cv_.wait_for(
-          lk, std::chrono::milliseconds(detail::NetworkLimits::wake_interval_ms),
-          [&] {
+          lk, std::chrono::milliseconds(NetworkLimits::wake_interval_ms), [&] {
             return wake_flag_.load(std::memory_order_acquire) == true ||
                    !running_.load(std::memory_order_acquire);
           });

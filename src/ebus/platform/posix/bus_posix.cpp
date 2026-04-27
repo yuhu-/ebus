@@ -14,7 +14,7 @@
 #include "core/request.hpp"
 #include "platform/system.hpp"
 
-namespace ebus::detail {
+namespace ebus::detail::platform {
 
 BusPosix::BusPosix(const BusConfig& config, const ebus::RuntimeConfig& runtime,
                    Request* request, BusMonitor* monitor)
@@ -25,7 +25,8 @@ BusPosix::BusPosix(const BusConfig& config, const ebus::RuntimeConfig& runtime,
       monitor_(monitor),
       fd_(-1),
       open_(false),
-      byte_queue_(std::make_unique<Queue<BusEvent>>(BusLimits::queue_size)),
+      byte_queue_(
+          std::make_unique<Queue<detail::BusEvent>>(BusLimits::queue_size)),
       worker_(),
       running_(false),  // Initialize running_ before syn_worker_
       syn_worker_() {}  // Initialize syn_worker_ after running_
@@ -64,7 +65,8 @@ void BusPosix::start() {
   running_.store(true);
   worker_ = std::make_unique<ServiceThread>(
       "ebusBusReader", [this] { readerThread(); },
-      OrchestrationLimits::stack_size, OrchestrationLimits::priority_high);
+      detail::OrchestrationLimits::stack_size,
+      detail::OrchestrationLimits::priority_high);
   worker_->start();
 
   // start SYN generator if enabled in config
@@ -83,8 +85,9 @@ void BusPosix::start() {
     syn_active_ = false;
     syn_running_.store(true);
     syn_worker_ = std::make_unique<ServiceThread>(
-        "ebusSynGen", [this] { synThread(); }, OrchestrationLimits::stack_size,
-        OrchestrationLimits::priority_med);
+        "ebusSynGen", [this] { synThread(); },
+        detail::OrchestrationLimits::stack_size,
+        detail::OrchestrationLimits::priority_med);
     syn_worker_->start();
   }
 }
@@ -211,8 +214,9 @@ void BusPosix::setRuntimeConfig(const RuntimeConfig& runtime) {
   if (should_start) {
     if (syn_worker_) syn_worker_->join();  // Join existing thread if any
     syn_worker_ = std::make_unique<ServiceThread>(  // Create new ServiceThread
-        "ebusSynGen", [this] { synThread(); }, OrchestrationLimits::stack_size,
-        OrchestrationLimits::priority_med);
+        "ebusSynGen", [this] { synThread(); },
+        detail::OrchestrationLimits::stack_size,
+        detail::OrchestrationLimits::priority_med);
     syn_worker_->start();  // Start the new ServiceThread
   } else if (should_stop) {
     if (syn_worker_) syn_worker_->join();  // Join existing thread if any
@@ -249,7 +253,8 @@ void BusPosix::readerThread() {
 
     if (simulate_) {
       // Use the memory-based simulation queue
-      if (virtual_line_->read(byte, BusLimits::Posix::virtual_read_timeout_ms))
+      if (virtual_line_->read(
+              byte, BusLimits::platform::Posix::virtual_read_timeout_ms))
         n = 1;
       else
         continue;  // timeout, check running_ flag again
@@ -266,7 +271,7 @@ void BusPosix::readerThread() {
       // Notify SYN generator that a symbol was recognised (end of char)
       resetSynTimer(byte);
 
-      BusEvent event;
+      detail::BusEvent event;
       event.byte = byte;
       event.bus_request =
           bus_request_flag_.exchange(false, std::memory_order_acq_rel);
@@ -284,7 +289,7 @@ void BusPosix::readerThread() {
 
       // Hit the 4300-4456us window (approx 200us after SYN reception)
       if (byte == Symbols::syn && request_->busRequestPending()) {
-        sleepMicro(BusLimits::Posix::request_delay_us);
+        sleepMicro(BusLimits::platform::Posix::request_delay_us);
         writeByte(request_->busRequestAddress());
         bus_request_flag_.store(true, std::memory_order_release);
       }
@@ -370,6 +375,6 @@ void BusPosix::synThread() {
   }
 }
 
-}  // namespace ebus::detail
+}  // namespace ebus::detail::platform
 
 #endif  // POSIX

@@ -36,8 +36,8 @@ using BusRequestLostCallback = std::function<void()>;
  */
 class Handler {
  public:
-  Handler(uint8_t source_address, Bus* bus, detail::Request* request,
-          detail::BusMonitor* monitor);
+  Handler(uint8_t source_address, platform::Bus* bus, Request* request,
+          BusMonitor* monitor);
 
   void setSourceAddress(uint8_t source_address);
   uint8_t getSourceAddress() const;
@@ -61,7 +61,7 @@ class Handler {
   void run(const BusEventContext& ctx);
 
  private:
-  Bus* bus_ = nullptr;
+  platform::Bus* bus_ = nullptr;
   Request* request_ = nullptr;
   BusMonitor* monitor_ = nullptr;
   RequestResult last_result_ = RequestResult::observe_syn;

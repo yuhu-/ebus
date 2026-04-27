@@ -13,7 +13,7 @@
 
 #include "platform/queue.hpp"
 
-namespace ebus::detail {
+namespace ebus::detail::platform {
 
 /**
  * VirtualLine simulates the physical eBUS wire.
@@ -29,8 +29,9 @@ class VirtualLine {
   void write(uint8_t byte);
 
   // Reads a byte from this specific instance's receive buffer
-  bool read(uint8_t& byte,
-            int timeout_ms = BusLimits::Posix::virtual_read_timeout_ms);
+  bool read(
+      uint8_t& byte,
+      int timeout_ms = BusLimits::platform::Posix::virtual_read_timeout_ms);
 
  private:
   // Internal queue for bytes arriving from the "wire"
@@ -41,6 +42,6 @@ class VirtualLine {
   static std::vector<VirtualLine*> instances_;
 };
 
-}  // namespace ebus::detail
+}  // namespace ebus::detail::platform
 
 #endif

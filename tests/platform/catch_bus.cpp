@@ -37,7 +37,7 @@ TEST_CASE("Bus: Basic Communication", "[platform][bus]") {
 
   Request req;
   BusMonitor monitor;
-  Bus bus(config, runtime, &req, &monitor);
+  platform::Bus bus(config, runtime, &req, &monitor);
 
   bus.start();
   force_request(req, 0x03);
@@ -60,7 +60,7 @@ TEST_CASE("Bus: Basic Communication", "[platform][bus]") {
   bool prematureSyn = false;
   for (int i = 0; i < 5; ++i) {
     bus.writeByte(0xff);
-    sleepMilli(20);
+    platform::sleepMilli(20);
     BusEvent tempEv;
     while (queue->tryPop(tempEv)) {
       if (tempEv.byte == ebus::Symbols::syn) prematureSyn = true;
@@ -79,7 +79,7 @@ TEST_CASE("Bus: SYN Timing", "[platform][bus]") {
 
   Request req;
   BusMonitor monitor;
-  Bus bus(config, runtime, &req, &monitor);
+  platform::Bus bus(config, runtime, &req, &monitor);
   auto* queue = bus.getQueue();
 
   auto start = std::chrono::steady_clock::now();
@@ -127,7 +127,7 @@ TEST_CASE("Bus: Raw Reception (Broadcast Simulation)", "[platform][bus]") {
   ebus::RuntimeConfig runtime = {.address = 0x01};
   Request req;
   BusMonitor monitor;
-  Bus bus(config, runtime, &req, &monitor);
+  platform::Bus bus(config, runtime, &req, &monitor);
   auto* queue = bus.getQueue();
 
   bus.start();
@@ -136,7 +136,7 @@ TEST_CASE("Bus: Raw Reception (Broadcast Simulation)", "[platform][bus]") {
 
   for (auto b : msg) {
     bus.writeByte(b);
-    sleepMilli(10);
+    platform::sleepMilli(10);
   }
 
   std::vector<uint8_t> received;

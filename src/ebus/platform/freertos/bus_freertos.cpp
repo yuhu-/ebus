@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#if defined(ESP32)
+#if defined(ESP_PLATFORM)
 #include "platform/freertos/bus_freertos.hpp"
 
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
@@ -17,13 +17,14 @@
 #include <freertos/task.h>
 #include <hal/uart_ll.h>
 
+#include <cmath>
 #include <ebus/protocol_math.hpp>
 
 #include "core/bus_monitor.hpp"
 #include "core/request.hpp"
 #include "driver/gpio.h"
 
-namespace ebus::detail {
+namespace ebus::detail::platform {
 
 BusFreeRtos::BusFreeRtos(const BusConfig& config, const RuntimeConfig& runtime,
                          Request* request, BusMonitor* monitor)
@@ -575,5 +576,6 @@ bool IRAM_ATTR BusFreeRtos::onSynGenTimer() {
   return false;
 }
 
-}  // namespace ebus::detail
-#endif  // ESP32
+}  // namespace ebus::detail::platform
+
+#endif  // ESP_PLATFORM

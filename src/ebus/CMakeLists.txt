@@ -26,8 +26,6 @@ set(MODELS_SOURCES
 
 # Platform Abstraction Layer
 set(PLATFORM_SOURCES
-    platform/service_thread.cpp
-    platform/system.cpp
 )
 
 # Utils
@@ -38,7 +36,7 @@ set(UTILS_SOURCES
 if(POSIX AND NOT APPLE)
     list(APPEND PLATFORM_SOURCES platform/posix/bus_posix.cpp)
     list(APPEND PLATFORM_SOURCES platform/posix/virtual_line.cpp)
-elseif(ESP32)
+elseif(ESP_PLATFORM)
     list(APPEND PLATFORM_SOURCES platform/freertos/bus_freertos.cpp)
 endif()
 

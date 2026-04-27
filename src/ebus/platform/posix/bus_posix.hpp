@@ -34,9 +34,11 @@
 #include "platform/service_thread.hpp"
 
 namespace ebus::detail {
-
 class Request;
 class BusMonitor;
+}  // namespace ebus::detail
+
+namespace ebus::detail::platform {
 
 /**
  * POSIX-specific implementation of the eBUS physical layer.
@@ -50,7 +52,7 @@ class BusPosix {
   using SynListener = std::function<void()>;
 
   BusPosix(const BusConfig& config, const ebus::RuntimeConfig& runtime,
-           Request* request, BusMonitor* monitor = nullptr);
+           detail::Request* request, detail::BusMonitor* monitor = nullptr);
   ~BusPosix();
 
   BusPosix(const BusPosix&) = delete;
@@ -59,7 +61,7 @@ class BusPosix {
   void start();
   void stop();
 
-  Queue<BusEvent>* getQueue() const;
+  Queue<detail::BusEvent>* getQueue() const;
 
   void writeByte(const uint8_t byte);
 
@@ -78,8 +80,8 @@ class BusPosix {
   bool simulate_;
   RuntimeConfig runtime_;
 
-  Request* request_ = nullptr;
-  BusMonitor* monitor_ = nullptr;
+  detail::Request* request_ = nullptr;
+  detail::BusMonitor* monitor_ = nullptr;
 
   int fd_;
   std::unique_ptr<VirtualLine> virtual_line_;
@@ -87,7 +89,7 @@ class BusPosix {
   bool open_;
   struct termios old_settings_{};
 
-  std::unique_ptr<Queue<BusEvent>> byte_queue_;
+  std::unique_ptr<Queue<detail::BusEvent>> byte_queue_;
   std::unique_ptr<ServiceThread> worker_;
   std::atomic<bool> running_;
 
@@ -126,6 +128,6 @@ class BusPosix {
   void resetSynTimer(uint8_t byte);
 };
 
-}  // namespace ebus::detail
+}  // namespace ebus::detail::platform
 
 #endif  // POSIX

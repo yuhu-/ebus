@@ -10,17 +10,18 @@
 // attractive output. Dumping of binary values ​​is also supported.
 
 #include <arpa/inet.h>
-#include <errno.h>
+#include <cerrno>
 #include <fcntl.h>
 #include <getopt.h>
 #include <netdb.h>
 #include <sys/select.h>
 #include <sys/socket.h>
 #include <sys/time.h>
-#include <time.h>
+#include <ctime>
 #include <unistd.h>
 
 #include <algorithm>
+#include <cstdio>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
@@ -62,15 +63,15 @@ const char* timestamp() {
 
   if (gettimeofday(&tv, nullptr) != 0) {
     std::cerr << "the current time could not be retrieved" << std::endl;
-    exit(EXIT_FAILURE);
+    std::exit(EXIT_FAILURE);
   }
 
   if (localtime_r(&tv.tv_sec, &tm) == nullptr) {
     std::cerr << "localtime_r failed" << std::endl;
-    exit(EXIT_FAILURE);
+    std::exit(EXIT_FAILURE);
   }
 
-  snprintf(time, sizeof(time), "%04d-%02d-%02d %02d:%02d:%02d.%03ld",
+  std::snprintf(time, sizeof(time), "%04d-%02d-%02d %02d:%02d:%02d.%03ld",
            tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min,
            tm.tm_sec, tv.tv_usec / 1000);
 
@@ -255,7 +256,7 @@ int connect(const char* hostname, const char* port, int max_retries = 5,
   while (attempt < max_retries) {
     int sfd = -1, err = 0;
     struct addrinfo hints, *addrs;
-    memset(&hints, 0, sizeof(hints));
+    std::memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_protocol = IPPROTO_TCP;
@@ -301,7 +302,7 @@ void run(const char* hostname, const char* port, int max_retries = 5) {
     if (sfd < 0) {
       std::cerr << "Could not connect to " << hostname << ":" << port
                 << std::endl;
-      exit(EXIT_FAILURE);
+    std::exit(EXIT_FAILURE);
     }
     std::cerr << "Connected to " << hostname << ":" << port << std::endl;
 
@@ -322,7 +323,7 @@ void run(const char* hostname, const char* port, int max_retries = 5) {
 
       int ret = select(sfd + 1, &readfds, nullptr, nullptr, &tv);
       if (ret < 0) {
-        std::cerr << "select() error: " << strerror(errno) << std::endl;
+        std::cerr << "select() error: " << std::strerror(errno) << std::endl;
         connection_ok = false;
       } else if (ret == 0) {
         std::cerr << "Timeout: no data received for 10 seconds." << std::endl;
@@ -332,7 +333,7 @@ void run(const char* hostname, const char* port, int max_retries = 5) {
           ssize_t datalen = recv(sfd, data, 1, 0);
           if (datalen == -1) {
             std::cerr << "An error occurred while receiving: "
-                      << strerror(errno) << std::endl;
+                      << std::strerror(errno) << std::endl;
             connection_ok = false;
           } else if (datalen == 0) {
             std::cerr << "Connection closed by peer" << std::endl;
@@ -366,7 +367,7 @@ void run(const char* hostname, const char* port, int max_retries = 5) {
               std::string result = collect(byte);
               if (result.size() > 0) std::cout << result << std::endl;
             }
-            fflush(stdout);
+            std::fflush(stdout);
           }
         } else {
           uint8_t enhanced_byte;
@@ -389,7 +390,7 @@ void run(const char* hostname, const char* port, int max_retries = 5) {
                 std::string result = collect(enhanced_byte);
                 if (result.size() > 0) std::cout << result << std::endl;
               }
-              fflush(stdout);
+              std::fflush(stdout);
             } else if (b1 < 0x80) {
               // Short form: just a data byte, no prefix
               recv(sfd, data, 1, 0);  // consume one byte
@@ -400,7 +401,7 @@ void run(const char* hostname, const char* port, int max_retries = 5) {
                 std::string result = collect(enhanced_byte);
                 if (result.size() > 0) std::cout << result << std::endl;
               }
-              fflush(stdout);
+              std::fflush(stdout);
             } else {
               // Invalid signature, skip one byte
               recv(sfd, data, 1, 0);
@@ -478,10 +479,10 @@ int main(int argc, char* argv[]) {
       case 'h':
       case '?':
         usage();
-        exit(EXIT_SUCCESS);
+        std::exit(EXIT_SUCCESS);
       default:
         std::cerr << "the specified option is unknown" << std::endl;
-        exit(EXIT_FAILURE);
+        std::exit(EXIT_FAILURE);
         break;
     }
   }
@@ -500,7 +501,7 @@ int main(int argc, char* argv[]) {
         stream.close();
       } else {
         std::cerr << "file '" << argv[optind] << "' not found" << std::endl;
-        exit(EXIT_FAILURE);
+        std::exit(EXIT_FAILURE);
       }
     } else {
       std::string hostname = tmp.substr(0, pos);
@@ -508,14 +509,14 @@ int main(int argc, char* argv[]) {
 
       if (hostname.empty() || port.empty()) {
         std::cerr << "hostname or port cannot be empty" << std::endl;
-        exit(EXIT_FAILURE);
+        std::exit(EXIT_FAILURE);
       }
 
       run(hostname.c_str(), port.c_str(), 5);  // 5 retries per disconnect
     }
   } else if (argv[optind] == nullptr && isatty(STDIN_FILENO)) {
     usage();
-    exit(EXIT_SUCCESS);
+    std::exit(EXIT_SUCCESS);
   } else {
     while (std::cin.good() && !std::cin.eof()) {
       int byte = std::cin.get();

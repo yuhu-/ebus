@@ -5,7 +5,7 @@
 
 #pragma once
 
-#if defined(ESP32)
+#if defined(ESP_PLATFORM)
 #include <atomic>
 #include <cstdint>
 #include <ebus/config.hpp>
@@ -28,9 +28,11 @@
 #endif
 
 namespace ebus::detail {
-
 class Request;
 class BusMonitor;
+}  // namespace ebus::detail
+
+namespace ebus::detail::platform {
 
 /**
  * FreeRtos-specific implementation of the eBUS physical layer.
@@ -44,7 +46,7 @@ class BusFreeRtos {
   using SynListener = std::function<void()>;
 
   explicit BusFreeRtos(const BusConfig& config, const RuntimeConfig& runtime,
-                       Request* request, BusMonitor* monitor);
+                       detail::Request* request, detail::BusMonitor* monitor);
   ~BusFreeRtos();
 
   BusFreeRtos(const BusFreeRtos&) = delete;
@@ -85,8 +87,8 @@ class BusFreeRtos {
   timer_idx_t timer_idx_num_ = TIMER_0;
 #endif
 
-  Request* request_ = nullptr;
-  BusMonitor* monitor_ = nullptr;
+  detail::Request* request_ = nullptr;
+  detail::BusMonitor* monitor_ = nullptr;
 
   // owned queue
   std::unique_ptr<Queue<BusEvent>> byte_queue_;
@@ -168,6 +170,6 @@ class BusFreeRtos {
   bool onSynGenTimer();
 };
 
-}  // namespace ebus::detail
+}  // namespace ebus::detail::platform
 
-#endif  // ESP32
+#endif  // ESP_PLATFORM

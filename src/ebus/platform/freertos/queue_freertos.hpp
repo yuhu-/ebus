@@ -5,13 +5,13 @@
 
 #pragma once
 
-#if defined(ESP32)
+#if defined(ESP_PLATFORM)
 #include <freertos/FreeRTOS.h>
 #include <freertos/queue.h>
 
 #include <chrono>
 
-namespace ebus::detail {
+namespace ebus::detail::platform {
 
 template <typename T>
 class QueueFreeRtos {
@@ -125,6 +125,6 @@ class QueueFreeRtos {
   size_t capacity_;
 };
 
-}  // namespace ebus::detail
+}  // namespace ebus::detail::platform
 
-#endif  // ESP32
+#endif  // ESP_PLATFORM
