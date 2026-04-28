@@ -78,8 +78,10 @@ class ClientManager {
 
   std::unique_ptr<platform::ServiceThread> worker_;
 
+  uint32_t session_counter_ = 0;
   std::shared_ptr<AbstractClient> current_active_sender_ = nullptr;
   std::atomic<bool> bus_requested_{false};
+  uint8_t last_sent_byte_ = 0;
 
   // Wake primitives to reduce busy-waiting
   std::mutex wake_mutex_;

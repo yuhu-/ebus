@@ -106,7 +106,9 @@ bool RegularClient::wantsToSend() {
 }
 
 bool RegularClient::recvFromClient(uint8_t& out) {
-  return platform::recv(fd_, &out, 1, platform::Flags::dont_wait) == 1;
+  bool ret = platform::recv(fd_, &out, 1, platform::Flags::dont_wait) == 1;
+  if (ret) last_sent_byte_ = out;
+  return ret;
 }
 
 void RegularClient::sendToClient(ByteView data) {
@@ -125,35 +127,32 @@ void RegularClient::sendToClient(ByteView data) {
 BridgeAction RegularClient::onBusByte(const BusEventContext& ctx) {
   if (!isConnected()) return BridgeAction::stop_session;
 
-  // Regular clients always echo all bus traffic
-  sendToClient(ByteView(&ctx.byte, 1));
-  return BridgeAction::keep_active;
+  switch (ctx.result) {
+    case RequestResult::first_won:
+    case RequestResult::second_won:
+      // Arbitration won: send address echo back to client and proceed to data
+      sendToClient(ByteView(&ctx.byte, 1));
+      return BridgeAction::bypass_wait;
 
-  // Handle bus response according to last command
-  // switch (ctx.result) {
-  //   case RequestResult::first_lost:
-  //   case RequestResult::first_error:
-  //   case RequestResult::retry_error:
-  //   case RequestResult::second_lost:
-  //   case RequestResult::second_error:
-  //     return BridgeAction::stop_session;
-  //   case RequestResult::observe_syn:
-  //   case RequestResult::observe_data:
-  //     sendToClient(ByteView(&ctx.byte, 1));
-  //     return BridgeAction::keep_active;
-  //   case RequestResult::first_syn:
-  //   case RequestResult::first_retry:
-  //   case RequestResult::retry_syn:
-  //     // Hide micro-retry: session remains active but we send no bridge
-  //     response return BridgeAction::keep_active;
-  //   case RequestResult::first_won:
-  //   case RequestResult::second_won:
-  //     sendToClient(ByteView(&ctx.byte, 1));
-  //     return BridgeAction::keep_active;
-  //   default:
-  //     break;
-  // }
-  // return BridgeAction::stop_session;
+    case RequestResult::first_lost:
+    case RequestResult::second_lost:
+    case RequestResult::first_error:
+    case RequestResult::second_error:
+    case RequestResult::retry_error:
+      // Fatal arbitration failure
+      return BridgeAction::stop_session;
+
+    case RequestResult::observe_data:
+      // Echo verification: if we are active, the next data byte must match
+      if (ctx.byte != last_sent_byte_) return BridgeAction::stop_session;
+      sendToClient(ByteView(&ctx.byte, 1));
+      return BridgeAction::bypass_wait;
+
+    default:
+      // Sniffing heartbeats (SYN) or transparent traffic
+      sendToClient(ByteView(&ctx.byte, 1));
+      return BridgeAction::keep_active;
+  }
 }
 
 EnhancedClient::EnhancedClient(int fd, Request* request, size_t max_buffer)
@@ -210,10 +209,15 @@ bool EnhancedClient::recvFromClient(uint8_t& out) {
       return false;
     case enhanced::Command::send:
       out = data;
+      last_sent_byte_ = data;
       return true;
     case enhanced::Command::start:
-      // Note: Arbitration cancellation via SYN is handled by Request FSM
+      if (data == ebus::Symbols::syn) {
+        request_->reset();
+        return false;
+      }
       out = data;
+      last_sent_byte_ = data;
       return true;
     case enhanced::Command::info:
       return false;
@@ -264,10 +268,14 @@ void EnhancedClient::sendToClient(ByteView data) {
   }
 }
 
+void EnhancedClient::onSessionStart(uint32_t session_id) {
+  (void)session_id;
+  inbound_len_ = 0;
+}
+
 BridgeAction EnhancedClient::onBusByte(const BusEventContext& ctx) {
   if (!isConnected()) return BridgeAction::stop_session;
 
-  // Handle bus response according to last command
   switch (ctx.result) {
     case RequestResult::first_lost:
     case RequestResult::second_lost:
@@ -277,29 +285,27 @@ BridgeAction EnhancedClient::onBusByte(const BusEventContext& ctx) {
     case RequestResult::first_error:
     case RequestResult::retry_error:
     case RequestResult::second_error:
+      // Physical layer error
       sendEnhancedResponse(enhanced::Response::error_ebus,
                            static_cast<uint8_t>(enhanced::Error::framing));
       return BridgeAction::stop_session;
-    case RequestResult::observe_syn:
-    case RequestResult::observe_data:
-      // Ordinary bus traffic (sniffing): return 0x01 + data byte
-      sendEnhancedResponse(enhanced::Response::received, ctx.byte);
-      return BridgeAction::keep_active;
-    case RequestResult::first_syn:
-    case RequestResult::first_retry:
-    case RequestResult::retry_syn:
-      // Arbitration phase: return 0x01 + data byte to keep sniffer stream
-      // complete
-      sendEnhancedResponse(enhanced::Response::received, ctx.byte);
-      return BridgeAction::keep_active;
     case RequestResult::first_won:
     case RequestResult::second_won:
-      // Arbitration won: return 0x02 + our own address (which is what we read
-      // back)
+      // Arbitration won: signal started
       sendEnhancedResponse(enhanced::Response::started, ctx.byte);
+      return BridgeAction::bypass_wait;
+    case RequestResult::observe_data:
+      // Verification vs Sniffing
+      sendEnhancedResponse(enhanced::Response::received, ctx.byte);
+      if (ctx.byte == last_sent_byte_) {
+        return BridgeAction::bypass_wait;
+      }
       return BridgeAction::keep_active;
+
     default:
-      break;
+      // Sniffing (SYN, retry steps, etc.)
+      sendEnhancedResponse(enhanced::Response::received, ctx.byte);
+      return BridgeAction::keep_active;
   }
   return BridgeAction::stop_session;
 }

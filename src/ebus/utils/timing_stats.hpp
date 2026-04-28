@@ -9,6 +9,7 @@
 #include <cmath>
 #include <cstdint>
 #include <ebus/metrics.hpp>
+#include <mutex>
 
 namespace ebus::detail {
 
@@ -22,6 +23,48 @@ class RollingStats {
   virtual ~RollingStats() = default;
 
   inline void addSample(double value) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    addSampleUnsynced(value);
+  }
+
+  inline void reset() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    last_ = min_ = max_ = mean_ = m2_ = 0.0;
+    count_ = 0;
+  }
+
+  inline MetricValues getValues() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return {last_, min_, max_, mean_, getStdDev(), count_};
+  }
+
+  double getSum() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return mean_ * count_;
+  }
+
+  double getLast() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return last_;
+  }
+
+  double getMean() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return mean_;
+  }
+
+  uint64_t getCount() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return count_;
+  }
+
+  inline double getStdDev() const {
+    // Note: Caller in getValues already holds lock, but direct calls need it.
+    return (count_ == 0) ? 0.0 : std::sqrt(m2_ / count_);
+  }
+
+ protected:
+  void addSampleUnsynced(double value) {
     last_ = value;
     if (count_ == 0) {
       min_ = value;
@@ -37,24 +80,7 @@ class RollingStats {
     m2_ += delta * delta2;
   }
 
-  inline void reset() {
-    last_ = min_ = max_ = mean_ = m2_ = 0.0;
-    count_ = 0;
-  }
-
-  inline MetricValues getValues() const {
-    return {last_, min_, max_, mean_, getStdDev(), count_};
-  }
-
-  double getSum() const { return mean_ * count_; }
-  double getLast() const { return last_; }
-  double getMean() const { return mean_; }
-  uint64_t getCount() const { return count_; }
-  inline double getStdDev() const {
-    return (count_ == 0) ? 0.0 : std::sqrt(m2_ / count_);
-  }
-
- protected:
+  mutable std::mutex mutex_;
   double last_;
   double min_;
   double max_;
@@ -72,17 +98,19 @@ class TimingStats : public RollingStats {
 
   inline void markBegin(const std::chrono::steady_clock::time_point& begin =
                             std::chrono::steady_clock::now()) {
+    std::unique_lock<std::mutex> lock(mutex_);
     begin_time_ = begin;
     marked_ = true;
   }
 
   inline void markEnd(const std::chrono::steady_clock::time_point& end =
                           std::chrono::steady_clock::now()) {
+    std::lock_guard<std::mutex> lock(mutex_);
     if (marked_) {
       auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
                           end - begin_time_)
                           .count();
-      addSample(static_cast<double>(duration));
+      addSampleUnsynced(static_cast<double>(duration));
       marked_ = false;
     }
   }

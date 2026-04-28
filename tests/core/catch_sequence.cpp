@@ -103,3 +103,16 @@ TEST_CASE("Sequence Logical Comparison", "[core][sequence]") {
   REQUIRE(reduced != extended);                // Physical bytes differ
   REQUIRE(reduced.logicallyEquals(extended));  // Protocol meaning is the same
 }
+
+TEST_CASE("Sequence: SBO Overflow", "[core][sequence]") {
+  ebus::Sequence seq;
+  std::vector<uint8_t> large_data(100, 0x11);
+  large_data[50] = 0xAA;  // Forces expansion
+
+  seq.assign(large_data, false);
+  seq.extend();
+
+  REQUIRE(seq.size() == 101);
+  REQUIRE(seq.toVector()[50] == 0xA9);
+  REQUIRE(seq.toVector()[51] == 0x01);
+}

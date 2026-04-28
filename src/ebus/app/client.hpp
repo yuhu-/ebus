@@ -22,7 +22,12 @@ namespace ebus::detail {
 
 class Request;
 
-enum class BridgeAction { keep_active, stop_session };
+enum class BridgeAction {
+  keep_active,   // Sniffing or heartbeat: stay in current wait state
+  stop_session,  // Error or collision: drop client
+  bypass_wait    // Wait phase complete (echo OK or arbitration won):
+                 // move to transmit state for the next byte
+};
 
 /**
  * Abstract base for WiFi/Network clients (e.g. ebusd bridges).
@@ -48,6 +53,11 @@ class AbstractClient {
   bool hasPendingData() const { return !outbound_buffer_.empty(); }
 
   /**
+   * Called when the manager starts a new active session for this client.
+   */
+  virtual void onSessionStart(uint32_t session_id) { (void)session_id; }
+
+  /**
    * Returns true if the client has data available to read from its socket.
    */
   virtual bool wantsToSend() = 0;
@@ -64,6 +74,7 @@ class AbstractClient {
   Request* request_;
   size_t max_buffer_size_;
   bool write_capable_;
+  uint8_t last_sent_byte_ = 0;
 
   bool flushLocked();  // Internal flush logic; returns false if connection lost
 };
@@ -109,6 +120,8 @@ class EnhancedClient : public AbstractClient {
   bool wantsToSend() override;
   bool recvFromClient(uint8_t& out) override;
   void sendToClient(ByteView data) override;
+
+  void onSessionStart(uint32_t session_id) override;
 
   BridgeAction onBusByte(const BusEventContext& ctx) override;
 

@@ -48,6 +48,23 @@ ebus::metrics::SystemMetrics BusMonitor::getMetrics() const {
   metrics::HandlerMetrics& hm = sm.handler;
   hm = handler_acc_;
 
+  // Map Timing
+  hm.sync = sync.getValues();
+  hm.write = write.getValues();
+  hm.passive_first = passive_first.getValues();
+  hm.passive_data = passive_data.getValues();
+  hm.active_first = active_first.getValues();
+  hm.active_data = active_data.getValues();
+  hm.callback_won = callback_won.getValues();
+  hm.callback_lost = callback_lost.getValues();
+  hm.callback_reactive = callback_reactive.getValues();
+  hm.callback_telegram = callback_telegram.getValues();
+  hm.callback_error = callback_error.getValues();
+
+  for (size_t i = 0; i < FsmLimits::num_handler_states; ++i) {
+    hm.state_timings[i] = handler_timing[i].getValues();
+  }
+
   // Recalculate derived metrics
   hm.messages_total =
       hm.messages_passive_master_slave + hm.messages_passive_master_master +
@@ -81,23 +98,6 @@ ebus::metrics::SystemMetrics BusMonitor::getMetrics() const {
         100.0;
   }
 
-  // Map Timing
-  hm.sync = sync.getValues();
-  hm.write = write.getValues();
-  hm.passive_first = passive_first.getValues();
-  hm.passive_data = passive_data.getValues();
-  hm.active_first = active_first.getValues();
-  hm.active_data = active_data.getValues();
-  hm.callback_won = callback_won.getValues();
-  hm.callback_lost = callback_lost.getValues();
-  hm.callback_reactive = callback_reactive.getValues();
-  hm.callback_telegram = callback_telegram.getValues();
-  hm.callback_error = callback_error.getValues();
-
-  for (size_t i = 0; i < FsmLimits::num_handler_states; ++i) {
-    hm.state_timings[i] = handler_timing[i].getValues();
-  }
-
   // 2. Populate Request Part
   metrics::RequestMetrics& rm = sm.request;
   rm = request_acc_;
@@ -108,31 +108,50 @@ ebus::metrics::SystemMetrics BusMonitor::getMetrics() const {
 
   uint32_t attempts = rm.first_won + rm.first_lost + rm.first_retry;
 
-  // Calculate Contention Rate (%)
   if (attempts > 0) {
     uint32_t collisions = rm.first_lost + rm.first_retry;
+    // Calculate Contention Rate (%)
     rm.contention_rate = (static_cast<double>(collisions) / attempts) * 100.0;
+    // Calculate Collision Rate (%)
+    rm.collision_rate = rm.contention_rate;
   }
 
   // 3. Populate Bus Part
   metrics::BusMetrics& bm = sm.bus;
   bm = bus_acc_;
 
+  // Map Timing
+  bm.delay = delay.getValues();
+  bm.window = window.getValues();
+  bm.transmit = transmit.getValues();
+  bm.uptime = uptime.getValues();
+  bm.syn_postpone = syn_postpone.getValues();
+
   // Physical Utilization (%)
   if (bm.uptime.last > 0) {
     bm.utilization = (utilization.getSum() / bm.uptime.last) * 100.0;
 
     // Congestion Logic: > 70% for > 10 seconds
+    // If a single uptime sample already indicates the bus has been up for
+    // at least 10s (samples are in microseconds), treat high utilization
+    // as sustained congestion immediately. Otherwise fall back to the
+    // time-point based detection across successive calls.
+    constexpr double kTenSecondsUs = 10e6;  // 10 seconds in microseconds
     if (bm.utilization > 70.0) {
-      auto now = std::chrono::steady_clock::now();
-      if (congestion_start_point_ == std::chrono::steady_clock::time_point{}) {
-        congestion_start_point_ = now;
+      if (bm.uptime.last >= kTenSecondsUs) {
+        congestion_active_ = true;
       } else {
-        auto duration = std::chrono::duration_cast<std::chrono::seconds>(
-                            now - congestion_start_point_)
-                            .count();
-        if (duration >= 10) {
-          congestion_active_ = true;
+        auto now = std::chrono::steady_clock::now();
+        if (congestion_start_point_ ==
+            std::chrono::steady_clock::time_point{}) {
+          congestion_start_point_ = now;
+        } else {
+          auto duration = std::chrono::duration_cast<std::chrono::seconds>(
+                              now - congestion_start_point_)
+                              .count();
+          if (duration >= 10) {
+            congestion_active_ = true;
+          }
         }
       }
     } else {
@@ -145,13 +164,6 @@ ebus::metrics::SystemMetrics BusMonitor::getMetrics() const {
   // High Jitter Logic: Standard deviation of SYN intervals > 10ms
   // (Standard eBUS unique timer tolerance is 5ms per Spec 9.2.2)
   bm.high_jitter = hm.sync.stddev > 10000.0;
-
-  // Map Timing
-  bm.delay = delay.getValues();
-  bm.window = window.getValues();
-  bm.transmit = transmit.getValues();
-  bm.uptime = uptime.getValues();
-  bm.syn_postpone = syn_postpone.getValues();
 
   // 4. Populate Device Part
   metrics::DeviceMetrics& dm = sm.devices;
@@ -167,8 +179,9 @@ ebus::metrics::SystemMetrics BusMonitor::getMetrics() const {
 void BusMonitor::updateUtilizationHistory() {
   std::lock_guard<std::mutex> lock(metrics_mutex);
   double current_util = 0.0;
-  if (bus_acc_.uptime.last > 0) {
-    current_util = (utilization.getSum() / bus_acc_.uptime.last) * 100.0;
+  double up_last = uptime.getLast();
+  if (up_last > 0) {
+    current_util = (utilization.getSum() / up_last) * 100.0;
   }
 
   utilization_history_.push_back(static_cast<float>(current_util));
@@ -176,13 +189,7 @@ void BusMonitor::updateUtilizationHistory() {
 
 std::vector<float> BusMonitor::getUtilizationHistory() const {
   std::lock_guard<std::mutex> lock(metrics_mutex);
-  std::vector<float> result;
-  result.reserve(utilization_history_.size());
-
-  for (size_t i = 0; i < utilization_history_.size(); ++i) {
-    result.push_back(utilization_history_[i]);  // Access chronologically
-  }
-  return result;
+  return utilization_history_.snapshot();
 }
 
 }  // namespace ebus::detail

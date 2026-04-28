@@ -182,6 +182,11 @@ struct RequestMetrics {
   // divided by the total number of bus request attempts.
   double contention_rate = 0.0;
 
+  // Collision Rate (%)
+  // Percentage of total transmit attempts that encountered a collision
+  // (arbitration lost or retry required).
+  double collision_rate = 0.0;
+
   // Aggregated Counters
   uint32_t won_total = 0;
   uint32_t lost_total = 0;
@@ -203,6 +208,7 @@ struct RequestMetrics {
 
   void resetMetrics() {
     contention_rate = 0.0;
+    collision_rate = 0.0;
 
     // Aggregated Counters
     won_total = 0;

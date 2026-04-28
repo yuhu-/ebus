@@ -87,16 +87,17 @@ void Scheduler::setTotalTimeout(uint32_t timeout_ms) {
 
 void Scheduler::setReactiveMasterSlaveCallback(
     ReactiveMasterSlaveCallback callback) {
+  std::lock_guard<std::mutex> lock(data_mutex_);
   extern_reactive_callback_ = std::move(callback);
-  if (handler_)
-    handler_->setReactiveMasterSlaveCallback(extern_reactive_callback_);
 }
 
 void Scheduler::setTelegramCallback(TelegramCallback callback) {
+  std::lock_guard<std::mutex> lock(data_mutex_);
   extern_telegram_callback_ = std::move(callback);
 }
 
 void Scheduler::setErrorCallback(ErrorCallback callback) {
+  std::lock_guard<std::mutex> lock(data_mutex_);
   extern_error_callback_ = std::move(callback);
 }
 
@@ -310,20 +311,33 @@ void Scheduler::attachHandlerCallbacks() {
 
   handler_->setReactiveMasterSlaveCallback([this](const ReactiveInfo& info) {
     if (stop_flag_.load(std::memory_order_relaxed)) return;
-    if (extern_reactive_callback_) extern_reactive_callback_(info);
+    ReactiveMasterSlaveCallback user_callback;
+    {
+      std::lock_guard<std::mutex> lock(data_mutex_);
+      user_callback = extern_reactive_callback_;
+    }
+    if (user_callback) {
+      user_callback(info);
+    }
   });
 
   handler_->setTelegramCallback([this](const TelegramInfo& info) {
     if (stop_flag_.load(std::memory_order_relaxed)) return;
     uint32_t id = current_attempt_id_.load(std::memory_order_relaxed);
 
-    if (extern_telegram_callback_) {
+    TelegramCallback user_callback;
+    {
+      std::lock_guard<std::mutex> lock(data_mutex_);
+      user_callback = extern_telegram_callback_;
+    }
+
+    if (user_callback) {
       if (id != 0 && info.message_type == MessageType::active) {
         auto correlated = info;
         correlated.session_id = id;
-        extern_telegram_callback_(correlated);
+        user_callback(correlated);
       } else {
-        extern_telegram_callback_(info);
+        user_callback(info);
       }
     }
 
@@ -348,15 +362,20 @@ void Scheduler::attachHandlerCallbacks() {
     uint32_t id = current_attempt_id_.load(std::memory_order_relaxed);
 
     if (extern_error_callback_) {
+      ErrorCallback user_callback;
+      {
+        std::lock_guard<std::mutex> lock(data_mutex_);
+        user_callback = extern_error_callback_;
+      }
+
       if (id != 0) {
         auto correlated = info;
         correlated.session_id = id;
-        extern_error_callback_(correlated);
+        user_callback(correlated);
       } else {
-        extern_error_callback_(info);
+        user_callback(info);
       }
     }
-
     if (id == 0) return;
 
     Event ev;

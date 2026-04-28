@@ -65,6 +65,7 @@ class BusHandler {
     std::lock_guard<std::mutex> lock(mutex_);
     uint32_t id = next_listener_id_++;
     listeners_.push_back({id, std::move(listener)});
+    listeners_version_++;
     return id;
   }
 
@@ -76,6 +77,7 @@ class BusHandler {
                          return p.first == id;
                        }),
         listeners_.end());
+    listeners_version_++;
   }
 
  private:
@@ -90,6 +92,8 @@ class BusHandler {
 
   uint32_t next_listener_id_ = 0;
   mutable std::mutex mutex_;
+  uint32_t listeners_version_ = 0;
+  uint32_t last_cache_version_ = 0xffffffff;
   std::vector<std::pair<uint32_t, ByteListener>> listeners_;
   std::vector<ByteListener> listeners_cache_;
 
@@ -111,15 +115,18 @@ class BusHandler {
         if (handler_) handler_->run(ctx);
 
         {
-          // Only lock and copy if listeners actually exist.
-          // Note: read size() without lock is acceptable for this check.
-          if (!listeners_.empty()) {
-            std::lock_guard<std::mutex> lock(mutex_);
+          std::lock_guard<std::mutex> lock(mutex_);
+          if (listeners_version_ != last_cache_version_) {
             listeners_cache_.clear();
             for (const auto& item : listeners_)
               listeners_cache_.push_back(item.second);
-
-            for (const auto& listener : listeners_cache_) listener(ctx);
+            last_cache_version_ = listeners_version_;
+          }
+        }
+        // Execute listeners outside the lock to prevent deadlocks
+        if (!listeners_cache_.empty()) {
+          for (const auto& listener : listeners_cache_) {
+            listener(ctx);
           }
         }
       }

@@ -102,13 +102,18 @@ class MockClient : public detail::AbstractClient {
 
   ~MockClient() override { fd_ = -1; }
 
+  void onSessionStart(uint32_t session_id) override { (void)session_id; }
+
   bool wantsToSend() override { return !inbound_.empty(); }
+
   bool recvFromClient(uint8_t& out) override {
     if (inbound_.empty()) return false;
     out = inbound_.front();
+    last_sent_byte_ = out;
     inbound_.pop();
     return true;
   }
+
   void sendToClient(ByteView data) override {
     if (outbound_.size() + data.size() > max_buffer_size_) {
       this->stop();  // Simulate socket closing on overflow
@@ -119,8 +124,24 @@ class MockClient : public detail::AbstractClient {
 
   BridgeAction onBusByte(const BusEventContext& ctx) override {
     if (!this->isConnected()) return BridgeAction::stop_session;
+
+    bool proceed = false;
+    switch (ctx.result) {
+      case RequestResult::first_won:
+      case RequestResult::second_won:
+        proceed = true;
+        break;
+      case RequestResult::observe_data:
+        if (ctx.byte == last_sent_byte_) {
+          proceed = true;
+        }
+        break;
+      default:
+        break;
+    }
+
     sendToClient(ByteView(&ctx.byte, 1));
-    return BridgeAction::keep_active;
+    return proceed ? BridgeAction::bypass_wait : BridgeAction::keep_active;
   }
 
   void pushInput(uint8_t b) { inbound_.push(b); }

@@ -11,13 +11,6 @@
 
 #include "core/bus_monitor.hpp"
 
-#if defined(ESP_PLATFORM)
-#include <lwip/sockets.h>
-#elif defined(POSIX)
-#include <poll.h>
-#include <sys/socket.h>
-#endif
-
 namespace ebus::detail {
 
 ClientManager::ClientManager(platform::Bus* bus, BusHandler* bus_handler,
@@ -137,7 +130,6 @@ void ClientManager::run() {
       if (clients_version_ != last_snapshot_version_) {
         clients_cache_ = clients_;  // copy shared_ptrs
         last_snapshot_version_ = clients_version_;
-        bus_requested_.store(false, std::memory_order_release);
       }
     }
     auto active_clients = clients_cache_;  // local copy for iteration
@@ -165,6 +157,7 @@ void ClientManager::run() {
           if (client->isConnected() && client->isWriteCapable() &&
               client->wantsToSend()) {
             current_active_sender_ = client;
+            client->onSessionStart(++session_counter_);
             session_state_ = SessionState::request;
             last_state_change = std::chrono::steady_clock::now();
             bus_requested_.store(false, std::memory_order_release);
@@ -210,6 +203,7 @@ void ClientManager::run() {
               std::lock_guard<std::mutex> lock(mutex_);
               request_->requestBus(
                   first_byte, true);  // CRITICAL FIX: Initiate bus arbitration
+              last_sent_byte_ = first_byte;
               session_state_ = SessionState::response;
               activity = true;
               last_state_change = std::chrono::steady_clock::now();
@@ -222,6 +216,7 @@ void ClientManager::run() {
         uint8_t send_byte = 0;
         if (active_sender->recvFromClient(send_byte)) {
           bus_->writeByte(send_byte);
+          last_sent_byte_ = send_byte;
           {
             std::lock_guard<std::mutex> lock(mutex_);
             session_state_ = SessionState::response;
@@ -246,17 +241,18 @@ void ClientManager::run() {
         // We forward all bytes to the current active sender so it can sniff
         // while waiting for or performing arbitration.
         if (s != SessionState::idle) {
-          if (current_sender->onBusByte(bctx) == BridgeAction::stop_session) {
+          auto action = current_sender->onBusByte(bctx);
+          if (action == BridgeAction::stop_session) {
+            if (monitor_)
+              monitor_->updateRequest([](auto& m) {
+                m.bus_request_blocked++;
+              });  // Track as failure
             stopActiveSession();
-          } else if (bus_requested_.load(std::memory_order_acquire) ||
-                     s == SessionState::response) {
-            // If we were waiting for an echo, we got it.
-            // Arbitration logic in Request FSM signaled completion, or
-            // we just received the echo of a data byte.
-            // Move back to transmit state to allow sending the next byte.
+          } else if (action == BridgeAction::bypass_wait) {
             std::lock_guard<std::mutex> lock(mutex_);
             session_state_ = SessionState::transmit;
             last_state_change = std::chrono::steady_clock::now();
+            bus_requested_.store(false, std::memory_order_release);
           }
         }
       }

@@ -5,12 +5,13 @@
 
 #pragma once
 
+#include <atomic>
 #include <chrono>
 #include <condition_variable>
 #include <cstdint>
 #include <functional>
-#include <mutex>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -61,8 +62,7 @@ class Controller {
   void enqueue(uint8_t priority, ByteView message,
                ResultCallback callback = nullptr);
 
-  uint32_t addPollItem(uint8_t priority, ByteView message,
-                       uint32_t interval_ms,
+  uint32_t addPollItem(uint8_t priority, ByteView message, uint32_t interval_ms,
                        ResultCallback callback = nullptr);
   void removePollItem(uint32_t id);
 
@@ -99,9 +99,10 @@ class Controller {
   EbusConfig config_;
   std::unique_ptr<Impl> impl_;
 
-  bool configured_ = false;
-  bool running_ = false;
+  std::atomic<bool> configured_{false};
+  std::atomic<bool> running_{false};
 
+  mutable std::mutex config_mutex_;
   mutable std::mutex wake_mutex_;
   std::condition_variable wake_cv_;
 

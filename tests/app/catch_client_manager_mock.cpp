@@ -62,6 +62,9 @@ TEST_CASE("ClientManager: Mock Orchestration", "[app][clientmanager][mock]") {
     // 3. Client should have received the SYN echo and the address echo
     REQUIRE(waitCondition([&] { return !mockClient->getOutput().empty(); }));
     REQUIRE(mockClient->getOutput()[0] == ebus::Symbols::syn);
+    REQUIRE(mockClient->getOutput()[1] == 0x33);
+
+    REQUIRE(req.getState() == ebus::RequestState::observe);
 
     // 4. Continue sending the rest of the telegram (Broadcast to fe)
     std::vector<uint8_t> body = {0xfe, 0xb5, 0x05, 0x01, 0xec};

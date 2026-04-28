@@ -188,6 +188,7 @@ std::string toJson(const metrics::RequestMetrics& m) {
   std::ostringstream oss;
   oss << std::fixed << std::setprecision(2);
   oss << "{\"contention_rate\":" << m.contention_rate
+      << ",\"collision_rate\":" << m.collision_rate
       << ",\"won_total\":" << m.won_total << ",\"lost_total\":" << m.lost_total
       << ",\"first_syn\":" << m.first_syn << ",\"first_won\":" << m.first_won
       << ",\"first_retry\":" << m.first_retry
