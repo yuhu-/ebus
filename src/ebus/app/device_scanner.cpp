@@ -92,7 +92,7 @@ bool DeviceScanner::scanObservedDevices() {
   std::vector<Sequence> vendor_cmds;  // Correct type
 
   if (device_manager_) {
-    observed = device_manager_->getObservedSlaves();
+    device_manager_->getObservedSlaves(observed);
     vendor_cmds = device_manager_->vendorScanCommands();
   }
 
@@ -150,81 +150,85 @@ void DeviceScanner::stop() {
 }
 
 ebus::Sequence DeviceScanner::nextCommand() {
-  std::lock_guard<std::mutex> lock(mutex_);
+  const auto now = std::chrono::steady_clock::now();
+  std::unique_lock<std::mutex> lock(mutex_);
+
   // Priority 1: Manual Scan
   if (!manual_queue_.empty()) {
-    auto cmd = manual_queue_.front();
+    auto cmd = std::move(manual_queue_.front());
     manual_queue_.pop();
     return cmd;
   }
 
-  auto now = std::chrono::steady_clock::now();
-
   // Autonomous scans (Full and Startup) must respect the initial delay
   // guard
-  if (now >= next_startup_scan_time_) {
-    // Priority 2: Full Scan (generates one command at a time)
-    if (full_scan_) {
-      while (full_scan_address_ <= 0xff) {
-        uint8_t addr = static_cast<uint8_t>(full_scan_address_);
-        full_scan_address_++;
-
-        if (ebus::isSlave(addr) && (addr != ebus::slaveOf(own_address_))) {
-          return Device::createScanCommand(addr);
-        }
-      }
-      // Finished full scan
-      full_scan_ = false;
-    }
-  }
-
-  // Priority 3: Startup Scan (Discovery of observed devices)
-  if (scan_on_startup_) {
-    // If the queue for the current iteration is empty, try to populate
-    // it.
-    if (startup_queue_.empty()) {
-      // Stop if we have completed all scan iterations.
-      if (startup_scan_count_ >= max_startup_scans_) {
-        scan_on_startup_ = false;
-        return {};
-      }
-
-      // Check if it's time for the next iteration.
-      if (now >= next_startup_scan_time_) {
-        startup_scan_count_++;
-
-        std::bitset<256> targets;
-        if (device_manager_) {
-          // Note: accessing device_manager under lock.
-          // device_manager handles its own locking, so this is safe.
-          targets = device_manager_->getObservedSlaves();
-        }
-
-        // Populate queue for this iteration
-        for (size_t i = 0; i < 256; ++i) {
-          if (targets.test(i)) {
-            startup_queue_.push(
-                Device::createScanCommand(static_cast<uint8_t>(i)));
-          }
-        }
-        // Also queue vendor-specific scans for already identified devices
-        if (device_manager_) {
-          auto vendor_cmds = device_manager_->vendorScanCommands();
-          for (const auto& vcmd : vendor_cmds) {
-            startup_queue_.push(vcmd);
-          }
-        }
-
-        // Schedule the next iteration.
-        next_startup_scan_time_ = now + startup_scan_interval_;
-      }
-    }
-
-    if (!startup_queue_.empty()) {
-      auto cmd = startup_queue_.front();
+  if (now < next_startup_scan_time_) {
+    // Even if we are in the delay phase, we might still have items left in
+    // the startup_queue from a previous trigger.
+    if (scan_on_startup_ && !startup_queue_.empty()) {
+      auto cmd = std::move(startup_queue_.front());
       startup_queue_.pop();
       return cmd;
     }
+    return {};
+  }
+
+  // Priority 2: Full Scan (generates one command at a time)
+  if (full_scan_) {
+    while (full_scan_address_ <= 0xff) {
+      uint8_t addr = static_cast<uint8_t>(full_scan_address_++);
+      if (ebus::isSlave(addr) && (addr != ebus::slaveOf(own_address_))) {
+        return Device::createScanCommand(addr);
+      }
+    }
+    // Finished full scan
+    full_scan_ = false;
+  }
+
+  // Priority 3: Startup Scan (Discovery of observed devices)
+  if (!scan_on_startup_) return {};
+
+  if (startup_queue_.empty()) {
+    // Stop if we have completed all scan iterations.
+    if (startup_scan_count_ >= max_startup_scans_) {
+      scan_on_startup_ = false;
+      return {};
+    }
+
+    // Trigger iteration: drop lock to query thread-safe DeviceManager
+    lock.unlock();
+    std::bitset<256> observed;
+    std::vector<Sequence> vendor_cmds;
+    if (device_manager_) {
+      device_manager_->getObservedSlaves(observed);
+      vendor_cmds = device_manager_->vendorScanCommands();
+    }
+
+    // Populate iteration queue outside the lock
+    std::queue<Sequence> temp_q;
+    for (size_t i = 0; i < 256; ++i) {
+      if (observed.test(i)) {
+        temp_q.push(Device::createScanCommand(static_cast<uint8_t>(i)));
+      }
+    }
+    for (const auto& vcmd : vendor_cmds) {
+      temp_q.push(vcmd);
+    }
+
+    lock.lock();
+    // Verify state hasn't changed (e.g. stop() called) while we were unlocked
+    if (scan_on_startup_ && startup_queue_.empty() &&
+        startup_scan_count_ < max_startup_scans_) {
+      startup_queue_ = std::move(temp_q);
+      startup_scan_count_++;
+      next_startup_scan_time_ = now + startup_scan_interval_;
+    }
+  }
+
+  if (!startup_queue_.empty()) {
+    auto cmd = std::move(startup_queue_.front());
+    startup_queue_.pop();
+    return cmd;
   }
 
   return {};

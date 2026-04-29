@@ -40,7 +40,7 @@ class DeviceManager {
   std::vector<DeviceInfo> getDeviceInfo() const;
   std::string getDeviceInfoJson() const;
 
-  std::bitset<256> getObservedSlaves() const;
+  void getObservedSlaves(std::bitset<256>& observed) const;
   std::vector<Sequence> vendorScanCommands() const;
   std::vector<Sequence> createScanCommands(
       const std::vector<std::string>& addresses) const;

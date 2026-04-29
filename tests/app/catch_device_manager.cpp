@@ -34,7 +34,8 @@ TEST_CASE("DeviceManager: Address Tracking", "[app][devicemanager]") {
 
   dm.update(master, slave);
 
-  auto observed = dm.getObservedSlaves();
+  std::bitset<256> observed;
+  dm.getObservedSlaves(observed);
 
   REQUIRE(observed[0x10] == 0);
   REQUIRE(observed[0x15] == 1);

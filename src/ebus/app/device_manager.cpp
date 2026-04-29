@@ -70,8 +70,8 @@ std::string DeviceManager::getDeviceInfoJson() const {
   return ebus::toJson(getDeviceInfo());
 }
 
-std::bitset<256> DeviceManager::getObservedSlaves() const {
-  std::bitset<256> observed;
+void DeviceManager::getObservedSlaves(std::bitset<256>& observed) const {
+  observed.reset();  // Clear any previous state
   if (monitor_) {
     auto m = monitor_->getMetrics().devices;
 
@@ -85,7 +85,6 @@ std::bitset<256> DeviceManager::getObservedSlaves() const {
         observed.set(static_cast<uint8_t>(i));
     }
   }
-  return observed;
 }
 
 std::vector<ebus::Sequence> DeviceManager::vendorScanCommands() const {
