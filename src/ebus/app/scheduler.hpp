@@ -144,6 +144,7 @@ class Scheduler {
 
   bool pushItem(Item&& it);
   void run();
+
   Duration backoffDuration(int attempt) const;
   void attachHandlerCallbacks();
   void detachHandlerCallbacks();
