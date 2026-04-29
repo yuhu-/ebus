@@ -35,15 +35,18 @@ class DeviceScanner {
  public:
   DeviceScanner(uint8_t address, DeviceManager* device_manager);
 
-  void setFullScan(bool enable);
-  bool isFullScan() const;
-
-  void setScanOnStartup(bool enable);
   void setOwnAddress(uint8_t address);
+
+  // Startup scanning
+  void setScanOnStartup(bool enable);
   bool isScanOnStartup() const;
   void setMaxStartupScans(uint8_t max);
   void setInitialScanDelay(uint32_t delay_s);
   void setStartupScanInterval(uint32_t interval_s);
+
+  // Full scanning
+  void setFullScan(bool enable);
+  bool isFullScan() const;
 
   // Manual scanning
   bool scanObservedDevices();

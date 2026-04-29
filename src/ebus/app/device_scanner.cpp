@@ -16,23 +16,20 @@ DeviceScanner::DeviceScanner(uint8_t address, DeviceManager* device_manager)
       own_address_(address),
       next_startup_scan_time_(std::chrono::steady_clock::time_point::max()) {}
 
-void DeviceScanner::setFullScan(bool enable) {
+void DeviceScanner::setOwnAddress(uint8_t address) {
   std::lock_guard<std::mutex> lock(mutex_);
-  full_scan_ = enable;
-  if (enable) {
-    full_scan_address_ = 0;
-    // Arm the timer for the initial delay if not already active
-    if (next_startup_scan_time_ ==
-        std::chrono::steady_clock::time_point::max()) {
-      next_startup_scan_time_ =
-          std::chrono::steady_clock::now() + initial_scan_delay_;
-    }
-  }
-}
+  own_address_ = address;
 
-bool DeviceScanner::isFullScan() const {
-  std::lock_guard<std::mutex> lock(mutex_);
-  return full_scan_;
+  // Purge any pending manual retries that now target our own slave address
+  // to prevent self-probing after an address change.
+  std::queue<Sequence> filtered;
+  const uint8_t own_slave = ebus::slaveOf(address);
+  while (!manual_queue_.empty()) {
+    auto& cmd = manual_queue_.front();
+    if (cmd.empty() || cmd[0] != own_slave) filtered.push(std::move(cmd));
+    manual_queue_.pop();
+  }
+  manual_queue_ = std::move(filtered);
 }
 
 void DeviceScanner::setScanOnStartup(bool enable) {
@@ -53,22 +50,6 @@ bool DeviceScanner::isScanOnStartup() const {
   return scan_on_startup_;
 }
 
-void DeviceScanner::setOwnAddress(uint8_t address) {
-  std::lock_guard<std::mutex> lock(mutex_);
-  own_address_ = address;
-
-  // Purge any pending manual retries that now target our own slave address
-  // to prevent self-probing after an address change.
-  std::queue<Sequence> filtered;
-  const uint8_t own_slave = ebus::slaveOf(address);
-  while (!manual_queue_.empty()) {
-    auto& cmd = manual_queue_.front();
-    if (cmd.empty() || cmd[0] != own_slave) filtered.push(std::move(cmd));
-    manual_queue_.pop();
-  }
-  manual_queue_ = std::move(filtered);
-}
-
 void DeviceScanner::setMaxStartupScans(uint8_t max) {
   std::lock_guard<std::mutex> lock(mutex_);
   max_startup_scans_ = max;
@@ -82,6 +63,25 @@ void DeviceScanner::setInitialScanDelay(uint32_t delay_s) {
 void DeviceScanner::setStartupScanInterval(uint32_t interval_s) {
   std::lock_guard<std::mutex> lock(mutex_);
   startup_scan_interval_ = std::chrono::seconds(interval_s);
+}
+
+void DeviceScanner::setFullScan(bool enable) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  full_scan_ = enable;
+  if (enable) {
+    full_scan_address_ = 0;
+    // Arm the timer for the initial delay if not already active
+    if (next_startup_scan_time_ ==
+        std::chrono::steady_clock::time_point::max()) {
+      next_startup_scan_time_ =
+          std::chrono::steady_clock::now() + initial_scan_delay_;
+    }
+  }
+}
+
+bool DeviceScanner::isFullScan() const {
+  std::lock_guard<std::mutex> lock(mutex_);
+  return full_scan_;
 }
 
 bool DeviceScanner::scanObservedDevices() {
