@@ -57,7 +57,8 @@ class PollManager {
 
   // Processes commands that are currently due and updates their internal
   // timers. Using a callback avoids heap allocations from returning a vector.
-  void processDueItems(const std::function<void(const PollItem&)>& callback);
+  void processDueItems(const std::function<void(const PollItem&)>& callback,
+                       bool* activity);
 
   void clear();
 

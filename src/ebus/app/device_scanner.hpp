@@ -28,7 +28,7 @@ namespace ebus::detail {
  * The DeviceScanner is responsible for generating eBUS scan commands to
  * discover devices on the bus. It operates as a state machine that prioritizes
  * three scanning modes: Manual Scan (initiated by explicit requests), Full Scan
- * (exhaustive 0x00-0xff), and Startup Scan (periodic discovery of known
+ * (exhaustive 0x00-0xFF), and Startup Scan (periodic discovery of known
  * devices). The scanner maintains internal queues for manual and startup scans.
  */
 class DeviceScanner {
@@ -46,9 +46,9 @@ class DeviceScanner {
   void setStartupScanInterval(uint32_t interval_s);
 
   // Manual scanning
-  void scanObservedDevices();
-  void scanAddress(uint8_t address);
-  void scanAddresses(const std::vector<uint8_t>& addresses);
+  bool scanObservedDevices();
+  bool scanAddress(uint8_t address);
+  bool scanAddresses(const std::vector<uint8_t>& addresses);
 
   bool isScanning() const;
   void stop();
@@ -75,7 +75,7 @@ class DeviceScanner {
   // The wall-clock time when the next startup scan iteration is allowed to run
   std::chrono::steady_clock::time_point next_startup_scan_time_;
 
-  // Flag and cursor for the exhaustive 0x00-0xff scan.
+  // Flag and cursor for the exhaustive 0x00-0xFF scan.
   // fullScanAddress_ iterates from 0 to 255.
   bool full_scan_ = false;
   uint16_t full_scan_address_ = 0;
@@ -91,7 +91,7 @@ class DeviceScanner {
 
   // Internal helper to add a scan command without locking (caller must hold
   // lock)
-  void scanAddressLocked(uint8_t address);
+  bool scanAddressLocked(uint8_t address);
 };
 
 }  // namespace ebus::detail

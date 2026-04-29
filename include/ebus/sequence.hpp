@@ -157,11 +157,11 @@ namespace ebus {
  * Sequence class that represents a sequence of bytes in the eBUS protocol. It
  * provides methods for constructing sequences from vectors, comparing
  * sequences, calculating CRC, and converting between extended and reduced
- * formats. The class handles byte stuffing for the special characters 0xaa and
- * 0xa9 as defined in the eBUS specification.
+ * formats. The class handles byte stuffing for the special characters 0xAA and
+ * 0xA9 as defined in the eBUS specification.
  *
- * (reduced) 0xaa <-> 0xa9 0x01 (extended)
- * (reduced) 0xa9 <-> 0xa9 0x00 (extended)
+ * (reduced) 0xAA <-> 0xA9 0x01 (extended)
+ * (reduced) 0xA9 <-> 0xA9 0x00 (extended)
  */
 template <size_t kInlineCapacity = detail::SequenceLimits::default_capacity>
 class SequenceImpl {

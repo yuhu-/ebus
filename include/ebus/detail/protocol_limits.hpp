@@ -19,8 +19,8 @@ namespace ebus::detail {
 // --- Physical Layer ---
 namespace Physical {
 inline constexpr uint32_t baud_rate = 2400;
-inline constexpr double bit_time_us = 1000000.0 / 2400.0;  // ~416.67 us
-inline constexpr double byte_center_bits = 9.5;     // midpoint of the stop bit
+inline constexpr float bit_time_us = 1000000.0f / 2400.0f;  // ~416.67 us
+inline constexpr float byte_center_bits = 9.5;      // midpoint of the stop bit
 inline constexpr float start_bit_tolerance = 1.5f;  // bit times
 }  // namespace Physical
 
@@ -49,8 +49,7 @@ inline constexpr uint16_t window_min_us = 4000;
 inline constexpr uint16_t window_max_us = 5000;
 inline constexpr uint16_t offset_max_us = 500;
 
-inline constexpr size_t queue_size = 256;
-inline constexpr size_t event_queue_capacity = 16;
+inline constexpr size_t queue_size = 128;
 inline constexpr size_t max_listeners = 16;
 
 namespace Syn {
@@ -78,6 +77,7 @@ inline constexpr size_t history_size = 60;
 namespace NetworkLimits {
 inline constexpr uint32_t transmit_timeout_ms = 500;
 inline constexpr uint32_t wake_interval_ms = 20;
+inline constexpr size_t max_clients = 8;
 }  // namespace NetworkLimits
 
 namespace ScannerLimits {
@@ -85,14 +85,20 @@ inline constexpr uint32_t initial_delay_s = 10;
 inline constexpr uint32_t startup_interval_s = 60;
 inline constexpr uint8_t max_startup_scans = 5;
 inline constexpr uint8_t scan_priority = 5;
+inline constexpr size_t max_manual_queue = 64;
 }  // namespace ScannerLimits
 
 namespace SchedulerLimits {
 inline constexpr size_t queue_reserve = 32;
+inline constexpr size_t max_items = 128;
 inline constexpr size_t scan_threshold = 5;
 inline constexpr uint32_t jitter_threshold_ms = 2;
 inline constexpr uint32_t controller_tick_ms = 20;
 }  // namespace SchedulerLimits
+
+namespace PollLimits {
+inline constexpr size_t max_items = 64;
+}  // namespace PollLimits
 
 namespace SequenceLimits {
 inline constexpr size_t default_capacity = 64;

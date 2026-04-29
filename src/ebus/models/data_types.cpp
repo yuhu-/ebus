@@ -79,7 +79,7 @@ constexpr std::array<const Meta*, 144> generateMetaLookup() {
   for (size_t i = 0; i < 144; ++i) arr[i] = nullptr;
   for (const auto& m : kMetaTable) {
     const int32_t val = static_cast<int32_t>(m.dt);
-    const int idx = ((val >> 8) << 4) | (val & 0xFF);
+    const int idx = ((val >> 8) << 4) | (val & 0xff);
     arr[idx] = &m;
   }
   return arr;
@@ -91,7 +91,7 @@ const Meta* metaFor(DataType dt) {
   if (dt == DataType::error || dt == DataType::auto_detect) return nullptr;
 
   const int32_t val = static_cast<int32_t>(dt);
-  const int idx = ((val >> 8) << 4) | (val & 0xFF);
+  const int idx = ((val >> 8) << 4) | (val & 0xff);
 
   if (idx < 0 || idx >= 144) return nullptr;
   return kMetaLookup[idx];
@@ -213,25 +213,14 @@ std::optional<DataValue> decode(DataType dt, ByteView data, Endian e) {
     uint32_t raw = readInt<uint32_t>(data, flip);
     float f;
     std::memcpy(&f, &raw, 4);
-#if defined(ESP_PLATFORM)
-    return static_cast<float_t>(f);
-#else
-    return static_cast<double_t>(f);
-#endif
+    return f;
   }
 
   // Handle scaled integer types (DATA1C, DATA2B, etc.)
   if (m->scale.num != 1 || m->scale.den != 1) {
     // Perform scaling in floating point to preserve fractional resolutions
-#if defined(ESP_PLATFORM)
-    return static_cast<float_t>(static_cast<float_t>(raw_val) *
-                                static_cast<float_t>(m->scale.num) /
-                                static_cast<float_t>(m->scale.den));
-#else
-    return static_cast<double_t>(static_cast<double_t>(raw_val) *
-                                 static_cast<double_t>(m->scale.num) /
-                                 static_cast<double_t>(m->scale.den));
-#endif
+    return static_cast<float>(raw_val) * static_cast<float>(m->scale.num) /
+           static_cast<float>(m->scale.den);
   }
 
   // Handle unscaled integer types
@@ -252,7 +241,7 @@ bool isValid(DataType dt, ByteView data) noexcept {
   if (dt == DataType::bcd) {
     uint8_t val = data[0];
     // Sentinel 0xFF is valid as a "null" result, not a protocol error.
-    if (val == 0xFF) return true;
+    if (val == 0xff) return true;
     return (val & 0x0f) <= 9 && ((val >> 4) & 0x0f) <= 9;
   }
   return true;
@@ -313,7 +302,7 @@ Sequence encode(DataType dt, const DataValue& value, Endian e) {
 
   // Handle Floats
   if (m->is_float) {
-    float_t f = static_cast<float_t>(asDouble(value));
+    float f = asFloat(value);
     uint32_t raw;
     std::memcpy(&raw, &f, 4);
     writeInt<uint32_t>(s, raw, flip);
@@ -322,10 +311,9 @@ Sequence encode(DataType dt, const DataValue& value, Endian e) {
 
   // Handle Integers and Fixed-Point
   int64_t raw_int = 0;
-  if (std::holds_alternative<double_t>(value) ||
-      std::holds_alternative<float_t>(value)) {
+  if (std::holds_alternative<float>(value)) {
     raw_int = static_cast<int64_t>(
-        std::round(asDouble(value) * m->scale.den / m->scale.num));
+        std::round(asFloat(value) * m->scale.den / m->scale.num));
   } else {
     raw_int = integerScale(asInt64(value), m->scale.den, m->scale.num);
   }
@@ -362,13 +350,12 @@ bool isNumeric(const DataValue& value) noexcept {
 
 /* --- DataValue Conversion --- */
 
-double_t asDouble(const DataValue& value) noexcept {
+float asFloat(const DataValue& value) noexcept {
   return std::visit(
-      [](auto&& arg) -> double_t {
+      [](auto&& arg) -> float {
         using T = std::decay_t<decltype(arg)>;
-        if constexpr (std::is_arithmetic_v<T>)
-          return static_cast<double_t>(arg);
-        return 0.0;
+        if constexpr (std::is_arithmetic_v<T>) return static_cast<float>(arg);
+        return 0.0f;
       },
       value);
 }
@@ -462,8 +449,8 @@ std::optional<DataTypeInfo> getMeta(DataType dt) {
   if (!m) return std::nullopt;
 
   DataTypeInfo info;
-  static_cast<DataTypeInfoBase&>(info) = *m;
-  info.factor = static_cast<double_t>(m->scale.num) / m->scale.den;
+  static_cast<DataTypeInfoBase&>(info) = *m;  // NOLINT
+  info.factor = static_cast<float>(m->scale.num) / m->scale.den;
   return info;
 }
 

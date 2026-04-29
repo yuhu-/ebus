@@ -60,11 +60,11 @@ void DeviceScanner::setOwnAddress(uint8_t address) {
   // Purge any pending manual retries that now target our own slave address
   // to prevent self-probing after an address change.
   std::queue<Sequence> filtered;
-  const uint8_t own_slave = ebus::slaveOf(own_address_);
+  const uint8_t own_slave = ebus::slaveOf(address);
   while (!manual_queue_.empty()) {
-    auto cmd = manual_queue_.front();
-    manual_queue_.pop();
+    auto& cmd = manual_queue_.front();
     if (cmd.empty() || cmd[0] != own_slave) filtered.push(std::move(cmd));
+    manual_queue_.pop();
   }
   manual_queue_ = std::move(filtered);
 }
@@ -84,7 +84,8 @@ void DeviceScanner::setStartupScanInterval(uint32_t interval_s) {
   startup_scan_interval_ = std::chrono::seconds(interval_s);
 }
 
-void DeviceScanner::scanObservedDevices() {
+bool DeviceScanner::scanObservedDevices() {
+  bool queued_any = false;
   // device_manager is thread-safe, so we can query it outside our lock
   // to reduce contention, although getObservedSlaves copies the set anyway.
   std::bitset<256> observed;
@@ -98,32 +99,34 @@ void DeviceScanner::scanObservedDevices() {
   std::lock_guard<std::mutex> lock(mutex_);
   for (size_t i = 0; i < 256; ++i) {
     if (observed.test(i)) {
-      scanAddressLocked(static_cast<uint8_t>(i));
+      if (scanAddressLocked(static_cast<uint8_t>(i))) queued_any = true;
     }
   }
   // Also queue vendor-specific scans for a complete refresh
   for (const auto& cmd : vendor_cmds) {
     // Basic deduplication: only add if the queue is small or command is unique
-    manual_queue_.push(cmd);
+    if (manual_queue_.size() < ScannerLimits::max_manual_queue) {
+      manual_queue_.push(cmd);
+      queued_any = true;
+    }
   }
+  return queued_any;
 }
 
-void DeviceScanner::scanAddress(uint8_t address) {
+bool DeviceScanner::scanAddress(uint8_t address) {
   std::lock_guard<std::mutex> lock(mutex_);
-  scanAddressLocked(address);
+  return scanAddressLocked(address);
 }
 
-void DeviceScanner::scanAddressLocked(uint8_t address) {
-  if (ebus::isSlave(address) && (address != ebus::slaveOf(own_address_))) {
-    manual_queue_.push(Device::createScanCommand(address));
-  }
-}
-
-void DeviceScanner::scanAddresses(const std::vector<uint8_t>& addresses) {
+bool DeviceScanner::scanAddresses(const std::vector<uint8_t>& addresses) {
   std::lock_guard<std::mutex> lock(mutex_);
+  bool all_success = true;
   for (uint8_t addr : addresses) {
-    scanAddressLocked(addr);
+    if (!scanAddressLocked(addr)) {
+      all_success = false;
+    }
   }
+  return all_success;
 }
 
 bool DeviceScanner::isScanning() const {
@@ -225,6 +228,15 @@ ebus::Sequence DeviceScanner::nextCommand() {
   }
 
   return {};
+}
+
+bool DeviceScanner::scanAddressLocked(uint8_t address) {
+  if (ebus::isSlave(address) && (address != ebus::slaveOf(own_address_))) {
+    if (manual_queue_.size() >= ScannerLimits::max_manual_queue) return false;
+    manual_queue_.push(Device::createScanCommand(address));
+    return true;
+  }
+  return false;
 }
 
 }  // namespace ebus::detail

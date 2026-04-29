@@ -85,17 +85,17 @@ ebus::metrics::SystemMetrics BusMonitor::getMetrics() const {
 
   //  Calculate Error Rate (%)
   if (hm.messages_total > 0) {
-    hm.error_rate = (static_cast<double>(hm.error_total) /
+    hm.error_rate = (static_cast<float>(hm.error_total) /
                      (hm.messages_total + hm.error_total)) *
-                    100.0;
+                    100.0f;
   }
 
   // Calculate Protocol Data Utilization Rate (%)
   if (hm.total_protocol_bytes_sent > 0) {
     hm.protocol_data_utilization_rate =
-        (static_cast<double>(hm.total_data_bytes_sent) /
+        (static_cast<float>(hm.total_data_bytes_sent) /
          hm.total_protocol_bytes_sent) *
-        100.0;
+        100.0f;
   }
 
   // 2. Populate Request Part
@@ -111,7 +111,7 @@ ebus::metrics::SystemMetrics BusMonitor::getMetrics() const {
   if (attempts > 0) {
     uint32_t collisions = rm.first_lost + rm.first_retry;
     // Calculate Contention Rate (%)
-    rm.contention_rate = (static_cast<double>(collisions) / attempts) * 100.0;
+    rm.contention_rate = (static_cast<float>(collisions) / attempts) * 100.0f;
     // Calculate Collision Rate (%)
     rm.collision_rate = rm.contention_rate;
   }
@@ -129,15 +129,15 @@ ebus::metrics::SystemMetrics BusMonitor::getMetrics() const {
 
   // Physical Utilization (%)
   if (bm.uptime.last > 0) {
-    bm.utilization = (utilization.getSum() / bm.uptime.last) * 100.0;
+    bm.utilization = (utilization.getSum() / bm.uptime.last) * 100.0f;
 
     // Congestion Logic: > 70% for > 10 seconds
     // If a single uptime sample already indicates the bus has been up for
     // at least 10s (samples are in microseconds), treat high utilization
     // as sustained congestion immediately. Otherwise fall back to the
     // time-point based detection across successive calls.
-    constexpr double kTenSecondsUs = 10e6;  // 10 seconds in microseconds
-    if (bm.utilization > 70.0) {
+    constexpr float kTenSecondsUs = 10e6f;  // 10 seconds in microseconds
+    if (bm.utilization > 70.0f) {
       if (bm.uptime.last >= kTenSecondsUs) {
         congestion_active_ = true;
       } else {
@@ -163,25 +163,25 @@ ebus::metrics::SystemMetrics BusMonitor::getMetrics() const {
 
   // High Jitter Logic: Standard deviation of SYN intervals > 10ms
   // (Standard eBUS unique timer tolerance is 5ms per Spec 9.2.2)
-  bm.high_jitter = hm.sync.stddev > 10000.0;
+  bm.high_jitter = hm.sync.stddev > 10000.0f;
 
   // 4. Populate Device Part
   metrics::DeviceMetrics& dm = sm.devices;
   dm = device_acc_;
 
   // Calculate Quality Score (%)
-  sm.quality = (100.0 - sm.handler.error_rate) *
-               (1.0 - (sm.request.contention_rate / 100.0));
+  sm.quality = (100.0f - sm.handler.error_rate) *
+               (1.0f - (sm.request.contention_rate / 100.0f));
 
   return sm;
 }
 
 void BusMonitor::updateUtilizationHistory() {
   std::lock_guard<std::mutex> lock(metrics_mutex);
-  double current_util = 0.0;
-  double up_last = uptime.getLast();
-  if (up_last > 0) {
-    current_util = (utilization.getSum() / up_last) * 100.0;
+  float current_util = 0.0f;
+  float up_last = uptime.getLast();
+  if (up_last > 0.0f) {
+    current_util = (utilization.getSum() / up_last) * 100.0f;
   }
 
   utilization_history_.push_back(static_cast<float>(current_util));

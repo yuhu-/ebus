@@ -13,6 +13,8 @@
 #include <string_view>
 #include <vector>
 
+#include "ebus/detail/protocol_limits.hpp"
+
 namespace ebus {
 
 /**
@@ -295,11 +297,11 @@ struct ErrorEntry {
   SequenceState sequence_state;
   HandlerState handler_state;
   RequestState request_state;
-  uint8_t master[32];
+  uint8_t master[detail::SequenceLimits::default_capacity];
   uint8_t master_len;
-  uint8_t slave[32];
+  uint8_t slave[detail::SequenceLimits::default_capacity];
   uint8_t slave_len;
-  double utilization;
+  float utilization;
   uint64_t timestamp;  // ms since epoch
 
   // Custom stringifier for human-readable logs

@@ -209,10 +209,20 @@ void Controller::setErrorCallback(ErrorCallback callback) {
   impl_->user_error_callback_ = std::move(callback);
 }
 
-void Controller::enqueue(uint8_t priority, ByteView message,
+bool Controller::enqueue(uint8_t priority, ByteView message,
                          ResultCallback callback) {
   if (impl_->scheduler_)
-    impl_->scheduler_->enqueue(priority, message, std::move(callback));
+    return impl_->scheduler_->enqueue(priority, message, std::move(callback));
+
+  return false;
+}
+
+bool Controller::enqueueAt(uint8_t priority, ByteView message,
+                           Clock::time_point when, ResultCallback callback) {
+  if (impl_->scheduler_)
+    return impl_->scheduler_->enqueueAt(priority, message, when,
+                                        std::move(callback));
+  return false;
 }
 
 uint32_t Controller::addPollItem(uint8_t priority, ByteView message,
@@ -415,9 +425,13 @@ void Controller::constructMembers() {
 void Controller::run() {
   while (running_.load()) {
     bool activity = false;
-    impl_->poll_manager_->processDueItems([this](const detail::PollItem& item) {
-      impl_->scheduler_->enqueue(item.priority, item.message, item.callback);
-    });
+    impl_->poll_manager_->processDueItems(
+        [this, &activity](const detail::PollItem& item) {
+          if (impl_->scheduler_->enqueue(item.priority, item.message,
+                                         item.callback))
+            activity = true;
+        },
+        &activity);
 
     if (impl_->scheduler_->queueSize() <
         detail::SchedulerLimits::scan_threshold) {

@@ -19,52 +19,57 @@ namespace ebus::detail {
 class RollingStats {
  public:
   RollingStats()
-      : last_(0.0), min_(0.0), max_(0.0), count_(0), mean_(0.0), m2_(0.0) {}
+      : last_(0.0f),
+        min_(0.0f),
+        max_(0.0f),
+        count_(0),
+        mean_(0.0f),
+        m2_(0.0f) {}
   virtual ~RollingStats() = default;
 
-  inline void addSample(double value) {
+  inline void addSample(float value) {
     std::lock_guard<std::mutex> lock(mutex_);
     addSampleUnsynced(value);
   }
 
   inline void reset() {
     std::lock_guard<std::mutex> lock(mutex_);
-    last_ = min_ = max_ = mean_ = m2_ = 0.0;
+    last_ = min_ = max_ = mean_ = m2_ = 0.0f;
     count_ = 0;
   }
 
   inline MetricValues getValues() const {
     std::lock_guard<std::mutex> lock(mutex_);
-    return {last_, min_, max_, mean_, getStdDev(), count_};
+    return {last_, min_, max_, mean_, static_cast<float>(getStdDev()), count_};
   }
 
-  double getSum() const {
+  float getSum() const {
     std::lock_guard<std::mutex> lock(mutex_);
     return mean_ * count_;
   }
 
-  double getLast() const {
+  float getLast() const {
     std::lock_guard<std::mutex> lock(mutex_);
     return last_;
   }
 
-  double getMean() const {
+  float getMean() const {
     std::lock_guard<std::mutex> lock(mutex_);
     return mean_;
   }
 
-  uint64_t getCount() const {
+  uint32_t getCount() const {
     std::lock_guard<std::mutex> lock(mutex_);
     return count_;
   }
 
-  inline double getStdDev() const {
+  inline float getStdDev() const {
     // Note: Caller in getValues already holds lock, but direct calls need it.
-    return (count_ == 0) ? 0.0 : std::sqrt(m2_ / count_);
+    return (count_ == 0) ? 0.0f : std::sqrt(m2_ / static_cast<float>(count_));
   }
 
  protected:
-  void addSampleUnsynced(double value) {
+  void addSampleUnsynced(float value) {
     last_ = value;
     if (count_ == 0) {
       min_ = value;
@@ -74,19 +79,19 @@ class RollingStats {
       if (value > max_) max_ = value;
     }
     ++count_;
-    double delta = value - mean_;
+    float delta = value - mean_;
     mean_ += delta / count_;
-    double delta2 = value - mean_;
+    float delta2 = value - mean_;
     m2_ += delta * delta2;
   }
 
   mutable std::mutex mutex_;
-  double last_;
-  double min_;
-  double max_;
-  uint64_t count_;
-  double mean_;
-  double m2_;
+  float last_;
+  float min_;
+  float max_;
+  uint32_t count_;
+  float mean_;
+  float m2_;
 };
 
 /**
@@ -110,7 +115,7 @@ class TimingStats : public RollingStats {
       auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
                           end - begin_time_)
                           .count();
-      addSampleUnsynced(static_cast<double>(duration));
+      addSampleUnsynced(static_cast<float>(duration));
       marked_ = false;
     }
   }
@@ -122,7 +127,7 @@ class TimingStats : public RollingStats {
     auto duration =
         std::chrono::duration_cast<std::chrono::microseconds>(end - begin)
             .count();
-    addSample(static_cast<double>(duration));
+    addSample(static_cast<float>(duration));
   }
 
  private:

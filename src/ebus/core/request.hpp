@@ -67,6 +67,9 @@ class Request {
   uint8_t lock_counter_max_ = ebus::RuntimeConfig{}.lock_counter;
   uint8_t lock_counter_ = ebus::RuntimeConfig{}.lock_counter;
 
+  // Counter to detect collisions in observe mode (Spec 6.4 exception)
+  uint32_t bytes_since_syn_ = 0;
+
   uint8_t request_address_ = 0;
 
   // Indicates whether a bus request is present

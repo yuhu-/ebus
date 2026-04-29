@@ -25,13 +25,13 @@ class QueueEsp {
 
   // Blocking push with duration (Standard C++ naming alias)
   template <typename Rep, typename Period>
-  bool try_push_for(const T& item, std::chrono::duration<Rep, Period> timeout) {
+  bool tryPushFor(const T& item, std::chrono::duration<Rep, Period> timeout) {
     return push(item, timeout);
   }
 
   // Blocking push (move semantics) with duration (Standard C++ naming alias)
   template <typename Rep, typename Period>
-  bool try_push_for(T&& item, std::chrono::duration<Rep, Period> timeout) {
+  bool tryPushFor(T&& item, std::chrono::duration<Rep, Period> timeout) {
     return push(std::move(item), timeout);
   }
 
@@ -61,6 +61,9 @@ class QueueEsp {
   // Non-blocking push
   bool tryPush(const T& item) { return xQueueSend(queue_, &item, 0) == pdTRUE; }
 
+  // Non-blocking push (move semantics)
+  bool tryPush(T&& item) { return xQueueSend(queue_, &item, 0) == pdTRUE; }
+
   // ISR-safe push (from ISR context)
   bool pushFromISR(const T& item) {
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
@@ -78,7 +81,7 @@ class QueueEsp {
 
   // Blocking pop with duration (Standard C++ naming alias)
   template <typename Rep, typename Period>
-  bool try_pop_for(T& out, std::chrono::duration<Rep, Period> timeout) {
+  bool tryPopFor(T& out, std::chrono::duration<Rep, Period> timeout) {
     return pop(out, timeout);
   }
 

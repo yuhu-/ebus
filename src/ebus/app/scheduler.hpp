@@ -56,9 +56,9 @@ class Scheduler {
   void start();
   void stop();
 
-  void enqueue(uint8_t priority, ByteView message,
+  bool enqueue(uint8_t priority, ByteView message,
                ResultCallback callback = nullptr);
-  void enqueueAt(uint8_t priority, ByteView message, TimePoint when,
+  bool enqueueAt(uint8_t priority, ByteView message, TimePoint when,
                  ResultCallback callback = nullptr);
 
   void setMaxSendAttempts(int send_attempts);
@@ -142,7 +142,7 @@ class Scheduler {
   TelegramCallback extern_telegram_callback_ = nullptr;
   ErrorCallback extern_error_callback_ = nullptr;
 
-  void pushItem(Item&& it);
+  bool pushItem(Item&& it);
   void run();
   Duration backoffDuration(int attempt) const;
   void attachHandlerCallbacks();

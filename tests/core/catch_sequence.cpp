@@ -39,6 +39,13 @@ TEST_CASE("Sequence Extend and Reduce logic", "[core][sequence]") {
     seq.extend();
     REQUIRE(seq.toVector() == ebus::toVector("01a90003"));
   }
+
+  SECTION("Truncated escape (lone a9) at end of sequence") {
+    seq.assign(ebus::toVector("01a9"), true);
+    seq.reduce();
+    REQUIRE(seq.toVector() == ebus::toVector("01a9"));
+    REQUIRE_FALSE(seq.isExtended());
+  }
 }
 
 TEST_CASE("Sequence CRC Calculation", "[core][sequence]") {

@@ -122,6 +122,7 @@ Queue<BusEvent>* BusPosix::getQueue() const { return byte_queue_.get(); }
 
 void BusPosix::writeByte(const uint8_t byte) {
   {
+    std::lock_guard<std::mutex> l_lock(listeners_mutex_);
     std::lock_guard<std::mutex> lock(syn_mutex_);
     auto now = std::chrono::steady_clock::now();
     last_activity_time_ = now;
@@ -146,7 +147,10 @@ void BusPosix::writeByte(const uint8_t byte) {
 
   } else {
     ensureOpen();
-    for (const auto& listener : write_listeners_) listener(byte);
+    {
+      std::lock_guard<std::mutex> lock(listeners_mutex_);
+      for (const auto& listener : write_listeners_) listener(byte);
+    }
     if (::write(fd_, &byte, 1) == -1)
       throw std::runtime_error("BusPosix: write error");
   }
@@ -225,20 +229,23 @@ void BusPosix::setRuntimeConfig(const RuntimeConfig& runtime) {
 }
 
 void BusPosix::addReadListener(ReadListener listener) {
+  std::lock_guard<std::mutex> lock(listeners_mutex_);
   read_listeners_.push_back(listener);
 }
 
 void BusPosix::addWriteListener(WriteListener listener) {
+  std::lock_guard<std::mutex> lock(listeners_mutex_);
   write_listeners_.push_back(listener);
 }
 
 void BusPosix::addSynListener(SynListener listener) {
+  std::lock_guard<std::mutex> lock(listeners_mutex_);
   syn_listeners_.push_back(listener);
 }
 
 void BusPosix::recordUtilization(uint8_t byte) {
   // 1 (start bit) + zero bits in data. eBUS bit time is ~416.67us
-  double low_time = (countZeroBits(byte) + 1) * detail::Physical::bit_time_us;
+  float low_time = (countZeroBits(byte) + 1) * detail::Physical::bit_time_us;
   if (monitor_) monitor_->utilization.addSample(low_time);
 }
 
@@ -264,7 +271,10 @@ void BusPosix::readerThread() {
 
     if (n == 1) {
       auto arrival_time = std::chrono::steady_clock::now();
-      for (const auto& listener : read_listeners_) listener(byte);
+      {
+        std::lock_guard<std::mutex> lock(listeners_mutex_);
+        for (const auto& listener : read_listeners_) listener(byte);
+      }
 
       recordUtilization(byte);
 
@@ -350,7 +360,7 @@ void BusPosix::synThread() {
 
     if (syn_intent_time_ != std::chrono::steady_clock::time_point{} &&
         monitor_) {
-      monitor_->syn_postpone.addSample(static_cast<double>(
+      monitor_->syn_postpone.addSample(static_cast<float>(
           std::chrono::duration_cast<std::chrono::microseconds>(
               now - syn_intent_time_)
               .count()));
@@ -361,7 +371,10 @@ void BusPosix::synThread() {
     syn_active_ = true;
     lock.unlock();
 
-    for (const auto& listener : syn_listeners_) listener();
+    {
+      std::lock_guard<std::mutex> l_lock(listeners_mutex_);
+      for (const auto& listener : syn_listeners_) listener();
+    }
     writeByte(Symbols::syn);
 
     lock.lock();

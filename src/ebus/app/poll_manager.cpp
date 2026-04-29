@@ -6,6 +6,7 @@
 #include "app/poll_manager.hpp"
 
 #include <algorithm>
+#include <ebus/detail/protocol_limits.hpp>
 
 namespace ebus::detail {
 
@@ -27,6 +28,11 @@ uint32_t PollManager::addPollItem(uint8_t priority, ByteView message,
                                   uint32_t interval_ms,
                                   ResultCallback callback) {
   std::lock_guard<std::mutex> lock(mutex_);
+
+  if (items_.size() >= PollLimits::max_items) {
+    return 0;
+  }
+
   uint32_t id = next_id_++;
   PollItem item;
   item.id = id;
@@ -49,7 +55,7 @@ void PollManager::removePollItem(uint32_t id) {
 }
 
 void PollManager::processDueItems(
-    const std::function<void(const PollItem&)>& callback) {
+    const std::function<void(const PollItem&)>& callback, bool* activity) {
   std::lock_guard<std::mutex> lock(mutex_);
   auto now = std::chrono::steady_clock::now();
 
@@ -58,6 +64,7 @@ void PollManager::processDueItems(
     auto node = items_.extract(items_.begin());
     const auto& item = node.value();
     callback(item);
+    if (activity) *activity = true;
 
     // Update timer and re-insert
     node.value().next_due = now + item.interval;

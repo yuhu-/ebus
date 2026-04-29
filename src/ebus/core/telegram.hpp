@@ -50,8 +50,8 @@ constexpr size_t kAckSize = 1;
  * NN...Number of data bytes (0 <= NN <= 16)
  * DBx..Data bytes (payload)
  * CRC..8-Bit CRC byte
- * ACK..Acknowledgement byte (0x00 OK, 0xff NOK)
- * SYN..Synchronisation byte (0xaa)
+ * ACK..Acknowledgement byte (0x00 OK, 0xFF NOK)
+ * SYN..Synchronisation byte (0xAA)
  */
 template <size_t kInlineCapacity = SequenceLimits::default_capacity>
 class TelegramImpl {
@@ -122,12 +122,14 @@ class TelegramImpl {
       master_state_ = SequenceState::err_data_byte;
       return;
     }
-    // Spec 5.4 & 5.5: Primary and Secondary commands cannot be AAh or A9h
+
+    /* Spec 5.4 & 5.5: Primary and Secondary commands cannot be 0xAA or 0xA9 */
     if (sequence[2] == Symbols::syn || sequence[2] == Symbols::ext ||
         sequence[3] == Symbols::syn || sequence[3] == Symbols::ext) {
       master_state_ = SequenceState::err_data_byte;
       return;
     }
+
     if (sequence.size() <
         static_cast<size_t>(kMasterHeaderSize + uint8_t(sequence[4]))) {
       master_state_ = SequenceState::err_seq_too_short;
@@ -171,6 +173,7 @@ class TelegramImpl {
       slave_state_ = SequenceState::err_data_byte;
       return;
     }
+
     if (sequence.size() < static_cast<size_t>(1 + uint8_t(sequence[0]))) {
       slave_state_ = SequenceState::err_seq_too_short;
       return;

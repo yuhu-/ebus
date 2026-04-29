@@ -59,8 +59,11 @@ class Controller {
   void setErrorCallback(ErrorCallback callback);
 
   // Scheduling & Polling
-  void enqueue(uint8_t priority, ByteView message,
+  bool enqueue(uint8_t priority, ByteView message,
                ResultCallback callback = nullptr);
+
+  bool enqueueAt(uint8_t priority, ByteView message, Clock::time_point when,
+                 ResultCallback callback = nullptr);
 
   uint32_t addPollItem(uint8_t priority, ByteView message, uint32_t interval_ms,
                        ResultCallback callback = nullptr);

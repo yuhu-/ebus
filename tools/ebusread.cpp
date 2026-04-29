@@ -10,21 +10,21 @@
 // attractive output. Dumping of binary values ​​is also supported.
 
 #include <arpa/inet.h>
-#include <cerrno>
 #include <fcntl.h>
 #include <getopt.h>
 #include <netdb.h>
 #include <sys/select.h>
 #include <sys/socket.h>
 #include <sys/time.h>
-#include <ctime>
 #include <unistd.h>
 
 #include <algorithm>
-#include <cstdio>
+#include <cerrno>
 #include <cstdint>
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <ctime>
 #include <ebus/data_types.hpp>
 #include <fstream>
 #include <iostream>
@@ -43,7 +43,7 @@ constexpr const char* BLUE = "\033[34m";
 constexpr const char* MAGENTA = "\033[35m";
 constexpr const char* CYAN = "\033[36m";
 
-constexpr uint8_t ENHANCED_SYM = 0xC6;
+constexpr uint8_t ENHANCED_SYM = 0xc6;
 constexpr int ENHANCED_THRESHOLD = 2;
 
 bool bold = false;
@@ -72,8 +72,8 @@ const char* timestamp() {
   }
 
   std::snprintf(time, sizeof(time), "%04d-%02d-%02d %02d:%02d:%02d.%03ld",
-           tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min,
-           tm.tm_sec, tv.tv_usec / 1000);
+                tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour,
+                tm.tm_min, tm.tm_sec, tv.tv_usec / 1000);
 
   return time;
 }
@@ -302,7 +302,7 @@ void run(const char* hostname, const char* port, int max_retries = 5) {
     if (sfd < 0) {
       std::cerr << "Could not connect to " << hostname << ":" << port
                 << std::endl;
-    std::exit(EXIT_FAILURE);
+      std::exit(EXIT_FAILURE);
     }
     std::cerr << "Connected to " << hostname << ":" << port << std::endl;
 
@@ -310,7 +310,7 @@ void run(const char* hostname, const char* port, int max_retries = 5) {
     bool connection_ok = true;
     bool mode_enhanced = false;
     int enhanced_seq_count = 0;
-    bool waiting_for_c6 = true;  // true: expect 0xc6, false: expect 0xaa
+    bool waiting_for_c6 = true;  // true: expect 0xC6, false: expect 0xAA
 
     while (connection_ok) {
       fd_set readfds;
@@ -347,7 +347,7 @@ void run(const char* hostname, const char* port, int max_retries = 5) {
                 enhanced_seq_count = 0;
                 waiting_for_c6 = true;
               }
-            } else {  // waiting for 0xaa
+            } else {  // waiting for 0xAA
               if (byte == ebus::Symbols::syn) {
                 enhanced_seq_count++;
                 if (enhanced_seq_count >= ENHANCED_THRESHOLD) {

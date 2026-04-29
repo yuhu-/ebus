@@ -51,7 +51,7 @@ class DeviceManager {
 
   mutable std::mutex mutex_;
 
-  std::array<Device, 256> devices_;
+  std::map<uint8_t, Device> devices_;
   std::bitset<256> identified_devices_{};
 };
 

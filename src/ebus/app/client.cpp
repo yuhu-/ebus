@@ -279,7 +279,7 @@ BridgeAction EnhancedClient::onBusByte(const BusEventContext& ctx) {
   switch (ctx.result) {
     case RequestResult::first_lost:
     case RequestResult::second_lost:
-      // Arbitration lost: return 0x0a + the master address that actually won
+      // Arbitration lost: return 0x0A + the master address that actually won
       sendEnhancedResponse(enhanced::Response::failed, ctx.byte);
       return BridgeAction::stop_session;
     case RequestResult::first_error:

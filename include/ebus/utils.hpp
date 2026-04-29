@@ -79,8 +79,8 @@ inline std::vector<uint8_t> toVector(ByteView data) {
 /**
  * Rounds a floating point value to a specific number of decimal places.
  */
-inline double roundDigits(double value, uint8_t digits) noexcept {
-  double decimals = std::pow(10, digits);
+inline float roundDigits(float value, uint8_t digits) noexcept {
+  float decimals = std::pow(10.0f, static_cast<float>(digits));
   return std::round(value * decimals) / decimals;
 }
 

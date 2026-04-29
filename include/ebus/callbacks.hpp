@@ -42,7 +42,7 @@ struct ErrorInfo {
   RequestState request_state;
   ByteView master_view;
   ByteView slave_view;
-  double utilization = 0.0;
+  float utilization = 0.0f;
 };
 
 struct ReactiveInfo {

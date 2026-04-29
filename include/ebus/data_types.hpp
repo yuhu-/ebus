@@ -86,15 +86,14 @@ struct DataTypeInfoBase {
  * Public metadata for an eBUS data type.
  */
 struct DataTypeInfo : DataTypeInfoBase {
-  double factor = 1.0;
+  float factor = 1.0f;
 };
 
 /**
  * A variant containing any possible decoded eBUS value.
  */
-using DataValue =
-    std::variant<std::monostate, uint8_t, int8_t, uint16_t, int16_t, uint32_t,
-                 int32_t, float_t, double_t, std::string>;
+using DataValue = std::variant<std::monostate, uint8_t, int8_t, uint16_t,
+                               int16_t, uint32_t, int32_t, float, std::string>;
 
 /* --- Core Operations --- */
 
@@ -160,13 +159,13 @@ bool isNumeric(const DataValue& value) noexcept;
 /* --- DataValue Conversion --- */
 
 /**
- * Extracts a numeric value as a double, regardless of underlying variant type.
+ * Extracts a numeric value as a float, regardless of underlying variant type.
  * Returns 0.0 for non-numeric types or if the DataValue is null.
  *
  * @param value The DataValue to convert.
- * @return The value as a double_t.
+ * @return The value as a float.
  */
-double_t asDouble(const DataValue& value) noexcept;
+float asFloat(const DataValue& value) noexcept;
 
 /**
  * Extracts a numeric value as a 64-bit integer, rounding if necessary.
@@ -218,11 +217,10 @@ std::optional<T> getAs(const DataValue& value) noexcept {
         if constexpr (std::is_arithmetic_v<ArgT>) {
           if constexpr (std::is_floating_point_v<T> ||
                         std::is_floating_point_v<ArgT>) {
-            double_t val = static_cast<double_t>(arg);
-            return (val >= static_cast<double_t>(
+            float val = static_cast<float>(arg);
+            return (val >= static_cast<float>(
                                (std::numeric_limits<T>::lowest)()) &&
-                    val <=
-                        static_cast<double_t>((std::numeric_limits<T>::max)()))
+                    val <= static_cast<float>((std::numeric_limits<T>::max)()))
                        ? std::optional<T>(static_cast<T>(val))
                        : std::nullopt;
           } else {

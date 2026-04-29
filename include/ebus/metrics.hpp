@@ -14,24 +14,16 @@
 
 namespace ebus {
 
-// Optimization by switching the statistical accumulators from double to float
-// and the sample count from uint64_t to uint32_t, I have reduced the size of
-// the struct from 48 bytes to 24 bytes. Given that the SystemMetrics tree
-// contains over 30 instances of this struct (including the FSM state timing
-// array), this change reduces the overall memory footprint of the telemetry
-// system by approximately 750 bytes, which is a significant saving for
-// memory-constrained platforms like the ESP32.
-
 /**
  * Results of a rolling metric calculation.
  */
 struct MetricValues {
-  double last = 0.0;
-  double min = 0.0;
-  double max = 0.0;
-  double mean = 0.0;
-  double stddev = 0.0;
-  uint64_t count = 0;
+  float last = 0.0f;
+  float min = 0.0f;
+  float max = 0.0f;
+  float mean = 0.0f;
+  float stddev = 0.0f;
+  uint32_t count = 0;
 };
 
 /**
@@ -50,7 +42,7 @@ struct HandlerMetrics {
   // total number of messages (including errors). This provides insight into the
   // reliability of the communication, with a lower error rate indicating better
   // performance.
-  double error_rate = 0.0;
+  float error_rate = 0.0f;
 
   // Protocol Data Utilization Rate (%)
   // This metric represents the efficiency of data transmission, calculated as
@@ -58,7 +50,7 @@ struct HandlerMetrics {
   // (including overhead like SYN, ACK, etc.). A higher utilization rate
   // indicates more efficient use of the bus bandwidth for actual data
   // transmission.
-  double protocol_data_utilization_rate = 0.0;
+  float protocol_data_utilization_rate = 0.0f;
 
   // Aggregated Counters
   uint32_t messages_total = 0;
@@ -114,8 +106,8 @@ struct HandlerMetrics {
   std::array<MetricValues, detail::FsmLimits::num_handler_states> state_timings;
 
   void resetMetrics() {
-    error_rate = 0.0;
-    protocol_data_utilization_rate = 0.0;
+    error_rate = 0.0f;
+    protocol_data_utilization_rate = 0.0f;
 
     // Aggregated Counters
     messages_total = 0;
@@ -180,12 +172,12 @@ struct RequestMetrics {
   // Contention happens when we lose arbitration (lost or retry) on the
   // first attempt. This is calculated as the number of contention events
   // divided by the total number of bus request attempts.
-  double contention_rate = 0.0;
+  float contention_rate = 0.0f;
 
   // Collision Rate (%)
   // Percentage of total transmit attempts that encountered a collision
   // (arbitration lost or retry required).
-  double collision_rate = 0.0;
+  float collision_rate = 0.0f;
 
   // Aggregated Counters
   uint32_t won_total = 0;
@@ -207,8 +199,8 @@ struct RequestMetrics {
   uint32_t session_timeouts = 0;
 
   void resetMetrics() {
-    contention_rate = 0.0;
-    collision_rate = 0.0;
+    contention_rate = 0.0f;
+    collision_rate = 0.0f;
 
     // Aggregated Counters
     won_total = 0;
@@ -239,7 +231,7 @@ struct BusMetrics {
   // Utilization is the percentage of time the bus is actively transmitting data
   // versus idle. This is calculated based on the total time spent transmitting
   // data compared to the overall uptime of the bus.
-  double utilization = 0.0;
+  float utilization = 0.0f;
 
   // Detailed Counters
   uint32_t start_bit_errors = 0;
@@ -256,7 +248,7 @@ struct BusMetrics {
   MetricValues syn_postpone;
 
   void resetMetrics() {
-    utilization = 0.0;
+    utilization = 0.0f;
 
     // Detailed Counters
     start_bit_errors = 0;
@@ -302,7 +294,7 @@ struct SystemMetrics {
   // contention rate to provide an overall health indicator of the bus
   // communication. A higher score indicates better performance and
   // reliability.
-  double quality = 0.0;
+  float quality = 0.0f;
 };
 
 }  // namespace metrics

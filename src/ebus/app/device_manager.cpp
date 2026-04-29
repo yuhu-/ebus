@@ -57,9 +57,10 @@ void DeviceManager::update(ByteView master_view, ByteView slave_view) {
 std::vector<ebus::DeviceInfo> DeviceManager::getDeviceInfo() const {
   std::lock_guard<std::mutex> lock(mutex_);
   std::vector<DeviceInfo> result;
-  for (size_t i = 0; i < 256; ++i) {
-    if (identified_devices_.test(i)) {
-      result.push_back(devices_[i].getDeviceInfo());
+  result.reserve(devices_.size());
+  for (const auto& [addr, dev] : devices_) {
+    if (identified_devices_.test(addr)) {
+      result.push_back(dev.getDeviceInfo());
     }
   }
   return result;
@@ -90,9 +91,9 @@ std::bitset<256> DeviceManager::getObservedSlaves() const {
 std::vector<ebus::Sequence> DeviceManager::vendorScanCommands() const {
   std::lock_guard<std::mutex> lock(mutex_);
   std::vector<Sequence> result;
-  for (size_t i = 0; i < 256; ++i) {
-    if (identified_devices_.test(i)) {
-      const auto commands = devices_[i].createVendorScanCommands();
+  for (const auto& [addr, dev] : devices_) {
+    if (identified_devices_.test(addr)) {
+      const auto commands = dev.createVendorScanCommands();
       if (!commands.empty())
         result.insert(result.end(), commands.begin(), commands.end());
     }

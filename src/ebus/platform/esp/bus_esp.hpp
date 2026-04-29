@@ -39,6 +39,10 @@ namespace ebus::detail::platform {
  * Handles serial port configuration and asynchronous byte reading via a
  * background thread.
  */
+/* WARNING: Listeners registered with this class are executed within a
+   critical section and potentially from an ISR. They MUST be extremely
+   fast, non-blocking, and ISR-safe. Do not call ebus::Controller methods
+   or any blocking OS primitives from within these listeners. */
 class BusEsp {
  public:
   using ReadListener = std::function<void(const uint8_t& byte)>;
@@ -108,36 +112,37 @@ class BusEsp {
   static constexpr int64_t byte_time_center_us_ =
       static_cast<int64_t>(Physical::byte_center_bits * Physical::bit_time_us);
 
-  // This value can be adjusted if the bus ISR is not working as expected.
-  volatile uint16_t window_us_ = 4300;  // usually between 4300-4456 us
-  volatile uint16_t offset_us_ = 80;    // mainly for context switch and write
+  // Configuration and state shared between ISR and Task context.
+  // These MUST be accessed within the timer_mux_ critical section.
+  uint16_t window_us_ = 4300;  // Usually between 4300-4456 us
+  uint16_t offset_us_ = 80;    // Mainly for context switch and write
 
-  volatile uint8_t buffer_index_ = 0;  // index for falling edge buffer
-  volatile int64_t micros_edge_buffer_[FALLING_EDGE_BUFFER_SIZE] = {0};
+  uint8_t buffer_index_ = 0;  // Index for falling edge buffer
+  int64_t micros_edge_buffer_[FALLING_EDGE_BUFFER_SIZE] = {0};
+  int64_t micros_start_bit_ = 0;  // Estimated start bit time
 
-  volatile int64_t micros_start_bit_ = 0;  // estimated start bit time
+  bool bus_request_flag_ = false;
+  bool start_bit_flag_ = false;
+  bool micros_delay_flag_ = false;
+  bool micros_window_flag_ = false;
 
-  volatile bool bus_request_flag_ = false;
-  volatile bool start_bit_flag_ = false;
+  int64_t micros_last_delay_ = 0;
+  int64_t micros_last_window_ = 0;
 
-  volatile bool micros_delay_flag_ = false;
-  volatile bool micros_window_flag_ = false;
-
-  volatile int64_t micros_last_delay_ = 0;
-  volatile int64_t micros_last_window_ = 0;
-
-  volatile int64_t last_activity_micros_ = 0;
-  // Time when we first wanted to send SYN
-  volatile int64_t syn_intent_time_ = 0;
+  int64_t last_activity_micros_ = 0;
+  int64_t syn_intent_time_ = 0;
+  int64_t syn_postpone_delta_us_ = 0;
+  uint32_t syn_postponed_count_ = 0;
+  bool syn_active_{false};
 
   std::atomic<bool> syn_running_{false};
-  bool syn_active_{false};    // True if this generator is actively sending SYNs
-  uint64_t syn_base_us_ = 0;  // Base SYN interval in microseconds
+  uint64_t syn_base_us_ = 0;    // Base SYN interval in microseconds
   uint64_t syn_unique_us_ = 0;  // Unique SYN interval in microseconds
 
   // platform handles
   QueueHandle_t uart_event_queue_ = nullptr;
   portMUX_TYPE timer_mux_ = portMUX_INITIALIZER_UNLOCKED;
+  portMUX_TYPE listener_mux_ = portMUX_INITIALIZER_UNLOCKED;
 
   // setup helpers
   void configureUart();

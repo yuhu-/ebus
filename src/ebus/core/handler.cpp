@@ -767,7 +767,7 @@ void Handler::callOnError(LogLevel level, std::string_view error_message,
                           SequenceState sequence_state, ByteView master_view,
                           ByteView slave_view) {
   if (error_callback_) {
-    double current_util = 0.0;
+    float current_util = 0.0f;
     if (monitor_) {
       monitor_->callback_error.markBegin();
       monitor_->updateBus([](auto& m) {

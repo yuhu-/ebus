@@ -55,26 +55,26 @@ TEST_CASE("Datatypes: uint8/int8/data1b/data1c", "[models][datatypes]") {
   }
 
   for (int16_t v = -128; v <= 127; v += 17) {
-    double_t value = static_cast<double_t>(v);
+    float value = static_cast<float>(v);
     Sequence bytes = ebus::encode(DataType::data1b, value);
     auto decoded = ebus::decode(DataType::data1b, bytes);
     REQUIRE(decoded.has_value());
     if (v == -128) {
       REQUIRE(ebus::isNull(*decoded));
     } else {
-      REQUIRE(std::fabs(ebus::asDouble(*decoded) - value) < 1e-5);
+      REQUIRE(std::fabs(ebus::asFloat(*decoded) - value) < 1e-5f);
     }
   }
 
   for (uint16_t v = 0; v <= 255; v += 17) {
-    double_t value = static_cast<double_t>(v) / 2.0;
+    float value = static_cast<float>(v) / 2.0;
     Sequence bytes = ebus::encode(DataType::data1c, value);
     auto decoded = ebus::decode(DataType::data1c, bytes);
     REQUIRE(decoded.has_value());
     if (v == 255) {
       REQUIRE(ebus::isNull(*decoded));
     } else {
-      REQUIRE(std::fabs(ebus::asDouble(*decoded) - value) < 1e-5);
+      REQUIRE(std::fabs(ebus::asFloat(*decoded) - value) < 1e-5);
     }
   }
 }
@@ -84,12 +84,12 @@ TEST_CASE("DATA1C resolution", "[models][datatypes]") {
   // 0x01 -> 0.5
   auto d1 = ebus::decode(DataType::data1c, ebus::ByteView({0x01}));
   REQUIRE(d1);
-  REQUIRE(std::fabs(ebus::asDouble(*d1) - 0.5) < 1e-5);
+  REQUIRE(std::fabs(ebus::asFloat(*d1) - 0.5) < 1e-5);
 
   // 0x02 -> 1.0
   auto d2 = ebus::decode(DataType::data1c, ebus::ByteView({0x02}));
   REQUIRE(d2);
-  REQUIRE(std::fabs(ebus::asDouble(*d2) - 1.0) < 1e-5);
+  REQUIRE(std::fabs(ebus::asFloat(*d2) - 1.0) < 1e-5);
 }
 
 TEST_CASE("Datatypes: 16-bit and data2", "[models][datatypes]") {
@@ -142,50 +142,50 @@ TEST_CASE("Datatypes: 16-bit and data2", "[models][datatypes]") {
   }
 
   for (int32_t v = -32768; v <= 32767; v += 4096) {
-    double_t value = static_cast<double_t>(v) / 256.0;
+    float value = static_cast<float>(v) / 256.0;
     Sequence bytes = ebus::encode(DataType::data2b, value, Endian::little);
     auto decoded = ebus::decode(DataType::data2b, bytes, Endian::little);
     REQUIRE(decoded.has_value());
     if (v == -32768) {
       REQUIRE(ebus::isNull(*decoded));
     } else {
-      REQUIRE(std::fabs(ebus::asDouble(*decoded) - value) < 1e-3);
+      REQUIRE(std::fabs(ebus::asFloat(*decoded) - value) < 1e-3);
     }
   }
 
   for (int32_t v = -32768; v <= 32767; v += 4096) {
-    double_t value = static_cast<double_t>(v) / 256.0;
+    float value = static_cast<float>(v) / 256.0;
     Sequence bytes = ebus::encode(DataType::data2br, value, Endian::little);
     auto decoded = ebus::decode(DataType::data2br, bytes, Endian::little);
     REQUIRE(decoded.has_value());
     if (v == -32768) {
       REQUIRE(ebus::isNull(*decoded));
     } else {
-      REQUIRE(std::fabs(ebus::asDouble(*decoded) - value) < 1e-3);
+      REQUIRE(std::fabs(ebus::asFloat(*decoded) - value) < 1e-3);
     }
   }
 
   for (int32_t v = -32768; v <= 32767; v += 4096) {
-    double_t value = static_cast<double_t>(v) / 16.0;
+    float value = static_cast<float>(v) / 16.0;
     Sequence bytes = ebus::encode(DataType::data2c, value, Endian::little);
     auto decoded = ebus::decode(DataType::data2c, bytes, Endian::little);
     REQUIRE(decoded.has_value());
     if (v == -32768) {
       REQUIRE(ebus::isNull(*decoded));
     } else {
-      REQUIRE(std::fabs(ebus::asDouble(*decoded) - value) < 1e-3);
+      REQUIRE(std::fabs(ebus::asFloat(*decoded) - value) < 1e-3);
     }
   }
 
   for (int32_t v = -32768; v <= 32767; v += 4096) {
-    double_t value = static_cast<double_t>(v) / 16.0;
+    float value = static_cast<float>(v) / 16.0;
     Sequence bytes = ebus::encode(DataType::data2cr, value, Endian::little);
     auto decoded = ebus::decode(DataType::data2cr, bytes, Endian::little);
     REQUIRE(decoded.has_value());
     if (v == -32768) {
       REQUIRE(ebus::isNull(*decoded));
     } else {
-      REQUIRE(std::fabs(ebus::asDouble(*decoded) - value) < 1e-3);
+      REQUIRE(std::fabs(ebus::asFloat(*decoded) - value) < 1e-3);
     }
   }
 }
@@ -251,36 +251,34 @@ TEST_CASE("Datatypes: 32-bit ints and floats", "[models][datatypes]") {
                                    -std::numeric_limits<float>::infinity(),
                                    std::nanf("")};
   for (float value : float_vals) {
-    Sequence bytes = ebus::encode(DataType::float4,
-                                  static_cast<double_t>(value), Endian::little);
+    Sequence bytes = ebus::encode(DataType::float4, value, Endian::little);
     auto decoded = ebus::decode(DataType::float4, bytes, Endian::little);
     if (std::isnan(value)) {
       REQUIRE(decoded.has_value());
-      REQUIRE(std::isnan(ebus::asDouble(*decoded)));
+      REQUIRE(std::isnan(ebus::asFloat(*decoded)));
     } else if (std::isinf(value)) {
       REQUIRE(decoded.has_value());
-      REQUIRE(std::isinf(ebus::asDouble(*decoded)));
-      REQUIRE(std::signbit(value) == std::signbit(ebus::asDouble(*decoded)));
+      REQUIRE(std::isinf(ebus::asFloat(*decoded)));
+      REQUIRE(std::signbit(value) == std::signbit(ebus::asFloat(*decoded)));
     } else {
       REQUIRE(decoded.has_value());
-      REQUIRE(std::fabs(ebus::asDouble(*decoded) - value) < 1e-5);
+      REQUIRE(std::fabs(ebus::asFloat(*decoded) - value) < 1e-5);
     }
   }
 
   for (float value : float_vals) {
-    Sequence bytes = ebus::encode(DataType::float4r,
-                                  static_cast<double_t>(value), Endian::little);
+    Sequence bytes = ebus::encode(DataType::float4r, value, Endian::little);
     auto decoded = ebus::decode(DataType::float4r, bytes, Endian::little);
     if (std::isnan(value)) {
       REQUIRE(decoded.has_value());
-      REQUIRE(std::isnan(ebus::asDouble(*decoded)));
+      REQUIRE(std::isnan(ebus::asFloat(*decoded)));
     } else if (std::isinf(value)) {
       REQUIRE(decoded.has_value());
-      REQUIRE(std::isinf(ebus::asDouble(*decoded)));
-      REQUIRE(std::signbit(value) == std::signbit(ebus::asDouble(*decoded)));
+      REQUIRE(std::isinf(ebus::asFloat(*decoded)));
+      REQUIRE(std::signbit(value) == std::signbit(ebus::asFloat(*decoded)));
     } else {
       REQUIRE(decoded.has_value());
-      REQUIRE(std::fabs(ebus::asDouble(*decoded) - value) < 1e-5);
+      REQUIRE(std::fabs(ebus::asFloat(*decoded) - value) < 1e-5);
     }
   }
 }
@@ -328,13 +326,13 @@ TEST_CASE("Datatypes: auto detection", "[models][datatypes]") {
   REQUIRE(s1.size() == 1);
   REQUIRE(s1[0] == 42);
 
-  // float4 (default for double)
-  DataValue v2 = 21.5;
+  // float4 (default for float)
+  DataValue v2 = 21.5f;
   Sequence s2 = ebus::encode(DataType::auto_detect, v2);
   REQUIRE(s2.size() == 4);
   auto d2 = ebus::decode(DataType::float4, s2);
   REQUIRE(d2);
-  REQUIRE(std::fabs(ebus::asDouble(*d2) - 21.5) < 1e-5);
+  REQUIRE(std::fabs(ebus::asFloat(*d2) - 21.5) < 1e-5);
 
   // char8 (default for string)
   DataValue v3 = std::string("EBUS");
@@ -380,11 +378,11 @@ TEST_CASE("Datatypes: isValid", "[models][datatypes]") {
   // BCD validation
   REQUIRE(ebus::isValid(DataType::bcd, ebus::ByteView({0x12})));  // "12"
   REQUIRE(
-      !ebus::isValid(DataType::bcd, ebus::ByteView({0x1A})));  // Invalid nibble
+      !ebus::isValid(DataType::bcd, ebus::ByteView({0x1a})));  // Invalid nibble
   REQUIRE(ebus::isValid(
       DataType::bcd,
       ebus::ByteView(
-          {0xFF})));  // Spec Replacement Value is valid protocol data
+          {0xff})));  // Spec Replacement Value is valid protocol data
 
   // Size validation
   REQUIRE(

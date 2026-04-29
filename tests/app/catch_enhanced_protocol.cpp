@@ -10,16 +10,16 @@
 
 using namespace ebus::detail::enhanced;
 
-TEST_CASE("Encoding/decoding examples (0x7f / 0x80 / 0xff)",
+TEST_CASE("Encoding/decoding examples (0x7F / 0x80 / 0xFF)",
           "[app][enhanced]") {
   SECTION("Case 1: 0x7f (0111 1111)") {
     uint8_t out[2];
     uint8_t val;
     Command cmd;
 
-    // cmd=1 (SEND), val=0x7f
-    // byte 0: 11 <0001> <01> -> 1100 0101 -> 0xc5
-    // byte 1: 10 <11 1111> -> 1011 1111 -> 0xbf
+    // cmd=1 (SEND), val=0x7F
+    // byte 0: 11 <0001> <01> -> 1100 0101 -> 0xC5
+    // byte 1: 10 <11 1111> -> 1011 1111 -> 0xBF
     Protocol::encode(Command::send, 0x7f, out);
     REQUIRE(out[0] == 0xc5);
     REQUIRE(out[1] == 0xbf);
@@ -34,8 +34,7 @@ TEST_CASE("Encoding/decoding examples (0x7f / 0x80 / 0xff)",
     Command cmd;
 
     // cmd=1 (SEND), val=0x80
-    // byte 0: 11 <0001> <10> -> 1100 0110 -> 0xc6
-    // byte 1: 10 <00 0000> -> 1000 0000 -> 0x80
+    // byte 0: 11 <0001> <10> -> 1100 0110 -> 0xC6
     Protocol::encode(Command::send, 0x80, out);
     REQUIRE(out[0] == 0xc6);
     REQUIRE(out[1] == 0x80);
@@ -44,14 +43,14 @@ TEST_CASE("Encoding/decoding examples (0x7f / 0x80 / 0xff)",
     REQUIRE(val == 0x80);
   }
 
-  SECTION("Case 3: 0xff (1111 1111)") {
+  SECTION("Case 3: 0xFF (1111 1111)") {
     uint8_t out[2];
     uint8_t val;
     Command cmd;
 
-    // cmd=1 (SEND), val=0xff
-    // byte 0: 11 <0001> <11> -> 1100 0111 -> 0xc7
-    // byte 1: 10 <11 1111> -> 1011 1111 -> 0xbf
+    // cmd=1 (SEND), val=0xFF
+    // byte 0: 11 <0001> <11> -> 1100 0111 -> 0xC7
+    // byte 1: 10 <11 1111> -> 1011 1111 -> 0xBF
     Protocol::encode(Command::send, 0xff, out);
     REQUIRE(out[0] == 0xc7);
     REQUIRE(out[1] == 0xbf);

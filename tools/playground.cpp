@@ -78,13 +78,13 @@ void checkTargetMasterSlave() {
 }
 
 void encode(uint8_t c, uint8_t d, uint8_t (&data)[2]) {
-  data[0] = 0xC0 | (c << 2) | ((d & 0xC0) >> 6);
-  data[1] = 0x80 | (d & 0x3F);
+  data[0] = 0xc0 | (c << 2) | ((d & 0xc0) >> 6);
+  data[1] = 0x80 | (d & 0x3f);
 }
 
 void decode(uint8_t c, uint8_t d, uint8_t (&data)[2]) {
-  data[0] = (c >> 2) & 0x0F;
-  data[1] = ((c & 0x03) << 6) | (d & 0x3F);
+  data[0] = (c >> 2) & 0x0f;
+  data[1] = ((c & 0x03) << 6) | (d & 0x3f);
 }
 
 void printDecodeEncode(uint8_t c, uint8_t d) {
@@ -127,16 +127,16 @@ void printFloatTestLittleEndian() {
             << std::endl;
   auto df = ebus::decode(ebus::DataType::float4, ef, ebus::Endian::little);
   std::cout << "bytes: " << ebus::toString(ef)
-            << " to float: " << ebus::asDouble(*df) << std::endl
+            << " to float: " << ebus::asFloat(*df) << std::endl
             << std::endl;
 
   std::vector<uint8_t> h = {0xcd, 0x4c, 0xb2, 0x41};
   auto dh = ebus::decode(ebus::DataType::float4, h, ebus::Endian::little);
   std::cout << "bytes: " << ebus::toString(h)
-            << " to float: " << ebus::asDouble(*dh) << std::endl;
+            << " to float: " << ebus::asFloat(*dh) << std::endl;
   ebus::Sequence bh =
       ebus::encode(ebus::DataType::float4, *dh, ebus::Endian::little);
-  std::cout << "float: " << ebus::asDouble(*dh)
+  std::cout << "float: " << ebus::asFloat(*dh)
             << " to bytes: " << ebus::toString(bh) << std::endl
             << std::endl;
 }
@@ -149,16 +149,16 @@ void printFloatTestBigEndian() {
             << std::endl;
   auto df = ebus::decode(ebus::DataType::float4, ef, ebus::Endian::big);
   std::cout << "bytes: " << ebus::toString(ef)
-            << " to float: " << ebus::asDouble(*df) << std::endl
+            << " to float: " << ebus::asFloat(*df) << std::endl
             << std::endl;
 
   std::vector<uint8_t> h = {0x41, 0xa8, 0x4c, 0x7f};
   auto dh = ebus::decode(ebus::DataType::float4, h, ebus::Endian::big);
   std::cout << "bytes: " << ebus::toString(h)
-            << " to float: " << ebus::asDouble(*dh) << std::endl;
+            << " to float: " << ebus::asFloat(*dh) << std::endl;
   ebus::Sequence bh =
       ebus::encode(ebus::DataType::float4, *dh, ebus::Endian::big);
-  std::cout << "float: " << ebus::asDouble(*dh)
+  std::cout << "float: " << ebus::asFloat(*dh)
             << " to bytes: " << ebus::toString(bh) << std::endl
             << std::endl;
 }

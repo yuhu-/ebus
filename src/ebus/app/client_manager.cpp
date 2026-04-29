@@ -81,6 +81,10 @@ void ClientManager::addClient(int fd, ClientType type) {
   if (!client) return;
   {
     std::lock_guard<std::mutex> lock(mutex_);
+    if (clients_.size() >= NetworkLimits::max_clients) {
+      client->stop();
+      return;
+    }
     clients_.push_back(std::move(client));
     ++clients_version_;
   }

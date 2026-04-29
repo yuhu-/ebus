@@ -93,6 +93,7 @@ class BusPosix {
   std::unique_ptr<ServiceThread> worker_;
   std::atomic<bool> running_;
 
+  mutable std::mutex listeners_mutex_;
   std::vector<ReadListener> read_listeners_;
   std::vector<WriteListener> write_listeners_;
   std::vector<SynListener> syn_listeners_;

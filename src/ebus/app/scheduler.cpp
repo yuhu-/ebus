@@ -47,7 +47,7 @@ void Scheduler::stop() {
   }
 }
 
-void Scheduler::enqueue(uint8_t priority, ByteView message,
+bool Scheduler::enqueue(uint8_t priority, ByteView message,
                         ResultCallback callback) {
   Item it;
   it.priority = priority;
@@ -55,10 +55,10 @@ void Scheduler::enqueue(uint8_t priority, ByteView message,
   it.message.assign(message);
   it.result_callback = std::move(callback);
   it.id = next_id_++;
-  pushItem(std::move(it));
+  return pushItem(std::move(it));
 }
 
-void Scheduler::enqueueAt(uint8_t priority, ByteView message, TimePoint when,
+bool Scheduler::enqueueAt(uint8_t priority, ByteView message, TimePoint when,
                           ResultCallback callback) {
   Item it;
   it.priority = priority;
@@ -66,7 +66,7 @@ void Scheduler::enqueueAt(uint8_t priority, ByteView message, TimePoint when,
   it.message.assign(message);
   it.result_callback = std::move(callback);
   it.id = next_id_++;
-  pushItem(std::move(it));
+  return pushItem(std::move(it));
 }
 
 void Scheduler::setMaxSendAttempts(int max_send_attempts) {
@@ -112,11 +112,15 @@ void Scheduler::clear() {
   std::make_heap(item_queue_.begin(), item_queue_.end(), Compare());
 }
 
-void Scheduler::pushItem(Item&& it) {
+bool Scheduler::pushItem(Item&& it) {
   std::lock_guard<std::mutex> lock(data_mutex_);
+  if (item_queue_.size() >= SchedulerLimits::max_items) {
+    return false;  // Queue is full
+  }
   item_queue_.push_back(std::move(it));
   std::push_heap(item_queue_.begin(), item_queue_.end(), Compare());
   data_ready_cv_.notify_one();
+  return true;  // Successfully pushed
 }
 
 void Scheduler::run() {

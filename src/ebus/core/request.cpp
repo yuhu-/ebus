@@ -92,10 +92,17 @@ ebus::RequestResult Request::run(uint8_t byte) {
 
 void Request::observe(uint8_t byte) {
   if (byte == Symbols::syn) {
-    if (lock_counter_ > 0) lock_counter_--;
+    // Spec 6.4: Decrement unless the SYN follows an arbitration without a clear
+    // winner. An arbitration collision results in exactly one byte (the
+    // address) between SYNs.
+    if (bytes_since_syn_ != 1) {
+      if (lock_counter_ > 0) lock_counter_--;
+    }
     result_ = RequestResult::observe_syn;
+    bytes_since_syn_ = 0;
   } else {
     result_ = RequestResult::observe_data;
+    bytes_since_syn_++;
   }
 }
 

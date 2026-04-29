@@ -103,7 +103,11 @@ void BusEsp::stop() {
 Queue<BusEvent>* BusEsp::getQueue() const { return byte_queue_.get(); }
 
 void BusEsp::writeByte(const uint8_t byte) {
-  for (const auto& listener : write_listeners_) listener(byte);
+  {
+    portENTER_CRITICAL(&listener_mux_);
+    for (const auto& listener : write_listeners_) listener(byte);
+    portEXIT_CRITICAL(&listener_mux_);
+  }
   if (monitor_) monitor_->transmit.markBegin();
   portENTER_CRITICAL(&timer_mux_);
   last_activity_micros_ = esp_timer_get_time();
@@ -175,20 +179,26 @@ void BusEsp::setRuntimeConfig(const RuntimeConfig& runtime) {
 }
 
 void BusEsp::addReadListener(ReadListener listener) {
+  portENTER_CRITICAL(&listener_mux_);
   read_listeners_.push_back(std::move(listener));
+  portEXIT_CRITICAL(&listener_mux_);
 }
 
 void BusEsp::addWriteListener(WriteListener listener) {
+  portENTER_CRITICAL(&listener_mux_);
   write_listeners_.push_back(std::move(listener));
+  portEXIT_CRITICAL(&listener_mux_);
 }
 
 void BusEsp::addSynListener(SynListener listener) {
+  portENTER_CRITICAL(&listener_mux_);
   syn_listeners_.push_back(std::move(listener));
+  portEXIT_CRITICAL(&listener_mux_);
 }
 
 void BusEsp::recordUtilization(uint8_t byte) {
   // 1 (start bit) + zero bits in data. eBUS bit time is ~416.67us
-  double low_time = (countZeroBits(byte) + 1) * Physical::bit_time_us;
+  float low_time = (countZeroBits(byte) + 1) * Physical::bit_time_us;
   if (monitor_) monitor_->utilization.addSample(low_time);
 }
 
@@ -338,7 +348,9 @@ void BusEsp::ebusUartEventRunner() {
           const auto arrival_time = std::chrono::steady_clock::now();
           const uint8_t byte = data[i];
 
+          portENTER_CRITICAL(&listener_mux_);
           for (const auto& listener : read_listeners_) listener(byte);
+          portEXIT_CRITICAL(&listener_mux_);
 
           recordUtilization(byte);
 
@@ -348,14 +360,14 @@ void BusEsp::ebusUartEventRunner() {
             const int64_t now =
                 esp_timer_get_time();  // Current time in microseconds
 
-            // Calculation of the expected start bit time based on the current
-            // time and the bit time with a 0.5-bit offset. The expected start
-            // bit time is calculated as follows:
-            // now - (10 * 416.67) + (0.5 * 416.67) or: now - 9.5 * 416.67
+            /* Calculation of the expected start bit time based on the current
+               time and the bit time with a 0.5-bit offset. The expected start
+               bit time is calculated as follows:
+               now - (10 * 416.67) + (0.5 * 416.67) or: now - 9.5 * 416.67 */
             const int64_t expected_start_bit_time = now - byte_time_center_us_;
 
             // Retrieving the start time of the last sync byte. Due to the
-            // nature of the sync byte (0xaa), the buffer size used, and
+            // nature of the sync byte (0xAA), the buffer size used, and
             // hardware delays, the relevant index is two positions before the
             // current buffer index. This is because the sync byte is sent at
             // the beginning of the frame, and we want to align the start bit
@@ -365,6 +377,8 @@ void BusEsp::ebusUartEventRunner() {
             portENTER_CRITICAL(&timer_mux_);
             micros_start_bit_ = micros_edge_buffer_[(buffer_index_ + 2) %
                                                     FALLING_EDGE_BUFFER_SIZE];
+            const uint16_t window = window_us_;
+            const uint16_t offset = offset_us_;
             portEXIT_CRITICAL(&timer_mux_);
 
             // Calculate the difference between the expected start bit time
@@ -382,8 +396,8 @@ void BusEsp::ebusUartEventRunner() {
               const int64_t micros_since_start_bit =
                   esp_timer_get_time() - micros_start_bit_;
               const int64_t delay =
-                  (window_us_ > micros_since_start_bit + offset_us_)
-                      ? (window_us_ - micros_since_start_bit - offset_us_)
+                  (window > micros_since_start_bit + offset)
+                      ? (window - micros_since_start_bit - offset)
                       : 0;
 
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
@@ -399,7 +413,7 @@ void BusEsp::ebusUartEventRunner() {
               // Legacy Timer Alarm setzen (v4.x)
               timer_set_counter_value(timer_group_num_, timer_idx_num_, 0);
               timer_set_alarm_value(timer_group_num_, timer_idx_num_,
-                                    (double)delay);
+                                    (float)delay);
               timer_set_alarm(timer_group_num_, timer_idx_num_, TIMER_ALARM_EN);
 #endif
 
@@ -423,14 +437,20 @@ void BusEsp::ebusUartEventRunner() {
           portENTER_CRITICAL(&timer_mux_);
           bus_event.bus_request = bus_request_flag_;
           bus_event.start_bit = start_bit_flag_;
+          const bool has_delay = micros_delay_flag_;
+          const bool has_window = micros_window_flag_;
+          const int64_t last_delay = micros_last_delay_;
+          const int64_t last_window = micros_last_window_;
 
-          if (monitor_) {
-            if (micros_delay_flag_)
-              monitor_->delay.addSample(
-                  static_cast<double>(micros_last_delay_));
-            if (micros_window_flag_)
-              monitor_->window.addSample(
-                  static_cast<double>(micros_last_window_));
+          int64_t postpone_sample = 0;
+          if (syn_postpone_delta_us_ > 0) {
+            postpone_sample = syn_postpone_delta_us_;
+            syn_postpone_delta_us_ = 0;
+          }
+          uint32_t postponed_count = 0;
+          if (syn_postponed_count_ > 0) {
+            postponed_count = syn_postponed_count_;
+            syn_postponed_count_ = 0;
           }
 
           // Reset the global ISR flags after consumption
@@ -439,6 +459,21 @@ void BusEsp::ebusUartEventRunner() {
           micros_delay_flag_ = false;
           micros_window_flag_ = false;
           portEXIT_CRITICAL(&timer_mux_);
+
+          if (monitor_) {
+            if (has_delay)
+              monitor_->delay.addSample(static_cast<float>(last_delay));
+            if (has_window)
+              monitor_->window.addSample(static_cast<float>(last_window));
+            if (postpone_sample > 0) {
+              monitor_->syn_postpone.addSample(
+                  static_cast<float>(postpone_sample));
+            }
+            if (postponed_count > 0) {
+              monitor_->updateBus(
+                  [=](auto& m) { m.syn_postponed_count += postponed_count; });
+            }
+          }
 
           bus_event.timestamp = arrival_time;
 
@@ -454,7 +489,7 @@ void BusEsp::ebusUartEventRunner() {
           if (syn_enabled) {
             uint64_t next_interval;
             portENTER_CRITICAL(&timer_mux_);
-            if (syn_active_ && byte == Symbols::syn) {
+            if (syn_active_ && byte == Symbols::syn) {  // Check echo for 0xAA
               next_interval = base_us;
             } else {
               syn_active_ = false;
@@ -544,33 +579,34 @@ bool IRAM_ATTR BusEsp::onSynGenTimer() {
 
   portENTER_CRITICAL_ISR(&timer_mux_);
   int64_t last_activity = last_activity_micros_;
-  portEXIT_CRITICAL_ISR(&timer_mux_);
 
-  // Carrier Sense: yield and postpone if bus was active within the last 5ms
-  // (Duration of a byte at 2400 baud + safety margin)
+  /* Carrier Sense: yield and postpone if bus was active within the last 5ms
+     (Duration of a byte at 2400 baud + safety margin) */
   if (now - last_activity < (BusLimits::Syn::carrier_sense_ms * 1000)) {
     if (syn_intent_time_ == 0) syn_intent_time_ = now;
+    syn_postponed_count_++;
+    portEXIT_CRITICAL_ISR(&timer_mux_);
+
     // Schedule a re-check in 2ms using the ISR-safe esp_timer
-    if (monitor_) {
-      monitor_->updateBus([](auto& m) { m.syn_postponed_count++; });
-    }
     esp_timer_start_once(syn_postpone_timer_,
                          BusLimits::Syn::postpone_ms * 1000);
     return false;
   }
 
-  if (syn_intent_time_ > 0 && monitor_) {
-    monitor_->syn_postpone.addSample(
-        static_cast<double>(now - syn_intent_time_));
+  if (syn_intent_time_ > 0) {
+    syn_postpone_delta_us_ = now - syn_intent_time_;
     syn_intent_time_ = 0;
   }
 
-  syn_active_ = true;  // Mark SYN generator as active
-  portENTER_CRITICAL_ISR(&timer_mux_);
+  syn_active_ = true;
   last_activity_micros_ = now;
   portEXIT_CRITICAL_ISR(&timer_mux_);
 
-  for (const auto& listener : syn_listeners_) listener();
+  portENTER_CRITICAL_ISR(&listener_mux_);
+  for (const auto& listener : syn_listeners_) {
+    listener();
+  }
+  portEXIT_CRITICAL_ISR(&listener_mux_);
 
   uint8_t syn = Symbols::syn;
   uart_ll_write_txfifo(UART_LL_GET_HW(uart_port_num_), &syn, 1);
