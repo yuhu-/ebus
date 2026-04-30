@@ -90,10 +90,9 @@ void ReadOnlyClient::sendToClient(ByteView data) {
   }
 }
 
-BridgeAction ReadOnlyClient::onBusByte(const BusEventContext& ctx) {
+BridgeAction ReadOnlyClient::onBusByte(const BusEventContext&) {
   if (!isConnected()) return BridgeAction::stop_session;
   // This should never happen, because ReadOnlyClient is never allowed to write
-  (void)ctx;
   return BridgeAction::stop_session;
 }
 

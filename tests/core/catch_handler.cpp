@@ -146,8 +146,8 @@ SCENARIO("Handler processes eBUS messages correctly", "[core][handler]") {
             busRequestFlag = false;
           }
           request.run(seq[i]);
-          handler.run({seq[i], request.getState(), request.getResult(),
-                       request.getLockCounter(),
+          handler.run({seq[i], handler.getState(), request.getState(),
+                       request.getResult(), request.getLockCounter(),
                        std::chrono::steady_clock::now()});
 
           if (seq[i] == ebus::Symbols::syn && request.busRequestPending()) {

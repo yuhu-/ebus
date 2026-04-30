@@ -99,6 +99,8 @@ class Request {
 
   RequestState state_ = RequestState::observe;
   RequestResult result_ = RequestResult::observe_syn;
+
+  void transitionTo(RequestState next);
 };
 
 }  // namespace ebus::detail

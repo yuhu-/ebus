@@ -203,6 +203,66 @@ std::string toJson(const MetricValues& v) {
   return oss.str();
 }
 
+std::string toJson(const BusEventContext& ctx) {
+  std::ostringstream oss;
+  // Convert steady_clock to system_clock (approximation for external logs)
+  auto wall_time =
+      std::chrono::system_clock::now() +
+      std::chrono::duration_cast<std::chrono::system_clock::duration>(
+          ctx.timestamp - std::chrono::steady_clock::now());
+  time_t t = std::chrono::system_clock::to_time_t(wall_time);
+  auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                wall_time.time_since_epoch())
+                .count() %
+            1000;
+
+  oss << "{"
+      << "\"byte\":\"" << toString(ctx.byte) << "\","
+      << "\"handler_state\":\"" << toString(ctx.handler_state) << "\","
+      << "\"request_state\":\"" << toString(ctx.request_state) << "\","
+      << "\"result\":\"" << toString(ctx.result) << "\","
+      << "\"lock_counter\":" << static_cast<int>(ctx.lock_counter) << ","
+      << "\"timestamp\":\"" << std::put_time(std::gmtime(&t), "%Y-%m-%dT%H:%M:%S")
+      << "." << std::setw(3) << std::setfill('0') << ms << "Z\""
+      << "}";
+  return oss.str();
+}
+
+std::string toJson(const std::vector<BusEventContext>& trace) {
+  std::ostringstream oss;
+  oss << "[";
+  for (size_t i = 0; i < trace.size(); ++i) {
+    if (i > 0) oss << ",";
+    oss << toJson(trace[i]);
+  }
+  oss << "]";
+  return oss.str();
+}
+
+std::string toJson(const HandlerTransition& t) {
+  std::ostringstream oss;
+  time_t s = static_cast<time_t>(t.timestamp / 1000);
+  oss << "{"
+      << "\"from\":\"" << toString(t.from) << "\","
+      << "\"to\":\"" << toString(t.to) << "\","
+      << "\"timestamp\":\""
+      << std::put_time(std::gmtime(&s), "%Y-%m-%dT%H:%M:%SZ") << "\""
+      << "}";
+  return oss.str();
+}
+
+std::string toJson(const RequestTransition& t) {
+  std::ostringstream oss;
+  time_t s = static_cast<time_t>(t.timestamp / 1000);
+  oss << "{"
+      << "\"from\":\"" << toString(t.from) << "\","
+      << "\"to\":\"" << toString(t.to) << "\","
+      << "\"timestamp\":\""
+      << std::put_time(std::gmtime(&s), "%Y-%m-%dT%H:%M:%SZ") << "\""
+      << "}";
+  return oss.str();
+}
+
 std::string toJson(const metrics::HandlerMetrics& m) {
   std::ostringstream oss;
   oss << std::fixed << std::setprecision(2);
@@ -233,7 +293,16 @@ std::string toJson(const metrics::HandlerMetrics& m) {
     oss << "\"" << toString(static_cast<HandlerState>(i))
         << "\":" << toJson(m.state_timings[i]);
   }
-  oss << "}}";
+  oss << "},";
+
+  oss << "\"transition_history\": [";
+  for (size_t i = 0; i < m.transition_history.size(); ++i) {
+    if (i > 0) oss << ",";
+    oss << toJson(m.transition_history[i]);
+  }
+  oss << "]";
+
+  oss << "}";
   return oss.str();
 }
 
@@ -251,7 +320,16 @@ std::string toJson(const metrics::RequestMetrics& m) {
       << ",\"retry_error\":" << m.retry_error
       << ",\"second_won\":" << m.second_won
       << ",\"second_lost\":" << m.second_lost
-      << ",\"second_error\":" << m.second_error << "}";
+      << ",\"second_error\":" << m.second_error;
+
+  oss << ",\"transition_history\": [";
+  for (size_t i = 0; i < m.transition_history.size(); ++i) {
+    if (i > 0) oss << ",";
+    oss << toJson(m.transition_history[i]);
+  }
+  oss << "]";
+
+  oss << "}";
   return oss.str();
 }
 

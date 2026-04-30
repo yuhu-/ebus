@@ -7,6 +7,7 @@
 
 #include <cstdint>
 #include <ebus/byte_view.hpp>
+#include <ebus/callbacks.hpp>
 #include <ebus/config.hpp>
 #include <ebus/types.hpp>
 #include <memory>
@@ -15,7 +16,6 @@
 #include <vector>
 
 #include "app/enhanced_protocol.hpp"
-#include "core/bus_events.hpp"
 #include "core/request.hpp"
 
 namespace ebus::detail {

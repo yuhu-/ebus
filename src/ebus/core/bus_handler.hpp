@@ -101,18 +101,24 @@ class BusHandler {
     BusEvent bus_event;
     while (running_) {
       if (queue_->pop(bus_event, watchdog_timeout_ms_)) {
-        BusEventContext ctx{bus_event.byte, RequestState::observe,
-                            RequestResult::observe_data, 0,
+        BusEventContext ctx{bus_event.byte,
+                            HandlerState::passive_receive_master,
+                            RequestState::observe,
+                            RequestResult::observe_data,
+                            0,
                             bus_event.timestamp};
 
         if (request_) {
           if (bus_event.bus_request) request_->busRequestCompleted();
           if (bus_event.start_bit) request_->startBit();
-          ctx.state = request_->getState();
+          ctx.request_state = request_->getState();
           ctx.result = request_->run(bus_event.byte);
           ctx.lock_counter = request_->getLockCounter();
         }
-        if (handler_) handler_->run(ctx);
+        if (handler_) {
+          handler_->run(ctx);
+          ctx.handler_state = handler_->getState();
+        }
 
         {
           std::lock_guard<std::mutex> lock(mutex_);

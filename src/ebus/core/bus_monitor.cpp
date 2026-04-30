@@ -5,7 +5,17 @@
 
 #include "core/bus_monitor.hpp"
 
+#include <chrono>
+
 namespace ebus::detail {
+
+namespace {
+uint64_t getNowMs() {
+  return std::chrono::duration_cast<std::chrono::milliseconds>(
+             std::chrono::system_clock::now().time_since_epoch())
+      .count();
+}
+}  // namespace
 
 BusMonitor::BusMonitor() : utilization_history_(LoggingLimits::history_size) {}
 
@@ -38,6 +48,9 @@ void BusMonitor::resetMetrics() {
   for (auto& stat : handler_timing) {
     stat.reset();
   }
+
+  handler_history_.clear();
+  request_history_.clear();
 }
 
 ebus::metrics::SystemMetrics BusMonitor::getMetrics() const {
@@ -98,6 +111,9 @@ ebus::metrics::SystemMetrics BusMonitor::getMetrics() const {
         100.0f;
   }
 
+  // Diagnostic History
+  hm.transition_history = handler_history_.snapshot();
+
   // 2. Populate Request Part
   metrics::RequestMetrics& rm = sm.request;
   rm = request_acc_;
@@ -115,6 +131,9 @@ ebus::metrics::SystemMetrics BusMonitor::getMetrics() const {
     // Calculate Collision Rate (%)
     rm.collision_rate = rm.contention_rate;
   }
+
+  // Diagnostic History
+  rm.transition_history = request_history_.snapshot();
 
   // 3. Populate Bus Part
   metrics::BusMetrics& bm = sm.bus;
@@ -190,6 +209,16 @@ void BusMonitor::updateUtilizationHistory() {
 std::vector<float> BusMonitor::getUtilizationHistory() const {
   std::lock_guard<std::mutex> lock(metrics_mutex);
   return utilization_history_.snapshot();
+}
+
+void BusMonitor::logHandlerTransition(HandlerState from, HandlerState to) {
+  std::lock_guard<std::mutex> lock(metrics_mutex);
+  handler_history_.push_back({from, to, getNowMs()});
+}
+
+void BusMonitor::logRequestTransition(RequestState from, RequestState to) {
+  std::lock_guard<std::mutex> lock(metrics_mutex);
+  request_history_.push_back({from, to, getNowMs()});
 }
 
 }  // namespace ebus::detail

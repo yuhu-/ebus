@@ -11,6 +11,24 @@
 
 namespace ebus::detail {
 
+namespace {
+template <typename... Args>
+constexpr uint8_t mask(Args... states) {
+  return (0 | ... | (1 << static_cast<int>(states)));
+}
+
+// FSM Transition Matrix (Arbitration)
+static constexpr uint8_t kTransitionMasks[] = {
+    // 0: observe
+    mask(RequestState::observe, RequestState::first),
+    // 1: first
+    mask(RequestState::observe, RequestState::first, RequestState::retry),
+    // 2: retry
+    mask(RequestState::observe, RequestState::second),
+    // 3: second
+    mask(RequestState::observe)};
+}  // namespace
+
 Request::Request(BusMonitor* monitor) : monitor_(monitor) {}
 
 void Request::setLockCounter(uint8_t lock_counter) {
@@ -47,7 +65,7 @@ void Request::setExternalBusRequestedCallback(BusRequestedCallback callback) {
 
 void Request::busRequestCompleted() {
   bus_request_.store(false, std::memory_order_release);
-  if (state_ == RequestState::observe) state_ = RequestState::first;
+  if (state_ == RequestState::observe) transitionTo(RequestState::first);
 
   if (external_bus_request_) {
     if (external_bus_requested_callback_) external_bus_requested_callback_();
@@ -62,7 +80,7 @@ void Request::startBit() {
   // We can no longer trust the bus state, so we abort any pending request
   // and return to the safest state: observing the bus for a clean SYN.
   bus_request_.store(false, std::memory_order_release);
-  state_ = RequestState::observe;
+  transitionTo(RequestState::observe);
   result_ = RequestResult::observe_syn;
 }
 
@@ -79,7 +97,7 @@ void Request::reset() {
   if (monitor_)
     monitor_->updateRequest([](auto& m) { m.lock_counter_reset++; });
   bus_request_.store(false, std::memory_order_release);
-  state_ = RequestState::observe;
+  transitionTo(RequestState::observe);
 }
 
 ebus::RequestResult Request::run(uint8_t byte) {
@@ -109,12 +127,12 @@ void Request::observe(uint8_t byte) {
 void Request::first(uint8_t byte) {
   if (byte == Symbols::syn) {
     if (monitor_) monitor_->updateRequest([](auto& m) { m.first_syn++; });
-    state_ = RequestState::first;
+    transitionTo(RequestState::first);
     result_ = RequestResult::first_syn;
   } else if (byte == request_address_) {
     if (monitor_) monitor_->updateRequest([](auto& m) { m.first_won++; });
     lock_counter_ = lock_counter_max_;
-    state_ = RequestState::observe;
+    transitionTo(RequestState::observe);
     result_ = RequestResult::first_won;
   } else if (isMaster(byte)) {
     // ARBITRATION LOSS (Wire-AND Logic):
@@ -127,7 +145,7 @@ void Request::first(uint8_t byte) {
     // to retry immediately at the next SYN (Auto-SYN).
     if ((byte & 0x0f) == (request_address_ & 0x0f)) {
       if (monitor_) monitor_->updateRequest([](auto& m) { m.first_retry++; });
-      state_ = RequestState::retry;
+      transitionTo(RequestState::retry);
       // CRITICAL: We must re-arm the bus request immediately here.
       // If we wait until we see the next SYN in 'retry()', the Bus thread
       // will have already passed the write window for that SYN.
@@ -135,12 +153,12 @@ void Request::first(uint8_t byte) {
       result_ = RequestResult::first_retry;
     } else {
       if (monitor_) monitor_->updateRequest([](auto& m) { m.first_lost++; });
-      state_ = RequestState::observe;
+      transitionTo(RequestState::observe);
       result_ = RequestResult::first_lost;
     }
   } else {
     if (monitor_) monitor_->updateRequest([](auto& m) { m.first_error++; });
-    state_ = RequestState::observe;
+    transitionTo(RequestState::observe);
     result_ = RequestResult::first_error;
   }
 }
@@ -148,11 +166,11 @@ void Request::first(uint8_t byte) {
 void Request::retry(uint8_t byte) {
   if (byte == Symbols::syn) {
     if (monitor_) monitor_->updateRequest([](auto& m) { m.retry_syn++; });
-    state_ = RequestState::second;
+    transitionTo(RequestState::second);
     result_ = RequestResult::retry_syn;
   } else {
     if (monitor_) monitor_->updateRequest([](auto& m) { m.retry_error++; });
-    state_ = RequestState::observe;
+    transitionTo(RequestState::observe);
     result_ = RequestResult::retry_error;
   }
 }
@@ -161,16 +179,35 @@ void Request::second(uint8_t byte) {
   if (byte == request_address_) {
     if (monitor_) monitor_->updateRequest([](auto& m) { m.second_won++; });
     lock_counter_ = lock_counter_max_;
-    state_ = RequestState::observe;
+    transitionTo(RequestState::observe);
     result_ = RequestResult::second_won;
   } else if (isMaster(byte)) {
     if (monitor_) monitor_->updateRequest([](auto& m) { m.second_lost++; });
-    state_ = RequestState::observe;
+    transitionTo(RequestState::observe);
     result_ = RequestResult::second_lost;
   } else {
     if (monitor_) monitor_->updateRequest([](auto& m) { m.second_error++; });
-    state_ = RequestState::observe;
+    transitionTo(RequestState::observe);
     result_ = RequestResult::second_error;
+  }
+}
+
+void Request::transitionTo(RequestState next) {
+  if (next == state_) return;
+
+  const RequestState old_state = state_;
+  const uint8_t next_bit = 1 << static_cast<int>(next);
+  const uint8_t valid_mask = kTransitionMasks[static_cast<size_t>(state_)];
+
+  if (!(next_bit & valid_mask)) {
+    // Safe recovery: return to observe state.
+    next = RequestState::observe;
+  }
+
+  state_ = next;
+
+  if (monitor_) {
+    monitor_->logRequestTransition(old_state, next);
   }
 }
 

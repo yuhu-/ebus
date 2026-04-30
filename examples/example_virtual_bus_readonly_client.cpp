@@ -107,19 +107,23 @@ int main() {
     if (n > 0) {
       // If you see 0xaa here, the virtual connection is working.
       // If you see nothing, the VirtualLine is isolated.
-      std::cout << "[DeviceA ReadOnly] Logged " << n << " bytes: "
+      std::cout << "[Device A] Logged " << n << " bytes: "
                 << ebus::byteToHex(std::vector<uint8_t>(logBuf, logBuf + n))
                 << std::endl;
     }
 
     // Print metrics to see bus health
     auto metrics = deviceB.getMetrics();
-    std::cout << "Bus Quality: " << metrics.quality << "%" << std::endl;
+    std::cout << "[Device B] Bus Quality: " << metrics.quality << "%"
+              << std::endl;
   }
 
   // Print metrics to see bus health
   auto metrics = deviceB.getMetrics();
-  std::cout << "devieB Metrics: " << ebus::toJson(metrics) << std::endl;
+  std::cout << "[Device B] Metrics: " << ebus::toJson(metrics) << std::endl;
+
+  std::cout << "[Device B] Trace History: " << deviceB.getTraceHistoryJson()
+            << std::endl;
 
   // --- 8. Stop the simulation ---
   std::cout << "Stopping simulation on virtual bus..." << std::endl;

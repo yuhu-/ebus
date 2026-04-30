@@ -143,7 +143,8 @@ class Handler {
                 "kStateHandlers table size does not match NUM_HANDLER_STATES");
 
   HandlerState state_ = HandlerState::passive_receive_master;
-  HandlerState last_state_ = HandlerState::passive_receive_master;
+
+  void transitionTo(HandlerState next);
 
   void checkPassiveBuffers();
   void checkActiveBuffers();

@@ -14,7 +14,6 @@
 #include <vector>
 
 #include "app/client.hpp"
-#include "core/bus_events.hpp"
 #include "core/bus_handler.hpp"
 #include "core/request.hpp"
 #include "platform/bus.hpp"

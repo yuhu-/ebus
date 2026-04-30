@@ -88,12 +88,15 @@ TEST_CASE("EnhancedClient: Encoded responses mapping",
 
   // Transparent Sniffer: Bridge client must see the SYN that opens the window
   req.run(ebus::Symbols::syn);
-  client.onBusByte({ebus::Symbols::syn, req.getState(), req.getResult(),
-                    req.getLockCounter(), std::chrono::steady_clock::now()});
+  client.onBusByte({ebus::Symbols::syn,
+                    ebus::HandlerState::passive_receive_master, req.getState(),
+                    req.getResult(), req.getLockCounter(),
+                    std::chrono::steady_clock::now()});
 
   req.run(0x33);  // Move FSM to firstWon
 
-  client.onBusByte({0x33, req.getState(), req.getResult(), req.getLockCounter(),
+  client.onBusByte({0x33, ebus::HandlerState::passive_receive_master,
+                    req.getState(), req.getResult(), req.getLockCounter(),
                     std::chrono::steady_clock::now()});
 
   uint8_t resp[2];
@@ -107,7 +110,8 @@ TEST_CASE("EnhancedClient: Encoded responses mapping",
 
   // 2. Test: Short-form observation
   req.run(0x15);  // Move FSM to observeData
-  client.onBusByte({0x15, req.getState(), req.getResult(), req.getLockCounter(),
+  client.onBusByte({0x15, ebus::HandlerState::passive_receive_master,
+                    req.getState(), req.getResult(), req.getLockCounter(),
                     std::chrono::steady_clock::now()});
 
   uint8_t short_resp;
@@ -116,7 +120,8 @@ TEST_CASE("EnhancedClient: Encoded responses mapping",
 
   // 3. Test: Long-form observation (>= 0x80) should be encoded
   req.run(0xaa);  // Move FSM to observeSyn
-  client.onBusByte({0xaa, req.getState(), req.getResult(), req.getLockCounter(),
+  client.onBusByte({0xaa, ebus::HandlerState::passive_receive_master,
+                    req.getState(), req.getResult(), req.getLockCounter(),
                     std::chrono::steady_clock::now()});
 
   REQUIRE(readExact(sv[1], resp, 2));

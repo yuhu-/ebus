@@ -14,6 +14,63 @@
 
 namespace ebus::detail {
 
+namespace {
+template <typename... Args>
+constexpr uint16_t mask(Args... states) {
+  return (0 | ... | (1 << static_cast<int>(states)));
+}
+
+#define RESET_TRANS HandlerState::passive_receive_master
+#define ARB_TRANS HandlerState::request_bus
+
+// FSM Transition Matrix (Spec 4 & 6)
+
+static constexpr uint16_t kTransitionMasks[] = {
+    // 0: passive_receive_master
+    mask(RESET_TRANS, ARB_TRANS,
+         HandlerState::passive_receive_master_acknowledge,
+         HandlerState::reactive_send_master_positive_acknowledge,
+         HandlerState::reactive_send_master_negative_acknowledge,
+         HandlerState::release_bus),
+    // 1: passive_receive_master_acknowledge
+    mask(RESET_TRANS, ARB_TRANS, HandlerState::passive_receive_slave),
+    // 2: passive_receive_slave
+    mask(RESET_TRANS, ARB_TRANS,
+         HandlerState::passive_receive_slave_acknowledge),
+    // 3: passive_receive_slave_acknowledge
+    mask(RESET_TRANS, ARB_TRANS, HandlerState::passive_receive_slave),
+    // 4: reactive_send_master_positive_acknowledge
+    mask(RESET_TRANS, ARB_TRANS, HandlerState::reactive_send_slave),
+    // 5: reactive_send_master_negative_acknowledge
+    mask(RESET_TRANS, ARB_TRANS),
+    // 6: reactive_send_slave
+    mask(RESET_TRANS, ARB_TRANS,
+         HandlerState::reactive_receive_slave_acknowledge),
+    // 7: reactive_receive_slave_acknowledge
+    mask(RESET_TRANS, ARB_TRANS, HandlerState::reactive_send_slave),
+    // 8: request_bus
+    mask(RESET_TRANS, ARB_TRANS, HandlerState::active_send_master,
+         HandlerState::release_bus),
+    // 9: active_send_master
+    mask(RESET_TRANS, ARB_TRANS,
+         HandlerState::active_receive_master_acknowledge,
+         HandlerState::release_bus),
+    // 10: active_receive_master_acknowledge
+    mask(RESET_TRANS, ARB_TRANS, HandlerState::active_send_master,
+         HandlerState::active_receive_slave, HandlerState::release_bus),
+    // 11: active_receive_slave
+    mask(RESET_TRANS, ARB_TRANS,
+         HandlerState::active_send_slave_positive_acknowledge,
+         HandlerState::active_send_slave_negative_acknowledge),
+    // 12: active_send_slave_positive_acknowledge
+    mask(RESET_TRANS, ARB_TRANS, HandlerState::release_bus),
+    // 13: active_send_slave_negative_acknowledge
+    mask(RESET_TRANS, ARB_TRANS, HandlerState::active_receive_slave,
+         HandlerState::release_bus),
+    // 14: release_bus
+    mask(RESET_TRANS, ARB_TRANS)};
+}  // namespace
+
 Handler::Handler(uint8_t source_address, platform::Bus* bus, Request* request,
                  BusMonitor* monitor)
     : bus_(bus), request_(request), monitor_(monitor) {
@@ -21,7 +78,7 @@ Handler::Handler(uint8_t source_address, platform::Bus* bus, Request* request,
 
   request_->setHandlerBusRequestedCallback([this]() {
     if (active_message_ && state_ != HandlerState::request_bus)
-      state_ = HandlerState::request_bus;
+      transitionTo(HandlerState::request_bus);
   });
 
   request_->setStartBitCallback([this]() {
@@ -97,7 +154,7 @@ bool Handler::sendActiveMessage(ByteView message) {
 bool Handler::isActiveMessagePending() const { return active_message_; }
 
 void Handler::reset() {
-  state_ = HandlerState::passive_receive_master;
+  transitionTo(HandlerState::passive_receive_master);
   callActiveReset();
   callPassiveReset();
 }
@@ -187,7 +244,7 @@ void Handler::passiveReceiveMaster(uint8_t byte) {
           callPassiveReset();
         } else if (passive_master_[1] == source_address_) {
           callWrite(Symbols::ack);
-          state_ = HandlerState::reactive_send_master_positive_acknowledge;
+          transitionTo(HandlerState::reactive_send_master_positive_acknowledge);
         } else if (passive_master_[1] == target_address_) {
           passive_slave_.clear();
           callOnReactiveMasterSlave(passive_telegram_.getMaster(),
@@ -200,7 +257,8 @@ void Handler::passiveReceiveMaster(uint8_t byte) {
             passive_slave_.pushBack(passive_telegram_.getSlaveCRC(), false);
             passive_slave_.extend();
             callWrite(Symbols::ack);
-            state_ = HandlerState::reactive_send_master_positive_acknowledge;
+            transitionTo(
+                HandlerState::reactive_send_master_positive_acknowledge);
           } else {
             if (monitor_)
               monitor_->updateHandler(
@@ -211,10 +269,10 @@ void Handler::passiveReceiveMaster(uint8_t byte) {
                         {passive_slave_.data(), passive_slave_.size()});
             callPassiveReset();
             callWrite(Symbols::syn);
-            state_ = HandlerState::release_bus;
+            transitionTo(HandlerState::release_bus);
           }
         } else {
-          state_ = HandlerState::passive_receive_master_acknowledge;
+          transitionTo(HandlerState::passive_receive_master_acknowledge);
         }
       } else {
         if (passive_master_[1] == source_address_ ||
@@ -229,10 +287,10 @@ void Handler::passiveReceiveMaster(uint8_t byte) {
           passive_master_.clear();
           passive_master_dbx_ = 0;
           callWrite(Symbols::nak);
-          state_ = HandlerState::reactive_send_master_negative_acknowledge;
+          transitionTo(HandlerState::reactive_send_master_negative_acknowledge);
         } else if (passive_telegram_.getType() == TelegramType::master_master ||
                    passive_telegram_.getType() == TelegramType::master_slave) {
-          state_ = HandlerState::passive_receive_master_acknowledge;
+          transitionTo(HandlerState::passive_receive_master_acknowledge);
         } else {
           if (monitor_)
             monitor_->updateHandler(
@@ -266,16 +324,16 @@ void Handler::passiveReceiveMasterAcknowledge(uint8_t byte) {
         monitor_->updateHandler(
             [](auto& m) { m.messages_passive_master_master++; });
       callPassiveReset();
-      state_ = HandlerState::passive_receive_master;
+      transitionTo(HandlerState::passive_receive_master);
     } else {
-      state_ = HandlerState::passive_receive_slave;
+      transitionTo(HandlerState::passive_receive_slave);
     }
   } else if (byte != Symbols::syn && !passive_master_repeated_) {
     passive_master_repeated_ = true;
     passive_telegram_.clear();
     passive_master_.clear();
     passive_master_dbx_ = 0;
-    state_ = HandlerState::passive_receive_master;
+    transitionTo(HandlerState::passive_receive_master);
   } else {
     if (monitor_)
       monitor_->updateHandler([](auto& m) { m.error_passive_master_ack++; });
@@ -290,7 +348,7 @@ void Handler::passiveReceiveMasterAcknowledge(uint8_t byte) {
                 {passive_master_.data(), passive_master_.size()},
                 {passive_slave_.data(), passive_slave_.size()});
     callPassiveReset();
-    state_ = HandlerState::passive_receive_master;
+    transitionTo(HandlerState::passive_receive_master);
   }
 }
 
@@ -314,7 +372,7 @@ void Handler::passiveReceiveSlave(uint8_t byte) {
                   {passive_master_.data(), passive_master_.size()},
                   {passive_slave_.data(), passive_slave_.size()});
     }
-    state_ = HandlerState::passive_receive_slave_acknowledge;
+    transitionTo(HandlerState::passive_receive_slave_acknowledge);
   }
 }
 
@@ -329,12 +387,12 @@ void Handler::passiveReceiveSlaveAcknowledge(uint8_t byte) {
       monitor_->updateHandler(
           [](auto& m) { m.messages_passive_master_slave++; });
     callPassiveReset();
-    state_ = HandlerState::passive_receive_master;
+    transitionTo(HandlerState::passive_receive_master);
   } else if (byte == Symbols::nak && !passive_slave_repeated_) {
     passive_slave_repeated_ = true;
     passive_slave_.clear();
     passive_slave_dbx_ = 0;
-    state_ = HandlerState::passive_receive_slave;
+    transitionTo(HandlerState::passive_receive_slave);
   } else {
     if (monitor_)
       monitor_->updateHandler([](auto& m) { m.error_passive_slave_ack++; });
@@ -343,7 +401,7 @@ void Handler::passiveReceiveSlaveAcknowledge(uint8_t byte) {
                 {passive_master_.data(), passive_master_.size()},
                 {passive_slave_.data(), passive_slave_.size()});
     callPassiveReset();
-    state_ = HandlerState::passive_receive_master;
+    transitionTo(HandlerState::passive_receive_master);
   }
 }
 
@@ -359,16 +417,16 @@ void Handler::reactiveSendMasterPositiveAcknowledge(
       monitor_->updateHandler(
           [](auto& m) { m.messages_reactive_master_master++; });
     callPassiveReset();
-    state_ = HandlerState::passive_receive_master;
+    transitionTo(HandlerState::passive_receive_master);
   } else {
     callWrite(passive_slave_[passive_slave_index_]);  // Send next slave byte
-    state_ = HandlerState::reactive_send_slave;
+    transitionTo(HandlerState::reactive_send_slave);
   }
 }
 
 void Handler::reactiveSendMasterNegativeAcknowledge(
     [[maybe_unused]] uint8_t byte) {
-  state_ = HandlerState::passive_receive_master;
+  transitionTo(HandlerState::passive_receive_master);
   if (!passive_master_repeated_) {
     passive_master_repeated_ = true;  // Allow one retry
   } else {
@@ -385,7 +443,7 @@ void Handler::reactiveSendMasterNegativeAcknowledge(
 void Handler::reactiveSendSlave([[maybe_unused]] uint8_t byte) {
   passive_slave_index_++;
   if (passive_slave_index_ >= passive_slave_.size())  // All slave bytes sent
-    state_ = HandlerState::reactive_receive_slave_acknowledge;
+    transitionTo(HandlerState::reactive_receive_slave_acknowledge);
   else
     callWrite(passive_slave_[passive_slave_index_]);
 }
@@ -402,14 +460,14 @@ void Handler::reactiveReceiveSlaveAcknowledge(uint8_t byte) {
       monitor_->updateHandler(
           [](auto& m) { m.messages_reactive_master_slave++; });
     callPassiveReset();
-    state_ = HandlerState::passive_receive_master;
+    transitionTo(HandlerState::passive_receive_master);
   } else if (byte == Symbols::nak &&
              !passive_slave_repeated_) {  // Negative Symbols::ack, retry slave
                                           // response
     passive_slave_repeated_ = true;
     passive_slave_index_ = 0;
     callWrite(passive_slave_[passive_slave_index_]);
-    state_ = HandlerState::reactive_send_slave;
+    transitionTo(HandlerState::reactive_send_slave);
   } else {
     if (monitor_)
       monitor_->updateHandler([](auto& m) { m.error_reactive_slave_ack++; });
@@ -418,7 +476,7 @@ void Handler::reactiveReceiveSlaveAcknowledge(uint8_t byte) {
                 {passive_master_.data(), passive_master_.size()},
                 {passive_slave_.data(), passive_slave_.size()});
     callPassiveReset();
-    state_ = HandlerState::passive_receive_master;
+    transitionTo(HandlerState::passive_receive_master);
   }
 }
 
@@ -431,7 +489,7 @@ void Handler::requestBus(uint8_t byte) {
       callOnBusRequestWon();
       active_master_index_ = 1;
       callWrite(active_master_[active_master_index_]);
-      state_ = HandlerState::active_send_master;
+      transitionTo(HandlerState::active_send_master);
     } else {
       callOnBusRequestLost();
       if (monitor_)
@@ -440,7 +498,7 @@ void Handler::requestBus(uint8_t byte) {
       active_telegram_.clear();  // Clear active message state
       active_master_.clear();
       callWrite(Symbols::syn);
-      state_ = HandlerState::release_bus;
+      transitionTo(HandlerState::release_bus);
     }
   };
 
@@ -450,7 +508,7 @@ void Handler::requestBus(uint8_t byte) {
     active_message_ = false;
     active_telegram_.clear();  // Clear active message state
     active_master_.clear();
-    state_ = HandlerState::passive_receive_master;
+    transitionTo(HandlerState::passive_receive_master);
   };
 
   auto error = [&]() {
@@ -458,7 +516,7 @@ void Handler::requestBus(uint8_t byte) {
     active_message_ = false;
     active_telegram_.clear();  // Clear active message state
     active_master_.clear();
-    state_ = HandlerState::passive_receive_master;
+    transitionTo(HandlerState::passive_receive_master);
   };
 
   switch (last_result_) {
@@ -529,9 +587,9 @@ void Handler::activeSendMaster(uint8_t byte) {
         monitor_->updateHandler([](auto& m) { m.messages_active_broadcast++; });
       callActiveReset();  // Reset active state
       callWrite(Symbols::syn);
-      state_ = HandlerState::release_bus;
+      transitionTo(HandlerState::release_bus);
     } else {
-      state_ = HandlerState::active_receive_master_acknowledge;
+      transitionTo(HandlerState::active_receive_master_acknowledge);
     }
   } else {
     callWrite(active_master_[active_master_index_]);
@@ -549,9 +607,9 @@ void Handler::activeReceiveMasterAcknowledge(uint8_t byte) {
             [](auto& m) { m.messages_active_master_master++; });
       callActiveReset();  // Reset active state
       callWrite(Symbols::syn);
-      state_ = HandlerState::release_bus;
+      transitionTo(HandlerState::release_bus);
     } else {
-      state_ = HandlerState::active_receive_slave;
+      transitionTo(HandlerState::active_receive_slave);
     }
   } else if (byte == Symbols::nak &&
              !active_master_repeated_) {  // Negative ACK, retry master
@@ -559,7 +617,7 @@ void Handler::activeReceiveMasterAcknowledge(uint8_t byte) {
     active_master_repeated_ = true;
     active_master_index_ = 0;
     callWrite(active_master_[active_master_index_]);
-    state_ = HandlerState::active_send_master;
+    transitionTo(HandlerState::active_send_master);
   } else {
     if (monitor_)
       monitor_->updateHandler([](auto& m) { m.error_active_master_ack++; });
@@ -574,7 +632,7 @@ void Handler::activeReceiveMasterAcknowledge(uint8_t byte) {
                 {active_slave_.data(), active_slave_.size()});
     callActiveReset();  // Reset active state
     callWrite(Symbols::syn);
-    state_ = HandlerState::release_bus;
+    transitionTo(HandlerState::release_bus);
   }
 }
 
@@ -592,7 +650,7 @@ void Handler::activeReceiveSlave(uint8_t byte) {
     active_telegram_.createSlave(active_slave_);
     if (active_telegram_.getSlaveState() == SequenceState::seq_ok) {
       callWrite(Symbols::ack);
-      state_ = HandlerState::active_send_slave_positive_acknowledge;
+      transitionTo(HandlerState::active_send_slave_positive_acknowledge);
     } else {
       if (monitor_)
         monitor_->updateHandler([](auto& m) { m.error_active_slave++; });
@@ -603,7 +661,7 @@ void Handler::activeReceiveSlave(uint8_t byte) {
       active_slave_.clear();  // Clear slave response
       active_slave_dbx_ = 0;
       callWrite(Symbols::nak);
-      state_ = HandlerState::active_send_slave_negative_acknowledge;
+      transitionTo(HandlerState::active_send_slave_negative_acknowledge);
     }
   }
 }
@@ -619,14 +677,14 @@ void Handler::activeSendSlavePositiveAcknowledge(
     monitor_->updateHandler([](auto& m) { m.messages_active_master_slave++; });
   callActiveReset();  // Reset active state
   callWrite(Symbols::syn);
-  state_ = HandlerState::release_bus;
+  transitionTo(HandlerState::release_bus);
 }
 
 void Handler::activeSendSlaveNegativeAcknowledge(
     [[maybe_unused]] uint8_t byte) {
   if (!active_slave_repeated_) {
     active_slave_repeated_ = true;
-    state_ = HandlerState::active_receive_slave;
+    transitionTo(HandlerState::active_receive_slave);
   } else {
     if (monitor_)
       monitor_->updateHandler([](auto& m) { m.error_active_slave_ack++; });
@@ -636,12 +694,32 @@ void Handler::activeSendSlaveNegativeAcknowledge(
                 {active_slave_.data(), active_slave_.size()});
     callActiveReset();  // Reset active state
     callWrite(Symbols::syn);
-    state_ = HandlerState::release_bus;
+    transitionTo(HandlerState::release_bus);
   }
 }
 
 void Handler::releaseBus([[maybe_unused]] uint8_t byte) {
-  state_ = HandlerState::passive_receive_master;
+  transitionTo(HandlerState::passive_receive_master);
+}
+
+void Handler::transitionTo(HandlerState next) {
+  if (next == state_) return;
+
+  const HandlerState old_state = state_;
+  const uint16_t next_bit = 1 << static_cast<int>(next);
+  const uint16_t valid_mask = kTransitionMasks[static_cast<size_t>(state_)];
+
+  if (!(next_bit & valid_mask)) {
+    callOnError(LogLevel::error, "IllegalFsmTransition", SequenceState::seq_ok,
+                {}, {});
+    // Emergency recovery: Force reset to ground state
+    next = HandlerState::passive_receive_master;
+  }
+
+  state_ = next;
+  if (monitor_) {
+    monitor_->logHandlerTransition(old_state, next);
+  }
 }
 
 /**

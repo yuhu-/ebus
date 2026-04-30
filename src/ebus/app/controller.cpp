@@ -7,6 +7,7 @@
 #include <ebus/controller.hpp>
 #include <ebus/detail/config_validator.hpp>
 #include <ebus/utils.hpp>
+#include <iomanip>
 #include <mutex>
 
 #include "app/client_manager.hpp"
@@ -28,9 +29,12 @@ namespace ebus {
 struct Impl {
   detail::CircularBuffer<ebus::ErrorEntry> error_buffer_{
       ebus::RuntimeConfig{}.logging.log_size};
+  detail::CircularBuffer<ebus::BusEventContext> trace_buffer_{100};
   ebus::ReactiveMasterSlaveCallback user_reactive_callback_;
   ebus::TelegramCallback user_telegram_callback_;
   ebus::ErrorCallback user_error_callback_;
+  ebus::TraceCallback user_trace_callback_;
+
   std::unique_ptr<detail::Request> request_;
   std::unique_ptr<detail::BusMonitor> bus_monitor_;
   std::unique_ptr<detail::platform::Bus> bus_;
@@ -214,6 +218,11 @@ void Controller::setErrorCallback(ErrorCallback callback) {
   impl_->user_error_callback_ = std::move(callback);
 }
 
+void Controller::setTraceCallback(TraceCallback callback) {
+  std::lock_guard<std::mutex> lock(config_mutex_);
+  impl_->user_trace_callback_ = std::move(callback);
+}
+
 bool Controller::enqueue(uint8_t priority, ByteView message,
                          ResultCallback callback) {
   if (isConfigured())
@@ -331,6 +340,47 @@ void Controller::resetMetrics() {
 
 Metrics Controller::getMetrics() const {
   return isConfigured() ? impl_->bus_monitor_->getMetrics() : Metrics{};
+}
+
+std::string Controller::getFsmHistory() const {
+  if (!isConfigured()) return "";
+  auto metrics = impl_->bus_monitor_->getMetrics();
+  std::ostringstream oss;
+
+  oss << "--- Handler FSM History ---\n";
+  for (const auto& t : metrics.handler.transition_history) {
+    time_t s = static_cast<time_t>(t.timestamp / 1000);
+    auto* tm_ptr = std::gmtime(&s);
+    if (tm_ptr) {
+      oss << "[" << std::put_time(tm_ptr, "%H:%M:%S") << "." << std::setw(3)
+          << std::setfill('0') << (t.timestamp % 1000) << "] "
+          << toString(t.from) << " -> " << toString(t.to) << "\n";
+    }
+  }
+
+  oss << "\n--- Request FSM History ---\n";
+  for (const auto& t : metrics.request.transition_history) {
+    time_t s = static_cast<time_t>(t.timestamp / 1000);
+    auto* tm_ptr = std::gmtime(&s);
+    if (tm_ptr) {
+      oss << "[" << std::put_time(tm_ptr, "%H:%M:%S") << "." << std::setw(3)
+          << std::setfill('0') << (t.timestamp % 1000) << "] "
+          << toString(t.from) << " -> " << toString(t.to) << "\n";
+    }
+  }
+  return oss.str();
+}
+
+std::vector<BusEventContext> Controller::getTraceHistory() const {
+  if (isConfigured()) {
+    return impl_->trace_buffer_.snapshot();
+  }
+  return {};
+}
+
+std::string Controller::getTraceHistoryJson() const {
+  if (!isConfigured()) return "[]";
+  return toJson(getTraceHistory());
 }
 
 std::vector<float> Controller::getUtilizationHistory() const {
@@ -479,6 +529,20 @@ void Controller::constructMembers() {
     impl_->bus_handler_ = std::make_unique<detail::BusHandler>(
         impl_->request_.get(), impl_->handler_.get(), impl_->bus_->getQueue(),
         detail::BusLimits::max_listeners);
+
+    // Add the permanent tracing listener
+    impl_->bus_handler_->addByteListener([this](const BusEventContext& ctx) {
+      // Store in internal history
+      impl_->trace_buffer_.push_back(BusEventContext(ctx));
+
+      // Invoke user callback if registered
+      TraceCallback user_callback;
+      {
+        std::lock_guard<std::mutex> lock(config_mutex_);
+        user_callback = impl_->user_trace_callback_;
+      }
+      if (user_callback) user_callback(ctx);
+    });
   }
   impl_->bus_handler_->setWatchdogTimeout(
       config_.runtime.network.watchdog_timeout_ms);

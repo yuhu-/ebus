@@ -64,6 +64,7 @@ class Controller {
   void setReactiveMasterSlaveCallback(ReactiveMasterSlaveCallback callback);
   void setTelegramCallback(TelegramCallback callback);
   void setErrorCallback(ErrorCallback callback);
+  void setTraceCallback(TraceCallback callback);
 
   // Messaging & Scheduling
   bool enqueue(uint8_t priority, ByteView message,
@@ -99,7 +100,10 @@ class Controller {
   // Health Metrics
   void resetMetrics();
   ebus::Metrics getMetrics() const;
+  std::string getFsmHistory() const;
   std::vector<float> getUtilizationHistory() const;
+  std::vector<BusEventContext> getTraceHistory() const;
+  std::string getTraceHistoryJson() const;
 
   // Diagnostic Log
   void setErrorLogSize(size_t size);
@@ -107,6 +111,7 @@ class Controller {
   std::string getErrorsJson() const;
   size_t getErrorLogCapacity() const;
   void clearErrors();
+
  private:
   EbusConfig config_;
   std::unique_ptr<Impl> impl_;

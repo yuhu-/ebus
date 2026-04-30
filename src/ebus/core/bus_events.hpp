@@ -24,15 +24,4 @@ struct BusEvent {
   std::chrono::steady_clock::time_point timestamp;
 };
 
-/**
- * Snapshot of the eBUS FSM state at the moment a byte was processed.
- */
-struct BusEventContext {
-  uint8_t byte;
-  RequestState state;
-  RequestResult result;
-  uint8_t lock_counter;
-  std::chrono::steady_clock::time_point timestamp;
-};
-
 }  // namespace ebus::detail

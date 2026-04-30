@@ -61,9 +61,17 @@ struct ResultInfo {
 };
 
 /**
- * Serializes ErrorInfo to a JSON object string.
+ * Snapshot of the eBUS FSM state at the moment a byte was processed.
+ * Included in public callbacks for protocol tracing and diagnostics.
  */
-std::string toJson(const ErrorInfo& info);
+struct BusEventContext {
+  uint8_t byte = 0;
+  HandlerState handler_state = HandlerState::passive_receive_master;
+  RequestState request_state = RequestState::observe;
+  RequestResult result = RequestResult::observe_data;
+  uint8_t lock_counter = 0;
+  Clock::time_point timestamp = {};
+};
 
 /**
  * Callback signatures
@@ -76,5 +84,22 @@ using ReactiveMasterSlaveCallback =
     std::function<void(const ReactiveInfo& info)>;
 
 using ResultCallback = std::function<void(const ResultInfo& info)>;
+
+using TraceCallback = std::function<void(const BusEventContext& ctx)>;
+
+/**
+ * Serializes ErrorInfo to a JSON object string.
+ */
+std::string toJson(const ErrorInfo& info);
+
+/**
+ * Serializes BusEventContext to a JSON object string.
+ */
+std::string toJson(const BusEventContext& ctx);
+
+/**
+ * Serializes a vector of BusEventContext to a JSON array string.
+ */
+std::string toJson(const std::vector<BusEventContext>& trace);
 
 }  // namespace ebus

@@ -54,6 +54,9 @@ class BusMonitor {
     updater(device_acc_);
   }
 
+  void logHandlerTransition(HandlerState from, HandlerState to);
+  void logRequestTransition(RequestState from, RequestState to);
+
   // Accumulators
   mutable std::mutex metrics_mutex;
 
@@ -79,6 +82,9 @@ class BusMonitor {
   TimingStats uptime;
   TimingStats syn_postpone;
   RollingStats utilization;
+
+  CircularBuffer<HandlerTransition> handler_history_{FsmLimits::history_size};
+  CircularBuffer<RequestTransition> request_history_{FsmLimits::history_size};
 
   CircularBuffer<float> utilization_history_;
 

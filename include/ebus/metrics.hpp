@@ -8,6 +8,7 @@
 #include <array>
 #include <cstdint>
 #include <string>
+#include <vector>
 
 #include "ebus/detail/protocol_limits.hpp"
 #include "ebus/types.hpp"
@@ -105,6 +106,9 @@ struct HandlerMetrics {
   // State-machine specific execution timings
   std::array<MetricValues, detail::FsmLimits::num_handler_states> state_timings;
 
+  // Recent state transitions for diagnostics
+  std::vector<HandlerTransition> transition_history;
+
   void resetMetrics() {
     error_rate = 0.0f;
     protocol_data_utilization_rate = 0.0f;
@@ -161,6 +165,8 @@ struct HandlerMetrics {
 
     // State-machine specific execution timings
     state_timings.fill({});
+
+    transition_history.clear();
   }
 };
 
@@ -198,6 +204,9 @@ struct RequestMetrics {
   uint32_t lock_counter_reset = 0;
   uint32_t session_timeouts = 0;
 
+  // Recent arbitration transitions for diagnostics
+  std::vector<RequestTransition> transition_history;
+
   void resetMetrics() {
     contention_rate = 0.0f;
     collision_rate = 0.0f;
@@ -220,6 +229,8 @@ struct RequestMetrics {
     bus_request_blocked = 0;
     lock_counter_reset = 0;
     session_timeouts = 0;
+
+    transition_history.clear();
   }
 };
 

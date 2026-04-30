@@ -247,6 +247,24 @@ constexpr const char* toString(RequestResult state) noexcept {
   }
 }
 
+/**
+ * Records a single state transition in the protocol handler.
+ */
+struct HandlerTransition {
+  HandlerState from;
+  HandlerState to;
+  uint64_t timestamp;  // ms since epoch
+};
+
+/**
+ * Records a single state transition in the arbitration engine.
+ */
+struct RequestTransition {
+  RequestState from;
+  RequestState to;
+  uint64_t timestamp;  // ms since epoch
+};
+
 // --- Addressing logic ---
 
 /**

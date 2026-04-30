@@ -28,6 +28,7 @@ inline constexpr float start_bit_tolerance = 1.5f;  // bit times
 namespace FsmLimits {
 inline constexpr std::size_t num_handler_states = 15;
 inline constexpr size_t num_request_states = 4;
+inline constexpr size_t history_size = 10;
 }  // namespace FsmLimits
 
 // --- Orchestration Layer (Thread Priorities & Stacks) ---
