@@ -92,7 +92,13 @@ int main() {
               << ebus::toString(info.slave_view) << "'" << std::endl;
   });
 
-  // --- 7. Start the simulation ---
+  // --- 7. Add a trace callback handler to Device B ---
+  // deviceB.setTraceCallback([](const ebus::BusEventContext& ctx) {
+  //   std::cout << "[Device B] Trace message" << ebus::toJson(ctx) <<
+  //   std::endl;
+  // });
+
+  // --- 8. Start the simulation ---
   std::cout << "Starting simulation on virtual bus..." << std::endl;
   deviceA.start();
   deviceB.start();
@@ -122,10 +128,10 @@ int main() {
   auto metrics = deviceB.getMetrics();
   std::cout << "[Device B] Metrics: " << ebus::toJson(metrics) << std::endl;
 
-  std::cout << "[Device B] Trace History: " << deviceB.getTraceHistoryJson()
-            << std::endl;
+  // std::cout << "[Device B] Trace History (100 entries): "
+  //           << deviceB.getTraceHistoryJson() << std::endl;
 
-  // --- 8. Stop the simulation ---
+  // --- 9. Stop the simulation ---
   std::cout << "Stopping simulation on virtual bus..." << std::endl;
 
   deviceA.stop();

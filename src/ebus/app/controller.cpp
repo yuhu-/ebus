@@ -340,6 +340,11 @@ Metrics Controller::getMetrics() const {
   return isConfigured() ? impl_->bus_monitor_->getMetrics() : Metrics{};
 }
 
+std::vector<float> Controller::getUtilizationHistory() const {
+  if (isConfigured()) return impl_->bus_monitor_->getUtilizationHistory();
+  return {};
+}
+
 std::vector<BusEventContext> Controller::getTraceHistory() const {
   if (isConfigured()) {
     return impl_->trace_buffer_.snapshot();
@@ -350,11 +355,6 @@ std::vector<BusEventContext> Controller::getTraceHistory() const {
 std::string Controller::getTraceHistoryJson() const {
   if (!isConfigured()) return "[]";
   return toJson(getTraceHistory());
-}
-
-std::vector<float> Controller::getUtilizationHistory() const {
-  if (isConfigured()) return impl_->bus_monitor_->getUtilizationHistory();
-  return {};
 }
 
 void Controller::setErrorLogSize(size_t size) {
