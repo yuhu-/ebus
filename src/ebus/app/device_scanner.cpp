@@ -65,7 +65,7 @@ void DeviceScanner::setStartupScanInterval(uint32_t interval_s) {
   startup_scan_interval_ = std::chrono::seconds(interval_s);
 }
 
-void DeviceScanner::setFullScan(bool enable) {
+void DeviceScanner::initFullScan(bool enable) {
   std::lock_guard<std::mutex> lock(mutex_);
   full_scan_ = enable;
   if (enable) {

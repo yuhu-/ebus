@@ -71,6 +71,7 @@ std::string toJson(const EbusConfig& config) {
       << "\"bus\": {"
       << "\"window_us\": " << r.bus.window_us << ","
       << "\"offset_us\": " << r.bus.offset_us << ","
+      << "\"watchdog_timeout_ms\": " << r.bus.watchdog_timeout_ms << ","
       << "\"syn\": {"
       << "\"enabled\": " << (r.bus.syn.enabled ? "true" : "false") << ","
       << "\"base_ms\": " << r.bus.syn.base_ms << ","
@@ -80,9 +81,10 @@ std::string toJson(const EbusConfig& config) {
       << "\"log_size\": " << r.logging.log_size << "},"
       << "\"network\": {"
       << "\"client_timeout_ms\": " << r.network.client_timeout_ms << ","
-      << "\"watchdog_timeout_ms\": " << r.network.watchdog_timeout_ms << ","
       << "\"outbound_buffer_size\": " << r.network.outbound_buffer_size << "},"
       << "\"scanner\": {"
+      << "\"scan_on_startup\": "
+      << (r.scanner.scan_on_startup ? "true" : "false") << ","
       << "\"initial_delay_s\": " << r.scanner.initial_delay_s << ","
       << "\"startup_interval_s\": " << r.scanner.startup_interval_s << ","
       << "\"max_startup_scans\": "
@@ -222,8 +224,9 @@ std::string toJson(const BusEventContext& ctx) {
       << "\"request_state\":\"" << toString(ctx.request_state) << "\","
       << "\"result\":\"" << toString(ctx.result) << "\","
       << "\"lock_counter\":" << static_cast<int>(ctx.lock_counter) << ","
-      << "\"timestamp\":\"" << std::put_time(std::gmtime(&t), "%Y-%m-%dT%H:%M:%S")
-      << "." << std::setw(3) << std::setfill('0') << ms << "Z\""
+      << "\"timestamp\":\""
+      << std::put_time(std::gmtime(&t), "%Y-%m-%dT%H:%M:%S") << "."
+      << std::setw(3) << std::setfill('0') << ms << "Z\""
       << "}";
   return oss.str();
 }

@@ -28,6 +28,7 @@ struct Impl {
   detail::CircularBuffer<ebus::ErrorEntry> error_buffer_{
       ebus::RuntimeConfig{}.logging.log_size};
   detail::CircularBuffer<ebus::BusEventContext> trace_buffer_{100};
+
   ebus::ReactiveMasterSlaveCallback user_reactive_callback_;
   ebus::TelegramCallback user_telegram_callback_;
   ebus::ErrorCallback user_error_callback_;
@@ -55,25 +56,6 @@ Controller::Controller(const EbusConfig& config)
 }
 
 Controller::~Controller() { stop(); }
-
-bool Controller::configure(const EbusConfig& config) {
-  // 1. Exhaustive Validation
-  if (!detail::ConfigValidator::validate(config)) return false;
-
-  // 2. Restart-Check: Some BusConfig changes require a full stop
-  if (running_.load()) {
-    if (detail::ConfigValidator::requiresHardwareRestart(config_, config)) {
-      return false;  // Cannot change physical UART while running
-    }
-  }
-
-  // 3. Apply changes
-  std::lock_guard<std::mutex> lock(config_mutex_);
-  config_ = config;
-  constructMembers();
-  configured_.store(true);
-  return true;
-}
 
 bool Controller::start() {
   if (!isConfigured()) return false;
@@ -105,9 +87,28 @@ void Controller::stop() {
   impl_->bus_->stop();
 }
 
-bool Controller::isConfigured() const noexcept { return configured_.load(); }
-
 bool Controller::isRunning() const noexcept { return running_.load(); }
+
+bool Controller::configure(const EbusConfig& config) {
+  // 1. Exhaustive Validation
+  if (!detail::ConfigValidator::validate(config)) return false;
+
+  // 2. Restart-Check: Some BusConfig changes require a full stop
+  if (running_.load()) {
+    if (detail::ConfigValidator::requiresHardwareRestart(config_, config)) {
+      return false;  // Cannot change physical UART while running
+    }
+  }
+
+  // 3. Apply changes
+  std::lock_guard<std::mutex> lock(config_mutex_);
+  config_ = config;
+  constructMembers();
+  configured_.store(true);
+  return true;
+}
+
+bool Controller::isConfigured() const noexcept { return configured_.load(); }
 
 std::string Controller::getConfigJson() const {
   std::lock_guard<std::mutex> lock(config_mutex_);
@@ -127,6 +128,14 @@ void Controller::setAddress(const uint8_t& address) {
   }
 }
 
+void Controller::setLockCounter(const uint8_t& lock_counter) {
+  std::lock_guard<std::mutex> lock(config_mutex_);
+  config_.runtime.lock_counter = lock_counter;
+  if (isConfigured()) {
+    impl_->request_->setLockCounter(lock_counter);
+  }
+}
+
 void Controller::setWindow(const uint16_t& window_us) {
   std::lock_guard<std::mutex> lock(config_mutex_);
   config_.runtime.bus.window_us = window_us;
@@ -141,9 +150,61 @@ void Controller::setOffset(const uint16_t& offset_us) {
 
 void Controller::setWatchdogTimeout(uint32_t timeout_ms) {
   std::lock_guard<std::mutex> lock(config_mutex_);
-  config_.runtime.network.watchdog_timeout_ms = timeout_ms;
+  config_.runtime.bus.watchdog_timeout_ms = timeout_ms;
   if (isConfigured()) {
     impl_->bus_handler_->setWatchdogTimeout(timeout_ms);
+  }
+}
+
+void Controller::setLogLevel(LogLevel level) {
+  std::lock_guard<std::mutex> lock(config_mutex_);
+  config_.runtime.logging.level = level;
+  // Log level is checked dynamically in Scheduler callbacks
+}
+
+void Controller::setActiveTimeout(uint32_t timeout_ms) {
+  std::lock_guard<std::mutex> lock(config_mutex_);
+  config_.runtime.network.client_timeout_ms = timeout_ms;
+  if (isConfigured()) {
+    impl_->client_manager_->setActiveTimeout(timeout_ms);
+  }
+}
+
+void Controller::setOutboundBufferSize(size_t size) {
+  std::lock_guard<std::mutex> lock(config_mutex_);
+  config_.runtime.network.outbound_buffer_size = size;
+  if (isConfigured()) {
+    impl_->client_manager_->setOutboundBufferSize(size);
+  }
+}
+
+void Controller::setScanOnStartup(bool enable) {
+  std::lock_guard<std::mutex> lock(config_mutex_);
+  config_.runtime.scanner.scan_on_startup = enable;
+  if (isConfigured()) impl_->device_scanner_->setScanOnStartup(enable);
+}
+
+void Controller::setMaxStartupScans(uint8_t max_scans) {
+  std::lock_guard<std::mutex> lock(config_mutex_);
+  config_.runtime.scanner.max_startup_scans = max_scans;
+  if (isConfigured()) {
+    impl_->device_scanner_->setMaxStartupScans(max_scans);
+  }
+}
+
+void Controller::setInitialScanDelay(uint32_t delay_s) {
+  std::lock_guard<std::mutex> lock(config_mutex_);
+  config_.runtime.scanner.initial_delay_s = delay_s;
+  if (isConfigured()) {
+    impl_->device_scanner_->setInitialScanDelay(delay_s);
+  }
+}
+
+void Controller::setStartupScanInterval(uint32_t interval_s) {
+  std::lock_guard<std::mutex> lock(config_mutex_);
+  config_.runtime.scanner.startup_interval_s = interval_s;
+  if (isConfigured()) {
+    impl_->device_scanner_->setStartupScanInterval(interval_s);
   }
 }
 
@@ -173,28 +234,6 @@ void Controller::setTotalTimeout(uint32_t timeout_ms) {
   std::lock_guard<std::mutex> lock(config_mutex_);
   config_.runtime.scheduler.total_timeout_ms = timeout_ms;
   if (isConfigured()) impl_->scheduler_->setTotalTimeout(timeout_ms);
-}
-
-void Controller::setLogLevel(LogLevel level) {
-  std::lock_guard<std::mutex> lock(config_mutex_);
-  config_.runtime.logging.level = level;
-  // Log level is checked dynamically in Scheduler callbacks
-}
-
-void Controller::setClientActiveTimeout(uint32_t timeout_ms) {
-  std::lock_guard<std::mutex> lock(config_mutex_);
-  config_.runtime.network.client_timeout_ms = timeout_ms;
-  if (isConfigured()) {
-    impl_->client_manager_->setActiveTimeout(timeout_ms);
-  }
-}
-
-void Controller::setOutboundBufferSize(size_t size) {
-  std::lock_guard<std::mutex> lock(config_mutex_);
-  config_.runtime.network.outbound_buffer_size = size;
-  if (isConfigured()) {
-    impl_->client_manager_->setOutboundBufferSize(size);
-  }
 }
 
 void Controller::setReactiveMasterSlaveCallback(
@@ -256,36 +295,8 @@ void Controller::clearPollItems() {
   if (isConfigured()) impl_->poll_manager_->clear();
 }
 
-void Controller::setScanOnStartup(bool enable) {
-  if (isConfigured()) impl_->device_scanner_->setScanOnStartup(enable);
-}
-
-void Controller::setMaxStartupScans(uint8_t max_scans) {
-  std::lock_guard<std::mutex> lock(config_mutex_);
-  config_.runtime.scanner.max_startup_scans = max_scans;
-  if (isConfigured()) {
-    impl_->device_scanner_->setMaxStartupScans(max_scans);
-  }
-}
-
-void Controller::setInitialScanDelay(uint32_t delay_s) {
-  std::lock_guard<std::mutex> lock(config_mutex_);
-  config_.runtime.scanner.initial_delay_s = delay_s;
-  if (isConfigured()) {
-    impl_->device_scanner_->setInitialScanDelay(delay_s);
-  }
-}
-
-void Controller::setStartupScanInterval(uint32_t interval_s) {
-  std::lock_guard<std::mutex> lock(config_mutex_);
-  config_.runtime.scanner.startup_interval_s = interval_s;
-  if (isConfigured()) {
-    impl_->device_scanner_->setStartupScanInterval(interval_s);
-  }
-}
-
-void Controller::setFullScan(bool enable) {
-  if (isConfigured()) impl_->device_scanner_->setFullScan(enable);
+void Controller::initFullScan(bool enable) {
+  if (isConfigured()) impl_->device_scanner_->initFullScan(enable);
 }
 
 bool Controller::scanAddress(uint8_t address) {
@@ -481,6 +492,8 @@ void Controller::constructMembers() {
         config_.runtime.address, impl_->device_manager_.get());
   }
   impl_->device_scanner_->setOwnAddress(config_.runtime.address);
+  impl_->device_scanner_->setScanOnStartup(
+      config_.runtime.scanner.scan_on_startup);
   impl_->device_scanner_->setInitialScanDelay(
       config_.runtime.scanner.initial_delay_s);
   impl_->device_scanner_->setStartupScanInterval(
@@ -514,7 +527,7 @@ void Controller::constructMembers() {
     });
   }
   impl_->bus_handler_->setWatchdogTimeout(
-      config_.runtime.network.watchdog_timeout_ms);
+      config_.runtime.bus.watchdog_timeout_ms);
 
   if (!impl_->client_manager_) {
     impl_->client_manager_ = std::make_unique<detail::ClientManager>(

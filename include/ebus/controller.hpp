@@ -36,35 +36,51 @@ class Controller {
   Controller& operator=(const Controller&) = delete;
 
   // Lifecycle
-  bool configure(const EbusConfig& config);
   bool start();
   void stop();
-  bool isConfigured() const noexcept;
   bool isRunning() const noexcept;
+
+  // --- Configuration Section ---
+  bool configure(const EbusConfig& config);
+  bool isConfigured() const noexcept;
   std::string getConfigJson() const;
 
-  // Bus Configuration
+  // Addressing
   void setAddress(const uint8_t& address);
+  void setLockCounter(const uint8_t& lock_counter);
+
+  // Bus
   void setWindow(const uint16_t& window_us);
   void setOffset(const uint16_t& offset_us);
   void setWatchdogTimeout(uint32_t timeout_ms);
 
-  // Component Configuration
+  // Logging
+  void setLogLevel(LogLevel level);
+
+  // Network
+  void setActiveTimeout(uint32_t timeout_ms);
+  void setOutboundBufferSize(size_t size);
+
+  // Scanner
+  void setScanOnStartup(bool enable);
+  void setMaxStartupScans(uint8_t max_scans);
+  void setInitialScanDelay(uint32_t delay_s);
+  void setStartupScanInterval(uint32_t interval_s);
+
+  // Scheduler
   void setMaxSendAttempts(int max_send_attempts);
   void setBaseBackoff(uint32_t base_backoff_ms);
   void setFsmTimeout(uint32_t timeout_ms);
   void setTotalTimeout(uint32_t timeout_ms);
-  void setLogLevel(LogLevel level);
 
-  // Network Configuration
-  void setClientActiveTimeout(uint32_t timeout_ms);
-  void setOutboundBufferSize(size_t size);
+  // --- Callbacks Section ---
 
-  // Unified Bus Listeners
   void setReactiveMasterSlaveCallback(ReactiveMasterSlaveCallback callback);
   void setTelegramCallback(TelegramCallback callback);
   void setErrorCallback(ErrorCallback callback);
   void setTraceCallback(TraceCallback callback);
+
+  // --- Runtime Section ---
 
   // Messaging & Scheduling
   bool enqueue(uint8_t priority, ByteView message,
@@ -79,11 +95,7 @@ class Controller {
   void clearPollItems();
 
   // Device Discovery & Scanning
-  void setScanOnStartup(bool enable);
-  void setMaxStartupScans(uint8_t max_scans);
-  void setInitialScanDelay(uint32_t delay_s);
-  void setStartupScanInterval(uint32_t interval_s);
-  void setFullScan(bool enable);
+  void initFullScan(bool enable);
   bool scanAddress(uint8_t address);
   bool scanAddresses(const std::vector<uint8_t>& addresses);
   bool scanObservedDevices();
@@ -92,6 +104,8 @@ class Controller {
   // External Client Bridge (WiFi/TCP)
   void addClient(int fd, ClientType type);
   void removeClient(int fd);
+
+  // --- Diagnostics Section ---
 
   // Device Information
   std::vector<DeviceInfo> getDeviceInfo() const;

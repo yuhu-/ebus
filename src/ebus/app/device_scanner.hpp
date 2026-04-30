@@ -45,7 +45,7 @@ class DeviceScanner {
   void setStartupScanInterval(uint32_t interval_s);
 
   // Full scanning
-  void setFullScan(bool enable);
+  void initFullScan(bool enable);
   bool isFullScan() const;
 
   // Manual scanning

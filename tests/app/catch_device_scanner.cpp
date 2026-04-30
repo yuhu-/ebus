@@ -42,7 +42,7 @@ TEST_CASE("DeviceScanner: Priority (Manual > Full > Startup)",
   DeviceScanner scanner(0xff, &dm);
 
   scanner.setInitialScanDelay(0);
-  scanner.setFullScan(true);
+  scanner.initFullScan(true);
   scanner.setScanOnStartup(true);
   scanner.scanAddress(0x50);  // Manual scan
 
@@ -54,7 +54,7 @@ TEST_CASE("DeviceScanner: Priority (Manual > Full > Startup)",
   REQUIRE(!cmd2.empty());
   REQUIRE(cmd2[0] == 0x02);
 
-  scanner.setFullScan(false);
+  scanner.initFullScan(false);
   scanner.setInitialScanDelay(0);
   REQUIRE(scanner.nextCommand().empty());
 }

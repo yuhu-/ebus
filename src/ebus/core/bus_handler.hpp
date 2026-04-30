@@ -86,7 +86,7 @@ class BusHandler {
   platform::Queue<BusEvent>* queue_;
   std::atomic<bool> running_;
   std::chrono::milliseconds watchdog_timeout_ms_{
-      ebus::RuntimeConfig{}.network.watchdog_timeout_ms};
+      ebus::RuntimeConfig{}.bus.watchdog_timeout_ms};
 
   std::unique_ptr<platform::ServiceThread> worker_;
 
