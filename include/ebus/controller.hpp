@@ -100,7 +100,6 @@ class Controller {
   // Health Metrics
   void resetMetrics();
   ebus::Metrics getMetrics() const;
-  std::string getFsmHistory() const;
   std::vector<float> getUtilizationHistory() const;
   std::vector<BusEventContext> getTraceHistory() const;
   std::string getTraceHistoryJson() const;

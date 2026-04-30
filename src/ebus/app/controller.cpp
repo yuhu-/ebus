@@ -3,11 +3,10 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include <deque>
 #include <ebus/controller.hpp>
 #include <ebus/detail/config_validator.hpp>
+#include <ebus/detail/protocol_limits.hpp>
 #include <ebus/utils.hpp>
-#include <iomanip>
 #include <mutex>
 
 #include "app/client_manager.hpp"
@@ -21,7 +20,6 @@
 #include "core/request.hpp"
 #include "platform/bus.hpp"
 #include "platform/service_thread.hpp"
-#include "platform/system.hpp"
 #include "utils/circular_buffer.hpp"
 
 namespace ebus {
@@ -340,35 +338,6 @@ void Controller::resetMetrics() {
 
 Metrics Controller::getMetrics() const {
   return isConfigured() ? impl_->bus_monitor_->getMetrics() : Metrics{};
-}
-
-std::string Controller::getFsmHistory() const {
-  if (!isConfigured()) return "";
-  auto metrics = impl_->bus_monitor_->getMetrics();
-  std::ostringstream oss;
-
-  oss << "--- Handler FSM History ---\n";
-  for (const auto& t : metrics.handler.transition_history) {
-    time_t s = static_cast<time_t>(t.timestamp / 1000);
-    auto* tm_ptr = std::gmtime(&s);
-    if (tm_ptr) {
-      oss << "[" << std::put_time(tm_ptr, "%H:%M:%S") << "." << std::setw(3)
-          << std::setfill('0') << (t.timestamp % 1000) << "] "
-          << toString(t.from) << " -> " << toString(t.to) << "\n";
-    }
-  }
-
-  oss << "\n--- Request FSM History ---\n";
-  for (const auto& t : metrics.request.transition_history) {
-    time_t s = static_cast<time_t>(t.timestamp / 1000);
-    auto* tm_ptr = std::gmtime(&s);
-    if (tm_ptr) {
-      oss << "[" << std::put_time(tm_ptr, "%H:%M:%S") << "." << std::setw(3)
-          << std::setfill('0') << (t.timestamp % 1000) << "] "
-          << toString(t.from) << " -> " << toString(t.to) << "\n";
-    }
-  }
-  return oss.str();
 }
 
 std::vector<BusEventContext> Controller::getTraceHistory() const {
