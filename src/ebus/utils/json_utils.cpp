@@ -5,6 +5,7 @@
 
 #include <ctime>
 #include <ebus/callbacks.hpp>
+#include <ebus/config.hpp>
 #include <ebus/device.hpp>
 #include <ebus/metrics.hpp>
 #include <ebus/types.hpp>
@@ -56,6 +57,58 @@ inline std::string escapeJson(const std::string& s) {
     }
   }
   return res;
+}
+
+std::string toJson(const EbusConfig& config) {
+  std::ostringstream oss;
+  const auto& r = config.runtime;
+  const auto& b = config.bus;
+
+  oss << "{"
+      << "\"runtime\":{"
+      << "\"address\": " << static_cast<int>(r.address) << ","
+      << "\"lock_counter\": " << static_cast<int>(r.lock_counter) << ","
+      << "\"bus\": {"
+      << "\"window_us\": " << r.bus.window_us << ","
+      << "\"offset_us\": " << r.bus.offset_us << ","
+      << "\"syn\": {"
+      << "\"enabled\": " << (r.bus.syn.enabled ? "true" : "false") << ","
+      << "\"base_ms\": " << r.bus.syn.base_ms << ","
+      << "\"tolerance_ms\": " << r.bus.syn.tolerance_ms << "}},"
+      << "\"logging\": {"
+      << "\"level\": " << static_cast<int>(r.logging.level) << ","
+      << "\"log_size\": " << r.logging.log_size << "},"
+      << "\"network\": {"
+      << "\"client_timeout_ms\": " << r.network.client_timeout_ms << ","
+      << "\"watchdog_timeout_ms\": " << r.network.watchdog_timeout_ms << ","
+      << "\"outbound_buffer_size\": " << r.network.outbound_buffer_size << "},"
+      << "\"scanner\": {"
+      << "\"initial_delay_s\": " << r.scanner.initial_delay_s << ","
+      << "\"startup_interval_s\": " << r.scanner.startup_interval_s << ","
+      << "\"max_startup_scans\": "
+      << static_cast<int>(r.scanner.max_startup_scans) << "},"
+      << "\"scheduler\": {"
+      << "\"max_send_attempts\": " << r.scheduler.max_send_attempts << ","
+      << "\"base_backoff_ms\": " << r.scheduler.base_backoff_ms << ","
+      << "\"fsm_timeout_ms\": " << r.scheduler.fsm_timeout_ms << ","
+      << "\"total_timeout_ms\": " << r.scheduler.total_timeout_ms << "}},"
+      << "\"bus_hardware\": {";
+
+#if defined(ESP_PLATFORM)
+  oss << "\"platform\": \"esp32\","
+      << "\"uart_port\": " << static_cast<int>(b.uart_port) << ","
+      << "\"rx_pin\": " << static_cast<int>(b.rx_pin) << ","
+      << "\"tx_pin\": " << static_cast<int>(b.tx_pin) << ","
+      << "\"timer_group\": " << static_cast<int>(b.timer_group) << ","
+      << "\"timer_idx\": " << static_cast<int>(b.timer_idx);
+#elif defined(POSIX)
+  oss << "\"platform\": \"posix\","
+      << "\"device\": \"" << escapeJson(b.device) << "\","
+      << "\"simulate\": " << (b.simulate ? "true" : "false");
+#endif
+
+  oss << "}}";
+  return oss.str();
 }
 
 std::string toJson(const ErrorInfo& info) {

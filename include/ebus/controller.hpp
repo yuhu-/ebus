@@ -35,21 +35,28 @@ class Controller {
   Controller(const Controller&) = delete;
   Controller& operator=(const Controller&) = delete;
 
-  void configure(const EbusConfig& config);
-  void start();
+  // Lifecycle
+  bool configure(const EbusConfig& config);
+  bool start();
   void stop();
+  bool isConfigured() const noexcept;
+  bool isRunning() const noexcept;
+  std::string getConfigJson() const;
 
+  // Bus Configuration
   void setAddress(const uint8_t& address);
   void setWindow(const uint16_t& window_us);
   void setOffset(const uint16_t& offset_us);
-  void setErrorLogSize(size_t size);
+  void setWatchdogTimeout(uint32_t timeout_ms);
+
+  // Component Configuration
   void setMaxSendAttempts(int max_send_attempts);
   void setBaseBackoff(uint32_t base_backoff_ms);
   void setFsmTimeout(uint32_t timeout_ms);
-  void setInitialScanDelay(uint32_t delay_s);
-  void setStartupScanInterval(uint32_t interval_s);
-  void setMaxStartupScans(uint8_t max_scans);
-  void setWatchdogTimeout(uint32_t timeout_ms);
+  void setTotalTimeout(uint32_t timeout_ms);
+  void setLogLevel(LogLevel level);
+
+  // Network Configuration
   void setClientActiveTimeout(uint32_t timeout_ms);
   void setOutboundBufferSize(size_t size);
 
@@ -58,46 +65,48 @@ class Controller {
   void setTelegramCallback(TelegramCallback callback);
   void setErrorCallback(ErrorCallback callback);
 
-  // Scheduling & Polling
+  // Messaging & Scheduling
   bool enqueue(uint8_t priority, ByteView message,
                ResultCallback callback = nullptr);
-
   bool enqueueAt(uint8_t priority, ByteView message, Clock::time_point when,
                  ResultCallback callback = nullptr);
 
+  // Polling
   uint32_t addPollItem(uint8_t priority, ByteView message, uint32_t interval_ms,
                        ResultCallback callback = nullptr);
   void removePollItem(uint32_t id);
+  void clearPollItems();
 
-  // Scanning
-  void setFullScan(bool enable);
+  // Device Discovery & Scanning
   void setScanOnStartup(bool enable);
-  void scanAddress(uint8_t address);
-  void scanObservedDevices();
+  void setMaxStartupScans(uint8_t max_scans);
+  void setInitialScanDelay(uint32_t delay_s);
+  void setStartupScanInterval(uint32_t interval_s);
+  void setFullScan(bool enable);
+  bool scanAddress(uint8_t address);
+  bool scanAddresses(const std::vector<uint8_t>& addresses);
+  bool scanObservedDevices();
   bool isScanning() const;
 
   // External Client Bridge (WiFi/TCP)
   void addClient(int fd, ClientType type);
   void removeClient(int fd);
 
-  // Device & Network State
+  // Device Information
   std::vector<DeviceInfo> getDeviceInfo() const;
   std::string getDeviceInfoJson() const;
 
-  // Bus Health Metrics
+  // Health Metrics
   void resetMetrics();
   ebus::Metrics getMetrics() const;
   std::vector<float> getUtilizationHistory() const;
 
   // Diagnostic Log
+  void setErrorLogSize(size_t size);
   std::vector<ErrorEntry> getErrors() const;
   std::string getErrorsJson() const;
   size_t getErrorLogCapacity() const;
   void clearErrors();
-
-  bool isConfigured() const noexcept;
-  bool isRunning() const noexcept;
-
  private:
   EbusConfig config_;
   std::unique_ptr<Impl> impl_;

@@ -88,4 +88,9 @@ struct EbusConfig {
   BusConfig bus = {};
 };
 
+/**
+ * Serializes the full EbusConfig to a JSON string.
+ */
+std::string toJson(const EbusConfig& config);
+
 }  // namespace ebus
