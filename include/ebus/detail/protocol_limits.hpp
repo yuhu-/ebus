@@ -45,6 +45,14 @@ namespace RequestLimits {
 inline constexpr uint8_t lock_counter_max = 25;
 }  // namespace RequestLimits
 
+// --- Container Limits ---
+namespace SequenceLimits {
+inline constexpr size_t default_capacity = 64;
+inline constexpr uint8_t max_telegram_bytes = 48;
+inline constexpr uint8_t max_data_bytes = 16;
+}  // namespace SequenceLimits
+
+// --- Bus Layer ---
 namespace BusLimits {
 inline constexpr uint16_t window_min_us = 4000;
 inline constexpr uint16_t window_max_us = 5000;
@@ -100,11 +108,5 @@ inline constexpr uint32_t controller_tick_ms = 20;
 namespace PollLimits {
 inline constexpr size_t max_items = 64;
 }  // namespace PollLimits
-
-namespace SequenceLimits {
-inline constexpr size_t default_capacity = 64;
-inline constexpr uint8_t max_telegram_bytes = 48;
-inline constexpr uint8_t max_data_bytes = 16;
-}  // namespace SequenceLimits
 
 }  // namespace ebus::detail
