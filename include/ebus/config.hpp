@@ -24,7 +24,7 @@ struct RuntimeConfig {
   struct Bus {
     uint16_t window_us = 4300;  // us
     uint16_t offset_us = 80;    // us
-    uint32_t watchdog_timeout_ms = 500;
+    uint32_t watchdog_timeout_ms = 250;
 
     struct Syn {
       bool enabled = false;
