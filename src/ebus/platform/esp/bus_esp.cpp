@@ -71,6 +71,8 @@ void BusEsp::stop() {
   if (!running_.load(std::memory_order_acquire)) return;
   running_.store(false, std::memory_order_release);
 
+  if (byte_queue_) byte_queue_->shutdown();
+
   gpio_isr_handler_remove(static_cast<gpio_num_t>(rx_pin_));
   gpio_intr_disable(static_cast<gpio_num_t>(rx_pin_));
   gpio_set_intr_type(static_cast<gpio_num_t>(rx_pin_), GPIO_INTR_DISABLE);

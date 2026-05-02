@@ -81,7 +81,9 @@ class Request {
   BusRequestedCallback handler_bus_requested_callback_ = nullptr;
   BusRequestedCallback external_bus_requested_callback_ = nullptr;
 
-  // TODO fix this - this will reset the handler - do we need this?
+  // Fired when the physical layer detects a bus anomaly (e.g. noise or framing
+  // error) that invalidates the current byte alignment. This allows the Handler
+  // to reset its buffers immediately.
   StartBitCallback start_bit_callback_ = nullptr;
 
   void observe(uint8_t byte);

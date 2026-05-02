@@ -20,7 +20,12 @@ template <typename T>
 class QueuePosix {
  public:
   explicit QueuePosix(size_t capacity = 32)
-      : buffer_(capacity), capacity_(capacity), head_(0), tail_(0), size_(0) {
+      : buffer_(capacity),
+        capacity_(capacity),
+        head_(0),
+        tail_(0),
+        size_(0),
+        shutdown_(false) {
     if (capacity == 0)
       throw std::invalid_argument("Queue capacity must be > 0");
   }
@@ -55,15 +60,19 @@ class QueuePosix {
       }
 
       std::unique_lock<std::mutex> lock(mutex_);
+      if (shutdown_) return false;
       if (capacity_ > 0) {
         if (timeout == std::chrono::milliseconds::max()) {
-          not_full_.wait(lock, [this] { return size_ < capacity_; });
+          not_full_.wait(lock,
+                         [this] { return size_ < capacity_ || shutdown_; });
         } else {
-          if (!not_full_.wait_for(lock, timeout,
-                                  [this] { return size_ < capacity_; }))
+          if (!not_full_.wait_for(lock, timeout, [this] {
+                return size_ < capacity_ || shutdown_;
+              }))
             return false;  // timeout
         }
       }
+      if (shutdown_) return false;
       buffer_[tail_] = item;
       tail_ = (tail_ + 1) % capacity_;
       size_++;
@@ -83,15 +92,19 @@ class QueuePosix {
       }
 
       std::unique_lock<std::mutex> lock(mutex_);
+      if (shutdown_) return false;
       if (capacity_ > 0) {
         if (timeout == std::chrono::milliseconds::max()) {
-          not_full_.wait(lock, [this] { return size_ < capacity_; });
+          not_full_.wait(lock,
+                         [this] { return size_ < capacity_ || shutdown_; });
         } else {
-          if (!not_full_.wait_for(lock, timeout,
-                                  [this] { return size_ < capacity_; }))
+          if (!not_full_.wait_for(lock, timeout, [this] {
+                return size_ < capacity_ || shutdown_;
+              }))
             return false;  // timeout
         }
       }
+      if (shutdown_) return false;
       buffer_[tail_] = std::move(item);
       tail_ = (tail_ + 1) % capacity_;
       size_++;
@@ -113,11 +126,14 @@ class QueuePosix {
         timeout_val = dur_ms;
       }
       std::unique_lock<std::mutex> lock(mutex_);
+      if (shutdown_) return false;
       if (capacity_ > 0) {
-        if (!not_full_.wait_for(lock, timeout_val,
-                                [this] { return size_ < capacity_; }))
+        if (!not_full_.wait_for(lock, timeout_val, [this] {
+              return size_ < capacity_ || shutdown_;
+            }))
           return false;  // timeout
       }
+      if (shutdown_) return false;
       buffer_[tail_] = std::move(item);
       tail_ = (tail_ + 1) % capacity_;
       size_++;
@@ -130,7 +146,7 @@ class QueuePosix {
   bool tryPush(const T& item) {
     {
       std::lock_guard<std::mutex> lock(mutex_);
-      if (capacity_ > 0 && size_ >= capacity_) return false;
+      if (shutdown_ || (capacity_ > 0 && size_ >= capacity_)) return false;
       buffer_[tail_] = item;
       tail_ = (tail_ + 1) % capacity_;
       size_++;
@@ -143,7 +159,7 @@ class QueuePosix {
   bool tryPush(T&& item) {
     {
       std::lock_guard<std::mutex> lock(mutex_);
-      if (capacity_ > 0 && size_ >= capacity_) return false;
+      if (shutdown_ || (capacity_ > 0 && size_ >= capacity_)) return false;
       buffer_[tail_] = std::move(item);
       tail_ = (tail_ + 1) % capacity_;
       size_++;
@@ -172,12 +188,15 @@ class QueuePosix {
           (timeout_ms == 0xffffffff) ? std::chrono::milliseconds::max()
                                      : std::chrono::milliseconds(timeout_ms);
       std::unique_lock<std::mutex> lock(mutex_);
+      if (shutdown_ && size_ == 0) return false;
       if (timeout == std::chrono::milliseconds::max()) {
-        not_empty_.wait(lock, [this] { return size_ > 0; });
+        not_empty_.wait(lock, [this] { return size_ > 0 || shutdown_; });
       } else {
-        if (!not_empty_.wait_for(lock, timeout, [this] { return size_ > 0; }))
+        if (!not_empty_.wait_for(lock, timeout,
+                                 [this] { return size_ > 0 || shutdown_; }))
           return false;  // timeout
       }
+      if (size_ == 0) return false;
       out = std::move(buffer_[head_]);
       head_ = (head_ + 1) % capacity_;
       size_--;
@@ -190,7 +209,7 @@ class QueuePosix {
   bool tryPop(T& out) {
     {
       std::lock_guard<std::mutex> lock(mutex_);
-      if (size_ == 0) return false;
+      if (size_ == 0 || shutdown_) return false;
       out = std::move(buffer_[head_]);
       head_ = (head_ + 1) % capacity_;
       size_--;
@@ -202,6 +221,20 @@ class QueuePosix {
   size_t size() const {
     std::lock_guard<std::mutex> lock(mutex_);
     return size_;
+  }
+
+  void shutdown() {
+    {
+      std::lock_guard<std::mutex> lock(mutex_);
+      shutdown_ = true;
+    }
+    not_empty_.notify_all();
+    not_full_.notify_all();
+  }
+
+  bool isShutdown() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return shutdown_;
   }
 
   void clear() {
@@ -221,6 +254,7 @@ class QueuePosix {
   size_t head_;
   size_t tail_;
   size_t size_;
+  bool shutdown_;
 };
 
 }  // namespace ebus::detail::platform

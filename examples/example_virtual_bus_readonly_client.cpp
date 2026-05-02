@@ -87,7 +87,8 @@ int main() {
 
   // --- 6. Add a error callback handler to Device B ---
   deviceB.setErrorCallback([](const ebus::ErrorInfo& info) {
-    std::cout << "[Device B] Error message " << info.message << " master: '"
+    std::cout << "[Device B] Error message "
+              << ebus::toString(info.protocol_error) << " master: '"
               << ebus::toString(info.master_view) << "' slave: '"
               << ebus::toString(info.slave_view) << "'" << std::endl;
   });

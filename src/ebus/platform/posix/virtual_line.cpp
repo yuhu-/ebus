@@ -37,6 +37,8 @@ bool VirtualLine::read(uint8_t& byte, int timeout_ms) {
   return rx_queue_.pop(byte, timeout_ms);
 }
 
+void VirtualLine::shutdown() { rx_queue_.shutdown(); }
+
 }  // namespace ebus::detail::platform
 
 #endif  // POSIX

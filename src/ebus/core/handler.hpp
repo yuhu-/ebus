@@ -163,7 +163,7 @@ class Handler {
   void callOnTelegram(MessageType message_type, TelegramType telegram_type,
                       ByteView master_view, ByteView slave_view);
 
-  void callOnError(LogLevel level, std::string_view error_message,
+  void callOnError(LogLevel level, ProtocolError protocol_error,
                    SequenceState sequence_state, ByteView master_view,
                    ByteView slave_view);
 };

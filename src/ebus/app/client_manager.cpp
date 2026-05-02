@@ -24,8 +24,10 @@ ClientManager::ClientManager(platform::Bus* bus, BusHandler* bus_handler,
       session_state_(SessionState::idle),
       clients_version_(0),
       last_snapshot_version_(0),
-      active_timeout_(::std::chrono::milliseconds(
-          ebus::RuntimeConfig{}.network.client_timeout_ms)),
+      session_timeout_(::std::chrono::milliseconds(
+          ebus::RuntimeConfig{}.network.session_timeout_ms)),
+      transmit_timeout_(::std::chrono::milliseconds(
+          ebus::RuntimeConfig{}.network.transmit_timeout_ms)),
       outbound_buffer_size_(
           ebus::RuntimeConfig{}.network.outbound_buffer_size) {
   if (bus_handler_) {
@@ -68,8 +70,12 @@ void ClientManager::stop() {
   if (worker_) worker_->join();
 }
 
-void ClientManager::setActiveTimeout(uint32_t timeout_ms) {
-  active_timeout_ = std::chrono::milliseconds(timeout_ms);
+void ClientManager::setSessionTimeout(uint32_t timeout_ms) {
+  session_timeout_ = std::chrono::milliseconds(timeout_ms);
+}
+
+void ClientManager::setTransmitTimeout(uint32_t timeout_ms) {
+  transmit_timeout_ = std::chrono::milliseconds(timeout_ms);
 }
 
 void ClientManager::setOutboundBufferSize(size_t size) {
@@ -187,11 +193,10 @@ void ClientManager::run() {
     if (active_sender) {
       auto now = std::chrono::steady_clock::now();
       auto elapsed = now - last_state_change;
-      auto timeout =
-          (session_state_ == SessionState::transmit)
-              ? std::chrono::milliseconds(NetworkLimits::transmit_timeout_ms)
-              : active_timeout_;
-      if (elapsed > timeout) {
+      auto current_timeout = (session_state_ == SessionState::transmit)
+                                 ? transmit_timeout_
+                                 : session_timeout_;
+      if (elapsed > current_timeout) {
         // stop active session safely
         stopActiveSession();
         if (monitor_)

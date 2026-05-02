@@ -32,7 +32,9 @@ TEST_CASE("Controller: Lifecycle and API", "[app][controller]") {
       [&](const ebus::TelegramInfo& info) { telegramSeen = true; });
 
   // Start service
-  controller.start();
+  REQUIRE(controller.start());
+  // Give some time for the internal threads to spin up and initialize
+  platform::sleepMilli(50);
   REQUIRE(controller.isRunning());
 
   // Active messaging (enqueue)

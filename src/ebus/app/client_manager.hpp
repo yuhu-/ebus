@@ -37,7 +37,8 @@ class ClientManager {
   void start();
   void stop();
 
-  void setActiveTimeout(uint32_t timeout_ms);
+  void setSessionTimeout(uint32_t timeout_ms);
+  void setTransmitTimeout(uint32_t timeout_ms);
   void setOutboundBufferSize(size_t size);
 
   void addClient(int fd, ClientType type);
@@ -91,8 +92,10 @@ class ClientManager {
   uint32_t bus_listener_id_{0};
 
   // Configurable timeout for active session
-  std::chrono::milliseconds active_timeout_{
-      ebus::RuntimeConfig{}.network.client_timeout_ms};
+  std::chrono::milliseconds session_timeout_{
+      ebus::RuntimeConfig{}.network.session_timeout_ms};
+  std::chrono::milliseconds transmit_timeout_{
+      ebus::RuntimeConfig{}.network.transmit_timeout_ms};
 
   size_t outbound_buffer_size_ =
       ebus::RuntimeConfig{}.network.outbound_buffer_size;

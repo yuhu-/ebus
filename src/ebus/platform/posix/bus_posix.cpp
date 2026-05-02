@@ -99,6 +99,9 @@ void BusPosix::stop() {
   running_.store(false);
   syn_running_.store(false);
 
+  if (byte_queue_) byte_queue_->shutdown();
+  if (virtual_line_) virtual_line_->shutdown();
+
   {
     std::unique_lock<std::mutex> lock(syn_mutex_);
     syn_cv_.notify_all();

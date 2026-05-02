@@ -82,6 +82,7 @@ void Request::startBit() {
   bus_request_.store(false, std::memory_order_release);
   transitionTo(RequestState::observe);
   result_ = RequestResult::observe_syn;
+  if (start_bit_callback_) start_bit_callback_();
 }
 
 void Request::setStartBitCallback(StartBitCallback callback) {

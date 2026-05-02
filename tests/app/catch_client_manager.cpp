@@ -212,7 +212,7 @@ TEST_CASE("ClientManager Watchdog Timeout") {
   }
   CHECK_TEST("Client is now active", req.busRequestPending());
 
-  platform::sleepMilli(11000);
+  platform::sleepMilli(600);
 
   CHECK_TEST("Watchdog cleared active client", !req.busRequestPending());
 

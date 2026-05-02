@@ -38,6 +38,7 @@ void Scheduler::stop() {
       std::lock_guard<std::mutex> lock(data_mutex_);
       data_ready_cv_.notify_all();
     }
+    event_queue_.shutdown();
     clear();  // Clear any pending items and their callbacks to prevent UAF
               // during test teardown
 
@@ -157,7 +158,7 @@ void Scheduler::run() {
     lock.unlock();
 
     bool sent = false;
-    const char* last_error = nullptr;
+    ProtocolError last_error_code = ProtocolError::none;
     LogLevel result_level = LogLevel::error;
     RequestResult result_code = RequestResult::first_error;
     SequenceState result_s_state = SequenceState::seq_ok;
@@ -176,22 +177,22 @@ void Scheduler::run() {
 
     // Initiation: check if handler is busy, then arm it.
     if (handler_->isActiveMessagePending()) {
-      last_error = "Handler busy";
+      last_error_code = ProtocolError::handler_busy;
     } else if (!handler_->sendActiveMessage(current_item.message)) {
-      last_error = "Invalid message";
+      last_error_code = ProtocolError::invalid_message;
       result_s_state = handler_->getActiveSequenceState();
       // Structural error: structure or address invalid. Retry will not help.
       current_item.send_attempts = max_send_attempts_;
     }
 
     // If arming succeeded (no immediate error), wait for terminal events
-    if (last_error == nullptr) {
+    if (last_error_code == ProtocolError::none) {
       auto start = Clock::now();
       while (!stop_flag_.load()) {
         Event ev;
         if (!event_queue_.pop(ev,
                               static_cast<uint32_t>(fsm_timeout_.count()))) {
-          last_error = "FSM timeout";
+          last_error_code = ProtocolError::fsm_timeout;
           handler_->reset();  // Serious error: FSM stuck.
           break;
         }
@@ -203,10 +204,10 @@ void Scheduler::run() {
           slave_response = std::move(ev.slave);
           break;
         } else if (ev.type == EventType::lost) {
-          last_error = "Arbitration lost";
+          last_error_code = ProtocolError::arbitration_lost;
           break;
         } else if (ev.type == EventType::error) {
-          last_error = ev.error;
+          last_error_code = ev.protocol_error;
           result_code = ev.result;
           result_s_state = ev.sequence_state;
           result_level = ev.level;
@@ -216,7 +217,7 @@ void Scheduler::run() {
         }
 
         if (Clock::now() - start > total_timeout_) {
-          last_error = "Total transfer timeout";
+          last_error_code = ProtocolError::total_transfer_timeout;
           handler_->reset();
           break;
         }
@@ -251,15 +252,16 @@ void Scheduler::run() {
         data_ready_cv_.notify_one();
       } else {
         if (extern_error_callback_) {
-          extern_error_callback_({current_item.id,
-                                  result_level,
-                                  last_error,
-                                  result_code,
-                                  result_s_state,
-                                  result_h_state,
-                                  result_r_state,
-                                  current_item.message,
-                                  {}});
+          extern_error_callback_(
+              {current_item.id,
+               result_level,  // LogLevel is still used for filtering
+               last_error_code,
+               result_code,
+               result_s_state,
+               result_h_state,
+               result_r_state,
+               current_item.message,
+               {}});
         }
         if (current_item.result_callback) {
           current_item.result_callback({current_item.id,
@@ -383,14 +385,14 @@ void Scheduler::attachHandlerCallbacks() {
     if (id == 0) return;
 
     Event ev;
-    ev.type = EventType::error;
+    ev.type = EventType::error;  // EventType::error is still used
     ev.id = id;
     ev.level = info.level;
     ev.result = info.result;
     ev.sequence_state = info.sequence_state;
     ev.handler_state = info.handler_state;
     ev.request_state = info.request_state;
-    ev.error = info.message.data();  // Points to the error message literal
+    ev.protocol_error = info.protocol_error;
     ev.master.assign(info.master_view);
     ev.slave.assign(info.slave_view);
     event_queue_.tryPush(ev);

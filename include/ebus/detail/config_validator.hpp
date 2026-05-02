@@ -28,15 +28,26 @@ class ConfigValidator {
         r.bus.window_us > BusLimits::window_max_us)
       return false;
     if (r.bus.offset_us > BusLimits::offset_max_us) return false;
+    if (r.bus.watchdog_timeout_ms == 0) return false;
+    if (r.bus.syn.enabled && r.bus.syn.base_ms == 0) return false;
 
     // 3. Scheduler & Logic
     if (r.scheduler.max_send_attempts < 1) return false;
+    if (r.scheduler.base_backoff_ms == 0) return false;
     if (r.scheduler.fsm_timeout_ms == 0) return false;
-    if (r.scheduler.total_timeout_ms < r.scheduler.fsm_timeout_ms) return false;
+
+    // Ensure total timeout allows for at least one full FSM cycle plus overhead
+    if (r.scheduler.total_timeout_ms <= r.scheduler.fsm_timeout_ms)
+      return false;
+    if (r.scheduler.total_timeout_ms <
+        (r.scheduler.fsm_timeout_ms + r.scheduler.base_backoff_ms))
+      return false;
 
     // 4. Network & Logging
     if (r.network.outbound_buffer_size == 0) return false;
-    if (r.logging.log_size > LoggingLimits::history_size * 10)
+    if (r.network.session_timeout_ms == 0) return false;
+    if (r.network.transmit_timeout_ms == 0) return false;
+    if (r.logging.log_size > LoggingLimits::history_size)
       return false;  // Sanity check
 
     // 5. Platform Specifics

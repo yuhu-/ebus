@@ -162,12 +162,22 @@ void Controller::setLogLevel(LogLevel level) {
   // Log level is checked dynamically in Scheduler callbacks
 }
 
-void Controller::setActiveTimeout(uint32_t timeout_ms) {
+void Controller::setErrorLogSize(size_t size) {
   std::lock_guard<std::mutex> lock(config_mutex_);
-  config_.runtime.network.client_timeout_ms = timeout_ms;
-  if (isConfigured()) {
-    impl_->client_manager_->setActiveTimeout(timeout_ms);
-  }
+  config_.runtime.logging.log_size = size;
+  if (isConfigured()) impl_->error_buffer_.set_capacity(size);
+}
+
+void Controller::setSessionTimeout(uint32_t timeout_ms) {
+  std::lock_guard<std::mutex> lock(config_mutex_);
+  config_.runtime.network.session_timeout_ms = timeout_ms;
+  if (isConfigured()) impl_->client_manager_->setSessionTimeout(timeout_ms);
+}
+
+void Controller::setTransmitTimeout(uint32_t timeout_ms) {
+  std::lock_guard<std::mutex> lock(config_mutex_);
+  config_.runtime.network.transmit_timeout_ms = timeout_ms;
+  if (isConfigured()) impl_->client_manager_->setTransmitTimeout(timeout_ms);
 }
 
 void Controller::setOutboundBufferSize(size_t size) {
@@ -368,12 +378,6 @@ std::string Controller::getTraceHistoryJson() const {
   return toJson(getTraceHistory());
 }
 
-void Controller::setErrorLogSize(size_t size) {
-  std::lock_guard<std::mutex> lock(config_mutex_);
-  config_.runtime.logging.log_size = size;
-  if (isConfigured()) impl_->error_buffer_.set_capacity(size);
-}
-
 std::vector<ErrorEntry> Controller::getErrors() const {
   return impl_->error_buffer_.snapshot();
 }
@@ -447,8 +451,8 @@ void Controller::constructMembers() {
       }
       if (current_log_size > 0) {
         ErrorEntry entry;
-        entry.level = info.level;
-        entry.setMessage(info.message);
+        entry.level = info.level;  // LogLevel is still used for filtering
+        entry.setProtocolError(info.protocol_error);
         entry.result = info.result;
         entry.sequence_state = info.sequence_state;
         entry.handler_state = info.handler_state;
@@ -533,9 +537,11 @@ void Controller::constructMembers() {
     impl_->client_manager_ = std::make_unique<detail::ClientManager>(
         impl_->bus_.get(), impl_->bus_handler_.get(), impl_->request_.get(),
         impl_->bus_monitor_.get());
-  }
-  impl_->client_manager_->setActiveTimeout(
-      config_.runtime.network.client_timeout_ms);
+  }  // Update client manager settings in-place
+  impl_->client_manager_->setSessionTimeout(
+      config_.runtime.network.session_timeout_ms);
+  impl_->client_manager_->setTransmitTimeout(
+      config_.runtime.network.transmit_timeout_ms);
   impl_->client_manager_->setOutboundBufferSize(
       config_.runtime.network.outbound_buffer_size);
 

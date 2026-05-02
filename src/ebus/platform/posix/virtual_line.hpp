@@ -33,6 +33,9 @@ class VirtualLine {
       uint8_t& byte,
       int timeout_ms = BusLimits::platform::Posix::virtual_read_timeout_ms);
 
+  // Shuts down the line, unblocking any waiting readers.
+  void shutdown();
+
  private:
   // Internal queue for bytes arriving from the "wire"
   Queue<uint8_t> rx_queue_{BusLimits::queue_size};

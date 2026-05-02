@@ -109,7 +109,7 @@ class Scheduler {
     SequenceState sequence_state;
     Sequence master;
     Sequence slave;
-    const char* error = nullptr;
+    ProtocolError protocol_error = ProtocolError::none;
   };
 
   Handler* handler_ = nullptr;

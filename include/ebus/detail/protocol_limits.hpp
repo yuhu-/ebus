@@ -84,13 +84,12 @@ inline constexpr size_t history_size = 60;
 }  // namespace LoggingLimits
 
 namespace NetworkLimits {
-inline constexpr uint32_t transmit_timeout_ms = 500;
 inline constexpr uint32_t wake_interval_ms = 20;
 inline constexpr size_t max_clients = 8;
 }  // namespace NetworkLimits
 
 namespace ScannerLimits {
-inline constexpr uint32_t initial_delay_s = 10;
+inline constexpr uint32_t initial_delay_s = 5;
 inline constexpr uint32_t startup_interval_s = 60;
 inline constexpr uint8_t max_startup_scans = 5;
 inline constexpr uint8_t scan_priority = 5;

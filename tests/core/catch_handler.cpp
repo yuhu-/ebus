@@ -110,8 +110,8 @@ SCENARIO("Handler processes eBUS messages correctly", "[core][handler]") {
                             << ebus::toString(info.slave_view));
         });
         handler.setErrorCallback([&](const ebus::ErrorInfo& info) {
-          error_count++;
-          INFO("error: " << info.message << " master '"
+          error_count++;  // error_count is still used
+          INFO("error: " << ebus::toString(info.protocol_error) << " master '"
                          << ebus::toString(info.master_view) << "' slave '"
                          << ebus::toString(info.slave_view) << "'");
         });

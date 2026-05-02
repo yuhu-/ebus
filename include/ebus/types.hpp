@@ -133,6 +133,31 @@ enum class RequestResult {
   second_error
 };
 
+enum class ProtocolError {
+  none,
+  error_passive_master,
+  error_passive_master_ack,
+  error_passive_slave,
+  error_passive_slave_ack,
+  error_reactive_master,
+  error_reactive_master_ack,
+  error_reactive_slave,
+  error_reactive_slave_ack,
+  error_active_master_echo,
+  error_active_master,
+  error_active_master_ack,
+  error_active_slave,
+  error_active_slave_ack,
+  check_passive_buffers,
+  check_active_buffers,
+  illegal_fsm_transition,
+  handler_busy,
+  invalid_message,
+  fsm_timeout,
+  arbitration_lost,
+  total_transfer_timeout,
+};
+
 // --- String Conversion ---
 
 constexpr const char* toString(SequenceState state) noexcept {
@@ -247,6 +272,57 @@ constexpr const char* toString(RequestResult state) noexcept {
   }
 }
 
+constexpr const char* toString(ProtocolError error) noexcept {
+  switch (error) {
+    case ProtocolError::none:
+      return "none";
+    case ProtocolError::error_passive_master:
+      return "Passive master error";
+    case ProtocolError::error_passive_master_ack:
+      return "Passive master ACK error";
+    case ProtocolError::error_passive_slave:
+      return "Passive slave error";
+    case ProtocolError::error_passive_slave_ack:
+      return "Passive slave ACK error";
+    case ProtocolError::error_reactive_master:
+      return "Reactive master error";
+    case ProtocolError::error_reactive_master_ack:
+      return "Reactive master ACK error";
+    case ProtocolError::error_reactive_slave:
+      return "Reactive slave error";
+    case ProtocolError::error_reactive_slave_ack:
+      return "Reactive slave ACK error";
+    case ProtocolError::error_active_master_echo:
+      return "Active master echo error";
+    case ProtocolError::error_active_master:
+      return "Active master error";
+    case ProtocolError::error_active_master_ack:
+      return "Active master ACK error";
+    case ProtocolError::error_active_slave:
+      return "Active slave error";
+    case ProtocolError::error_active_slave_ack:
+      return "Active slave ACK error";
+    case ProtocolError::check_passive_buffers:
+      return "Passive buffers check failed";
+    case ProtocolError::check_active_buffers:
+      return "Active buffers check failed";
+    case ProtocolError::illegal_fsm_transition:
+      return "Illegal FSM Transition";
+    case ProtocolError::handler_busy:
+      return "Handler busy";
+    case ProtocolError::invalid_message:
+      return "Invalid message";
+    case ProtocolError::fsm_timeout:
+      return "FSM timeout";
+    case ProtocolError::arbitration_lost:
+      return "Arbitration lost";
+    case ProtocolError::total_transfer_timeout:
+      return "Total transfer timeout";
+    default:
+      return "Unknown protocol error";
+  }
+}
+
 /**
  * Records a single state transition in the protocol handler.
  */
@@ -310,7 +386,7 @@ constexpr TelegramType typeOf(uint8_t byte) {
  */
 struct ErrorEntry {
   LogLevel level;
-  char message[64];  // Sufficient for protocol and vendor error literals
+  ProtocolError protocol_error;
   RequestResult result;
   SequenceState sequence_state;
   HandlerState handler_state;
@@ -325,7 +401,8 @@ struct ErrorEntry {
   // Custom stringifier for human-readable logs
   std::string toString() const {
     std::string res = "[" + std::string(ebus::toString(handler_state)) + "][" +
-                      ebus::toString(request_state) + "] " + message;
+                      ebus::toString(request_state) + "] " +
+                      ebus::toString(protocol_error);
     if (sequence_state != SequenceState::seq_ok &&
         sequence_state != SequenceState::seq_empty) {
       res += " (" + std::string(ebus::toString(sequence_state)) + ")";
@@ -334,13 +411,7 @@ struct ErrorEntry {
     return res;
   }
 
-  void setMessage(std::string_view msg) {
-    const size_t max_len = sizeof(message) - 1;
-    size_t len = (msg.size() < max_len) ? msg.size() : max_len;
-    std::memcpy(message, msg.data(), len);
-    message[len] = '\0';
-  }
-
+  void setProtocolError(ProtocolError error) { protocol_error = error; }
   void setMaster(const uint8_t* data, size_t size) {
     const size_t max_len = sizeof(master);
     master_len = static_cast<uint8_t>((size < max_len) ? size : max_len);

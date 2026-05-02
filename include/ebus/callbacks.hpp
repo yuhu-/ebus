@@ -36,8 +36,8 @@ struct TelegramInfo {
 
 struct ErrorInfo {
   uint32_t session_id = 0;
-  LogLevel level;
-  std::string_view message;
+  LogLevel level = LogLevel::error;
+  ProtocolError protocol_error = ProtocolError::none;
   RequestResult result;
   SequenceState sequence_state;
   HandlerState handler_state;
