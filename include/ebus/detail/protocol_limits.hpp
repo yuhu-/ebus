@@ -28,7 +28,7 @@ inline constexpr float start_bit_tolerance = 1.5f;  // bit times
 namespace FsmLimits {
 inline constexpr std::size_t num_handler_states = 15;
 inline constexpr size_t num_request_states = 4;
-inline constexpr size_t history_size = 10;
+inline constexpr size_t log_history_size = 10;
 }  // namespace FsmLimits
 
 // --- Orchestration Layer (Thread Priorities & Stacks) ---
@@ -79,9 +79,10 @@ inline constexpr uint32_t virtual_read_timeout_ms = 10;
 }  // namespace platform::Posix
 }  // namespace BusLimits
 
-namespace LoggingLimits {
-inline constexpr size_t history_size = 60;
-}  // namespace LoggingLimits
+namespace DiagnosticsLimits {
+inline constexpr size_t log_history_size = 60;
+inline constexpr size_t trace_history_size = 100;
+}  // namespace DiagnosticsLimits
 
 namespace NetworkLimits {
 inline constexpr uint32_t wake_interval_ms = 20;

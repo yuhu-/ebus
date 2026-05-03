@@ -35,10 +35,10 @@ struct RuntimeConfig {
     } syn;
   } bus;
 
-  struct Logging {
+  struct Diagnostics {
     LogLevel level = LogLevel::error;
     size_t log_size = 10;
-  } logging;
+  } diagnostics;
 
   struct Network {
     uint32_t session_timeout_ms = 500;

@@ -26,8 +26,9 @@ namespace ebus {
 
 struct Impl {
   detail::CircularBuffer<ebus::ErrorEntry> error_buffer_{
-      ebus::RuntimeConfig{}.logging.log_size};
-  detail::CircularBuffer<ebus::BusEventContext> trace_buffer_{100};
+      ebus::RuntimeConfig{}.diagnostics.log_size};
+  detail::CircularBuffer<ebus::BusEventContext> trace_buffer_{
+      detail::DiagnosticsLimits::trace_history_size};
 
   ebus::ReactiveMasterSlaveCallback user_reactive_callback_;
   ebus::TelegramCallback user_telegram_callback_;
@@ -172,13 +173,13 @@ void Controller::setWatchdogTimeout(uint32_t timeout_ms) {
 
 void Controller::setLogLevel(LogLevel level) {
   std::lock_guard<std::mutex> lock(config_mutex_);
-  config_.runtime.logging.level = level;
+  config_.runtime.diagnostics.level = level;
   // Log level is checked dynamically in Scheduler callbacks
 }
 
 void Controller::setErrorLogSize(size_t size) {
   std::lock_guard<std::mutex> lock(config_mutex_);
-  config_.runtime.logging.log_size = size;
+  config_.runtime.diagnostics.log_size = size;
   if (isConfigured()) impl_->error_buffer_.set_capacity(size);
 }
 
@@ -488,8 +489,8 @@ void Controller::constructMembers() {
       ErrorCallback user_callback;
       {
         std::lock_guard<std::mutex> lock(config_mutex_);
-        current_log_size = config_.runtime.logging.log_size;
-        current_log_level = config_.runtime.logging.level;
+        current_log_size = config_.runtime.diagnostics.log_size;
+        current_log_level = config_.runtime.diagnostics.level;
         user_callback = impl_->user_error_callback_;
       }
       if (current_log_size > 0) {

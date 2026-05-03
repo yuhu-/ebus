@@ -83,8 +83,10 @@ class BusMonitor {
   TimingStats syn_postpone;
   RollingStats utilization;
 
-  CircularBuffer<HandlerTransition> handler_history_{FsmLimits::history_size};
-  CircularBuffer<RequestTransition> request_history_{FsmLimits::history_size};
+  CircularBuffer<HandlerTransition> handler_history_{
+      FsmLimits::log_history_size};
+  CircularBuffer<RequestTransition> request_history_{
+      FsmLimits::log_history_size};
 
   CircularBuffer<float> utilization_history_;
 

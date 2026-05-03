@@ -47,7 +47,7 @@ class ConfigValidator {
     if (r.network.outbound_buffer_size == 0) return false;
     if (r.network.session_timeout_ms == 0) return false;
     if (r.network.transmit_timeout_ms == 0) return false;
-    if (r.logging.log_size > LoggingLimits::history_size)
+    if (r.diagnostics.log_size > DiagnosticsLimits::log_history_size)
       return false;  // Sanity check
 
     // 5. Platform Specifics

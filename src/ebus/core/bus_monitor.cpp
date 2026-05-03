@@ -17,7 +17,8 @@ uint64_t getNowMs() {
 }
 }  // namespace
 
-BusMonitor::BusMonitor() : utilization_history_(LoggingLimits::history_size) {}
+BusMonitor::BusMonitor()
+    : utilization_history_(DiagnosticsLimits::log_history_size) {}
 
 void BusMonitor::resetMetrics() {
   std::lock_guard<std::mutex> lock(metrics_mutex);
