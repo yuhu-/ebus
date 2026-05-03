@@ -414,6 +414,22 @@ class SequenceImpl {
    */
   operator ByteView() const { return ByteView(data(), size()); }
 
+  /**
+   * @brief Creates a logical eBUS Inquiry of Existence broadcast sequence.
+   * ZZ=FE, PB=07, SB=FE, NN=00.
+   */
+  static SequenceImpl InquiryOfExistence() {
+    return {Symbols::broad, 0x07, 0xfe, 0x00};
+  }
+
+  /**
+   * @brief Creates a logical eBUS Sign of Life broadcast sequence.
+   * ZZ=FE, PB=07, SB=FF, NN=00.
+   */
+  static SequenceImpl SignOfLife() {
+    return {Symbols::broad, 0x07, 0xff, 0x00};
+  }
+
  private:
   detail::SmallByteVector<uint8_t, kInlineCapacity> sequence_;
   bool extended_ = false;

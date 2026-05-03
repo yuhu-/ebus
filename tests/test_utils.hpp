@@ -206,6 +206,26 @@ class BusSimulator {
     }
   }
 
+  /**
+   * Injects a master message with correct CRC and escaping onto the bus.
+   */
+  void injectMasterMessage(uint8_t source, ebus::Sequence payload) {
+    // Prepend a SYN to ensure the FSM is in a clean state to receive the
+    // message
+    bus_.writeByte(ebus::Symbols::syn);
+    platform::sleepMicro(100);  // Give the FSM time to process the SYN
+
+    payload.reduce();
+    ebus::Sequence msg;
+    msg.pushBack(source, false);
+    msg.append(payload);
+    msg.pushBack(msg.crc(), false);
+    msg.extend();
+    for (uint8_t b : msg) {
+      bus_.writeByte(b);
+    }
+  }
+
  private:
   platform::Bus& bus_;
   std::mutex mtx_;

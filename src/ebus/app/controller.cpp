@@ -67,6 +67,10 @@ bool Controller::start() {
   impl_->scheduler_->start();
   impl_->client_manager_->start();
 
+  // Trigger initial system discovery if enabled
+  std::lock_guard<std::mutex> lock(config_mutex_);
+  if (config_.runtime.system_inquiry) triggerInquiryOfExistence();
+
   impl_->worker_ = std::make_unique<detail::platform::ServiceThread>(
       "ebusController", [this] { run(); },
       detail::OrchestrationLimits::stack_size,
@@ -134,6 +138,16 @@ void Controller::setLockCounter(const uint8_t& lock_counter) {
   if (isConfigured()) {
     impl_->request_->setLockCounter(lock_counter);
   }
+}
+
+void Controller::setSystemInquiry(bool enable) {
+  std::lock_guard<std::mutex> lock(config_mutex_);
+  config_.runtime.system_inquiry = enable;
+}
+
+void Controller::setSystemResponse(bool enable) {
+  std::lock_guard<std::mutex> lock(config_mutex_);
+  config_.runtime.system_response = enable;
 }
 
 void Controller::setWindow(const uint16_t& window_us) {
@@ -218,7 +232,7 @@ void Controller::setStartupScanInterval(uint32_t interval_s) {
   }
 }
 
-void Controller::setMaxSendAttempts(int max_send_attempts) {
+void Controller::setMaxSendAttempts(uint8_t max_send_attempts) {
   std::lock_guard<std::mutex> lock(config_mutex_);
   config_.runtime.scheduler.max_send_attempts = max_send_attempts;
   if (isConfigured()) {
@@ -303,6 +317,13 @@ void Controller::removePollItem(uint32_t id) {
 
 void Controller::clearPollItems() {
   if (isConfigured()) impl_->poll_manager_->clear();
+}
+
+void Controller::triggerInquiryOfExistence() {
+  // Standard eBUS System Discovery: Broadcast "Inquiry of Existence" (07h FEh)
+  // This advises other masters that a new participant has entered the bus.
+  enqueue(detail::ScannerLimits::scan_priority,
+          ebus::Sequence::InquiryOfExistence());
 }
 
 void Controller::initFullScan(bool enable) {
@@ -429,13 +450,35 @@ void Controller::constructMembers() {
     // Setup internal event dispatchers
     impl_->scheduler_->setTelegramCallback([this](const TelegramInfo& info) {
       TelegramCallback user_callback;
+      bool response_enabled = false;
+      uint8_t own_address = 0xff;
       {
         std::lock_guard<std::mutex> lock(config_mutex_);
         user_callback = impl_->user_telegram_callback_;
+        response_enabled = config_.runtime.system_response;
+        own_address = config_.runtime.address;
       }
+
       if (impl_->device_manager_) {
         impl_->device_manager_->update(info.master_view, info.slave_view);
       }
+
+      // Standard eBUS System Discovery reaction
+      if (response_enabled) {
+        // Inquiry of Existence (Service 07h FEh): PB=07, SB=FE, NN=00
+        // We match starting at index 1 to verify ZZ, PB, SB, and NN.
+        if (ebus::matches(info.master_view,
+                          ebus::Sequence::InquiryOfExistence(), 1)) {
+          const uint8_t source = info.master_view[0];
+
+          // Don't respond to our own inquiries.
+          if (source != own_address) {
+            impl_->scheduler_->enqueue(detail::ScannerLimits::scan_priority,
+                                       ebus::Sequence::SignOfLife());
+          }
+        }
+      }
+
       if (user_callback) user_callback(info);
     });
 

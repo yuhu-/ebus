@@ -17,7 +17,11 @@ namespace ebus::detail {
 namespace {
 template <typename... Args>
 constexpr uint16_t mask(Args... states) {
-  return (0 | ... | (1 << static_cast<int>(states)));
+  if constexpr (sizeof...(Args) == 0) {
+    return 0;
+  } else {
+    return (... | (1 << static_cast<int>(states)));
+  }
 }
 
 #define RESET_TRANS HandlerState::passive_receive_master

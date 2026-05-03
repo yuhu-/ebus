@@ -61,7 +61,7 @@ class Scheduler {
   bool enqueueAt(uint8_t priority, ByteView message, TimePoint when,
                  ResultCallback callback = nullptr);
 
-  void setMaxSendAttempts(int send_attempts);
+  void setMaxSendAttempts(uint8_t send_attempts);
   void setBaseBackoff(uint32_t base_backoff_ms);
   void setFsmTimeout(uint32_t timeout_ms);
   void setTotalTimeout(uint32_t timeout_ms);
@@ -129,7 +129,8 @@ class Scheduler {
   platform::Queue<Event> event_queue_{SchedulerLimits::queue_reserve};
 
   // Configuration
-  int max_send_attempts_ = ebus::RuntimeConfig{}.scheduler.max_send_attempts;
+  uint8_t max_send_attempts_ =
+      ebus::RuntimeConfig{}.scheduler.max_send_attempts;
   Duration base_backoff_ = std::chrono::milliseconds(
       ebus::RuntimeConfig{}.scheduler.base_backoff_ms);
   std::chrono::milliseconds fsm_timeout_ =

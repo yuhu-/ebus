@@ -28,6 +28,9 @@ int main() {
   configA.runtime.address = 0x01;
   configA.bus.simulate = true;
   configA.runtime.bus.syn.enabled = true;
+  configA.runtime.system_inquiry = false;
+  configA.runtime.system_response = true;
+  configA.runtime.scanner.scan_on_startup = false;
 
   ebus::Controller deviceA(configA);
 
@@ -36,6 +39,9 @@ int main() {
   ebus::EbusConfig configB;
   configB.runtime.address = 0x10;
   configB.bus.simulate = true;
+  configB.runtime.system_inquiry = false;  // true to send at startup
+  configB.runtime.system_response = false;
+  configB.runtime.scanner.scan_on_startup = false;
 
   ebus::Controller deviceB(configB);
 
@@ -63,12 +69,22 @@ int main() {
     std::cout << "[Device B] Periodic broadcast sent." << std::endl;
   });
 
-  // Try to enqueue a faulty broadcast message every 7 seconds.
+  // Try to enqueue a faulty broadcast message after 3 seconds.
   // This library offers several helper functions, such as...ebus::to_vector("")
-  deviceB.addPollItem(
-      15, ebus::toVector("feb5160301"), 7000, [](const ebus::ResultInfo& info) {
-        std::cout << "[Device B] Periodic faulty broadcast sent." << std::endl;
+  deviceB.enqueueAt(
+      10, ebus::toVector("feb5160301"), ebus::Clock::now() + 3s,
+      [](const ebus::ResultInfo& info) {
+        std::cout
+            << "[Device B] Faulty broadcast try to sent. Sequencer state: "
+            << ebus::toString(info.sequence_state) << std::endl;
       });
+
+  // Send inquiry of existence after 8 seconds.
+  deviceB.enqueueAt(20, ebus::Sequence::InquiryOfExistence(),
+                    ebus::Clock::now() + 8s, [](const ebus::ResultInfo& info) {
+                      std::cout << "[Device B] Inquiry of existence sent."
+                                << std::endl;
+                    });
 
   // --- 5. Logic for Device A: Decoding of a received message ---
   // We set a callback to decode the received message from DeviceB.

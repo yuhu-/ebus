@@ -5,7 +5,6 @@
 
 #include "app/scheduler.hpp"
 
-#include <algorithm>
 #include <ebus/types.hpp>
 #include <ebus/utils.hpp>
 #include <memory>
@@ -70,8 +69,9 @@ bool Scheduler::enqueueAt(uint8_t priority, ByteView message, TimePoint when,
   return pushItem(std::move(it));
 }
 
-void Scheduler::setMaxSendAttempts(int max_send_attempts) {
-  max_send_attempts_ = std::max(1, max_send_attempts);
+void Scheduler::setMaxSendAttempts(uint8_t max_send_attempts) {
+  max_send_attempts_ = max_send_attempts;
+  if (max_send_attempts_ == 0) max_send_attempts_ = 1;
 }
 
 void Scheduler::setBaseBackoff(uint32_t base_backoff_ms) {

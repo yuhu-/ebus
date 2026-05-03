@@ -20,6 +20,8 @@ namespace ebus {
 struct RuntimeConfig {
   uint8_t address = 0xff;
   uint8_t lock_counter = 3;  // max 25
+  bool system_inquiry = false;
+  bool system_response = true;
 
   struct Bus {
     uint16_t window_us = 4300;  // us
@@ -46,13 +48,13 @@ struct RuntimeConfig {
 
   struct Scanner {
     bool scan_on_startup = true;
-    uint32_t initial_delay_s = 5;
+    uint32_t initial_delay_s = 10;
     uint32_t startup_interval_s = 60;
     uint8_t max_startup_scans = 5;
   } scanner;
 
   struct Scheduler {
-    int max_send_attempts = 3;
+    uint8_t max_send_attempts = 3;
     uint32_t base_backoff_ms = 100;
     uint32_t fsm_timeout_ms = 1000;
     uint32_t total_timeout_ms = 2000;

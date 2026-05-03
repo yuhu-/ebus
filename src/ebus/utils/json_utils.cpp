@@ -68,6 +68,9 @@ std::string toJson(const EbusConfig& config) {
       << "\"runtime\":{"
       << "\"address\": " << static_cast<int>(r.address) << ","
       << "\"lock_counter\": " << static_cast<int>(r.lock_counter) << ","
+      << "\"system_inquiry\": " << (r.system_inquiry ? "true" : "false") << ","
+      << "\"system_response\": " << (r.system_response ? "true" : "false")
+      << ","
       << "\"bus\": {"
       << "\"window_us\": " << r.bus.window_us << ","
       << "\"offset_us\": " << r.bus.offset_us << ","

@@ -90,6 +90,18 @@ class Controller {
   void setLockCounter(const uint8_t& lock_counter);
 
   /**
+   * @brief Enables or disables proactive sending of "Inquiry of Existence" on
+   * startup.
+   */
+  void setSystemInquiry(bool enable);
+
+  /**
+   * @brief Enables or disables responding with a "Sign of Life" when an inquiry
+   * is received.
+   */
+  void setSystemResponse(bool enable);
+
+  /**
    * @brief Sets the timing window for arbitration in microseconds.
    */
   void setWindow(const uint16_t& window_us);
@@ -153,7 +165,7 @@ class Controller {
   /**
    * @brief Sets the maximum application-level retry attempts for a message.
    */
-  void setMaxSendAttempts(int max_send_attempts);
+  void setMaxSendAttempts(uint8_t max_send_attempts);
 
   /**
    * @brief Sets the base duration for exponential backoff during retries.
@@ -238,6 +250,11 @@ class Controller {
   void clearPollItems();
 
   // Device Discovery & Scanning
+
+  /**
+   * @brief Triggers an eBUS "Inquiry of Existence" broadcast.
+   */
+  void triggerInquiryOfExistence();
 
   /**
    * @brief Initiates an exhaustive scan of the entire bus address range.
