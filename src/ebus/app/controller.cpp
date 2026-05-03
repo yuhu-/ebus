@@ -495,6 +495,8 @@ void Controller::constructMembers() {
       }
       if (current_log_size > 0) {
         ErrorEntry entry;
+        entry.session_id = info.session_id;
+        entry.poll_id = info.poll_id;
         entry.level = info.level;  // LogLevel is still used for filtering
         entry.setProtocolError(info.protocol_error);
         entry.result = info.result;
@@ -599,7 +601,7 @@ void Controller::run() {
     impl_->poll_manager_->processDueItems(
         [this, &activity](const detail::PollItem& item) {
           if (impl_->scheduler_->enqueue(item.priority, item.message,
-                                         item.callback))
+                                         item.callback, item.poll_id))
             activity = true;
         },
         &activity);

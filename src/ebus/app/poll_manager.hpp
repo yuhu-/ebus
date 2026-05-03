@@ -19,7 +19,7 @@
 namespace ebus::detail {
 
 struct PollItem {
-  uint32_t id;
+  uint32_t poll_id;
   uint8_t priority;
   Sequence message;
   std::chrono::milliseconds interval;
@@ -28,7 +28,7 @@ struct PollItem {
 
   bool operator<(const PollItem& other) const {
     if (next_due != other.next_due) return next_due < other.next_due;
-    return id < other.id;
+    return poll_id < other.poll_id;
   }
 };
 
@@ -43,7 +43,7 @@ struct PollItem {
  */
 class PollManager {
  public:
-  PollManager() : next_id_(1) {}
+  PollManager() : next_poll_id_(1) {}
 
   // Sets the current master address and purges items that would poll itself.
   void setOwnAddress(uint8_t address);
@@ -65,7 +65,7 @@ class PollManager {
  private:
   mutable std::mutex mutex_;
   std::set<PollItem> items_;
-  uint32_t next_id_;
+  uint32_t next_poll_id_;
 };
 
 }  // namespace ebus::detail

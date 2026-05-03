@@ -12,7 +12,7 @@
 namespace ebus::detail {
 
 Scheduler::Scheduler(Handler* handler)
-    : handler_(handler), stop_flag_(true), next_id_(1) {
+    : handler_(handler), stop_flag_(true), next_session_id_(1) {
   // Reserve space for typical traffic bursts
   item_queue_.reserve(SchedulerLimits::queue_reserve);
   attachHandlerCallbacks();
@@ -48,24 +48,26 @@ void Scheduler::stop() {
 }
 
 bool Scheduler::enqueue(uint8_t priority, ByteView message,
-                        ResultCallback callback) {
+                        ResultCallback callback, uint32_t poll_id) {
   Item it;
   it.priority = priority;
   it.due = Clock::now();
   it.message.assign(message);
   it.result_callback = std::move(callback);
-  it.id = next_id_++;
+  it.session_id = next_session_id_++;
+  it.poll_id = poll_id;
   return pushItem(std::move(it));
 }
 
 bool Scheduler::enqueueAt(uint8_t priority, ByteView message, TimePoint when,
-                          ResultCallback callback) {
+                          ResultCallback callback, uint32_t poll_id) {
   Item it;
   it.priority = priority;
   it.due = when;
   it.message.assign(message);
   it.result_callback = std::move(callback);
-  it.id = next_id_++;
+  it.session_id = next_session_id_++;
+  it.poll_id = poll_id;
   return pushItem(std::move(it));
 }
 
@@ -138,14 +140,15 @@ void Scheduler::run() {
 
     // copy next due while holding lock
     auto next_due = item_queue_.front().due;
-    auto next_id = item_queue_.front().id;
+    auto next_session_id = item_queue_.front().session_id;
 
-    data_ready_cv_.wait_until(lock, next_due, [this, next_due, next_id] {
-      return stop_flag_.load() || item_queue_.empty() ||
-             item_queue_.front().due <= Clock::now() ||
-             item_queue_.front().due < next_due ||
-             item_queue_.front().id != next_id;
-    });
+    data_ready_cv_.wait_until(
+        lock, next_due, [this, next_due, next_session_id] {
+          return stop_flag_.load() || item_queue_.empty() ||
+                 item_queue_.front().due <= Clock::now() ||
+                 item_queue_.front().due < next_due ||
+                 item_queue_.front().session_id != next_session_id;
+        });
 
     if (stop_flag_.load()) break;
     if (item_queue_.empty()) continue;
@@ -165,9 +168,11 @@ void Scheduler::run() {
     HandlerState result_h_state = HandlerState::passive_receive_master;
     RequestState result_r_state = RequestState::observe;
     Sequence slave_response;
-    uint32_t attempt_id = current_item.id;
+    uint32_t attempt_session_id = current_item.session_id;
+    uint32_t attempt_poll_id = current_item.poll_id;
 
-    current_attempt_id_.store(attempt_id, std::memory_order_relaxed);
+    current_session_id_.store(attempt_session_id, std::memory_order_relaxed);
+    current_poll_id_.store(attempt_poll_id, std::memory_order_relaxed);
 
     // Clear any stale events from previous attempts
     Event stale;
@@ -197,7 +202,7 @@ void Scheduler::run() {
           break;
         }
 
-        if (ev.id != attempt_id) continue;
+        if (ev.session_id != attempt_session_id) continue;
 
         if (ev.type == EventType::telegram) {
           sent = true;
@@ -225,7 +230,8 @@ void Scheduler::run() {
     }
 
     // clear attempt id so stray callbacks are ignored
-    current_attempt_id_.store(0, std::memory_order_relaxed);
+    current_session_id_.store(0, std::memory_order_relaxed);
+    current_poll_id_.store(0, std::memory_order_relaxed);
 
     /**
      * Reliability Logic:
@@ -238,8 +244,9 @@ void Scheduler::run() {
     if (sent) {
       if (current_item.result_callback)
         current_item.result_callback(
-            {current_item.id, true, RequestResult::first_won,
-             SequenceState::seq_ok, current_item.message, slave_response});
+            {current_item.session_id, current_item.poll_id, true,
+             RequestResult::first_won, SequenceState::seq_ok,
+             current_item.message, slave_response});
       lock.lock();
     } else {
       ++current_item.send_attempts;
@@ -253,7 +260,8 @@ void Scheduler::run() {
       } else {
         if (extern_error_callback_) {
           extern_error_callback_(
-              {current_item.id,
+              {current_item.session_id,
+               current_item.poll_id,
                result_level,  // LogLevel is still used for filtering
                last_error_code,
                result_code,
@@ -264,7 +272,8 @@ void Scheduler::run() {
                {}});
         }
         if (current_item.result_callback) {
-          current_item.result_callback({current_item.id,
+          current_item.result_callback({current_item.session_id,
+                                        current_item.poll_id,
                                         false,
                                         result_code,
                                         result_s_state,
@@ -295,23 +304,27 @@ void Scheduler::attachHandlerCallbacks() {
 
   handler_->setBusRequestWonCallback([this]() {
     if (stop_flag_.load(std::memory_order_relaxed)) return;
-    uint32_t id = current_attempt_id_.load(std::memory_order_relaxed);
-    if (id == 0) return;
+    uint32_t s_id = current_session_id_.load(std::memory_order_relaxed);
+    uint32_t p_id = current_poll_id_.load(std::memory_order_relaxed);
+    if (s_id == 0) return;
 
     Event ev;
     ev.type = EventType::won;
-    ev.id = id;
+    ev.session_id = s_id;
+    ev.poll_id = p_id;
     event_queue_.tryPush(ev);
   });
 
   handler_->setBusRequestLostCallback([this]() {
     if (stop_flag_.load(std::memory_order_relaxed)) return;
-    uint32_t id = current_attempt_id_.load(std::memory_order_relaxed);
-    if (id == 0) return;
+    uint32_t s_id = current_session_id_.load(std::memory_order_relaxed);
+    uint32_t p_id = current_poll_id_.load(std::memory_order_relaxed);
+    if (s_id == 0) return;
 
     Event ev;
     ev.type = EventType::lost;
-    ev.id = id;
+    ev.session_id = s_id;
+    ev.poll_id = p_id;
     event_queue_.tryPush(ev);
   });
 
@@ -329,7 +342,8 @@ void Scheduler::attachHandlerCallbacks() {
 
   handler_->setTelegramCallback([this](const TelegramInfo& info) {
     if (stop_flag_.load(std::memory_order_relaxed)) return;
-    uint32_t id = current_attempt_id_.load(std::memory_order_relaxed);
+    uint32_t s_id = current_session_id_.load(std::memory_order_relaxed);
+    uint32_t p_id = current_poll_id_.load(std::memory_order_relaxed);
 
     TelegramCallback user_callback;
     {
@@ -338,20 +352,22 @@ void Scheduler::attachHandlerCallbacks() {
     }
 
     if (user_callback) {
-      if (id != 0 && info.message_type == MessageType::active) {
+      if (s_id != 0 && info.message_type == MessageType::active) {
         auto correlated = info;
-        correlated.session_id = id;
+        correlated.session_id = s_id;
+        correlated.poll_id = p_id;
         user_callback(correlated);
       } else {
         user_callback(info);
       }
     }
 
-    if (id == 0) return;
+    if (s_id == 0) return;
 
     Event ev;
     ev.type = EventType::telegram;
-    ev.id = id;
+    ev.session_id = s_id;
+    ev.poll_id = p_id;
     ev.message_type = info.message_type;
     ev.telegram_type = info.telegram_type;
     ev.handler_state = info.handler_state;
@@ -365,7 +381,8 @@ void Scheduler::attachHandlerCallbacks() {
     if (stop_flag_.load(std::memory_order_relaxed)) return;
     // Reset on certain error conditions that indicate the bus is now free
     // again
-    uint32_t id = current_attempt_id_.load(std::memory_order_relaxed);
+    uint32_t s_id = current_session_id_.load(std::memory_order_relaxed);
+    uint32_t p_id = current_poll_id_.load(std::memory_order_relaxed);
 
     if (extern_error_callback_) {
       ErrorCallback user_callback;
@@ -374,19 +391,21 @@ void Scheduler::attachHandlerCallbacks() {
         user_callback = extern_error_callback_;
       }
 
-      if (id != 0) {
+      if (s_id != 0) {
         auto correlated = info;
-        correlated.session_id = id;
+        correlated.session_id = s_id;
+        correlated.poll_id = p_id;
         user_callback(correlated);
       } else {
         user_callback(info);
       }
     }
-    if (id == 0) return;
+    if (s_id == 0) return;
 
     Event ev;
     ev.type = EventType::error;  // EventType::error is still used
-    ev.id = id;
+    ev.session_id = s_id;
+    ev.poll_id = p_id;
     ev.level = info.level;
     ev.result = info.result;
     ev.sequence_state = info.sequence_state;

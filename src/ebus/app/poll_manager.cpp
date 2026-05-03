@@ -33,9 +33,9 @@ uint32_t PollManager::addPollItem(uint8_t priority, ByteView message,
     return 0;
   }
 
-  uint32_t id = next_id_++;
+  uint32_t id = next_poll_id_++;
   PollItem item;
-  item.id = id;
+  item.poll_id = id;
   item.priority = priority;
   item.message.assign(message);
   item.interval = std::chrono::milliseconds(interval_ms);
@@ -50,7 +50,7 @@ uint32_t PollManager::addPollItem(uint8_t priority, ByteView message,
 void PollManager::removePollItem(uint32_t id) {
   std::lock_guard<std::mutex> lock(mutex_);
   auto it = std::find_if(items_.begin(), items_.end(),
-                         [id](const PollItem& i) { return i.id == id; });
+                         [id](const PollItem& i) { return i.poll_id == id; });
   if (it != items_.end()) items_.erase(it);
 }
 

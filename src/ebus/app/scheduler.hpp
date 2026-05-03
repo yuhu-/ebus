@@ -41,7 +41,8 @@ class Scheduler {
   struct Item {
     uint8_t priority = 0;  // larger = higher priority (e.g. 255 is top)
     TimePoint due = Clock::now();
-    uint32_t id = 0;
+    uint32_t session_id = 0;
+    uint32_t poll_id = 0;
     int send_attempts = 0;
     Sequence message;
     ResultCallback result_callback = nullptr;
@@ -57,9 +58,9 @@ class Scheduler {
   void stop();
 
   bool enqueue(uint8_t priority, ByteView message,
-               ResultCallback callback = nullptr);
+               ResultCallback callback = nullptr, uint32_t poll_id = 0);
   bool enqueueAt(uint8_t priority, ByteView message, TimePoint when,
-                 ResultCallback callback = nullptr);
+                 ResultCallback callback = nullptr, uint32_t poll_id = 0);
 
   void setMaxSendAttempts(uint8_t send_attempts);
   void setBaseBackoff(uint32_t base_backoff_ms);
@@ -90,8 +91,8 @@ class Scheduler {
       if (lhs.priority != rhs.priority) {
         return lhs.priority < rhs.priority;
       }
-      // Maintain stability via ID if everything else is equal
-      return lhs.id > rhs.id;
+      // Maintain stability via session ID if everything else is equal
+      return lhs.session_id > rhs.session_id;
     }
   };
 
@@ -99,7 +100,8 @@ class Scheduler {
 
   struct Event {
     EventType type;
-    uint32_t id;
+    uint32_t session_id;
+    uint32_t poll_id;
     MessageType message_type;
     TelegramType telegram_type;
     HandlerState handler_state;
@@ -122,10 +124,11 @@ class Scheduler {
   // Worker thread
   std::unique_ptr<platform::ServiceThread> worker_;
   std::atomic<bool> stop_flag_;
-  std::atomic<uint32_t> next_id_;
+  std::atomic<uint32_t> next_session_id_;
 
   // Active transfer state
-  std::atomic<uint32_t> current_attempt_id_{0};
+  std::atomic<uint32_t> current_session_id_{0};
+  std::atomic<uint32_t> current_poll_id_{0};
   platform::Queue<Event> event_queue_{SchedulerLimits::queue_reserve};
 
   // Configuration

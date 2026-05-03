@@ -25,6 +25,7 @@ using Sequence = SequenceImpl<detail::SequenceLimits::default_capacity>;
 
 struct TelegramInfo {
   uint32_t session_id = 0;
+  uint32_t poll_id = 0;
   uint32_t retry_count = 0;
   MessageType message_type;
   TelegramType telegram_type;
@@ -36,6 +37,7 @@ struct TelegramInfo {
 
 struct ErrorInfo {
   uint32_t session_id = 0;
+  uint32_t poll_id = 0;
   LogLevel level = LogLevel::error;
   ProtocolError protocol_error = ProtocolError::none;
   RequestResult result;
@@ -55,6 +57,7 @@ struct ReactiveInfo {
 
 struct ResultInfo {
   uint32_t session_id = 0;
+  uint32_t poll_id = 0;
   bool success;
   RequestResult result;
   SequenceState sequence_state;

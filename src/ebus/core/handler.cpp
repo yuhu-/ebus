@@ -842,7 +842,7 @@ void Handler::callOnTelegram(MessageType message_type,
                              ByteView slave_view) {
   if (telegram_callback_) {
     if (monitor_) monitor_->callback_telegram.markBegin();
-    telegram_callback_({0, 0, message_type, telegram_type, state_,
+    telegram_callback_({0, 0, 0, message_type, telegram_type, state_,
                         request_->getState(), master_view, slave_view});
     if (monitor_) monitor_->callback_telegram.markEnd();
   }
@@ -863,7 +863,7 @@ void Handler::callOnError(LogLevel level, ProtocolError protocol_error,
       });
       current_util = monitor_->getMetrics().bus.utilization;
     }
-    error_callback_({0, level, protocol_error, last_result_, sequence_state,
+    error_callback_({0, 0, level, protocol_error, last_result_, sequence_state,
                      state_, request_->getState(), master_view, slave_view,
                      current_util});
     if (monitor_) monitor_->callback_error.markEnd();

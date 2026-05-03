@@ -121,6 +121,7 @@ std::string toJson(const ErrorInfo& info) {
   std::ostringstream oss;
   oss << "{"
       << "\"session_id\":" << info.session_id << ","
+      << "\"poll_id\":" << info.poll_id << ","
       << "\"level\":" << static_cast<int>(info.level) << ","
       << "\"protocol_error\":\"" << toString(info.protocol_error) << "\","
       << "\"result\":\"" << toString(info.result) << "\","
@@ -138,6 +139,8 @@ std::string toJson(const ErrorEntry& entry) {
   std::ostringstream oss;
   time_t t = static_cast<time_t>(entry.timestamp / 1000);
   oss << "{"
+      << "\"session_id\":" << entry.session_id << ","
+      << "\"poll_id\":" << entry.poll_id << ","
       << "\"level\":" << static_cast<int>(entry.level) << ","
       << "\"protocol_error\":\"" << toString(entry.protocol_error) << "\","
       << "\"result\":\"" << toString(entry.result) << "\","
