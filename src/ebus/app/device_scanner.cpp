@@ -69,13 +69,11 @@ void DeviceScanner::initFullScan(bool enable) {
   std::lock_guard<std::mutex> lock(mutex_);
   full_scan_ = enable;
   if (enable) {
+    // Start full-scan from beginning without touching startup timing/state.
     full_scan_address_ = 0;
-    // Arm the timer for the initial delay if not already active
-    if (next_startup_scan_time_ ==
-        std::chrono::steady_clock::time_point::max()) {
-      next_startup_scan_time_ =
-          std::chrono::steady_clock::now() + initial_scan_delay_;
-    }
+  } else {
+    // Stop full scan; leave startup scans untouched.
+    full_scan_ = false;
   }
 }
 
@@ -89,7 +87,7 @@ bool DeviceScanner::scanObservedDevices() {
   // device_manager is thread-safe, so we can query it outside our lock
   // to reduce contention, although getObservedSlaves copies the set anyway.
   std::bitset<256> observed;
-  std::vector<Sequence> vendor_cmds;  // Correct type
+  std::vector<Sequence> vendor_cmds;
 
   if (device_manager_) {
     device_manager_->getObservedSlaves(observed);
@@ -104,7 +102,7 @@ bool DeviceScanner::scanObservedDevices() {
   }
   // Also queue vendor-specific scans for a complete refresh
   for (const auto& cmd : vendor_cmds) {
-    // Basic deduplication: only add if the queue is small or command is unique
+    if (cmd.empty()) continue;
     if (manual_queue_.size() < ScannerLimits::max_manual_queue) {
       manual_queue_.push(cmd);
       queued_any = true;
@@ -137,16 +135,11 @@ bool DeviceScanner::isScanning() const {
 
 void DeviceScanner::stop() {
   std::lock_guard<std::mutex> lock(mutex_);
+  // Stop manual scanning and any active full scan, but preserve startup scans.
   full_scan_ = false;
-  scan_on_startup_ = false;
 
   std::queue<Sequence> empty_manual;
   std::swap(manual_queue_, empty_manual);
-
-  std::queue<Sequence> empty_startup;
-  std::swap(startup_queue_, empty_startup);
-
-  next_startup_scan_time_ = std::chrono::steady_clock::time_point::max();
 }
 
 ebus::Sequence DeviceScanner::nextCommand() {
@@ -157,28 +150,19 @@ ebus::Sequence DeviceScanner::nextCommand() {
   if (!manual_queue_.empty()) {
     auto cmd = std::move(manual_queue_.front());
     manual_queue_.pop();
-    return cmd;
+    if (!cmd.empty()) return cmd;
   }
 
-  // Autonomous scans (Full and Startup) must respect the initial delay
-  // guard
-  if (now < next_startup_scan_time_) {
-    // Even if we are in the delay phase, we might still have items left in
-    // the startup_queue from a previous trigger.
-    if (scan_on_startup_ && !startup_queue_.empty()) {
-      auto cmd = std::move(startup_queue_.front());
-      startup_queue_.pop();
-      return cmd;
-    }
-    return {};
-  }
-
-  // Priority 2: Full Scan (generates one command at a time)
+  // Priority 2: Full Scan (independent from startup timing)
   if (full_scan_) {
-    while (full_scan_address_ <= 0xff) {
+    for (; full_scan_address_ < 256; ++full_scan_address_) {
       uint8_t addr = static_cast<uint8_t>(full_scan_address_++);
+      // Note: we increment the cursor only once per attempt; adjust to ensure
+      // progress even if createScanCommand returns empty.
       if (ebus::isSlave(addr) && (addr != ebus::slaveOf(own_address_))) {
-        return Device::createScanCommand(addr);
+        auto cmd = Device::createScanCommand(addr);
+        if (!cmd.empty()) return cmd;
+        // If createScanCommand returned empty, continue the loop.
       }
     }
     // Finished full scan
@@ -187,6 +171,18 @@ ebus::Sequence DeviceScanner::nextCommand() {
 
   // Priority 3: Startup Scan (Discovery of observed devices)
   if (!scan_on_startup_) return {};
+
+  if (now < next_startup_scan_time_) {
+    // If we are still in initial delay, but there might be leftover
+    // startup_queue_
+    if (!startup_queue_.empty()) {
+      auto cmd = std::move(startup_queue_.front());
+      startup_queue_.pop();
+      if (!cmd.empty()) return cmd;
+      return {};
+    }
+    return {};
+  }
 
   if (startup_queue_.empty()) {
     // Stop if we have completed all scan iterations.
@@ -208,11 +204,12 @@ ebus::Sequence DeviceScanner::nextCommand() {
     std::queue<Sequence> temp_q;
     for (size_t i = 0; i < 256; ++i) {
       if (observed.test(i)) {
-        temp_q.push(Device::createScanCommand(static_cast<uint8_t>(i)));
+        auto cmd = Device::createScanCommand(static_cast<uint8_t>(i));
+        if (!cmd.empty()) temp_q.push(std::move(cmd));
       }
     }
     for (const auto& vcmd : vendor_cmds) {
-      temp_q.push(vcmd);
+      if (!vcmd.empty()) temp_q.push(vcmd);
     }
 
     lock.lock();
@@ -228,7 +225,7 @@ ebus::Sequence DeviceScanner::nextCommand() {
   if (!startup_queue_.empty()) {
     auto cmd = std::move(startup_queue_.front());
     startup_queue_.pop();
-    return cmd;
+    if (!cmd.empty()) return cmd;
   }
 
   return {};
@@ -237,7 +234,9 @@ ebus::Sequence DeviceScanner::nextCommand() {
 bool DeviceScanner::scanAddressLocked(uint8_t address) {
   if (ebus::isSlave(address) && (address != ebus::slaveOf(own_address_))) {
     if (manual_queue_.size() >= ScannerLimits::max_manual_queue) return false;
-    manual_queue_.push(Device::createScanCommand(address));
+    auto cmd = Device::createScanCommand(address);
+    if (cmd.empty()) return false;
+    manual_queue_.push(std::move(cmd));
     return true;
   }
   return false;

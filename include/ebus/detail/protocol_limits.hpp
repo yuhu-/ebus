@@ -90,9 +90,6 @@ inline constexpr size_t max_clients = 8;
 }  // namespace NetworkLimits
 
 namespace ScannerLimits {
-inline constexpr uint32_t initial_delay_s = 5;
-inline constexpr uint32_t startup_interval_s = 60;
-inline constexpr uint8_t max_startup_scans = 5;
 inline constexpr uint8_t scan_priority = 5;
 inline constexpr size_t max_manual_queue = 64;
 }  // namespace ScannerLimits
@@ -106,7 +103,7 @@ inline constexpr uint32_t controller_tick_ms = 20;
 }  // namespace SchedulerLimits
 
 namespace PollLimits {
-inline constexpr size_t max_items = 64;
+inline constexpr size_t max_items = 128;
 }  // namespace PollLimits
 
 }  // namespace ebus::detail

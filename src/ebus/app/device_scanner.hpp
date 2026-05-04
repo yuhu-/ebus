@@ -71,9 +71,10 @@ class DeviceScanner {
   std::queue<Sequence> manual_queue_;
 
   // Timing configuration for the discovery/startup phase.
-  std::chrono::seconds initial_scan_delay_{ScannerLimits::initial_delay_s};
+  std::chrono::seconds initial_scan_delay_{
+      ebus::RuntimeConfig{}.scanner.initial_delay_s};
   std::chrono::seconds startup_scan_interval_{
-      ScannerLimits::startup_interval_s};
+      ebus::RuntimeConfig{}.scanner.startup_interval_s};
 
   // The wall-clock time when the next startup scan iteration is allowed to run
   std::chrono::steady_clock::time_point next_startup_scan_time_;
@@ -88,7 +89,7 @@ class DeviceScanner {
   // Number of full discovery iterations performed so far
   uint8_t startup_scan_count_ = 0;
   // Threshold to stop periodic discovery
-  uint8_t max_startup_scans_ = ScannerLimits::max_startup_scans;
+  uint8_t max_startup_scans_ = ebus::RuntimeConfig{}.scanner.max_startup_scans;
   // Buffer of commands for the currently active startup scan iteration
   std::queue<Sequence> startup_queue_;
 
