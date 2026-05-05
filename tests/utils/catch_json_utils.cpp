@@ -26,7 +26,7 @@ TEST_CASE("JsonUtils: Serialization and Escaping", "[utils][json]") {
     info.vaillant.serial_number = "2112345678901234567890123456";
 
     std::string json = ebus::toJson(info);
-    REQUIRE(json.find("\"slave_address\":21") != std::string::npos);
+    REQUIRE(json.find("\"slave_address\":\"15\"") != std::string::npos);
     REQUIRE(json.find("\"vaillant\":{") != std::string::npos);
   }
 }

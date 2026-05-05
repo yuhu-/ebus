@@ -71,18 +71,13 @@ struct Symbols {
   }
 };
 
-// --- enums ---
+// --- Protocol Enums ---
 
 enum class LogLevel { none, error, info, debug };
 
-// --- Protocol Enums ---
 enum class TelegramType { undefined, broadcast, master_master, master_slave };
-enum class MessageType { undefined, active, passive, reactive };
 
-/**
- * Available client types for the network bridge.
- */
-enum class ClientType { read_only, regular, enhanced };
+enum class MessageType { undefined, active, passive, reactive };
 
 enum class SequenceState {
   seq_empty,
@@ -158,7 +153,53 @@ enum class ProtocolError {
   total_transfer_timeout,
 };
 
+/**
+ * Available client types for the network bridge.
+ */
+enum class ClientType { read_only, regular, enhanced };
+
 // --- String Conversion ---
+
+constexpr const char* toString(LogLevel level) noexcept {
+  switch (level) {
+    case LogLevel::none:
+      return "none";
+    case LogLevel::error:
+      return "error";
+    case LogLevel::info:
+      return "info";
+    case LogLevel::debug:
+      return "debug";
+    default:
+      return "unknown level";
+  }
+}
+
+constexpr const char* toString(TelegramType type) noexcept {
+  switch (type) {
+    case TelegramType::broadcast:
+      return "broadcast";
+    case TelegramType::master_master:
+      return "master_master";
+    case TelegramType::master_slave:
+      return "master_slave";
+    default:
+      return "unknown type";
+  }
+}
+
+constexpr const char* toString(MessageType type) noexcept {
+  switch (type) {
+    case MessageType::active:
+      return "active";
+    case MessageType::passive:
+      return "passive";
+    case MessageType::reactive:
+      return "reactive";
+    default:
+      return "unknown type";
+  }
+}
 
 constexpr const char* toString(SequenceState state) noexcept {
   switch (state) {
@@ -320,6 +361,19 @@ constexpr const char* toString(ProtocolError error) noexcept {
       return "Total transfer timeout";
     default:
       return "Unknown protocol error";
+  }
+}
+
+constexpr const char* toString(ClientType type) noexcept {
+  switch (type) {
+    case ClientType::read_only:
+      return "read_only";
+    case ClientType::regular:
+      return "regular";
+    case ClientType::enhanced:
+      return "enhanced";
+    default:
+      return "unknown type";
   }
 }
 

@@ -93,6 +93,11 @@ using ResultCallback = std::function<void(const ResultInfo& info)>;
 using TraceCallback = std::function<void(const BusEventContext& ctx)>;
 
 /**
+ * Serializes TelegramInfo to a JSON object string.
+ */
+std::string toJson(const TelegramInfo& info);
+
+/**
  * Serializes ErrorInfo to a JSON object string.
  */
 std::string toJson(const ErrorInfo& info);

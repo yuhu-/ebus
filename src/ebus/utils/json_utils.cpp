@@ -117,15 +117,30 @@ std::string toJson(const EbusConfig& config) {
   return oss.str();
 }
 
+std::string toJson(const TelegramInfo& info) {
+  std::ostringstream oss;
+  oss << "{"
+      << "\"session_id\":" << info.session_id << ","
+      << "\"poll_id\":" << info.poll_id << ","
+      << "\"retry_count\":" << info.retry_count << ","
+      << "\"message_type\":\"" << toString(info.message_type) << "\","
+      << "\"telegram_type\":\"" << toString(info.telegram_type) << "\","
+      << "\"handler_state\":\"" << toString(info.handler_state) << "\","
+      << "\"request_state\":\"" << toString(info.request_state) << "\","
+      << "\"master\":\"" << toString(info.master_view) << "\","
+      << "\"slave\":\"" << toString(info.slave_view) << "\"}";
+  return oss.str();
+}
+
 std::string toJson(const ErrorInfo& info) {
   std::ostringstream oss;
   oss << "{"
       << "\"session_id\":" << info.session_id << ","
       << "\"poll_id\":" << info.poll_id << ","
-      << "\"level\":" << static_cast<int>(info.level) << ","
+      << "\"level\":\"" << toString(info.level) << "\","
       << "\"protocol_error\":\"" << toString(info.protocol_error) << "\","
       << "\"result\":\"" << toString(info.result) << "\","
-      << "\"sequence_state\":" << static_cast<int>(info.sequence_state) << ","
+      << "\"sequence_state\":\"" << toString(info.sequence_state) << "\","
       << "\"handler_state\":\"" << toString(info.handler_state) << "\","
       << "\"request_state\":\"" << toString(info.request_state) << "\","
       << "\"master\":\"" << toString(info.master_view) << "\","
@@ -141,10 +156,10 @@ std::string toJson(const ErrorEntry& entry) {
   oss << "{"
       << "\"session_id\":" << entry.session_id << ","
       << "\"poll_id\":" << entry.poll_id << ","
-      << "\"level\":" << static_cast<int>(entry.level) << ","
+      << "\"level\":\"" << toString(entry.level) << "\","
       << "\"protocol_error\":\"" << toString(entry.protocol_error) << "\","
       << "\"result\":\"" << toString(entry.result) << "\","
-      << "\"sequence_state\":" << toString(entry.sequence_state) << ","
+      << "\"sequence_state\":\"" << toString(entry.sequence_state) << "\","
       << "\"handler_state\":\"" << toString(entry.handler_state) << "\","
       << "\"request_state\":\"" << toString(entry.request_state) << "\","
       << "\"master\":\"" << toString(ByteView(entry.master, entry.master_len))
@@ -173,8 +188,8 @@ std::string toJson(const std::vector<ErrorEntry>& errors) {
 std::string toJson(const DeviceInfo& info) {
   std::ostringstream oss;
   oss << "{"
-      << "\"slave_address\":" << static_cast<int>(info.slave_address) << ","
-      << "\"manufacturer\":" << static_cast<int>(info.manufacturer) << ","
+      << "\"slave_address\":\"" << toString(info.slave_address) << "\","
+      << "\"manufacturer\":\"" << toString(info.manufacturer) << "\","
       << "\"manufacturer_name\":\"" << escapeJson(info.manufacturer_name)
       << "\","
       << "\"unit_id\":\"" << escapeJson(info.unit_id) << "\","
@@ -200,15 +215,6 @@ std::string toJson(const std::vector<DeviceInfo>& devices) {
     oss << toJson(devices[i]);
   }
   oss << "]";
-  return oss.str();
-}
-
-std::string toJson(const MetricValues& v) {
-  std::ostringstream oss;
-  oss << std::fixed << std::setprecision(2);
-  oss << "{\"last\":" << v.last << ",\"min\":" << v.min << ",\"max\":" << v.max
-      << ",\"mean\":" << v.mean << ",\"stddev\":" << v.stddev
-      << ",\"count\":" << v.count << "}";
   return oss.str();
 }
 
@@ -270,6 +276,15 @@ std::string toJson(const RequestTransition& t) {
       << "\"timestamp\":\""
       << std::put_time(std::gmtime(&s), "%Y-%m-%dT%H:%M:%SZ") << "\""
       << "}";
+  return oss.str();
+}
+
+std::string toJson(const MetricValues& v) {
+  std::ostringstream oss;
+  oss << std::fixed << std::setprecision(2);
+  oss << "{\"last\":" << v.last << ",\"min\":" << v.min << ",\"max\":" << v.max
+      << ",\"mean\":" << v.mean << ",\"stddev\":" << v.stddev
+      << ",\"count\":" << v.count << "}";
   return oss.str();
 }
 
