@@ -258,6 +258,12 @@ void Scheduler::run() {
              current_item.message, slave_response});
       lock.lock();
     } else {
+      // Capture callbacks under lock for consistent access
+      ErrorCallback error_cb;
+      {
+        std::lock_guard<std::mutex> cb_lock(data_mutex_);
+        error_cb = extern_error_callback_;
+      }
       ++current_item.send_attempts;
       if (current_item.send_attempts < max_send_attempts_) {
         current_item.due =
@@ -267,18 +273,17 @@ void Scheduler::run() {
         std::push_heap(item_queue_.begin(), item_queue_.end(), Compare());
         data_ready_cv_.notify_one();
       } else {
-        if (extern_error_callback_) {
-          extern_error_callback_(
-              {current_item.session_id,
-               current_item.poll_id,
-               result_level,  // LogLevel is still used for filtering
-               last_error_code,
-               result_code,
-               result_s_state,
-               result_h_state,
-               result_r_state,
-               current_item.message,
-               {}});
+        if (error_cb) {
+          error_cb({current_item.session_id,
+                    current_item.poll_id,
+                    result_level,  // LogLevel is still used for filtering
+                    last_error_code,
+                    result_code,
+                    result_s_state,
+                    result_h_state,
+                    result_r_state,
+                    current_item.message,
+                    {}});
         }
         if (current_item.result_callback) {
           current_item.result_callback({current_item.session_id,
