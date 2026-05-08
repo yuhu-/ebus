@@ -18,9 +18,14 @@
 #include "core/bus_monitor.hpp"
 #include "core/handler.hpp"
 #include "core/request.hpp"
+#if defined(ESP_PLATFORM)
+#include <esp_heap_caps.h>
+#include <esp_system.h>
+#endif
 #include "platform/bus.hpp"
 #include "platform/service_thread.hpp"
 #include "utils/circular_buffer.hpp"
+#include "utils/logger.hpp"
 
 namespace ebus {
 
@@ -74,8 +79,8 @@ bool Controller::start() {
 
   impl_->worker_ = std::make_unique<detail::platform::ServiceThread>(
       "ebusController", [this] { run(); },
-      detail::OrchestrationLimits::stack_size,
-      detail::OrchestrationLimits::priority_low, 0);
+      detail::OrchestrationLimits::stack_size_high,
+      detail::OrchestrationLimits::priority_low);
   impl_->worker_->start();
 
   return true;
@@ -115,9 +120,9 @@ bool Controller::configure(const EbusConfig& config) {
 
 bool Controller::isConfigured() const noexcept { return configured_.load(); }
 
-std::string Controller::getConfigJson() const {
+EbusConfig Controller::getConfig() const {
   std::lock_guard<std::mutex> lock(config_mutex_);
-  return toJson(config_);
+  return config_;
 }
 
 void Controller::setAddress(const uint8_t& address) {
@@ -174,7 +179,12 @@ void Controller::setWatchdogTimeout(uint32_t timeout_ms) {
 void Controller::setLogLevel(LogLevel level) {
   std::lock_guard<std::mutex> lock(config_mutex_);
   config_.runtime.diagnostics.level = level;
-  // Log level is checked dynamically in Scheduler callbacks
+  detail::Logger::setLevel(level);
+}
+
+void Controller::setLogSink(
+    std::function<void(LogLevel, const std::string&)> sink) {
+  detail::Logger::setSink(std::move(sink));
 }
 
 void Controller::setErrorLogSize(size_t size) {
@@ -370,11 +380,6 @@ std::vector<DeviceInfo> Controller::getDeviceInfo() const {
   return impl_->device_manager_->getDeviceInfo();
 }
 
-std::string Controller::getDeviceInfoJson() const {
-  if (!isConfigured()) return "[]";
-  return impl_->device_manager_->getDeviceInfoJson();
-}
-
 void Controller::resetMetrics() {
   if (isConfigured()) impl_->bus_monitor_->resetMetrics();
 }
@@ -395,16 +400,9 @@ std::vector<BusEventContext> Controller::getTraceHistory() const {
   return {};
 }
 
-std::string Controller::getTraceHistoryJson() const {
-  if (!isConfigured()) return "[]";
-  return toJson(getTraceHistory());
-}
-
 std::vector<ErrorEntry> Controller::getErrors() const {
   return impl_->error_buffer_.snapshot();
 }
-
-std::string Controller::getErrorsJson() const { return toJson(getErrors()); }
 
 size_t Controller::getErrorLogCapacity() const {
   return impl_->error_buffer_.capacity();
@@ -412,11 +410,71 @@ size_t Controller::getErrorLogCapacity() const {
 
 void Controller::clearErrors() { impl_->error_buffer_.clear(); }
 
+ServiceStatus Controller::getServiceStatus() const {
+  ServiceStatus status;
+
+#if defined(ESP_PLATFORM)
+  status.free_heap_bytes = esp_heap_caps_get_free_heap_size(MALLOC_CAP_8BIT);
+  status.min_free_heap_bytes =
+      esp_heap_caps_get_minimum_free_heap_size(MALLOC_CAP_8BIT);
+#endif
+
+  const uint64_t now_ms =
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          std::chrono::system_clock::now().time_since_epoch())
+          .count();
+
+  auto mapThreadStatus =
+      [](const detail::platform::ServiceThread::Status& s) -> ThreadStatus {
+    return {s.task_stack_bytes, s.task_stack_free_bytes};
+  };
+
+  // Controller's own thread status
+  if (impl_->worker_) {
+    status.controller_thread = mapThreadStatus(impl_->worker_->status());
+  }
+
+  if (isConfigured()) {
+    // Bus thread status (platform-specific)
+    status.bus_thread = mapThreadStatus(impl_->bus_->getThreadStatus());
+    // SYN Generator thread status (platform-specific)
+    status.syn_generator_thread =
+        mapThreadStatus(impl_->bus_->getSynThreadStatus());
+
+    status.services.push_back(
+        {"BusHandler", mapThreadStatus(impl_->bus_handler_->getThreadStatus()),
+         now_ms, impl_->bus_handler_->queueSize(),
+         impl_->bus_handler_->queueCapacity()});
+
+    status.services.push_back(
+        {"Scheduler", mapThreadStatus(impl_->scheduler_->getThreadStatus()),
+         now_ms, impl_->scheduler_->queueSize(),
+         impl_->scheduler_->queueCapacity()});
+
+    status.services.push_back(
+        {"ClientManager",
+         mapThreadStatus(impl_->client_manager_->getThreadStatus()), now_ms,
+         impl_->client_manager_->queueSize(),
+         impl_->client_manager_->queueCapacity()});
+
+    status.scanner = impl_->device_scanner_->getStatus();
+    status.poll = impl_->poll_manager_->getStatus();
+  }
+
+  if (detail::Logger::isEnabled(LogLevel::debug)) {
+    detail::Logger::debug("Service Status Update: " + status.toJson());
+  }
+
+  return status;
+}
+
 void Controller::constructMembers() {
   // -- 1. Telemetry & Core Arbitration --
   if (!impl_->bus_monitor_) {
     impl_->bus_monitor_ = std::make_unique<detail::BusMonitor>();
   }
+
+  detail::Logger::setLevel(config_.runtime.diagnostics.level);
 
   if (!impl_->request_) {
     impl_->request_ =

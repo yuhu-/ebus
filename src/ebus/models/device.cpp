@@ -6,7 +6,6 @@
 #include "models/device.hpp"
 
 #include <algorithm>
-#include <ebus/data_types.hpp>
 #include <ebus/device.hpp>
 #include <ebus/utils.hpp>
 

@@ -33,6 +33,11 @@ struct TelegramInfo {
   RequestState request_state;
   ByteView master_view;
   ByteView slave_view;
+
+  /**
+   * @brief Serializes TelegramInfo to a JSON object string.
+   */
+  std::string toJson() const;
 };
 
 struct ErrorInfo {
@@ -47,12 +52,22 @@ struct ErrorInfo {
   ByteView master_view;
   ByteView slave_view;
   float utilization = 0.0f;
+
+  /**
+   * @brief Serializes ErrorInfo to a JSON object string.
+   */
+  std::string toJson() const;
 };
 
 struct ReactiveInfo {
   uint32_t session_id = 0;
   ByteView master_view;
   Sequence& slave_response;
+
+  /**
+   * @brief Serializes ReactiveInfo to a JSON object string.
+   */
+  std::string toJson() const;
 };
 
 struct ResultInfo {
@@ -63,6 +78,11 @@ struct ResultInfo {
   SequenceState sequence_state;
   ByteView master_view;
   ByteView slave_view;
+
+  /**
+   * @brief Serializes ResultInfo to a JSON object string.
+   */
+  std::string toJson() const;
 };
 
 /**
@@ -76,6 +96,11 @@ struct BusEventContext {
   RequestResult result = RequestResult::observe_data;
   uint8_t lock_counter = 0;
   Clock::time_point timestamp = {};
+
+  /**
+   * Serializes BusEventContext to a JSON object string.
+   */
+  std::string toJson() const;
 };
 
 /**
@@ -91,25 +116,5 @@ using ReactiveMasterSlaveCallback =
 using ResultCallback = std::function<void(const ResultInfo& info)>;
 
 using TraceCallback = std::function<void(const BusEventContext& ctx)>;
-
-/**
- * Serializes TelegramInfo to a JSON object string.
- */
-std::string toJson(const TelegramInfo& info);
-
-/**
- * Serializes ErrorInfo to a JSON object string.
- */
-std::string toJson(const ErrorInfo& info);
-
-/**
- * Serializes BusEventContext to a JSON object string.
- */
-std::string toJson(const BusEventContext& ctx);
-
-/**
- * Serializes a vector of BusEventContext to a JSON array string.
- */
-std::string toJson(const std::vector<BusEventContext>& trace);
 
 }  // namespace ebus

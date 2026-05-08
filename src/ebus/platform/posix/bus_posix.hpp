@@ -75,6 +75,9 @@ class BusPosix {
   void addWriteListener(WriteListener listener);
   void addSynListener(SynListener listener);
 
+  platform::ServiceThread::Status getThreadStatus() const;
+  platform::ServiceThread::Status getSynThreadStatus() const;
+
  private:
   std::string device_;
   bool simulate_;

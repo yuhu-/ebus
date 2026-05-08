@@ -23,6 +23,50 @@
 namespace ebus {
 
 // --- Hex and String Conversion ---
+
+/**
+ * Escapes a string for use in a JSON value.
+ */
+inline std::string escapeJson(const std::string& s) {
+  std::string res;
+  res.reserve(s.length());
+  for (char c : s) {
+    switch (c) {
+      case '"':
+        res += "\\\"";
+        break;
+      case '\\':
+        res += "\\\\";
+        break;
+      case '\b':
+        res += "\\b";
+        break;
+      case '\f':
+        res += "\\f";
+        break;
+      case '\n':
+        res += "\\n";
+        break;
+      case '\r':
+        res += "\\r";
+        break;
+      case '\t':
+        res += "\\t";
+        break;
+      default:
+        if (static_cast<unsigned char>(c) < 0x20) {
+          static const char hex[] = "0123456789abcdef";
+          res += "\\u00";
+          res += hex[(static_cast<unsigned char>(c) >> 4) & 0xf];
+          res += hex[static_cast<unsigned char>(c) & 0xf];
+        } else {
+          res += c;
+        }
+    }
+  }
+  return res;
+}
+
 inline std::string toString(uint8_t byte) {
   static constexpr char hex_chars[] = "0123456789abcdef";
   std::string s;

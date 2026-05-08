@@ -58,8 +58,8 @@ void ClientManager::start() {
   if (running_.load(std::memory_order_acquire)) return;
   running_.store(true, std::memory_order_release);
   worker_ = std::make_unique<platform::ServiceThread>(
-      "ebusClientManager", [this] { run(); }, OrchestrationLimits::stack_size,
-      OrchestrationLimits::priority_med, 0);
+      "ebusClientManager", [this] { run(); },
+      OrchestrationLimits::stack_size_low, OrchestrationLimits::priority_med);
   worker_->start();
   notifyWake();
 }
@@ -122,6 +122,17 @@ void ClientManager::removeClient(int fd) {
 }
 
 void ClientManager::wake() { notifyWake(); }
+
+size_t ClientManager::queueSize() { return bus_byte_queue_.size(); }
+
+size_t ClientManager::queueCapacity() const { return BusLimits::queue_size; }
+
+platform::ServiceThread::Status ClientManager::getThreadStatus() const {
+  if (worker_) {
+    return worker_->status();
+  }
+  return platform::ServiceThread::Status{-1, -1};
+}
 
 void ClientManager::run() {
   BusEventContext ctx;

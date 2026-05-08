@@ -87,6 +87,11 @@ struct DataTypeInfoBase {
  */
 struct DataTypeInfo : DataTypeInfoBase {
   float factor = 1.0f;
+
+  /**
+   * @brief Serializes DataTypeInfo to a JSON object string.
+   */
+  std::string toJson() const;
 };
 
 /**
@@ -271,7 +276,13 @@ DataType getDataType(const DataValue& value) noexcept;
  *
  * @return A vector of supported DataType enums.
  */
-std::vector<DataType> getSupportedDataTypes();
+std::vector<DataTypeInfo> getSupportedDataTypes();
+
+/**
+ * @brief Returns a JSON array of all supported eBUS data types with their
+ * metadata.
+ */
+std::string getSupportedDataTypesJson();
 
 /**
  * Returns the protocol-level byte size of an eBUS DataType.
@@ -299,5 +310,15 @@ const char* dataTypeToString(DataType data_type) noexcept;
  * @return The DataType enum, or DataType::error if not recognized.
  */
 DataType stringToDataType(const char* str);
+
+/**
+ * @brief Decodes raw eBUS bytes into a high-level DataValue and serializes it
+ * to a JSON object string, including metadata.
+ *
+ * @param dt The expected eBUS data type.
+ * @param bytes The raw bytes from the bus.
+ * @return A JSON string representing the decoded value and its metadata.
+ */
+std::string decodeToJson(DataType dt, ByteView data);
 
 }  // namespace ebus

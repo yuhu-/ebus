@@ -10,6 +10,7 @@
  * Includes all public components required for building eBUS applications.
  */
 
+#include "ebus/address.hpp"
 #include "ebus/byte_view.hpp"
 #include "ebus/callbacks.hpp"
 #include "ebus/config.hpp"

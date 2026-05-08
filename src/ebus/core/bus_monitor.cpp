@@ -22,10 +22,10 @@ BusMonitor::BusMonitor()
 
 void BusMonitor::resetMetrics() {
   std::lock_guard<std::mutex> lock(metrics_mutex);
-  handler_acc_.resetMetrics();
-  request_acc_.resetMetrics();
-  bus_acc_.resetMetrics();
-  device_acc_.resetMetrics();
+  handler_acc_.reset();
+  request_acc_.reset();
+  bus_acc_.reset();
+  device_acc_.reset();
 
   sync.reset();
   write.reset();

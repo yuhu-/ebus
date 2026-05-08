@@ -75,9 +75,9 @@ class Controller {
   bool isConfigured() const noexcept;
 
   /**
-   * @brief Returns the current configuration as a JSON string.
+   * @brief Returns the current configuration.
    */
-  std::string getConfigJson() const;
+  EbusConfig getConfig() const;
 
   /**
    * @brief Sets the controller's master address.
@@ -120,6 +120,11 @@ class Controller {
    * @brief Sets the global log level for protocol events.
    */
   void setLogLevel(LogLevel level);
+
+  /**
+   * @brief Sets a callback for internal library log messages.
+   */
+  void setLogSink(std::function<void(LogLevel, const std::string&)> sink);
 
   /**
    * @brief Sets the maximum number of errors to keep in the diagnostic log.
@@ -302,11 +307,6 @@ class Controller {
    */
   std::vector<DeviceInfo> getDeviceInfo() const;
 
-  /**
-   * @brief Returns discovered device information as a JSON string.
-   */
-  std::string getDeviceInfoJson() const;
-
   // Health Metrics
 
   /**
@@ -329,22 +329,12 @@ class Controller {
    */
   std::vector<BusEventContext> getTraceHistory() const;
 
-  /**
-   * @brief Returns the raw event trace as a JSON string.
-   */
-  std::string getTraceHistoryJson() const;
-
   // Diagnostic Log
 
   /**
    * @brief Returns a snapshot of the diagnostic error log.
    */
   std::vector<ErrorEntry> getErrors() const;
-
-  /**
-   * @brief Returns the diagnostic error log as a JSON string.
-   */
-  std::string getErrorsJson() const;
 
   /**
    * @brief Returns the current capacity of the diagnostic error log.
@@ -355,6 +345,11 @@ class Controller {
    * @brief Clears the diagnostic error log.
    */
   void clearErrors();
+
+  /**
+   * @brief Returns an aggregated status of all internal services.
+   */
+  ServiceStatus getServiceStatus() const;
 
  private:
   EbusConfig config_;

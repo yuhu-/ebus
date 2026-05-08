@@ -311,11 +311,11 @@ TEST_CASE("Datatypes: metadata", "[models][datatypes]") {
   auto types = ebus::getSupportedDataTypes();
   REQUIRE_FALSE(types.empty());
   for (auto dt : types) {
-    auto meta = ebus::getMeta(dt);
+    auto meta = ebus::getMeta(dt.dt);
     REQUIRE(meta.has_value());
-    REQUIRE(meta->dt == dt);
+    REQUIRE(meta->dt == dt.dt);
     REQUIRE(std::string(meta->name) != "UNKNOWN");
-    REQUIRE(meta->size == ebus::sizeOfDataType(dt));
+    REQUIRE(meta->size == ebus::sizeOfDataType(dt.dt));
   }
 }
 
@@ -500,28 +500,28 @@ TEST_CASE("Datatypes: null sentinel encoding", "[models][datatypes]") {
 TEST_CASE("Datatypes: all types roundtrip", "[models][datatypes]") {
   auto types = ebus::getSupportedDataTypes();
   for (auto dt : types) {
-    auto meta = ebus::getMeta(dt);
+    auto meta = ebus::getMeta(dt.dt);
     REQUIRE(meta.has_value());
 
     // 1. Metadata check
-    REQUIRE(meta->size == ebus::sizeOfDataType(dt));
+    REQUIRE(meta->size == ebus::sizeOfDataType(dt.dt));
 
     // 2. Validity check with zero-buffer
     std::vector<uint8_t> buffer(meta->size, 0);
-    REQUIRE(ebus::isValid(dt, buffer));
+    REQUIRE(ebus::isValid(dt.dt, buffer));
 
     // 3. Decode -> Encode roundtrip
-    auto decoded = ebus::decode(dt, buffer);
+    auto decoded = ebus::decode(dt.dt, buffer);
     REQUIRE(decoded.has_value());
 
-    Sequence encoded = ebus::encode(dt, *decoded);
+    Sequence encoded = ebus::encode(dt.dt, *decoded);
     REQUIRE(encoded.size() == meta->size);
 
     // 4. Data integrity check
     // For standard types with 1.0 factor and no float precision loss,
     // the value must be identical.
     if (!meta->is_float && std::abs(meta->factor - 1.0) < 1e-9) {
-      auto re_decoded = ebus::decode(dt, encoded);
+      auto re_decoded = ebus::decode(dt.dt, encoded);
       REQUIRE(re_decoded.has_value());
       // variant operator== checks type and value
       REQUIRE(*re_decoded == *decoded);

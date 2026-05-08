@@ -12,6 +12,8 @@
 #include <string>
 
 #if defined(ESP_PLATFORM)
+#include <esp_heap_caps.h>
+#include <esp_system.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
 #include <freertos/task.h>
@@ -28,7 +30,7 @@ namespace ebus::detail::platform {
 class ServiceThread {
  public:
   ServiceThread(std::string name, std::function<void()> func,
-                uint32_t stack_size = OrchestrationLimits::stack_size,
+                uint32_t stack_size = OrchestrationLimits::stack_size_low,
                 uint8_t priority = OrchestrationLimits::priority_low,
                 int core = -1);
   ~ServiceThread() { join(); }
@@ -66,6 +68,34 @@ class ServiceThread {
       thread_.join();
     }
 #endif
+  }
+
+  struct Status {
+    // -1 if not available
+    ssize_t task_stack_bytes;       // configured stack size in bytes
+    ssize_t task_stack_free_bytes;  // free stack (high-water) in bytes
+  };
+
+  inline Status status() const {
+    Status s;
+#if defined(ESP_PLATFORM)
+    // configured stack bytes
+    s.task_stack_bytes =
+        static_cast<ssize_t>(stack_size_ * sizeof(StackType_t));
+    // if task handle exists, get high water mark (words) -> bytes
+    if (handle_) {
+      UBaseType_t words_free = uxTaskGetStackHighWaterMark(handle_);
+      s.task_stack_free_bytes =
+          static_cast<ssize_t>(words_free * sizeof(StackType_t));
+    } else {
+      // task not created yet; report full configured stack as free
+      s.task_stack_free_bytes = s.task_stack_bytes;
+    }
+#else
+    s.task_stack_bytes = -1;
+    s.task_stack_free_bytes = -1;
+#endif
+    return s;
   }
 
  private:

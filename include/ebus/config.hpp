@@ -64,25 +64,32 @@ struct RuntimeConfig {
    * Resets all fields to their default hardcoded values.
    */
   void reset() { *this = RuntimeConfig{}; }
+
+  /**
+   * @brief Serializes RuntimeConfig to a JSON string.
+   */
+  std::string toJson() const;
 };
 
 /**
  * Platform-dependent bus configuration.
  */
-#if defined(ESP_PLATFORM)
 struct BusConfig {
+#if defined(ESP_PLATFORM)
   uint8_t uart_port;
   uint8_t rx_pin;
   uint8_t tx_pin;
   uint8_t timer_group;
   uint8_t timer_idx;
-};
 #elif defined(POSIX)
-struct BusConfig {
   std::string device = "/dev/null";
   bool simulate = false;
-};
 #endif
+  /**
+   * @brief Serializes BusConfig to a JSON string.
+   */
+  std::string toJson() const;
+};
 
 /**
  * Global eBUS Controller configuration.
@@ -90,11 +97,11 @@ struct BusConfig {
 struct EbusConfig {
   RuntimeConfig runtime = {};
   BusConfig bus = {};
-};
 
-/**
- * Serializes the full EbusConfig to a JSON string.
- */
-std::string toJson(const EbusConfig& config);
+  /**
+   * @brief Serializes the full EbusConfig to a JSON string.
+   */
+  std::string toJson() const;
+};
 
 }  // namespace ebus

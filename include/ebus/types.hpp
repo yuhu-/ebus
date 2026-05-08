@@ -13,6 +13,7 @@
 #include <string_view>
 #include <vector>
 
+#include "ebus/address.hpp"
 #include "ebus/detail/protocol_limits.hpp"
 
 namespace ebus {
@@ -24,58 +25,9 @@ namespace ebus {
  */
 using Clock = std::chrono::steady_clock;
 
-/**
- * Core eBUS byte symbols as defined in the specification.
- */
-struct Symbols {
-  static constexpr uint8_t zero = 0x00;     // zero byte
-  static constexpr uint8_t syn = 0xaa;      // synchronization byte
-  static constexpr uint8_t ext = 0xa9;      // extend byte
-  static constexpr uint8_t syn_ext = 0x01;  // extended synchronization byte
-  static constexpr uint8_t ext_ext = 0x00;  // extended extend byte
-  static constexpr uint8_t ack = 0x00;      // positive acknowledge
-  static constexpr uint8_t nak = 0xff;      // negative acknowledge
-  static constexpr uint8_t broad = 0xfe;    // broadcast destination address
-
-  /**
-   * Returns true if the byte requires eBUS stuffing (0xAA or 0xA9).
-   */
-  static constexpr bool needsEscape(uint8_t byte) {
-    return byte == syn || byte == ext;
-  }
-
-  /**
-   * Escapes a byte according to eBUS rules (Spec 5.1).
-   * out[0] is the escape byte (0xA9), out[1] is the escaped value.
-   */
-  static constexpr void escape(uint8_t byte, uint8_t out[2]) {
-    out[0] = ext;
-    out[1] = (byte == syn) ? syn_ext : ext_ext;
-  }
-
-  /**
-   * Attempts to unescape an eBUS sequence.
-   * Returns true if the sequence was a valid escape sequence.
-   */
-  static constexpr bool unescape(uint8_t b1, uint8_t b2, uint8_t& out) {
-    if (b1 != ext) return false;
-    if (b2 == syn_ext) {
-      out = syn;
-      return true;
-    }
-    if (b2 == ext_ext) {
-      out = ext;
-      return true;
-    }
-    return false;
-  }
-};
-
 // --- Protocol Enums ---
 
 enum class LogLevel { none, error, info, debug };
-
-enum class TelegramType { undefined, broadcast, master_master, master_slave };
 
 enum class MessageType { undefined, active, passive, reactive };
 
@@ -172,19 +124,6 @@ constexpr const char* toString(LogLevel level) noexcept {
       return "debug";
     default:
       return "unknown level";
-  }
-}
-
-constexpr const char* toString(TelegramType type) noexcept {
-  switch (type) {
-    case TelegramType::broadcast:
-      return "broadcast";
-    case TelegramType::master_master:
-      return "master_master";
-    case TelegramType::master_slave:
-      return "master_slave";
-    default:
-      return "unknown type";
   }
 }
 
@@ -377,6 +316,8 @@ constexpr const char* toString(ClientType type) noexcept {
   }
 }
 
+// --- Struct ---
+
 /**
  * Records a single state transition in the protocol handler.
  */
@@ -384,6 +325,11 @@ struct HandlerTransition {
   HandlerState from;
   HandlerState to;
   uint64_t timestamp;  // ms since epoch
+
+  /**
+   * @brief Serializes HandlerTransition to a JSON object string.
+   */
+  std::string toJson() const;
 };
 
 /**
@@ -393,46 +339,12 @@ struct RequestTransition {
   RequestState from;
   RequestState to;
   uint64_t timestamp;  // ms since epoch
+
+  /**
+   * @brief Serializes RequestTransition to a JSON object string.
+   */
+  std::string toJson() const;
 };
-
-// --- Addressing logic ---
-
-/**
- * Checks if a byte conforms to the eBUS master address rules (Spec 6.2.2.1).
- */
-constexpr bool isMaster(uint8_t byte) {
-  return ((((byte >> 4) & 0x0f) + 1) & ((byte >> 4) & 0x0f)) == 0 &&
-         (((byte & 0x0f) + 1) & (byte & 0x0f)) == 0;
-}
-
-constexpr bool isSlave(uint8_t byte) {
-  return !isMaster(byte) && byte != Symbols::syn && byte != Symbols::ext &&
-         byte != Symbols::broad;
-}
-
-constexpr bool isTarget(uint8_t byte) {
-  return byte != Symbols::syn && byte != Symbols::ext;
-}
-
-constexpr uint8_t masterOf(uint8_t byte) {
-  if (byte == 0x04) return 0xff;
-  if (byte < 5) return byte;
-  uint8_t potential = static_cast<uint8_t>(byte - 5);
-  return isMaster(potential) ? potential : byte;
-}
-
-constexpr uint8_t slaveOf(uint8_t byte) {
-  if (byte == 0xff) return 0x04;
-  if (!isMaster(byte)) return byte;
-  uint8_t result = static_cast<uint8_t>(byte + 5);
-  return isSlave(result) ? result : byte;
-}
-
-constexpr TelegramType typeOf(uint8_t byte) {
-  if (byte == Symbols::broad) return TelegramType::broadcast;
-  if (isMaster(byte)) return TelegramType::master_master;
-  return TelegramType::master_slave;
-}
 
 /**
  * Persistent entry for the diagnostic error log.
@@ -454,6 +366,11 @@ struct ErrorEntry {
   float utilization;
   uint64_t timestamp;  // ms since epoch
 
+  /**
+   * @brief Serializes ErrorEntry to a JSON object string.
+   */
+  std::string toJson() const;
+
   // Custom stringifier for human-readable logs
   std::string toString() const {
     std::string res = "[";
@@ -473,6 +390,7 @@ struct ErrorEntry {
   }
 
   void setProtocolError(ProtocolError error) { protocol_error = error; }
+
   void setMaster(const uint8_t* data, size_t size) {
     const size_t max_len = sizeof(master);
     master_len = static_cast<uint8_t>((size < max_len) ? size : max_len);
@@ -485,15 +403,5 @@ struct ErrorEntry {
     if (slave_len > 0) std::memcpy(slave, data, slave_len);
   }
 };
-
-/**
- * Serializes ErrorEntry to a JSON object string.
- */
-std::string toJson(const ErrorEntry& entry);
-
-/**
- * Serializes a vector of ErrorEntry to a JSON array string.
- */
-std::string toJson(const std::vector<ErrorEntry>& errors);
 
 }  // namespace ebus

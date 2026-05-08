@@ -66,10 +66,6 @@ std::vector<ebus::DeviceInfo> DeviceManager::getDeviceInfo() const {
   return result;
 }
 
-std::string DeviceManager::getDeviceInfoJson() const {
-  return ebus::toJson(getDeviceInfo());
-}
-
 void DeviceManager::getObservedSlaves(std::bitset<256>& observed) const {
   observed.reset();  // Clear any previous state
   if (monitor_) {

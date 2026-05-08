@@ -476,12 +476,28 @@ DataType getDataType(const DataValue& value) noexcept {
       value);
 }
 
-std::vector<DataType> getSupportedDataTypes() {
-  std::vector<DataType> types;
+std::vector<DataTypeInfo> getSupportedDataTypes() {
+  std::vector<DataTypeInfo> types;
   types.reserve(sizeof(kMetaTable) / sizeof(kMetaTable[0]));
-  std::transform(std::begin(kMetaTable), std::end(kMetaTable),
-                 std::back_inserter(types), [](const Meta& m) { return m.dt; });
+  for (const auto& m : kMetaTable) {
+    DataTypeInfo info;
+    static_cast<DataTypeInfoBase&>(info) = m;
+    info.factor = static_cast<float>(m.scale.num) / m.scale.den;
+    types.push_back(info);
+  }
   return types;
+}
+
+std::string getSupportedDataTypesJson() {
+  std::ostringstream oss;
+  oss << "[";
+  const auto types = ebus::getSupportedDataTypes();
+  for (size_t i = 0; i < types.size(); ++i) {
+    if (i > 0) oss << ",";
+    oss << types[i].toJson();
+  }
+  oss << "]";
+  return oss.str();
 }
 
 const char* dataTypeToString(DataType data_type) noexcept {
@@ -496,6 +512,53 @@ DataType stringToDataType(const char* str) {
   if (it != std::end(kMetaTable) && std::strcmp(it->name, str) == 0)
     return it->dt;
   return DataType::error;
+}
+
+std::string decodeToJson(DataType dt, ByteView data) {
+  std::ostringstream oss;
+  oss << "{";
+
+  auto meta_opt = getMeta(dt);
+  if (!meta_opt) {
+    oss << "\"error\":\"Invalid DataType\"";
+  } else {
+    const auto& meta = *meta_opt;
+    oss << "\"type\":" << static_cast<int32_t>(meta.dt) << ",";
+    oss << "\"name\":\"" << meta.name << "\",";
+    oss << "\"raw_hex\":\"" << toString(data) << "\",";
+
+    auto decoded_value_opt = decode(dt, data);
+    oss << "\"value\":";
+    if (decoded_value_opt) {
+      const auto& val = *decoded_value_opt;
+      if (isNull(val)) {
+        oss << "null";
+      } else if (std::holds_alternative<std::string>(val)) {
+        oss << "\"" << escapeJson(std::get<std::string>(val)) << "\"";
+      } else if (std::holds_alternative<float>(val)) {
+        oss << std::fixed << std::setprecision(4) << std::get<float>(val);
+      } else if (std::holds_alternative<uint8_t>(val)) {
+        oss << static_cast<int>(std::get<uint8_t>(val));
+      } else if (std::holds_alternative<int8_t>(val)) {
+        oss << static_cast<int>(std::get<int8_t>(val));
+      } else if (std::holds_alternative<uint16_t>(val)) {
+        oss << std::get<uint16_t>(val);
+      } else if (std::holds_alternative<int16_t>(val)) {
+        oss << std::get<int16_t>(val);
+      } else if (std::holds_alternative<uint32_t>(val)) {
+        oss << std::get<uint32_t>(val);
+      } else if (std::holds_alternative<int32_t>(val)) {
+        oss << std::get<int32_t>(val);
+      } else {
+        oss << "null";  // Should not happen with current DataValue types
+      }
+    } else {
+      oss << "null";
+    }
+    oss << ",\"factor\":" << std::fixed << std::setprecision(4) << meta.factor;
+  }
+  oss << "}";
+  return oss.str();
 }
 
 }  // namespace ebus

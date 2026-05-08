@@ -15,7 +15,7 @@ TEST_CASE("JsonUtils: Serialization and Escaping", "[utils][json]") {
     ebus::ErrorInfo info;
     info.utilization = 12.345;
 
-    std::string json = ebus::toJson(info);
+    std::string json = info.toJson();
     REQUIRE(json.find("12.35") != std::string::npos);  // Rounded
   }
 
@@ -25,7 +25,7 @@ TEST_CASE("JsonUtils: Serialization and Escaping", "[utils][json]") {
     info.manufacturer_name = "Vaillant";
     info.vaillant.serial_number = "2112345678901234567890123456";
 
-    std::string json = ebus::toJson(info);
+    std::string json = info.toJson();
     REQUIRE(json.find("\"slave_address\":\"15\"") != std::string::npos);
     REQUIRE(json.find("\"vaillant\":{") != std::string::npos);
   }

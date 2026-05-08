@@ -33,7 +33,9 @@ inline constexpr size_t log_history_size = 10;
 
 // --- Orchestration Layer (Thread Priorities & Stacks) ---
 namespace OrchestrationLimits {
-inline constexpr size_t stack_size = 4096;
+inline constexpr size_t stack_size_high = 6144;
+inline constexpr size_t stack_size_med = 4096;
+inline constexpr size_t stack_size_low = 2048;
 inline constexpr uint8_t priority_high = 15;
 inline constexpr uint8_t priority_med = 10;
 inline constexpr uint8_t priority_low = 5;
@@ -58,7 +60,7 @@ inline constexpr uint16_t window_min_us = 4000;
 inline constexpr uint16_t window_max_us = 5000;
 inline constexpr uint16_t offset_max_us = 500;
 
-inline constexpr size_t queue_size = 128;
+inline constexpr size_t queue_size = 512;
 inline constexpr size_t max_listeners = 16;
 
 namespace Syn {

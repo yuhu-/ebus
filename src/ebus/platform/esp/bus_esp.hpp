@@ -74,6 +74,9 @@ class BusEsp {
   void addWriteListener(WriteListener listener);
   void addSynListener(SynListener listener);
 
+  platform::ServiceThread::Status getThreadStatus() const;
+  platform::ServiceThread::Status getSynThreadStatus() const;
+
  private:
   uart_port_t uart_port_num_;
   uint8_t rx_pin_;

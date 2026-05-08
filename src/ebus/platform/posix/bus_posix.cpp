@@ -65,7 +65,7 @@ void BusPosix::start() {
   running_.store(true);
   worker_ = std::make_unique<ServiceThread>(
       "ebusBusReader", [this] { readerThread(); },
-      detail::OrchestrationLimits::stack_size,
+      detail::OrchestrationLimits::stack_size_low,
       detail::OrchestrationLimits::priority_high);
   worker_->start();
 
@@ -86,7 +86,7 @@ void BusPosix::start() {
     syn_running_.store(true);
     syn_worker_ = std::make_unique<ServiceThread>(
         "ebusSynGen", [this] { synThread(); },
-        detail::OrchestrationLimits::stack_size,
+        detail::OrchestrationLimits::stack_size_low,
         detail::OrchestrationLimits::priority_med);
     syn_worker_->start();
   }
@@ -222,7 +222,7 @@ void BusPosix::setRuntimeConfig(const RuntimeConfig& runtime) {
     if (syn_worker_) syn_worker_->join();  // Join existing thread if any
     syn_worker_ = std::make_unique<ServiceThread>(  // Create new ServiceThread
         "ebusSynGen", [this] { synThread(); },
-        detail::OrchestrationLimits::stack_size,
+        detail::OrchestrationLimits::stack_size_low,
         detail::OrchestrationLimits::priority_med);
     syn_worker_->start();  // Start the new ServiceThread
   } else if (should_stop) {
@@ -244,6 +244,20 @@ void BusPosix::addWriteListener(WriteListener listener) {
 void BusPosix::addSynListener(SynListener listener) {
   std::lock_guard<std::mutex> lock(listeners_mutex_);
   syn_listeners_.push_back(listener);
+}
+
+ServiceThread::Status BusPosix::getThreadStatus() const {
+  if (worker_) {
+    return worker_->status();
+  }
+  return ServiceThread::Status{-1, -1};
+}
+
+ServiceThread::Status BusPosix::getSynThreadStatus() const {
+  if (syn_worker_) {
+    return syn_worker_->status();
+  }
+  return ServiceThread::Status{-1, -1};
 }
 
 void BusPosix::recordUtilization(uint8_t byte) {

@@ -24,7 +24,7 @@ TEST_CASE("ServiceThread: Basic execution and join",
         threadStarted = true;
         counter++;
       },
-      OrchestrationLimits::stack_size, OrchestrationLimits::priority_low);
+      OrchestrationLimits::stack_size_low, OrchestrationLimits::priority_low);
 
   worker.start();
   worker.join();
@@ -46,7 +46,7 @@ TEST_CASE("ServiceThread: Destructor performs implicit join",
           threadStarted = true;
           counter++;
         },
-        OrchestrationLimits::stack_size, OrchestrationLimits::priority_low);
+        OrchestrationLimits::stack_size_low, OrchestrationLimits::priority_low);
 
     worker.start();
     // Destructor should join when worker goes out of scope

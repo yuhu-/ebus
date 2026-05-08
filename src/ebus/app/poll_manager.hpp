@@ -10,6 +10,7 @@
 #include <chrono>
 #include <cstdint>
 #include <ebus/callbacks.hpp>
+#include <ebus/metrics.hpp>
 #include <ebus/sequence.hpp>
 #include <functional>
 #include <mutex>
@@ -61,6 +62,8 @@ class PollManager {
                        bool* activity);
 
   void clear();
+
+  PollStatus getStatus() const;
 
  private:
   mutable std::mutex mutex_;

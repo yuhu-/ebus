@@ -48,7 +48,8 @@ class BusHandler {
     running_ = true;
     worker_ = std::make_unique<platform::ServiceThread>(
         "ebusBusQueueRunner", [this] { this->run(); },
-        OrchestrationLimits::stack_size, OrchestrationLimits::priority_low);
+        OrchestrationLimits::stack_size_low,
+        OrchestrationLimits::priority_high);
     worker_->start();
   }
 
@@ -78,6 +79,17 @@ class BusHandler {
                        }),
         listeners_.end());
     listeners_version_++;
+  }
+
+  size_t queueSize() { return queue_ ? queue_->size() : 0; }
+
+  size_t queueCapacity() const { return BusLimits::queue_size; }
+
+  platform::ServiceThread::Status getThreadStatus() const {
+    if (worker_) {
+      return worker_->status();
+    }
+    return platform::ServiceThread::Status{-1, -1};
   }
 
  private:

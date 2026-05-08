@@ -27,17 +27,12 @@ struct DeviceInfo {
     std::string serial_number;  // Full 28-character serial number
     std::string product_code;   // 10-digit product identifier (digits 7-16)
   } vaillant;
+
+  /**
+   * @brief Serializes DeviceInfo to a JSON object string.
+   */
+  std::string toJson() const;
 };
-
-/**
- * Serializes DeviceInfo to a JSON object string.
- */
-std::string toJson(const DeviceInfo& info);
-
-/**
- * Serializes a vector of DeviceInfo to a JSON array string.
- */
-std::string toJson(const std::vector<DeviceInfo>& devices);
 
 /**
  * Returns the manufacturer name associated with the given eBUS ID.

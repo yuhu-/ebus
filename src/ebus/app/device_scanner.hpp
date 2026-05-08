@@ -14,6 +14,7 @@
 #include <cstdint>
 #include <ebus/config.hpp>
 #include <ebus/detail/protocol_limits.hpp>
+#include <ebus/metrics.hpp>
 #include <ebus/sequence.hpp>
 #include <mutex>
 #include <queue>
@@ -58,6 +59,8 @@ class DeviceScanner {
 
   // Returns the next command to send, or empty vector if idle
   Sequence nextCommand();
+
+  ScannerStatus getStatus() const;
 
  private:
   DeviceManager* device_manager_ = nullptr;

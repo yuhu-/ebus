@@ -71,9 +71,12 @@ class Scheduler {
   void setTelegramCallback(TelegramCallback callback);
   void setErrorCallback(ErrorCallback callback);
 
-  size_t queueSize();
-
   void clear();
+
+  size_t queueSize();
+  size_t queueCapacity() const;
+
+  platform::ServiceThread::Status getThreadStatus() const;
 
  private:
   struct Compare {

@@ -50,6 +50,11 @@ class ClientManager {
    */
   void wake();
 
+  size_t queueSize();
+  size_t queueCapacity() const;
+
+  platform::ServiceThread::Status getThreadStatus() const;
+
  private:
   platform::Bus* bus_;
   BusHandler* bus_handler_;

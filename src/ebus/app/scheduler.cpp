@@ -24,8 +24,8 @@ void Scheduler::start() {
   bool expected = true;
   if (stop_flag_.compare_exchange_strong(expected, false)) {
     worker_ = std::make_unique<platform::ServiceThread>(
-        "ebusScheduler", [this] { run(); }, OrchestrationLimits::stack_size,
-        OrchestrationLimits::priority_high, 1);
+        "ebusScheduler", [this] { run(); }, OrchestrationLimits::stack_size_low,
+        OrchestrationLimits::priority_med);
     worker_->start();
   }
 }
@@ -104,15 +104,24 @@ void Scheduler::setErrorCallback(ErrorCallback callback) {
   extern_error_callback_ = std::move(callback);
 }
 
+void Scheduler::clear() {
+  std::lock_guard<std::mutex> lock(data_mutex_);
+  item_queue_.clear();
+  std::make_heap(item_queue_.begin(), item_queue_.end(), Compare());
+}
+
 size_t Scheduler::queueSize() {
   std::lock_guard<std::mutex> lock(data_mutex_);
   return item_queue_.size();
 }
 
-void Scheduler::clear() {
-  std::lock_guard<std::mutex> lock(data_mutex_);
-  item_queue_.clear();
-  std::make_heap(item_queue_.begin(), item_queue_.end(), Compare());
+size_t Scheduler::queueCapacity() const { return SchedulerLimits::max_items; }
+
+platform::ServiceThread::Status Scheduler::getThreadStatus() const {
+  if (worker_) {
+    return worker_->status();
+  }
+  return platform::ServiceThread::Status{-1, -1};
 }
 
 bool Scheduler::pushItem(Item&& it) {

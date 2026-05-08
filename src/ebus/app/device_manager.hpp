@@ -38,7 +38,6 @@ class DeviceManager {
   void update(ByteView master_view, ByteView slave_view);
 
   std::vector<DeviceInfo> getDeviceInfo() const;
-  std::string getDeviceInfoJson() const;
 
   void getObservedSlaves(std::bitset<256>& observed) const;
   std::vector<Sequence> vendorScanCommands() const;

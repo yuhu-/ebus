@@ -77,4 +77,11 @@ void PollManager::clear() {
   items_.clear();
 }
 
+PollStatus PollManager::getStatus() const {
+  std::lock_guard<std::mutex> lock(mutex_);
+  PollStatus s;
+  s.item_count = items_.size();
+  return s;
+}
+
 }  // namespace ebus::detail

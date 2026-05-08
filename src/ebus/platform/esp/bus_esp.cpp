@@ -60,10 +60,14 @@ BusEsp::~BusEsp() { stop(); }
 
 void BusEsp::start() {
   if (running_.load(std::memory_order_acquire)) return;
+  if (!uart_event_queue_) {
+    return;
+  }
+
   running_.store(true, std::memory_order_release);
   worker_ = std::make_unique<ServiceThread>(
       "ebusUartEventRunner", [this] { ebusUartEventRunner(); },
-      OrchestrationLimits::stack_size, OrchestrationLimits::priority_high);
+      OrchestrationLimits::stack_size_low, OrchestrationLimits::priority_high);
   worker_->start();
 }
 
@@ -196,6 +200,17 @@ void BusEsp::addSynListener(SynListener listener) {
   portENTER_CRITICAL(&listener_mux_);
   syn_listeners_.push_back(std::move(listener));
   portEXIT_CRITICAL(&listener_mux_);
+}
+
+ServiceThread::Status BusEsp::getThreadStatus() const {
+  if (worker_) {
+    return worker_->status();
+  }
+  return ServiceThread::Status{-1, -1};
+}
+
+ServiceThread::Status BusEsp::getSynThreadStatus() const {
+  return ServiceThread::Status{-1, -1};
 }
 
 void BusEsp::recordUtilization(uint8_t byte) {
@@ -340,6 +355,10 @@ void BusEsp::ebusUartEventRunner() {
   uint8_t data[SequenceLimits::default_capacity * 2];
 
   while (running_.load(std::memory_order_acquire)) {
+    if (!uart_event_queue_) {
+      break;
+    }
+
     if (xQueueReceive(
             uart_event_queue_, &uart_event,
             pdMS_TO_TICKS(BusLimits::platform::Esp::event_timeout_ms))) {

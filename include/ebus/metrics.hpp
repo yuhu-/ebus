@@ -6,6 +6,7 @@
 #pragma once
 
 #include <array>
+#include <cstddef>
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -25,12 +26,12 @@ struct MetricValues {
   float mean = 0.0f;
   float stddev = 0.0f;
   uint32_t count = 0;
-};
 
-/**
- * Serializes MetricValues to a JSON object string.
- */
-std::string toJson(const MetricValues& v);
+  /**
+   * @brief Serializes MetricValues to a JSON object string.
+   */
+  std::string toJson() const;
+};
 
 namespace metrics {
 
@@ -109,7 +110,7 @@ struct HandlerMetrics {
   // Recent state transitions for diagnostics
   std::vector<HandlerTransition> transition_history;
 
-  void resetMetrics() {
+  void reset() {
     error_rate = 0.0f;
     protocol_data_utilization_rate = 0.0f;
 
@@ -168,6 +169,11 @@ struct HandlerMetrics {
 
     transition_history.clear();
   }
+
+  /**
+   * @brief Serializes HandlerMetrics to a JSON object string.
+   */
+  std::string toJson() const;
 };
 
 /**
@@ -207,7 +213,7 @@ struct RequestMetrics {
   // Recent arbitration transitions for diagnostics
   std::vector<RequestTransition> transition_history;
 
-  void resetMetrics() {
+  void reset() {
     contention_rate = 0.0f;
     collision_rate = 0.0f;
 
@@ -232,6 +238,11 @@ struct RequestMetrics {
 
     transition_history.clear();
   }
+
+  /**
+   * @brief Serializes RequestMetrics to a JSON object string.
+   */
+  std::string toJson() const;
 };
 
 /**
@@ -258,7 +269,7 @@ struct BusMetrics {
   MetricValues uptime;
   MetricValues syn_postpone;
 
-  void resetMetrics() {
+  void reset() {
     utilization = 0.0f;
 
     // Detailed Counters
@@ -273,6 +284,11 @@ struct BusMetrics {
     uptime = {};
     syn_postpone = {};
   }
+
+  /**
+   * @brief Serializes BusMetrics to a JSON object string.
+   */
+  std::string toJson() const;
 };
 
 /**
@@ -284,11 +300,16 @@ struct DeviceMetrics {
   std::array<uint32_t, 256> masters{};
   std::array<uint32_t, 256> slaves{};
 
-  void resetMetrics() {
+  void reset() {
     unknown_devices = 0;
     masters.fill(0);
     slaves.fill(0);
   }
+
+  /**
+   * @brief Serializes DeviceMetrics to a JSON object string.
+   */
+  std::string toJson() const;
 };
 
 /**
@@ -306,6 +327,11 @@ struct SystemMetrics {
   // communication. A higher score indicates better performance and
   // reliability.
   float quality = 0.0f;
+
+  /**
+   * @brief Serializes the entire SystemMetrics tree to a JSON object string.
+   */
+  std::string toJson() const;
 };
 
 }  // namespace metrics
@@ -316,16 +342,72 @@ struct SystemMetrics {
 using Metrics = metrics::SystemMetrics;
 
 /**
- * Global JSON Serialization Helpers
+ * Snapshot of a service thread's health.
  */
-std::string toJson(const metrics::HandlerMetrics& m);
-std::string toJson(const metrics::RequestMetrics& m);
-std::string toJson(const metrics::BusMetrics& m);
-std::string toJson(const metrics::DeviceMetrics& m);
+struct ThreadStatus {
+  ssize_t task_stack_bytes = -1;
+  ssize_t task_stack_free_bytes = -1;
+
+  /**
+   * @brief Serializes ThreadStatus to a JSON object string.
+   */
+  std::string toJson() const;
+};
 
 /**
- * Serializes the entire SystemMetrics tree to a JSON object string.
+ * Snapshot of the device scanner's current state.
  */
-std::string toJson(const metrics::SystemMetrics& sm);
+struct ScannerStatus {
+  bool is_scanning = false;
+  bool full_scan_active = false;
+  uint16_t full_scan_address = 0;
+  bool scan_on_startup_enabled = false;
+  uint8_t startup_scan_count = 0;
+  size_t manual_queue_size = 0;
+  size_t startup_queue_size = 0;
+
+  /**
+   * @brief Serializes ScannerStatus to a JSON object string.
+   */
+  std::string toJson() const;
+};
+
+/**
+ * Snapshot of the poll manager's current state.
+ */
+struct PollStatus {
+  size_t item_count = 0;
+
+  /**
+   * @brief Serializes PollStatus to a JSON object string.
+   */
+  std::string toJson() const;
+};
+
+/**
+ * Aggregated health and operational status of all internal services.
+ */
+struct ServiceStatus {
+  ssize_t free_heap_bytes = -1;
+  ssize_t min_free_heap_bytes = -1;
+  struct Entry {
+    std::string name;
+    ThreadStatus thread;
+    uint64_t last_update_timestamp_ms = 0;
+    size_t queue_size = 0;
+    size_t queue_capacity = 0;
+  };
+  std::vector<Entry> services;
+  ThreadStatus syn_generator_thread;
+  ThreadStatus controller_thread;
+  ThreadStatus bus_thread;
+  ScannerStatus scanner;
+  PollStatus poll;
+
+  /**
+   * @brief Serializes ServiceStatus to a JSON object string.
+   */
+  std::string toJson() const;
+};
 
 }  // namespace ebus

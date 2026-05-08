@@ -231,6 +231,20 @@ ebus::Sequence DeviceScanner::nextCommand() {
   return {};
 }
 
+ScannerStatus DeviceScanner::getStatus() const {
+  std::lock_guard<std::mutex> lock(mutex_);
+  ScannerStatus s;
+  s.is_scanning = full_scan_ || scan_on_startup_ || !manual_queue_.empty() ||
+                  !startup_queue_.empty();
+  s.full_scan_active = full_scan_;
+  s.full_scan_address = full_scan_address_;
+  s.scan_on_startup_enabled = scan_on_startup_;
+  s.startup_scan_count = startup_scan_count_;
+  s.manual_queue_size = manual_queue_.size();
+  s.startup_queue_size = startup_queue_.size();
+  return s;
+}
+
 bool DeviceScanner::scanAddressLocked(uint8_t address) {
   if (ebus::isSlave(address) && (address != ebus::slaveOf(own_address_))) {
     if (manual_queue_.size() >= ScannerLimits::max_manual_queue) return false;
