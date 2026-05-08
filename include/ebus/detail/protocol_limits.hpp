@@ -64,6 +64,8 @@ inline constexpr size_t queue_size = 512;
 inline constexpr size_t max_listeners = 16;
 
 namespace Syn {
+inline constexpr uint32_t base_ms = 50;
+inline constexpr uint32_t tolerance_ms = 5;
 inline constexpr uint32_t address_factor_ms = 10;
 inline constexpr uint32_t postpone_ms = 2;
 inline constexpr uint32_t carrier_sense_ms = 5;

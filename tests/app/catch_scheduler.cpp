@@ -37,7 +37,7 @@ TEST_CASE("Scheduler: Simulation", "[app][scheduler]") {
 
   ebus::RuntimeConfig runtime;
   runtime.address = 0x33;
-  runtime.bus.syn.enabled = true;
+  runtime.bus.syn_gen = true;
 
   BusMonitor monitor;
   platform::Bus bus(config, runtime, &request, &monitor);
@@ -101,7 +101,7 @@ TEST_CASE("Scheduler: Priority Preemption", "[app][scheduler][priority]") {
 
   ebus::RuntimeConfig runtime;
   runtime.address = 0x01;
-  runtime.bus.syn.enabled = true;
+  runtime.bus.syn_gen = true;
   runtime.lock_counter = 0;  // Send immediately
 
   BusMonitor monitor;

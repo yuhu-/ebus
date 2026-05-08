@@ -24,7 +24,7 @@ TEST_CASE("Controller: Lifecycle and API", "[app][controller]") {
   config.runtime.system_inquiry = false;
   config.runtime.system_response = false;
   config.runtime.scanner.scan_on_startup = false;
-  config.runtime.bus.syn.enabled = true;
+  config.runtime.bus.syn_gen = true;
 
   ebus::Controller controller(config);
   REQUIRE(controller.isConfigured());
@@ -70,7 +70,7 @@ TEST_CASE("Controller: System Discovery automated response",
   config.runtime.system_inquiry = false;
   config.runtime.system_response = true;
   config.runtime.scanner.scan_on_startup = false;
-  config.runtime.bus.syn.enabled = true;
+  config.runtime.bus.syn_gen = true;
 
   ebus::Controller controller(config);
 
@@ -96,7 +96,7 @@ TEST_CASE("Controller: System Discovery automated response",
   // to avoid collisions with the controller on the simulated wire.
   ebus::RuntimeConfig peerRuntime = config.runtime;
   peerRuntime.address = 0x10;
-  peerRuntime.bus.syn.enabled = false;
+  peerRuntime.bus.syn_gen = false;
 
   Request peerReq;
   peerReq.setLockCounter(0);

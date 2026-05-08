@@ -25,7 +25,7 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
     ebus::BusConfig config = {.device = "/dev/null", .simulate = true};
     ebus::RuntimeConfig runtime;
     runtime.address = 0x01;
-    runtime.bus.syn.enabled = true;
+    runtime.bus.syn_gen = true;
 
     Request request;
     BusMonitor monitor;
@@ -175,7 +175,7 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
     ebus::BusConfig config = {.device = "/dev/null", .simulate = true};
     ebus::RuntimeConfig runtime;
     runtime.address = 0x33;
-    runtime.bus.syn.enabled = true;
+    runtime.bus.syn_gen = true;
 
     Request request;
     request.setLockCounter(0);

@@ -27,7 +27,7 @@ int main() {
   ebus::EbusConfig configA;
   configA.runtime.address = 0x01;
   configA.bus.simulate = true;
-  configA.runtime.bus.syn.enabled = true;
+  configA.runtime.bus.syn_gen = true;
   configA.runtime.system_inquiry = false;
   configA.runtime.system_response = true;
   configA.runtime.scanner.scan_on_startup = false;

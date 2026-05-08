@@ -33,7 +33,7 @@ TEST_CASE("Bus: Basic Communication", "[platform][bus]") {
   ebus::BusConfig config = {.device = "/dev/null", .simulate = true};
   ebus::RuntimeConfig runtime;
   runtime.address = 0x01;
-  runtime.bus.syn.enabled = true;
+  runtime.bus.syn_gen = true;
 
   Request req;
   BusMonitor monitor;
@@ -75,7 +75,7 @@ TEST_CASE("Bus: SYN Timing", "[platform][bus]") {
   ebus::BusConfig config = {.device = "/dev/null", .simulate = true};
   ebus::RuntimeConfig runtime;
   runtime.address = 0x01;
-  runtime.bus.syn.enabled = true;
+  runtime.bus.syn_gen = true;
 
   Request req;
   BusMonitor monitor;

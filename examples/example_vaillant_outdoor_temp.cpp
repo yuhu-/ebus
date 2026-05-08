@@ -22,9 +22,9 @@ int main() {
   // We use simulation mode to demonstrate the logic without hardware.
   ebus::EbusConfig config;
   config.bus.simulate = true;
-  config.runtime.address = 0x31;          // Our controller address
-  config.runtime.bus.syn.enabled = true;  // MUST be enabled for simulation
-  config.runtime.lock_counter = 0;        // Send immediately on first SYN
+  config.runtime.address = 0x31;       // Our controller address
+  config.runtime.bus.syn_gen = true;  // MUST be enabled for simulation
+  config.runtime.lock_counter = 0;     // Send immediately on first SYN
 
   ebus::Controller controller(config);
 

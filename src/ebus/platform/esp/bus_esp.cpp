@@ -143,15 +143,15 @@ void BusEsp::setOffset(const uint16_t offset_us) {
 
 void BusEsp::setRuntimeConfig(const RuntimeConfig& runtime) {
   bool was_enabled;
-  uint64_t base_us = static_cast<uint64_t>(runtime.bus.syn.base_ms) * 1000;
+  uint64_t base_us = static_cast<uint64_t>(BusLimits::Syn::base_ms) * 1000;
   uint64_t unique_us =
-      base_us +
+      base_us +  //
       (static_cast<uint64_t>(runtime.address) *
        static_cast<uint64_t>(BusLimits::Syn::address_factor_ms) * 1000) +
-      (static_cast<uint64_t>(runtime.bus.syn.tolerance_ms) * 1000);
+      (static_cast<uint64_t>(BusLimits::Syn::tolerance_ms) * 1000);
 
   portENTER_CRITICAL(&timer_mux_);
-  was_enabled = runtime_.bus.syn.enabled;
+  was_enabled = runtime_.bus.syn_gen;
   runtime_ = runtime;
 
   // Validate window and offset inside the critical section
@@ -165,7 +165,7 @@ void BusEsp::setRuntimeConfig(const RuntimeConfig& runtime) {
   syn_unique_us_ = unique_us;
   portEXIT_CRITICAL(&timer_mux_);
 
-  if (runtime_.bus.syn.enabled) {
+  if (runtime_.bus.syn_gen) {
     gptimer_alarm_config_t alarm_config = {
         .alarm_count = syn_unique_us_,  // Start with unique rate
         .reload_count = 0,
@@ -502,7 +502,7 @@ void BusEsp::ebusUartEventRunner() {
 
           // Reset SYN Timer (Arbitration Logic)
           portENTER_CRITICAL(&timer_mux_);
-          const bool syn_enabled = runtime_.bus.syn.enabled;
+          const bool syn_enabled = runtime_.bus.syn_gen;
           const uint64_t base_us = syn_base_us_;
           const uint64_t unique_us = syn_unique_us_;
           portEXIT_CRITICAL(&timer_mux_);

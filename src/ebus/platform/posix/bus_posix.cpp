@@ -71,10 +71,10 @@ void BusPosix::start() {
 
   // start SYN generator if enabled in config
   if (monitor_) monitor_->uptime.markBegin();
-  if (runtime_.bus.syn.enabled) {
-    syn_base_ms_dur_ = std::chrono::milliseconds(runtime_.bus.syn.base_ms);
+  if (runtime_.bus.syn_gen) {
+    syn_base_ms_dur_ = std::chrono::milliseconds(BusLimits::Syn::base_ms);
     syn_tolerance_ms_dur_ =
-        std::chrono::milliseconds(runtime_.bus.syn.tolerance_ms);
+        std::chrono::milliseconds(BusLimits::Syn::tolerance_ms);
     current_t_unique_ =
         syn_base_ms_dur_ +
         std::chrono::milliseconds(runtime_.address *
@@ -181,7 +181,7 @@ void BusPosix::setRuntimeConfig(const RuntimeConfig& runtime) {
 
   {
     std::lock_guard<std::mutex> lock(syn_mutex_);
-    bool was_enabled = runtime_.bus.syn.enabled;
+    bool was_enabled = runtime_.bus.syn_gen;
     runtime_ = runtime;
 
     // Validate window and offset
@@ -192,9 +192,9 @@ void BusPosix::setRuntimeConfig(const RuntimeConfig& runtime) {
       runtime_.bus.offset_us = ebus::RuntimeConfig{}.bus.offset_us;
 
     // Always recalculate timing durations based on the new configuration
-    syn_base_ms_dur_ = std::chrono::milliseconds(runtime_.bus.syn.base_ms);
+    syn_base_ms_dur_ = std::chrono::milliseconds(BusLimits::Syn::base_ms);
     syn_tolerance_ms_dur_ =
-        std::chrono::milliseconds(runtime_.bus.syn.tolerance_ms);
+        std::chrono::milliseconds(BusLimits::Syn::tolerance_ms);
     current_t_unique_ =
         syn_base_ms_dur_ +
         std::chrono::milliseconds(runtime_.address *
@@ -203,13 +203,12 @@ void BusPosix::setRuntimeConfig(const RuntimeConfig& runtime) {
 
     // Manage thread transitions only if the bus is currently active
     if (open_ && running_.load()) {
-      if (runtime_.bus.syn.enabled && !was_enabled && !syn_running_.load()) {
+      if (runtime_.bus.syn_gen && !was_enabled && !syn_running_.load()) {
         should_start = true;
         syn_running_.store(true);
         next_syn_expiry_ = std::chrono::steady_clock::now() + current_t_unique_;
         syn_active_ = false;
-      } else if (!runtime_.bus.syn.enabled && was_enabled &&
-                 syn_running_.load()) {
+      } else if (!runtime_.bus.syn_gen && was_enabled && syn_running_.load()) {
         should_stop = true;
         syn_running_.store(false);
         syn_cv_.notify_all();

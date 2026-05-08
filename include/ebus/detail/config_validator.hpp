@@ -29,7 +29,6 @@ class ConfigValidator {
       return false;
     if (r.bus.offset_us > BusLimits::offset_max_us) return false;
     if (r.bus.watchdog_timeout_ms == 0) return false;
-    if (r.bus.syn.enabled && r.bus.syn.base_ms == 0) return false;
 
     // 3. Scheduler & Logic
     if (r.scheduler.max_send_attempts < 1) return false;
