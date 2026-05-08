@@ -414,9 +414,8 @@ ServiceStatus Controller::getServiceStatus() const {
   ServiceStatus status;
 
 #if defined(ESP_PLATFORM)
-  status.free_heap_bytes = esp_heap_caps_get_free_heap_size(MALLOC_CAP_8BIT);
-  status.min_free_heap_bytes =
-      esp_heap_caps_get_minimum_free_heap_size(MALLOC_CAP_8BIT);
+  status.free_heap_bytes = heap_caps_get_free_size(MALLOC_CAP_8BIT);
+  status.min_free_heap_bytes = heap_caps_get_minimum_free_size(MALLOC_CAP_8BIT);
 #endif
 
   const uint64_t now_ms =
