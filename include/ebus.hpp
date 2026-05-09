@@ -20,5 +20,6 @@
 #include "ebus/metrics.hpp"
 #include "ebus/protocol_math.hpp"
 #include "ebus/sequence.hpp"
+#include "ebus/status.hpp"
 #include "ebus/types.hpp"
 #include "ebus/utils.hpp"

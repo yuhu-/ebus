@@ -20,6 +20,8 @@
 #include <cstring>
 #include <ebus/callbacks.hpp>
 #include <ebus/config.hpp>
+#include <ebus/metrics.hpp>
+#include <ebus/status.hpp>
 #include <ebus/types.hpp>
 #include <functional>
 #include <memory>
@@ -77,6 +79,8 @@ class BusPosix {
 
   platform::ServiceThread::Status getThreadStatus() const;
   platform::ServiceThread::Status getSynThreadStatus() const;
+
+  ebus::BusStatus getStatus() const;
 
  private:
   std::string device_;

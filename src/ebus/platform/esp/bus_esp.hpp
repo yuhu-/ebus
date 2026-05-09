@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <ebus/config.hpp>
 #include <ebus/detail/protocol_limits.hpp>
+#include <ebus/status.hpp>
 #include <functional>
 #include <memory>
 #include <vector>
@@ -76,6 +77,8 @@ class BusEsp {
 
   platform::ServiceThread::Status getThreadStatus() const;
   platform::ServiceThread::Status getSynThreadStatus() const;
+
+  ebus::BusStatus getStatus() const;
 
  private:
   uart_port_t uart_port_num_;

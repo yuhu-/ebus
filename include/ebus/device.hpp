@@ -28,9 +28,6 @@ struct DeviceInfo {
     std::string product_code;   // 10-digit product identifier (digits 7-16)
   } vaillant;
 
-  /**
-   * @brief Serializes DeviceInfo to a JSON object string.
-   */
   std::string toJson() const;
 };
 

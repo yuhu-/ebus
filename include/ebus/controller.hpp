@@ -20,6 +20,7 @@
 #include "ebus/config.hpp"
 #include "ebus/device.hpp"
 #include "ebus/metrics.hpp"
+#include "ebus/status.hpp"
 #include "ebus/types.hpp"
 
 namespace ebus {
@@ -347,9 +348,10 @@ class Controller {
   void clearErrors();
 
   /**
-   * @brief Returns an aggregated status of all internal services.
+   * @brief Returns the service status as a JSON string.
+   * @param reset_histories If true, resets history buffers after serialization.
    */
-  ServiceStatus getServiceStatus() const;
+  std::string getServiceStatusJson(bool reset_histories = false) const;
 
  private:
   EbusConfig config_;
@@ -361,6 +363,11 @@ class Controller {
   mutable std::mutex config_mutex_;
   mutable std::mutex wake_mutex_;
   std::condition_variable wake_cv_;
+
+  /**
+   * @brief Internal helper to capture a snapshot of all service states.
+   */
+  ServiceStatus getServiceStatus() const;
 
   void constructMembers();
   void run();

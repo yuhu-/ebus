@@ -10,6 +10,8 @@
 #include <chrono>
 #include <ebus/config.hpp>
 #include <ebus/detail/protocol_limits.hpp>
+#include <ebus/metrics.hpp>
+#include <ebus/status.hpp>
 #include <functional>
 #include <memory>
 #include <mutex>
@@ -89,7 +91,14 @@ class BusHandler {
     if (worker_) {
       return worker_->status();
     }
-    return platform::ServiceThread::Status{-1, -1};
+    return platform::ServiceThread::Status{"BusHandler", -1, -1};
+  }
+
+  BusHandlerStatus getStatus() {
+    auto s = getThreadStatus();
+    return {{s.name, s.task_stack_bytes, s.task_stack_free_bytes},
+            queueSize(),
+            queueCapacity()};
   }
 
  private:

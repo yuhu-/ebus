@@ -28,6 +28,7 @@
 #include <ebus/data_types.hpp>
 #include <fstream>
 #include <iostream>
+#include <string>
 #include <sstream>
 #include <vector>
 

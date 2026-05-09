@@ -9,13 +9,14 @@
 #include <bitset>
 #include <cstdint>
 #include <ebus/device.hpp>
+#include <ebus/metrics.hpp>
 #include <ebus/sequence.hpp>
+#include <ebus/status.hpp>
 #include <map>
 #include <mutex>
 #include <set>
 
 #include "core/handler.hpp"
-#include "ebus/metrics.hpp"
 #include "models/device.hpp"
 
 namespace ebus::detail {
@@ -43,6 +44,8 @@ class DeviceManager {
   std::vector<Sequence> vendorScanCommands() const;
   std::vector<Sequence> createScanCommands(
       const std::vector<std::string>& addresses) const;
+
+  DeviceManagerStatus getStatus() const;
 
  private:
   uint8_t own_address_ = 0xff;

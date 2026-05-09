@@ -213,6 +213,11 @@ void BusPosix::setRuntimeConfig(const RuntimeConfig& runtime) {
         syn_running_.store(false);
         syn_cv_.notify_all();
       }
+
+      // If generator was already running, re-align next_syn_expiry_ to the new t_unique
+      if (runtime_.bus.syn_gen && !should_start && syn_running_.load()) {
+        next_syn_expiry_ = std::chrono::steady_clock::now() + current_t_unique_;
+      }
     }
   }
 
@@ -249,14 +254,25 @@ ServiceThread::Status BusPosix::getThreadStatus() const {
   if (worker_) {
     return worker_->status();
   }
-  return ServiceThread::Status{-1, -1};
+  return ServiceThread::Status{"BusPosix::readerThread", -1, -1};
 }
 
 ServiceThread::Status BusPosix::getSynThreadStatus() const {
   if (syn_worker_) {
     return syn_worker_->status();
   }
-  return ServiceThread::Status{-1, -1};
+  return ServiceThread::Status{"BusPosix::synThread", -1, -1};
+}
+
+ebus::BusStatus BusPosix::getStatus() const {
+  auto map =
+      [](const platform::ServiceThread::Status& s) -> ebus::ThreadStatus {
+    return {s.name, s.task_stack_bytes, s.task_stack_free_bytes};
+  };
+  ebus::BusStatus s;
+  if (worker_) s.bus_thread = map(worker_->status());
+  if (syn_worker_) s.syn_thread = map(syn_worker_->status());
+  return s;
 }
 
 void BusPosix::recordUtilization(uint8_t byte) {

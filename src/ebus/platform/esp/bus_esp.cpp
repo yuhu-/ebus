@@ -171,11 +171,16 @@ void BusEsp::setRuntimeConfig(const RuntimeConfig& runtime) {
         .reload_count = 0,
         .flags = {.auto_reload_on_alarm = true}};
 
-    gptimer_set_alarm_action(syn_gp_timer_, &alarm_config);
-
     if (!was_enabled) {
       syn_running_.store(true);
       syn_active_ = false;
+      gptimer_set_alarm_action(syn_gp_timer_, &alarm_config);
+      gptimer_start(syn_gp_timer_);
+    } else {
+      // Restart timer to apply the new t_unique count immediately
+      gptimer_stop(syn_gp_timer_);
+      gptimer_set_raw_count(syn_gp_timer_, 0);
+      gptimer_set_alarm_action(syn_gp_timer_, &alarm_config);
       gptimer_start(syn_gp_timer_);
     }
   } else if (was_enabled) {
@@ -206,11 +211,22 @@ ServiceThread::Status BusEsp::getThreadStatus() const {
   if (worker_) {
     return worker_->status();
   }
-  return ServiceThread::Status{-1, -1};
+  return ServiceThread::Status{"BusEsp::readerThread", -1, -1};
 }
 
 ServiceThread::Status BusEsp::getSynThreadStatus() const {
-  return ServiceThread::Status{-1, -1};
+  return ServiceThread::Status{"HardwareTimer (GPTimer)", -1, -1};
+}
+
+ebus::BusStatus BusEsp::getStatus() const {
+  auto map =
+      [](const platform::ServiceThread::Status& s) -> ebus::ThreadStatus {
+    return {s.name, s.task_stack_bytes, s.task_stack_free_bytes};
+  };
+  ebus::BusStatus s;
+  if (worker_) s.bus_thread = map(worker_->status());
+  s.syn_thread = map(getSynThreadStatus());
+  return s;
 }
 
 void BusEsp::recordUtilization(uint8_t byte) {

@@ -3,25 +3,75 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+#include <charconv>
 #include <ctime>
 #include <ebus/callbacks.hpp>
 #include <ebus/config.hpp>
 #include <ebus/data_types.hpp>
 #include <ebus/device.hpp>
 #include <ebus/metrics.hpp>
+#include <ebus/status.hpp>
 #include <ebus/types.hpp>
 #include <ebus/utils.hpp>
 #include <iomanip>
 #include <sstream>
+#include <string>
+#include <string_view>
 #include <vector>
 
+#include "core/bus_monitor.hpp"
+
 namespace ebus {
+
+namespace {
+std::string extract(std::string_view json, std::string_view key) {
+  std::string k = "\"" + std::string(key) + "\"";
+  size_t pos = json.find(k);
+  if (pos == std::string_view::npos) return "";
+  pos = json.find(':', pos);
+  if (pos == std::string_view::npos) return "";
+  size_t start = json.find_first_not_of(" \t\n\r", pos + 1);
+  if (start == std::string_view::npos) return "";
+  size_t end;
+  if (json[start] == '"') {
+    start++;
+    end = json.find('"', start);
+  } else {
+    end = json.find_first_of(", \t\n\r}", start);
+  }
+  return std::string(json.substr(start, end - start));
+}
+
+std::string_view extractSub(std::string_view json, std::string_view key) {
+  std::string k = "\"" + std::string(key) + "\"";
+  size_t pos = json.find(k);
+  if (pos == std::string_view::npos) return "";
+  size_t start = json.find('{', pos);
+  if (start == std::string_view::npos) return "";
+  int depth = 0;
+  for (size_t i = start; i < json.size(); ++i) {
+    if (json[i] == '{')
+      depth++;
+    else if (json[i] == '}')
+      depth--;
+    if (depth == 0) return json.substr(start, i - start + 1);
+  }
+  return "";
+}
+
+template <typename T>
+T toNum(const std::string& s) {
+  if (s.empty()) return 0;
+  T val = 0;
+  std::from_chars(s.data(), s.data() + s.size(), val);
+  return val;
+}
+}  // namespace
 
 // --- config.hpp ---
 
 std::string RuntimeConfig::toJson() const {
   std::ostringstream oss;
-
   oss << "{"
       << "\"address\": " << static_cast<int>(address) << ","
       << "\"lock_counter\": " << static_cast<int>(lock_counter) << ","
@@ -53,6 +103,107 @@ std::string RuntimeConfig::toJson() const {
       << "\"total_timeout_ms\": " << scheduler.total_timeout_ms << "}}";
 
   return oss.str();
+}
+
+RuntimeConfig RuntimeConfig::fromJson(const std::string& json) {
+  RuntimeConfig cfg;
+  if (!isValidJson(json)) {
+    // Return a default-constructed config if the JSON is invalid
+    return RuntimeConfig{};
+  }
+  std::string_view j = json;
+  cfg.address = static_cast<uint8_t>(toNum<int>(extract(j, "address")));
+  cfg.lock_counter =
+      static_cast<uint8_t>(toNum<int>(extract(j, "lock_counter")));
+  cfg.system_inquiry = extract(j, "system_inquiry") == "true";
+  cfg.system_response = extract(j, "system_response") == "true";
+  auto bus_j = extractSub(j, "bus");
+  if (!bus_j.empty()) {
+    cfg.bus.window_us =
+        static_cast<uint16_t>(toNum<int>(extract(bus_j, "window_us")));
+    cfg.bus.offset_us =
+        static_cast<uint16_t>(toNum<int>(extract(bus_j, "offset_us")));
+    cfg.bus.watchdog_timeout_ms =
+        toNum<uint32_t>(extract(bus_j, "watchdog_timeout_ms"));
+    cfg.bus.syn_gen = extract(bus_j, "syn_gen") == "true";
+  }
+  auto diag_j = extractSub(j, "diagnostics");
+  if (!diag_j.empty()) {
+    cfg.diagnostics.level =
+        static_cast<LogLevel>(toNum<int>(extract(diag_j, "level")));
+    cfg.diagnostics.log_size = toNum<size_t>(extract(diag_j, "log_size"));
+  }
+  auto net_j = extractSub(j, "network");
+  if (!net_j.empty()) {
+    cfg.network.session_timeout_ms =
+        toNum<uint32_t>(extract(net_j, "session_timeout_ms"));
+    cfg.network.transmit_timeout_ms =
+        toNum<uint32_t>(extract(net_j, "transmit_timeout_ms"));
+    cfg.network.outbound_buffer_size =
+        toNum<size_t>(extract(net_j, "outbound_buffer_size"));
+  }
+  auto scan_j = extractSub(j, "scanner");
+  if (!scan_j.empty()) {
+    cfg.scanner.scan_on_startup = extract(scan_j, "scan_on_startup") == "true";
+    cfg.scanner.initial_delay_s =
+        toNum<uint32_t>(extract(scan_j, "initial_delay_s"));
+    cfg.scanner.startup_interval_s =
+        toNum<uint32_t>(extract(scan_j, "startup_interval_s"));
+    cfg.scanner.max_startup_scans =
+        static_cast<uint8_t>(toNum<int>(extract(scan_j, "max_startup_scans")));
+  }
+  auto sched_j = extractSub(j, "scheduler");
+  if (!sched_j.empty()) {
+    cfg.scheduler.max_send_attempts =
+        static_cast<uint8_t>(toNum<int>(extract(sched_j, "max_send_attempts")));
+    cfg.scheduler.base_backoff_ms =
+        toNum<uint32_t>(extract(sched_j, "base_backoff_ms"));
+    cfg.scheduler.fsm_timeout_ms =
+        toNum<uint32_t>(extract(sched_j, "fsm_timeout_ms"));
+    cfg.scheduler.total_timeout_ms =
+        toNum<uint32_t>(extract(sched_j, "total_timeout_ms"));
+  }
+  return cfg;
+}
+
+bool RuntimeConfig::isValidJson(const std::string& json) {
+  if (json.empty()) return false;
+  // Trim whitespace
+  size_t first = json.find_first_not_of(" \t\n\r");
+  size_t last = json.find_last_not_of(" \t\n\r");
+  if (first == std::string::npos || last == std::string::npos)
+    return false;  // All whitespace
+
+  std::string_view trimmed_json(json.data() + first, last - first + 1);
+
+  if (trimmed_json.empty() || trimmed_json.front() != '{' ||
+      trimmed_json.back() != '}') {
+    return false;
+  }
+
+  // Basic check for balanced braces/brackets and string escaping
+  int brace_count = 0;
+  int bracket_count = 0;
+  bool in_string = false;
+  for (size_t i = 0; i < trimmed_json.length(); ++i) {
+    char c = trimmed_json[i];
+    if (c == '\\') {  // Skip escaped characters
+      i++;
+    } else if (c == '"') {
+      in_string = !in_string;
+    } else if (!in_string) {
+      if (c == '{')
+        brace_count++;
+      else if (c == '}')
+        brace_count--;
+      else if (c == '[')
+        bracket_count++;
+      else if (c == ']')
+        bracket_count--;
+    }
+    if (brace_count < 0 || bracket_count < 0) return false;  // Unbalanced
+  }
+  return brace_count == 0 && bracket_count == 0 && !in_string;
 }
 
 std::string BusConfig::toJson() const {
@@ -153,6 +304,8 @@ std::string BusEventContext::toJson() const {
                 wall_time.time_since_epoch())
                 .count() %
             1000;
+  struct tm tm_info;
+  gmtime_r(&t, &tm_info);
 
   oss << "{"
       << "\"byte\":\"" << toString(byte) << "\","
@@ -160,9 +313,8 @@ std::string BusEventContext::toJson() const {
       << "\"request_state\":\"" << toString(request_state) << "\","
       << "\"result\":\"" << toString(result) << "\","
       << "\"lock_counter\":" << static_cast<int>(lock_counter) << ","
-      << "\"timestamp\":\""
-      << std::put_time(std::gmtime(&t), "%Y-%m-%dT%H:%M:%S") << "."
-      << std::setw(3) << std::setfill('0') << ms << "Z\""
+      << "\"timestamp\":\"" << std::put_time(&tm_info, "%Y-%m-%dT%H:%M:%S")
+      << "." << std::setw(3) << std::setfill('0') << ms << "Z\""
       << "}";
   return oss.str();
 }
@@ -195,11 +347,14 @@ std::string DeviceInfo::toJson() const {
 std::string HandlerTransition::toJson() const {
   std::ostringstream oss;
   time_t s = static_cast<time_t>(timestamp / 1000);
+  struct tm tm_info;
+  gmtime_r(&s, &tm_info);
+
   oss << "{"
       << "\"from\":\"" << toString(from) << "\","
       << "\"to\":\"" << toString(to) << "\","
-      << "\"timestamp\":\""
-      << std::put_time(std::gmtime(&s), "%Y-%m-%dT%H:%M:%SZ") << "\""
+      << "\"timestamp\":\"" << std::put_time(&tm_info, "%Y-%m-%dT%H:%M:%SZ")
+      << "\""
       << "}";
   return oss.str();
 }
@@ -207,11 +362,14 @@ std::string HandlerTransition::toJson() const {
 std::string RequestTransition::toJson() const {
   std::ostringstream oss;
   time_t s = static_cast<time_t>(timestamp / 1000);
+  struct tm tm_info;
+  gmtime_r(&s, &tm_info);
+
   oss << "{"
       << "\"from\":\"" << toString(from) << "\","
       << "\"to\":\"" << toString(to) << "\","
-      << "\"timestamp\":\""
-      << std::put_time(std::gmtime(&s), "%Y-%m-%dT%H:%M:%SZ") << "\""
+      << "\"timestamp\":\"" << std::put_time(&tm_info, "%Y-%m-%dT%H:%M:%SZ")
+      << "\""
       << "}";
   return oss.str();
 }
@@ -219,6 +377,9 @@ std::string RequestTransition::toJson() const {
 std::string ErrorEntry::toJson() const {
   std::ostringstream oss;
   time_t t = static_cast<time_t>(timestamp / 1000);
+  struct tm tm_info;
+  gmtime_r(&t, &tm_info);
+
   oss << "{"
       << "\"session_id\":" << session_id << ","
       << "\"poll_id\":" << poll_id << ","
@@ -233,20 +394,9 @@ std::string ErrorEntry::toJson() const {
       << "\"slave\":\"" << ebus::toString(ByteView(slave, slave_len)) << "\","
       << "\"utilization\":" << std::fixed << std::setprecision(2) << utilization
       << ","
-      << "\"timestamp\":\""
-      << std::put_time(std::gmtime(&t), "%Y-%m-%dT%H:%M:%SZ") << "\""
+      << "\"timestamp\":\"" << std::put_time(&tm_info, "%Y-%m-%dT%H:%M:%SZ")
+      << "\""
       << "}";
-  return oss.str();
-}
-
-// --- metrics.hpp ---
-
-std::string MetricValues::toJson() const {
-  std::ostringstream oss;
-  oss << std::fixed << std::setprecision(2);
-  oss << "{\"last\":" << last << ",\"min\":" << min << ",\"max\":" << max
-      << ",\"mean\":" << mean << ",\"stddev\":" << stddev
-      << ",\"count\":" << count << "}";
   return oss.str();
 }
 
@@ -283,10 +433,8 @@ std::string metrics::HandlerMetrics::toJson() const {
   oss << "},";
 
   oss << "\"transition_history\": [";
-  for (size_t i = 0; i < transition_history.size(); ++i) {
-    if (i > 0) oss << ",";
-    oss << transition_history[i].toJson();
-  }
+  // Note: We need a way to iterate the history without copying it to a vector.
+  // This will be handled in ServiceStatus::toJson via the Monitor access.
   oss << "]";
 
   oss << "}";
@@ -328,8 +476,11 @@ std::string metrics::BusMetrics::toJson() const {
 
   if (last_error_timestamp > 0) {
     time_t t = static_cast<time_t>(last_error_timestamp / 1000);
+    struct tm tm_info;
+    gmtime_r(&t, &tm_info);
+
     oss << ",\"last_error_timestamp\":\""
-        << std::put_time(std::gmtime(&t), "%Y-%m-%dT%H:%M:%SZ") << "\"";
+        << std::put_time(&tm_info, "%Y-%m-%dT%H:%M:%SZ") << "\"";
   }
 
   oss << ",\"delay\":" << delay.toJson() << ",\"window\":" << window.toJson()
@@ -375,15 +526,79 @@ std::string metrics::SystemMetrics::toJson() const {
   return oss.str();
 }
 
-std::string ThreadStatus::toJson() const {
+// --- metrics.hpp ---
+
+std::string MetricValues::toJson() const {
   std::ostringstream oss;
-  oss << "{"
-      << "\"stack_size\":" << task_stack_bytes << ","
-      << "\"stack_free\":" << task_stack_free_bytes << "}";
+  oss << std::fixed << std::setprecision(2);
+  oss << "{\"last\":" << last << ",\"min\":" << min << ",\"max\":" << max
+      << ",\"mean\":" << mean << ",\"std_dev\":" << stddev
+      << ",\"count\":" << count << "}";
   return oss.str();
 }
 
-std::string ScannerStatus::toJson() const {
+namespace {
+std::string threadToJson(const ThreadStatus& s) {
+  std::ostringstream oss;
+  oss << "{"
+      << "\"name\":\"" << (s.name.empty() ? "unknown" : escapeJson(s.name))
+      << "\","
+      << "\"stack_size\":" << s.task_stack_bytes << ","
+      << "\"stack_free\":" << s.task_stack_free_bytes << "}";
+  return oss.str();
+}
+
+std::string queueToJson(const ThreadStatus& thread, size_t size,
+                        size_t capacity) {
+  std::ostringstream oss;
+  oss << "{"
+      << "\"thread\":" << thread.toJson() << ","
+      << "\"queue_size\":" << size << ","
+      << "\"queue_capacity\":" << capacity << "}";
+  return oss.str();
+}
+}  // namespace
+
+std::string ThreadStatus::toJson() const { return threadToJson(*this); }
+
+std::string ControllerStatus::toJson() const {
+  return "{\"thread\":" + thread.toJson() + "}";
+}
+
+std::string BusStatus::toJson() const {
+  return "{\"bus_thread\":" + bus_thread.toJson() +
+         ",\"syn_thread\":" + syn_thread.toJson() + "}";
+}
+
+std::string BusHandlerStatus::toJson() const {
+  return queueToJson(thread, queue_size, queue_capacity);
+}
+
+std::string SchedulerStatus::toJson() const {
+  return queueToJson(thread, queue_size, queue_capacity);
+}
+
+std::string ClientManagerStatus::toJson() const {
+  std::ostringstream oss;
+  oss << "{"
+      << "\"thread\":" << thread.toJson() << ","
+      << "\"queue_size\":" << queue_size << ","
+      << "\"queue_capacity\":" << queue_capacity << ","
+      << "\"session_active\":" << (session_active ? "true" : "false")
+      << ",\"session_state\":\"" << escapeJson(session_state) << "\","
+      << "\"last_error\":\"" << escapeJson(last_error) << "\"}";
+  return oss.str();
+}
+
+std::string DeviceManagerStatus::toJson() const {
+  std::ostringstream oss;
+  oss << "{"
+      << "\"identified_count\":" << identified_count << ","
+      << "\"unknown_count\":" << unknown_count << "}";
+  return oss.str();
+}
+
+std::string DeviceScannerStatus::toJson() const {
   std::ostringstream oss;
   oss << "{"
       << "\"is_scanning\":" << (is_scanning ? "true" : "false") << ","
@@ -398,7 +613,7 @@ std::string ScannerStatus::toJson() const {
   return oss.str();
 }
 
-std::string PollStatus::toJson() const {
+std::string PollManagerStatus::toJson() const {
   std::ostringstream oss;
   oss << "{"
       << "\"item_count\":" << item_count << "}";
@@ -406,29 +621,54 @@ std::string PollStatus::toJson() const {
 }
 
 std::string ServiceStatus::toJson() const {
+  return serializeServiceStatus(*this);
+}
+
+/**
+ * To implement the zero-allocation requirement, we would need to pass
+ * the actual BusMonitor to this function, as ServiceStatus no longer
+ * holds the history vectors.
+ */
+std::string serializeServiceStatus(const ServiceStatus& status,
+                                   detail::BusMonitor* monitor,
+                                   bool reset_histories) {
   std::ostringstream oss;
   oss << "{"
-      << "\"free_heap\":" << free_heap_bytes << ","
-      << "\"min_free_heap\":" << min_free_heap_bytes << ","
-      << "\"services\":[";
-  for (size_t i = 0; i < services.size(); ++i) {
-    if (i > 0) oss << ",";
-    const auto& e = services[i];
-    oss << "{"
-        << "\"name\":\"" << e.name << "\",";
-    if (e.last_update_timestamp_ms > 0) {
-      oss << "\"last_update_timestamp_ms\":" << e.last_update_timestamp_ms
-          << ",";
+      << "\"last_update_timestamp_ms\":" << status.last_update_timestamp_ms
+      << ",\"controller\":" << status.controller.toJson()
+      << ",\"bus\":" << status.bus.toJson()
+      << ",\"bus_handler\":" << status.bus_handler.toJson()
+      << ",\"scheduler\":" << status.scheduler.toJson()
+      << ",\"client_manager\":" << status.client_manager.toJson()
+      << ",\"device_manager\":" << status.device_manager.toJson()
+      << ",\"device_scanner\":" << status.device_scanner.toJson()
+      << ",\"poll_manager\":" << status.poll_manager.toJson();
+
+  if (monitor) {
+    oss << ",\"handler_history\":[";
+    bool first = true;
+    monitor->handler_history_.forEach([&](const HandlerTransition& t) {
+      if (!first) oss << ",";
+      oss << t.toJson();
+      first = false;
+    });
+    oss << "],\"request_history\":[";
+    first = true;
+    monitor->request_history_.forEach([&](const RequestTransition& t) {
+      if (!first) oss << ",";
+      oss << t.toJson();
+      first = false;
+    });
+    oss << "]";
+
+    if (reset_histories) {
+      monitor->handler_history_.clear();
+      monitor->request_history_.clear();
+      monitor->utilization_history_.clear();
     }
-    oss << "\"thread\":" << e.thread.toJson() << ","
-        << "\"queue_size\":" << e.queue_size << ","
-        << "\"queue_capacity\":" << e.queue_capacity << "}";
   }
-  oss << "],\"syn_generator_thread\":" << syn_generator_thread.toJson()
-      << ",\"controller_thread\":" << controller_thread.toJson()
-      << ",\"bus_thread\":" << bus_thread.toJson()
-      << ",\"scanner\":" << scanner.toJson() << ",\"poll\":" << poll.toJson()
-      << "}";
+
+  oss << "}";
   return oss.str();
 }
 

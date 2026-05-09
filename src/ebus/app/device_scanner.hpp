@@ -60,7 +60,7 @@ class DeviceScanner {
   // Returns the next command to send, or empty vector if idle
   Sequence nextCommand();
 
-  ScannerStatus getStatus() const;
+  DeviceScannerStatus getStatus() const;
 
  private:
   DeviceManager* device_manager_ = nullptr;

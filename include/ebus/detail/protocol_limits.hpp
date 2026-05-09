@@ -49,7 +49,11 @@ inline constexpr uint8_t lock_counter_max = 25;
 
 // --- Container Limits ---
 namespace SequenceLimits {
-inline constexpr size_t default_capacity = 64;
+/**
+ * Default capacity for Small Buffer Optimization (SBO).
+ * Set to 64 to accommodate byte-stuffing expansion of a 48-byte logical telegram.
+ */
+inline constexpr size_t default_capacity = 64; 
 inline constexpr uint8_t max_telegram_bytes = 48;
 inline constexpr uint8_t max_data_bytes = 16;
 }  // namespace SequenceLimits

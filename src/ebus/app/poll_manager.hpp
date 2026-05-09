@@ -12,6 +12,7 @@
 #include <ebus/callbacks.hpp>
 #include <ebus/metrics.hpp>
 #include <ebus/sequence.hpp>
+#include <ebus/status.hpp>
 #include <functional>
 #include <mutex>
 #include <set>
@@ -63,11 +64,12 @@ class PollManager {
 
   void clear();
 
-  PollStatus getStatus() const;
+  PollManagerStatus getStatus() const;
 
  private:
   mutable std::mutex mutex_;
   std::set<PollItem> items_;
+  uint8_t own_address_ = 0xff;
   uint32_t next_poll_id_;
 };
 

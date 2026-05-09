@@ -110,6 +110,13 @@ enum class ProtocolError {
  */
 enum class ClientType { read_only, regular, enhanced };
 
+enum class SessionState {
+  idle,      // Waiting for a client to have data
+  request,   // Bus request pending, waiting for our slot to send
+  response,  // Waiting for arbitration result from eBUS
+  transmit   // Arbitration won, sending telegram body
+};
+
 // --- String Conversion ---
 
 constexpr const char* toString(LogLevel level) noexcept {
@@ -316,6 +323,21 @@ constexpr const char* toString(ClientType type) noexcept {
   }
 }
 
+constexpr const char* toString(SessionState state) noexcept {
+  switch (state) {
+    case SessionState::idle:
+      return "idle";
+    case SessionState::request:
+      return "request";
+    case SessionState::response:
+      return "response";
+    case SessionState::transmit:
+      return "transmit";
+    default:
+      return "unknown state";
+  }
+}
+
 // --- Struct ---
 
 /**
@@ -326,9 +348,6 @@ struct HandlerTransition {
   HandlerState to;
   uint64_t timestamp;  // ms since epoch
 
-  /**
-   * @brief Serializes HandlerTransition to a JSON object string.
-   */
   std::string toJson() const;
 };
 
@@ -340,9 +359,6 @@ struct RequestTransition {
   RequestState to;
   uint64_t timestamp;  // ms since epoch
 
-  /**
-   * @brief Serializes RequestTransition to a JSON object string.
-   */
   std::string toJson() const;
 };
 
@@ -366,9 +382,6 @@ struct ErrorEntry {
   float utilization;
   uint64_t timestamp;  // ms since epoch
 
-  /**
-   * @brief Serializes ErrorEntry to a JSON object string.
-   */
   std::string toJson() const;
 
   // Custom stringifier for human-readable logs

@@ -131,7 +131,20 @@ platform::ServiceThread::Status ClientManager::getThreadStatus() const {
   if (worker_) {
     return worker_->status();
   }
-  return platform::ServiceThread::Status{-1, -1};
+  return platform::ServiceThread::Status{"ClientManager", -1, -1};
+}
+
+ClientManagerStatus ClientManager::getStatus() {
+  auto s = getThreadStatus();
+
+  std::lock_guard<std::mutex> lock(mutex_);
+  return {{s.name, static_cast<int32_t>(s.task_stack_bytes),
+           static_cast<int32_t>(s.task_stack_free_bytes)},
+          queueSize(),
+          queueCapacity(),
+          current_active_sender_ != nullptr,
+          toString(session_state_),
+          last_error_message_};
 }
 
 void ClientManager::run() {
@@ -166,6 +179,7 @@ void ClientManager::run() {
         current_active_sender_.reset();
         session_state_ = SessionState::idle;
         bus_requested_.store(false, std::memory_order_release);
+        last_error_message_ = "Client disconnected.";
         lock.unlock();
         old->stop();
         request_->reset();
@@ -212,6 +226,7 @@ void ClientManager::run() {
         stopActiveSession();
         if (monitor_)
           monitor_->updateRequest([](auto& m) { m.session_timeouts++; });
+        last_error_message_ = "Session timed out.";
       } else if (session_state_ == SessionState::request) {
         if (request_->busAvailable()) {
           // read first byte from client outside any manager lock
@@ -229,6 +244,7 @@ void ClientManager::run() {
               last_state_change = std::chrono::steady_clock::now();
             }
           } else {
+            last_error_message_ = "Client sent no data for bus request.";
             stopActiveSession();
           }
         }
@@ -319,6 +335,7 @@ void ClientManager::stopActiveSession() {
     current_active_sender_.reset();
     session_state_ = SessionState::idle;
     bus_requested_.store(false, std::memory_order_release);
+    last_error_message_ = "Session stopped by ClientManager.";
   }
   // do work outside lock
   if (old_sender) old_sender->stop();

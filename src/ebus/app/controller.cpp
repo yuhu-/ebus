@@ -18,10 +18,6 @@
 #include "core/bus_monitor.hpp"
 #include "core/handler.hpp"
 #include "core/request.hpp"
-#if defined(ESP_PLATFORM)
-#include <esp_heap_caps.h>
-#include <esp_system.h>
-#endif
 #include "platform/bus.hpp"
 #include "platform/service_thread.hpp"
 #include "utils/circular_buffer.hpp"
@@ -30,10 +26,12 @@
 namespace ebus {
 
 struct Impl {
-  detail::CircularBuffer<ebus::ErrorEntry> error_buffer_{
-      ebus::RuntimeConfig{}.diagnostics.log_size};
-  detail::CircularBuffer<ebus::BusEventContext> trace_buffer_{
-      detail::DiagnosticsLimits::trace_history_size};
+  detail::CircularBuffer<ebus::ErrorEntry,
+                         detail::DiagnosticsLimits::log_history_size>
+      error_buffer_;
+  detail::CircularBuffer<ebus::BusEventContext,
+                         detail::DiagnosticsLimits::trace_history_size>
+      trace_buffer_;
 
   ebus::ReactiveMasterSlaveCallback user_reactive_callback_;
   ebus::TelegramCallback user_telegram_callback_;
@@ -130,6 +128,8 @@ void Controller::setAddress(const uint8_t& address) {
   config_.runtime.address = address;
   if (isConfigured()) {
     impl_->handler_->setSourceAddress(address);
+    impl_->handler_->reset();
+    impl_->request_->reset();
     impl_->device_manager_->setOwnAddress(address);
     impl_->device_scanner_->setOwnAddress(address);
     impl_->poll_manager_->setOwnAddress(address);
@@ -179,18 +179,18 @@ void Controller::setWatchdogTimeout(uint32_t timeout_ms) {
 void Controller::setLogLevel(LogLevel level) {
   std::lock_guard<std::mutex> lock(config_mutex_);
   config_.runtime.diagnostics.level = level;
-  detail::Logger::setLevel(level);
+  detail::Logger::getInstance().setLevel(level);
 }
 
 void Controller::setLogSink(
     std::function<void(LogLevel, const std::string&)> sink) {
-  detail::Logger::setSink(std::move(sink));
+  detail::Logger::getInstance().setSink(std::move(sink));
 }
 
 void Controller::setErrorLogSize(size_t size) {
   std::lock_guard<std::mutex> lock(config_mutex_);
   config_.runtime.diagnostics.log_size = size;
-  if (isConfigured()) impl_->error_buffer_.set_capacity(size);
+  if (isConfigured()) impl_->error_buffer_.clear();  // Reset log on size change
 }
 
 void Controller::setSessionTimeout(uint32_t timeout_ms) {
@@ -395,13 +395,19 @@ std::vector<float> Controller::getUtilizationHistory() const {
 
 std::vector<BusEventContext> Controller::getTraceHistory() const {
   if (isConfigured()) {
-    return impl_->trace_buffer_.snapshot();
+    std::vector<BusEventContext> history;
+    impl_->trace_buffer_.forEach(
+        [&](const BusEventContext& ctx) { history.push_back(ctx); });
+    return history;
   }
   return {};
 }
 
 std::vector<ErrorEntry> Controller::getErrors() const {
-  return impl_->error_buffer_.snapshot();
+  std::vector<ErrorEntry> errors;
+  impl_->error_buffer_.forEach(
+      [&](const ErrorEntry& entry) { errors.push_back(entry); });
+  return errors;
 }
 
 size_t Controller::getErrorLogCapacity() const {
@@ -410,59 +416,40 @@ size_t Controller::getErrorLogCapacity() const {
 
 void Controller::clearErrors() { impl_->error_buffer_.clear(); }
 
+std::string Controller::getServiceStatusJson(bool reset_histories) const {
+  return serializeServiceStatus(getServiceStatus(), impl_->bus_monitor_.get(),
+                                reset_histories);
+}
+
 ServiceStatus Controller::getServiceStatus() const {
   ServiceStatus status;
 
-#if defined(ESP_PLATFORM)
-  status.free_heap_bytes = heap_caps_get_free_size(MALLOC_CAP_8BIT);
-  status.min_free_heap_bytes = heap_caps_get_minimum_free_size(MALLOC_CAP_8BIT);
-#endif
-
-  const uint64_t now_ms =
+  status.last_update_timestamp_ms =
       std::chrono::duration_cast<std::chrono::milliseconds>(
           std::chrono::system_clock::now().time_since_epoch())
           .count();
 
   auto mapThreadStatus =
       [](const detail::platform::ServiceThread::Status& s) -> ThreadStatus {
-    return {s.task_stack_bytes, s.task_stack_free_bytes};
+    return {s.name, s.task_stack_bytes, s.task_stack_free_bytes};
   };
 
   // Controller's own thread status
   if (impl_->worker_) {
-    status.controller_thread = mapThreadStatus(impl_->worker_->status());
+    status.controller.thread = mapThreadStatus(impl_->worker_->status());
   }
 
   if (isConfigured()) {
-    // Bus thread status (platform-specific)
-    status.bus_thread = mapThreadStatus(impl_->bus_->getThreadStatus());
-    // SYN Generator thread status (platform-specific)
-    status.syn_generator_thread =
-        mapThreadStatus(impl_->bus_->getSynThreadStatus());
-
-    status.services.push_back(
-        {"BusHandler", mapThreadStatus(impl_->bus_handler_->getThreadStatus()),
-         now_ms, impl_->bus_handler_->queueSize(),
-         impl_->bus_handler_->queueCapacity()});
-
-    status.services.push_back(
-        {"Scheduler", mapThreadStatus(impl_->scheduler_->getThreadStatus()),
-         now_ms, impl_->scheduler_->queueSize(),
-         impl_->scheduler_->queueCapacity()});
-
-    status.services.push_back(
-        {"ClientManager",
-         mapThreadStatus(impl_->client_manager_->getThreadStatus()), now_ms,
-         impl_->client_manager_->queueSize(),
-         impl_->client_manager_->queueCapacity()});
-
-    status.scanner = impl_->device_scanner_->getStatus();
-    status.poll = impl_->poll_manager_->getStatus();
+    status.bus = impl_->bus_->getStatus();
+    status.bus_handler = impl_->bus_handler_->getStatus();
+    status.scheduler = impl_->scheduler_->getStatus();
+    status.client_manager = impl_->client_manager_->getStatus();
+    status.device_manager = impl_->device_manager_->getStatus();
+    status.device_scanner = impl_->device_scanner_->getStatus();
+    status.poll_manager = impl_->poll_manager_->getStatus();
   }
 
-  if (detail::Logger::isEnabled(LogLevel::debug)) {
-    detail::Logger::debug("Service Status Update: " + status.toJson());
-  }
+  EBUS_LOG_DEBUG("Service Status Update: " + status.toJson());
 
   return status;
 }
@@ -473,7 +460,7 @@ void Controller::constructMembers() {
     impl_->bus_monitor_ = std::make_unique<detail::BusMonitor>();
   }
 
-  detail::Logger::setLevel(config_.runtime.diagnostics.level);
+  detail::Logger::getInstance().setLevel(config_.runtime.diagnostics.level);
 
   if (!impl_->request_) {
     impl_->request_ =
@@ -541,16 +528,14 @@ void Controller::constructMembers() {
     });
 
     impl_->scheduler_->setErrorCallback([this](const ErrorInfo& info) {
-      size_t current_log_size;
-      LogLevel current_log_level;
       ErrorCallback user_callback;
+      bool store_internal = false;
       {
         std::lock_guard<std::mutex> lock(config_mutex_);
-        current_log_size = config_.runtime.diagnostics.log_size;
-        current_log_level = config_.runtime.diagnostics.level;
         user_callback = impl_->user_error_callback_;
+        store_internal = config_.runtime.diagnostics.log_size > 0;
       }
-      if (current_log_size > 0) {
+      if (store_internal) {
         ErrorEntry entry;
         entry.session_id = info.session_id;
         entry.poll_id = info.poll_id;
@@ -569,7 +554,11 @@ void Controller::constructMembers() {
                 .count();
         impl_->error_buffer_.push_back(std::move(entry));
       }
-      if (user_callback && info.level <= current_log_level) {
+
+      // Use the thread-safe singleton to check enablement without re-locking
+      // config
+      if (user_callback &&
+          detail::Logger::getInstance().isEnabled(info.level)) {
         user_callback(info);
       }
     });

@@ -80,3 +80,20 @@ TEST_CASE("PollManager: Removal", "[app][pollmanager]") {
   pm.processDueItems([&](const PollItem&) { count++; }, &activity);
   REQUIRE(count == 0);
 }
+
+TEST_CASE("PollManager: Address Filtering", "[app][pollmanager]") {
+  PollManager pm;
+
+  // 1. Add items first while manager doesn't know its address yet
+  pm.addPollItem(1, ebus::ByteView({0x08, 0x07}), 1000); // External slave
+  pm.addPollItem(1, ebus::ByteView({0x36, 0x07}), 1000); // Our own slave
+
+  // 2. Set address. This must trigger the purge of the 0x36 item.
+  pm.setOwnAddress(0x31);
+
+  size_t count = 0;
+  bool activity = false;
+  pm.processDueItems([&](const PollItem&) { count++; }, &activity);
+  
+  REQUIRE(count == 1); // Only the external one should remain
+}

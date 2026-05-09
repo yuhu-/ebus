@@ -12,6 +12,7 @@ namespace ebus::detail {
 
 void PollManager::setOwnAddress(uint8_t address) {
   std::lock_guard<std::mutex> lock(mutex_);
+  own_address_ = address;
   const uint8_t own_slave = ebus::slaveOf(address);
 
   auto it = items_.begin();
@@ -28,6 +29,11 @@ uint32_t PollManager::addPollItem(uint8_t priority, ByteView message,
                                   uint32_t interval_ms,
                                   ResultCallback callback) {
   std::lock_guard<std::mutex> lock(mutex_);
+
+  // Proactively prevent self-polling
+  if (!message.empty() && message[0] == ebus::slaveOf(own_address_)) {
+    return 0;
+  }
 
   if (items_.size() >= PollLimits::max_items) {
     return 0;
@@ -77,9 +83,9 @@ void PollManager::clear() {
   items_.clear();
 }
 
-PollStatus PollManager::getStatus() const {
+PollManagerStatus PollManager::getStatus() const {
   std::lock_guard<std::mutex> lock(mutex_);
-  PollStatus s;
+  PollManagerStatus s;
   s.item_count = items_.size();
   return s;
 }

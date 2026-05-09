@@ -231,9 +231,9 @@ ebus::Sequence DeviceScanner::nextCommand() {
   return {};
 }
 
-ScannerStatus DeviceScanner::getStatus() const {
+DeviceScannerStatus DeviceScanner::getStatus() const {
   std::lock_guard<std::mutex> lock(mutex_);
-  ScannerStatus s;
+  DeviceScannerStatus s;
   s.is_scanning = full_scan_ || scan_on_startup_ || !manual_queue_.empty() ||
                   !startup_queue_.empty();
   s.full_scan_active = full_scan_;

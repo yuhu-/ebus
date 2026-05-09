@@ -9,6 +9,8 @@
 #include <chrono>
 #include <condition_variable>
 #include <cstdint>
+#include <ebus/metrics.hpp>
+#include <ebus/status.hpp>
 #include <memory>
 #include <mutex>
 #include <vector>
@@ -55,6 +57,8 @@ class ClientManager {
 
   platform::ServiceThread::Status getThreadStatus() const;
 
+  ClientManagerStatus getStatus();
+
  private:
   platform::Bus* bus_;
   BusHandler* bus_handler_;
@@ -63,13 +67,6 @@ class ClientManager {
 
   platform::Queue<BusEventContext> bus_byte_queue_;
   std::atomic<bool> running_{false};
-
-  enum class SessionState {
-    idle,      // Waiting for a client to have data
-    request,   // Bus request pending, waiting for our slot to send
-    response,  // Waiting for arbitration result from eBUS
-    transmit   // Arbitration won, sending telegram body
-  };
 
   SessionState session_state_ = SessionState::idle;
 
@@ -88,6 +85,7 @@ class ClientManager {
   std::atomic<bool> bus_requested_{false};
   uint8_t last_sent_byte_ = 0;
 
+  std::string last_error_message_;
   // Wake primitives to reduce busy-waiting
   std::mutex wake_mutex_;
   std::condition_variable wake_cv_;

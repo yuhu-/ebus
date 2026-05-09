@@ -17,8 +17,7 @@ uint64_t getNowMs() {
 }
 }  // namespace
 
-BusMonitor::BusMonitor()
-    : utilization_history_(DiagnosticsLimits::log_history_size) {}
+BusMonitor::BusMonitor() = default;
 
 void BusMonitor::resetMetrics() {
   std::lock_guard<std::mutex> lock(metrics_mutex);
@@ -113,7 +112,9 @@ ebus::metrics::SystemMetrics BusMonitor::getMetrics() const {
   }
 
   // Diagnostic History
-  hm.transition_history = handler_history_.snapshot();
+  hm.transition_history.clear();
+  handler_history_.forEach(
+      [&](const HandlerTransition& t) { hm.transition_history.push_back(t); });
 
   // 2. Populate Request Part
   metrics::RequestMetrics& rm = sm.request;
@@ -134,7 +135,9 @@ ebus::metrics::SystemMetrics BusMonitor::getMetrics() const {
   }
 
   // Diagnostic History
-  rm.transition_history = request_history_.snapshot();
+  rm.transition_history.clear();
+  request_history_.forEach(
+      [&](const RequestTransition& t) { rm.transition_history.push_back(t); });
 
   // 3. Populate Bus Part
   metrics::BusMetrics& bm = sm.bus;
@@ -209,7 +212,9 @@ void BusMonitor::updateUtilizationHistory() {
 
 std::vector<float> BusMonitor::getUtilizationHistory() const {
   std::lock_guard<std::mutex> lock(metrics_mutex);
-  return utilization_history_.snapshot();
+  std::vector<float> history;
+  utilization_history_.forEach([&](float val) { history.push_back(val); });
+  return history;
 }
 
 void BusMonitor::logHandlerTransition(HandlerState from, HandlerState to) {

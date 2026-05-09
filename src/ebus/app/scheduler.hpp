@@ -10,8 +10,10 @@
 #include <condition_variable>
 #include <ebus/config.hpp>
 #include <ebus/detail/protocol_limits.hpp>
+#include <ebus/metrics.hpp>
 #include <ebus/sequence.hpp>
 #include <functional>
+#include <memory>
 #include <mutex>
 #include <queue>
 #include <string>
@@ -77,6 +79,8 @@ class Scheduler {
   size_t queueCapacity() const;
 
   platform::ServiceThread::Status getThreadStatus() const;
+
+  SchedulerStatus getStatus();
 
  private:
   struct Compare {

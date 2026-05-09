@@ -113,4 +113,14 @@ std::vector<ebus::Sequence> DeviceManager::createScanCommands(
   return result;
 }
 
+DeviceManagerStatus DeviceManager::getStatus() const {
+  std::lock_guard<std::mutex> lock(mutex_);
+  DeviceManagerStatus s;
+  s.identified_count = identified_devices_.count();
+  if (monitor_) {
+    s.unknown_count = monitor_->getMetrics().devices.unknown_devices;
+  }
+  return s;
+}
+
 }  // namespace ebus::detail

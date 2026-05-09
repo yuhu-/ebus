@@ -121,7 +121,14 @@ platform::ServiceThread::Status Scheduler::getThreadStatus() const {
   if (worker_) {
     return worker_->status();
   }
-  return platform::ServiceThread::Status{-1, -1};
+  return platform::ServiceThread::Status{"Scheduler", -1, -1};
+}
+
+SchedulerStatus Scheduler::getStatus() {
+  auto s = getThreadStatus();
+  return {{s.name, s.task_stack_bytes, s.task_stack_free_bytes},
+          queueSize(),
+          queueCapacity()};
 }
 
 bool Scheduler::pushItem(Item&& it) {

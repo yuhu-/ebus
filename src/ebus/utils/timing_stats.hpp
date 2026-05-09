@@ -101,15 +101,15 @@ class TimingStats : public RollingStats {
  public:
   TimingStats() : RollingStats(), marked_(false), begin_time_() {}
 
-  inline void markBegin(const std::chrono::steady_clock::time_point& begin =
-                            std::chrono::steady_clock::now()) {
+  inline void markBegin(const Clock::time_point& begin =
+                            Clock::now()) {
     std::unique_lock<std::mutex> lock(mutex_);
     begin_time_ = begin;
     marked_ = true;
   }
 
-  inline void markEnd(const std::chrono::steady_clock::time_point& end =
-                          std::chrono::steady_clock::now()) {
+  inline void markEnd(const Clock::time_point& end =
+                          Clock::now()) {
     std::lock_guard<std::mutex> lock(mutex_);
     if (marked_) {
       auto duration = std::chrono::duration_cast<std::chrono::microseconds>(

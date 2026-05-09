@@ -42,6 +42,7 @@ add_catch2_test_executable(catch_device_manager app/catch_device_manager.cpp)
 add_catch2_test_executable(catch_device_scanner app/catch_device_scanner.cpp)
 add_catch2_test_executable(catch_poll_manager app/catch_poll_manager.cpp)
 add_catch2_test_executable(catch_controller app/catch_controller.cpp)
+add_catch2_test_executable(catch_config_validator app/catch_config_validator.cpp)
 
 # Core Protocol Logic
 add_catch2_test_executable(catch_sequence core/catch_sequence.cpp)
@@ -64,3 +65,5 @@ add_catch2_test_executable(catch_service_thread platform/catch_service_thread.cp
 add_catch2_test_executable(catch_timing_stats utils/catch_timing_stats.cpp)
 add_catch2_test_executable(catch_utils utils/catch_utils.cpp)
 add_catch2_test_executable(catch_json_utils utils/catch_json_utils.cpp)
+add_catch2_test_executable(catch_logger utils/catch_logger.cpp)
+add_catch2_test_executable(catch_circular_buffer utils/catch_circular_buffer.cpp)

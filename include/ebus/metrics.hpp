@@ -170,9 +170,6 @@ struct HandlerMetrics {
     transition_history.clear();
   }
 
-  /**
-   * @brief Serializes HandlerMetrics to a JSON object string.
-   */
   std::string toJson() const;
 };
 
@@ -239,9 +236,6 @@ struct RequestMetrics {
     transition_history.clear();
   }
 
-  /**
-   * @brief Serializes RequestMetrics to a JSON object string.
-   */
   std::string toJson() const;
 };
 
@@ -285,9 +279,6 @@ struct BusMetrics {
     syn_postpone = {};
   }
 
-  /**
-   * @brief Serializes BusMetrics to a JSON object string.
-   */
   std::string toJson() const;
 };
 
@@ -306,9 +297,6 @@ struct DeviceMetrics {
     slaves.fill(0);
   }
 
-  /**
-   * @brief Serializes DeviceMetrics to a JSON object string.
-   */
   std::string toJson() const;
 };
 
@@ -328,9 +316,6 @@ struct SystemMetrics {
   // reliability.
   float quality = 0.0f;
 
-  /**
-   * @brief Serializes the entire SystemMetrics tree to a JSON object string.
-   */
   std::string toJson() const;
 };
 
@@ -340,74 +325,5 @@ struct SystemMetrics {
  * Top-level alias for the aggregate metrics.
  */
 using Metrics = metrics::SystemMetrics;
-
-/**
- * Snapshot of a service thread's health.
- */
-struct ThreadStatus {
-  ssize_t task_stack_bytes = -1;
-  ssize_t task_stack_free_bytes = -1;
-
-  /**
-   * @brief Serializes ThreadStatus to a JSON object string.
-   */
-  std::string toJson() const;
-};
-
-/**
- * Snapshot of the device scanner's current state.
- */
-struct ScannerStatus {
-  bool is_scanning = false;
-  bool full_scan_active = false;
-  uint16_t full_scan_address = 0;
-  bool scan_on_startup_enabled = false;
-  uint8_t startup_scan_count = 0;
-  size_t manual_queue_size = 0;
-  size_t startup_queue_size = 0;
-
-  /**
-   * @brief Serializes ScannerStatus to a JSON object string.
-   */
-  std::string toJson() const;
-};
-
-/**
- * Snapshot of the poll manager's current state.
- */
-struct PollStatus {
-  size_t item_count = 0;
-
-  /**
-   * @brief Serializes PollStatus to a JSON object string.
-   */
-  std::string toJson() const;
-};
-
-/**
- * Aggregated health and operational status of all internal services.
- */
-struct ServiceStatus {
-  ssize_t free_heap_bytes = -1;
-  ssize_t min_free_heap_bytes = -1;
-  struct Entry {
-    std::string name;
-    ThreadStatus thread;
-    uint64_t last_update_timestamp_ms = 0;
-    size_t queue_size = 0;
-    size_t queue_capacity = 0;
-  };
-  std::vector<Entry> services;
-  ThreadStatus syn_generator_thread;
-  ThreadStatus controller_thread;
-  ThreadStatus bus_thread;
-  ScannerStatus scanner;
-  PollStatus poll;
-
-  /**
-   * @brief Serializes ServiceStatus to a JSON object string.
-   */
-  std::string toJson() const;
-};
 
 }  // namespace ebus

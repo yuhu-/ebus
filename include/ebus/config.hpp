@@ -55,15 +55,26 @@ struct RuntimeConfig {
     uint32_t total_timeout_ms = 2000;
   } scheduler;
 
-  /**
-   * Resets all fields to their default hardcoded values.
-   */
   void reset() { *this = RuntimeConfig{}; }
 
-  /**
-   * @brief Serializes RuntimeConfig to a JSON string.
-   */
   std::string toJson() const;
+
+  /**
+   * @brief Deserializes a JSON string into a RuntimeConfig object.
+   * @param json The JSON string to parse.
+   * @return A populated RuntimeConfig object. Defaults are used for missing
+   * keys.
+   */
+  static RuntimeConfig fromJson(const std::string& json);
+
+  /**
+   * @brief Performs a basic structural validation of a JSON string.
+   * Checks for non-empty string, starts/ends with braces, and balanced
+   * braces/brackets.
+   * @param json The JSON string to validate.
+   * @return true if the string appears to be valid JSON, false otherwise.
+   */
+  static bool isValidJson(const std::string& json);
 };
 
 /**
@@ -80,9 +91,7 @@ struct BusConfig {
   std::string device = "/dev/null";
   bool simulate = false;
 #endif
-  /**
-   * @brief Serializes BusConfig to a JSON string.
-   */
+
   std::string toJson() const;
 };
 
@@ -93,9 +102,6 @@ struct EbusConfig {
   RuntimeConfig runtime = {};
   BusConfig bus = {};
 
-  /**
-   * @brief Serializes the full EbusConfig to a JSON string.
-   */
   std::string toJson() const;
 };
 

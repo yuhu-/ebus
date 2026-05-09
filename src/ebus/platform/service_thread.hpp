@@ -72,21 +72,23 @@ class ServiceThread {
 
   struct Status {
     // -1 if not available
-    ssize_t task_stack_bytes;       // configured stack size in bytes
-    ssize_t task_stack_free_bytes;  // free stack (high-water) in bytes
+    std::string name;
+    int32_t task_stack_bytes;       // configured stack size in bytes
+    int32_t task_stack_free_bytes;  // free stack (high-water) in bytes
   };
 
   inline Status status() const {
     Status s;
+    s.name = name_;
 #if defined(ESP_PLATFORM)
     // configured stack bytes
     s.task_stack_bytes =
-        static_cast<ssize_t>(stack_size_ * sizeof(StackType_t));
+        static_cast<int32_t>(stack_size_ * sizeof(StackType_t));
     // if task handle exists, get high water mark (words) -> bytes
     if (handle_) {
       UBaseType_t words_free = uxTaskGetStackHighWaterMark(handle_);
       s.task_stack_free_bytes =
-          static_cast<ssize_t>(words_free * sizeof(StackType_t));
+          static_cast<int32_t>(words_free * sizeof(StackType_t));
     } else {
       // task not created yet; report full configured stack as free
       s.task_stack_free_bytes = s.task_stack_bytes;

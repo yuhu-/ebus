@@ -144,8 +144,8 @@ int main() {
   auto metrics = deviceB.getMetrics();
   std::cout << "[Device B] Metrics: " << metrics.toJson() << std::endl;
 
-  auto status = deviceB.getServiceStatus();
-  std::cout << "[Device B] Status: " << status.toJson() << std::endl;
+  auto status = deviceB.getServiceStatusJson();
+  std::cout << "[Device B] Status: " << status << std::endl;
 
   // --- 9. Stop the simulation ---
   std::cout << "Stopping simulation on virtual bus..." << std::endl;
