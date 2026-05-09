@@ -117,6 +117,25 @@ struct PollManagerStatus {
 };
 
 /**
+ * Minimal snapshot of system resources (stacks and queues).
+ */
+struct SystemResources {
+  uint64_t timestamp_ms = 0;
+  std::vector<ThreadStatus> threads;
+
+  struct QueueInfo {
+    std::string name;
+    size_t size = 0;
+    size_t capacity = 0;
+
+    std::string toJson() const;
+  };
+  std::vector<QueueInfo> queues;
+
+  std::string toJson() const;
+};
+
+/**
  * Aggregated health and operational status of all internal services.
  */
 struct ServiceStatus {

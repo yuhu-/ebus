@@ -124,7 +124,7 @@ class Scheduler {
   Handler* handler_ = nullptr;
 
   // Queue management
-  std::vector<Item> item_queue_;
+  std::vector<Item> scheduled_items_;
   std::mutex data_mutex_;
   std::condition_variable data_ready_cv_;
 

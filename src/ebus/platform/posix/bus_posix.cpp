@@ -64,7 +64,7 @@ void BusPosix::start() {
 
   running_.store(true);
   worker_ = std::make_unique<ServiceThread>(
-      "ebusBusReader", [this] { readerThread(); },
+      "ebus_bus", [this] { readerThread(); },
       detail::OrchestrationLimits::stack_size_low,
       detail::OrchestrationLimits::priority_high);
   worker_->start();
@@ -85,7 +85,7 @@ void BusPosix::start() {
     syn_active_ = false;
     syn_running_.store(true);
     syn_worker_ = std::make_unique<ServiceThread>(
-        "ebusSynGen", [this] { synThread(); },
+        "ebus_bus_syn", [this] { synThread(); },
         detail::OrchestrationLimits::stack_size_low,
         detail::OrchestrationLimits::priority_med);
     syn_worker_->start();
@@ -225,7 +225,7 @@ void BusPosix::setRuntimeConfig(const RuntimeConfig& runtime) {
   if (should_start) {
     if (syn_worker_) syn_worker_->join();  // Join existing thread if any
     syn_worker_ = std::make_unique<ServiceThread>(  // Create new ServiceThread
-        "ebusSynGen", [this] { synThread(); },
+        "ebus_bus_syn", [this] { synThread(); },
         detail::OrchestrationLimits::stack_size_low,
         detail::OrchestrationLimits::priority_med);
     syn_worker_->start();  // Start the new ServiceThread
@@ -254,14 +254,14 @@ ServiceThread::Status BusPosix::getThreadStatus() const {
   if (worker_) {
     return worker_->status();
   }
-  return ServiceThread::Status{"BusPosix::readerThread", -1, -1};
+  return ServiceThread::Status{"ebus_bus", -1, -1};
 }
 
 ServiceThread::Status BusPosix::getSynThreadStatus() const {
   if (syn_worker_) {
     return syn_worker_->status();
   }
-  return ServiceThread::Status{"BusPosix::synThread", -1, -1};
+  return ServiceThread::Status{"ebus_bus_syn", -1, -1};
 }
 
 ebus::BusStatus BusPosix::getStatus() const {

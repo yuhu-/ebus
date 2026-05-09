@@ -66,7 +66,7 @@ void BusEsp::start() {
 
   running_.store(true, std::memory_order_release);
   worker_ = std::make_unique<ServiceThread>(
-      "ebusUartEventRunner", [this] { ebusUartEventRunner(); },
+      "ebus_bus", [this] { ebusUartEventRunner(); },
       OrchestrationLimits::stack_size_low, OrchestrationLimits::priority_high);
   worker_->start();
 }
@@ -211,11 +211,11 @@ ServiceThread::Status BusEsp::getThreadStatus() const {
   if (worker_) {
     return worker_->status();
   }
-  return ServiceThread::Status{"BusEsp::readerThread", -1, -1};
+  return ServiceThread::Status{"ebus_bus", -1, -1};
 }
 
 ServiceThread::Status BusEsp::getSynThreadStatus() const {
-  return ServiceThread::Status{"HardwareTimer (GPTimer)", -1, -1};
+  return ServiceThread::Status{"ebus_bus_syn", -1, -1};
 }
 
 ebus::BusStatus BusEsp::getStatus() const {

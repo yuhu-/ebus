@@ -644,6 +644,33 @@ std::string PollManagerStatus::toJson() const {
   return oss.str();
 }
 
+std::string SystemResources::QueueInfo::toJson() const {
+  std::ostringstream oss;
+  oss << "{"
+      << "\"name\":\"" << escapeJson(name) << "\","
+      << "\"size\":" << size << ","
+      << "\"capacity\":" << capacity << "}";
+  return oss.str();
+}
+
+std::string SystemResources::toJson() const {
+  std::ostringstream oss;
+  oss << "{"
+      << "\"timestamp_ms\":" << timestamp_ms << ","
+      << "\"threads\":[";
+  for (size_t i = 0; i < threads.size(); ++i) {
+    if (i > 0) oss << ",";
+    oss << threads[i].toJson();
+  }
+  oss << "],\"queues\":[";
+  for (size_t i = 0; i < queues.size(); ++i) {
+    if (i > 0) oss << ",";
+    oss << queues[i].toJson();
+  }
+  oss << "]}";
+  return oss.str();
+}
+
 std::string ServiceStatus::toJson() const {
   return serializeServiceStatus(*this);
 }

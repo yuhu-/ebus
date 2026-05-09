@@ -349,6 +349,12 @@ class Controller {
   void clearErrors();
 
   /**
+   * @brief Returns a minimal JSON string containing only thread stacks and
+   * queue sizes.
+   */
+  std::string getSystemResourcesJson() const;
+
+  /**
    * @brief Returns the service status as a JSON string.
    * @param reset_histories If true, resets history buffers after serialization.
    */

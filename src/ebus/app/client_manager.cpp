@@ -58,7 +58,7 @@ void ClientManager::start() {
   if (running_.load(std::memory_order_acquire)) return;
   running_.store(true, std::memory_order_release);
   worker_ = std::make_unique<platform::ServiceThread>(
-      "ebusClientManager", [this] { run(); },
+      "ebus_client_manager", [this] { run(); },
       OrchestrationLimits::stack_size_low, OrchestrationLimits::priority_med);
   worker_->start();
   notifyWake();
@@ -131,7 +131,7 @@ platform::ServiceThread::Status ClientManager::getThreadStatus() const {
   if (worker_) {
     return worker_->status();
   }
-  return platform::ServiceThread::Status{"ClientManager", -1, -1};
+  return platform::ServiceThread::Status{"ebus_client_manager", -1, -1};
 }
 
 ClientManagerStatus ClientManager::getStatus() {

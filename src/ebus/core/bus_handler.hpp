@@ -49,7 +49,7 @@ class BusHandler {
     if (running_) return;
     running_ = true;
     worker_ = std::make_unique<platform::ServiceThread>(
-        "ebusBusQueueRunner", [this] { this->run(); },
+        "ebus_bus_handler", [this] { this->run(); },
         OrchestrationLimits::stack_size_low,
         OrchestrationLimits::priority_high);
     worker_->start();
@@ -91,7 +91,7 @@ class BusHandler {
     if (worker_) {
       return worker_->status();
     }
-    return platform::ServiceThread::Status{"BusHandler", -1, -1};
+    return platform::ServiceThread::Status{"ebus_bus_handler", -1, -1};
   }
 
   BusHandlerStatus getStatus() {

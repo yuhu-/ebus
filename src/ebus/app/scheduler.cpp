@@ -14,7 +14,7 @@ namespace ebus::detail {
 Scheduler::Scheduler(Handler* handler)
     : handler_(handler), stop_flag_(true), next_session_id_(1) {
   // Reserve space for typical traffic bursts
-  item_queue_.reserve(SchedulerLimits::queue_reserve);
+  scheduled_items_.reserve(SchedulerLimits::queue_reserve);
   attachHandlerCallbacks();
 }
 
@@ -24,8 +24,8 @@ void Scheduler::start() {
   bool expected = true;
   if (stop_flag_.compare_exchange_strong(expected, false)) {
     worker_ = std::make_unique<platform::ServiceThread>(
-        "ebusScheduler", [this] { run(); }, OrchestrationLimits::stack_size_low,
-        OrchestrationLimits::priority_med);
+        "ebus_scheduler", [this] { run(); },
+        OrchestrationLimits::stack_size_low, OrchestrationLimits::priority_med);
     worker_->start();
   }
 }
@@ -106,13 +106,13 @@ void Scheduler::setErrorCallback(ErrorCallback callback) {
 
 void Scheduler::clear() {
   std::lock_guard<std::mutex> lock(data_mutex_);
-  item_queue_.clear();
-  std::make_heap(item_queue_.begin(), item_queue_.end(), Compare());
+  scheduled_items_.clear();
+  std::make_heap(scheduled_items_.begin(), scheduled_items_.end(), Compare());
 }
 
 size_t Scheduler::queueSize() {
   std::lock_guard<std::mutex> lock(data_mutex_);
-  return item_queue_.size();
+  return scheduled_items_.size();
 }
 
 size_t Scheduler::queueCapacity() const { return SchedulerLimits::max_items; }
@@ -121,7 +121,7 @@ platform::ServiceThread::Status Scheduler::getThreadStatus() const {
   if (worker_) {
     return worker_->status();
   }
-  return platform::ServiceThread::Status{"Scheduler", -1, -1};
+  return platform::ServiceThread::Status{"ebus_scheduler", -1, -1};
 }
 
 SchedulerStatus Scheduler::getStatus() {
@@ -133,11 +133,11 @@ SchedulerStatus Scheduler::getStatus() {
 
 bool Scheduler::pushItem(Item&& it) {
   std::lock_guard<std::mutex> lock(data_mutex_);
-  if (item_queue_.size() >= SchedulerLimits::max_items) {
+  if (scheduled_items_.size() >= SchedulerLimits::max_items) {
     return false;  // Queue is full
   }
-  item_queue_.push_back(std::move(it));
-  std::push_heap(item_queue_.begin(), item_queue_.end(), Compare());
+  scheduled_items_.push_back(std::move(it));
+  std::push_heap(scheduled_items_.begin(), scheduled_items_.end(), Compare());
   data_ready_cv_.notify_one();
   return true;  // Successfully pushed
 }
@@ -148,31 +148,32 @@ void Scheduler::run() {
   // Main loop: wait for next due item, attempt to send, and handle retries if
   // needed
   while (!stop_flag_.load()) {
-    if (item_queue_.empty()) {
-      data_ready_cv_.wait(
-          lock, [this] { return stop_flag_.load() || !item_queue_.empty(); });
+    if (scheduled_items_.empty()) {
+      data_ready_cv_.wait(lock, [this] {
+        return stop_flag_.load() || !scheduled_items_.empty();
+      });
       if (stop_flag_.load()) break;
     }
 
     // copy next due while holding lock
-    auto next_due = item_queue_.front().due;
-    auto next_session_id = item_queue_.front().session_id;
+    auto next_due = scheduled_items_.front().due;
+    auto next_session_id = scheduled_items_.front().session_id;
 
     data_ready_cv_.wait_until(
         lock, next_due, [this, next_due, next_session_id] {
-          return stop_flag_.load() || item_queue_.empty() ||
-                 item_queue_.front().due <= Clock::now() ||
-                 item_queue_.front().due < next_due ||
-                 item_queue_.front().session_id != next_session_id;
+          return stop_flag_.load() || scheduled_items_.empty() ||
+                 scheduled_items_.front().due <= Clock::now() ||
+                 scheduled_items_.front().due < next_due ||
+                 scheduled_items_.front().session_id != next_session_id;
         });
 
     if (stop_flag_.load()) break;
-    if (item_queue_.empty()) continue;
-    if (item_queue_.front().due > Clock::now()) continue;
+    if (scheduled_items_.empty()) continue;
+    if (scheduled_items_.front().due > Clock::now()) continue;
 
-    std::pop_heap(item_queue_.begin(), item_queue_.end(), Compare());
-    Item current_item = std::move(item_queue_.back());
-    item_queue_.pop_back();
+    std::pop_heap(scheduled_items_.begin(), scheduled_items_.end(), Compare());
+    Item current_item = std::move(scheduled_items_.back());
+    scheduled_items_.pop_back();
 
     lock.unlock();
 
@@ -276,8 +277,9 @@ void Scheduler::run() {
         current_item.due =
             Clock::now() + backoffDuration(current_item.send_attempts);
         lock.lock();
-        item_queue_.push_back(std::move(current_item));
-        std::push_heap(item_queue_.begin(), item_queue_.end(), Compare());
+        scheduled_items_.push_back(std::move(current_item));
+        std::push_heap(scheduled_items_.begin(), scheduled_items_.end(),
+                       Compare());
         data_ready_cv_.notify_one();
       } else {
         if (error_cb) {

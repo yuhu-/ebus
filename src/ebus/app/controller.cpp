@@ -76,7 +76,7 @@ bool Controller::start() {
   if (config_.runtime.system_inquiry) triggerInquiryOfExistence();
 
   impl_->worker_ = std::make_unique<detail::platform::ServiceThread>(
-      "ebusController", [this] { run(); },
+      "ebus_controller", [this] { run(); },
       detail::OrchestrationLimits::stack_size_high,
       detail::OrchestrationLimits::priority_low);
   impl_->worker_->start();
@@ -415,6 +415,51 @@ size_t Controller::getErrorLogCapacity() const {
 }
 
 void Controller::clearErrors() { impl_->error_buffer_.clear(); }
+
+std::string Controller::getSystemResourcesJson() const {
+  SystemResources res;
+  res.timestamp_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                         std::chrono::system_clock::now().time_since_epoch())
+                         .count();
+
+  auto mapThreadStatus =
+      [](const detail::platform::ServiceThread::Status& s) -> ThreadStatus {
+    return {s.name, s.task_stack_bytes, s.task_stack_free_bytes};
+  };
+
+  if (impl_->worker_) {
+    res.threads.push_back(mapThreadStatus(impl_->worker_->status()));
+  }
+
+  if (isConfigured()) {
+    // Bus threads
+    auto b_stat = impl_->bus_->getStatus();
+    res.threads.push_back(b_stat.bus_thread);
+    if (!b_stat.syn_thread.name.empty()) {
+      res.threads.push_back(b_stat.syn_thread);
+    }
+
+    // Bus Handler
+    auto bh_stat = impl_->bus_handler_->getStatus();
+    res.threads.push_back(bh_stat.thread);
+    res.queues.push_back(
+        {"bus_handler", bh_stat.queue_size, bh_stat.queue_capacity});
+
+    // Scheduler
+    auto s_stat = impl_->scheduler_->getStatus();
+    res.threads.push_back(s_stat.thread);
+    res.queues.push_back(
+        {"scheduler", s_stat.queue_size, s_stat.queue_capacity});
+
+    // Client Manager
+    auto c_stat = impl_->client_manager_->getStatus();
+    res.threads.push_back(c_stat.thread);
+    res.queues.push_back(
+        {"client_manager", c_stat.queue_size, c_stat.queue_capacity});
+  }
+
+  return res.toJson();
+}
 
 std::string Controller::getServiceStatusJson(bool reset_histories) const {
   return serializeServiceStatus(getServiceStatus(), impl_->bus_monitor_.get(),
