@@ -125,7 +125,8 @@ class Controller {
   /**
    * @brief Sets a callback for internal library log messages.
    */
-  void setLogSink(std::function<void(LogLevel, const std::string&)> sink);
+  static void setLogSink(
+      std::function<void(LogLevel, const std::string&)> sink);
 
   /**
    * @brief Sets the maximum number of errors to keep in the diagnostic log.

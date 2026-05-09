@@ -41,12 +41,12 @@ BusEsp::BusEsp(const BusConfig& config, const RuntimeConfig& runtime,
       byte_queue_(std::make_unique<Queue<BusEvent>>(BusLimits::queue_size)) {
 
   // Initialize postponement timer
-  const esp_timer_create_args_t postpone_args = {
-      .callback = &BusEsp::s_onSynPostpone,
-      .arg = this,
-      .dispatch_method = ESP_TIMER_TASK,
-      .name = "ebusSynPostpone",
-      .skip_unhandled_events = true};
+  esp_timer_create_args_t postpone_args = {};
+  postpone_args.callback = &BusEsp::s_onSynPostpone;
+  postpone_args.arg = this;
+  postpone_args.dispatch_method = ESP_TIMER_TASK;
+  postpone_args.name = "ebusSynPostpone";
+  postpone_args.skip_unhandled_events = true;
   ESP_ERROR_CHECK(esp_timer_create(&postpone_args, &syn_postpone_timer_));
 
   configureUart();
@@ -166,10 +166,10 @@ void BusEsp::setRuntimeConfig(const RuntimeConfig& runtime) {
   portEXIT_CRITICAL(&timer_mux_);
 
   if (runtime_.bus.syn_gen) {
-    gptimer_alarm_config_t alarm_config = {
-        .alarm_count = syn_unique_us_,  // Start with unique rate
-        .reload_count = 0,
-        .flags = {.auto_reload_on_alarm = true}};
+    gptimer_alarm_config_t alarm_config = {};
+    alarm_config.alarm_count = syn_unique_us_;
+    alarm_config.reload_count = 0;
+    alarm_config.flags.auto_reload_on_alarm = true;
 
     if (!was_enabled) {
       syn_running_.store(true);
@@ -236,30 +236,26 @@ void BusEsp::recordUtilization(uint8_t byte) {
 }
 
 void BusEsp::configureUart() {
-  uart_config_t uart_config = {
-      .baud_rate = Physical::baud_rate,
-      .data_bits = UART_DATA_8_BITS,
-      .parity = UART_PARITY_DISABLE,
-      .stop_bits = UART_STOP_BITS_1,
-      .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
+  uart_config_t uart_config = {};
+  uart_config.baud_rate = Physical::baud_rate;
+  uart_config.data_bits = UART_DATA_8_BITS;
+  uart_config.parity = UART_PARITY_DISABLE;
+  uart_config.stop_bits = UART_STOP_BITS_1;
+  uart_config.flow_ctrl = UART_HW_FLOWCTRL_DISABLE;
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(3, 0, 0)
-      .rx_flow_ctrl_thresh = 0,
+  uart_config.rx_flow_ctrl_thresh = 0;
 #endif
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 0, 0)
 #ifdef UART_SCLK_DEFAULT
-      .source_clk = UART_SCLK_DEFAULT,
+  uart_config.source_clk = UART_SCLK_DEFAULT;
 #else
-      .source_clk = UART_SCLK_APB,
+  uart_config.source_clk = UART_SCLK_APB;
 #endif
 #endif
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
-      .flags =
-          {
-              .allow_pd = false,
-              .backup_before_sleep = false,
-          },
+  uart_config.flags.allow_pd = false;
+  uart_config.flags.backup_before_sleep = false;
 #endif
-  };
 
   // Setup UART configuration
   uart_param_config(uart_port_num_, &uart_config);
@@ -274,13 +270,12 @@ void BusEsp::configureUart() {
 }
 
 void BusEsp::configureGpio() {
-  gpio_config_t gpio_conf = {
-      .pin_bit_mask = (1ULL << rx_pin_),
-      .mode = GPIO_MODE_INPUT,
-      .pull_up_en = GPIO_PULLUP_ENABLE,
-      .pull_down_en = GPIO_PULLDOWN_DISABLE,
-      .intr_type = GPIO_INTR_NEGEDGE,
-  };
+  gpio_config_t gpio_conf = {};
+  gpio_conf.pin_bit_mask = (1ULL << rx_pin_);
+  gpio_conf.mode = GPIO_MODE_INPUT;
+  gpio_conf.pull_up_en = GPIO_PULLUP_ENABLE;
+  gpio_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;
+  gpio_conf.intr_type = GPIO_INTR_NEGEDGE;
 
   gpio_config(&gpio_conf);
 
@@ -294,60 +289,55 @@ void BusEsp::configureGpio() {
 
 void BusEsp::configureTimer() {
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
-  gptimer_config_t gpt_config_arb = {
-      .clk_src = GPTIMER_CLK_SRC_DEFAULT,
-      .direction = GPTIMER_COUNT_UP,
-      .resolution_hz = 1000000,  // 1 Tick = 1 µs
-      .intr_priority = 3,        //  high priority (1-3)
-      .flags = {.intr_shared = false,
-                .allow_pd = false,
-                .backup_before_sleep = false}};
+  gptimer_config_t gpt_config_arb = {};
+  gpt_config_arb.clk_src = GPTIMER_CLK_SRC_DEFAULT;
+  gpt_config_arb.direction = GPTIMER_COUNT_UP;
+  gpt_config_arb.resolution_hz = 1000000;
+  gpt_config_arb.intr_priority = 3;
+  gpt_config_arb.flags.intr_shared = false;
+  gpt_config_arb.flags.allow_pd = false;
+  gpt_config_arb.flags.backup_before_sleep = false;
 
   ESP_ERROR_CHECK(gptimer_new_timer(&gpt_config_arb, &gp_timer_));
 
-  gptimer_config_t gpt_config_syn = {
-      .clk_src = GPTIMER_CLK_SRC_DEFAULT,
-      .direction = GPTIMER_COUNT_UP,
-      .resolution_hz = 1000000,
-      .intr_priority = 3,
-      .flags = {
-          .intr_shared = false,  // do not share interrupt - reduce jitter
-          .allow_pd = false,
-          .backup_before_sleep = false,
-      }};
+  gptimer_config_t gpt_config_syn = {};
+  gpt_config_syn.clk_src = GPTIMER_CLK_SRC_DEFAULT;
+  gpt_config_syn.direction = GPTIMER_COUNT_UP;
+  gpt_config_syn.resolution_hz = 1000000;
+  gpt_config_syn.intr_priority = 3;
+  gpt_config_syn.flags.intr_shared = false;
+  gpt_config_syn.flags.allow_pd = false;
+  gpt_config_syn.flags.backup_before_sleep = false;
 
   ESP_ERROR_CHECK(gptimer_new_timer(&gpt_config_syn, &syn_gp_timer_));
 
-  gptimer_event_callbacks_t arb_cbs = {
-      .on_alarm = s_onBusIsrTimer,
-  };
+  gptimer_event_callbacks_t arb_cbs = {};
+  arb_cbs.on_alarm = s_onBusIsrTimer;
   ESP_ERROR_CHECK(gptimer_register_event_callbacks(gp_timer_, &arb_cbs, this));
   ESP_ERROR_CHECK(gptimer_enable(gp_timer_));
 
-  gptimer_event_callbacks_t syn_cbs = {
-      .on_alarm = s_onSynGenTimer,
-  };
+  gptimer_event_callbacks_t syn_cbs = {};
+  syn_cbs.on_alarm = s_onSynGenTimer;
   ESP_ERROR_CHECK(
       gptimer_register_event_callbacks(syn_gp_timer_, &syn_cbs, this));
   ESP_ERROR_CHECK(gptimer_enable(syn_gp_timer_));
 
 #else
-  timer_config_t timer_config = {
-      .alarm_en = TIMER_ALARM_DIS,
-      .counter_en = TIMER_PAUSE,
-      .intr_type = TIMER_INTR_LEVEL,
-      .counter_dir = TIMER_COUNT_UP,
-      .auto_reload = TIMER_AUTORELOAD_DIS,
-      .divider = static_cast<uint32_t>(esp_clk_apb_freq() / 1000000U),
+  timer_config_t timer_config = {};
+  timer_config.alarm_en = TIMER_ALARM_DIS;
+  timer_config.counter_en = TIMER_PAUSE;
+  timer_config.intr_type = TIMER_INTR_LEVEL;
+  timer_config.counter_dir = TIMER_COUNT_UP;
+  timer_config.auto_reload = TIMER_AUTORELOAD_DIS;
+  timer_config.divider = static_cast<uint32_t>(esp_clk_apb_freq() / 1000000U);
 
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 0, 0)
 #ifdef TIMER_SRC_CLK_DEFAULT
-      .clk_src = TIMER_SRC_CLK_DEFAULT,
+  timer_config.clk_src = TIMER_SRC_CLK_DEFAULT;
 #else
-      .clk_src = TIMER_SRC_CLK_APB,
+  timer_config.clk_src = TIMER_SRC_CLK_APB;
 #endif
 #endif
-  };
 
   // Initialize the timer
   timer_init(timer_group_num_, timer_idx_num_, &timer_config);
@@ -438,10 +428,10 @@ void BusEsp::ebusUartEventRunner() {
                       : 0;
 
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
-              gptimer_alarm_config_t alarm_config = {
-                  .alarm_count = (uint64_t)delay,
-                  .reload_count = 0,
-                  .flags = {.auto_reload_on_alarm = false}};
+              gptimer_alarm_config_t alarm_config = {};
+              alarm_config.alarm_count = (uint64_t)delay;
+              alarm_config.reload_count = 0;
+              alarm_config.flags.auto_reload_on_alarm = false;
               gptimer_stop(gp_timer_);
               gptimer_set_raw_count(gp_timer_, 0);
               gptimer_set_alarm_action(gp_timer_, &alarm_config);
@@ -535,10 +525,10 @@ void BusEsp::ebusUartEventRunner() {
             portEXIT_CRITICAL(&timer_mux_);
 
             // Update the hardware timer alarm
-            gptimer_alarm_config_t alarm_config = {
-                .alarm_count = next_interval,
-                .reload_count = 0,
-                .flags = {.auto_reload_on_alarm = true}};
+            gptimer_alarm_config_t alarm_config = {};
+            alarm_config.alarm_count = next_interval;
+            alarm_config.reload_count = 0;
+            alarm_config.flags.auto_reload_on_alarm = true;
             gptimer_stop(syn_gp_timer_);  // Ensure thread-safe reconfiguration
             gptimer_set_raw_count(syn_gp_timer_, 0);  // Restart count
             gptimer_set_alarm_action(syn_gp_timer_, &alarm_config);

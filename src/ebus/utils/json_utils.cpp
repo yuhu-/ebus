@@ -24,30 +24,53 @@
 namespace ebus {
 
 namespace {
-std::string extract(std::string_view json, std::string_view key) {
-  std::string k = "\"" + std::string(key) + "\"";
-  size_t pos = json.find(k);
-  if (pos == std::string_view::npos) return "";
-  pos = json.find(':', pos);
-  if (pos == std::string_view::npos) return "";
-  size_t start = json.find_first_not_of(" \t\n\r", pos + 1);
-  if (start == std::string_view::npos) return "";
+/**
+ * Finds a key safely by ensuring it is wrapped in quotes and followed by a
+ * colon. This prevents matching keys that are substrings of other keys.
+ */
+size_t findKey(std::string_view json, std::string_view key) {
+  size_t pos = 0;
+  while ((pos = json.find('"', pos)) != std::string_view::npos) {
+    std::string_view sub = json.substr(pos + 1);
+    if (sub.size() > key.size() && sub.compare(0, key.size(), key) == 0 &&
+        sub[key.size()] == '"') {
+      size_t colon = json.find(':', pos + key.size() + 2);
+      if (colon != std::string_view::npos) return colon + 1;
+    }
+    pos++;
+  }
+  return std::string_view::npos;
+}
+
+std::string_view extract(std::string_view json, std::string_view key) {
+  size_t pos = findKey(json, key);
+  if (pos == std::string_view::npos) return {};
+
+  size_t start = json.find_first_not_of(" \t\n\r", pos);
+  if (start == std::string_view::npos) return {};
+
   size_t end;
   if (json[start] == '"') {
     start++;
-    end = json.find('"', start);
+    // Basic robustness: handle escaped quotes \" by looking ahead
+    end = start;
+    while ((end = json.find('"', end)) != std::string_view::npos) {
+      if (json[end - 1] != '\\') break;
+      end++;
+    }
   } else {
     end = json.find_first_of(", \t\n\r}", start);
   }
-  return std::string(json.substr(start, end - start));
+  return (end == std::string_view::npos) ? json.substr(start)
+                                         : json.substr(start, end - start);
 }
 
 std::string_view extractSub(std::string_view json, std::string_view key) {
-  std::string k = "\"" + std::string(key) + "\"";
-  size_t pos = json.find(k);
-  if (pos == std::string_view::npos) return "";
+  size_t pos = findKey(json, key);
+  if (pos == std::string_view::npos) return {};
+
   size_t start = json.find('{', pos);
-  if (start == std::string_view::npos) return "";
+  if (start == std::string_view::npos) return {};
   int depth = 0;
   for (size_t i = start; i < json.size(); ++i) {
     if (json[i] == '{')
@@ -60,8 +83,8 @@ std::string_view extractSub(std::string_view json, std::string_view key) {
 }
 
 template <typename T>
-T toNum(const std::string& s) {
-  if (s.empty()) return 0;
+T toNum(std::string_view s) {
+  if (s.empty() || s == "null") return 0;
   T val = 0;
   std::from_chars(s.data(), s.data() + s.size(), val);
   return val;
@@ -167,14 +190,15 @@ RuntimeConfig RuntimeConfig::fromJson(const std::string& json) {
 }
 
 bool RuntimeConfig::isValidJson(const std::string& json) {
-  if (json.empty()) return false;
+  std::string_view sv = json;
+  if (sv.empty()) return false;
   // Trim whitespace
-  size_t first = json.find_first_not_of(" \t\n\r");
-  size_t last = json.find_last_not_of(" \t\n\r");
+  size_t first = sv.find_first_not_of(" \t\n\r");
+  size_t last = sv.find_last_not_of(" \t\n\r");
   if (first == std::string::npos || last == std::string::npos)
     return false;  // All whitespace
 
-  std::string_view trimmed_json(json.data() + first, last - first + 1);
+  std::string_view trimmed_json = sv.substr(first, last - first + 1);
 
   if (trimmed_json.empty() || trimmed_json.front() != '{' ||
       trimmed_json.back() != '}') {
