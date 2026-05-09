@@ -32,7 +32,7 @@ struct RuntimeConfig {
 
   struct Diagnostics {
     LogLevel level = LogLevel::error;
-    size_t log_size = 10;
+    size_t log_size = 5;
   } diagnostics;
 
   struct Network {
