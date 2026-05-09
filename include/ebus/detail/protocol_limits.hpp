@@ -29,11 +29,13 @@ namespace FsmLimits {
 inline constexpr std::size_t num_handler_states = 15;
 inline constexpr size_t num_request_states = 4;
 
-#ifndef EBUS_FSM_HISTORY_SIZE
-inline constexpr size_t log_history_size = 10;
+#ifndef EBUS_TRANSITION_HISTORY_SIZE
+inline constexpr size_t transition_history_size = 10;
 #else
-inline constexpr size_t log_history_size = EBUS_FSM_HISTORY_SIZE;
+inline constexpr size_t transition_history_size = EBUS_TRANSITION_HISTORY_SIZE;
 #endif
+static_assert(transition_history_size >= 1,
+              "FSM transition history size must be at least 1");
 }  // namespace FsmLimits
 
 // --- Orchestration Layer (Thread Priorities & Stacks) ---
@@ -120,12 +122,16 @@ inline constexpr size_t log_history_size = 60;
 #else
 inline constexpr size_t log_history_size = EBUS_LOG_HISTORY_SIZE;
 #endif
+static_assert(log_history_size >= 1,
+              "Diagnostic log history size must be at least 1");
 
 #ifndef EBUS_TRACE_HISTORY_SIZE
 inline constexpr size_t trace_history_size = 100;
 #else
 inline constexpr size_t trace_history_size = EBUS_TRACE_HISTORY_SIZE;
 #endif
+static_assert(trace_history_size >= 1,
+              "Protocol trace history size must be at least 1");
 }  // namespace DiagnosticsLimits
 
 namespace NetworkLimits {
