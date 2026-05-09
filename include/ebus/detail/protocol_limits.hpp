@@ -28,14 +28,31 @@ inline constexpr float start_bit_tolerance = 1.5f;  // bit times
 namespace FsmLimits {
 inline constexpr std::size_t num_handler_states = 15;
 inline constexpr size_t num_request_states = 4;
+
+#ifndef EBUS_FSM_HISTORY_SIZE
 inline constexpr size_t log_history_size = 10;
+#else
+inline constexpr size_t log_history_size = EBUS_FSM_HISTORY_SIZE;
+#endif
 }  // namespace FsmLimits
 
 // --- Orchestration Layer (Thread Priorities & Stacks) ---
 namespace OrchestrationLimits {
-inline constexpr size_t stack_size_high = 6144;
-inline constexpr size_t stack_size_med = 4096;
-inline constexpr size_t stack_size_low = 2048;
+#ifndef EBUS_STACK_SIZE_HIGH
+inline constexpr size_t stack_size_high = 4096;  // Reduced from 6144
+#else
+inline constexpr size_t stack_size_high = EBUS_STACK_SIZE_HIGH;
+#endif
+#ifndef EBUS_STACK_SIZE_MED
+inline constexpr size_t stack_size_med = 3072;  // Reduced from 4096
+#else
+inline constexpr size_t stack_size_med = EBUS_STACK_SIZE_MED;
+#endif
+#ifndef EBUS_STACK_SIZE_LOW
+inline constexpr size_t stack_size_low = 1536;  // Reduced from 2048
+#else
+inline constexpr size_t stack_size_low = EBUS_STACK_SIZE_LOW;
+#endif
 inline constexpr uint8_t priority_high = 15;
 inline constexpr uint8_t priority_med = 10;
 inline constexpr uint8_t priority_low = 5;
@@ -51,9 +68,10 @@ inline constexpr uint8_t lock_counter_max = 25;
 namespace SequenceLimits {
 /**
  * Default capacity for Small Buffer Optimization (SBO).
- * Set to 64 to accommodate byte-stuffing expansion of a 48-byte logical telegram.
+ * Set to 64 to accommodate byte-stuffing expansion of a 48-byte logical
+ * telegram.
  */
-inline constexpr size_t default_capacity = 64; 
+inline constexpr size_t default_capacity = 64;
 inline constexpr uint8_t max_telegram_bytes = 48;
 inline constexpr uint8_t max_data_bytes = 16;
 }  // namespace SequenceLimits
@@ -64,8 +82,17 @@ inline constexpr uint16_t window_min_us = 4000;
 inline constexpr uint16_t window_max_us = 5000;
 inline constexpr uint16_t offset_max_us = 500;
 
+#ifndef EBUS_BUS_QUEUE_SIZE
 inline constexpr size_t queue_size = 512;
-inline constexpr size_t max_listeners = 16;
+#else
+inline constexpr size_t queue_size = EBUS_BUS_QUEUE_SIZE;
+#endif
+
+#ifndef EBUS_MAX_LISTENERS
+inline constexpr size_t max_listeners = 4;
+#else
+inline constexpr size_t max_listeners = EBUS_MAX_LISTENERS;
+#endif
 
 namespace Syn {
 inline constexpr uint32_t base_ms = 50;
@@ -88,30 +115,55 @@ inline constexpr uint32_t virtual_read_timeout_ms = 10;
 }  // namespace BusLimits
 
 namespace DiagnosticsLimits {
+#ifndef EBUS_LOG_HISTORY_SIZE
 inline constexpr size_t log_history_size = 60;
+#else
+inline constexpr size_t log_history_size = EBUS_LOG_HISTORY_SIZE;
+#endif
+
+#ifndef EBUS_TRACE_HISTORY_SIZE
 inline constexpr size_t trace_history_size = 100;
+#else
+inline constexpr size_t trace_history_size = EBUS_TRACE_HISTORY_SIZE;
+#endif
 }  // namespace DiagnosticsLimits
 
 namespace NetworkLimits {
 inline constexpr uint32_t wake_interval_ms = 20;
-inline constexpr size_t max_clients = 8;
+#ifndef EBUS_MAX_CLIENTS
+inline constexpr size_t max_clients = 4;
+#else
+inline constexpr size_t max_clients = EBUS_MAX_CLIENTS;
+#endif
 }  // namespace NetworkLimits
 
 namespace ScannerLimits {
 inline constexpr uint8_t scan_priority = 5;
-inline constexpr size_t max_manual_queue = 64;
+#ifndef EBUS_MAX_MANUAL_QUEUE
+inline constexpr size_t max_manual_queue = 16;
+#else
+inline constexpr size_t max_manual_queue = EBUS_MAX_MANUAL_QUEUE;
+#endif
 }  // namespace ScannerLimits
 
 namespace SchedulerLimits {
 inline constexpr size_t queue_reserve = 32;
+#ifndef EBUS_SCHEDULER_MAX_ITEMS
 inline constexpr size_t max_items = 128;
+#else
+inline constexpr size_t max_items = EBUS_SCHEDULER_MAX_ITEMS;
+#endif
 inline constexpr size_t scan_threshold = 5;
 inline constexpr uint32_t jitter_threshold_ms = 2;
 inline constexpr uint32_t controller_tick_ms = 20;
 }  // namespace SchedulerLimits
 
 namespace PollLimits {
+#ifndef EBUS_POLL_MAX_ITEMS
 inline constexpr size_t max_items = 128;
+#else
+inline constexpr size_t max_items = EBUS_POLL_MAX_ITEMS;
+#endif
 }  // namespace PollLimits
 
 }  // namespace ebus::detail
