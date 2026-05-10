@@ -38,6 +38,12 @@ struct Impl {
   ebus::ErrorCallback user_error_callback_;
   ebus::TraceCallback user_trace_callback_;
 
+  // Decoupled queues for user callbacks (Prioritized drainage)
+  detail::platform::Queue<ebus::ProtocolEvent> public_errors_{
+      detail::ControllerLimits::public_queue_size};
+  detail::platform::Queue<ebus::ProtocolEvent> public_telegrams_{
+      detail::ControllerLimits::public_queue_size};
+
   std::unique_ptr<detail::Request> request_;
   std::unique_ptr<detail::BusMonitor> bus_monitor_;
   std::unique_ptr<detail::platform::Bus> bus_;
@@ -77,8 +83,8 @@ bool Controller::start() {
 
   impl_->worker_ = std::make_unique<detail::platform::ServiceThread>(
       "ebus_controller", [this] { run(); },
-      detail::OrchestrationLimits::stack_size_high,
-      detail::OrchestrationLimits::priority_low);
+      detail::OrchestrationLimits::controller_stack_size,
+      detail::OrchestrationLimits::controller_priority);
   impl_->worker_->start();
 
   return true;
@@ -499,6 +505,55 @@ ServiceStatus Controller::getServiceStatus() const {
   return status;
 }
 
+void Controller::processPublicEvents() {
+  ProtocolEvent ev;
+
+  // 1. Prioritize Errors: Drain all pending error events first
+  while (impl_->public_errors_.tryPop(ev)) {
+    ErrorCallback callback;
+    {
+      std::lock_guard<std::mutex> lock(config_mutex_);
+      callback = impl_->user_error_callback_;
+    }
+    if (callback &&
+        detail::Logger::getInstance().isEnabled(ev.data.err.level)) {
+      ErrorInfo info{ev.session_id,
+                     ev.poll_id,
+                     ev.data.err.level,
+                     ev.data.err.protocol_error,
+                     ev.data.err.result,
+                     ev.data.err.sequence_state,
+                     ev.handler_state,
+                     ev.request_state,
+                     ByteView(ev.master, ev.master_len),
+                     ByteView(ev.slave, ev.slave_len),
+                     ev.data.err.utilization};
+      callback(info);
+    }
+  }
+
+  // 2. Process Telegrams
+  while (impl_->public_telegrams_.tryPop(ev)) {
+    TelegramCallback callback;
+    {
+      std::lock_guard<std::mutex> lock(config_mutex_);
+      callback = impl_->user_telegram_callback_;
+    }
+    if (callback) {
+      TelegramInfo info{ev.session_id,
+                        ev.poll_id,
+                        ev.data.tel.retry_count,
+                        ev.data.tel.message_type,
+                        ev.data.tel.telegram_type,
+                        ev.handler_state,
+                        ev.request_state,
+                        ByteView(ev.master, ev.master_len),
+                        ByteView(ev.slave, ev.slave_len)};
+      callback(info);
+    }
+  }
+}
+
 void Controller::constructMembers() {
   // -- 1. Telemetry & Core Arbitration --
   if (!impl_->bus_monitor_) {
@@ -539,12 +594,33 @@ void Controller::constructMembers() {
 
     // Setup internal event dispatchers
     impl_->scheduler_->setTelegramCallback([this](const TelegramInfo& info) {
-      TelegramCallback user_callback;
+      // 1. Pack event into the decoupling queue
+      ProtocolEvent ev;
+      ev.type = ProtocolEvent::Type::telegram;
+      ev.session_id = info.session_id;
+      ev.poll_id = info.poll_id;
+      ev.data.tel.retry_count = info.retry_count;
+      ev.data.tel.message_type = info.message_type;
+      ev.data.tel.telegram_type = info.telegram_type;
+      ev.handler_state = info.handler_state;
+      ev.request_state = info.request_state;
+      ev.master_len = static_cast<uint8_t>(
+          std::min(info.master_view.size(), sizeof(ev.master)));
+      std::memcpy(ev.master, info.master_view.data(), ev.master_len);
+      ev.slave_len = static_cast<uint8_t>(
+          std::min(info.slave_view.size(), sizeof(ev.slave)));
+      std::memcpy(ev.slave, info.slave_view.data(), ev.slave_len);
+      if (!impl_->public_telegrams_.tryPush(std::move(ev))) {
+        impl_->bus_monitor_->updateController(
+            [](auto& m) { m.public_queue_dropped++; });
+      }
+      wake_cv_.notify_one();
+
+      // 2. Handle internal discovery logic immediately
       bool response_enabled = false;
       uint8_t own_address = 0xff;
       {
         std::lock_guard<std::mutex> lock(config_mutex_);
-        user_callback = impl_->user_telegram_callback_;
         response_enabled = config_.runtime.system_response;
         own_address = config_.runtime.address;
       }
@@ -568,18 +644,40 @@ void Controller::constructMembers() {
           }
         }
       }
-
-      if (user_callback) user_callback(info);
     });
 
     impl_->scheduler_->setErrorCallback([this](const ErrorInfo& info) {
-      ErrorCallback user_callback;
+      // 1. Pack event into the decoupling queue
+      ProtocolEvent ev;
+      ev.type = ProtocolEvent::Type::error;
+      ev.session_id = info.session_id;
+      ev.poll_id = info.poll_id;
+      ev.data.err.level = info.level;
+      ev.data.err.protocol_error = info.protocol_error;
+      ev.data.err.result = info.result;
+      ev.data.err.sequence_state = info.sequence_state;
+      ev.handler_state = info.handler_state;
+      ev.request_state = info.request_state;
+      ev.master_len = static_cast<uint8_t>(
+          std::min(info.master_view.size(), sizeof(ev.master)));
+      std::memcpy(ev.master, info.master_view.data(), ev.master_len);
+      ev.slave_len = static_cast<uint8_t>(
+          std::min(info.slave_view.size(), sizeof(ev.slave)));
+      std::memcpy(ev.slave, info.slave_view.data(), ev.slave_len);
+      ev.data.err.utilization = info.utilization;
+      if (!impl_->public_errors_.tryPush(std::move(ev))) {
+        impl_->bus_monitor_->updateController(
+            [](auto& m) { m.public_queue_dropped++; });
+      }
+      wake_cv_.notify_one();
+
+      // 2. Handle internal diagnostic logging
       bool store_internal = false;
       {
         std::lock_guard<std::mutex> lock(config_mutex_);
-        user_callback = impl_->user_error_callback_;
         store_internal = config_.runtime.diagnostics.log_size > 0;
       }
+
       if (store_internal) {
         ErrorEntry entry;
         entry.session_id = info.session_id;
@@ -598,13 +696,6 @@ void Controller::constructMembers() {
                 std::chrono::system_clock::now().time_since_epoch())
                 .count();
         impl_->error_buffer_.push_back(std::move(entry));
-      }
-
-      // Use the thread-safe singleton to check enablement without re-locking
-      // config
-      if (user_callback &&
-          detail::Logger::getInstance().isEnabled(info.level)) {
-        user_callback(info);
       }
     });
   }
@@ -689,6 +780,9 @@ void Controller::constructMembers() {
 void Controller::run() {
   while (running_.load()) {
     bool activity = false;
+
+    processPublicEvents();
+
     impl_->poll_manager_->processDueItems(
         [this, &activity](const detail::PollItem& item) {
           if (impl_->scheduler_->enqueue(item.priority, item.message,
@@ -721,11 +815,21 @@ void Controller::run() {
       }
     }
 
+    auto next_poll = impl_->poll_manager_->nextDueTime();
+    auto tick_limit =
+        Clock::now() +
+        std::chrono::milliseconds(detail::SchedulerLimits::controller_tick_ms);
+    auto wait_until = std::min(next_poll, tick_limit);
+
     std::unique_lock<std::mutex> lk(wake_mutex_);
-    wake_cv_.wait_for(
-        lk,
-        std::chrono::milliseconds(detail::SchedulerLimits::controller_tick_ms),
-        [this, activity] { return !running_.load() || activity; });
+    wake_cv_.wait_until(lk, wait_until, [this, activity] {
+      // Wake immediately if work was found, thread is stopping, or new events
+      // arrived.
+      return !running_.load() || activity ||
+             impl_->public_errors_.size() > 0 ||
+             impl_->public_telegrams_.size() > 0 ||
+             impl_->poll_manager_->nextDueTime() <= Clock::now();
+    });
   }
 }
 

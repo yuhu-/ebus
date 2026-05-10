@@ -56,7 +56,7 @@ struct Symbols {
   }
 };
 
-enum class TelegramType { undefined, broadcast, master_master, master_slave };
+enum class TelegramType : uint8_t { undefined, broadcast, master_master, master_slave };
 
 constexpr const char* toString(TelegramType type) noexcept {
   switch (type) {

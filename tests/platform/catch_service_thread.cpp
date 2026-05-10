@@ -18,13 +18,10 @@ TEST_CASE("ServiceThread: Basic execution and join",
   std::atomic<int> counter{0};
   bool threadStarted = false;
 
-  platform::ServiceThread worker(
-      "testThread",
-      [&]() {
-        threadStarted = true;
-        counter++;
-      },
-      OrchestrationLimits::stack_size_low, OrchestrationLimits::priority_low);
+  platform::ServiceThread worker("test_thread", [&]() {
+    threadStarted = true;
+    counter++;
+  });
 
   worker.start();
   worker.join();
@@ -39,14 +36,11 @@ TEST_CASE("ServiceThread: Destructor performs implicit join",
   bool threadStarted = false;
 
   {
-    platform::ServiceThread worker(
-        "testDestructor",
-        [&]() {
-          platform::sleepMilli(50);
-          threadStarted = true;
-          counter++;
-        },
-        OrchestrationLimits::stack_size_low, OrchestrationLimits::priority_low);
+    platform::ServiceThread worker("test_thread", [&]() {
+      platform::sleepMilli(50);
+      threadStarted = true;
+      counter++;
+    });
 
     worker.start();
     // Destructor should join when worker goes out of scope

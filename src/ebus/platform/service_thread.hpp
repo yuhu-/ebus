@@ -30,8 +30,8 @@ namespace ebus::detail::platform {
 class ServiceThread {
  public:
   ServiceThread(std::string name, std::function<void()> func,
-                uint32_t stack_size = OrchestrationLimits::stack_size_low,
-                uint8_t priority = OrchestrationLimits::priority_low,
+                uint32_t stack_size = OrchestrationLimits::default_stack_size,
+                uint8_t priority = OrchestrationLimits::default_priority,
                 int core = -1);
   ~ServiceThread() { join(); }
 

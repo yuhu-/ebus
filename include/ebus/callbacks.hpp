@@ -104,6 +104,45 @@ struct BusEventContext {
 };
 
 /**
+ * Internal carrier for decoupled public callbacks.
+ * Contains owning copies of byte sequences.
+ */
+struct ProtocolEvent {
+  enum class Type : uint8_t { telegram, error } type;
+  
+  // Shared metadata (Ordered to minimize padding)
+  uint32_t session_id;
+  uint32_t poll_id;
+  HandlerState handler_state;
+  RequestState request_state;
+
+  union {
+    struct {
+      uint32_t retry_count;
+      MessageType message_type;
+      TelegramType telegram_type;
+    } tel;
+    struct {
+      float utilization;
+      ProtocolError protocol_error;
+      RequestResult result;
+      SequenceState sequence_state;
+      LogLevel level;
+    } err;
+  } data;
+
+  uint8_t master[detail::SequenceLimits::default_capacity];
+  uint8_t slave[detail::SequenceLimits::default_capacity];
+  uint8_t master_len;
+  uint8_t slave_len;
+};
+
+static_assert(
+    sizeof(ProtocolEvent) <= 192,
+    "ProtocolEvent exceeds the memory threshold for constrained targets. "
+    "Verify enum packing and buffer sizes.");
+
+/**
  * Callback signatures
  */
 using TelegramCallback = std::function<void(const TelegramInfo& info)>;

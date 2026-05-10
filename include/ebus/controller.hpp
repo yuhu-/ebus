@@ -376,6 +376,8 @@ class Controller {
    */
   ServiceStatus getServiceStatus() const;
 
+  void processPublicEvents();
+
   void constructMembers();
   void run();
 };

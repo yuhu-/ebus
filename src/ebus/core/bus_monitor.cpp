@@ -24,6 +24,7 @@ void BusMonitor::resetMetrics() {
   handler_acc_.reset();
   request_acc_.reset();
   bus_acc_.reset();
+  controller_acc_.reset();
   device_acc_.reset();
 
   sync.reset();
@@ -191,6 +192,9 @@ ebus::metrics::SystemMetrics BusMonitor::getMetrics() const {
   // 4. Populate Device Part
   metrics::DeviceMetrics& dm = sm.devices;
   dm = device_acc_;
+
+  // 5. Populate Controller Part
+  sm.controller = controller_acc_;
 
   // Calculate Quality Score (%)
   sm.quality = (100.0f - sm.handler.error_rate) *

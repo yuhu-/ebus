@@ -301,6 +301,16 @@ struct DeviceMetrics {
 };
 
 /**
+ * Performance metrics for the orchestration/application layer.
+ */
+struct ControllerMetrics {
+  uint32_t public_queue_dropped = 0;
+
+  void reset() { public_queue_dropped = 0; }
+  std::string toJson() const;
+};
+
+/**
  * Aggregate system telemetry.
  */
 struct SystemMetrics {
@@ -308,6 +318,7 @@ struct SystemMetrics {
   RequestMetrics request;
   BusMetrics bus;
   DeviceMetrics devices;
+  ControllerMetrics controller;
 
   // Quality Score (%)
   // Quality Score is a composite metric that combines error rate and

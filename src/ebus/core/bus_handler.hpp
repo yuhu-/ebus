@@ -50,8 +50,8 @@ class BusHandler {
     running_ = true;
     worker_ = std::make_unique<platform::ServiceThread>(
         "ebus_bus_handler", [this] { this->run(); },
-        OrchestrationLimits::stack_size_med,
-        OrchestrationLimits::priority_high);
+        OrchestrationLimits::bus_handler_stack_size,
+        OrchestrationLimits::bus_handler_priority);
     worker_->start();
   }
 

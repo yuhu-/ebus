@@ -62,6 +62,9 @@ class PollManager {
   void processDueItems(const std::function<void(const PollItem&)>& callback,
                        bool* activity);
 
+  // Returns the time point when the next item is due, or max if empty.
+  std::chrono::steady_clock::time_point nextDueTime() const;
+
   void clear();
 
   PollManagerStatus getStatus() const;

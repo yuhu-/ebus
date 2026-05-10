@@ -40,24 +40,84 @@ static_assert(transition_history_size >= 1,
 
 // --- Orchestration Layer (Thread Priorities & Stacks) ---
 namespace OrchestrationLimits {
-#ifndef EBUS_STACK_SIZE_HIGH
-inline constexpr size_t stack_size_high = 4096;
+
+inline constexpr size_t default_stack_size = 2048;
+inline constexpr uint8_t default_priority = 5;
+
+#ifndef EBUS_CONTROLLER_STACK_SIZE
+inline constexpr size_t controller_stack_size = 4096;
 #else
-inline constexpr size_t stack_size_high = EBUS_STACK_SIZE_HIGH;
+inline constexpr size_t controller_stack_size = EBUS_CONTROLLER_STACK_SIZE;
 #endif
-#ifndef EBUS_STACK_SIZE_MED
-inline constexpr size_t stack_size_med = 3072;
+
+#ifndef EBUS_CONTROLLER_PRIORITY
+inline constexpr uint8_t controller_priority = 5;
 #else
-inline constexpr size_t stack_size_med = EBUS_STACK_SIZE_MED;
+inline constexpr uint8_t controller_priority = EBUS_CONTROLLER_PRIORITY;
 #endif
-#ifndef EBUS_STACK_SIZE_LOW
-inline constexpr size_t stack_size_low = 2048;
+
+#ifndef EBUS_BUS_STACK_SIZE
+inline constexpr size_t bus_stack_size = 2048;
 #else
-inline constexpr size_t stack_size_low = EBUS_STACK_SIZE_LOW;
+inline constexpr size_t bus_stack_size = EBUS_BUS_STACK_SIZE;
 #endif
-inline constexpr uint8_t priority_high = 15;
-inline constexpr uint8_t priority_med = 10;
-inline constexpr uint8_t priority_low = 5;
+
+#ifndef EBUS_BUS_PRIORITY
+inline constexpr uint8_t bus_priority = 15;
+#else
+inline constexpr uint8_t bus_priority = EBUS_BUS_PRIORITY;
+#endif
+
+#ifndef EBUS_BUS_SYN_STACK_SIZE
+inline constexpr size_t bus_syn_stack_size = 2048;
+#else
+inline constexpr size_t bus_syn_stack_size = EBUS_BUS_SYN_STACK_SIZE;
+#endif
+
+#ifndef EBUS_BUS_SYN_PRIORITY
+inline constexpr uint8_t bus_syn_priority = 5;
+#else
+inline constexpr uint8_t bus_syn_priority = EBUS_BUS_SYN_PRIORITY;
+#endif
+
+#ifndef EBUS_BUS_HANDLER_STACK_SIZE
+inline constexpr size_t bus_handler_stack_size = 3072;
+#else
+inline constexpr size_t bus_handler_stack_size = EBUS_BUS_HANDLER_STACK_SIZE;
+#endif
+
+#ifndef EBUS_BUS_HANDLER_PRIORITY
+inline constexpr uint8_t bus_handler_priority = 10;
+#else
+inline constexpr uint8_t bus_handler_priority = EBUS_BUS_HANDLER_PRIORITY;
+#endif
+
+#ifndef EBUS_SCHEDULER_STACK_SIZE
+inline constexpr size_t scheduler_stack_size = 3072;
+#else
+inline constexpr size_t scheduler_stack_size = EBUS_SCHEDULER_STACK_SIZE;
+#endif
+
+#ifndef EBUS_SCHEDULER_PRIORITY
+inline constexpr uint8_t scheduler_priority = 10;
+#else
+inline constexpr uint8_t scheduler_priority = EBUS_SCHEDULER_PRIORITY;
+#endif
+
+#ifndef EBUS_CLIENT_MANAGER_STACK_SIZE
+inline constexpr size_t client_manager_stack_size = 2048;
+#else
+inline constexpr size_t client_manager_stack_size =
+    EBUS_CLIENT_MANAGER_STACK_SIZE;
+#endif
+
+#ifndef EBUS_CLIENT_MANAGER_PRIORITY
+inline constexpr uint8_t client_manager_priority = 10;
+#else
+inline constexpr uint8_t client_manager_priority = EBUS_CLIENT_MANAGER_PRIORITY;
+#endif
+
+// ESP Service Threads
 inline constexpr uint32_t termination_timeout_ms = 2000;
 }  // namespace OrchestrationLimits
 
@@ -116,6 +176,7 @@ inline constexpr uint32_t virtual_read_timeout_ms = 10;
 }  // namespace platform::Posix
 }  // namespace BusLimits
 
+// --- Diagnostics Layer ---
 namespace DiagnosticsLimits {
 #ifndef EBUS_LOG_HISTORY_SIZE
 inline constexpr size_t log_history_size = 60;
@@ -134,6 +195,7 @@ static_assert(trace_history_size >= 1,
               "Protocol trace history size must be at least 1");
 }  // namespace DiagnosticsLimits
 
+// --- Networking Layer ---
 namespace NetworkLimits {
 inline constexpr uint32_t wake_interval_ms = 20;
 #ifndef EBUS_MAX_CLIENTS
@@ -142,6 +204,16 @@ inline constexpr size_t max_clients = 4;
 inline constexpr size_t max_clients = EBUS_MAX_CLIENTS;
 #endif
 }  // namespace NetworkLimits
+
+// --- Application Layer ---
+namespace ControllerLimits {
+#ifndef EBUS_PUBLIC_QUEUE_SIZE
+inline constexpr size_t public_queue_size = 16;
+#else
+inline constexpr size_t public_queue_size = EBUS_PUBLIC_QUEUE_SIZE;
+#endif
+
+}  // namespace ControllerLimits
 
 namespace ScannerLimits {
 inline constexpr uint8_t scan_priority = 5;

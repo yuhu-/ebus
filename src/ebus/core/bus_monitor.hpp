@@ -54,6 +54,12 @@ class BusMonitor {
     updater(device_acc_);
   }
 
+  template <typename F>
+  void updateController(F&& updater) {
+    std::lock_guard<std::mutex> lock(metrics_mutex);
+    updater(controller_acc_);
+  }
+
   void logHandlerTransition(HandlerState from, HandlerState to);
   void logRequestTransition(RequestState from, RequestState to);
 
@@ -98,6 +104,7 @@ class BusMonitor {
   metrics::RequestMetrics request_acc_;
   metrics::BusMetrics bus_acc_;
   metrics::DeviceMetrics device_acc_;
+  metrics::ControllerMetrics controller_acc_;
 };
 
 }  // namespace ebus::detail

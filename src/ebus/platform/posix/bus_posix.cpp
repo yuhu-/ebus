@@ -64,8 +64,8 @@ void BusPosix::start() {
   running_.store(true);
   worker_ = std::make_unique<ServiceThread>(
       "ebus_bus", [this] { readerThread(); },
-      detail::OrchestrationLimits::stack_size_low,
-      detail::OrchestrationLimits::priority_high);
+      detail::OrchestrationLimits::bus_stack_size,
+      detail::OrchestrationLimits::bus_priority);
   worker_->start();
 
   // start SYN generator if enabled in config
@@ -85,8 +85,8 @@ void BusPosix::start() {
     syn_running_.store(true);
     syn_worker_ = std::make_unique<ServiceThread>(
         "ebus_bus_syn", [this] { synThread(); },
-        detail::OrchestrationLimits::stack_size_low,
-        detail::OrchestrationLimits::priority_med);
+        detail::OrchestrationLimits::bus_syn_stack_size,
+        detail::OrchestrationLimits::bus_syn_priority);
     syn_worker_->start();
   }
 }
@@ -226,8 +226,8 @@ void BusPosix::setRuntimeConfig(const RuntimeConfig& runtime) {
     if (syn_worker_) syn_worker_->join();  // Join existing thread if any
     syn_worker_ = std::make_unique<ServiceThread>(  // Create new ServiceThread
         "ebus_bus_syn", [this] { synThread(); },
-        detail::OrchestrationLimits::stack_size_low,
-        detail::OrchestrationLimits::priority_med);
+        detail::OrchestrationLimits::bus_syn_stack_size,
+        detail::OrchestrationLimits::bus_syn_priority);
     syn_worker_->start();  // Start the new ServiceThread
   } else if (should_stop) {
     if (syn_worker_) syn_worker_->join();  // Join existing thread if any

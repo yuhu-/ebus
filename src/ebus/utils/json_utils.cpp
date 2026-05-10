@@ -540,12 +540,19 @@ std::string metrics::DeviceMetrics::toJson() const {
   return oss.str();
 }
 
+std::string metrics::ControllerMetrics::toJson() const {
+  std::ostringstream oss;
+  oss << "{\"public_queue_dropped\":" << public_queue_dropped << "}";
+  return oss.str();
+}
+
 std::string metrics::SystemMetrics::toJson() const {
   std::ostringstream oss;
   oss << std::fixed << std::setprecision(2);
   oss << "{\"handler\":" << handler.toJson()
       << ",\"request\":" << request.toJson() << ",\"bus\":" << bus.toJson()
-      << ",\"devices\":" << devices.toJson() << ",\"quality\":" << quality
+      << ",\"devices\":" << devices.toJson()
+      << ",\"controller\":" << controller.toJson() << ",\"quality\":" << quality
       << "}";
   return oss.str();
 }

@@ -250,7 +250,7 @@ class BusSimulator {
           std::vector<uint8_t> data = resp.response_data;  // NOLINT
 
           auto worker = std::make_unique<platform::ServiceThread>(
-              "busSimResp", [this, delay, data]() {
+              "ebus_bus_simulator", [this, delay, data]() {
                 platform::sleepMilli(delay);
                 for (uint8_t byte : data) bus_.writeByte(byte);
               });

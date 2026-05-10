@@ -78,6 +78,13 @@ void PollManager::processDueItems(
   }
 }
 
+std::chrono::steady_clock::time_point PollManager::nextDueTime() const {
+  std::lock_guard<std::mutex> lock(mutex_);
+  if (items_.empty())
+    return std::chrono::steady_clock::time_point::max();
+  return items_.begin()->next_due;
+}
+
 void PollManager::clear() {
   std::lock_guard<std::mutex> lock(mutex_);
   items_.clear();

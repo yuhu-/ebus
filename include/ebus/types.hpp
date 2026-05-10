@@ -27,11 +27,11 @@ using Clock = std::chrono::steady_clock;
 
 // --- Protocol Enums ---
 
-enum class LogLevel { none, error, info, debug };
+enum class LogLevel : uint8_t { none, error, info, debug };
 
-enum class MessageType { undefined, active, passive, reactive };
+enum class MessageType : uint8_t { undefined, active, passive, reactive };
 
-enum class SequenceState {
+enum class SequenceState : uint8_t {
   seq_empty,
   seq_ok,
   err_seq_too_short,
@@ -45,7 +45,7 @@ enum class SequenceState {
   err_ack_negative
 };
 
-enum class HandlerState {
+enum class HandlerState : uint8_t {
   passive_receive_master,
   passive_receive_master_acknowledge,
   passive_receive_slave,
@@ -63,9 +63,9 @@ enum class HandlerState {
   release_bus
 };
 
-enum class RequestState { observe, first, retry, second };
+enum class RequestState : uint8_t { observe, first, retry, second };
 
-enum class RequestResult {
+enum class RequestResult : uint8_t {
   observe_syn,
   observe_data,
   first_syn,
@@ -80,7 +80,7 @@ enum class RequestResult {
   second_error
 };
 
-enum class ProtocolError {
+enum class ProtocolError : uint8_t {
   none,
   error_passive_master,
   error_passive_master_ack,
@@ -108,9 +108,9 @@ enum class ProtocolError {
 /**
  * Available client types for the network bridge.
  */
-enum class ClientType { read_only, regular, enhanced };
+enum class ClientType : uint8_t { read_only, regular, enhanced };
 
-enum class SessionState {
+enum class SessionState : uint8_t {
   idle,      // Waiting for a client to have data
   request,   // Bus request pending, waiting for our slot to send
   response,  // Waiting for arbitration result from eBUS

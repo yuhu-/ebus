@@ -62,14 +62,15 @@ BusEsp::~BusEsp() { stop(); }
 void BusEsp::start() {
   if (running_.load(std::memory_order_acquire)) return;
   if (!uart_event_queue_) {
-    EBUS_LOG_ERROR("Cannot start ebus_bus: UART driver not installed (queue null)");
+    EBUS_LOG_ERROR(
+        "Cannot start ebus_bus: UART driver not installed (queue null)");
     return;
   }
 
   running_.store(true, std::memory_order_release);
   worker_ = std::make_unique<ServiceThread>(
       "ebus_bus", [this] { ebusUartEventRunner(); },
-      OrchestrationLimits::stack_size_low, OrchestrationLimits::priority_high);
+      OrchestrationLimits::bus_stack_size, OrchestrationLimits::bus_priority);
   worker_->start();
 }
 
@@ -260,7 +261,7 @@ void BusEsp::configureUart() {
 #endif
 
   // Install UART driver with synchronized event queue sizes
-  uart_driver_delete(uart_port_num_); // Ensure port is clean
+  uart_driver_delete(uart_port_num_);  // Ensure port is clean
   esp_err_t err = ESP_FAIL;
   int retry_count = 3;
   while (retry_count-- > 0) {
@@ -268,7 +269,8 @@ void BusEsp::configureUart() {
                               BusLimits::queue_size, 1, &uart_event_queue_, 0);
     if (err == ESP_OK) break;
 
-    EBUS_LOG_ERROR("uart_driver_install attempt failed: " + std::string(esp_err_to_name(err)) + ". Retrying...");
+    EBUS_LOG_ERROR("uart_driver_install attempt failed: " +
+                   std::string(esp_err_to_name(err)) + ". Retrying...");
     if (retry_count > 0) vTaskDelay(pdMS_TO_TICKS(100));
   }
 
@@ -276,7 +278,8 @@ void BusEsp::configureUart() {
   uart_param_config(uart_port_num_, &uart_config);
 
   if (err != ESP_OK) {
-    EBUS_LOG_ERROR("uart_driver_install failed after all retries: " + std::string(esp_err_to_name(err)));
+    EBUS_LOG_ERROR("uart_driver_install failed after all retries: " +
+                   std::string(esp_err_to_name(err)));
     return;
   }
 
@@ -296,19 +299,23 @@ void BusEsp::configureGpio() {
 
   esp_err_t err = gpio_config(&gpio_conf);
   if (err != ESP_OK) {
-    EBUS_LOG_ERROR("GPIO config for RX pin failed: " + std::string(esp_err_to_name(err)));
+    EBUS_LOG_ERROR("GPIO config for RX pin failed: " +
+                   std::string(esp_err_to_name(err)));
   }
 
   // Install GPIO ISR service with flags for IRAM and high priority (level 3)
   err = gpio_install_isr_service(ESP_INTR_FLAG_IRAM | ESP_INTR_FLAG_LEVEL3);
   if (err != ESP_OK && err != ESP_ERR_INVALID_STATE) {
-     EBUS_LOG_ERROR("gpio_install_isr_service failed: " + std::string(esp_err_to_name(err)));
+    EBUS_LOG_ERROR("gpio_install_isr_service failed: " +
+                   std::string(esp_err_to_name(err)));
   }
 
   // Register the ISR handler
-  err = gpio_isr_handler_add(static_cast<gpio_num_t>(rx_pin_), &s_onFallingEdge, this);
+  err = gpio_isr_handler_add(static_cast<gpio_num_t>(rx_pin_), &s_onFallingEdge,
+                             this);
   if (err != ESP_OK) {
-    EBUS_LOG_ERROR("gpio_isr_handler_add failed: " + std::string(esp_err_to_name(err)));
+    EBUS_LOG_ERROR("gpio_isr_handler_add failed: " +
+                   std::string(esp_err_to_name(err)));
   }
 }
 
