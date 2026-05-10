@@ -25,8 +25,7 @@ BusPosix::BusPosix(const BusConfig& config, const ebus::RuntimeConfig& runtime,
       monitor_(monitor),
       fd_(-1),
       open_(false),
-      byte_queue_(
-          std::make_unique<Queue<detail::BusEvent>>(BusLimits::queue_size)),
+      byte_queue_(std::make_unique<Queue<BusEvent>>(BusLimits::queue_size)),
       worker_(),
       running_(false),  // Initialize running_ before syn_worker_
       syn_worker_() {}  // Initialize syn_worker_ after running_
@@ -214,7 +213,8 @@ void BusPosix::setRuntimeConfig(const RuntimeConfig& runtime) {
         syn_cv_.notify_all();
       }
 
-      // If generator was already running, re-align next_syn_expiry_ to the new t_unique
+      // If generator was already running, re-align next_syn_expiry_ to the new
+      // t_unique
       if (runtime_.bus.syn_gen && !should_start && syn_running_.load()) {
         next_syn_expiry_ = std::chrono::steady_clock::now() + current_t_unique_;
       }
@@ -270,8 +270,8 @@ ebus::BusStatus BusPosix::getStatus() const {
     return {s.name, s.task_stack_bytes, s.task_stack_free_bytes};
   };
   ebus::BusStatus s;
-  if (worker_) s.bus_thread = map(worker_->status());
-  if (syn_worker_) s.syn_thread = map(syn_worker_->status());
+  s.bus_thread = map(getThreadStatus());
+  s.syn_thread = map(getSynThreadStatus());
   return s;
 }
 

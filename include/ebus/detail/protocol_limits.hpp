@@ -41,17 +41,17 @@ static_assert(transition_history_size >= 1,
 // --- Orchestration Layer (Thread Priorities & Stacks) ---
 namespace OrchestrationLimits {
 #ifndef EBUS_STACK_SIZE_HIGH
-inline constexpr size_t stack_size_high = 4096;  // Reduced from 6144
+inline constexpr size_t stack_size_high = 4096;
 #else
 inline constexpr size_t stack_size_high = EBUS_STACK_SIZE_HIGH;
 #endif
 #ifndef EBUS_STACK_SIZE_MED
-inline constexpr size_t stack_size_med = 3072;  // Reduced from 4096
+inline constexpr size_t stack_size_med = 3072;
 #else
 inline constexpr size_t stack_size_med = EBUS_STACK_SIZE_MED;
 #endif
 #ifndef EBUS_STACK_SIZE_LOW
-inline constexpr size_t stack_size_low = 1536;  // Reduced from 2048
+inline constexpr size_t stack_size_low = 2048;
 #else
 inline constexpr size_t stack_size_low = EBUS_STACK_SIZE_LOW;
 #endif
