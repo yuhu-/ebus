@@ -21,7 +21,6 @@ TEST_CASE("Controller: Lifecycle and API", "[app][controller]") {
   // Configuration
   ebus::EbusConfig config;
   config.runtime.address = 0x31;  // Slave 0x36
-  config.bus.simulate = true;
   config.runtime.system_inquiry = false;
   config.runtime.system_response = false;
   config.runtime.scanner.scan_on_startup = false;
@@ -66,7 +65,6 @@ TEST_CASE("Controller: System Discovery automated response",
           "[app][controller]") {
   ebus::EbusConfig config;
   config.runtime.address = 0x01;
-  config.bus.simulate = true;
   config.runtime.lock_counter = 0;
   config.runtime.system_inquiry = false;
   config.runtime.system_response = true;

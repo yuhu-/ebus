@@ -90,7 +90,6 @@ struct BusConfig {
 #elif defined(POSIX)
   std::string device = "/dev/null";
 #endif
-  bool simulate = false;
 
   std::string toJson() const;
 };

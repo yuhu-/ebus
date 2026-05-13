@@ -19,7 +19,7 @@ using namespace ebus;
 using namespace ebus::detail;
 
 TEST_CASE("DeviceManager: Address Tracking", "[app][devicemanager]") {
-  BusConfig config{.device = "/dev/null", .simulate = true};
+  BusConfig config{.device = "/dev/null"};
   RuntimeConfig runtime = {.address = 0xff};
   Request request;
   BusMonitor monitor;
@@ -42,7 +42,7 @@ TEST_CASE("DeviceManager: Address Tracking", "[app][devicemanager]") {
 }
 
 TEST_CASE("DeviceManager: Device Update", "[app][devicemanager]") {
-  BusConfig config{.device = "/dev/null", .simulate = true};
+  BusConfig config{.device = "/dev/null"};
   RuntimeConfig runtime = {.address = 0xff};
   Request request;
   BusMonitor monitor;
@@ -68,7 +68,7 @@ TEST_CASE("DeviceManager: Device Update", "[app][devicemanager]") {
 }
 
 TEST_CASE("DeviceManager: Create Scan Commands", "[app][devicemanager]") {
-  BusConfig config{.device = "/dev/null", .simulate = true};
+  BusConfig config{.device = "/dev/null"};
   RuntimeConfig runtime = {.address = 0xff};
   Request request;
   BusMonitor monitor;

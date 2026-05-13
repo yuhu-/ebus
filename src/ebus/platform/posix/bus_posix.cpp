@@ -13,6 +13,9 @@
 #include "core/bus_monitor.hpp"
 #include "core/request.hpp"
 #include "platform/system.hpp"
+#if EBUS_SIMULATION_ENABLED
+#include "platform/virtual_line.hpp"
+#endif
 
 namespace ebus::detail::platform {
 
@@ -34,35 +37,31 @@ BusPosix::~BusPosix() { stop(); }
 void BusPosix::start() {
   if (open_) return;
 
-  if (config_.simulate) {
 #if EBUS_SIMULATION_ENABLED
-    VirtualLine::get().attach(this);
-    fd_ = -1;
-    open_ = true;
+  VirtualLine::get().attach(this);
+  fd_ = -1;
+  open_ = true;
 #else
-    throw std::runtime_error("Simulation mode is not enabled in this build.");
+  struct termios new_settings;
+  fd_ = ::open(config_.device.c_str(), O_RDWR | O_NOCTTY);
+  if (fd_ < 0 || isatty(fd_) == 0)
+    throw std::runtime_error("Failed to open ebus device: " + config_.device);
+
+  tcgetattr(fd_, &old_settings_);
+  ::memset(&new_settings, 0, sizeof(new_settings));
+  new_settings.c_cflag |= (B2400 | CS8 | CLOCAL | CREAD);
+  new_settings.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG);
+  new_settings.c_iflag |= IGNPAR;
+  new_settings.c_oflag &= ~OPOST;
+  new_settings.c_cc[VMIN] = 1;
+  new_settings.c_cc[VTIME] = 0;
+
+  tcflush(fd_, TCIFLUSH);
+  tcsetattr(fd_, TCSAFLUSH, &new_settings);
+  fcntl(fd_, F_SETFL, fcntl(fd_, F_GETFL) & ~O_NONBLOCK);
+
+  open_ = true;
 #endif
-  } else {
-    struct termios new_settings;
-    fd_ = ::open(config_.device.c_str(), O_RDWR | O_NOCTTY);
-    if (fd_ < 0 || isatty(fd_) == 0)
-      throw std::runtime_error("Failed to open ebus device: " + config_.device);
-
-    tcgetattr(fd_, &old_settings_);
-    ::memset(&new_settings, 0, sizeof(new_settings));
-    new_settings.c_cflag |= (B2400 | CS8 | CLOCAL | CREAD);
-    new_settings.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG);
-    new_settings.c_iflag |= IGNPAR;
-    new_settings.c_oflag &= ~OPOST;
-    new_settings.c_cc[VMIN] = 1;
-    new_settings.c_cc[VTIME] = 0;
-
-    tcflush(fd_, TCIFLUSH);
-    tcsetattr(fd_, TCSAFLUSH, &new_settings);
-    fcntl(fd_, F_SETFL, fcntl(fd_, F_GETFL) & ~O_NONBLOCK);
-
-    open_ = true;
-  }
 
   running_.store(true);
   worker_ = std::make_unique<ServiceThread>(
@@ -103,7 +102,7 @@ void BusPosix::stop() {
 
   if (byte_queue_) byte_queue_->shutdown();
 #if EBUS_SIMULATION_ENABLED
-  if (config_.simulate) VirtualLine::get().detach(this);
+  VirtualLine::get().detach(this);
 #endif
 
   {
@@ -111,12 +110,12 @@ void BusPosix::stop() {
     syn_cv_.notify_all();
   }
 
-  if (!config_.simulate && fd_ != -1) ::tcflush(fd_, TCIOFLUSH);
+  if (fd_ != -1) ::tcflush(fd_, TCIOFLUSH);
 
   if (syn_worker_) syn_worker_->join();
   if (worker_) worker_->join();
 
-  if (!config_.simulate && fd_ != -1) {
+  if (fd_ != -1) {
     ::tcsetattr(fd_, TCSANOW, &old_settings_);
     ::close(fd_);
   }
@@ -145,21 +144,20 @@ void BusPosix::writeByte(const uint8_t byte) {
 
   if (monitor_) monitor_->transmit.markBegin();
 
-  if (config_.simulate) {
 #if EBUS_SIMULATION_ENABLED
-    // Notify write listeners for local simulation feedback
+  // Notify write listeners for local simulation feedback
+  for (const auto& listener : write_listeners_) listener(byte);
+  VirtualLine::get().write(byte);
+#else
+  ensureOpen();
+  {
+    std::lock_guard<std::mutex> lock(listeners_mutex_);
     for (const auto& listener : write_listeners_) listener(byte);
-    VirtualLine::get().write(byte);
-#endif
-  } else {
-    ensureOpen();
-    {
-      std::lock_guard<std::mutex> lock(listeners_mutex_);
-      for (const auto& listener : write_listeners_) listener(byte);
-    }
-    if (::write(fd_, &byte, 1) == -1)
-      throw std::runtime_error("BusPosix: write error");
   }
+  if (::write(fd_, &byte, 1) == -1)
+    throw std::runtime_error("BusPosix: write error");
+#endif
+
   if (monitor_) monitor_->transmit.markEnd();
 }
 
@@ -217,8 +215,8 @@ void BusPosix::setRuntimeConfig(const RuntimeConfig& runtime) {
         syn_cv_.notify_all();
       }
 
-      // If generator was already running, re-align next_syn_expiry_ to the new
-      // t_unique
+      // If generator was already running, re-align next_syn_expiry_ to the
+      // new t_unique
       if (runtime_.bus.syn_gen && !should_start && syn_running_.load()) {
         next_syn_expiry_ = Clock::now() + current_t_unique_;
       }
@@ -294,18 +292,16 @@ void BusPosix::readerThread() {
     uint8_t byte;
     ssize_t n = 0;
 
-    if (config_.simulate) {
 #if EBUS_SIMULATION_ENABLED
-      // Use the memory-based simulation queue
-      if (VirtualLine::get().read(
-              this, byte, BusLimits::platform::Posix::virtual_read_timeout_ms))
-        n = 1;
-      else
-        continue;  // timeout, check running_ flag again
+    // Use the memory-based simulation queue
+    if (VirtualLine::get().read(
+            this, byte, BusLimits::platform::Posix::virtual_read_timeout_ms))
+      n = 1;
+    else
+      continue;  // timeout, check running_ flag again
+#else
+    n = ::read(fd_, &byte, 1);
 #endif
-    } else {
-      n = ::read(fd_, &byte, 1);
-    }
 
     if (n == 1) {
       auto arrival_time = Clock::now();
@@ -327,9 +323,9 @@ void BusPosix::readerThread() {
       // In POSIX, we don't have ISR-level start bit detection like ESP32.
       // If a framing error occurs, it's a strong indicator of a start bit
       // issue. For now, we'll increment this counter in the BusFreeRtos only.
-      // If POSIX serial drivers provide more granular error types, we could map
-      // them here.
-      // if (monitor_) monitor_->updateBus([](auto& m){ m.start_bit_errors++;
+      // If POSIX serial drivers provide more granular error types, we could
+      // map them here. if (monitor_) monitor_->updateBus([](auto& m){
+      // m.start_bit_errors++;
       // });
       event.timestamp = arrival_time;
 

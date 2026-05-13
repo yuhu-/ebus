@@ -26,7 +26,6 @@ int main() {
   // This device will act as a Master at address 0x01.
   ebus::EbusConfig configA;
   configA.runtime.address = 0x01;
-  configA.bus.simulate = true;
   configA.runtime.bus.syn_gen = true;
   configA.runtime.system_inquiry = false;
   configA.runtime.system_response = true;
@@ -38,7 +37,6 @@ int main() {
   // This device acts as Master 0x10 (Slave 0x15).
   ebus::EbusConfig configB;
   configB.runtime.address = 0x10;
-  configB.bus.simulate = true;
   configB.runtime.system_inquiry = false;  // true to send at startup
   configB.runtime.system_response = false;
   configB.runtime.scanner.scan_on_startup = false;

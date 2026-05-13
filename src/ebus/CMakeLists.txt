@@ -28,16 +28,19 @@ set(MODELS_SOURCES
 set(PLATFORM_SOURCES
 )
 
-# Utils
-set(UTILS_SOURCES
-    utils/json_utils.cpp
-    utils/virtual_bus.cpp
-)
-
 if(POSIX AND NOT APPLE)
     list(APPEND PLATFORM_SOURCES platform/posix/bus_posix.cpp)
 elseif(ESP_PLATFORM)
     list(APPEND PLATFORM_SOURCES platform/esp/bus_esp.cpp)
+endif()
+
+# Utils
+set(UTILS_SOURCES
+    utils/json_utils.cpp
+)
+
+if(EBUS_SIMULATION_ENABLED)
+    list(APPEND UTILS_SOURCES utils/virtual_bus.cpp)
 endif()
 
 set(SOURCES
@@ -53,8 +56,14 @@ add_library(ebus ${SOURCES})
 target_include_directories(ebus 
     PUBLIC ${CMAKE_SOURCE_DIR}/include
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
-    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/detail # For internal headers like bus_simulator.hpp
+    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/detail
 )
+
+if(EBUS_SIMULATION_ENABLED)
+    target_compile_definitions(ebus PUBLIC EBUS_SIMULATION_ENABLED=1)
+else()
+    target_compile_definitions(ebus PUBLIC EBUS_SIMULATION_ENABLED=0)
+endif()
 
 target_compile_options(ebus PRIVATE
   $<$<CXX_COMPILER_ID:GNU,Clang>:

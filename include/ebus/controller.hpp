@@ -21,8 +21,10 @@
 #include "ebus/device.hpp"
 #include "ebus/metrics.hpp"
 #include "ebus/status.hpp"
-#include "ebus/virtual_bus.hpp"
 #include "ebus/types.hpp"
+#if EBUS_SIMULATION_ENABLED
+#include "ebus/virtual_bus.hpp"
+#endif
 
 namespace ebus {
 
@@ -361,15 +363,16 @@ class Controller {
    */
   std::string getServiceStatusJson(bool reset_histories = false) const;
 
+#if EBUS_SIMULATION_ENABLED
   /**
    * @brief Returns a VirtualBus instance for direct interaction with the
    * simulated bus.
-   * @note This method is only available when the controller is configured
-   * for simulation mode (config.bus.simulate = true).
-   * @return A reference to the VirtualBus instance. Throws std::runtime_error
-   * if not in simulation mode.
+   * @note This method is only available when the library is built with
+   * EBUS_SIMULATION_ENABLED.
+   * @return A reference to the VirtualBus instance.
    */
   VirtualBus& getVirtualBus();
+#endif
 
  private:
   EbusConfig config_;

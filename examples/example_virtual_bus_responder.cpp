@@ -25,7 +25,6 @@ int main() {
   // VirtualBus instance, which will simulate other devices.
   ebus::EbusConfig config;
   config.runtime.address = 0x01;  // Our controller address
-  config.bus.simulate = true;     // Enable simulation mode
   config.runtime.bus.syn_gen =
       true;  // SYN generation is crucial for simulation
   config.runtime.system_inquiry = false;

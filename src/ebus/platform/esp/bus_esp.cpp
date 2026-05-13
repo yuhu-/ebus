@@ -45,10 +45,8 @@ BusEsp::BusEsp(const BusConfig& config, const RuntimeConfig& runtime,
       byte_queue_(std::make_unique<Queue<BusEvent>>(BusLimits::queue_size)) {
 
 #if EBUS_SIMULATION_ENABLED
-  if (config_.simulate) {
-    VirtualLine::get().attach(this);
-    return;
-  }
+  VirtualLine::get().attach(this);
+  return;
 #endif
 
   // Initialize postponement timer

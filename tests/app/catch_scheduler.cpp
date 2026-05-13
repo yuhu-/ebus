@@ -34,7 +34,6 @@ TEST_CASE("Scheduler: Simulation", "[app][scheduler]") {
   Request request;
   ebus::BusConfig config;
   config.device = "/dev/null";
-  config.simulate = true;
 
   ebus::RuntimeConfig runtime;
   runtime.address = 0x33;
@@ -98,7 +97,6 @@ TEST_CASE("Scheduler: Priority Preemption", "[app][scheduler][priority]") {
   Request request;
   ebus::BusConfig config;
   config.device = "/dev/null";
-  config.simulate = true;
 
   ebus::RuntimeConfig runtime;
   runtime.address = 0x01;

@@ -25,7 +25,7 @@ TEST_CASE("ClientManager: Mock Orchestration", "[app][clientmanager][mock]") {
   req.setLockCounter(0);
   req.reset();
 
-  BusConfig config = {.device = "/dev/null", .simulate = true};
+  BusConfig config = {.device = "/dev/null"};
   RuntimeConfig runtime = {.address = 0x01};
 
   BusMonitor monitor;

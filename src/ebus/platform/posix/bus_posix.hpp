@@ -33,9 +33,6 @@
 #include "core/bus_events.hpp"
 #include "platform/queue.hpp"
 #include "platform/service_thread.hpp"
-#if EBUS_SIMULATION_ENABLED
-#include "platform/virtual_line.hpp"
-#endif
 
 namespace ebus::detail {
 class Request;

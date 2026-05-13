@@ -19,11 +19,6 @@ class ConfigValidator {
   static bool validate(const EbusConfig& config) {
     const auto& r = config.runtime;
 
-    // 0. Feature Support
-#if !EBUS_SIMULATION_ENABLED
-    if (config.bus.simulate) return false;
-#endif
-
     // 1. Addressing
     if (!ebus::isMaster(r.address) && r.address != 0xff) return false;
     if (r.lock_counter > RequestLimits::lock_counter_max) return false;
@@ -56,7 +51,7 @@ class ConfigValidator {
 
     // 5. Platform Specifics
 #if defined(POSIX)
-    if (config.bus.device.empty() && !config.bus.simulate) return false;
+    if (config.bus.device.empty() && !EBUS_SIMULATION_ENABLED) return false;
 #endif
 
     return true;
@@ -72,8 +67,7 @@ class ConfigValidator {
            old_cfg.bus.rx_pin != new_cfg.bus.rx_pin ||
            old_cfg.bus.tx_pin != new_cfg.bus.tx_pin;
 #elif defined(POSIX)
-    return old_cfg.bus.device != new_cfg.bus.device ||
-           old_cfg.bus.simulate != new_cfg.bus.simulate;
+    return old_cfg.bus.device != new_cfg.bus.device;
 #else
     return false;
 #endif

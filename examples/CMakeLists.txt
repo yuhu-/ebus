@@ -10,3 +10,4 @@ target_link_libraries(example_virtual_bus_responder PRIVATE ebus)
 
 add_executable(example_vaillant_outdoor_temp example_vaillant_outdoor_temp.cpp)
 target_link_libraries(example_vaillant_outdoor_temp PRIVATE ebus)
+
