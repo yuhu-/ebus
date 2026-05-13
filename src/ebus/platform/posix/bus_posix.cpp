@@ -65,13 +65,22 @@ void BusPosix::start() {
 
   running_.store(true);
   worker_ = std::make_unique<ServiceThread>(
-      "ebus_bus", [this] { readerThread(); },
+      "ebus_bus",
+      [this] {
+#if EBUS_SIMULATION_ENABLED
+        readerThread();
+#else
+        readerThread();  // On POSIX, the same runner handles both via internal
+                         // guards
+#endif
+      },
       detail::OrchestrationLimits::bus_stack_size,
       detail::OrchestrationLimits::bus_priority);
   worker_->start();
 
-  // start SYN generator if enabled in config
+#if EBUS_SIMULATION_ENABLED
   if (monitor_) monitor_->uptime.markBegin();
+#endif
   if (runtime_.bus.syn_gen) {
     syn_base_ms_dur_ = std::chrono::milliseconds(BusLimits::Syn::base_ms);
     syn_tolerance_ms_dur_ =
@@ -95,7 +104,9 @@ void BusPosix::start() {
 
 void BusPosix::stop() {
   if (!open_) return;
+#if EBUS_SIMULATION_ENABLED
   if (monitor_) monitor_->uptime.markEnd();
+#endif
 
   running_.store(false);
   syn_running_.store(false);
@@ -128,7 +139,6 @@ Queue<BusEvent>* BusPosix::getQueue() const { return byte_queue_.get(); }
 
 void BusPosix::writeByte(const uint8_t byte) {
   {
-    std::lock_guard<std::mutex> l_lock(listeners_mutex_);
     std::lock_guard<std::mutex> lock(syn_mutex_);
     auto now = Clock::now();
     last_activity_time_ = now;
@@ -144,16 +154,15 @@ void BusPosix::writeByte(const uint8_t byte) {
 
   if (monitor_) monitor_->transmit.markBegin();
 
-#if EBUS_SIMULATION_ENABLED
-  // Notify write listeners for local simulation feedback
-  for (const auto& listener : write_listeners_) listener(byte);
-  VirtualLine::get().write(byte);
-#else
-  ensureOpen();
   {
     std::lock_guard<std::mutex> lock(listeners_mutex_);
     for (const auto& listener : write_listeners_) listener(byte);
   }
+
+#if EBUS_SIMULATION_ENABLED
+  VirtualLine::get().write(byte);
+#else
+  ensureOpen();
   if (::write(fd_, &byte, 1) == -1)
     throw std::runtime_error("BusPosix: write error");
 #endif

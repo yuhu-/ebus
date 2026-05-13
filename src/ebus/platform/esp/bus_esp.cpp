@@ -67,7 +67,7 @@ BusEsp::~BusEsp() { stop(); }
 
 void BusEsp::start() {
   if (running_.load(std::memory_order_acquire)) return;
-  if (!config_.simulate && !uart_event_queue_) {
+  if (!uart_event_queue_) {
     EBUS_LOG_ERROR(
         "Cannot start ebus_bus: UART driver not installed (queue null)");
     return;
@@ -77,15 +77,17 @@ void BusEsp::start() {
   worker_ = std::make_unique<ServiceThread>(
       "ebus_bus",
       [this] {
-        if (config_.simulate)
-          simulationReaderLoop();
-        else
-          ebusUartEventRunner();
+#if EBUS_SIMULATION_ENABLED
+        simulationReaderLoop();
+#else
+        ebusUartEventRunner();
+#endif
       },
       OrchestrationLimits::bus_stack_size, OrchestrationLimits::bus_priority);
   worker_->start();
-  if (config_.simulate && monitor_) monitor_->uptime.markBegin();
-  if (config_.simulate && runtime_.bus.syn_gen) {
+#if EBUS_SIMULATION_ENABLED
+  if (monitor_) monitor_->uptime.markBegin();
+  if (runtime_.bus.syn_gen) {
     syn_running_.store(true);
     syn_worker_ = std::make_unique<ServiceThread>(
         "ebus_bus_syn", [this] { simulationSynLoop(); },
@@ -93,6 +95,7 @@ void BusEsp::start() {
         OrchestrationLimits::bus_syn_priority);
     syn_worker_->start();
   }
+#endif
 }
 
 void BusEsp::stop() {
@@ -101,11 +104,13 @@ void BusEsp::stop() {
   syn_running_.store(false);
 
   if (byte_queue_) byte_queue_->shutdown();
-  if (config_.simulate) VirtualLine::get().detach(this);
+#if EBUS_SIMULATION_ENABLED
+  VirtualLine::get().detach(this);
   {
     std::unique_lock<std::mutex> lock(syn_mutex_);
     syn_cv_.notify_all();
   }
+#endif
 
   gpio_isr_handler_remove(static_cast<gpio_num_t>(rx_pin_));
   gpio_intr_disable(static_cast<gpio_num_t>(rx_pin_));
@@ -131,10 +136,10 @@ void BusEsp::stop() {
   if (syn_worker_) syn_worker_->join();
   if (worker_) worker_->join();
 
-  if (config_.simulate) {
-    if (monitor_) monitor_->uptime.markEnd();
-    return;
-  }
+#if EBUS_SIMULATION_ENABLED
+  if (monitor_) monitor_->uptime.markEnd();
+  return;
+#endif
 
   if (uart_event_queue_) {
     uart_driver_delete(uart_port_num_);
@@ -152,15 +157,15 @@ void BusEsp::writeByte(const uint8_t byte) {
   }
   if (monitor_) monitor_->transmit.markBegin();
 
-  if (config_.simulate) {
-    if (byte != Symbols::syn) {
-      std::lock_guard<std::mutex> lock(syn_mutex_);
-      syn_active_ = false;
-    }
-    VirtualLine::get().write(byte);
-    if (monitor_) monitor_->transmit.markEnd();
-    return;
+#if EBUS_SIMULATION_ENABLED
+  if (byte != Symbols::syn) {
+    std::lock_guard<std::mutex> lock(syn_mutex_);
+    syn_active_ = false;
   }
+  VirtualLine::get().write(byte);
+  if (monitor_) monitor_->transmit.markEnd();
+  return;
+#endif
 
   portENTER_CRITICAL(&timer_mux_);
   last_activity_micros_ = esp_timer_get_time();
@@ -716,6 +721,7 @@ bool IRAM_ATTR BusEsp::onSynGenTimer() {
   return false;
 }
 
+#if EBUS_SIMULATION_ENABLED
 void BusEsp::simulationReaderLoop() {
   uint8_t byte;
   while (running_.load()) {
@@ -804,6 +810,7 @@ void BusEsp::simulationSynLoop() {
     }
   }
 }
+#endif
 
 }  // namespace ebus::detail::platform
 
