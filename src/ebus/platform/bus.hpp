@@ -8,11 +8,17 @@
 #if defined(ESP_PLATFORM)
 #include "esp/bus_esp.hpp"
 namespace ebus::detail::platform {
-using Bus = BusEsp;
+class Bus : public BusEsp {
+ public:
+  using BusEsp::BusEsp;
+};
 }  // namespace ebus::detail::platform
 #elif defined(POSIX)
 #include "posix/bus_posix.hpp"
 namespace ebus::detail::platform {
-using Bus = BusPosix;
+class Bus : public BusPosix {
+ public:
+  using BusPosix::BusPosix;
+};
 }  // namespace ebus::detail::platform
 #endif

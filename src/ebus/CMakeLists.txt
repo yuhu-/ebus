@@ -31,6 +31,7 @@ set(PLATFORM_SOURCES
 # Utils
 set(UTILS_SOURCES
     utils/json_utils.cpp
+    utils/virtual_bus.cpp
 )
 
 if(POSIX AND NOT APPLE)
@@ -52,6 +53,7 @@ add_library(ebus ${SOURCES})
 target_include_directories(ebus 
     PUBLIC ${CMAKE_SOURCE_DIR}/include
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
+    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/detail # For internal headers like bus_simulator.hpp
 )
 
 target_compile_options(ebus PRIVATE

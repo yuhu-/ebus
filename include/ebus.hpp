@@ -23,3 +23,4 @@
 #include "ebus/status.hpp"
 #include "ebus/types.hpp"
 #include "ebus/utils.hpp"
+#include "ebus/virtual_bus.hpp"

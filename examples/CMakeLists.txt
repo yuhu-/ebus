@@ -5,6 +5,8 @@ include_directories(${PROJECT_SOURCE_DIR}/src/ebus)
 add_executable(example_virtual_bus_readonly_client example_virtual_bus_readonly_client.cpp)
 target_link_libraries(example_virtual_bus_readonly_client PRIVATE ebus)
 
+add_executable(example_virtual_bus_responder example_virtual_bus_responder.cpp)
+target_link_libraries(example_virtual_bus_responder PRIVATE ebus)
+
 add_executable(example_vaillant_outdoor_temp example_vaillant_outdoor_temp.cpp)
 target_link_libraries(example_vaillant_outdoor_temp PRIVATE ebus)
-

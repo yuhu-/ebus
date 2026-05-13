@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "test_utils.hpp"
+#include "utils/bus_simulator.hpp"
 
 using namespace ebus::detail;
 

@@ -25,6 +25,7 @@
 #include "core/request.hpp"
 #include "platform/bus.hpp"
 #include "test_utils.hpp"
+#include "utils/bus_simulator.hpp"
 
 // using namespace ebus;
 using namespace ebus::detail;

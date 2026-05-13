@@ -21,6 +21,7 @@
 #include "ebus/device.hpp"
 #include "ebus/metrics.hpp"
 #include "ebus/status.hpp"
+#include "ebus/virtual_bus.hpp"
 #include "ebus/types.hpp"
 
 namespace ebus {
@@ -359,6 +360,16 @@ class Controller {
    * @param reset_histories If true, resets history buffers after serialization.
    */
   std::string getServiceStatusJson(bool reset_histories = false) const;
+
+  /**
+   * @brief Returns a VirtualBus instance for direct interaction with the
+   * simulated bus.
+   * @note This method is only available when the controller is configured
+   * for simulation mode (config.bus.simulate = true).
+   * @return A reference to the VirtualBus instance. Throws std::runtime_error
+   * if not in simulation mode.
+   */
+  VirtualBus& getVirtualBus();
 
  private:
   EbusConfig config_;

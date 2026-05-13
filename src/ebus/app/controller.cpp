@@ -18,6 +18,7 @@
 #include "core/bus_monitor.hpp"
 #include "core/handler.hpp"
 #include "core/request.hpp"
+#include "ebus/virtual_bus.hpp"  // New include
 #include "platform/bus.hpp"
 #include "platform/service_thread.hpp"
 #include "utils/circular_buffer.hpp"
@@ -53,6 +54,8 @@ struct Impl {
   std::unique_ptr<detail::DeviceScanner> device_scanner_;
   std::unique_ptr<detail::PollManager> poll_manager_;
   std::unique_ptr<detail::Scheduler> scheduler_;
+  std::unique_ptr<ebus::VirtualBus>
+      virtual_bus_;  // Only instantiated in simulation mode
   std::unique_ptr<detail::ClientManager> client_manager_;
   std::unique_ptr<detail::platform::ServiceThread> worker_;
 };
@@ -505,6 +508,14 @@ ServiceStatus Controller::getServiceStatus() const {
   return status;
 }
 
+VirtualBus& Controller::getVirtualBus() {
+  if (!config_.bus.simulate || !impl_->virtual_bus_) {
+    throw std::runtime_error(
+        "VirtualBus is only available in simulation mode.");
+  }
+  return *impl_->virtual_bus_;
+}
+
 void Controller::processPublicEvents() {
   ProtocolEvent ev;
 
@@ -576,6 +587,16 @@ void Controller::constructMembers() {
         impl_->bus_monitor_.get());
   } else {
     impl_->bus_->setRuntimeConfig(config_.runtime);
+  }
+
+  // Initialize VirtualBus if in simulation mode
+  if (config_.bus.simulate) {
+    if (!impl_->virtual_bus_) {
+      impl_->virtual_bus_ =
+          std::unique_ptr<ebus::VirtualBus>(new ebus::VirtualBus(*impl_->bus_));
+    }
+  } else {
+    impl_->virtual_bus_.reset();
   }
 
   // -- 3. Protocol Handler --
