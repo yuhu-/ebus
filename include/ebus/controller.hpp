@@ -329,7 +329,7 @@ class Controller {
   /**
    * @brief Returns the raw event trace of the last processed bytes.
    */
-  std::vector<BusEventContext> getTraceHistory() const;
+  std::vector<BusEventInfo> getTraceHistory() const;
 
   // Diagnostic Log
 

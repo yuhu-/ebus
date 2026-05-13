@@ -65,7 +65,7 @@ class AbstractClient {
   virtual void sendToClient(ByteView data) = 0;
 
   // Logic to determine if the client wants to continue sending after a byte
-  virtual BridgeAction onBusByte(const BusEventContext& ctx) = 0;
+  virtual BridgeAction onBusByte(const BusEventInfo& info) = 0;
 
  protected:
   int fd_;
@@ -91,7 +91,7 @@ class ReadOnlyClient : public AbstractClient {
   bool recvFromClient(uint8_t& out) override;
   void sendToClient(ByteView data) override;
 
-  BridgeAction onBusByte(const BusEventContext& ctx) override;
+  BridgeAction onBusByte(const BusEventInfo& info) override;
 };
 
 /**
@@ -106,7 +106,7 @@ class RegularClient : public AbstractClient {
   bool recvFromClient(uint8_t& out) override;
   void sendToClient(ByteView data) override;
 
-  BridgeAction onBusByte(const BusEventContext& ctx) override;
+  BridgeAction onBusByte(const BusEventInfo& info) override;
 };
 
 /**
@@ -123,7 +123,7 @@ class EnhancedClient : public AbstractClient {
 
   void onSessionStart(uint32_t session_id) override;
 
-  BridgeAction onBusByte(const BusEventContext& ctx) override;
+  BridgeAction onBusByte(const BusEventInfo& info) override;
 
  private:
   // The Enhanced protocol accumulation buffer (max 2 bytes for escaped

@@ -25,7 +25,7 @@ struct PollItem {
   uint8_t priority;
   Sequence message;
   std::chrono::milliseconds interval;
-  std::chrono::steady_clock::time_point next_due;
+  Clock::time_point next_due;
   ResultCallback callback;
 
   bool operator<(const PollItem& other) const {
@@ -63,7 +63,7 @@ class PollManager {
                        bool* activity);
 
   // Returns the time point when the next item is due, or max if empty.
-  std::chrono::steady_clock::time_point nextDueTime() const;
+  Clock::time_point nextDueTime() const;
 
   void clear();
 

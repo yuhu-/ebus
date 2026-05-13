@@ -14,7 +14,7 @@ namespace ebus::detail {
 DeviceScanner::DeviceScanner(uint8_t address, DeviceManager* device_manager)
     : device_manager_(device_manager),
       own_address_(address),
-      next_startup_scan_time_(std::chrono::steady_clock::time_point::max()) {}
+      next_startup_scan_time_(Clock::time_point::max()) {}
 
 void DeviceScanner::setOwnAddress(uint8_t address) {
   std::lock_guard<std::mutex> lock(mutex_);
@@ -40,8 +40,7 @@ void DeviceScanner::setScanOnStartup(bool enable) {
     startup_scan_count_ = 0;
     std::queue<Sequence> empty;
     std::swap(startup_queue_, empty);
-    next_startup_scan_time_ =
-        std::chrono::steady_clock::now() + initial_scan_delay_;
+    next_startup_scan_time_ = Clock::now() + initial_scan_delay_;
   }
 }
 
@@ -143,7 +142,7 @@ void DeviceScanner::stop() {
 }
 
 ebus::Sequence DeviceScanner::nextCommand() {
-  const auto now = std::chrono::steady_clock::now();
+  const auto now = Clock::now();
   std::unique_lock<std::mutex> lock(mutex_);
 
   // Priority 1: Manual Scan

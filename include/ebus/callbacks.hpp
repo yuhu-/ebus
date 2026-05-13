@@ -34,9 +34,6 @@ struct TelegramInfo {
   ByteView master_view;
   ByteView slave_view;
 
-  /**
-   * @brief Serializes TelegramInfo to a JSON object string.
-   */
   std::string toJson() const;
 };
 
@@ -53,9 +50,6 @@ struct ErrorInfo {
   ByteView slave_view;
   float utilization = 0.0f;
 
-  /**
-   * @brief Serializes ErrorInfo to a JSON object string.
-   */
   std::string toJson() const;
 };
 
@@ -64,9 +58,6 @@ struct ReactiveInfo {
   ByteView master_view;
   Sequence& slave_response;
 
-  /**
-   * @brief Serializes ReactiveInfo to a JSON object string.
-   */
   std::string toJson() const;
 };
 
@@ -79,9 +70,6 @@ struct ResultInfo {
   ByteView master_view;
   ByteView slave_view;
 
-  /**
-   * @brief Serializes ResultInfo to a JSON object string.
-   */
   std::string toJson() const;
 };
 
@@ -89,7 +77,7 @@ struct ResultInfo {
  * Snapshot of the eBUS FSM state at the moment a byte was processed.
  * Included in public callbacks for protocol tracing and diagnostics.
  */
-struct BusEventContext {
+struct BusEventInfo {
   uint8_t byte = 0;
   HandlerState handler_state = HandlerState::passive_receive_master;
   RequestState request_state = RequestState::observe;
@@ -97,9 +85,6 @@ struct BusEventContext {
   uint8_t lock_counter = 0;
   Clock::time_point timestamp = {};
 
-  /**
-   * Serializes BusEventContext to a JSON object string.
-   */
   std::string toJson() const;
 };
 
@@ -109,7 +94,7 @@ struct BusEventContext {
  */
 struct ProtocolEvent {
   enum class Type : uint8_t { telegram, error } type;
-  
+
   // Shared metadata (Ordered to minimize padding)
   uint32_t session_id;
   uint32_t poll_id;
@@ -154,6 +139,6 @@ using ReactiveMasterSlaveCallback =
 
 using ResultCallback = std::function<void(const ResultInfo& info)>;
 
-using TraceCallback = std::function<void(const BusEventContext& ctx)>;
+using TraceCallback = std::function<void(const BusEventInfo& info)>;
 
 }  // namespace ebus

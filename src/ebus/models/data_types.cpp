@@ -449,7 +449,7 @@ std::optional<DataTypeInfo> getMeta(DataType dt) {
   if (!m) return std::nullopt;
 
   DataTypeInfo info;
-  static_cast<DataTypeInfoBase&>(info) = *m;  // NOLINT
+  static_cast<DataTypeInfoBase&>(info) = *m;
   info.factor = static_cast<float>(m->scale.num) / m->scale.den;
   return info;
 }

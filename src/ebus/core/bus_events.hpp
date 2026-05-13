@@ -21,7 +21,7 @@ struct BusEvent {
   uint8_t byte;
   bool bus_request{false};
   bool start_bit{false};
-  std::chrono::steady_clock::time_point timestamp;
+  Clock::time_point timestamp;
 };
 
 }  // namespace ebus::detail

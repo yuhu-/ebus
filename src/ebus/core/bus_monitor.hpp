@@ -66,7 +66,7 @@ class BusMonitor {
   // Accumulators
   mutable std::mutex metrics_mutex;
 
-  mutable std::chrono::steady_clock::time_point congestion_start_point_{};
+  mutable Clock::time_point congestion_start_point_{};
   mutable bool congestion_active_ = false;
 
   TimingStats sync;

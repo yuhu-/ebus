@@ -35,7 +35,6 @@ set(UTILS_SOURCES
 
 if(POSIX AND NOT APPLE)
     list(APPEND PLATFORM_SOURCES platform/posix/bus_posix.cpp)
-    list(APPEND PLATFORM_SOURCES platform/posix/virtual_line.cpp)
 elseif(ESP_PLATFORM)
     list(APPEND PLATFORM_SOURCES platform/esp/bus_esp.cpp)
 endif()

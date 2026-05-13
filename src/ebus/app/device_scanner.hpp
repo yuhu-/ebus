@@ -80,7 +80,7 @@ class DeviceScanner {
       ebus::RuntimeConfig{}.scanner.startup_interval_s};
 
   // The wall-clock time when the next startup scan iteration is allowed to run
-  std::chrono::steady_clock::time_point next_startup_scan_time_;
+  Clock::time_point next_startup_scan_time_;
 
   // Flag and cursor for the exhaustive 0x00-0xFF scan.
   // fullScanAddress_ iterates from 0 to 255.

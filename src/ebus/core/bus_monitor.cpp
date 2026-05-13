@@ -165,9 +165,8 @@ ebus::metrics::SystemMetrics BusMonitor::getMetrics() const {
       if (bm.uptime.last >= kTenSecondsUs) {
         congestion_active_ = true;
       } else {
-        auto now = std::chrono::steady_clock::now();
-        if (congestion_start_point_ ==
-            std::chrono::steady_clock::time_point{}) {
+        auto now = Clock::now();
+        if (congestion_start_point_ == Clock::time_point{}) {
           congestion_start_point_ = now;
         } else {
           auto duration = std::chrono::duration_cast<std::chrono::seconds>(

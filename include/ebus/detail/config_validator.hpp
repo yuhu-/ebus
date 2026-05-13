@@ -19,6 +19,11 @@ class ConfigValidator {
   static bool validate(const EbusConfig& config) {
     const auto& r = config.runtime;
 
+    // 0. Feature Support
+#if !EBUS_SIMULATION_ENABLED
+    if (config.bus.simulate) return false;
+#endif
+
     // 1. Addressing
     if (!ebus::isMaster(r.address) && r.address != 0xff) return false;
     if (r.lock_counter > RequestLimits::lock_counter_max) return false;

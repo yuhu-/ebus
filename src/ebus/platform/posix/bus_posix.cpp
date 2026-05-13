@@ -18,8 +18,7 @@ namespace ebus::detail::platform {
 
 BusPosix::BusPosix(const BusConfig& config, const ebus::RuntimeConfig& runtime,
                    Request* request, BusMonitor* monitor)
-    : device_(config.device),
-      simulate_(config.simulate),
+    : config_(config),
       runtime_(runtime),
       request_(request),
       monitor_(monitor),
@@ -35,15 +34,19 @@ BusPosix::~BusPosix() { stop(); }
 void BusPosix::start() {
   if (open_) return;
 
-  if (simulate_) {
-    virtual_line_ = std::make_unique<VirtualLine>();
+  if (config_.simulate) {
+#if EBUS_SIMULATION_ENABLED
+    VirtualLine::get().attach(this);
     fd_ = -1;
     open_ = true;
+#else
+    throw std::runtime_error("Simulation mode is not enabled in this build.");
+#endif
   } else {
     struct termios new_settings;
-    fd_ = ::open(device_.c_str(), O_RDWR | O_NOCTTY);
+    fd_ = ::open(config_.device.c_str(), O_RDWR | O_NOCTTY);
     if (fd_ < 0 || isatty(fd_) == 0)
-      throw std::runtime_error("Failed to open ebus device: " + device_);
+      throw std::runtime_error("Failed to open ebus device: " + config_.device);
 
     tcgetattr(fd_, &old_settings_);
     ::memset(&new_settings, 0, sizeof(new_settings));
@@ -79,7 +82,7 @@ void BusPosix::start() {
         std::chrono::milliseconds(runtime_.address *
                                   BusLimits::Syn::address_factor_ms) +
         syn_tolerance_ms_dur_;
-    next_syn_expiry_ = std::chrono::steady_clock::now() + current_t_unique_;
+    next_syn_expiry_ = Clock::now() + current_t_unique_;
 
     syn_active_ = false;
     syn_running_.store(true);
@@ -99,19 +102,21 @@ void BusPosix::stop() {
   syn_running_.store(false);
 
   if (byte_queue_) byte_queue_->shutdown();
-  if (virtual_line_) virtual_line_->shutdown();
+#if EBUS_SIMULATION_ENABLED
+  if (config_.simulate) VirtualLine::get().detach(this);
+#endif
 
   {
     std::unique_lock<std::mutex> lock(syn_mutex_);
     syn_cv_.notify_all();
   }
 
-  if (!simulate_ && fd_ != -1) ::tcflush(fd_, TCIOFLUSH);
+  if (!config_.simulate && fd_ != -1) ::tcflush(fd_, TCIOFLUSH);
 
   if (syn_worker_) syn_worker_->join();
   if (worker_) worker_->join();
 
-  if (!simulate_ && fd_ != -1) {
+  if (!config_.simulate && fd_ != -1) {
     ::tcsetattr(fd_, TCSANOW, &old_settings_);
     ::close(fd_);
   }
@@ -126,7 +131,7 @@ void BusPosix::writeByte(const uint8_t byte) {
   {
     std::lock_guard<std::mutex> l_lock(listeners_mutex_);
     std::lock_guard<std::mutex> lock(syn_mutex_);
-    auto now = std::chrono::steady_clock::now();
+    auto now = Clock::now();
     last_activity_time_ = now;
     // Postpone automated SYN generation. Add 4ms to account for serialization.
     if (byte != Symbols::syn) {
@@ -140,13 +145,12 @@ void BusPosix::writeByte(const uint8_t byte) {
 
   if (monitor_) monitor_->transmit.markBegin();
 
-  if (simulate_) {
-    if (virtual_line_) {
-      // Notify write listeners for local simulation feedback
-      for (const auto& listener : write_listeners_) listener(byte);
-      virtual_line_->write(byte);
-    }
-
+  if (config_.simulate) {
+#if EBUS_SIMULATION_ENABLED
+    // Notify write listeners for local simulation feedback
+    for (const auto& listener : write_listeners_) listener(byte);
+    VirtualLine::get().write(byte);
+#endif
   } else {
     ensureOpen();
     {
@@ -205,7 +209,7 @@ void BusPosix::setRuntimeConfig(const RuntimeConfig& runtime) {
       if (runtime_.bus.syn_gen && !was_enabled && !syn_running_.load()) {
         should_start = true;
         syn_running_.store(true);
-        next_syn_expiry_ = std::chrono::steady_clock::now() + current_t_unique_;
+        next_syn_expiry_ = Clock::now() + current_t_unique_;
         syn_active_ = false;
       } else if (!runtime_.bus.syn_gen && was_enabled && syn_running_.load()) {
         should_stop = true;
@@ -216,7 +220,7 @@ void BusPosix::setRuntimeConfig(const RuntimeConfig& runtime) {
       // If generator was already running, re-align next_syn_expiry_ to the new
       // t_unique
       if (runtime_.bus.syn_gen && !should_start && syn_running_.load()) {
-        next_syn_expiry_ = std::chrono::steady_clock::now() + current_t_unique_;
+        next_syn_expiry_ = Clock::now() + current_t_unique_;
       }
     }
   }
@@ -290,19 +294,21 @@ void BusPosix::readerThread() {
     uint8_t byte;
     ssize_t n = 0;
 
-    if (simulate_) {
+    if (config_.simulate) {
+#if EBUS_SIMULATION_ENABLED
       // Use the memory-based simulation queue
-      if (virtual_line_->read(
-              byte, BusLimits::platform::Posix::virtual_read_timeout_ms))
+      if (VirtualLine::get().read(
+              this, byte, BusLimits::platform::Posix::virtual_read_timeout_ms))
         n = 1;
       else
         continue;  // timeout, check running_ flag again
+#endif
     } else {
       n = ::read(fd_, &byte, 1);
     }
 
     if (n == 1) {
-      auto arrival_time = std::chrono::steady_clock::now();
+      auto arrival_time = Clock::now();
       {
         std::lock_guard<std::mutex> lock(listeners_mutex_);
         for (const auto& listener : read_listeners_) listener(byte);
@@ -349,7 +355,7 @@ void BusPosix::readerThread() {
 
 void BusPosix::resetSynTimer(uint8_t byte) {
   std::lock_guard<std::mutex> lock(syn_mutex_);
-  auto now = std::chrono::steady_clock::now();
+  auto now = Clock::now();
   last_activity_time_ = now;
 
   // Arbitration Logic:
@@ -370,7 +376,7 @@ void BusPosix::synThread() {
   while (syn_running_.load()) {
     std::unique_lock<std::mutex> lock(syn_mutex_);
 
-    auto now = std::chrono::steady_clock::now();
+    auto now = Clock::now();
     if (next_syn_expiry_ > now) {
       syn_cv_.wait_until(lock, next_syn_expiry_);
       continue;
@@ -383,15 +389,13 @@ void BusPosix::synThread() {
         std::chrono::milliseconds(BusLimits::Syn::carrier_sense_ms)) {
       if (monitor_)
         monitor_->updateBus([](auto& m) { m.syn_postponed_count++; });
-      if (syn_intent_time_ == std::chrono::steady_clock::time_point{})
-        syn_intent_time_ = now;
+      if (syn_intent_time_ == Clock::time_point{}) syn_intent_time_ = now;
       next_syn_expiry_ =
           now + std::chrono::milliseconds(BusLimits::Syn::postpone_ms);
       continue;
     }
 
-    if (syn_intent_time_ != std::chrono::steady_clock::time_point{} &&
-        monitor_) {
+    if (syn_intent_time_ != Clock::time_point{} && monitor_) {
       monitor_->syn_postpone.addSample(static_cast<float>(
           std::chrono::duration_cast<std::chrono::microseconds>(
               now - syn_intent_time_)
@@ -414,8 +418,8 @@ void BusPosix::synThread() {
     // If the timer hasn't been updated by readerThread (receiving the echo),
     // reset it to the unique (long) value as a fallback.
     // This handles cases where our write failed or the echo was corrupted.
-    if (next_syn_expiry_ <= std::chrono::steady_clock::now()) {
-      next_syn_expiry_ = std::chrono::steady_clock::now() + current_t_unique_;
+    if (next_syn_expiry_ <= Clock::now()) {
+      next_syn_expiry_ = Clock::now() + current_t_unique_;
     }
   }
 }

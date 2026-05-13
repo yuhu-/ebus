@@ -243,11 +243,10 @@ std::string BusConfig::toJson() const {
       << "\"timer_idx\": " << static_cast<int>(timer_idx);
 #elif defined(POSIX)
   oss << "\"platform\": \"posix\","
-      << "\"device\": \"" << escapeJson(device) << "\","
-      << "\"simulate\": " << (simulate ? "true" : "false");
+      << "\"device\": \"" << escapeJson(device) << "\",";
 #endif
 
-  oss << "}";
+  oss << "\"simulate\": " << (simulate ? "true" : "false") << "}";
   return oss.str();
 }
 
@@ -316,13 +315,13 @@ std::string ResultInfo::toJson() const {
   return oss.str();
 }
 
-std::string BusEventContext::toJson() const {
+std::string BusEventInfo::toJson() const {
   std::ostringstream oss;
   // Convert steady_clock to system_clock (approximation for external logs)
   auto wall_time =
       std::chrono::system_clock::now() +
       std::chrono::duration_cast<std::chrono::system_clock::duration>(
-          timestamp - std::chrono::steady_clock::now());
+          timestamp - Clock::now());
   time_t t = std::chrono::system_clock::to_time_t(wall_time);
   auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
                 wall_time.time_since_epoch())

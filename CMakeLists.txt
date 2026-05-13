@@ -20,6 +20,9 @@ if(UNIX AND NOT APPLE)
     set(POSIX ON)
 endif()
 
+# --- Feature Options ---
+option(EBUS_SIMULATION_ENABLED "Enable virtual bus simulation mode" ON)
+
 # --- Memory Tuning Options ---
 # These defaults match protocol_limits.hpp but can be overridden at build time.
 # Component Layer
@@ -54,6 +57,8 @@ set(EBUS_POLL_MAX_ITEMS 128 CACHE STRING "Maximum items in the poll manager")
 
 # Apply definitions globally for the library, tests, and tools
 add_compile_definitions(
+    # Features
+    EBUS_SIMULATION_ENABLED=$<BOOL:${EBUS_SIMULATION_ENABLED}>
     # Component Layer
     EBUS_TRANSITION_HISTORY_SIZE=${EBUS_TRANSITION_HISTORY_SIZE}
     # Orchestration Layer

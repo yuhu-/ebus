@@ -32,8 +32,8 @@ ClientManager::ClientManager(platform::Bus* bus, BusHandler* bus_handler,
           ebus::RuntimeConfig{}.network.outbound_buffer_size) {
   if (bus_handler_) {
     bus_listener_id_ =
-        bus_handler_->addByteListener([this](const BusEventContext& ctx) {
-          bus_byte_queue_.tryPush(ctx);
+        bus_handler_->addByteListener([this](const BusEventInfo& info) {
+          bus_byte_queue_.tryPush(info);
           notifyWake();
         });
   }
@@ -149,14 +149,14 @@ ClientManagerStatus ClientManager::getStatus() {
 }
 
 void ClientManager::run() {
-  BusEventContext ctx;
+  BusEventInfo info;
 
-  auto last_state_change = std::chrono::steady_clock::now();
+  auto last_state_change = Clock::now();
   SessionState prev_state = session_state_;
 
   while (running_.load(std::memory_order_acquire)) {
     // 0. Drain immediate bus events first (non-blocking)
-    bool has_bus_event = bus_byte_queue_.tryPop(ctx);
+    bool has_bus_event = bus_byte_queue_.tryPop(info);
     bool activity = has_bus_event;
 
     // 1. Snapshot clients only if changed
@@ -195,7 +195,7 @@ void ClientManager::run() {
             current_active_sender_ = client;
             client->onSessionStart(++session_counter_);
             session_state_ = SessionState::request;
-            last_state_change = std::chrono::steady_clock::now();
+            last_state_change = Clock::now();
             bus_requested_.store(false, std::memory_order_release);
             break;
           }
@@ -204,7 +204,7 @@ void ClientManager::run() {
 
       if (session_state_ != prev_state) {
         prev_state = session_state_;
-        last_state_change = std::chrono::steady_clock::now();
+        last_state_change = Clock::now();
       }
     }
 
@@ -217,7 +217,7 @@ void ClientManager::run() {
     }
 
     if (active_sender) {
-      auto now = std::chrono::steady_clock::now();
+      auto now = Clock::now();
       auto elapsed = now - last_state_change;
       auto current_timeout = (session_state_ == SessionState::transmit)
                                  ? transmit_timeout_
@@ -242,7 +242,7 @@ void ClientManager::run() {
               last_sent_byte_ = first_byte;
               session_state_ = SessionState::response;
               activity = true;
-              last_state_change = std::chrono::steady_clock::now();
+              last_state_change = Clock::now();
             }
           } else {
             last_error_message_ = "Client sent no data for bus request.";
@@ -258,14 +258,14 @@ void ClientManager::run() {
             std::lock_guard<std::mutex> lock(mutex_);
             session_state_ = SessionState::response;
             activity = true;
-            last_state_change = std::chrono::steady_clock::now();
+            last_state_change = Clock::now();
           }
         }
       }
     }
 
     // 4. Inbound logic: process bus byte(s)
-    auto process_byte = [&](const BusEventContext& bctx) {
+    auto process_byte = [&](const BusEventInfo& binfo) {
       std::shared_ptr<AbstractClient> current_sender;
       SessionState s;
       {
@@ -278,7 +278,7 @@ void ClientManager::run() {
         // We forward all bytes to the current active sender so it can sniff
         // while waiting for or performing arbitration.
         if (s != SessionState::idle) {
-          auto action = current_sender->onBusByte(bctx);
+          auto action = current_sender->onBusByte(binfo);
           if (action == BridgeAction::stop_session) {
             if (monitor_)
               monitor_->updateRequest([](auto& m) {
@@ -288,7 +288,7 @@ void ClientManager::run() {
           } else if (action == BridgeAction::bypass_wait) {
             std::lock_guard<std::mutex> lock(mutex_);
             session_state_ = SessionState::transmit;
-            last_state_change = std::chrono::steady_clock::now();
+            last_state_change = Clock::now();
             bus_requested_.store(false, std::memory_order_release);
           }
         }
@@ -296,17 +296,17 @@ void ClientManager::run() {
 
       for (auto& client : active_clients) {
         if (client != current_sender && client->isConnected()) {
-          client->sendToClient(ByteView(&bctx.byte, 1));
+          client->sendToClient(ByteView(&binfo.byte, 1));
         }
       }
     };
 
     if (has_bus_event) {
-      process_byte(ctx);
+      process_byte(info);
     }
-    while (bus_byte_queue_.tryPop(ctx)) {
+    while (bus_byte_queue_.tryPop(info)) {
       activity = true;
-      process_byte(ctx);
+      process_byte(info);
     }
 
     // 5. Periodic flush for all clients (calls outside lock)

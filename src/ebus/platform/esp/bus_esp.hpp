@@ -7,6 +7,7 @@
 
 #if defined(ESP_PLATFORM)
 #include <atomic>
+#include <condition_variable>
 #include <cstdint>
 #include <ebus/config.hpp>
 #include <ebus/detail/protocol_limits.hpp>
@@ -21,6 +22,12 @@
 #include "esp_timer.h"
 #include "platform/queue.hpp"
 #include "platform/service_thread.hpp"
+
+#if EBUS_SIMULATION_ENABLED
+#include <condition_variable>
+
+#include "platform/virtual_line.hpp"
+#endif
 
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
 #include "driver/gptimer.h"
@@ -40,10 +47,6 @@ namespace ebus::detail::platform {
  * Handles serial port configuration and asynchronous byte reading via a
  * background thread.
  */
-/* WARNING: Listeners registered with this class are executed within a
-   critical section and potentially from an ISR. They MUST be extremely
-   fast, non-blocking, and ISR-safe. Do not call ebus::Controller methods
-   or any blocking OS primitives from within these listeners. */
 class BusEsp {
  public:
   using ReadListener = std::function<void(const uint8_t& byte)>;
@@ -81,12 +84,15 @@ class BusEsp {
   ebus::BusStatus getStatus() const;
 
  private:
+  BusConfig config_;
+  RuntimeConfig runtime_;
+
+  detail::Request* request_ = nullptr;
+  detail::BusMonitor* monitor_ = nullptr;
+
   uart_port_t uart_port_num_;
   uint8_t rx_pin_;
   uint8_t tx_pin_;
-
-  BusConfig config_;
-  RuntimeConfig runtime_;
 
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
   gptimer_handle_t gp_timer_ = nullptr;
@@ -97,11 +103,10 @@ class BusEsp {
   timer_idx_t timer_idx_num_ = TIMER_0;
 #endif
 
-  detail::Request* request_ = nullptr;
-  detail::BusMonitor* monitor_ = nullptr;
-
   // owned queue
   std::unique_ptr<Queue<BusEvent>> byte_queue_;
+
+  std::unique_ptr<ServiceThread> syn_worker_;
 
   std::unique_ptr<ServiceThread> worker_;
   std::atomic<bool> running_{false};
@@ -117,11 +122,6 @@ class BusEsp {
   // approximately 9.5 * bit_time_us = 9.5 * 416.67 us = 3958.33 us
   static constexpr int64_t byte_time_center_us_ =
       static_cast<int64_t>(Physical::byte_center_bits * Physical::bit_time_us);
-
-  // Configuration and state shared between ISR and Task context.
-  // These MUST be accessed within the timer_mux_ critical section.
-  uint16_t window_us_ = 4300;  // Usually between 4300-4456 us
-  uint16_t offset_us_ = 80;    // Mainly for context switch and write
 
   uint8_t buffer_index_ = 0;  // Index for falling edge buffer
   int64_t micros_edge_buffer_[FALLING_EDGE_BUFFER_SIZE] = {0};
@@ -140,6 +140,15 @@ class BusEsp {
   int64_t syn_postpone_delta_us_ = 0;
   uint32_t syn_postponed_count_ = 0;
   bool syn_active_{false};
+
+#if EBUS_SIMULATION_ENABLED
+  // Simulation SYN generator state
+  std::mutex syn_mutex_;
+  std::condition_variable syn_cv_;
+  Clock::time_point last_activity_time_;
+  Clock::time_point next_syn_expiry_;
+  Clock::time_point syn_intent_time_sim_;
+#endif
 
   std::atomic<bool> syn_running_{false};
   uint64_t syn_base_us_ = 0;    // Base SYN interval in microseconds
@@ -160,6 +169,13 @@ class BusEsp {
   void ebusUartEventRunner();  // instance worker used by static trampoline
 
   static void s_onSynPostpone(void* arg);
+
+#if EBUS_SIMULATION_ENABLED
+  // Simulation workers
+  void simulationReaderLoop();
+  void simulationSynLoop();
+  void resetSynTimerSim(uint8_t byte);
+#endif
 
   // ISR: Save the falling edges in order to estimate the sync byte
   static void IRAM_ATTR s_onFallingEdge(void* arg);

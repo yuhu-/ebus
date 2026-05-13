@@ -58,7 +58,7 @@ class Handler {
 
   void reset();
 
-  void run(const BusEventContext& ctx);
+  void run(const BusEventInfo& info);
 
  private:
   platform::Bus* bus_ = nullptr;
@@ -77,7 +77,7 @@ class Handler {
   TelegramCallback telegram_callback_ = nullptr;
   ErrorCallback error_callback_ = nullptr;
 
-  std::chrono::steady_clock::time_point last_point_;
+  Clock::time_point last_point_;
   bool measure_sync_ = false;
 
   // passive

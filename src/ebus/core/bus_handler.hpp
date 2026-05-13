@@ -34,7 +34,7 @@ namespace ebus::detail {
  */
 class BusHandler {
  public:
-  using ByteListener = std::function<void(const BusEventContext& ctx)>;
+  using ByteListener = std::function<void(const BusEventInfo& info)>;
 
   BusHandler(Request* request, Handler* handler,
              platform::Queue<BusEvent>* queue,
@@ -122,23 +122,23 @@ class BusHandler {
     BusEvent bus_event;
     while (running_) {
       if (queue_->pop(bus_event, watchdog_timeout_ms_)) {
-        BusEventContext ctx{bus_event.byte,
-                            HandlerState::passive_receive_master,
-                            RequestState::observe,
-                            RequestResult::observe_data,
-                            0,
-                            bus_event.timestamp};
+        BusEventInfo info{bus_event.byte,
+                          HandlerState::passive_receive_master,
+                          RequestState::observe,
+                          RequestResult::observe_data,
+                          0,
+                          bus_event.timestamp};
 
         if (request_) {
           if (bus_event.bus_request) request_->busRequestCompleted();
           if (bus_event.start_bit) request_->startBit();
-          ctx.request_state = request_->getState();
-          ctx.result = request_->run(bus_event.byte);
-          ctx.lock_counter = request_->getLockCounter();
+          info.request_state = request_->getState();
+          info.result = request_->run(bus_event.byte);
+          info.lock_counter = request_->getLockCounter();
         }
         if (handler_) {
-          handler_->run(ctx);
-          ctx.handler_state = handler_->getState();
+          handler_->run(info);
+          info.handler_state = handler_->getState();
         }
 
         {
@@ -153,7 +153,7 @@ class BusHandler {
         // Execute listeners outside the lock to prevent deadlocks
         if (!listeners_cache_.empty()) {
           for (const auto& listener : listeners_cache_) {
-            listener(ctx);
+            listener(info);
           }
         }
       }

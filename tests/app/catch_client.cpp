@@ -90,14 +90,13 @@ TEST_CASE("EnhancedClient: Encoded responses mapping",
   req.run(ebus::Symbols::syn);
   client.onBusByte({ebus::Symbols::syn,
                     ebus::HandlerState::passive_receive_master, req.getState(),
-                    req.getResult(), req.getLockCounter(),
-                    std::chrono::steady_clock::now()});
+                    req.getResult(), req.getLockCounter(), ebus::Clock::now()});
 
   req.run(0x33);  // Move FSM to firstWon
 
   client.onBusByte({0x33, ebus::HandlerState::passive_receive_master,
                     req.getState(), req.getResult(), req.getLockCounter(),
-                    std::chrono::steady_clock::now()});
+                    ebus::Clock::now()});
 
   uint8_t resp[2];
   REQUIRE(readExact(sv[1], resp, 2));
@@ -112,7 +111,7 @@ TEST_CASE("EnhancedClient: Encoded responses mapping",
   req.run(0x15);  // Move FSM to observeData
   client.onBusByte({0x15, ebus::HandlerState::passive_receive_master,
                     req.getState(), req.getResult(), req.getLockCounter(),
-                    std::chrono::steady_clock::now()});
+                    ebus::Clock::now()});
 
   uint8_t short_resp;
   REQUIRE(readExact(sv[1], &short_resp, 1));
@@ -122,7 +121,7 @@ TEST_CASE("EnhancedClient: Encoded responses mapping",
   req.run(0xaa);  // Move FSM to observeSyn
   client.onBusByte({0xaa, ebus::HandlerState::passive_receive_master,
                     req.getState(), req.getResult(), req.getLockCounter(),
-                    std::chrono::steady_clock::now()});
+                    ebus::Clock::now()});
 
   REQUIRE(readExact(sv[1], resp, 2));
   REQUIRE(resp[0] == 0xc6);

@@ -97,7 +97,7 @@ Handler::Handler(uint8_t source_address, platform::Bus* bus, Request* request,
   active_master_.reserve(SequenceLimits::default_capacity);
   active_slave_.reserve(SequenceLimits::default_capacity);
 
-  last_point_ = std::chrono::steady_clock::now();
+  last_point_ = Clock::now();
 }
 
 void Handler::setSourceAddress(uint8_t source_address) {
@@ -165,28 +165,28 @@ void Handler::reset() {
   callPassiveReset();
 }
 
-void Handler::run(const BusEventContext& ctx) {
-  last_result_ = ctx.result;
+void Handler::run(const BusEventInfo& info) {
+  last_result_ = info.result;
   // record timing
-  if (ctx.byte != Symbols::syn) {
+  if (info.byte != Symbols::syn) {
     if (active_message_) {
       if (measure_sync_ && monitor_)
-        monitor_->active_first.markEnd(ctx.timestamp);
+        monitor_->active_first.markEnd(info.timestamp);
       else if (monitor_)
-        monitor_->active_data.markEnd(ctx.timestamp);
+        monitor_->active_data.markEnd(info.timestamp);
     } else {
       if (measure_sync_ && monitor_)
-        monitor_->passive_first.markEnd(ctx.timestamp);
+        monitor_->passive_first.markEnd(info.timestamp);
       else if (monitor_)
-        monitor_->passive_data.markEnd(ctx.timestamp);
+        monitor_->passive_data.markEnd(info.timestamp);
     }
     measure_sync_ = false;
   } else {
-    if (measure_sync_ && monitor_) monitor_->sync.markEnd(ctx.timestamp);
+    if (measure_sync_ && monitor_) monitor_->sync.markEnd(info.timestamp);
     measure_sync_ = true;
   }
 
-  last_point_ = ctx.timestamp;
+  last_point_ = info.timestamp;
   if (measure_sync_) {
     if (monitor_) {
       monitor_->sync.markBegin(last_point_);
@@ -205,13 +205,13 @@ void Handler::run(const BusEventContext& ctx) {
   size_t idx = static_cast<size_t>(state_);
   if (idx < FsmLimits::num_handler_states && kStateHandlers[idx]) {
     // Use a fresh "now" for the execution timing sample to measure CPU overhead
-    auto exec_start = std::chrono::steady_clock::now();
-    (this->*kStateHandlers[idx])(ctx.byte);  // handle byte
+    auto exec_start = Clock::now();
+    (this->*kStateHandlers[idx])(info.byte);  // handle byte
 
     if (monitor_) {
       monitor_->handler_timing[static_cast<size_t>(idx)].addSample(
-          std::chrono::duration_cast<std::chrono::microseconds>(
-              std::chrono::steady_clock::now() - exec_start)
+          std::chrono::duration_cast<std::chrono::microseconds>(Clock::now() -
+                                                                exec_start)
               .count());
     }
   }

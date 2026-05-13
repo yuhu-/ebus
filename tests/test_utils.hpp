@@ -48,9 +48,8 @@ inline bool readExact(int fd, uint8_t* buffer, size_t length) {
  */
 template <typename Predicate>
 inline bool waitCondition(Predicate&& pred, int timeout_ms = 1000) {
-  auto start = std::chrono::steady_clock::now();
-  while (std::chrono::steady_clock::now() - start <
-         std::chrono::milliseconds(timeout_ms)) {
+  auto start = ebus::Clock::now();
+  while (ebus::Clock::now() - start < std::chrono::milliseconds(timeout_ms)) {
     if (pred()) return true;
     platform::sleepMilli(5);
   }
@@ -122,17 +121,17 @@ class MockClient : public detail::AbstractClient {
     outbound_.insert(outbound_.end(), data.begin(), data.end());
   }
 
-  BridgeAction onBusByte(const BusEventContext& ctx) override {
+  BridgeAction onBusByte(const BusEventInfo& info) override {
     if (!this->isConnected()) return BridgeAction::stop_session;
 
     bool proceed = false;
-    switch (ctx.result) {
+    switch (info.result) {
       case RequestResult::first_won:
       case RequestResult::second_won:
         proceed = true;
         break;
       case RequestResult::observe_data:
-        if (ctx.byte == last_sent_byte_) {
+        if (info.byte == last_sent_byte_) {
           proceed = true;
         }
         break;
@@ -140,7 +139,7 @@ class MockClient : public detail::AbstractClient {
         break;
     }
 
-    sendToClient(ByteView(&ctx.byte, 1));
+    sendToClient(ByteView(&info.byte, 1));
     return proceed ? BridgeAction::bypass_wait : BridgeAction::keep_active;
   }
 
@@ -185,7 +184,7 @@ class BusSimulator {
    * @param masterPayloadHex The hex string of master data (ZZ PB SB NN DB...).
    * @param slavePayloadHex The hex string of slave data (NN DB...).
    */
-  void addMasterSlaveResponse(uint8_t source,  // NOLINT
+  void addMasterSlaveResponse(uint8_t source,
                               const std::string& masterPayloadHex,
                               const std::string& slavePayloadHex,
                               uint32_t delay_ms = 5) {
@@ -247,7 +246,7 @@ class BusSimulator {
           if (!infinite) resp.repeat_count--;
 
           uint32_t delay = resp.delay_ms;
-          std::vector<uint8_t> data = resp.response_data;  // NOLINT
+          std::vector<uint8_t> data = resp.response_data;
 
           auto worker = std::make_unique<platform::ServiceThread>(
               "ebus_bus_simulator", [this, delay, data]() {

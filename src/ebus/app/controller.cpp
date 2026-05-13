@@ -29,7 +29,7 @@ struct Impl {
   detail::CircularBuffer<ebus::ErrorEntry,
                          detail::DiagnosticsLimits::log_history_size>
       error_buffer_;
-  detail::CircularBuffer<ebus::BusEventContext,
+  detail::CircularBuffer<ebus::BusEventInfo,
                          detail::DiagnosticsLimits::trace_history_size>
       trace_buffer_;
 
@@ -399,11 +399,11 @@ std::vector<float> Controller::getUtilizationHistory() const {
   return {};
 }
 
-std::vector<BusEventContext> Controller::getTraceHistory() const {
+std::vector<BusEventInfo> Controller::getTraceHistory() const {
   if (isConfigured()) {
-    std::vector<BusEventContext> history;
+    std::vector<BusEventInfo> history;
     impl_->trace_buffer_.forEach(
-        [&](const BusEventContext& ctx) { history.push_back(ctx); });
+        [&](const BusEventInfo& info) { history.push_back(info); });
     return history;
   }
   return {};
@@ -671,14 +671,9 @@ void Controller::constructMembers() {
       }
       wake_cv_.notify_one();
 
-      // 2. Handle internal diagnostic logging
-      bool store_internal = false;
+      // 2. Handle internal diagnostic logging. The ConfigValidator ensures
+      // log_size > 0.
       {
-        std::lock_guard<std::mutex> lock(config_mutex_);
-        store_internal = config_.runtime.diagnostics.log_size > 0;
-      }
-
-      if (store_internal) {
         ErrorEntry entry;
         entry.session_id = info.session_id;
         entry.poll_id = info.poll_id;
@@ -745,9 +740,9 @@ void Controller::constructMembers() {
         detail::BusLimits::max_listeners);
 
     // Add the permanent tracing listener
-    impl_->bus_handler_->addByteListener([this](const BusEventContext& ctx) {
+    impl_->bus_handler_->addByteListener([this](const BusEventInfo& info) {
       // Store in internal history
-      impl_->trace_buffer_.push_back(BusEventContext(ctx));
+      impl_->trace_buffer_.push_back(BusEventInfo(info));
 
       // Invoke user callback if registered
       TraceCallback user_callback;
@@ -755,7 +750,7 @@ void Controller::constructMembers() {
         std::lock_guard<std::mutex> lock(config_mutex_);
         user_callback = impl_->user_trace_callback_;
       }
-      if (user_callback) user_callback(ctx);
+      if (user_callback) user_callback(info);
     });
   }
   impl_->bus_handler_->setWatchdogTimeout(
@@ -825,8 +820,7 @@ void Controller::run() {
     wake_cv_.wait_until(lk, wait_until, [this, activity] {
       // Wake immediately if work was found, thread is stopping, or new events
       // arrived.
-      return !running_.load() || activity ||
-             impl_->public_errors_.size() > 0 ||
+      return !running_.load() || activity || impl_->public_errors_.size() > 0 ||
              impl_->public_telegrams_.size() > 0 ||
              impl_->poll_manager_->nextDueTime() <= Clock::now();
     });

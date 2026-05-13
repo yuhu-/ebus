@@ -89,8 +89,8 @@ struct BusConfig {
   uint8_t timer_idx;
 #elif defined(POSIX)
   std::string device = "/dev/null";
-  bool simulate = false;
 #endif
+  bool simulate = false;
 
   std::string toJson() const;
 };

@@ -23,23 +23,33 @@
 #include "core/bus_monitor.hpp"
 #include "core/request.hpp"
 #include "driver/gpio.h"
+#include "platform/system.hpp"
 #include "utils/logger.hpp"
 
 namespace ebus::detail::platform {
 
 BusEsp::BusEsp(const BusConfig& config, const RuntimeConfig& runtime,
                Request* request, BusMonitor* monitor)
-    : uart_port_num_(static_cast<uart_port_t>(config.uart_port)),
+    : config_(config),
+      runtime_(runtime),
+      request_(request),
+      monitor_(monitor),
+      uart_port_num_(static_cast<uart_port_t>(config.uart_port)),
       rx_pin_(config.rx_pin),
       tx_pin_(config.tx_pin),
-      runtime_(runtime),
 #if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)
       timer_group_num_(static_cast<timer_group_t>(config.timer_group)),
       timer_idx_num_(static_cast<timer_idx_t>(config.timer_idx)),
 #endif
-      request_(request),
-      monitor_(monitor),
+
       byte_queue_(std::make_unique<Queue<BusEvent>>(BusLimits::queue_size)) {
+
+#if EBUS_SIMULATION_ENABLED
+  if (config_.simulate) {
+    VirtualLine::get().attach(this);
+    return;
+  }
+#endif
 
   // Initialize postponement timer
   esp_timer_create_args_t postpone_args = {};
@@ -53,15 +63,13 @@ BusEsp::BusEsp(const BusConfig& config, const RuntimeConfig& runtime,
   configureUart();
   configureGpio();
   configureTimer();
-
-  start();
 }
 
 BusEsp::~BusEsp() { stop(); }
 
 void BusEsp::start() {
   if (running_.load(std::memory_order_acquire)) return;
-  if (!uart_event_queue_) {
+  if (!config_.simulate && !uart_event_queue_) {
     EBUS_LOG_ERROR(
         "Cannot start ebus_bus: UART driver not installed (queue null)");
     return;
@@ -69,16 +77,37 @@ void BusEsp::start() {
 
   running_.store(true, std::memory_order_release);
   worker_ = std::make_unique<ServiceThread>(
-      "ebus_bus", [this] { ebusUartEventRunner(); },
+      "ebus_bus",
+      [this] {
+        if (config_.simulate)
+          simulationReaderLoop();
+        else
+          ebusUartEventRunner();
+      },
       OrchestrationLimits::bus_stack_size, OrchestrationLimits::bus_priority);
   worker_->start();
+  if (config_.simulate && monitor_) monitor_->uptime.markBegin();
+  if (config_.simulate && runtime_.bus.syn_gen) {
+    syn_running_.store(true);
+    syn_worker_ = std::make_unique<ServiceThread>(
+        "ebus_bus_syn", [this] { simulationSynLoop(); },
+        OrchestrationLimits::bus_syn_stack_size,
+        OrchestrationLimits::bus_syn_priority);
+    syn_worker_->start();
+  }
 }
 
 void BusEsp::stop() {
   if (!running_.load(std::memory_order_acquire)) return;
   running_.store(false, std::memory_order_release);
+  syn_running_.store(false);
 
   if (byte_queue_) byte_queue_->shutdown();
+  if (config_.simulate) VirtualLine::get().detach(this);
+  {
+    std::unique_lock<std::mutex> lock(syn_mutex_);
+    syn_cv_.notify_all();
+  }
 
   gpio_isr_handler_remove(static_cast<gpio_num_t>(rx_pin_));
   gpio_intr_disable(static_cast<gpio_num_t>(rx_pin_));
@@ -101,7 +130,13 @@ void BusEsp::stop() {
   timer_pause(timer_group_num_, timer_idx_num_);
 #endif
 
+  if (syn_worker_) syn_worker_->join();
   if (worker_) worker_->join();
+
+  if (config_.simulate) {
+    if (monitor_) monitor_->uptime.markEnd();
+    return;
+  }
 
   if (uart_event_queue_) {
     uart_driver_delete(uart_port_num_);
@@ -118,6 +153,17 @@ void BusEsp::writeByte(const uint8_t byte) {
     portEXIT_CRITICAL(&listener_mux_);
   }
   if (monitor_) monitor_->transmit.markBegin();
+
+  if (config_.simulate) {
+    if (byte != Symbols::syn) {
+      std::lock_guard<std::mutex> lock(syn_mutex_);
+      syn_active_ = false;
+    }
+    VirtualLine::get().write(byte);
+    if (monitor_) monitor_->transmit.markEnd();
+    return;
+  }
+
   portENTER_CRITICAL(&timer_mux_);
   last_activity_micros_ = esp_timer_get_time();
   portEXIT_CRITICAL(&timer_mux_);
@@ -128,19 +174,19 @@ void BusEsp::writeByte(const uint8_t byte) {
 void BusEsp::setWindow(const uint16_t window_us) {
   portENTER_CRITICAL(&timer_mux_);
   // Validate window against limits
-  window_us_ = (window_us < BusLimits::window_min_us ||
-                window_us > BusLimits::window_max_us)
-                   ? ebus::RuntimeConfig{}.bus.window_us
-                   : window_us;
+  runtime_.bus.window_us = (window_us < BusLimits::window_min_us ||
+                            window_us > BusLimits::window_max_us)
+                               ? ebus::RuntimeConfig{}.bus.window_us
+                               : window_us;
   portEXIT_CRITICAL(&timer_mux_);
 }
 
 void BusEsp::setOffset(const uint16_t offset_us) {
   portENTER_CRITICAL(&timer_mux_);
   // Validate offset against limits
-  offset_us_ = (offset_us > BusLimits::offset_max_us)
-                   ? ebus::RuntimeConfig{}.bus.offset_us
-                   : offset_us;
+  runtime_.bus.offset_us = (offset_us > BusLimits::offset_max_us)
+                               ? ebus::RuntimeConfig{}.bus.offset_us
+                               : offset_us;
   portEXIT_CRITICAL(&timer_mux_);
 }
 
@@ -404,7 +450,7 @@ void BusEsp::ebusUartEventRunner() {
         const int len =
             uart_read_bytes(uart_port_num_, data, uart_event.size, 0);
         for (int i = 0; i < len; ++i) {
-          const auto arrival_time = std::chrono::steady_clock::now();
+          const auto arrival_time = Clock::now();
           const uint8_t byte = data[i];
 
           portENTER_CRITICAL(&listener_mux_);
@@ -436,8 +482,8 @@ void BusEsp::ebusUartEventRunner() {
             portENTER_CRITICAL(&timer_mux_);
             micros_start_bit_ = micros_edge_buffer_[(buffer_index_ + 2) %
                                                     FALLING_EDGE_BUFFER_SIZE];
-            const uint16_t window = window_us_;
-            const uint16_t offset = offset_us_;
+            const uint16_t window = runtime_.bus.window_us;
+            const uint16_t offset = runtime_.bus.offset_us;
             portEXIT_CRITICAL(&timer_mux_);
 
             // Calculate the difference between the expected start bit time
@@ -670,6 +716,95 @@ bool IRAM_ATTR BusEsp::onSynGenTimer() {
   uint8_t syn = Symbols::syn;
   uart_ll_write_txfifo(UART_LL_GET_HW(uart_port_num_), &syn, 1);
   return false;
+}
+
+void BusEsp::simulationReaderLoop() {
+  uint8_t byte;
+  while (running_.load()) {
+    if (VirtualLine::get().read(this, byte, 10)) {
+      auto arrival_time = Clock::now();
+      {
+        portENTER_CRITICAL(&listener_mux_);
+        for (const auto& listener : read_listeners_) listener(byte);
+        portEXIT_CRITICAL(&listener_mux_);
+      }
+
+      recordUtilization(byte);
+      resetSynTimerSim(byte);
+
+      BusEvent event;
+      event.byte = byte;
+      event.timestamp = arrival_time;
+      event.bus_request = bus_request_flag_;
+      bus_request_flag_ = false;
+
+      if (byte_queue_) byte_queue_->push(event);
+
+      if (byte == Symbols::syn && request_->busRequestPending()) {
+        sleepMicro(200);  // Simulate arbitration window
+        writeByte(request_->busRequestAddress());
+        bus_request_flag_ = true;
+      }
+    }
+  }
+}
+
+void BusEsp::resetSynTimerSim(uint8_t byte) {
+  std::lock_guard<std::mutex> lock(syn_mutex_);
+  auto now = Clock::now();
+  last_activity_time_ = now;
+
+  if (syn_active_ && byte == Symbols::syn) {
+    next_syn_expiry_ = now + std::chrono::milliseconds(BusLimits::Syn::base_ms);
+  } else {
+    syn_active_ = false;
+    uint64_t unique_ms =
+        BusLimits::Syn::base_ms +
+        (runtime_.address * BusLimits::Syn::address_factor_ms) +
+        BusLimits::Syn::tolerance_ms;
+    next_syn_expiry_ = now + std::chrono::milliseconds(unique_ms);
+  }
+  syn_cv_.notify_one();
+}
+
+void BusEsp::simulationSynLoop() {
+  while (syn_running_.load()) {
+    std::unique_lock<std::mutex> lock(syn_mutex_);
+    auto now = Clock::now();
+    if (next_syn_expiry_ > now) {
+      syn_cv_.wait_until(lock, next_syn_expiry_);
+      continue;
+    }
+
+    // Carrier Sense
+    if (now - last_activity_time_ <
+        std::chrono::milliseconds(BusLimits::Syn::carrier_sense_ms)) {
+      if (monitor_)
+        monitor_->updateBus([](auto& m) { m.syn_postponed_count++; });
+      next_syn_expiry_ =
+          now + std::chrono::milliseconds(BusLimits::Syn::postpone_ms);
+      continue;
+    }
+
+    syn_active_ = true;
+    lock.unlock();
+
+    {
+      portENTER_CRITICAL(&listener_mux_);
+      for (const auto& listener : syn_listeners_) listener();
+      portEXIT_CRITICAL(&listener_mux_);
+    }
+    writeByte(Symbols::syn);
+
+    lock.lock();
+    if (next_syn_expiry_ <= Clock::now()) {
+      uint64_t unique_ms =
+          BusLimits::Syn::base_ms +
+          (runtime_.address * BusLimits::Syn::address_factor_ms) +
+          BusLimits::Syn::tolerance_ms;
+      next_syn_expiry_ = Clock::now() + std::chrono::milliseconds(unique_ms);
+    }
+  }
 }
 
 }  // namespace ebus::detail::platform

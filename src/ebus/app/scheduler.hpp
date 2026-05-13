@@ -37,8 +37,8 @@ namespace ebus::detail {
  */
 class Scheduler {
  public:
-  using TimePoint = ebus::Clock::time_point;
-  using Duration = ebus::Clock::duration;
+  using TimePoint = Clock::time_point;
+  using Duration = Clock::duration;
 
   struct Item {
     uint8_t priority = 0;  // larger = higher priority (e.g. 255 is top)

@@ -90,7 +90,7 @@ void ReadOnlyClient::sendToClient(ByteView data) {
   }
 }
 
-BridgeAction ReadOnlyClient::onBusByte(const BusEventContext&) {
+BridgeAction ReadOnlyClient::onBusByte(const BusEventInfo&) {
   if (!isConnected()) return BridgeAction::stop_session;
   // This should never happen, because ReadOnlyClient is never allowed to write
   return BridgeAction::stop_session;
@@ -123,14 +123,14 @@ void RegularClient::sendToClient(ByteView data) {
   }
 }
 
-BridgeAction RegularClient::onBusByte(const BusEventContext& ctx) {
+BridgeAction RegularClient::onBusByte(const BusEventInfo& info) {
   if (!isConnected()) return BridgeAction::stop_session;
 
-  switch (ctx.result) {
+  switch (info.result) {
     case RequestResult::first_won:
     case RequestResult::second_won:
       // Arbitration won: send address echo back to client and proceed to data
-      sendToClient(ByteView(&ctx.byte, 1));
+      sendToClient(ByteView(&info.byte, 1));
       return BridgeAction::bypass_wait;
 
     case RequestResult::first_lost:
@@ -143,13 +143,13 @@ BridgeAction RegularClient::onBusByte(const BusEventContext& ctx) {
 
     case RequestResult::observe_data:
       // Echo verification: if we are active, the next data byte must match
-      if (ctx.byte != last_sent_byte_) return BridgeAction::stop_session;
-      sendToClient(ByteView(&ctx.byte, 1));
+      if (info.byte != last_sent_byte_) return BridgeAction::stop_session;
+      sendToClient(ByteView(&info.byte, 1));
       return BridgeAction::bypass_wait;
 
     default:
       // Sniffing heartbeats (SYN) or transparent traffic
-      sendToClient(ByteView(&ctx.byte, 1));
+      sendToClient(ByteView(&info.byte, 1));
       return BridgeAction::keep_active;
   }
 }
@@ -272,14 +272,14 @@ void EnhancedClient::onSessionStart(uint32_t session_id) {
   inbound_len_ = 0;
 }
 
-BridgeAction EnhancedClient::onBusByte(const BusEventContext& ctx) {
+BridgeAction EnhancedClient::onBusByte(const BusEventInfo& info) {
   if (!isConnected()) return BridgeAction::stop_session;
 
-  switch (ctx.result) {
+  switch (info.result) {
     case RequestResult::first_lost:
     case RequestResult::second_lost:
       // Arbitration lost: return 0x0A + the master address that actually won
-      sendEnhancedResponse(enhanced::Response::failed, ctx.byte);
+      sendEnhancedResponse(enhanced::Response::failed, info.byte);
       return BridgeAction::stop_session;
     case RequestResult::first_error:
     case RequestResult::retry_error:
@@ -291,19 +291,19 @@ BridgeAction EnhancedClient::onBusByte(const BusEventContext& ctx) {
     case RequestResult::first_won:
     case RequestResult::second_won:
       // Arbitration won: signal started
-      sendEnhancedResponse(enhanced::Response::started, ctx.byte);
+      sendEnhancedResponse(enhanced::Response::started, info.byte);
       return BridgeAction::bypass_wait;
     case RequestResult::observe_data:
       // Verification vs Sniffing
-      sendEnhancedResponse(enhanced::Response::received, ctx.byte);
-      if (ctx.byte == last_sent_byte_) {
+      sendEnhancedResponse(enhanced::Response::received, info.byte);
+      if (info.byte == last_sent_byte_) {
         return BridgeAction::bypass_wait;
       }
       return BridgeAction::keep_active;
 
     default:
       // Sniffing (SYN, retry steps, etc.)
-      sendEnhancedResponse(enhanced::Response::received, ctx.byte);
+      sendEnhancedResponse(enhanced::Response::received, info.byte);
       return BridgeAction::keep_active;
   }
   return BridgeAction::stop_session;

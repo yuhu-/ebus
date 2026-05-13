@@ -110,8 +110,8 @@ int main() {
   });
 
   // --- 7. Add a trace callback handler to Device B ---
-  // deviceB.setTraceCallback([](const ebus::BusEventContext& ctx) {
-  //   std::cout << "[Device B] Trace message" << ctx.toJson() << std::endl;
+  // deviceB.setTraceCallback([](const ebus::BusEventInfo& info) {
+  //   std::cout << "[Device B] Trace message" << info.toJson() << std::endl;
   // });
 
   // --- 8. Start the simulation ---

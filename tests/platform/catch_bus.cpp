@@ -82,16 +82,16 @@ TEST_CASE("Bus: SYN Timing", "[platform][bus]") {
   platform::Bus bus(config, runtime, &req, &monitor);
   auto* queue = bus.getQueue();
 
-  auto start = std::chrono::steady_clock::now();
+  auto start = ebus::Clock::now();
   bus.start();
 
-  std::vector<std::chrono::steady_clock::time_point> timestamps;
+  std::vector<ebus::Clock::time_point> timestamps;
   BusEvent ev;
 
   for (int i = 0; i < 4; ++i) {
     if (queue->pop(ev, std::chrono::milliseconds(200))) {
       if (ev.byte == ebus::Symbols::syn)
-        timestamps.push_back(std::chrono::steady_clock::now());
+        timestamps.push_back(ebus::Clock::now());
     }
   }
 

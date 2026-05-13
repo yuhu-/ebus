@@ -46,7 +46,7 @@ uint32_t PollManager::addPollItem(uint8_t priority, ByteView message,
   item.message.assign(message);
   item.interval = std::chrono::milliseconds(interval_ms);
   // Schedule immediately to ensure data is available as soon as possible
-  item.next_due = std::chrono::steady_clock::now();
+  item.next_due = Clock::now();
   item.callback = std::move(callback);
 
   items_.insert(std::move(item));
@@ -63,7 +63,7 @@ void PollManager::removePollItem(uint32_t id) {
 void PollManager::processDueItems(
     const std::function<void(const PollItem&)>& callback, bool* activity) {
   std::lock_guard<std::mutex> lock(mutex_);
-  auto now = std::chrono::steady_clock::now();
+  auto now = Clock::now();
 
   while (!items_.empty() && items_.begin()->next_due <= now) {
     // Extract the due item (node handles are C++17)
@@ -78,10 +78,9 @@ void PollManager::processDueItems(
   }
 }
 
-std::chrono::steady_clock::time_point PollManager::nextDueTime() const {
+Clock::time_point PollManager::nextDueTime() const {
   std::lock_guard<std::mutex> lock(mutex_);
-  if (items_.empty())
-    return std::chrono::steady_clock::time_point::max();
+  if (items_.empty()) return Clock::time_point::max();
   return items_.begin()->next_due;
 }
 

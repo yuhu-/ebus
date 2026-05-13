@@ -6,6 +6,7 @@
 #include <atomic>
 #include <catch2/catch_all.hpp>
 #include <chrono>
+#include <ebus/types.hpp>
 #include <memory>
 #include <string>
 #include <thread>
@@ -47,9 +48,9 @@ TEST_CASE("Queue: Capacity", "[platform][queue]") {
   bool pushed = q.tryPush(3);
   REQUIRE(!pushed);
 
-  auto start = std::chrono::steady_clock::now();
+  auto start = ebus::Clock::now();
   pushed = q.push(3, std::chrono::milliseconds(50));
-  auto end = std::chrono::steady_clock::now();
+  auto end = ebus::Clock::now();
   auto dur = std::chrono::duration_cast<std::chrono::milliseconds>(end - start)
                  .count();
 

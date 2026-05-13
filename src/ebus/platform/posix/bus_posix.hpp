@@ -31,9 +31,11 @@
 #include <vector>
 
 #include "core/bus_events.hpp"
-#include "platform/posix/virtual_line.hpp"
 #include "platform/queue.hpp"
 #include "platform/service_thread.hpp"
+#if EBUS_SIMULATION_ENABLED
+#include "platform/virtual_line.hpp"
+#endif
 
 namespace ebus::detail {
 class Request;
@@ -83,15 +85,13 @@ class BusPosix {
   ebus::BusStatus getStatus() const;
 
  private:
-  std::string device_;
-  bool simulate_;
+  BusConfig config_;
   RuntimeConfig runtime_;
 
   detail::Request* request_ = nullptr;
   detail::BusMonitor* monitor_ = nullptr;
 
   int fd_;
-  std::unique_ptr<VirtualLine> virtual_line_;
 
   bool open_;
   struct termios old_settings_{};
@@ -115,9 +115,9 @@ class BusPosix {
   std::chrono::milliseconds syn_tolerance_ms_dur_;
   std::chrono::milliseconds current_t_unique_;
 
-  std::chrono::steady_clock::time_point last_activity_time_;
-  std::chrono::steady_clock::time_point next_syn_expiry_;
-  std::chrono::steady_clock::time_point syn_intent_time_;
+  Clock::time_point last_activity_time_;
+  Clock::time_point next_syn_expiry_;
+  Clock::time_point syn_intent_time_;
   bool syn_active_{false};
 
   std::atomic<bool> bus_request_flag_{false};
