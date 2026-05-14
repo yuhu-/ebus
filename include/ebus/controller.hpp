@@ -22,7 +22,7 @@
 #include "ebus/metrics.hpp"
 #include "ebus/status.hpp"
 #include "ebus/types.hpp"
-#if EBUS_SIMULATION_ENABLED
+#if EBUS_SIMULATION
 #include "ebus/virtual_bus.hpp"
 #endif
 
@@ -363,12 +363,12 @@ class Controller {
    */
   std::string getServiceStatusJson(bool reset_histories = false) const;
 
-#if EBUS_SIMULATION_ENABLED
+#if EBUS_SIMULATION
   /**
    * @brief Returns a VirtualBus instance for direct interaction with the
    * simulated bus.
    * @note This method is only available when the library is built with
-   * EBUS_SIMULATION_ENABLED.
+   * EBUS_SIMULATION.
    * @return A reference to the VirtualBus instance.
    */
   VirtualBus& getVirtualBus();

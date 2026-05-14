@@ -21,7 +21,7 @@ if(UNIX AND NOT APPLE)
 endif()
 
 # --- Feature Options ---
-option(EBUS_SIMULATION_ENABLED "Enable virtual bus simulation mode" OFF)
+option(EBUS_SIMULATION "Enable virtual bus simulation mode" OFF)
 
 # --- Memory Tuning Options ---
 # These defaults match protocol_limits.hpp but can be overridden at build time.
@@ -54,9 +54,14 @@ set(EBUS_MAX_MANUAL_QUEUE 16 CACHE STRING "Maximum pending manual scan requests"
 set(EBUS_SCHEDULER_MAX_ITEMS 128 CACHE STRING "Maximum items in the priority scheduler")
 set(EBUS_POLL_MAX_ITEMS 128 CACHE STRING "Maximum items in the poll manager")
 
+set(EBUS_SIMULATION_VAL 0)
+if(EBUS_SIMULATION)
+    set(EBUS_SIMULATION_VAL 1)
+endif()
 
 # Apply definitions globally for the library, tests, and tools
 add_compile_definitions(
+    EBUS_SIMULATION=${EBUS_SIMULATION_VAL}
     # Component Layer
     EBUS_TRANSITION_HISTORY_SIZE=${EBUS_TRANSITION_HISTORY_SIZE}
     # Orchestration Layer
@@ -87,26 +92,20 @@ add_compile_definitions(
     EBUS_POLL_MAX_ITEMS=${EBUS_POLL_MAX_ITEMS}
 )
 
-if(EBUS_SIMULATION_ENABLED)
-    add_compile_definitions(EBUS_SIMULATION_ENABLED=1)
+add_subdirectory(src/ebus)
+add_subdirectory(tools)
 
+if(EBUS_SIMULATION)
     include(FetchContent)
     FetchContent_Declare(
-      Catch2
-      GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-      GIT_TAG        v3.4.0
+        Catch2
+        GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+        GIT_TAG        v3.4.0
     )
     FetchContent_MakeAvailable(Catch2)
 
     enable_testing()
-else()
-    add_compile_definitions(EBUS_SIMULATION_ENABLED=0)
-endif()
-
-add_subdirectory(src/ebus)
-add_subdirectory(tools)
-
-if(EBUS_SIMULATION_ENABLED)
+    
     add_subdirectory(tests)
     add_subdirectory(examples)
 endif()

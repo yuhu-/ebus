@@ -39,7 +39,7 @@ set(UTILS_SOURCES
     utils/json_utils.cpp
 )
 
-if(EBUS_SIMULATION_ENABLED)
+if(EBUS_SIMULATION)
     list(APPEND UTILS_SOURCES utils/virtual_bus.cpp)
 endif()
 
@@ -53,17 +53,17 @@ set(SOURCES
 
 add_library(ebus ${SOURCES})
 
+if(EBUS_SIMULATION)
+    target_compile_definitions(ebus PUBLIC EBUS_SIMULATION=1)
+else()
+    target_compile_definitions(ebus PUBLIC EBUS_SIMULATION=0)
+endif()
+
 target_include_directories(ebus 
     PUBLIC ${CMAKE_SOURCE_DIR}/include
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/detail
 )
-
-if(EBUS_SIMULATION_ENABLED)
-    target_compile_definitions(ebus PUBLIC EBUS_SIMULATION_ENABLED=1)
-else()
-    target_compile_definitions(ebus PUBLIC EBUS_SIMULATION_ENABLED=0)
-endif()
 
 target_compile_options(ebus PRIVATE
   $<$<CXX_COMPILER_ID:GNU,Clang>:

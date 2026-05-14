@@ -13,7 +13,7 @@
 #include "core/bus_monitor.hpp"
 #include "core/request.hpp"
 #include "platform/system.hpp"
-#if EBUS_SIMULATION_ENABLED
+#if EBUS_SIMULATION
 #include "platform/virtual_line.hpp"
 #endif
 
@@ -37,7 +37,7 @@ BusPosix::~BusPosix() { stop(); }
 void BusPosix::start() {
   if (open_) return;
 
-#if EBUS_SIMULATION_ENABLED
+#if EBUS_SIMULATION
   VirtualLine::get().attach(this);
   fd_ = -1;
   open_ = true;
@@ -67,7 +67,7 @@ void BusPosix::start() {
   worker_ = std::make_unique<ServiceThread>(
       "ebus_bus",
       [this] {
-#if EBUS_SIMULATION_ENABLED
+#if EBUS_SIMULATION
         readerThread();
 #else
         readerThread();  // On POSIX, the same runner handles both via internal
@@ -78,7 +78,7 @@ void BusPosix::start() {
       detail::OrchestrationLimits::bus_priority);
   worker_->start();
 
-#if EBUS_SIMULATION_ENABLED
+#if EBUS_SIMULATION
   if (monitor_) monitor_->uptime.markBegin();
 #endif
   if (runtime_.bus.syn_gen) {
@@ -104,7 +104,7 @@ void BusPosix::start() {
 
 void BusPosix::stop() {
   if (!open_) return;
-#if EBUS_SIMULATION_ENABLED
+#if EBUS_SIMULATION
   if (monitor_) monitor_->uptime.markEnd();
 #endif
 
@@ -112,7 +112,7 @@ void BusPosix::stop() {
   syn_running_.store(false);
 
   if (byte_queue_) byte_queue_->shutdown();
-#if EBUS_SIMULATION_ENABLED
+#if EBUS_SIMULATION
   VirtualLine::get().detach(this);
 #endif
 
@@ -159,7 +159,7 @@ void BusPosix::writeByte(const uint8_t byte) {
     for (const auto& listener : write_listeners_) listener(byte);
   }
 
-#if EBUS_SIMULATION_ENABLED
+#if EBUS_SIMULATION
   VirtualLine::get().write(byte);
 #else
   ensureOpen();
@@ -301,7 +301,7 @@ void BusPosix::readerThread() {
     uint8_t byte;
     ssize_t n = 0;
 
-#if EBUS_SIMULATION_ENABLED
+#if EBUS_SIMULATION
     // Use the memory-based simulation queue
     if (VirtualLine::get().read(
             this, byte, BusLimits::platform::Posix::virtual_read_timeout_ms))

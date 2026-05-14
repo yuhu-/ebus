@@ -12,6 +12,7 @@
 #include <ebus/detail/protocol_limits.hpp>
 #include <ebus/metrics.hpp>
 #include <ebus/sequence.hpp>
+#include <ebus/status.hpp>
 #include <functional>
 #include <memory>
 #include <mutex>

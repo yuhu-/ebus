@@ -245,9 +245,7 @@ std::string BusConfig::toJson() const {
   oss << "\"platform\": \"posix\","
       << "\"device\": \"" << escapeJson(device) << "\",";
 #endif
-
-  oss << "\"simulate\": " << (EBUS_SIMULATION_ENABLED ? "true" : "false")
-      << "}";
+  oss << "}";
   return oss.str();
 }
 

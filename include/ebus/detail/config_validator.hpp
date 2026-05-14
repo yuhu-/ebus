@@ -50,8 +50,8 @@ class ConfigValidator {
       return false;  // Sanity check
 
     // 5. Platform Specifics
-#if defined(POSIX)
-    if (config.bus.device.empty() && !EBUS_SIMULATION_ENABLED) return false;
+#if defined(POSIX) && !EBUS_SIMULATION
+    if (config.bus.device.empty()) return false;
 #endif
 
     return true;

@@ -44,7 +44,7 @@ BusEsp::BusEsp(const BusConfig& config, const RuntimeConfig& runtime,
 
       byte_queue_(std::make_unique<Queue<BusEvent>>(BusLimits::queue_size)) {
 
-#if EBUS_SIMULATION_ENABLED
+#if EBUS_SIMULATION
   VirtualLine::get().attach(this);
   return;
 #endif
@@ -77,7 +77,7 @@ void BusEsp::start() {
   worker_ = std::make_unique<ServiceThread>(
       "ebus_bus",
       [this] {
-#if EBUS_SIMULATION_ENABLED
+#if EBUS_SIMULATION
         simulationReaderLoop();
 #else
         ebusUartEventRunner();
@@ -85,7 +85,7 @@ void BusEsp::start() {
       },
       OrchestrationLimits::bus_stack_size, OrchestrationLimits::bus_priority);
   worker_->start();
-#if EBUS_SIMULATION_ENABLED
+#if EBUS_SIMULATION
   if (monitor_) monitor_->uptime.markBegin();
   if (runtime_.bus.syn_gen) {
     syn_running_.store(true);
@@ -104,7 +104,7 @@ void BusEsp::stop() {
   syn_running_.store(false);
 
   if (byte_queue_) byte_queue_->shutdown();
-#if EBUS_SIMULATION_ENABLED
+#if EBUS_SIMULATION
   VirtualLine::get().detach(this);
   {
     std::unique_lock<std::mutex> lock(syn_mutex_);
@@ -136,7 +136,7 @@ void BusEsp::stop() {
   if (syn_worker_) syn_worker_->join();
   if (worker_) worker_->join();
 
-#if EBUS_SIMULATION_ENABLED
+#if EBUS_SIMULATION
   if (monitor_) monitor_->uptime.markEnd();
   return;
 #endif
@@ -157,7 +157,7 @@ void BusEsp::writeByte(const uint8_t byte) {
   }
   if (monitor_) monitor_->transmit.markBegin();
 
-#if EBUS_SIMULATION_ENABLED
+#if EBUS_SIMULATION
   if (byte != Symbols::syn) {
     std::lock_guard<std::mutex> lock(syn_mutex_);
     syn_active_ = false;
@@ -721,7 +721,7 @@ bool IRAM_ATTR BusEsp::onSynGenTimer() {
   return false;
 }
 
-#if EBUS_SIMULATION_ENABLED
+#if EBUS_SIMULATION
 void BusEsp::simulationReaderLoop() {
   uint8_t byte;
   while (running_.load()) {

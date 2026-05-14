@@ -369,23 +369,29 @@ class SequenceImpl {
     extended_ = false;
   }
 
-  uint8_t crc() const {
+  /**
+   * @brief Calculates the eBUS CRC for a raw buffer.
+   * @param data The bytes to process.
+   * @param extended If false (default), the helper simulates byte-stuffing
+   * (escaping 0xAA/0xA9) during calculation as required by the protocol.
+   */
+  static uint8_t calculateCRC(ByteView data, bool extended = false) {
     uint8_t current_crc = Symbols::zero;
-    for (uint8_t byte : sequence_) {
-      if (!extended_) {
-        if (Symbols::needsEscape(byte)) {
-          uint8_t escaped[2];
-          Symbols::escape(byte, escaped);
-          current_crc = calcCRC(escaped[0], current_crc);
-          current_crc = calcCRC(escaped[1], current_crc);
-        } else {
-          current_crc = calcCRC(byte, current_crc);
-        }
+    for (uint8_t byte : data) {
+      if (!extended && Symbols::needsEscape(byte)) {
+        uint8_t escaped[2];
+        Symbols::escape(byte, escaped);
+        current_crc = calcCRC(escaped[0], current_crc);
+        current_crc = calcCRC(escaped[1], current_crc);
       } else {
         current_crc = calcCRC(byte, current_crc);
       }
     }
     return current_crc;
+  }
+
+  uint8_t crc() const {
+    return calculateCRC(ByteView(data(), size()), extended_);
   }
 
   ByteView range(size_t index, size_t len) const {

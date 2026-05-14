@@ -23,7 +23,7 @@
 #include "platform/queue.hpp"
 #include "platform/service_thread.hpp"
 
-#if EBUS_SIMULATION_ENABLED
+#if EBUS_SIMULATION
 #include <condition_variable>
 
 #include "platform/virtual_line.hpp"
@@ -141,7 +141,7 @@ class BusEsp {
   uint32_t syn_postponed_count_ = 0;
   bool syn_active_{false};
 
-#if EBUS_SIMULATION_ENABLED
+#if EBUS_SIMULATION
   // Simulation SYN generator state
   std::mutex syn_mutex_;
   std::condition_variable syn_cv_;
@@ -170,7 +170,7 @@ class BusEsp {
 
   static void s_onSynPostpone(void* arg);
 
-#if EBUS_SIMULATION_ENABLED
+#if EBUS_SIMULATION
   // Simulation workers
   void simulationReaderLoop();
   void simulationSynLoop();

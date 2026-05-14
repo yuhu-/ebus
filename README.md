@@ -32,7 +32,7 @@ The library includes a high-performance telemetry system accessible via `Control
 
 The library supports several build-time features that can be enabled or disabled via CMake options:
 
-*   **EBUS_SIMULATION_ENABLED** (Default: OFF): Enables the virtual bus simulation infrastructure. This includes the `ebus::VirtualBus` API and allows running the library without physical hardware using an in-memory "Virtual Line".
+*   **EBUS_SIMULATION** (Default: OFF): Enables the virtual bus simulation infrastructure. This includes the `ebus::VirtualBus` API and allows running the library without physical hardware using an in-memory "Virtual Line".
 
 To enable simulation mode:
 ```bash

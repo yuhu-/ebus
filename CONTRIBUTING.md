@@ -41,7 +41,7 @@ These components manage high-level tasks like discovery, scheduling, and network
 *   **Clocks**: Use `ebus::Clock` (aliased to `std::chrono::steady_clock`) for duration measurements.
 
 ### Conditional Compilation
-*   **Feature-Based Guards**: Optional features (e.g., `EBUS_SIMULATION_ENABLED`) must be implemented using preprocessor guards (`#if`, `#else`, `#endif`). This ensures that unused logic and its dependencies are completely excluded from the final binary, which is critical for memory-constrained targets like the ESP32.
+*   **Feature-Based Guards**: Optional features (e.g., `EBUS_SIMULATION`) must be implemented using preprocessor guards (`#if`, `#else`, `#endif`). This ensures that unused logic and its dependencies are completely excluded from the final binary, which is critical for memory-constrained targets like the ESP32.
 *   **Compile-Time vs. Runtime**: If a feature is toggled at build time, do not use runtime `if` statements to check the flag. Use `#if FLAG_NAME` to wrap entire function bodies, members, or blocks of code so the compiler can strip the unused paths.
 *   **Parity Across Platforms**: When adding feature guards, ensure they are applied consistently across all platform-specific implementations (e.g., `BusPosix` and `BusEsp`) to maintain behavior parity.
 *   **Public API Stability**: Public headers for optional features should use `static_assert` or `#error` to provide a clear message if the feature is included but not enabled in the build.
