@@ -161,6 +161,7 @@ void BusPosix::writeByte(const uint8_t byte) {
 
 #if EBUS_SIMULATION
   VirtualLine::get().write(byte);
+  platform::sleepMicro(static_cast<uint32_t>(10 * Physical::bit_time_us));
 #else
   ensureOpen();
   if (::write(fd_, &byte, 1) == -1)

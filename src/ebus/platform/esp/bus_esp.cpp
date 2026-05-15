@@ -6,15 +6,7 @@
 #if defined(ESP_PLATFORM)
 #include "platform/esp/bus_esp.hpp"
 
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
-#include "esp_clk_tree.h"
-#else
-#include "esp32c3/clk.h"
-#endif
-
 #include <esp_timer.h>
-#include <freertos/FreeRTOS.h>
-#include <freertos/task.h>
 #include <hal/uart_ll.h>
 
 #include <cmath>
@@ -23,6 +15,7 @@
 #include "core/bus_monitor.hpp"
 #include "core/request.hpp"
 #include "driver/gpio.h"
+#include "esp_clk_tree.h"
 #include "platform/system.hpp"
 #include "utils/logger.hpp"
 
@@ -37,14 +30,18 @@ BusEsp::BusEsp(const BusConfig& config, const RuntimeConfig& runtime,
       uart_port_num_(static_cast<uart_port_t>(config.uart_port)),
       rx_pin_(config.rx_pin),
       tx_pin_(config.tx_pin),
-#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)
-      timer_group_num_(static_cast<timer_group_t>(config.timer_group)),
-      timer_idx_num_(static_cast<timer_idx_t>(config.timer_idx)),
-#endif
 
       byte_queue_(std::make_unique<Queue<BusEvent>>(BusLimits::queue_size)) {
-
 #if EBUS_SIMULATION
+  sim_write_sem_ = xSemaphoreCreateBinary();
+  esp_timer_create_args_t sim_args = {};
+  sim_args.callback = [](void* arg) {
+    xSemaphoreGive(static_cast<SemaphoreHandle_t>(arg));
+  };
+  sim_args.arg = sim_write_sem_;
+  sim_args.name = "ebusSimSer";
+  esp_timer_create(&sim_args, &sim_write_timer_);
+
   VirtualLine::get().attach(this);
   return;
 #endif
@@ -67,11 +64,14 @@ BusEsp::~BusEsp() { stop(); }
 
 void BusEsp::start() {
   if (running_.load(std::memory_order_acquire)) return;
+
+#if !EBUS_SIMULATION
   if (!uart_event_queue_) {
     EBUS_LOG_ERROR(
         "Cannot start ebus_bus: UART driver not installed (queue null)");
     return;
   }
+#endif
 
   running_.store(true, std::memory_order_release);
   worker_ = std::make_unique<ServiceThread>(
@@ -112,6 +112,15 @@ void BusEsp::stop() {
   }
 #endif
 
+#if EBUS_SIMULATION
+  if (sim_write_timer_) {
+    esp_timer_stop(sim_write_timer_);
+    esp_timer_delete(sim_write_timer_);
+    sim_write_timer_ = nullptr;
+  }
+  if (sim_write_sem_) vSemaphoreDelete(sim_write_sem_);
+#endif
+
   gpio_isr_handler_remove(static_cast<gpio_num_t>(rx_pin_));
   gpio_intr_disable(static_cast<gpio_num_t>(rx_pin_));
   gpio_set_intr_type(static_cast<gpio_num_t>(rx_pin_), GPIO_INTR_DISABLE);
@@ -122,16 +131,12 @@ void BusEsp::stop() {
     syn_postpone_timer_ = nullptr;
   }
 
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
   if (gp_timer_) {
     gptimer_stop(gp_timer_);
     gptimer_disable(gp_timer_);
     gptimer_del_timer(gp_timer_);
     gp_timer_ = nullptr;
   }
-#else
-  timer_pause(timer_group_num_, timer_idx_num_);
-#endif
 
   if (syn_worker_) syn_worker_->join();
   if (worker_) worker_->join();
@@ -163,6 +168,11 @@ void BusEsp::writeByte(const uint8_t byte) {
     syn_active_ = false;
   }
   VirtualLine::get().write(byte);
+  if (sim_write_timer_) {
+    esp_timer_start_once(sim_write_timer_,
+                         static_cast<uint64_t>(10 * Physical::bit_time_us));
+    xSemaphoreTake(sim_write_sem_, portMAX_DELAY);
+  }
   if (monitor_) monitor_->transmit.markEnd();
   return;
 #endif
@@ -369,7 +379,6 @@ void BusEsp::configureGpio() {
 }
 
 void BusEsp::configureTimer() {
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
   gptimer_config_t gpt_config_arb = {};
   gpt_config_arb.clk_src = GPTIMER_CLK_SRC_DEFAULT;
   gpt_config_arb.direction = GPTIMER_COUNT_UP;
@@ -402,33 +411,6 @@ void BusEsp::configureTimer() {
   ESP_ERROR_CHECK(
       gptimer_register_event_callbacks(syn_gp_timer_, &syn_cbs, this));
   ESP_ERROR_CHECK(gptimer_enable(syn_gp_timer_));
-
-#else
-  timer_config_t timer_config = {};
-  timer_config.alarm_en = TIMER_ALARM_DIS;
-  timer_config.counter_en = TIMER_PAUSE;
-  timer_config.intr_type = TIMER_INTR_LEVEL;
-  timer_config.counter_dir = TIMER_COUNT_UP;
-  timer_config.auto_reload = TIMER_AUTORELOAD_DIS;
-  timer_config.divider = static_cast<uint32_t>(esp_clk_apb_freq() / 1000000U);
-
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 0, 0)
-#ifdef TIMER_SRC_CLK_DEFAULT
-  timer_config.clk_src = TIMER_SRC_CLK_DEFAULT;
-#else
-  timer_config.clk_src = TIMER_SRC_CLK_APB;
-#endif
-#endif
-
-  // Initialize the timer
-  timer_init(timer_group_num_, timer_idx_num_, &timer_config);
-  timer_set_counter_value(timer_group_num_, timer_idx_num_, 0);
-
-  // Register the ISR callback with flags for IRAM and high priority (level 3)
-  timer_isr_callback_add(timer_group_num_, timer_idx_num_, s_onBusIsrTimer,
-                         this, ESP_INTR_FLAG_IRAM | ESP_INTR_FLAG_LEVEL3);
-  timer_start(timer_group_num_, timer_idx_num_);
-#endif
 }
 
 // static trampoline for FreeRTOS task
@@ -508,7 +490,6 @@ void BusEsp::ebusUartEventRunner() {
                       ? (window - micros_since_start_bit - offset)
                       : 0;
 
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
               gptimer_alarm_config_t alarm_config = {};
               alarm_config.alarm_count = (uint64_t)delay;
               alarm_config.reload_count = 0;
@@ -517,13 +498,6 @@ void BusEsp::ebusUartEventRunner() {
               gptimer_set_raw_count(gp_timer_, 0);
               gptimer_set_alarm_action(gp_timer_, &alarm_config);
               gptimer_start(gp_timer_);
-#else
-              // Legacy Timer Alarm setzen (v4.x)
-              timer_set_counter_value(timer_group_num_, timer_idx_num_, 0);
-              timer_set_alarm_value(timer_group_num_, timer_idx_num_,
-                                    (float)delay);
-              timer_set_alarm(timer_group_num_, timer_idx_num_, TIMER_ALARM_EN);
-#endif
 
               portENTER_CRITICAL(&timer_mux_);
               micros_last_delay_ = delay;
@@ -643,19 +617,12 @@ void IRAM_ATTR BusEsp::onFallingEdge() {
 }
 
 // static ISR trampoline -> instance method
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
 bool IRAM_ATTR BusEsp::s_onBusIsrTimer(gptimer_handle_t timer,
                                        const gptimer_alarm_event_data_t* edata,
                                        void* user_ctx) {
   BusEsp* inst = reinterpret_cast<BusEsp*>(user_ctx);
   return inst ? inst->onBusIsrTimer() : false;
 }
-#else
-bool IRAM_ATTR BusEsp::s_onBusIsrTimer(void* arg) {
-  BusEsp* inst = reinterpret_cast<BusEsp*>(arg);
-  return inst ? inst->onBusIsrTimer() : false;
-}
-#endif
 
 bool IRAM_ATTR BusEsp::onBusIsrTimer() {
   uint8_t byte = request_->busRequestAddress();
@@ -668,19 +635,12 @@ bool IRAM_ATTR BusEsp::onBusIsrTimer() {
   return false;
 }
 
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
 bool IRAM_ATTR BusEsp::s_onSynGenTimer(gptimer_handle_t timer,
                                        const gptimer_alarm_event_data_t* edata,
                                        void* user_ctx) {
   BusEsp* inst = reinterpret_cast<BusEsp*>(user_ctx);
   return inst ? inst->onSynGenTimer() : false;
 }
-#else
-bool IRAM_ATTR BusEsp::s_onSynGenTimer(void* arg) {
-  BusEsp* inst = reinterpret_cast<BusEsp*>(arg);
-  return inst ? inst->onSynGenTimer() : false;
-}
-#endif
 
 bool IRAM_ATTR BusEsp::onSynGenTimer() {
   int64_t now = esp_timer_get_time();

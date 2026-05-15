@@ -44,11 +44,10 @@ int main() {
   std::cout << "[VirtualBus] Configuring automated response for slave 0x15 ID "
                "request..."
             << std::endl;
-  virtualBus.addMasterSlaveResponse(
-      0x01,        // Source of the master request (our controller)
-      "15070400",  // Master payload: request ID from 0x15
-      "0ab54d4f434b0001020304",  // Slave response: mock ID data
-      5                          // Delay in ms for the response
+  virtualBus.addResponse(
+      0x01,                     // Source of the master request (our controller)
+      "15070400",               // Master payload: request ID from 0x15
+      "0ab54d4f434b0001020304"  // Slave response: mock ID data
   );
 
   // --- 4. Configure another Automated Response (Simulating a Broadcast
@@ -62,7 +61,6 @@ int main() {
       ebus::toVector("fe070000"),  // Trigger pattern (broadcast message)
       ebus::toVector(
           "00"),  // Response (e.g., a simple ACK from a listening device)
-      2,          // Delay in ms
       1           // Repeat once
   });
 

@@ -6,6 +6,9 @@
 #pragma once
 
 #if defined(ESP_PLATFORM)
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
+
 #include <atomic>
 #include <condition_variable>
 #include <cstdint>
@@ -17,6 +20,7 @@
 #include <vector>
 
 #include "core/bus_events.hpp"
+#include "driver/gptimer.h"
 #include "driver/uart.h"
 #include "esp_idf_version.h"
 #include "esp_timer.h"
@@ -27,12 +31,6 @@
 #include <condition_variable>
 
 #include "platform/virtual_line.hpp"
-#endif
-
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
-#include "driver/gptimer.h"
-#else
-#include "driver/timer.h"
 #endif
 
 namespace ebus::detail {
@@ -94,14 +92,9 @@ class BusEsp {
   uint8_t rx_pin_;
   uint8_t tx_pin_;
 
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
   gptimer_handle_t gp_timer_ = nullptr;
   gptimer_handle_t syn_gp_timer_ = nullptr;
   esp_timer_handle_t syn_postpone_timer_ = nullptr;
-#else
-  timer_group_t timer_group_num_ = TIMER_GROUP_1;
-  timer_idx_t timer_idx_num_ = TIMER_0;
-#endif
 
   // owned queue
   std::unique_ptr<Queue<BusEvent>> byte_queue_;
@@ -148,6 +141,8 @@ class BusEsp {
   Clock::time_point last_activity_time_;
   Clock::time_point next_syn_expiry_;
   Clock::time_point syn_intent_time_sim_;
+  SemaphoreHandle_t sim_write_sem_ = nullptr;
+  esp_timer_handle_t sim_write_timer_ = nullptr;
 #endif
 
   std::atomic<bool> syn_running_{false};
@@ -182,17 +177,13 @@ class BusEsp {
   void onFallingEdge();
 
   // ISR: Write request byte at the exact time
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
   static bool IRAM_ATTR s_onBusIsrTimer(gptimer_handle_t timer,
                                         const gptimer_alarm_event_data_t* edata,
                                         void* user_ctx);
   static bool IRAM_ATTR s_onSynGenTimer(gptimer_handle_t timer,
                                         const gptimer_alarm_event_data_t* edata,
                                         void* user_ctx);
-#else
-  static bool IRAM_ATTR s_onBusIsrTimer(void* arg);
-  static bool IRAM_ATTR s_onSynGenTimer(void* arg);
-#endif
+
   bool onBusIsrTimer();
   bool onSynGenTimer();
 };

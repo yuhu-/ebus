@@ -55,14 +55,14 @@ TEST_CASE("Scheduler: Simulation", "[app][scheduler]") {
 
   // MS Success: Master to 52. Slave responds with payload 01 3f (plus ACK and
   // CRC).
-  simulator.addMasterSlaveResponse(source, "52b509030d4600", "013f", 5);
+  simulator.addResponse(source, "52b509030d4600", "013f");
 
   // Retry Success: Master to fe. Simulate NAK (ff) twice, then success on 3rd
   // try.
   auto retry_trigger = ebus::toVector(frameMasterHex(source, "fe070400"));
-  simulator.addResponse({retry_trigger, {ebus::Symbols::nak}, 5, 2});
+  simulator.addResponse({retry_trigger, {ebus::Symbols::nak}, 2});
   simulator.addResponse(
-      {retry_trigger, ebus::toVector(frameSlaveHex("013f")), 5, 1});
+      {retry_trigger, ebus::toVector(frameSlaveHex("013f")), 1});
 
   Scheduler scheduler(&handler);
   scheduler.setMaxSendAttempts(3);

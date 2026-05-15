@@ -26,7 +26,6 @@
 #include "core/telegram.hpp"
 #include "platform/bus.hpp"
 #include "platform/service_thread.hpp"
-#include "platform/system.hpp"
 
 namespace ebus::detail {
 
@@ -80,12 +79,10 @@ class BusSimulator {
     responses_.push_back(std::move(resp));
   }
 
-  void addMasterSlaveResponse(uint8_t source,
-                              const std::string& masterPayloadHex,
-                              const std::string& slavePayloadHex,
-                              uint32_t delay_ms = 5) {
+  void addResponse(uint8_t source, const std::string& masterPayloadHex,
+                   const std::string& slavePayloadHex) {
     addResponse({ebus::toVector(frameMasterHex(source, masterPayloadHex)),
-                 ebus::toVector(frameSlaveHex(slavePayloadHex)), delay_ms});
+                 ebus::toVector(frameSlaveHex(slavePayloadHex)), 0});
   }
 
   void clear() {
@@ -103,9 +100,6 @@ class BusSimulator {
   }
 
   void injectMasterMessage(uint8_t source, ebus::Sequence payload) {
-    bus_.writeByte(ebus::Symbols::syn);
-    platform::sleepMicro(100);
-
     payload.reduce();
     ebus::Sequence msg;
     msg.pushBack(source, false);
@@ -138,12 +132,10 @@ class BusSimulator {
                 write_history_.size() - resp.trigger_pattern.size())) {
           if (!infinite) resp.repeat_count--;
 
-          uint32_t delay = resp.delay_ms;
           std::vector<uint8_t> data = resp.response_data;
 
           auto worker = std::make_unique<platform::ServiceThread>(
-              "ebus_bus_simulator_resp", [this, delay, data]() {
-                platform::sleepMilli(delay);
+              "ebus_bus_simulator_resp", [this, data]() {
                 for (uint8_t byte : data) bus_.writeByte(byte);
               });
           worker->start();

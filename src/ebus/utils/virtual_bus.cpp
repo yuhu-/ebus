@@ -27,16 +27,14 @@ void VirtualBus::injectMasterMessage(uint8_t source, ebus::ByteView payload) {
   impl_->injectMasterMessage(source, makeSequence(payload));
 }
 
-void VirtualBus::addResponse(AutoResponse response) {
+void VirtualBus::addResponse(const AutoResponse& response) {
   impl_->addResponse(response);
 }
 
-void VirtualBus::addMasterSlaveResponse(uint8_t source,
-                                        const std::string& masterPayloadHex,
-                                        const std::string& slavePayloadHex,
-                                        uint32_t delay_ms) {
-  impl_->addMasterSlaveResponse(source, masterPayloadHex, slavePayloadHex,
-                                delay_ms);
+void VirtualBus::addResponse(uint8_t source,
+                             const std::string& masterPayloadHex,
+                             const std::string& slavePayloadHex) {
+  impl_->addResponse(source, masterPayloadHex, slavePayloadHex);
 }
 
 void VirtualBus::clear() { impl_->clear(); }

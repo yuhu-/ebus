@@ -33,7 +33,6 @@ class VirtualBus {
   struct AutoResponse {
     std::vector<uint8_t> trigger_pattern;
     std::vector<uint8_t> response_data;
-    uint32_t delay_ms = 5;
     int repeat_count = 1;  // 0 for infinite, -1 for disabled
   };
 
@@ -43,7 +42,7 @@ class VirtualBus {
    * @param response The AutoResponse configuration defining the trigger
    * pattern, response data, delay, and repeat count.
    */
-  void addResponse(AutoResponse response);
+  void addResponse(const AutoResponse& response);
 
   /**
    * @brief Adds a master-slave response pair that triggers when a specific
@@ -54,13 +53,9 @@ class VirtualBus {
    * format (without CRC).
    * @param slavePayloadHex The slave response payload in hexadecimal string
    * format (without ACK or CRC).
-   * @param delay_ms The delay in milliseconds between observing the master
-   * message and injecting the slave response.
    */
-  void addMasterSlaveResponse(uint8_t source,
-                              const std::string& masterPayloadHex,
-                              const std::string& slavePayloadHex,
-                              uint32_t delay_ms);
+  void addResponse(uint8_t source, const std::string& masterPayloadHex,
+                   const std::string& slavePayloadHex);
 
   /**
    * @brief Clears all configured responses from the virtual bus.

@@ -104,6 +104,9 @@ TEST_CASE("Controller: System Discovery automated response",
   BusSimulator peerSim(peerBus);
 
   // 1. Simulate an external "Inquiry of Existence" broadcast from master 0x10
+  // We explicitly write the SYN to start the arbitration window.
+  peerBus.writeByte(ebus::Symbols::syn);
+  platform::sleepMicro(200);
   peerSim.injectMasterMessage(0x10, ebus::Sequence::InquiryOfExistence());
 
   // 2. The controller should see its own broadcast (echo), trigger the
