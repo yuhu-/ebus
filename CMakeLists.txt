@@ -50,6 +50,7 @@ set(EBUS_TRACE_HISTORY_SIZE 100 CACHE STRING "Number of trace events to keep in 
 set(EBUS_MAX_CLIENTS 4 CACHE STRING "Maximum number of network bridge clients")
 # Application Layer
 set(EBUS_PUBLIC_QUEUE_SIZE 16 CACHE STRING "Size of the public event queue")
+set(EBUS_MAX_DEVICES 32 CACHE STRING "Maximum number of devices to manage")
 set(EBUS_MAX_MANUAL_QUEUE 16 CACHE STRING "Maximum pending manual scan requests")
 set(EBUS_SCHEDULER_MAX_ITEMS 128 CACHE STRING "Maximum items in the priority scheduler")
 set(EBUS_POLL_MAX_ITEMS 128 CACHE STRING "Maximum items in the poll manager")
@@ -87,6 +88,7 @@ add_compile_definitions(
     EBUS_MAX_CLIENTS=${EBUS_MAX_CLIENTS}
     # Application Layer
     EBUS_PUBLIC_QUEUE_SIZE=${EBUS_PUBLIC_QUEUE_SIZE}
+    EBUS_MAX_DEVICES=${EBUS_MAX_DEVICES}
     EBUS_MAX_MANUAL_QUEUE=${EBUS_MAX_MANUAL_QUEUE}
     EBUS_SCHEDULER_MAX_ITEMS=${EBUS_SCHEDULER_MAX_ITEMS}
     EBUS_POLL_MAX_ITEMS=${EBUS_POLL_MAX_ITEMS}

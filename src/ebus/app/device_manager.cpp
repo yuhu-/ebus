@@ -22,24 +22,30 @@ void DeviceManager::update(ByteView master_view, ByteView slave_view) {
     monitor_->updateDevice([&](metrics::DeviceMetrics& d) {
       auto is_new = [&](uint8_t addr) {
         uint8_t sa = ebus::isSlave(addr) ? addr : ebus::slaveOf(addr);
-        return d.masters[masterOf(sa)] == 0 && d.slaves[sa] == 0;
+        return !d.masters.test(masterOf(sa)) && !d.slaves.test(sa);
       };
 
       if (is_new(m_addr) && !identified_devices_.test(ebus::slaveOf(m_addr))) {
         d.unknown_devices++;
       }
-      d.masters[m_addr]++;
+      d.masters.set(m_addr);
 
       if (ebus::isSlave(s_addr)) {
         if (is_new(s_addr) && !identified_devices_.test(s_addr)) {
           d.unknown_devices++;
         }
-        d.slaves[s_addr]++;
+        d.slaves.set(s_addr);
       }
     });
   }
 
   // Devices
+  if (devices_.size() >= max_devices_) {
+    // If the map is full, we can't add new devices.
+    // We could log an error here, but for a hot path, simply returning is safer.
+    return;
+  }
+
   if (master_view[1] == ebus::slaveOf(own_address_)) return;
   if (ebus::isSlave(master_view[1])) {
     if (!identified_devices_.test(master_view[1])) {
@@ -72,10 +78,10 @@ void DeviceManager::getObservedSlaves(std::bitset<256>& observed) const {
     auto m = monitor_->getMetrics().devices;
 
     for (size_t i = 0; i < 256; ++i) {
-      if (m.masters[i] > 0 && i != own_address_) {
+      if (m.masters.test(i) && i != own_address_) {
         observed.set(ebus::slaveOf(static_cast<uint8_t>(i)));
       }
-      if (m.slaves[i] > 0 && i != ebus::slaveOf(own_address_)) {
+      if (m.slaves.test(i) && i != ebus::slaveOf(own_address_)) {
         observed.set(static_cast<uint8_t>(i));
       }
     }

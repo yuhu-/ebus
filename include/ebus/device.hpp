@@ -28,6 +28,9 @@ struct DeviceInfo {
     std::string product_code;   // 10-digit product identifier (digits 7-16)
   } vaillant;
 
+  // Statistics
+  uint32_t frequency = 0;  // Total messages observed from this device
+
   std::string toJson() const;
 };
 

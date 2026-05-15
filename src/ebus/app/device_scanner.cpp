@@ -102,7 +102,7 @@ bool DeviceScanner::scanObservedDevices() {
   // Also queue vendor-specific scans for a complete refresh
   for (const auto& cmd : vendor_cmds) {
     if (cmd.empty()) continue;
-    if (manual_queue_.size() < ScannerLimits::max_manual_queue) {
+    if (manual_queue_.size() < DeviceLimits::max_manual_queue) {
       manual_queue_.push(cmd);
       queued_any = true;
     }
@@ -246,7 +246,7 @@ DeviceScannerStatus DeviceScanner::getStatus() const {
 
 bool DeviceScanner::scanAddressLocked(uint8_t address) {
   if (ebus::isSlave(address) && (address != ebus::slaveOf(own_address_))) {
-    if (manual_queue_.size() >= ScannerLimits::max_manual_queue) return false;
+    if (manual_queue_.size() >= DeviceLimits::max_manual_queue) return false;
     auto cmd = Device::createScanCommand(address);
     if (cmd.empty()) return false;
     manual_queue_.push(std::move(cmd));

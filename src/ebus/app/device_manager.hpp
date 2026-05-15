@@ -50,6 +50,7 @@ class DeviceManager {
  private:
   uint8_t own_address_ = 0xff;
   BusMonitor* monitor_ = nullptr;
+  size_t max_devices_ = DeviceLimits::max_devices;
 
   mutable std::mutex mutex_;
 

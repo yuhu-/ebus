@@ -35,6 +35,7 @@ class Device {
 
  private:
   uint8_t slave_ = 0;
+  uint32_t message_count_ = 0;
 
   using ModelSequence = SequenceImpl<detail::SequenceLimits::model_capacity>;
 

@@ -342,7 +342,7 @@ void Controller::clearPollItems() {
 void Controller::triggerInquiryOfExistence() {
   // Standard eBUS System Discovery: Broadcast "Inquiry of Existence" (07h FEh)
   // This advises other masters that a new participant has entered the bus.
-  enqueue(detail::ScannerLimits::scan_priority,
+  enqueue(detail::DeviceLimits::scan_priority,
           ebus::Sequence::InquiryOfExistence());
 }
 
@@ -654,7 +654,7 @@ void Controller::constructMembers() {
 
           // Don't respond to our own inquiries.
           if (source != own_address) {
-            impl_->scheduler_->enqueue(detail::ScannerLimits::scan_priority,
+            impl_->scheduler_->enqueue(detail::DeviceLimits::scan_priority,
                                        ebus::Sequence::SignOfLife());
           }
         }
@@ -806,7 +806,7 @@ void Controller::run() {
       auto scan_cmd = impl_->device_scanner_->nextCommand();
       if (!scan_cmd.empty()) {
         impl_->scheduler_->enqueue(
-            detail::ScannerLimits::scan_priority, scan_cmd,
+            detail::DeviceLimits::scan_priority, scan_cmd,
             [this](const ebus::ResultInfo& info) {
               if (!info.success &&
                   (info.result == RequestResult::first_lost ||

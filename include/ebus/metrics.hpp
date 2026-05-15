@@ -6,6 +6,7 @@
 #pragma once
 
 #include <array>
+#include <bitset>
 #include <cstddef>
 #include <cstdint>
 #include <string>
@@ -278,13 +279,13 @@ struct BusMetrics {
 struct DeviceMetrics {
   // Detailed Counters
   uint32_t unknown_devices = 0;
-  std::array<uint32_t, 256> masters{};
-  std::array<uint32_t, 256> slaves{};
+  std::bitset<256> masters{};
+  std::bitset<256> slaves{};
 
   void reset() {
     unknown_devices = 0;
-    masters.fill(0);
-    slaves.fill(0);
+    masters.reset();
+    slaves.reset();
   }
 
   std::string toJson() const;

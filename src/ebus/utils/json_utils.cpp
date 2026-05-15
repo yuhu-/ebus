@@ -499,27 +499,27 @@ std::string metrics::BusMetrics::toJson() const {
 
 std::string metrics::DeviceMetrics::toJson() const {
   std::ostringstream oss;
-  oss << "{\"unknown_devices\":" << unknown_devices << ",\"masters\":{";
+  oss << "{\"unknown_devices\":" << unknown_devices << ",\"masters\":[";
   bool first = true;
   for (size_t i = 0; i < 256; ++i) {
-    if (masters[i] > 0) {
+    if (masters.test(i)) {
       if (!first) oss << ",";
       static constexpr char hex[] = "0123456789abcdef";
-      oss << "\"0x" << hex[i >> 4] << hex[i & 0xf] << "\":" << masters[i];
+      oss << "\"0x" << hex[i >> 4] << hex[i & 0xf] << "\"";
       first = false;
     }
   }
-  oss << "},\"slaves\":{";
+  oss << "],\"slaves\":[";
   first = true;
   for (size_t i = 0; i < 256; ++i) {
-    if (slaves[i] > 0) {
+    if (slaves.test(i)) {
       if (!first) oss << ",";
       static constexpr char hex[] = "0123456789abcdef";
-      oss << "\"0x" << hex[i >> 4] << hex[i & 0xf] << "\":" << slaves[i];
+      oss << "\"0x" << hex[i >> 4] << hex[i & 0xf] << "\"";
       first = false;
     }
   }
-  oss << "}}";
+  oss << "]}";
   return oss.str();
 }
 

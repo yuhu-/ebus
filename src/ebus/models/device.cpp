@@ -26,6 +26,7 @@ uint8_t Device::getSlave() const { return slave_; }
 
 void Device::update(ByteView master_view, ByteView slave_view) {
   slave_ = master_view[1];
+  message_count_++;
   if (ebus::matches(master_view, VEC_070400, 2))
     vec_070400_.assign(slave_view);
   else if (ebus::matches(master_view, VEC_b5090124, 2))
@@ -53,6 +54,7 @@ std::vector<uint8_t> Device::getVendorData(uint8_t sub) const {
 ebus::DeviceInfo Device::getDeviceInfo() const {
   DeviceInfo info;
   info.slave_address = slave_;
+  info.frequency = message_count_;
 
   if (vec_070400_.size() > 1) {
     info.manufacturer = vec_070400_[1];
