@@ -134,7 +134,19 @@ namespace SequenceLimits {
  * telegram.
  */
 inline constexpr size_t default_capacity = 64;
+/**
+ * Capacity for metadata storage in models (e.g. Device identification).
+ * Sized to fit a logical 16-byte payload plus protocol overhead (NN, CRC).
+ */
+inline constexpr size_t model_capacity = 24;
+/**
+ * Maximum number of bytes in a logical eBUS telegram (excluding SYN, ACK, and
+ * byte-stuffing).
+ */
 inline constexpr uint8_t max_telegram_bytes = 48;
+/**
+ * Maximum number of data bytes that can be hold in a eBUS telegram.
+ */
 inline constexpr uint8_t max_data_bytes = 16;
 }  // namespace SequenceLimits
 

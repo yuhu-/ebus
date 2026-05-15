@@ -36,12 +36,14 @@ class Device {
  private:
   uint8_t slave_ = 0;
 
-  Sequence vec_070400_;
+  using ModelSequence = SequenceImpl<detail::SequenceLimits::model_capacity>;
 
-  Sequence vec_b5090124_;
-  Sequence vec_b5090125_;
-  Sequence vec_b5090126_;
-  Sequence vec_b5090127_;
+  ModelSequence vec_070400_;
+
+  ModelSequence vec_b5090124_;
+  ModelSequence vec_b5090125_;
+  ModelSequence vec_b5090126_;
+  ModelSequence vec_b5090127_;
 
   bool isVaillant() const;
   bool isVaillantValid() const;

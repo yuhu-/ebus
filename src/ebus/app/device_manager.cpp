@@ -71,14 +71,13 @@ void DeviceManager::getObservedSlaves(std::bitset<256>& observed) const {
   if (monitor_) {
     auto m = monitor_->getMetrics().devices;
 
-    for (size_t i = 0; i < m.masters.size(); ++i) {
-      if (m.masters[i] > 0 && i != own_address_)
+    for (size_t i = 0; i < 256; ++i) {
+      if (m.masters[i] > 0 && i != own_address_) {
         observed.set(ebus::slaveOf(static_cast<uint8_t>(i)));
-    }
-
-    for (size_t i = 0; i < m.slaves.size(); ++i) {
-      if (m.slaves[i] > 0 && i != ebus::slaveOf(own_address_))
+      }
+      if (m.slaves[i] > 0 && i != ebus::slaveOf(own_address_)) {
         observed.set(static_cast<uint8_t>(i));
+      }
     }
   }
 }

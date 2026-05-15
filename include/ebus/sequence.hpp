@@ -166,7 +166,7 @@ namespace ebus {
 template <size_t kInlineCapacity = detail::SequenceLimits::default_capacity>
 class SequenceImpl {
  public:
-  static_assert(kInlineCapacity >= detail::SequenceLimits::max_telegram_bytes,
+  static_assert(kInlineCapacity >= detail::SequenceLimits::max_data_bytes,
                 "Sequence capacity too small");
 
   SequenceImpl() = default;
