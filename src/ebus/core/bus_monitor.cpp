@@ -112,11 +112,6 @@ ebus::metrics::SystemMetrics BusMonitor::getMetrics() const {
         100.0f;
   }
 
-  // Diagnostic History
-  hm.transition_history.clear();
-  handler_history_.forEach(
-      [&](const HandlerTransition& t) { hm.transition_history.push_back(t); });
-
   // 2. Populate Request Part
   metrics::RequestMetrics& rm = sm.request;
   rm = request_acc_;
@@ -134,11 +129,6 @@ ebus::metrics::SystemMetrics BusMonitor::getMetrics() const {
     // Calculate Collision Rate (%)
     rm.collision_rate = rm.contention_rate;
   }
-
-  // Diagnostic History
-  rm.transition_history.clear();
-  request_history_.forEach(
-      [&](const RequestTransition& t) { rm.transition_history.push_back(t); });
 
   // 3. Populate Bus Part
   metrics::BusMetrics& bm = sm.bus;
@@ -200,6 +190,15 @@ ebus::metrics::SystemMetrics BusMonitor::getMetrics() const {
                (1.0f - (sm.request.contention_rate / 100.0f));
 
   return sm;
+}
+
+float BusMonitor::getBusUtilization() const {
+  std::lock_guard<std::mutex> lock(metrics_mutex);
+  float up_last = uptime.getLast();
+  if (up_last > 0.0f) {
+    return (utilization.getSum() / up_last) * 100.0f;
+  }
+  return 0.0f;
 }
 
 void BusMonitor::updateUtilizationHistory() {

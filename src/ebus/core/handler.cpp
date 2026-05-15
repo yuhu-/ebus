@@ -861,7 +861,7 @@ void Handler::callOnError(LogLevel level, ProtocolError protocol_error,
                 std::chrono::system_clock::now().time_since_epoch())
                 .count();
       });
-      current_util = monitor_->getMetrics().bus.utilization;
+      current_util = monitor_->getBusUtilization();
     }
     error_callback_({0, 0, level, protocol_error, last_result_, sequence_state,
                      state_, request_->getState(), master_view, slave_view,

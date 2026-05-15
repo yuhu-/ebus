@@ -26,6 +26,7 @@ class BusMonitor {
   void resetMetrics();
   metrics::SystemMetrics getMetrics() const;
 
+  float getBusUtilization() const;
   void updateUtilizationHistory();
   std::vector<float> getUtilizationHistory() const;
 

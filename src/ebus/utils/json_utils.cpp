@@ -452,14 +452,7 @@ std::string metrics::HandlerMetrics::toJson() const {
     oss << "\"" << toString(static_cast<HandlerState>(i))
         << "\":" << state_timings[i].toJson();
   }
-  oss << "},";
-
-  oss << "\"transition_history\": [";
-  // Note: We need a way to iterate the history without copying it to a vector.
-  // This will be handled in ServiceStatus::toJson via the Monitor access.
-  oss << "]";
-
-  oss << "}";
+  oss << "}}";
   return oss.str();
 }
 
@@ -474,16 +467,8 @@ std::string metrics::RequestMetrics::toJson() const {
       << ",\"first_error\":" << first_error << ",\"retry_syn\":" << retry_syn
       << ",\"retry_error\":" << retry_error << ",\"second_won\":" << second_won
       << ",\"second_lost\":" << second_lost
-      << ",\"second_error\":" << second_error;
+      << ",\"second_error\":" << second_error << "}";
 
-  oss << ",\"transition_history\": [";
-  for (size_t i = 0; i < transition_history.size(); ++i) {
-    if (i > 0) oss << ",";
-    oss << transition_history[i].toJson();
-  }
-  oss << "]";
-
-  oss << "}";
   return oss.str();
 }
 
