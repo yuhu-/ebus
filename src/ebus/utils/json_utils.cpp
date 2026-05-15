@@ -360,7 +360,7 @@ std::string DeviceInfo::toJson() const {
         << "}";
   }
 
-  oss << "}";
+  oss << ",\"frequency\":" << frequency << "}";
   return oss.str();
 }
 
