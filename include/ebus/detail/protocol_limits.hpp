@@ -210,6 +210,7 @@ static_assert(trace_history_size >= 1,
 // --- Networking Layer ---
 namespace NetworkLimits {
 inline constexpr uint32_t wake_interval_ms = 20;
+
 #ifndef EBUS_MAX_CLIENTS
 inline constexpr size_t max_clients = 4;
 #else
@@ -225,7 +226,6 @@ inline constexpr size_t public_queue_size = 16;
 inline constexpr size_t public_queue_size = EBUS_PUBLIC_QUEUE_SIZE;
 #endif
 }  // namespace ControllerLimits
-
 namespace DeviceLimits {
 #ifndef EBUS_MAX_DEVICES
 inline constexpr size_t max_devices = 32;
@@ -244,11 +244,13 @@ inline constexpr size_t max_manual_queue = EBUS_MAX_MANUAL_QUEUE;
 
 namespace SchedulerLimits {
 inline constexpr size_t queue_reserve = 32;
+
 #ifndef EBUS_SCHEDULER_MAX_ITEMS
 inline constexpr size_t max_items = 128;
 #else
 inline constexpr size_t max_items = EBUS_SCHEDULER_MAX_ITEMS;
 #endif
+
 inline constexpr size_t scan_threshold = 5;
 inline constexpr uint32_t jitter_threshold_ms = 2;
 inline constexpr uint32_t controller_tick_ms = 20;
