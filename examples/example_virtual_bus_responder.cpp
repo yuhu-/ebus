@@ -29,7 +29,7 @@ int main() {
       true;  // SYN generation is crucial for simulation
   config.runtime.system_inquiry = false;
   config.runtime.system_response = false;
-  config.runtime.scanner.scan_on_startup = false;
+  config.runtime.device.scan_on_startup = false;
 
   ebus::Controller controller(config);
 

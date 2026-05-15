@@ -112,13 +112,13 @@ std::string RuntimeConfig::toJson() const {
       << "\"session_timeout_ms\": " << network.session_timeout_ms << ","
       << "\"transmit_timeout_ms\": " << network.transmit_timeout_ms << ","
       << "\"outbound_buffer_size\": " << network.outbound_buffer_size << "},"
-      << "\"scanner\": {"
-      << "\"scan_on_startup\": " << (scanner.scan_on_startup ? "true" : "false")
+      << "\"device\": {"
+      << "\"scan_on_startup\": " << (device.scan_on_startup ? "true" : "false")
       << ","
-      << "\"initial_delay_s\": " << scanner.initial_delay_s << ","
-      << "\"startup_interval_s\": " << scanner.startup_interval_s << ","
-      << "\"max_startup_scans\": "
-      << static_cast<int>(scanner.max_startup_scans) << "},"
+      << "\"initial_delay_s\": " << device.initial_delay_s << ","
+      << "\"startup_interval_s\": " << device.startup_interval_s << ","
+      << "\"max_startup_scans\": " << static_cast<int>(device.max_startup_scans)
+      << "},"
       << "\"scheduler\": {"
       << "\"max_send_attempts\": " << scheduler.max_send_attempts << ","
       << "\"base_backoff_ms\": " << scheduler.base_backoff_ms << ","
@@ -165,15 +165,15 @@ RuntimeConfig RuntimeConfig::fromJson(const std::string& json) {
     cfg.network.outbound_buffer_size =
         toNum<size_t>(extract(net_j, "outbound_buffer_size"));
   }
-  auto scan_j = extractSub(j, "scanner");
-  if (!scan_j.empty()) {
-    cfg.scanner.scan_on_startup = extract(scan_j, "scan_on_startup") == "true";
-    cfg.scanner.initial_delay_s =
-        toNum<uint32_t>(extract(scan_j, "initial_delay_s"));
-    cfg.scanner.startup_interval_s =
-        toNum<uint32_t>(extract(scan_j, "startup_interval_s"));
-    cfg.scanner.max_startup_scans =
-        static_cast<uint8_t>(toNum<int>(extract(scan_j, "max_startup_scans")));
+  auto device_j = extractSub(j, "device");
+  if (!device_j.empty()) {
+    cfg.device.scan_on_startup = extract(device_j, "scan_on_startup") == "true";
+    cfg.device.initial_delay_s =
+        toNum<uint32_t>(extract(device_j, "initial_delay_s"));
+    cfg.device.startup_interval_s =
+        toNum<uint32_t>(extract(device_j, "startup_interval_s"));
+    cfg.device.max_startup_scans = static_cast<uint8_t>(
+        toNum<int>(extract(device_j, "max_startup_scans")));
   }
   auto sched_j = extractSub(j, "scheduler");
   if (!sched_j.empty()) {

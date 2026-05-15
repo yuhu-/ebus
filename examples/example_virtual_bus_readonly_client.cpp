@@ -29,7 +29,7 @@ int main() {
   configA.runtime.bus.syn_gen = true;
   configA.runtime.system_inquiry = false;
   configA.runtime.system_response = true;
-  configA.runtime.scanner.scan_on_startup = false;
+  configA.runtime.device.scan_on_startup = false;
 
   ebus::Controller deviceA(configA);
 
@@ -39,7 +39,7 @@ int main() {
   configB.runtime.address = 0x10;
   configB.runtime.system_inquiry = false;  // true to send at startup
   configB.runtime.system_response = false;
-  configB.runtime.scanner.scan_on_startup = false;
+  configB.runtime.device.scan_on_startup = false;
 
   ebus::Controller deviceB(configB);
 

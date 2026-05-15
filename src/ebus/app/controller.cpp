@@ -224,13 +224,13 @@ void Controller::setOutboundBufferSize(size_t size) {
 
 void Controller::setScanOnStartup(bool enable) {
   std::lock_guard<std::mutex> lock(config_mutex_);
-  config_.runtime.scanner.scan_on_startup = enable;
+  config_.runtime.device.scan_on_startup = enable;
   if (isConfigured()) impl_->device_scanner_->setScanOnStartup(enable);
 }
 
 void Controller::setMaxStartupScans(uint8_t max_scans) {
   std::lock_guard<std::mutex> lock(config_mutex_);
-  config_.runtime.scanner.max_startup_scans = max_scans;
+  config_.runtime.device.max_startup_scans = max_scans;
   if (isConfigured()) {
     impl_->device_scanner_->setMaxStartupScans(max_scans);
   }
@@ -238,7 +238,7 @@ void Controller::setMaxStartupScans(uint8_t max_scans) {
 
 void Controller::setInitialScanDelay(uint32_t delay_s) {
   std::lock_guard<std::mutex> lock(config_mutex_);
-  config_.runtime.scanner.initial_delay_s = delay_s;
+  config_.runtime.device.initial_delay_s = delay_s;
   if (isConfigured()) {
     impl_->device_scanner_->setInitialScanDelay(delay_s);
   }
@@ -246,7 +246,7 @@ void Controller::setInitialScanDelay(uint32_t delay_s) {
 
 void Controller::setStartupScanInterval(uint32_t interval_s) {
   std::lock_guard<std::mutex> lock(config_mutex_);
-  config_.runtime.scanner.startup_interval_s = interval_s;
+  config_.runtime.device.startup_interval_s = interval_s;
   if (isConfigured()) {
     impl_->device_scanner_->setStartupScanInterval(interval_s);
   }
@@ -735,13 +735,13 @@ void Controller::constructMembers() {
   }
   impl_->device_scanner_->setOwnAddress(config_.runtime.address);
   impl_->device_scanner_->setScanOnStartup(
-      config_.runtime.scanner.scan_on_startup);
+      config_.runtime.device.scan_on_startup);
   impl_->device_scanner_->setInitialScanDelay(
-      config_.runtime.scanner.initial_delay_s);
+      config_.runtime.device.initial_delay_s);
   impl_->device_scanner_->setStartupScanInterval(
-      config_.runtime.scanner.startup_interval_s);
+      config_.runtime.device.startup_interval_s);
   impl_->device_scanner_->setMaxStartupScans(
-      config_.runtime.scanner.max_startup_scans);
+      config_.runtime.device.max_startup_scans);
 
   if (!impl_->poll_manager_) {
     impl_->poll_manager_ = std::make_unique<detail::PollManager>();

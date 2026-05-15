@@ -23,7 +23,7 @@ TEST_CASE("Controller: Lifecycle and API", "[app][controller]") {
   config.runtime.address = 0x31;  // Slave 0x36
   config.runtime.system_inquiry = false;
   config.runtime.system_response = false;
-  config.runtime.scanner.scan_on_startup = false;
+  config.runtime.device.scan_on_startup = false;
   config.runtime.bus.syn_gen = true;
 
   ebus::Controller controller(config);
@@ -68,7 +68,7 @@ TEST_CASE("Controller: System Discovery automated response",
   config.runtime.lock_counter = 0;
   config.runtime.system_inquiry = false;
   config.runtime.system_response = true;
-  config.runtime.scanner.scan_on_startup = false;
+  config.runtime.device.scan_on_startup = false;
   config.runtime.bus.syn_gen = true;
 
   ebus::Controller controller(config);

@@ -41,12 +41,12 @@ struct RuntimeConfig {
     size_t outbound_buffer_size = 4096;
   } network;
 
-  struct Scanner {
+  struct Device {
     bool scan_on_startup = true;
     uint32_t initial_delay_s = 10;
     uint32_t startup_interval_s = 60;
     uint8_t max_startup_scans = 5;
-  } scanner;
+  } device;
 
   struct Scheduler {
     uint8_t max_send_attempts = 3;
