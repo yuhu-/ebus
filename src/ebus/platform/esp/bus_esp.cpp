@@ -277,6 +277,9 @@ ServiceThread::Status BusEsp::getThreadStatus() const {
 }
 
 ServiceThread::Status BusEsp::getSynThreadStatus() const {
+  if (syn_worker_) {
+    return syn_worker_->status();
+  }
   return ServiceThread::Status{"ebus_bus_syn", -1, -1};
 }
 
@@ -304,20 +307,10 @@ void BusEsp::configureUart() {
   uart_config.parity = UART_PARITY_DISABLE;
   uart_config.stop_bits = UART_STOP_BITS_1;
   uart_config.flow_ctrl = UART_HW_FLOWCTRL_DISABLE;
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(3, 0, 0)
   uart_config.rx_flow_ctrl_thresh = 0;
-#endif
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 0, 0)
-#ifdef UART_SCLK_DEFAULT
-  uart_config.source_clk = UART_SCLK_DEFAULT;
-#else
   uart_config.source_clk = UART_SCLK_APB;
-#endif
-#endif
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
   uart_config.flags.allow_pd = false;
   uart_config.flags.backup_before_sleep = false;
-#endif
 
   // Install UART driver with synchronized event queue sizes
   uart_driver_delete(uart_port_num_);  // Ensure port is clean
