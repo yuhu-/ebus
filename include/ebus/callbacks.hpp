@@ -10,7 +10,6 @@
 #include <string_view>
 #include <vector>
 
-#include "ebus/byte_view.hpp"
 #include "ebus/detail/protocol_limits.hpp"
 #include "ebus/types.hpp"
 
@@ -116,12 +115,13 @@ struct ProtocolEvent {
     } err;
   } data;
 
-  uint8_t master[detail::SequenceLimits::default_capacity];
-  uint8_t slave[detail::SequenceLimits::default_capacity];
-  uint8_t master_len;
-  uint8_t slave_len;
+  StaticSequence<detail::SequenceLimits::default_capacity> master;
+  StaticSequence<detail::SequenceLimits::default_capacity> slave;
 };
 
+static_assert(
+    std::is_trivially_copyable_v<ProtocolEvent>,
+    "ProtocolEvent must be trivially copyable for FreeRTOS queue safety.");
 static_assert(
     sizeof(ProtocolEvent) <= 192,
     "ProtocolEvent exceeds the memory threshold for constrained targets. "

@@ -6,7 +6,6 @@
 #pragma once
 
 #include <cstdint>
-#include <ebus/byte_view.hpp>
 #include <ebus/callbacks.hpp>
 #include <ebus/config.hpp>
 #include <ebus/types.hpp>

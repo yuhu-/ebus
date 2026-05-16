@@ -11,7 +11,6 @@
  */
 
 #include "ebus/address.hpp"
-#include "ebus/byte_view.hpp"
 #include "ebus/callbacks.hpp"
 #include "ebus/config.hpp"
 #include "ebus/controller.hpp"

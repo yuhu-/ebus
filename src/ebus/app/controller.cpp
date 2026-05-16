@@ -532,8 +532,8 @@ void Controller::processPublicEvents() {
                      ev.data.err.sequence_state,
                      ev.handler_state,
                      ev.request_state,
-                     ByteView(ev.master, ev.master_len),
-                     ByteView(ev.slave, ev.slave_len),
+                     ev.master,
+                     ev.slave,
                      ev.data.err.utilization};
       callback(info);
     }
@@ -554,8 +554,8 @@ void Controller::processPublicEvents() {
                         ev.data.tel.telegram_type,
                         ev.handler_state,
                         ev.request_state,
-                        ByteView(ev.master, ev.master_len),
-                        ByteView(ev.slave, ev.slave_len)};
+                        ev.master,
+                        ev.slave};
       callback(info);
     }
   }
@@ -619,12 +619,8 @@ void Controller::constructMembers() {
       ev.data.tel.telegram_type = info.telegram_type;
       ev.handler_state = info.handler_state;
       ev.request_state = info.request_state;
-      ev.master_len = static_cast<uint8_t>(
-          std::min(info.master_view.size(), sizeof(ev.master)));
-      std::memcpy(ev.master, info.master_view.data(), ev.master_len);
-      ev.slave_len = static_cast<uint8_t>(
-          std::min(info.slave_view.size(), sizeof(ev.slave)));
-      std::memcpy(ev.slave, info.slave_view.data(), ev.slave_len);
+      ev.master.assign(info.master_view.data(), info.master_view.size());
+      ev.slave.assign(info.slave_view.data(), info.slave_view.size());
       if (!impl_->public_telegrams_.tryPush(std::move(ev))) {
         impl_->bus_monitor_->updateController(
             [](auto& m) { m.public_queue_dropped++; });
@@ -673,12 +669,8 @@ void Controller::constructMembers() {
       ev.data.err.sequence_state = info.sequence_state;
       ev.handler_state = info.handler_state;
       ev.request_state = info.request_state;
-      ev.master_len = static_cast<uint8_t>(
-          std::min(info.master_view.size(), sizeof(ev.master)));
-      std::memcpy(ev.master, info.master_view.data(), ev.master_len);
-      ev.slave_len = static_cast<uint8_t>(
-          std::min(info.slave_view.size(), sizeof(ev.slave)));
-      std::memcpy(ev.slave, info.slave_view.data(), ev.slave_len);
+      ev.master.assign(info.master_view.data(), info.master_view.size());
+      ev.slave.assign(info.slave_view.data(), info.slave_view.size());
       ev.data.err.utilization = info.utilization;
       if (!impl_->public_errors_.tryPush(std::move(ev))) {
         impl_->bus_monitor_->updateController(
@@ -693,7 +685,7 @@ void Controller::constructMembers() {
         entry.session_id = info.session_id;
         entry.poll_id = info.poll_id;
         entry.level = info.level;  // LogLevel is still used for filtering
-        entry.setProtocolError(info.protocol_error);
+        entry.protocol_error = info.protocol_error;
         entry.result = info.result;
         entry.sequence_state = info.sequence_state;
         entry.handler_state = info.handler_state;

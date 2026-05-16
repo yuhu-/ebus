@@ -411,9 +411,8 @@ std::string ErrorEntry::toJson() const {
       << "\"sequence_state\":\"" << ebus::toString(sequence_state) << "\","
       << "\"handler_state\":\"" << ebus::toString(handler_state) << "\","
       << "\"request_state\":\"" << ebus::toString(request_state) << "\","
-      << "\"master\":\"" << ebus::toString(ByteView(master, master_len))
-      << "\","
-      << "\"slave\":\"" << ebus::toString(ByteView(slave, slave_len)) << "\","
+      << "\"master\":\"" << ebus::toString(master) << "\","
+      << "\"slave\":\"" << ebus::toString(slave) << "\","
       << "\"utilization\":" << std::fixed << std::setprecision(2) << utilization
       << ","
       << "\"timestamp\":\"" << std::put_time(&tm_info, "%Y-%m-%dT%H:%M:%SZ")

@@ -224,7 +224,7 @@ void Scheduler::run() {
 
         if (ev.type == EventType::telegram) {
           sent = true;
-          slave_response = std::move(ev.slave);
+          slave_response.assign(ev.slave);
           break;
         } else if (ev.type == EventType::lost) {
           last_error_code = ProtocolError::arbitration_lost;
@@ -396,8 +396,8 @@ void Scheduler::attachHandlerCallbacks() {
     ev.telegram_type = info.telegram_type;
     ev.handler_state = info.handler_state;
     ev.request_state = info.request_state;
-    ev.master.assign(info.master_view);
-    ev.slave.assign(info.slave_view);
+    ev.master.assign(info.master_view.data(), info.master_view.size());
+    ev.slave.assign(info.slave_view.data(), info.slave_view.size());
     event_queue_.tryPush(ev);
   });
 
@@ -436,8 +436,8 @@ void Scheduler::attachHandlerCallbacks() {
     ev.handler_state = info.handler_state;
     ev.request_state = info.request_state;
     ev.protocol_error = info.protocol_error;
-    ev.master.assign(info.master_view);
-    ev.slave.assign(info.slave_view);
+    ev.master.assign(info.master_view.data(), info.master_view.size());
+    ev.slave.assign(info.slave_view.data(), info.slave_view.size());
     event_queue_.tryPush(ev);
   });
 }

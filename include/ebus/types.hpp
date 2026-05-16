@@ -5,12 +5,15 @@
 
 #pragma once
 
+#include <algorithm>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <iterator>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <vector>
 
 #include "ebus/address.hpp"
@@ -341,6 +344,82 @@ constexpr const char* toString(SessionState state) noexcept {
 // --- Struct ---
 
 /**
+ * A lightweight, non-owning view of a byte sequence.
+ * Similar to std::string_view but for uint8_t.
+ */
+struct ByteView {
+  constexpr ByteView() = default;
+  constexpr ByteView(const uint8_t* data, size_t size)
+      : data_(data), size_(size) {}
+
+  ByteView(const std::vector<uint8_t>& v) : data_(v.data()), size_(v.size()) {}
+
+  constexpr const uint8_t* begin() const noexcept { return data_; }
+  constexpr const uint8_t* end() const noexcept { return data_ + size_; }
+
+  constexpr const uint8_t* data() const noexcept { return data_; }
+
+  constexpr size_t size() const noexcept { return size_; }
+  constexpr bool empty() const noexcept { return size_ == 0; }
+
+  constexpr uint8_t operator[](size_t i) const { return data_[i]; }
+
+  bool operator==(ByteView other) const {
+    if (this == &other) return true;
+    if (size_ != other.size_) return false;
+    return size_ == 0 || std::memcmp(data_, other.data_, size_) == 0;
+  }
+  bool operator!=(ByteView other) const { return !(*this == other); }
+
+ private:
+  const uint8_t* data_ = nullptr;
+  size_t size_ = 0;
+};
+
+// Ensure definitions.hpp remains lean and free of heavy template logic
+static_assert(std::is_standard_layout_v<ByteView>,
+              "ByteView must maintain standard layout for ABI compatibility.");
+
+static_assert(std::is_trivially_copyable_v<ByteView>,
+              "ByteView must be trivially copyable to remain heap-free in the "
+              "hot path.");
+
+/**
+ * A trivially copyable, owning byte sequence for use in bitwise-copy queues.
+ */
+template <size_t Cap>
+struct StaticSequence {
+  uint8_t buffer[Cap]{};
+  uint8_t size_bytes = 0;
+
+  void assign(const uint8_t* data, size_t len) {
+    size_bytes = static_cast<uint8_t>((len < Cap) ? len : Cap);
+    if (size_bytes > 0) std::memcpy(buffer, data, size_bytes);
+  }
+
+  uint8_t* begin() noexcept { return buffer; }
+  const uint8_t* begin() const noexcept { return buffer; }
+  uint8_t* end() noexcept { return buffer + size_bytes; }
+  const uint8_t* end() const noexcept { return buffer + size_bytes; }
+
+  uint8_t* data() noexcept { return buffer; }
+  const uint8_t* data() const noexcept { return buffer; }
+
+  size_t size() const noexcept { return size_bytes; }
+  size_t capacity() const noexcept { return Cap; }
+  void clear() noexcept { size_bytes = 0; }
+  bool empty() const { return size_bytes == 0; }
+
+  uint8_t& operator[](size_t i) { return buffer[i]; }
+  const uint8_t& operator[](size_t i) const { return buffer[i]; }
+
+  /**
+   * Implicit conversion to ByteView for zero-copy interoperability.
+   */
+  operator ByteView() const { return ByteView(buffer, size_bytes); }
+};
+
+/**
  * Records a single state transition in the protocol handler.
  */
 struct HandlerTransition {
@@ -375,10 +454,8 @@ struct ErrorEntry {
   SequenceState sequence_state;
   HandlerState handler_state;
   RequestState request_state;
-  uint8_t master[detail::SequenceLimits::default_capacity];
-  uint8_t master_len;
-  uint8_t slave[detail::SequenceLimits::default_capacity];
-  uint8_t slave_len;
+  StaticSequence<detail::SequenceLimits::default_capacity> master;
+  StaticSequence<detail::SequenceLimits::default_capacity> slave;
   float utilization;
   uint64_t timestamp;  // ms since epoch
 
@@ -402,19 +479,13 @@ struct ErrorEntry {
     return res;
   }
 
-  void setProtocolError(ProtocolError error) { protocol_error = error; }
+  void setMaster(const uint8_t* data, size_t len) { master.assign(data, len); }
 
-  void setMaster(const uint8_t* data, size_t size) {
-    const size_t max_len = sizeof(master);
-    master_len = static_cast<uint8_t>((size < max_len) ? size : max_len);
-    if (master_len > 0) std::memcpy(master, data, master_len);
-  }
-
-  void setSlave(const uint8_t* data, size_t size) {
-    const size_t max_len = sizeof(slave);
-    slave_len = static_cast<uint8_t>((size < max_len) ? size : max_len);
-    if (slave_len > 0) std::memcpy(slave, data, slave_len);
-  }
+  void setSlave(const uint8_t* data, size_t len) { slave.assign(data, len); }
 };
+
+static_assert(std::is_trivially_copyable_v<ErrorEntry>,
+              "ErrorEntry must be trivially copyable for zero-allocation "
+              "logging.");
 
 }  // namespace ebus

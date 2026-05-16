@@ -16,7 +16,6 @@
 #include <utility>
 #include <vector>
 
-#include "ebus/byte_view.hpp"
 #include "ebus/protocol_math.hpp"
 #include "ebus/types.hpp"
 
@@ -83,7 +82,7 @@ std::string toString(const T& container) {
   if (std::empty(container)) return {};
   static constexpr char hex_chars[] = "0123456789abcdef";
   std::string res;
-  res.reserve(std::size(container) * 2);
+  res.reserve(container.size() * 2);
   for (auto b : container) {
     uint8_t byte = static_cast<uint8_t>(b);
     res.push_back(hex_chars[byte >> 4]);

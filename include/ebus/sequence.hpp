@@ -16,7 +16,6 @@
 #include <type_traits>
 #include <vector>
 
-#include "ebus/byte_view.hpp"
 #include "ebus/detail/protocol_limits.hpp"
 #include "ebus/protocol_math.hpp"
 #include "ebus/types.hpp"
@@ -34,13 +33,10 @@ class SmallByteVector {
   static_assert(std::is_trivially_copyable_v<T>,
                 "SmallByteVector requires trivially copyable type");
 
-  SmallByteVector()
-      : data_(stack_buffer_),
-        size_(0),
-        capacity_(kInlineCapacity),
-        stack_buffer_{} {}
+  SmallByteVector() : size_(0), capacity_(kInlineCapacity) {}
+
   ~SmallByteVector() {
-    if (data_ != stack_buffer_) std::free(data_);
+    if (data_) std::free(data_);
   }
 
   SmallByteVector(const SmallByteVector& other) : SmallByteVector() {
@@ -61,7 +57,7 @@ class SmallByteVector {
 
   bool operator==(const SmallByteVector& other) const {
     if (size_ != other.size_) return false;
-    return size_ == 0 || std::memcmp(data_, other.data_, size_) == 0;
+    return size_ == 0 || std::memcmp(data(), other.data(), size_) == 0;
   }
 
   bool operator!=(const SmallByteVector<T, kInlineCapacity>& other) const {
@@ -70,19 +66,20 @@ class SmallByteVector {
 
   void push_back(T b) {
     if (size_ >= capacity_) grow(size_ + 1);
-    data_[size_++] = b;
+    data()[size_++] = b;
   }
   void clear() { size_ = 0; }
   size_t size() const { return size_; }
   bool empty() const { return size_ == 0; }
-  T& operator[](size_t i) { return data_[i]; }
-  const T& operator[](size_t i) const { return data_[i]; }
+  T& operator[](size_t i) { return data()[i]; }
+  const T& operator[](size_t i) const { return data()[i]; }
 
-  T* begin() { return data_; }
-  const T* begin() const { return data_; }
-  T* end() { return data_ + size_; }
-  const T* end() const { return data_ + size_; }
-  const T* data() const { return data_; }
+  T* begin() { return data(); }
+  const T* begin() const { return data(); }
+  T* end() { return data() + size_; }
+  const T* end() const { return data() + size_; }
+  T* data() { return data_ ? data_ : stack_buffer_; }
+  const T* data() const { return data_ ? data_ : stack_buffer_; }
 
   void reserve(size_t n) {
     if (n > capacity_) grow(n);
@@ -96,28 +93,29 @@ class SmallByteVector {
   void assign(It first, It last) {
     size_t n = static_cast<size_t>(std::distance(first, last));
     if (n > capacity_) grow(n);
-    std::copy(first, last, data_);
+    std::copy(first, last, data());
     size_ = n;
   }
 
   void insert(T* pos, const T* first, const T* last) {
     size_t n = static_cast<size_t>(std::distance(first, last));
-    size_t offset = static_cast<size_t>(std::distance(data_, pos));
+    size_t offset = static_cast<size_t>(std::distance(data(), pos));
     if (size_ + n > capacity_) grow(size_ + n);
-    std::move_backward(data_ + offset, data_ + size_, data_ + size_ + n);
-    std::copy(first, last, data_ + offset);
+    T* start = data();
+    std::move_backward(start + offset, start + size_, start + size_ + n);
+    std::copy(first, last, start + offset);
     size_ += n;
   }
 
  private:
-  T* data_;
-  size_t size_;
-  size_t capacity_;
-  T stack_buffer_[kInlineCapacity];
+  T* data_ = nullptr;
+  size_t size_ = 0;
+  size_t capacity_ = kInlineCapacity;
+  T stack_buffer_[kInlineCapacity]{};
 
   void grow(size_t min_cap) {
     const size_t new_cap = std::max(min_cap, capacity_ * 2);
-    if (data_ == stack_buffer_) {
+    if (data_ == nullptr) {
       T* new_data = static_cast<T*>(std::malloc(new_cap * sizeof(T)));
       if (new_data) {
         std::memcpy(new_data, stack_buffer_, size_ * sizeof(T));
@@ -134,15 +132,15 @@ class SmallByteVector {
   }
 
   void moveFrom(SmallByteVector<T, kInlineCapacity>&& other) {
-    if (data_ != stack_buffer_) std::free(data_);
-    if (other.data_ == other.stack_buffer_) {
+    if (data_) std::free(data_);
+    if (other.data_ == nullptr) {
       std::memcpy(stack_buffer_, other.stack_buffer_, other.size_ * sizeof(T));
-      data_ = stack_buffer_;
+      data_ = nullptr;
       capacity_ = kInlineCapacity;
     } else {
       data_ = other.data_;
       capacity_ = other.capacity_;
-      other.data_ = other.stack_buffer_;
+      other.data_ = nullptr;
       other.capacity_ = kInlineCapacity;
     }
     size_ = other.size_;
@@ -153,6 +151,7 @@ class SmallByteVector {
 }  // namespace ebus::detail
 
 namespace ebus {
+
 /**
  * Sequence class that represents a sequence of bytes in the eBUS protocol. It
  * provides methods for constructing sequences from vectors, comparing

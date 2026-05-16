@@ -117,10 +117,14 @@ class Scheduler {
     LogLevel level;
     RequestResult result;
     SequenceState sequence_state;
-    Sequence master;
-    Sequence slave;
+    StaticSequence<detail::SequenceLimits::default_capacity> master;
+    StaticSequence<detail::SequenceLimits::default_capacity> slave;
     ProtocolError protocol_error = ProtocolError::none;
   };
+
+  static_assert(std::is_trivially_copyable_v<Event>,
+                "Scheduler::Event must be trivially copyable for FreeRTOS "
+                "queue safety.");
 
   Handler* handler_ = nullptr;
 
