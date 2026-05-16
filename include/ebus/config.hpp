@@ -42,7 +42,7 @@ struct RuntimeConfig {
   } network;
 
   struct Device {
-    bool scan_on_startup = true;
+    bool scan_on_startup = false;
     uint32_t initial_delay_s = 10;
     uint32_t startup_interval_s = 60;
     uint8_t max_startup_scans = 5;
