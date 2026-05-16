@@ -65,7 +65,10 @@ class SmallByteVector {
   }
 
   void push_back(T b) {
-    if (size_ >= capacity_) grow(size_ + 1);
+    if (size_ >= capacity_) {
+      grow(size_ + 1);
+      if (size_ >= capacity_) return;  // Drop byte if grow failed
+    }
     data()[size_++] = b;
   }
   void clear() { size_ = 0; }
@@ -85,7 +88,10 @@ class SmallByteVector {
     if (n > capacity_) grow(n);
   }
   void resize(size_t n) {
-    if (n > capacity_) grow(n);
+    if (n > capacity_) {
+      grow(n);
+      if (n > capacity_) n = capacity_; // Cap at current limit
+    }
     size_ = n;
   }
 
@@ -100,7 +106,10 @@ class SmallByteVector {
   void insert(T* pos, const T* first, const T* last) {
     size_t n = static_cast<size_t>(std::distance(first, last));
     size_t offset = static_cast<size_t>(std::distance(data(), pos));
-    if (size_ + n > capacity_) grow(size_ + n);
+    if (size_ + n > capacity_) {
+      grow(size_ + n);
+      if (size_ + n > capacity_) return; // Drop insertion if grow failed
+    }
     T* start = data();
     std::move_backward(start + offset, start + size_, start + size_ + n);
     std::copy(first, last, start + offset);

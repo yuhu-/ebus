@@ -8,6 +8,7 @@
 #if defined(EBUS_SIMULATION)
 #include <atomic>
 #include <chrono>
+#include <condition_variable>
 #include <cstdint>
 #include <ebus/data_types.hpp>
 #include <ebus/sequence.hpp>
@@ -16,6 +17,7 @@
 #include <ebus/virtual_bus.hpp>
 #include <functional>
 #include <iomanip>
+#include <iostream>
 #include <memory>
 #include <mutex>
 #include <sstream>
@@ -23,6 +25,7 @@
 #include <vector>
 
 #include "core/telegram.hpp"
+#include "platform/queue.hpp"
 #include "platform/service_thread.hpp"
 #include "platform/simulation/bus_simulation.hpp"
 #include "utils/circular_buffer.hpp"
@@ -74,26 +77,11 @@ class BusSimulator {
     worker_->start();
   }
 
-  ~BusSimulator() {
+  ~BusSimulator() { stop(); }
+
+  void stop() {
     outbound_queue_.shutdown();
     if (worker_) worker_->join();
-  }
-
-  /**
-   * @brief Injects a master message.
-   * This remains synchronous because it simulates an external participant
-   * and is usually called from test setup, not from inside a bus listener.
-   */
-  void injectMasterMessage(uint8_t source, ebus::Sequence payload) {
-    payload.reduce();
-    ebus::Sequence msg;
-    msg.pushBack(source, false);
-    msg.append(payload);
-    msg.pushBack(msg.crc(), false);
-    msg.extend();
-    for (uint8_t b : msg) {
-      bus_.writeByte(b);
-    }
   }
 
   void addResponse(ebus::VirtualBus::AutoResponse resp) {
@@ -114,13 +102,35 @@ class BusSimulator {
     outbound_queue_.clear();
   }
 
+  struct ResponseItem {
+    uint8_t data[SequenceLimits::default_capacity];
+    uint8_t len = 0;
+  };
+
+  /**
+   * @brief Injects a master message.
+   * This remains synchronous because it simulates an external participant
+   * and is usually called from test setup, not from inside a bus listener.
+   */
+  void injectMasterMessage(uint8_t source, ebus::Sequence payload) {
+    payload.reduce();
+    ebus::Sequence msg;
+    msg.pushBack(source, false);
+    msg.append(payload);
+    msg.pushBack(msg.crc(), false);
+    msg.extend();
+    for (uint8_t b : msg) {
+      bus_.writeByte(b);
+    }
+  }
+
  private:
   platform::BusSimulation& bus_;
   std::mutex mtx_;
 
   CircularBuffer<uint8_t, SequenceLimits::default_capacity> write_history_;
   std::vector<ebus::VirtualBus::AutoResponse> responses_;
-  platform::Queue<std::vector<uint8_t>> outbound_queue_;
+  platform::Queue<ResponseItem> outbound_queue_;
   std::unique_ptr<platform::ServiceThread> worker_;
 
   void onWrite(uint8_t b) {
@@ -148,18 +158,22 @@ class BusSimulator {
         if (infinite || resp.repeat_count > 0) {
           if (!infinite) resp.repeat_count--;
           // Non-blocking push. If the simulator is overwhelmed, we skip.
-          outbound_queue_.tryPush(resp.response_data);
+          ResponseItem item;
+          item.len = static_cast<uint8_t>(
+              std::min(resp.response_data.size(), sizeof(item.data)));
+          std::memcpy(item.data, resp.response_data.data(), item.len);
+          outbound_queue_.tryPush(item);
         }
       }
     }
   }
 
   void processResponses() {
-    std::vector<uint8_t> data;
+    ResponseItem item;
     // Blocking pop handles the sleep/wait automatically
-    while (outbound_queue_.pop(data)) {
-      for (uint8_t byte : data) {
-        bus_.writeByte(byte);
+    while (outbound_queue_.pop(item)) {
+      for (size_t i = 0; i < item.len; ++i) {
+        bus_.writeByte(item.data[i]);
       }
     }
   }
