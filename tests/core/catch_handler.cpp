@@ -78,7 +78,7 @@ SCENARIO("Handler processes eBUS messages correctly", "[core][handler]") {
 
     for (const auto& tc : test_cases) {
       WHEN(tc.description) {
-        ebus::BusConfig config = {.device = "/dev/null"};
+        ebus::BusConfig config;
         ebus::RuntimeConfig runtime = {.address = 0x33};
         Request request;
         BusMonitor monitor;

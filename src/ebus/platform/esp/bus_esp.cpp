@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#if defined(ESP_PLATFORM)
+#if defined(ESP_PLATFORM) && !defined(EBUS_SIMULATION)
 #include "platform/esp/bus_esp.hpp"
 
 #include <esp_timer.h>
@@ -32,20 +32,6 @@ BusEsp::BusEsp(const BusConfig& config, const RuntimeConfig& runtime,
       tx_pin_(config.tx_pin),
 
       byte_queue_(std::make_unique<Queue<BusEvent>>(BusLimits::queue_size)) {
-#if EBUS_SIMULATION
-  sim_write_sem_ = xSemaphoreCreateBinary();
-  esp_timer_create_args_t sim_args = {};
-  sim_args.callback = [](void* arg) {
-    xSemaphoreGive(static_cast<SemaphoreHandle_t>(arg));
-  };
-  sim_args.arg = sim_write_sem_;
-  sim_args.name = "ebusSimSer";
-  esp_timer_create(&sim_args, &sim_write_timer_);
-
-  VirtualLine::get().attach(this);
-  return;
-#endif
-
   // Initialize postponement timer
   esp_timer_create_args_t postpone_args = {};
   postpone_args.callback = &BusEsp::s_onSynPostpone;
@@ -65,37 +51,17 @@ BusEsp::~BusEsp() { stop(); }
 void BusEsp::start() {
   if (running_.load(std::memory_order_acquire)) return;
 
-#if !EBUS_SIMULATION
   if (!uart_event_queue_) {
     EBUS_LOG_ERROR(
         "Cannot start ebus_bus: UART driver not installed (queue null)");
     return;
   }
-#endif
 
   running_.store(true, std::memory_order_release);
   worker_ = std::make_unique<ServiceThread>(
-      "ebus_bus",
-      [this] {
-#if EBUS_SIMULATION
-        simulationReaderLoop();
-#else
-        ebusUartEventRunner();
-#endif
-      },
+      "ebus_bus", [this] { ebusUartEventRunner(); },
       OrchestrationLimits::bus_stack_size, OrchestrationLimits::bus_priority);
   worker_->start();
-#if EBUS_SIMULATION
-  if (monitor_) monitor_->uptime.markBegin();
-  if (runtime_.bus.syn_gen) {
-    syn_running_.store(true);
-    syn_worker_ = std::make_unique<ServiceThread>(
-        "ebus_bus_syn", [this] { simulationSynLoop(); },
-        OrchestrationLimits::bus_syn_stack_size,
-        OrchestrationLimits::bus_syn_priority);
-    syn_worker_->start();
-  }
-#endif
 }
 
 void BusEsp::stop() {
@@ -104,22 +70,6 @@ void BusEsp::stop() {
   syn_running_.store(false);
 
   if (byte_queue_) byte_queue_->shutdown();
-#if EBUS_SIMULATION
-  VirtualLine::get().detach(this);
-  {
-    std::unique_lock<std::mutex> lock(syn_mutex_);
-    syn_cv_.notify_all();
-  }
-#endif
-
-#if EBUS_SIMULATION
-  if (sim_write_timer_) {
-    esp_timer_stop(sim_write_timer_);
-    esp_timer_delete(sim_write_timer_);
-    sim_write_timer_ = nullptr;
-  }
-  if (sim_write_sem_) vSemaphoreDelete(sim_write_sem_);
-#endif
 
   gpio_isr_handler_remove(static_cast<gpio_num_t>(rx_pin_));
   gpio_intr_disable(static_cast<gpio_num_t>(rx_pin_));
@@ -141,11 +91,6 @@ void BusEsp::stop() {
   if (syn_worker_) syn_worker_->join();
   if (worker_) worker_->join();
 
-#if EBUS_SIMULATION
-  if (monitor_) monitor_->uptime.markEnd();
-  return;
-#endif
-
   if (uart_event_queue_) {
     uart_driver_delete(uart_port_num_);
     uart_event_queue_ = nullptr;
@@ -161,21 +106,6 @@ void BusEsp::writeByte(const uint8_t byte) {
     portEXIT_CRITICAL(&listener_mux_);
   }
   if (monitor_) monitor_->transmit.markBegin();
-
-#if EBUS_SIMULATION
-  if (byte != Symbols::syn) {
-    std::lock_guard<std::mutex> lock(syn_mutex_);
-    syn_active_ = false;
-  }
-  VirtualLine::get().write(byte);
-  if (sim_write_timer_) {
-    esp_timer_start_once(sim_write_timer_,
-                         static_cast<uint64_t>(10 * Physical::bit_time_us));
-    xSemaphoreTake(sim_write_sem_, portMAX_DELAY);
-  }
-  if (monitor_) monitor_->transmit.markEnd();
-  return;
-#endif
 
   portENTER_CRITICAL(&timer_mux_);
   last_activity_micros_ = esp_timer_get_time();
@@ -673,97 +603,6 @@ bool IRAM_ATTR BusEsp::onSynGenTimer() {
   uart_ll_write_txfifo(UART_LL_GET_HW(uart_port_num_), &syn, 1);
   return false;
 }
-
-#if EBUS_SIMULATION
-void BusEsp::simulationReaderLoop() {
-  uint8_t byte;
-  while (running_.load()) {
-    if (VirtualLine::get().read(this, byte, 10)) {
-      auto arrival_time = Clock::now();
-      {
-        portENTER_CRITICAL(&listener_mux_);
-        for (const auto& listener : read_listeners_) listener(byte);
-        portEXIT_CRITICAL(&listener_mux_);
-      }
-
-      recordUtilization(byte);
-      resetSynTimerSim(byte);
-
-      BusEvent event;
-      event.byte = byte;
-      event.timestamp = arrival_time;
-      event.bus_request = bus_request_flag_;
-      bus_request_flag_ = false;
-
-      if (byte_queue_) byte_queue_->push(event);
-
-      if (byte == Symbols::syn && request_->busRequestPending()) {
-        sleepMicro(200);  // Simulate arbitration window
-        writeByte(request_->busRequestAddress());
-        bus_request_flag_ = true;
-      }
-    }
-  }
-}
-
-void BusEsp::resetSynTimerSim(uint8_t byte) {
-  std::lock_guard<std::mutex> lock(syn_mutex_);
-  auto now = Clock::now();
-  last_activity_time_ = now;
-
-  if (syn_active_ && byte == Symbols::syn) {
-    next_syn_expiry_ = now + std::chrono::milliseconds(BusLimits::Syn::base_ms);
-  } else {
-    syn_active_ = false;
-    uint64_t unique_ms =
-        BusLimits::Syn::base_ms +
-        (runtime_.address * BusLimits::Syn::address_factor_ms) +
-        BusLimits::Syn::tolerance_ms;
-    next_syn_expiry_ = now + std::chrono::milliseconds(unique_ms);
-  }
-  syn_cv_.notify_one();
-}
-
-void BusEsp::simulationSynLoop() {
-  while (syn_running_.load()) {
-    std::unique_lock<std::mutex> lock(syn_mutex_);
-    auto now = Clock::now();
-    if (next_syn_expiry_ > now) {
-      syn_cv_.wait_until(lock, next_syn_expiry_);
-      continue;
-    }
-
-    // Carrier Sense
-    if (now - last_activity_time_ <
-        std::chrono::milliseconds(BusLimits::Syn::carrier_sense_ms)) {
-      if (monitor_)
-        monitor_->updateBus([](auto& m) { m.syn_postponed_count++; });
-      next_syn_expiry_ =
-          now + std::chrono::milliseconds(BusLimits::Syn::postpone_ms);
-      continue;
-    }
-
-    syn_active_ = true;
-    lock.unlock();
-
-    {
-      portENTER_CRITICAL(&listener_mux_);
-      for (const auto& listener : syn_listeners_) listener();
-      portEXIT_CRITICAL(&listener_mux_);
-    }
-    writeByte(Symbols::syn);
-
-    lock.lock();
-    if (next_syn_expiry_ <= Clock::now()) {
-      uint64_t unique_ms =
-          BusLimits::Syn::base_ms +
-          (runtime_.address * BusLimits::Syn::address_factor_ms) +
-          BusLimits::Syn::tolerance_ms;
-      next_syn_expiry_ = Clock::now() + std::chrono::milliseconds(unique_ms);
-    }
-  }
-}
-#endif
 
 }  // namespace ebus::detail::platform
 

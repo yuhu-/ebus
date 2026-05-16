@@ -3,23 +3,24 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+#if defined(EBUS_SIMULATION)
 #include <ebus/protocol_math.hpp>
 #include <ebus/sequence.hpp>
 #include <ebus/utils.hpp>
 #include <ebus/virtual_bus.hpp>
 
-#include "utils/bus_simulator.hpp"
+#include "platform/simulation/bus_simulator.hpp"
 
 namespace ebus {
 
 // Define the Impl struct here as an alias for BusSimulator
 // This makes detail::BusSimulator a complete type when unique_ptr needs it.
 struct VirtualBus::Impl : public detail::BusSimulator {
-  explicit Impl(detail::platform::Bus& internal_bus)
+  explicit Impl(detail::platform::BusSimulation& internal_bus)
       : detail::BusSimulator(internal_bus) {}
 };
 
-VirtualBus::VirtualBus(detail::platform::Bus& internal_bus)
+VirtualBus::VirtualBus(detail::platform::BusSimulation& internal_bus)
     : impl_(std::make_unique<Impl>(internal_bus)) {}
 VirtualBus::~VirtualBus() = default;
 
@@ -40,3 +41,5 @@ void VirtualBus::addResponse(uint8_t source,
 void VirtualBus::clear() { impl_->clear(); }
 
 }  // namespace ebus
+
+#endif  // EBUS_SIMULATION

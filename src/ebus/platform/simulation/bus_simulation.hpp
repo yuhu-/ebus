@@ -1,0 +1,109 @@
+/*
+ * Copyright (C) 2026 Roland Jax
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
+#pragma once
+
+#if defined(EBUS_SIMULATION)
+#include <atomic>
+#include <chrono>
+#include <condition_variable>
+#include <cstdint>
+#include <ebus/config.hpp>
+#include <ebus/detail/protocol_limits.hpp>
+#include <ebus/status.hpp>
+#include <functional>
+#include <memory>
+#include <mutex>
+#include <vector>
+
+#include "core/bus_events.hpp"
+#include "platform/bus_base.hpp"
+#include "platform/queue.hpp"
+#include "platform/service_thread.hpp"
+
+namespace ebus::detail {
+class Request;
+class BusMonitor;
+}  // namespace ebus::detail
+
+namespace ebus::detail::platform {
+
+/**
+ * Simulation implementation of the eBUS physical layer.
+ * Provides a virtual bus for testing and development without hardware.
+ */
+class BusSimulation : public BusBase {
+ public:
+  explicit BusSimulation(const BusConfig& config, const RuntimeConfig& runtime,
+                         detail::Request* request, detail::BusMonitor* monitor);
+  ~BusSimulation();
+
+  BusSimulation(const BusSimulation&) = delete;
+  BusSimulation& operator=(const BusSimulation&) = delete;
+
+  void start();
+  void stop();
+
+  Queue<BusEvent>* getQueue() const;
+
+  void writeByte(const uint8_t byte);
+
+  void setWindow(const uint16_t window_us);
+  void setOffset(const uint16_t offset_us);
+  void setRuntimeConfig(const RuntimeConfig& runtime);
+
+  void recordUtilization(uint8_t byte);
+
+  // Listeners
+  void addReadListener(ReadListener listener);
+  void addWriteListener(WriteListener listener);
+  void addSynListener(SynListener listener);
+
+  platform::ServiceThread::Status getThreadStatus() const;
+  platform::ServiceThread::Status getSynThreadStatus() const;
+
+  ebus::BusStatus getStatus() const;
+
+ private:
+  BusConfig config_;
+  RuntimeConfig runtime_;
+
+  detail::Request* request_ = nullptr;
+  detail::BusMonitor* monitor_ = nullptr;
+
+  // owned queue
+  std::unique_ptr<Queue<BusEvent>> byte_queue_;
+
+  std::unique_ptr<ServiceThread> worker_;
+  std::unique_ptr<ServiceThread> syn_worker_;
+  std::atomic<bool> running_{false};
+  std::atomic<bool> syn_running_{false};
+
+  mutable std::mutex listeners_mutex_;  // Protects listener vectors
+
+  // Simulation SYN generator state
+  std::mutex syn_mutex_;
+  std::condition_variable syn_cv_;
+  Clock::time_point last_activity_time_;
+  Clock::time_point next_syn_expiry_;
+  Clock::time_point syn_intent_time_sim_;
+
+  uint64_t syn_base_ms_ = 0;            // Base SYN interval in milliseconds
+  uint64_t syn_tolerance_ms_ = 0;       // SYN tolerance in milliseconds
+  uint64_t syn_address_factor_ms_ = 0;  // SYN address factor in milliseconds
+
+  std::atomic<bool> bus_request_flag_{
+      false};  // Flag to indicate a bus request is pending
+  bool syn_active_{
+      false};  // True if this instance is currently generating SYNs
+
+  void simulationReaderLoop();
+  void simulationSynLoop();
+  void resetSynTimerSim(uint8_t byte);
+};
+
+}  // namespace ebus::detail::platform
+
+#endif  // EBUS_SIMULATION

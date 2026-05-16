@@ -5,6 +5,7 @@
 
 #pragma once
 
+#if defined(EBUS_SIMULATION)
 #include <atomic>
 #include <chrono>
 #include <cstdint>
@@ -15,17 +16,16 @@
 #include <ebus/virtual_bus.hpp>
 #include <functional>
 #include <iomanip>
-#include <iostream>
 #include <memory>
 #include <mutex>
-#include <queue>
 #include <sstream>
 #include <string>
 #include <vector>
 
 #include "core/telegram.hpp"
-#include "platform/bus.hpp"
 #include "platform/service_thread.hpp"
+#include "platform/simulation/bus_simulation.hpp"
+#include "utils/circular_buffer.hpp"
 
 namespace ebus::detail {
 
@@ -64,13 +64,35 @@ inline std::string frameSlaveHex(const std::string& payloadHex) {
  */
 class BusSimulator {
  public:
-  explicit BusSimulator(platform::Bus& bus) : bus_(bus) {
+  explicit BusSimulator(platform::BusSimulation& bus)
+      : bus_(bus), outbound_queue_(16) {
     bus_.addWriteListener([this](uint8_t b) { this->onWrite(b); });
+    worker_ = std::make_unique<platform::ServiceThread>(
+        "ebus_sim_worker", [this] { processResponses(); },
+        OrchestrationLimits::default_stack_size,
+        OrchestrationLimits::default_priority);
+    worker_->start();
   }
 
   ~BusSimulator() {
-    for (auto& w : response_workers_) {
-      if (w) w->join();
+    outbound_queue_.shutdown();
+    if (worker_) worker_->join();
+  }
+
+  /**
+   * @brief Injects a master message.
+   * This remains synchronous because it simulates an external participant
+   * and is usually called from test setup, not from inside a bus listener.
+   */
+  void injectMasterMessage(uint8_t source, ebus::Sequence payload) {
+    payload.reduce();
+    ebus::Sequence msg;
+    msg.pushBack(source, false);
+    msg.append(payload);
+    msg.pushBack(msg.crc(), false);
+    msg.extend();
+    for (uint8_t b : msg) {
+      bus_.writeByte(b);
     }
   }
 
@@ -86,64 +108,63 @@ class BusSimulator {
   }
 
   void clear() {
-    std::vector<std::unique_ptr<platform::ServiceThread>> workers_to_join;
-    {
-      std::lock_guard<std::mutex> lock(mtx_);
-      responses_.clear();
-      write_history_.clear();
-      workers_to_join = std::move(response_workers_);
-      response_workers_.clear();  // Clear the original vector
-    }
-    for (auto& w : workers_to_join) {
-      if (w) w->join();
-    }
-  }
-
-  void injectMasterMessage(uint8_t source, ebus::Sequence payload) {
-    payload.reduce();
-    ebus::Sequence msg;
-    msg.pushBack(source, false);
-    msg.append(payload);
-    msg.pushBack(msg.crc(), false);
-    msg.extend();
-    for (uint8_t b : msg) {
-      bus_.writeByte(b);
-    }
+    std::lock_guard<std::mutex> lock(mtx_);
+    responses_.clear();
+    write_history_.clear();
+    outbound_queue_.clear();
   }
 
  private:
-  platform::Bus& bus_;
+  platform::BusSimulation& bus_;
   std::mutex mtx_;
-  std::vector<uint8_t> write_history_;
+
+  CircularBuffer<uint8_t, SequenceLimits::default_capacity> write_history_;
   std::vector<ebus::VirtualBus::AutoResponse> responses_;
-  std::vector<std::unique_ptr<platform::ServiceThread>> response_workers_;
+  platform::Queue<std::vector<uint8_t>> outbound_queue_;
+  std::unique_ptr<platform::ServiceThread> worker_;
 
   void onWrite(uint8_t b) {
     std::lock_guard<std::mutex> lock(mtx_);
     write_history_.push_back(b);
-    if (write_history_.size() > SequenceLimits::default_capacity)
-      write_history_.erase(write_history_.begin());
-
     for (auto& resp : responses_) {
-      bool infinite = (resp.repeat_count == 0);
-      if (infinite || resp.repeat_count > 0) {
-        if (ebus::matches(
-                write_history_, resp.trigger_pattern,
-                write_history_.size() - resp.trigger_pattern.size())) {
-          if (!infinite) resp.repeat_count--;
-
-          std::vector<uint8_t> data = resp.response_data;
-
-          auto worker = std::make_unique<platform::ServiceThread>(
-              "ebus_bus_simulator_resp", [this, data]() {
-                for (uint8_t byte : data) bus_.writeByte(byte);
-              });
-          worker->start();
-          response_workers_.push_back(std::move(worker));
+      // Check if the current history suffix matches the trigger pattern
+      bool match = true;
+      if (write_history_.size() < resp.trigger_pattern.size())
+        match = false;
+      else {
+        size_t hist_size = write_history_.size();
+        size_t pat_size = resp.trigger_pattern.size();
+        for (size_t i = 0; i < pat_size; ++i) {
+          if (write_history_[hist_size - pat_size + i] !=
+              resp.trigger_pattern[i]) {
+            match = false;
+            break;
+          }
         }
+      }
+
+      if (match) {
+        bool infinite = (resp.repeat_count == 0);
+        if (infinite || resp.repeat_count > 0) {
+          if (!infinite) resp.repeat_count--;
+          // Non-blocking push. If the simulator is overwhelmed, we skip.
+          outbound_queue_.tryPush(resp.response_data);
+        }
+      }
+    }
+  }
+
+  void processResponses() {
+    std::vector<uint8_t> data;
+    // Blocking pop handles the sleep/wait automatically
+    while (outbound_queue_.pop(data)) {
+      for (uint8_t byte : data) {
+        bus_.writeByte(byte);
       }
     }
   }
 };
 
 }  // namespace ebus::detail
+
+#endif  // EBUS_SIMULATION

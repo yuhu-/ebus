@@ -22,7 +22,7 @@ using namespace ebus::detail;
 
 TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
   SECTION("Integration vectors (passive/reactive/active BC happy paths)") {
-    ebus::BusConfig config = {.device = "/dev/null"};
+    ebus::BusConfig config;
     ebus::RuntimeConfig runtime;
     runtime.address = 0x01;
     runtime.bus.syn_gen = true;
@@ -104,7 +104,7 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
   }
 
   SECTION("Lock counter behavior and arbitration pumping") {
-    ebus::BusConfig config = {.device = "/dev/null"};
+    ebus::BusConfig config;
     ebus::RuntimeConfig runtime = {.address = 0x33};
 
     Request request;
@@ -172,7 +172,7 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
   }
 
   SECTION("External client callback path") {
-    ebus::BusConfig config = {.device = "/dev/null"};
+    ebus::BusConfig config;
     ebus::RuntimeConfig runtime;
     runtime.address = 0x33;
     runtime.bus.syn_gen = true;

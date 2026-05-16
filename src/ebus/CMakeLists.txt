@@ -28,20 +28,19 @@ set(MODELS_SOURCES
 set(PLATFORM_SOURCES
 )
 
-if(POSIX AND NOT APPLE)
-    list(APPEND PLATFORM_SOURCES platform/posix/bus_posix.cpp)
-elseif(ESP_PLATFORM)
+if(EBUS_SIMULATION)
+    list(APPEND PLATFORM_SOURCES platform/simulation/bus_simulation.cpp)
+    list(APPEND PLATFORM_SOURCES platform/simulation/virtual_bus.cpp)
+elseif(DEFINED ESP_PLATFORM)
     list(APPEND PLATFORM_SOURCES platform/esp/bus_esp.cpp)
+elseif(POSIX)
+    list(APPEND PLATFORM_SOURCES platform/posix/bus_posix.cpp)
 endif()
 
 # Utils
 set(UTILS_SOURCES
     utils/json_utils.cpp
 )
-
-if(EBUS_SIMULATION)
-    list(APPEND UTILS_SOURCES utils/virtual_bus.cpp)
-endif()
 
 set(SOURCES
     ${APP_SOURCES} 

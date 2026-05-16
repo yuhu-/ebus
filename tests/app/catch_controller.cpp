@@ -12,8 +12,8 @@
 #include <thread>
 #include <vector>
 
+#include "platform/simulation/bus_simulator.hpp"
 #include "test_utils.hpp"
-#include "utils/bus_simulator.hpp"
 
 using namespace ebus::detail;
 
@@ -99,7 +99,7 @@ TEST_CASE("Controller: System Discovery automated response",
 
   Request peerReq;
   peerReq.setLockCounter(0);
-  platform::Bus peerBus(config.bus, peerRuntime, &peerReq);
+  platform::Bus peerBus(config.bus, peerRuntime, &peerReq, nullptr);
   peerBus.start();
   BusSimulator peerSim(peerBus);
 

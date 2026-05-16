@@ -9,7 +9,6 @@
 
 #include "core/telegram.hpp"
 
-// using namespace ebus;
 using namespace ebus::detail;
 
 TEST_CASE("Telegram: creation", "[core][telegram]") {

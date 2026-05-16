@@ -23,17 +23,14 @@ class CircularBuffer {
 
   // Pushes an item into the buffer. Returns true if an old element was
   // overwritten.
+  bool push_back(const T& item) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return push_impl(item);
+  }
+
   bool push_back(T&& item) {
     std::lock_guard<std::mutex> lock(mutex_);
-    bool overwritten = false;
-    if (size_ < Cap) {
-      buffer_[size_++] = std::move(item);
-    } else {
-      buffer_[head_] = std::move(item);
-      head_ = (head_ + 1) % Cap;
-      overwritten = true;
-    }
-    return overwritten;
+    return push_impl(std::move(item));
   }
 
   void clear() {
@@ -63,7 +60,9 @@ class CircularBuffer {
     std::lock_guard<std::mutex> lock(mutex_);
     return size_;
   }
+
   constexpr size_t capacity() const { return Cap; }
+  
   bool empty() const {
     std::lock_guard<std::mutex> lock(mutex_);
     return size_ == 0;
@@ -80,6 +79,19 @@ class CircularBuffer {
   T buffer_[Cap];
   size_t head_ = 0;
   size_t size_ = 0;
+
+  template <typename U>
+  bool push_impl(U&& item) {
+    bool overwritten = false;
+    if (size_ < Cap) {
+      buffer_[size_++] = std::forward<U>(item);
+    } else {
+      buffer_[head_] = std::forward<U>(item);
+      head_ = (head_ + 1) % Cap;
+      overwritten = true;
+    }
+    return overwritten;
+  }
 };
 
 }  // namespace ebus::detail

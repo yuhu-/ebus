@@ -24,16 +24,14 @@
 #include "core/handler.hpp"
 #include "core/request.hpp"
 #include "platform/bus.hpp"
+#include "platform/simulation/bus_simulator.hpp"
 #include "test_utils.hpp"
-#include "utils/bus_simulator.hpp"
 
-// using namespace ebus;
 using namespace ebus::detail;
 
 TEST_CASE("Scheduler: Simulation", "[app][scheduler]") {
   Request request;
   ebus::BusConfig config;
-  config.device = "/dev/null";
 
   ebus::RuntimeConfig runtime;
   runtime.address = 0x33;
@@ -96,7 +94,6 @@ TEST_CASE("Scheduler: Simulation", "[app][scheduler]") {
 TEST_CASE("Scheduler: Priority Preemption", "[app][scheduler][priority]") {
   Request request;
   ebus::BusConfig config;
-  config.device = "/dev/null";
 
   ebus::RuntimeConfig runtime;
   runtime.address = 0x01;

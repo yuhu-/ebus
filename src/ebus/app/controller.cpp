@@ -53,8 +53,8 @@ struct Impl {
   std::unique_ptr<detail::DeviceScanner> device_scanner_;
   std::unique_ptr<detail::PollManager> poll_manager_;
   std::unique_ptr<detail::Scheduler> scheduler_;
-#if EBUS_SIMULATION
-  std::unique_ptr<ebus::VirtualBus> virtual_bus_;  //
+#if defined(EBUS_SIMULATION)
+  std::unique_ptr<ebus::VirtualBus> virtual_bus_;
 #endif
   std::unique_ptr<detail::ClientManager> client_manager_;
   std::unique_ptr<detail::platform::ServiceThread> worker_;
@@ -508,7 +508,7 @@ ServiceStatus Controller::getServiceStatus() const {
   return status;
 }
 
-#if EBUS_SIMULATION
+#if defined(EBUS_SIMULATION)
 VirtualBus& Controller::getVirtualBus() { return *impl_->virtual_bus_; }
 #endif
 
@@ -585,7 +585,7 @@ void Controller::constructMembers() {
     impl_->bus_->setRuntimeConfig(config_.runtime);
   }
 
-#if EBUS_SIMULATION
+#if defined(EBUS_SIMULATION)
   // Initialize VirtualBus build flag is set
   if (!impl_->virtual_bus_) {
     impl_->virtual_bus_ =

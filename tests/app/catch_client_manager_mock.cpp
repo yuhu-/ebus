@@ -17,7 +17,6 @@
 #include "platform/system.hpp"
 #include "test_utils.hpp"
 
-using namespace ebus;
 using namespace ebus::detail;
 
 TEST_CASE("ClientManager: Mock Orchestration", "[app][clientmanager][mock]") {
@@ -25,8 +24,8 @@ TEST_CASE("ClientManager: Mock Orchestration", "[app][clientmanager][mock]") {
   req.setLockCounter(0);
   req.reset();
 
-  BusConfig config = {.device = "/dev/null"};
-  RuntimeConfig runtime = {.address = 0x01};
+  ebus::BusConfig config;
+  ebus::RuntimeConfig runtime = {.address = 0x01};
 
   BusMonitor monitor;
   platform::Bus bus(config, runtime, &req, &monitor);

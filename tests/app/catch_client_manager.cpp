@@ -22,7 +22,6 @@
 #include "platform/system.hpp"
 #include "test_utils.hpp"
 
-// using namespace ebus;
 using namespace ebus::detail;
 
 // Helper to mimic run_test behaviour but using Catch2
@@ -36,7 +35,7 @@ TEST_CASE("ClientManager Orchestration (Regular + ReadOnly)") {
   req.setLockCounter(3);
   req.reset();
 
-  ebus::BusConfig config = {.device = "/dev/null"};
+  ebus::BusConfig config;
   ebus::RuntimeConfig runtime = {.address = 0x01};
 
   BusMonitor monitor;
@@ -114,7 +113,7 @@ TEST_CASE("ClientManager Enhanced Active Sending") {
   req.setLockCounter(3);
   req.reset();
 
-  ebus::BusConfig config = {.device = "/dev/null"};
+  ebus::BusConfig config;
   ebus::RuntimeConfig runtime = {.address = 0x01};
 
   BusMonitor monitor;
@@ -188,7 +187,7 @@ TEST_CASE("ClientManager Enhanced Active Sending") {
 TEST_CASE("ClientManager Watchdog Timeout") {
   Request req;
   req.setLockCounter(0);
-  ebus::BusConfig config = {.device = "/dev/null"};
+  ebus::BusConfig config;
   ebus::RuntimeConfig runtime = {.address = 0xff};
 
   BusMonitor monitor;
@@ -223,7 +222,7 @@ TEST_CASE("ClientManager Watchdog Timeout") {
 
 TEST_CASE("Client Removal") {
   Request req;
-  ebus::BusConfig config = {.device = "/dev/null"};
+  ebus::BusConfig config;
   ebus::RuntimeConfig runtime = {.address = 0xff};
 
   BusMonitor monitor;

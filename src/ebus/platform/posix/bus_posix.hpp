@@ -5,7 +5,7 @@
 
 #pragma once
 
-#if defined(POSIX)
+#if defined(POSIX) && !defined(EBUS_SIMULATION)
 #include <fcntl.h>
 #include <poll.h>
 #include <sys/ioctl.h>
@@ -31,6 +31,7 @@
 #include <vector>
 
 #include "core/bus_events.hpp"
+#include "platform/bus_base.hpp"
 #include "platform/queue.hpp"
 #include "platform/service_thread.hpp"
 
@@ -46,12 +47,8 @@ namespace ebus::detail::platform {
  * Handles serial port configuration and asynchronous byte reading via a
  * background thread. Supports a virtual-line simulation for testing.
  */
-class BusPosix {
+class BusPosix : public BusBase {
  public:
-  using ReadListener = std::function<void(const uint8_t& byte)>;
-  using WriteListener = std::function<void(const uint8_t& byte)>;
-  using SynListener = std::function<void()>;
-
   BusPosix(const BusConfig& config, const ebus::RuntimeConfig& runtime,
            detail::Request* request, detail::BusMonitor* monitor = nullptr);
   ~BusPosix();
@@ -98,9 +95,6 @@ class BusPosix {
   std::atomic<bool> running_;
 
   mutable std::mutex listeners_mutex_;
-  std::vector<ReadListener> read_listeners_;
-  std::vector<WriteListener> write_listeners_;
-  std::vector<SynListener> syn_listeners_;
 
   // SYN generator members
   std::unique_ptr<ServiceThread> syn_worker_;

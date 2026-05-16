@@ -5,7 +5,15 @@
 
 #pragma once
 
-#if defined(ESP_PLATFORM)
+#if defined(EBUS_SIMULATION)
+#include "simulation/bus_simulation.hpp"
+namespace ebus::detail::platform {
+class Bus : public BusSimulation {
+ public:
+  using BusSimulation::BusSimulation;
+};
+}  // namespace ebus::detail::platform
+#elif defined(ESP_PLATFORM) && !defined(EBUS_SIMULATION)
 #include "esp/bus_esp.hpp"
 namespace ebus::detail::platform {
 class Bus : public BusEsp {
@@ -13,7 +21,7 @@ class Bus : public BusEsp {
   using BusEsp::BusEsp;
 };
 }  // namespace ebus::detail::platform
-#elif defined(POSIX)
+#elif defined(POSIX) && !defined(EBUS_SIMULATION)
 #include "posix/bus_posix.hpp"
 namespace ebus::detail::platform {
 class Bus : public BusPosix {

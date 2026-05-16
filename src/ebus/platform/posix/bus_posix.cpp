@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#if defined(POSIX)
+#if defined(POSIX) && !defined(EBUS_SIMULATION)
 #include "platform/posix/bus_posix.hpp"
 
 #include <algorithm>
@@ -13,9 +13,6 @@
 #include "core/bus_monitor.hpp"
 #include "core/request.hpp"
 #include "platform/system.hpp"
-#if EBUS_SIMULATION
-#include "platform/virtual_line.hpp"
-#endif
 
 namespace ebus::detail::platform {
 
@@ -37,11 +34,6 @@ BusPosix::~BusPosix() { stop(); }
 void BusPosix::start() {
   if (open_) return;
 
-#if EBUS_SIMULATION
-  VirtualLine::get().attach(this);
-  fd_ = -1;
-  open_ = true;
-#else
   struct termios new_settings;
   fd_ = ::open(config_.device.c_str(), O_RDWR | O_NOCTTY);
   if (fd_ < 0 || isatty(fd_) == 0)
@@ -61,26 +53,14 @@ void BusPosix::start() {
   fcntl(fd_, F_SETFL, fcntl(fd_, F_GETFL) & ~O_NONBLOCK);
 
   open_ = true;
-#endif
 
   running_.store(true);
   worker_ = std::make_unique<ServiceThread>(
-      "ebus_bus",
-      [this] {
-#if EBUS_SIMULATION
-        readerThread();
-#else
-        readerThread();  // On POSIX, the same runner handles both via internal
-                         // guards
-#endif
-      },
+      "ebus_bus", [this] { readerThread(); },
       detail::OrchestrationLimits::bus_stack_size,
       detail::OrchestrationLimits::bus_priority);
   worker_->start();
 
-#if EBUS_SIMULATION
-  if (monitor_) monitor_->uptime.markBegin();
-#endif
   if (runtime_.bus.syn_gen) {
     syn_base_ms_dur_ = std::chrono::milliseconds(BusLimits::Syn::base_ms);
     syn_tolerance_ms_dur_ =
@@ -104,17 +84,11 @@ void BusPosix::start() {
 
 void BusPosix::stop() {
   if (!open_) return;
-#if EBUS_SIMULATION
-  if (monitor_) monitor_->uptime.markEnd();
-#endif
 
   running_.store(false);
   syn_running_.store(false);
 
   if (byte_queue_) byte_queue_->shutdown();
-#if EBUS_SIMULATION
-  VirtualLine::get().detach(this);
-#endif
 
   {
     std::unique_lock<std::mutex> lock(syn_mutex_);
@@ -159,14 +133,9 @@ void BusPosix::writeByte(const uint8_t byte) {
     for (const auto& listener : write_listeners_) listener(byte);
   }
 
-#if EBUS_SIMULATION
-  VirtualLine::get().write(byte);
-  platform::sleepMicro(static_cast<uint32_t>(10 * Physical::bit_time_us));
-#else
   ensureOpen();
   if (::write(fd_, &byte, 1) == -1)
     throw std::runtime_error("BusPosix: write error");
-#endif
 
   if (monitor_) monitor_->transmit.markEnd();
 }
@@ -302,16 +271,7 @@ void BusPosix::readerThread() {
     uint8_t byte;
     ssize_t n = 0;
 
-#if EBUS_SIMULATION
-    // Use the memory-based simulation queue
-    if (VirtualLine::get().read(
-            this, byte, BusLimits::platform::Posix::virtual_read_timeout_ms))
-      n = 1;
-    else
-      continue;  // timeout, check running_ flag again
-#else
     n = ::read(fd_, &byte, 1);
-#endif
 
     if (n == 1) {
       auto arrival_time = Clock::now();

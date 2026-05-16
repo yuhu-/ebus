@@ -50,7 +50,7 @@ class ConfigValidator {
       return false;  // Sanity check
 
     // 5. Platform Specifics
-#if defined(POSIX) && !EBUS_SIMULATION
+#if defined(POSIX) && !defined(EBUS_SIMULATION)
     if (config.bus.device.empty()) return false;
 #endif
 
@@ -60,13 +60,14 @@ class ConfigValidator {
   /**
    * Checks if two configs require a hardware restart (Bus/UART recreation).
    */
-  static bool requiresHardwareRestart(const EbusConfig& old_cfg,
-                                      const EbusConfig& new_cfg) {
-#if defined(ESP_PLATFORM)
+  static bool requiresHardwareRestart(
+      [[maybe_unused]] const EbusConfig& old_cfg,
+      [[maybe_unused]] const EbusConfig& new_cfg) {
+#if defined(ESP_PLATFORM) && !defined(EBUS_SIMULATION)
     return old_cfg.bus.uart_port != new_cfg.bus.uart_port ||
            old_cfg.bus.rx_pin != new_cfg.bus.rx_pin ||
            old_cfg.bus.tx_pin != new_cfg.bus.tx_pin;
-#elif defined(POSIX)
+#elif defined(POSIX) && !defined(EBUS_SIMULATION)
     return old_cfg.bus.device != new_cfg.bus.device;
 #else
     return false;

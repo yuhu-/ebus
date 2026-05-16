@@ -81,13 +81,13 @@ struct RuntimeConfig {
  * Platform-dependent bus configuration.
  */
 struct BusConfig {
-#if defined(ESP_PLATFORM)
+#if defined(ESP_PLATFORM) && !defined(EBUS_SIMULATION)
   uint8_t uart_port;
   uint8_t rx_pin;
   uint8_t tx_pin;
   uint8_t timer_group;
   uint8_t timer_idx;
-#elif defined(POSIX)
+#elif defined(POSIX) && !defined(EBUS_SIMULATION)
   std::string device = "/dev/null";
 #endif
 

@@ -5,12 +5,10 @@
 
 #pragma once
 
-#if defined(ESP_PLATFORM)
+#if defined(ESP_PLATFORM) && !defined(EBUS_SIMULATION)
 #include <freertos/FreeRTOS.h>
-#include <freertos/semphr.h>
 
 #include <atomic>
-#include <condition_variable>
 #include <cstdint>
 #include <ebus/config.hpp>
 #include <ebus/detail/protocol_limits.hpp>
@@ -22,16 +20,10 @@
 #include "core/bus_events.hpp"
 #include "driver/gptimer.h"
 #include "driver/uart.h"
-#include "esp_idf_version.h"
 #include "esp_timer.h"
+#include "platform/bus_base.hpp"
 #include "platform/queue.hpp"
 #include "platform/service_thread.hpp"
-
-#if EBUS_SIMULATION
-#include <condition_variable>
-
-#include "platform/virtual_line.hpp"
-#endif
 
 namespace ebus::detail {
 class Request;
@@ -45,12 +37,8 @@ namespace ebus::detail::platform {
  * Handles serial port configuration and asynchronous byte reading via a
  * background thread.
  */
-class BusEsp {
+class BusEsp : public BusBase {
  public:
-  using ReadListener = std::function<void(const uint8_t& byte)>;
-  using WriteListener = std::function<void(const uint8_t& byte)>;
-  using SynListener = std::function<void()>;
-
   explicit BusEsp(const BusConfig& config, const RuntimeConfig& runtime,
                   detail::Request* request, detail::BusMonitor* monitor);
   ~BusEsp();
@@ -104,10 +92,6 @@ class BusEsp {
   std::unique_ptr<ServiceThread> worker_;
   std::atomic<bool> running_{false};
 
-  std::vector<ReadListener> read_listeners_;
-  std::vector<WriteListener> write_listeners_;
-  std::vector<SynListener> syn_listeners_;
-
   // ISR/state
   static constexpr uint8_t FALLING_EDGE_BUFFER_SIZE = 5;
 
@@ -134,17 +118,6 @@ class BusEsp {
   uint32_t syn_postponed_count_ = 0;
   bool syn_active_{false};
 
-#if EBUS_SIMULATION
-  // Simulation SYN generator state
-  std::mutex syn_mutex_;
-  std::condition_variable syn_cv_;
-  Clock::time_point last_activity_time_;
-  Clock::time_point next_syn_expiry_;
-  Clock::time_point syn_intent_time_sim_;
-  SemaphoreHandle_t sim_write_sem_ = nullptr;
-  esp_timer_handle_t sim_write_timer_ = nullptr;
-#endif
-
   std::atomic<bool> syn_running_{false};
   uint64_t syn_base_us_ = 0;    // Base SYN interval in microseconds
   uint64_t syn_unique_us_ = 0;  // Unique SYN interval in microseconds
@@ -164,13 +137,6 @@ class BusEsp {
   void ebusUartEventRunner();  // instance worker used by static trampoline
 
   static void s_onSynPostpone(void* arg);
-
-#if EBUS_SIMULATION
-  // Simulation workers
-  void simulationReaderLoop();
-  void simulationSynLoop();
-  void resetSynTimerSim(uint8_t byte);
-#endif
 
   // ISR: Save the falling edges in order to estimate the sync byte
   static void IRAM_ATTR s_onFallingEdge(void* arg);

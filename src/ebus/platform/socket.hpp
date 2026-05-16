@@ -57,20 +57,8 @@ inline ssize_t recv(int fd, void* buf, size_t len, Flags flags) {
   return ::recv(fd, buf, len, f);
 }
 
-inline bool isInterrupted() {
-#if defined(POSIX) || defined(ESP_PLATFORM)
-  return errno == EINTR;
-#else
-  return false;
-#endif
-}
+inline bool isInterrupted() { return errno == EINTR; }
 
-inline bool isWouldBlock() {
-#if defined(POSIX) || defined(ESP_PLATFORM)
-  return errno == EAGAIN || errno == EWOULDBLOCK;
-#else
-  return false;
-#endif
-}
+inline bool isWouldBlock() { return errno == EAGAIN || errno == EWOULDBLOCK; }
 
 }  // namespace ebus::detail::platform

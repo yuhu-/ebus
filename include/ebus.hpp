@@ -23,6 +23,6 @@
 #include "ebus/status.hpp"
 #include "ebus/types.hpp"
 #include "ebus/utils.hpp"
-#if EBUS_SIMULATION
+#if defined(EBUS_SIMULATION)
 #include "ebus/virtual_bus.hpp"
 #endif

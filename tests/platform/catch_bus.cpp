@@ -30,7 +30,7 @@ static void force_request(Request& req, uint8_t addr) {
 }
 
 TEST_CASE("Bus: Basic Communication", "[platform][bus]") {
-  ebus::BusConfig config = {.device = "/dev/null"};
+  ebus::BusConfig config;
   ebus::RuntimeConfig runtime;
   runtime.address = 0x01;
   runtime.bus.syn_gen = true;
@@ -72,7 +72,7 @@ TEST_CASE("Bus: Basic Communication", "[platform][bus]") {
 }
 
 TEST_CASE("Bus: SYN Timing", "[platform][bus]") {
-  ebus::BusConfig config = {.device = "/dev/null"};
+  ebus::BusConfig config;
   ebus::RuntimeConfig runtime;
   runtime.address = 0x01;
   runtime.bus.syn_gen = true;
@@ -123,7 +123,7 @@ TEST_CASE("Bus: SYN Timing", "[platform][bus]") {
 }
 
 TEST_CASE("Bus: Raw Reception (Broadcast Simulation)", "[platform][bus]") {
-  ebus::BusConfig config = {.device = "/dev/null"};
+  ebus::BusConfig config;
   ebus::RuntimeConfig runtime = {.address = 0x01};
   Request req;
   BusMonitor monitor;

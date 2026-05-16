@@ -5,6 +5,7 @@
 
 #pragma once
 
+#if defined(EBUS_SIMULATION)
 #include <memory>
 #include <vector>
 
@@ -12,7 +13,7 @@
 #include "ebus/utils.hpp"
 
 namespace ebus::detail::platform {
-class Bus;
+class BusSimulation;
 }  // namespace ebus::detail::platform
 
 namespace ebus {
@@ -66,7 +67,9 @@ class VirtualBus {
   struct Impl;
   std::unique_ptr<Impl> impl_;
 
-  explicit VirtualBus(detail::platform::Bus& internal_bus);
+  explicit VirtualBus(detail::platform::BusSimulation& internal_bus);
 };
 
 }  // namespace ebus
+
+#endif  // EBUS_SIMULATION

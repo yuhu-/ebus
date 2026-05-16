@@ -5,6 +5,7 @@
 
 #pragma once
 
+#if defined(EBUS_SIMULATION)
 #include <chrono>
 #include <condition_variable>
 #include <cstdint>
@@ -51,7 +52,7 @@ class VirtualLine {
     if (it == queues_.end()) return false;
 
     auto& q = it->second;
-    auto tp = Clock::now() + std::chrono::milliseconds(timeout_ms);
+    auto tp = ebus::Clock::now() + std::chrono::milliseconds(timeout_ms);
 
     if (!cv_.wait_until(lock, tp,
                         [this, &q] { return !q.empty() || shutdown_; })) {
@@ -89,3 +90,5 @@ class VirtualLine {
 };
 
 }  // namespace ebus::detail::platform
+
+#endif  // EBUS_SIMULATION
