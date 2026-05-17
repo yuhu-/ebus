@@ -81,6 +81,7 @@ To keep the library maintainable and portable, we follow these patterns:
 *   **DeviceManager**: Maintains the inventory of discovered devices and their properties.
 *   **DeviceScanner**: Implements the logic for identifying devices on the bus.
 *   **EnhancedProtocol**: Implements specialized ebusd-compatible communication modes.
+*   **BusSimulator**: Internal utility for the virtual bus that manages mock reactions and simulated bus behavior.
 *   **ClientManager**: Manages bridge connections for external clients (e.g., ebusd).
 *   **Metrics**: Unified telemetry models for bus utilization, jitter, and error tracking.
 *   **Queue**: Thread-safe byte buffering for incoming bus data.
