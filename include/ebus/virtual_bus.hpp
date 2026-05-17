@@ -34,7 +34,7 @@ class VirtualBus {
     Sequence trigger;       ///< The sequence of bytes that triggers the action.
     Sequence action;        ///< The sequence of bytes to inject as a result.
     int repeat_count = 1;   ///< 0 for infinite, -1 for disabled, > 0 finite.
-    uint32_t delay_ms = 5;  ///< Delay before injecting the action bytes.
+    uint32_t delay_ms = 4;  ///< Delay before injecting the action bytes.
   };
 
   ~VirtualBus();
@@ -79,7 +79,7 @@ class VirtualBus {
    */
   void addSlaveReaction(uint8_t source, const std::string& trigger_hex,
                         const std::string& reaction_hex, int repeat_count = 1,
-                        uint32_t delay_ms = 0);
+                        uint32_t delay_ms = 4);
 
   /**
    * @brief Mocks a receiver sending an ACK (0x00) for a master message.
@@ -91,7 +91,7 @@ class VirtualBus {
    * @param trigger_hex The master payload (ZZ PB SB NN DBx) in hex.
    */
   void addAckReaction(uint8_t source, const std::string& trigger_hex,
-                      int repeat_count = 1, uint32_t delay_ms = 0);
+                      int repeat_count = 1, uint32_t delay_ms = 4);
 
   /**
    * @brief Mocks a receiver sending a NAK (0xff) for a master message.
@@ -102,7 +102,7 @@ class VirtualBus {
    * @param trigger_hex The master payload (ZZ PB SB NN DBx) in hex.
    */
   void addNakReaction(uint8_t source, const std::string& trigger_hex,
-                      int repeat_count = 1, uint32_t delay_ms = 0);
+                      int repeat_count = 1, uint32_t delay_ms = 4);
 
   /**
    * @brief Mocks the master sending the final ACK (0x00) of a Master-Slave
@@ -113,7 +113,7 @@ class VirtualBus {
    * @param trigger_hex The slave payload (NN DBx) in hex.
    */
   void addMasterAckReaction(const std::string& trigger_hex,
-                            int repeat_count = 1, uint32_t delay_ms = 0);
+                            int repeat_count = 1, uint32_t delay_ms = 4);
 
   /**
    * @brief Mocks the master sending the final NAK (0xff) of a Master-Slave
@@ -124,7 +124,7 @@ class VirtualBus {
    * @param trigger_hex The slave payload (NN DBx) in hex.
    */
   void addMasterNakReaction(const std::string& trigger_hex,
-                            int repeat_count = 1, uint32_t delay_ms = 0);
+                            int repeat_count = 1, uint32_t delay_ms = 4);
 
   /**
    * @brief Adds a complex reaction that triggers on a combined Master+Slave
@@ -141,7 +141,7 @@ class VirtualBus {
   void addFullTelegramReaction(uint8_t source, const std::string& master_hex,
                                const std::string& slave_hex,
                                uint8_t action_byte, int repeat_count = 1,
-                               uint32_t delay_ms = 0);
+                               uint32_t delay_ms = 4);
 
  private:
   struct Impl;

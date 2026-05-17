@@ -42,7 +42,7 @@ class BusSimulator {
     Sequence trigger;       ///< Sequence of bytes that triggers the mock.
     Sequence action;        ///< Bytes to inject when triggered.
     int repeat_count = 1;   ///< 0 for infinite, -1 for disabled, > 0 finite.
-    uint32_t delay_ms = 5;  ///< Delay before injection.
+    uint32_t delay_ms = 4;  ///< Delay before injection.
   };
 
   explicit BusSimulator(platform::BusSimulation& bus)
@@ -62,16 +62,16 @@ class BusSimulator {
     if (worker_) worker_->join();
   }
 
-  void addMockReaction(MockReaction reaction) {
-    std::lock_guard<std::mutex> lock(mtx_);
-    reactions_.push_back(std::move(reaction));
-  }
-
   void clear() {
     std::lock_guard<std::mutex> lock(mtx_);
     reactions_.clear();
     write_history_.clear();
     outbound_queue_.clear();
+  }
+
+  void addMockReaction(MockReaction reaction) {
+    std::lock_guard<std::mutex> lock(mtx_);
+    reactions_.push_back(std::move(reaction));
   }
 
   /**
@@ -98,7 +98,7 @@ class BusSimulator {
   struct ResponseItem {
     uint8_t data[SequenceLimits::default_capacity];
     uint8_t len = 0;
-    uint32_t delay_ms = 0;  // Added delay
+    uint32_t delay_ms = 4;  // Added delay
   };
 
   CircularBuffer<uint8_t, SequenceLimits::default_capacity> write_history_;

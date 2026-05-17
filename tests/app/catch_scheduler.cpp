@@ -61,7 +61,7 @@ TEST_CASE("Scheduler: Simulation", "[app][scheduler]") {
 
   simulator.addMockReaction(
       {ebus::frameMaster(source, ebus::toVector("52b509030d4600")),
-       fullSlaveResponse, 1, 5});
+       fullSlaveResponse, 1, 4});
 
   // Retry Success: Master to fe. Simulate NAK (ff) twice, then success on 3rd
   // try.
@@ -80,29 +80,6 @@ TEST_CASE("Scheduler: Simulation", "[app][scheduler]") {
   scheduler.setMaxSendAttempts(3);
   scheduler.setBaseBackoff(50);
 
-  scheduler.setTelegramCallback([](const ebus::TelegramInfo& info) {
-    std::cerr << "[Handler Telegram] session_id: " << info.session_id
-              << ", poll_id: " << info.poll_id
-              << ", retry_count: " << info.retry_count
-              << ", message_type: " << ebus::toString(info.message_type)
-              << ", telegram_type: " << ebus::toString(info.telegram_type)
-              << ", h_state: " << ebus::toString(info.handler_state)
-              << ", r_state: " << ebus::toString(info.request_state)
-              << ", master: " << ebus::toString(info.master_view)
-              << ", slave: " << ebus::toString(info.slave_view) << std::endl;
-  });
-
-  scheduler.setErrorCallback([](const ebus::ErrorInfo& info) {
-    std::cerr << "[Handler Error] protocol_error: "
-              << ebus::toString(info.protocol_error)
-              << ", result: " << ebus::toString(info.result)
-              << ", seq_state: " << ebus::toString(info.sequence_state)
-              << ", h_state: " << ebus::toString(info.handler_state)
-              << ", r_state: " << ebus::toString(info.request_state)
-              << ", master: " << ebus::toString(info.master_view)
-              << ", slave: " << ebus::toString(info.slave_view) << std::endl;
-  });
-
   bus.start();
   busHandler.start();
   scheduler.start();
@@ -110,18 +87,10 @@ TEST_CASE("Scheduler: Simulation", "[app][scheduler]") {
   auto run_test = [&](const std::string& payload) {
     auto promise = std::make_shared<std::promise<bool>>();
     auto future = promise->get_future();
-    scheduler.enqueue(
-        1, ebus::toVector(payload), [promise](const ebus::ResultInfo& info) {
-          if (!info.success) {
-            std::cerr << "[Scheduler Result] FAIL: result="
-                      << ebus::toString(info.result)
-                      << ", seq_state=" << ebus::toString(info.sequence_state)
-                      << ", master=" << ebus::toString(info.master_view)
-                      << ", slave=" << ebus::toString(info.slave_view)
-                      << std::endl;
-          }
-          promise->set_value(info.success);
-        });
+    scheduler.enqueue(1, ebus::toVector(payload),
+                      [promise](const ebus::ResultInfo& info) {
+                        promise->set_value(info.success);
+                      });
     return future.wait_for(std::chrono::seconds(2)) ==
                std::future_status::ready &&
            future.get();
