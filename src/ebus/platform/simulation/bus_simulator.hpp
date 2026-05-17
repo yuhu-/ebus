@@ -5,7 +5,7 @@
 
 #pragma once
 
-#if defined(EBUS_SIMULATION)
+#if EBUS_SIMULATION
 #include <atomic>
 #include <chrono>
 #include <condition_variable>

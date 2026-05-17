@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#if defined(ESP_PLATFORM) && !defined(EBUS_SIMULATION)
+#if defined(ESP_PLATFORM) && !EBUS_SIMULATION
 #include "platform/esp/bus_esp.hpp"
 
 #include <esp_timer.h>
@@ -102,7 +102,7 @@ Queue<BusEvent>* BusEsp::getQueue() const { return byte_queue_.get(); }
 void BusEsp::writeByte(const uint8_t byte) {
   {
     portENTER_CRITICAL(&listener_mux_);
-    for (const auto& listener : write_listeners_) listener(byte);
+    for (const auto& listener : getWriteListeners()) listener(byte);
     portEXIT_CRITICAL(&listener_mux_);
   }
   if (monitor_) monitor_->transmit.markBegin();
@@ -183,19 +183,19 @@ void BusEsp::setRuntimeConfig(const RuntimeConfig& runtime) {
 
 void BusEsp::addReadListener(ReadListener listener) {
   portENTER_CRITICAL(&listener_mux_);
-  read_listeners_.push_back(std::move(listener));
+  getReadListeners().push_back(std::move(listener));
   portEXIT_CRITICAL(&listener_mux_);
 }
 
 void BusEsp::addWriteListener(WriteListener listener) {
   portENTER_CRITICAL(&listener_mux_);
-  write_listeners_.push_back(std::move(listener));
+  getWriteListeners().push_back(std::move(listener));
   portEXIT_CRITICAL(&listener_mux_);
 }
 
 void BusEsp::addSynListener(SynListener listener) {
   portENTER_CRITICAL(&listener_mux_);
-  syn_listeners_.push_back(std::move(listener));
+  getSynListeners().push_back(std::move(listener));
   portEXIT_CRITICAL(&listener_mux_);
 }
 
@@ -362,7 +362,7 @@ void BusEsp::ebusUartEventRunner() {
           const uint8_t byte = data[i];
 
           portENTER_CRITICAL(&listener_mux_);
-          for (const auto& listener : read_listeners_) listener(byte);
+          for (const auto& listener : getReadListeners()) listener(byte);
           portEXIT_CRITICAL(&listener_mux_);
 
           recordUtilization(byte);
@@ -594,7 +594,7 @@ bool IRAM_ATTR BusEsp::onSynGenTimer() {
   portEXIT_CRITICAL_ISR(&timer_mux_);
 
   portENTER_CRITICAL_ISR(&listener_mux_);
-  for (const auto& listener : syn_listeners_) {
+  for (const auto& listener : getSynListeners()) {
     listener();
   }
   portEXIT_CRITICAL_ISR(&listener_mux_);

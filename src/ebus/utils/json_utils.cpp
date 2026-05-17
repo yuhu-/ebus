@@ -234,14 +234,14 @@ std::string BusConfig::toJson() const {
   std::ostringstream oss;
   oss << "{";
 
-#if defined(ESP_PLATFORM) && !defined(EBUS_SIMULATION)
+#if defined(ESP_PLATFORM) && !EBUS_SIMULATION
   oss << "\"platform\": \"esp32\","
       << "\"uart_port\": " << static_cast<int>(uart_port) << ","
       << "\"rx_pin\": " << static_cast<int>(rx_pin) << ","
       << "\"tx_pin\": " << static_cast<int>(tx_pin) << ","
       << "\"timer_group\": " << static_cast<int>(timer_group) << ","
       << "\"timer_idx\": " << static_cast<int>(timer_idx);
-#elif defined(POSIX) && !defined(EBUS_SIMULATION)
+#elif defined(POSIX) && !EBUS_SIMULATION
   oss << "\"platform\": \"posix\","
       << "\"device\": \"" << escapeJson(device) << "\",";
 #endif

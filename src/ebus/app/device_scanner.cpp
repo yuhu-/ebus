@@ -154,9 +154,9 @@ ebus::Sequence DeviceScanner::nextCommand() {
 
   // Priority 2: Full Scan (independent from startup timing)
   if (full_scan_) {
-    for (; full_scan_address_ < 256; ++full_scan_address_) {
+    while (full_scan_address_ < 256) {
       uint8_t addr = static_cast<uint8_t>(full_scan_address_++);
-      // Note: we increment the cursor only once per attempt; adjust to ensure
+      // Note: we increment the cursor once per attempt; adjust to ensure
       // progress even if createScanCommand returns empty.
       if (ebus::isSlave(addr) && (addr != ebus::slaveOf(own_address_))) {
         auto cmd = Device::createScanCommand(addr);

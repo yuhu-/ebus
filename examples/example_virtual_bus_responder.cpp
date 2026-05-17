@@ -50,16 +50,7 @@ int main() {
       "0ab54d4f434b0001020304"  // Action: mock ID data
   );
 
-  // --- 4. Configure another Automated Response (Simulating a Broadcast
-  // Listener) --- Simulate a device that responds to a specific broadcast.
-  // Let's say a broadcast "fe070000" (Inquiry of Existence) triggers a simple
-  // ACK from a listening device.
-  // std::cout << "[VirtualBus] Configuring automated response for broadcast "
-  //              "'fe070000'..."
-  //           << std::endl;
-  // virtualBus.addResponse("fe070000", "00", 1, 5);
-
-  // --- 5. Set up a Telegram Callback to Observe Traffic ---
+  // --- 4. Set up a Telegram Callback to Observe Traffic ---
   // This callback will be invoked for all successfully processed telegrams.
   controller.setTelegramCallback([](const ebus::TelegramInfo& info) {
     std::cout << "[Controller] Telegram received: Type="
@@ -68,12 +59,12 @@ int main() {
               << ", Slave=" << ebus::toString(info.slave_view) << std::endl;
   });
 
-  // --- 6. Start the Controller ---
+  // --- 5. Start the Controller ---
   std::cout << "Starting controller in simulation mode..." << std::endl;
   controller.start();
   std::this_thread::sleep_for(100ms);  // Give threads a moment to start
 
-  // --- 7. Trigger the Automated Response from our Controller ---
+  // --- 6. Trigger the Automated Response from our Controller ---
   // Enqueue a message from our controller (0x01) to the simulated slave (0x15).
   std::cout << "[Controller] Enqueuing ID request to simulated slave 0x15..."
             << std::endl;
@@ -89,22 +80,22 @@ int main() {
         }
       });
 
-  // --- 8. Inject an External Message (Simulating another Master) ---
+  // --- 7. Inject an External Message (Simulating another Master) ---
   // Simulate a broadcast message coming from an external master (0x03)
   std::cout << "[VirtualBus] Injecting broadcast from simulated external "
                "master 0x03..."
             << std::endl;
   virtualBus.injectMasterMessage(0x03, ebus::toVector("fe070000"));
 
-  // --- 9. Run for a while to observe interactions ---
+  // --- 8. Run for a while to observe interactions ---
   std::cout << "Running simulation for 5 seconds..." << std::endl;
   std::this_thread::sleep_for(5s);
 
-  // --- 10. Clear automated responses ---
+  // --- 9. Clear automated responses ---
   std::cout << "[VirtualBus] Clearing all automated responses." << std::endl;
   virtualBus.clear();
 
-  // --- 11. Attempt to trigger the cleared response (should not work) ---
+  // --- 10. Attempt to trigger the cleared response (should not work) ---
   std::cout << "[Controller] Enqueuing ID request to simulated slave 0x15 "
                "again (should fail)..."
             << std::endl;
@@ -122,7 +113,7 @@ int main() {
                      });
   std::this_thread::sleep_for(2s);
 
-  // --- 12. Stop the Controller ---
+  // --- 11. Stop the Controller ---
   std::cout << "Stopping controller." << std::endl;
   controller.stop();
 

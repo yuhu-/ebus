@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#if defined(EBUS_SIMULATION)
+#if EBUS_SIMULATION
 #include "platform/simulation/bus_simulation.hpp"
 
 #include <ebus/protocol_math.hpp>
@@ -78,7 +78,7 @@ Queue<BusEvent>* BusSimulation::getQueue() const { return byte_queue_.get(); }
 void BusSimulation::writeByte(const uint8_t byte) {
   {
     std::lock_guard<std::mutex> lock(listeners_mutex_);
-    for (const auto& listener : write_listeners_) listener(byte);
+    for (const auto& listener : getWriteListeners()) listener(byte);
   }
   if (monitor_) monitor_->transmit.markBegin();
 
@@ -150,17 +150,17 @@ void BusSimulation::setRuntimeConfig(const RuntimeConfig& runtime) {
 
 void BusSimulation::addReadListener(ReadListener listener) {
   std::lock_guard<std::mutex> lock(listeners_mutex_);
-  read_listeners_.push_back(std::move(listener));
+  getReadListeners().push_back(std::move(listener));
 }
 
 void BusSimulation::addWriteListener(WriteListener listener) {
   std::lock_guard<std::mutex> lock(listeners_mutex_);
-  write_listeners_.push_back(std::move(listener));
+  getWriteListeners().push_back(std::move(listener));
 }
 
 void BusSimulation::addSynListener(SynListener listener) {
   std::lock_guard<std::mutex> lock(listeners_mutex_);
-  syn_listeners_.push_back(std::move(listener));
+  getSynListeners().push_back(std::move(listener));
 }
 
 ServiceThread::Status BusSimulation::getThreadStatus() const {
@@ -202,7 +202,7 @@ void BusSimulation::simulationReaderLoop() {
       auto arrival_time = Clock::now();
       {
         std::lock_guard<std::mutex> lock(listeners_mutex_);
-        for (const auto& listener : read_listeners_) listener(byte);
+        for (const auto& listener : getReadListeners()) listener(byte);
       }
 
       recordUtilization(byte);
@@ -292,7 +292,7 @@ void BusSimulation::simulationSynLoop() {
 
     {
       std::lock_guard<std::mutex> l_lock(listeners_mutex_);
-      for (const auto& listener : syn_listeners_) listener();
+      for (const auto& listener : getSynListeners()) listener();
     }
     writeByte(Symbols::syn);
 

@@ -5,7 +5,7 @@
 
 #pragma once
 
-#if defined(POSIX) && !defined(EBUS_SIMULATION)
+#if defined(POSIX) && !EBUS_SIMULATION
 #include <fcntl.h>
 #include <poll.h>
 #include <sys/ioctl.h>

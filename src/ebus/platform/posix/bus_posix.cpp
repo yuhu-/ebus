@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#if defined(POSIX) && !defined(EBUS_SIMULATION)
+#if defined(POSIX) && !EBUS_SIMULATION
 #include "platform/posix/bus_posix.hpp"
 
 #include <algorithm>
@@ -130,7 +130,7 @@ void BusPosix::writeByte(const uint8_t byte) {
 
   {
     std::lock_guard<std::mutex> lock(listeners_mutex_);
-    for (const auto& listener : write_listeners_) listener(byte);
+    for (const auto& listener : getWriteListeners()) listener(byte);
   }
 
   ensureOpen();
@@ -218,17 +218,17 @@ void BusPosix::setRuntimeConfig(const RuntimeConfig& runtime) {
 
 void BusPosix::addReadListener(ReadListener listener) {
   std::lock_guard<std::mutex> lock(listeners_mutex_);
-  read_listeners_.push_back(listener);
+  getReadListeners().push_back(listener);
 }
 
 void BusPosix::addWriteListener(WriteListener listener) {
   std::lock_guard<std::mutex> lock(listeners_mutex_);
-  write_listeners_.push_back(listener);
+  getWriteListeners().push_back(listener);
 }
 
 void BusPosix::addSynListener(SynListener listener) {
   std::lock_guard<std::mutex> lock(listeners_mutex_);
-  syn_listeners_.push_back(listener);
+  getSynListeners().push_back(listener);
 }
 
 ServiceThread::Status BusPosix::getThreadStatus() const {
@@ -277,7 +277,7 @@ void BusPosix::readerThread() {
       auto arrival_time = Clock::now();
       {
         std::lock_guard<std::mutex> lock(listeners_mutex_);
-        for (const auto& listener : read_listeners_) listener(byte);
+        for (const auto& listener : getReadListeners()) listener(byte);
       }
 
       recordUtilization(byte);
@@ -375,7 +375,7 @@ void BusPosix::synThread() {
 
     {
       std::lock_guard<std::mutex> l_lock(listeners_mutex_);
-      for (const auto& listener : syn_listeners_) listener();
+      for (const auto& listener : getSynListeners()) listener();
     }
     writeByte(Symbols::syn);
 

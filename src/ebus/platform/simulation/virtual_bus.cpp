@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#if defined(EBUS_SIMULATION)
+#if EBUS_SIMULATION
 #include <ebus/protocol_math.hpp>
 #include <ebus/sequence.hpp>
 #include <ebus/utils.hpp>

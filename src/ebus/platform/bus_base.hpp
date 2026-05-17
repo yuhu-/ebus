@@ -25,6 +25,11 @@ class BusBase {
   virtual ~BusBase() = default;
 
  protected:
+  auto& getReadListeners() { return read_listeners_; }
+  auto& getWriteListeners() { return write_listeners_; }
+  auto& getSynListeners() { return syn_listeners_; }
+
+ private:
   // Common storage for listeners.
   // Derived classes handle synchronization (Mutex vs Spinlock).
   std::vector<ReadListener> read_listeners_;

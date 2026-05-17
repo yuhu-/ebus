@@ -1,6 +1,6 @@
 {
-    "cpp-check-lint.cppcheck.--std_c++=": "c++14",
-    "C_Cpp.default.cppStandard": "c++14",
+    "cpp-check-lint.cppcheck.--std_c++=": "c++17",
+    "C_Cpp.default.cppStandard": "c++17",
     "C_Cpp.clang_format_fallbackStyle": "Google",
     "files.associations": {
         "atomic": "cpp",
@@ -93,5 +93,8 @@
         "core": "cpp"
     },
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
-    "C_Cpp.autoAddFileAssociations": true
+    "C_Cpp.autoAddFileAssociations": true,
+    "cmake.configureArgs": [
+        "-DEBUS_SIMULATION=ON"
+    ]
 }

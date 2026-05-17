@@ -20,7 +20,7 @@ uint64_t getNowMs() {
 BusMonitor::BusMonitor() = default;
 
 void BusMonitor::resetMetrics() {
-  std::lock_guard<std::mutex> lock(metrics_mutex);
+  std::lock_guard<std::mutex> lock(metrics_mutex_);
   handler_acc_.reset();
   request_acc_.reset();
   bus_acc_.reset();
@@ -55,7 +55,7 @@ void BusMonitor::resetMetrics() {
 }
 
 ebus::metrics::SystemMetrics BusMonitor::getMetrics() const {
-  std::lock_guard<std::mutex> lock(metrics_mutex);
+  std::lock_guard<std::mutex> lock(metrics_mutex_);
   metrics::SystemMetrics sm;
 
   // 1. Populate Handler Part
@@ -193,7 +193,7 @@ ebus::metrics::SystemMetrics BusMonitor::getMetrics() const {
 }
 
 float BusMonitor::getBusUtilization() const {
-  std::lock_guard<std::mutex> lock(metrics_mutex);
+  std::lock_guard<std::mutex> lock(metrics_mutex_);
   float up_last = uptime.getLast();
   if (up_last > 0.0f) {
     return (utilization.getSum() / up_last) * 100.0f;
@@ -202,7 +202,7 @@ float BusMonitor::getBusUtilization() const {
 }
 
 void BusMonitor::updateUtilizationHistory() {
-  std::lock_guard<std::mutex> lock(metrics_mutex);
+  std::lock_guard<std::mutex> lock(metrics_mutex_);
   float current_util = 0.0f;
   float up_last = uptime.getLast();
   if (up_last > 0.0f) {
@@ -213,19 +213,19 @@ void BusMonitor::updateUtilizationHistory() {
 }
 
 std::vector<float> BusMonitor::getUtilizationHistory() const {
-  std::lock_guard<std::mutex> lock(metrics_mutex);
+  std::lock_guard<std::mutex> lock(metrics_mutex_);
   std::vector<float> history;
   utilization_history_.forEach([&](float val) { history.push_back(val); });
   return history;
 }
 
 void BusMonitor::logHandlerTransition(HandlerState from, HandlerState to) {
-  std::lock_guard<std::mutex> lock(metrics_mutex);
+  std::lock_guard<std::mutex> lock(metrics_mutex_);
   handler_history_.push_back({from, to, getNowMs()});
 }
 
 void BusMonitor::logRequestTransition(RequestState from, RequestState to) {
-  std::lock_guard<std::mutex> lock(metrics_mutex);
+  std::lock_guard<std::mutex> lock(metrics_mutex_);
   request_history_.push_back({from, to, getNowMs()});
 }
 

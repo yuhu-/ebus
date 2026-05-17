@@ -33,42 +33,36 @@ class BusMonitor {
   // Thread-safe update helpers
   template <typename F>
   void updateHandler(F&& updater) {
-    std::lock_guard<std::mutex> lock(metrics_mutex);
+    std::lock_guard<std::mutex> lock(metrics_mutex_);
     updater(handler_acc_);
   }
 
   template <typename F>
   void updateRequest(F&& updater) {
-    std::lock_guard<std::mutex> lock(metrics_mutex);
+    std::lock_guard<std::mutex> lock(metrics_mutex_);
     updater(request_acc_);
   }
 
   template <typename F>
   void updateBus(F&& updater) {
-    std::lock_guard<std::mutex> lock(metrics_mutex);
+    std::lock_guard<std::mutex> lock(metrics_mutex_);
     updater(bus_acc_);
   }
 
   template <typename F>
   void updateDevice(F&& updater) {
-    std::lock_guard<std::mutex> lock(metrics_mutex);
+    std::lock_guard<std::mutex> lock(metrics_mutex_);
     updater(device_acc_);
   }
 
   template <typename F>
   void updateController(F&& updater) {
-    std::lock_guard<std::mutex> lock(metrics_mutex);
+    std::lock_guard<std::mutex> lock(metrics_mutex_);
     updater(controller_acc_);
   }
 
   void logHandlerTransition(HandlerState from, HandlerState to);
   void logRequestTransition(RequestState from, RequestState to);
-
-  // Accumulators
-  mutable std::mutex metrics_mutex;
-
-  mutable Clock::time_point congestion_start_point_{};
-  mutable bool congestion_active_ = false;
 
   TimingStats sync;
   TimingStats write;
@@ -101,6 +95,11 @@ class BusMonitor {
   std::array<TimingStats, FsmLimits::num_handler_states> handler_timing = {};
 
  private:
+  mutable std::mutex metrics_mutex_;
+
+  mutable Clock::time_point congestion_start_point_{};
+  mutable bool congestion_active_ = false;
+
   metrics::HandlerMetrics handler_acc_;
   metrics::RequestMetrics request_acc_;
   metrics::BusMetrics bus_acc_;

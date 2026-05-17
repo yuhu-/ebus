@@ -5,7 +5,7 @@
 
 #pragma once
 
-#if defined(ESP_PLATFORM) && !defined(EBUS_SIMULATION)
+#if defined(ESP_PLATFORM) && !EBUS_SIMULATION
 #include <freertos/FreeRTOS.h>
 
 #include <atomic>
