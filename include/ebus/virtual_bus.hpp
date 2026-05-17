@@ -89,6 +89,8 @@ class VirtualBus {
    *
    * @param source The source address of the master message.
    * @param trigger_hex The master payload (ZZ PB SB NN DBx) in hex.
+   * @param repeat_count How many times this reaction should be triggered.
+   * @param delay_ms Delay in milliseconds before mocking the slave.
    */
   void addAckReaction(uint8_t source, const std::string& trigger_hex,
                       int repeat_count = 1, uint32_t delay_ms = 4);
@@ -100,6 +102,8 @@ class VirtualBus {
    *
    * @param source The source address of the master message.
    * @param trigger_hex The master payload (ZZ PB SB NN DBx) in hex.
+   * @param repeat_count How many times this reaction should be triggered.
+   * @param delay_ms Delay in milliseconds before mocking the slave.
    */
   void addNakReaction(uint8_t source, const std::string& trigger_hex,
                       int repeat_count = 1, uint32_t delay_ms = 4);
@@ -111,6 +115,8 @@ class VirtualBus {
    * Injects: [ACK]
    *
    * @param trigger_hex The slave payload (NN DBx) in hex.
+   * @param repeat_count How many times this reaction should be triggered.
+   * @param delay_ms Delay in milliseconds before mocking the slave.
    */
   void addMasterAckReaction(const std::string& trigger_hex,
                             int repeat_count = 1, uint32_t delay_ms = 4);
@@ -122,6 +128,8 @@ class VirtualBus {
    * master. Triggers on: [Slave Part (NN DBx CRC)] Injects: [NAK]
    *
    * @param trigger_hex The slave payload (NN DBx) in hex.
+   * @param repeat_count How many times this reaction should be triggered.
+   * @param delay_ms Delay in milliseconds before mocking the slave.
    */
   void addMasterNakReaction(const std::string& trigger_hex,
                             int repeat_count = 1, uint32_t delay_ms = 4);
@@ -137,6 +145,8 @@ class VirtualBus {
    * @param master_hex The master payload (ZZ PB SB NN DBx) in hex.
    * @param slave_hex The slave payload (NN DBx) in hex.
    * @param action_byte The final byte to inject (usually Symbols::ack).
+   * @param repeat_count How many times this reaction should be triggered.
+   * @param delay_ms Delay in milliseconds before mocking the slave.
    */
   void addFullTelegramReaction(uint8_t source, const std::string& master_hex,
                                const std::string& slave_hex,
