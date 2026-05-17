@@ -18,6 +18,10 @@ class BusSimulation;
 
 namespace ebus {
 
+namespace detail {
+class BusSimulator;
+}
+
 class VirtualBus {
   friend class Controller;
 
@@ -25,49 +29,123 @@ class VirtualBus {
   ~VirtualBus();
 
   /**
-   * @brief Injects a master message onto the bus with proper framing and CRC.
-   * @param source The source address of the master message.
-   * @param payload The raw payload bytes of the master message (excluding CRC).
+   * @brief Constructs a VirtualBus instance tied to an internal simulation.
+   */
+  explicit VirtualBus(detail::platform::BusSimulation& internal_bus);
+
+  /**
+   * @brief Injects a master message onto the bus (QQ ZZ PB SB NN DBx CRC).
+   * @param source The source address (QQ).
+   * @param payload The master payload bytes (ZZ through DBx).
    */
   void injectMasterMessage(uint8_t source, ebus::ByteView payload);
 
-  struct AutoResponse {
-    std::vector<uint8_t> trigger_pattern;
-    std::vector<uint8_t> response_data;
-    int repeat_count = 1;  // 0 for infinite, -1 for disabled
+  /**
+   * @brief A MockReaction defines an automated action taken by the simulator
+   * when a specific sequence of bytes is observed on the wire.
+   */
+  struct MockReaction {
+    Sequence trigger;       ///< The sequence of bytes that triggers the action.
+    Sequence action;        ///< The sequence of bytes to inject as a result.
+    int repeat_count = 1;   ///< 0 for infinite, -1 for disabled, > 0 finite.
+    uint32_t delay_ms = 5;  ///< Delay before injecting the action bytes.
   };
 
   /**
-   * @brief Adds an automatic response that triggers when a specific pattern is
-   * observed on the bus.
-   * @param response The AutoResponse configuration defining the trigger
-   * pattern, response data, delay, and repeat count.
+   * @brief Adds a raw mock reaction to the simulator.
    */
-  void addResponse(const AutoResponse& response);
+  void addMockReaction(const MockReaction& reaction);
 
   /**
-   * @brief Adds a master-slave response pair that triggers when a specific
-   * master message is observed. After an optional delay, the corresponding
-   * slave response is injected.
-   * @param source The expected source address of the master message.
-   * @param masterPayloadHex The expected master payload in hexadecimal string
-   * format (without CRC).
-   * @param slavePayloadHex The slave response payload in hexadecimal string
-   * format (without ACK or CRC).
+   * @brief Mocks a slave responding to a specific master request.
+   * Triggers on: [Master Part (QQ ZZ PB SB NN DBx CRC)]
+   * Injects: [ACK] [Slave Part (NN DBx CRC)]
+   *
+   * @param source The source address of the master message (QQ).
+   * @param trigger_hex The master payload (ZZ PB SB NN DBx) in hex.
+   * @param reaction_hex The slave payload (NN DBx) in hex.
+   * @param repeat_count How many times this reaction should be triggered.
+   * @param delay_ms Delay in milliseconds before mocking the slave.
    */
-  void addResponse(uint8_t source, const std::string& masterPayloadHex,
-                   const std::string& slavePayloadHex);
+  void addSlaveReaction(uint8_t source, const std::string& trigger_hex,
+                        const std::string& reaction_hex, int repeat_count = 1,
+                        uint32_t delay_ms = 0);
 
   /**
-   * @brief Clears all configured responses from the virtual bus.
+   * @brief Mocks a receiver sending an ACK (0x00) for a master message.
+   * Useful for Master-Master telegram simulations.
+   * Triggers on: [Master Part]
+   * Injects: [ACK]
+   *
+   * @param source The source address of the master message.
+   * @param trigger_hex The master payload (ZZ PB SB NN DBx) in hex.
+   */
+  void addAckReaction(uint8_t source, const std::string& trigger_hex,
+                      int repeat_count = 1, uint32_t delay_ms = 0);
+
+  /**
+   * @brief Mocks a receiver sending a NAK (0xff) for a master message.
+   * Useful for simulating a busy slave or a slave detecting a CRC error in the
+   * master part. Triggers on: [Master Part] Injects: [NAK]
+   *
+   * @param source The source address of the master message.
+   * @param trigger_hex The master payload (ZZ PB SB NN DBx) in hex.
+   */
+  void addNakReaction(uint8_t source, const std::string& trigger_hex,
+                      int repeat_count = 1, uint32_t delay_ms = 0);
+
+  /**
+   * @brief Mocks the master sending the final ACK (0x00) of a Master-Slave
+   * telegram.
+   * Triggers on: [Slave Part (NN DBx CRC)]
+   * Injects: [ACK]
+   *
+   * @param trigger_hex The slave payload (NN DBx) in hex.
+   */
+  void addMasterAckReaction(const std::string& trigger_hex,
+                            int repeat_count = 1, uint32_t delay_ms = 0);
+
+  /**
+   * @brief Mocks the master sending the final NAK (0xff) of a Master-Slave
+   * telegram.
+   * Useful for testing how a slave reacts when its response is rejected by the
+   * master. Triggers on: [Slave Part (NN DBx CRC)] Injects: [NAK]
+   *
+   * @param trigger_hex The slave payload (NN DBx) in hex.
+   */
+  void addMasterNakReaction(const std::string& trigger_hex,
+                            int repeat_count = 1, uint32_t delay_ms = 0);
+
+  /**
+   * @brief Adds a complex reaction that triggers on a combined Master+Slave
+   * sequence. Useful for Broadcast listeners or special MS handshake mocking.
+   *
+   * Triggers on: [Master Part] [ACK] [Slave Part]
+   * Injects: [Final Part (ACK or NAK)]
+   *
+   * @param source The source address of the master.
+   * @param master_hex The master payload (ZZ PB SB NN DBx) in hex.
+   * @param slave_hex The slave payload (NN DBx) in hex.
+   * @param action_byte The final byte to inject (usually Symbols::ack).
+   */
+  void addFullTelegramReaction(uint8_t source, const std::string& master_hex,
+                               const std::string& slave_hex,
+                               uint8_t action_byte, int repeat_count = 1,
+                               uint32_t delay_ms = 0);
+
+  /**
+   * @brief Clears all configured reactions from the virtual bus.
    */
   void clear();
+
+  /**
+   * @brief Returns the underlying simulator engine for low-level test access.
+   */
+  detail::BusSimulator& getSimulator();
 
  private:
   struct Impl;
   std::unique_ptr<Impl> impl_;
-
-  explicit VirtualBus(detail::platform::BusSimulation& internal_bus);
 };
 
 }  // namespace ebus

@@ -34,37 +34,74 @@ TEST_CASE("Scheduler: Simulation", "[app][scheduler]") {
   ebus::BusConfig config;
 
   ebus::RuntimeConfig runtime;
-  runtime.address = 0x33;
+  runtime.address = 0x01;
   runtime.bus.syn_gen = true;
 
   BusMonitor monitor;
   platform::Bus bus(config, runtime, &request, &monitor);
-  Handler handler(ebus::RuntimeConfig{}.address, &bus, &request, &monitor);
+  Handler handler(runtime.address, &bus, &request, &monitor);
   BusHandler busHandler(&request, &handler, bus.getQueue());
 
-  const uint8_t source = 0x33;
+  const uint8_t source = 0x01;
   handler.setSourceAddress(source);
 
   BusSimulator simulator(bus);
 
   // BC Success: Broadcast to fe. No slave response.
-  simulator.addResponse(
-      {ebus::toVector(frameMasterHex(source, "feb5050327002d")), {}, 0});
+  simulator.addMockReaction(
+      {ebus::frameMaster(source, ebus::toVector("feb5050327002d")),
+       ebus::Sequence(), 0, 0});  // 0 is infinite
 
   // MS Success: Master to 52. Slave responds with payload 01 3f (plus ACK and
   // CRC).
-  simulator.addResponse(source, "52b509030d4600", "013f");
+  ebus::Sequence slavePart = ebus::frameSlave(ebus::toVector("013f"));
+  ebus::Sequence fullSlaveResponse;
+  fullSlaveResponse.pushBack(ebus::Symbols::ack, false);
+  fullSlaveResponse.append(slavePart);
+
+  simulator.addMockReaction(
+      {ebus::frameMaster(source, ebus::toVector("52b509030d4600")),
+       fullSlaveResponse, 1, 5});
 
   // Retry Success: Master to fe. Simulate NAK (ff) twice, then success on 3rd
   // try.
-  auto retry_trigger = ebus::toVector(frameMasterHex(source, "fe070400"));
-  simulator.addResponse({retry_trigger, {ebus::Symbols::nak}, 2});
-  simulator.addResponse(
-      {retry_trigger, ebus::toVector(frameSlaveHex("013f")), 1});
+  auto retry_trigger = ebus::frameMaster(source, ebus::toVector("fe070400"));
+  simulator.addMockReaction(
+      {retry_trigger, ebus::Sequence({ebus::Symbols::nak}), 2, 0});
+
+  ebus::Sequence retry_success_action;
+  retry_success_action.pushBack(ebus::Symbols::ack, false);
+  retry_success_action.append(ebus::frameSlave(ebus::toVector("013f")));
+
+  simulator.addMockReaction(
+      {retry_trigger, std::move(retry_success_action), 1, 0});
 
   Scheduler scheduler(&handler);
   scheduler.setMaxSendAttempts(3);
   scheduler.setBaseBackoff(50);
+
+  scheduler.setTelegramCallback([](const ebus::TelegramInfo& info) {
+    std::cerr << "[Handler Telegram] session_id: " << info.session_id
+              << ", poll_id: " << info.poll_id
+              << ", retry_count: " << info.retry_count
+              << ", message_type: " << ebus::toString(info.message_type)
+              << ", telegram_type: " << ebus::toString(info.telegram_type)
+              << ", h_state: " << ebus::toString(info.handler_state)
+              << ", r_state: " << ebus::toString(info.request_state)
+              << ", master: " << ebus::toString(info.master_view)
+              << ", slave: " << ebus::toString(info.slave_view) << std::endl;
+  });
+
+  scheduler.setErrorCallback([](const ebus::ErrorInfo& info) {
+    std::cerr << "[Handler Error] protocol_error: "
+              << ebus::toString(info.protocol_error)
+              << ", result: " << ebus::toString(info.result)
+              << ", seq_state: " << ebus::toString(info.sequence_state)
+              << ", h_state: " << ebus::toString(info.handler_state)
+              << ", r_state: " << ebus::toString(info.request_state)
+              << ", master: " << ebus::toString(info.master_view)
+              << ", slave: " << ebus::toString(info.slave_view) << std::endl;
+  });
 
   bus.start();
   busHandler.start();
@@ -73,10 +110,18 @@ TEST_CASE("Scheduler: Simulation", "[app][scheduler]") {
   auto run_test = [&](const std::string& payload) {
     auto promise = std::make_shared<std::promise<bool>>();
     auto future = promise->get_future();
-    scheduler.enqueue(1, ebus::toVector(payload),
-                      [promise](const ebus::ResultInfo& info) {
-                        promise->set_value(info.success);
-                      });
+    scheduler.enqueue(
+        1, ebus::toVector(payload), [promise](const ebus::ResultInfo& info) {
+          if (!info.success) {
+            std::cerr << "[Scheduler Result] FAIL: result="
+                      << ebus::toString(info.result)
+                      << ", seq_state=" << ebus::toString(info.sequence_state)
+                      << ", master=" << ebus::toString(info.master_view)
+                      << ", slave=" << ebus::toString(info.slave_view)
+                      << std::endl;
+          }
+          promise->set_value(info.success);
+        });
     return future.wait_for(std::chrono::seconds(2)) ==
                std::future_status::ready &&
            future.get();
@@ -110,11 +155,13 @@ TEST_CASE("Scheduler: Priority Preemption", "[app][scheduler][priority]") {
 
   // Setup responses for both test messages
   // High priority trigger
-  simulator.addResponse(
-      {ebus::toVector(frameMasterHex(source, "feb50500")), {}, 0});
+  simulator.addMockReaction(
+      {ebus::frameMaster(source, ebus::toVector("feb50500")), ebus::Sequence(),
+       1, 0});
   // Low priority trigger
-  simulator.addResponse(
-      {ebus::toVector(frameMasterHex(source, "fe070400")), {}, 0});
+  simulator.addMockReaction(
+      {ebus::frameMaster(source, ebus::toVector("fe070400")), ebus::Sequence(),
+       1, 0});
 
   Scheduler scheduler(&handler);
   scheduler.start();

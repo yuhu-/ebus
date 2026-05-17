@@ -62,7 +62,7 @@ class CircularBuffer {
   }
 
   constexpr size_t capacity() const { return Cap; }
-  
+
   bool empty() const {
     std::lock_guard<std::mutex> lock(mutex_);
     return size_ == 0;
@@ -71,6 +71,7 @@ class CircularBuffer {
   T operator[](size_t index) const {
     std::lock_guard<std::mutex> lock(mutex_);
     if (size_ < Cap) return buffer_[index];
+    if (index >= Cap) return T();
     return buffer_[(head_ + index) % Cap];
   }
 

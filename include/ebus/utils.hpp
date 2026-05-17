@@ -17,6 +17,7 @@
 #include <vector>
 
 #include "ebus/protocol_math.hpp"
+#include "ebus/sequence.hpp"
 #include "ebus/types.hpp"
 
 namespace ebus {
@@ -120,6 +121,51 @@ inline std::vector<uint8_t> toVector(ByteView data) {
 }
 
 /**
+ * Helper to frame a master telegram with CRC from a ByteView.
+ * @param source The source address.
+ * @param payload The master payload bytes (QQ - DBx).
+ * @return The framed master telegram (QQ - DBx + CRC).
+ */
+inline Sequence frameMaster(uint8_t source, ByteView payload) {
+  ebus::Sequence msg;
+  msg.pushBack(source, false);
+  msg.append(makeSequence(payload));
+  msg.pushBack(msg.crc(), false);
+  msg.extend();
+  return msg;
+}
+
+inline std::string frameMasterHex(uint8_t source, ByteView payload) {
+  return toString(frameMaster(source, payload));
+}
+
+inline std::string frameMasterHex(uint8_t source, const std::string& payload) {
+  return frameMasterHex(source, toVector(payload));
+}
+
+/**
+ * Helper to frame a slave response with CRC from a ByteView.
+ * Does NOT include the leading ACK or NAK byte.
+ * @param payload The slave payload bytes (NN + DBx).
+ * @return The framed slave response (NN + DBx + CRC).
+ */
+inline Sequence frameSlave(ByteView payload) {
+  ebus::Sequence msg;
+  msg.append(makeSequence(payload));
+  msg.pushBack(msg.crc(), false);
+  msg.extend();
+  return msg;
+}
+
+inline std::string frameSlaveHex(ByteView payload) {
+  return toString(frameSlave(payload));
+}
+
+inline std::string frameSlaveHex(const std::string& payload) {
+  return frameSlaveHex(toVector(payload));
+}
+
+/**
  * Rounds a floating point value to a specific number of decimal places.
  */
 inline float roundDigits(float value, uint8_t digits) noexcept {
@@ -157,10 +203,18 @@ bool contains(const T& container, std::initializer_list<uint8_t> search) {
 }
 
 template <typename T, typename U>
-bool matches(const T& container, const U& search, size_t index = 0) {
-  if (std::empty(search)) return true;
-  if (index + search.size() > container.size()) return false;
-  return std::equal(search.begin(), search.end(), container.begin() + index);
+inline bool matches(const T& container, const U& search, size_t index = 0) {
+  const size_t search_size = std::size(search);
+  const size_t cont_size = std::size(container);
+  if (search_size == 0) return true;  // Empty search always matches
+  if (index >= cont_size || index + search_size > cont_size)
+    return false;  // Out of bounds
+  auto it = std::begin(search);
+  for (size_t i = 0; i < search_size; ++i) {
+    if (container[index + i] != *it) return false;
+    ++it;
+  }
+  return true;
 }
 
 /**

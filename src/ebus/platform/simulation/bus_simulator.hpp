@@ -16,11 +16,8 @@
 #include <ebus/utils.hpp>
 #include <ebus/virtual_bus.hpp>
 #include <functional>
-#include <iomanip>
-#include <iostream>
 #include <memory>
 #include <mutex>
-#include <sstream>
 #include <string>
 #include <vector>
 
@@ -28,48 +25,29 @@
 #include "platform/queue.hpp"
 #include "platform/service_thread.hpp"
 #include "platform/simulation/bus_simulation.hpp"
+#include "platform/system.hpp"
 #include "utils/circular_buffer.hpp"
 
 namespace ebus::detail {
-
-// Helper to frame a master telegram with CRC for testing.
-inline std::string frameMasterHex(uint8_t source,
-                                  const std::string& payloadHex) {
-  auto payload = ebus::toVector(payloadHex);
-  uint8_t crc = source;
-  for (auto b : payload) crc = ebus::calcCRC(b, crc);
-
-  std::ostringstream oss;
-  oss << std::hex << std::setw(2) << std::setfill('0')
-      << static_cast<int>(source);
-  oss << payloadHex;
-  oss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(crc);
-  return oss.str();
-}
-
-// Helper to frame a slave response with CRC for testing.
-// Includes the leading ACK (0x00).
-inline std::string frameSlaveHex(const std::string& payloadHex) {
-  auto payload = ebus::toVector(payloadHex);
-  uint8_t crc = 0;
-  // Spec 4.2: CRC starts with NN (the first byte of the slave payload)
-  for (auto b : payload) crc = ebus::calcCRC(b, crc);
-
-  std::ostringstream oss;
-  oss << "00";  // ACK
-  oss << payloadHex;
-  oss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(crc);
-  return oss.str();
-}
 
 /**
  * Automated responder for Bus simulation. This is an internal utility.
  */
 class BusSimulator {
  public:
+  /**
+   * @brief Configuration for an automated mock action.
+   */
+  struct MockReaction {
+    Sequence trigger;       ///< Sequence of bytes that triggers the mock.
+    Sequence action;        ///< Bytes to inject when triggered.
+    int repeat_count = 1;   ///< 0 for infinite, -1 for disabled, > 0 finite.
+    uint32_t delay_ms = 5;  ///< Delay before injection.
+  };
+
   explicit BusSimulator(platform::BusSimulation& bus)
       : bus_(bus), outbound_queue_(16) {
-    bus_.addWriteListener([this](uint8_t b) { this->onWrite(b); });
+    bus_.addReadListener([this](uint8_t b) { this->onRead(b); });
     worker_ = std::make_unique<platform::ServiceThread>(
         "ebus_sim_worker", [this] { processResponses(); },
         OrchestrationLimits::default_stack_size,
@@ -84,28 +62,17 @@ class BusSimulator {
     if (worker_) worker_->join();
   }
 
-  void addResponse(ebus::VirtualBus::AutoResponse resp) {
+  void addMockReaction(MockReaction reaction) {
     std::lock_guard<std::mutex> lock(mtx_);
-    responses_.push_back(std::move(resp));
-  }
-
-  void addResponse(uint8_t source, const std::string& masterPayloadHex,
-                   const std::string& slavePayloadHex) {
-    addResponse({ebus::toVector(frameMasterHex(source, masterPayloadHex)),
-                 ebus::toVector(frameSlaveHex(slavePayloadHex)), 0});
+    reactions_.push_back(std::move(reaction));
   }
 
   void clear() {
     std::lock_guard<std::mutex> lock(mtx_);
-    responses_.clear();
+    reactions_.clear();
     write_history_.clear();
     outbound_queue_.clear();
   }
-
-  struct ResponseItem {
-    uint8_t data[SequenceLimits::default_capacity];
-    uint8_t len = 0;
-  };
 
   /**
    * @brief Injects a master message.
@@ -128,25 +95,36 @@ class BusSimulator {
   platform::BusSimulation& bus_;
   std::mutex mtx_;
 
+  struct ResponseItem {
+    uint8_t data[SequenceLimits::default_capacity];
+    uint8_t len = 0;
+    uint32_t delay_ms = 0;  // Added delay
+  };
+
   CircularBuffer<uint8_t, SequenceLimits::default_capacity> write_history_;
-  std::vector<ebus::VirtualBus::AutoResponse> responses_;
+  std::vector<MockReaction> reactions_;
   platform::Queue<ResponseItem> outbound_queue_;
   std::unique_ptr<platform::ServiceThread> worker_;
 
-  void onWrite(uint8_t b) {
+  // Renamed from onWrite to onRead to reflect that it observes the bus
+  void onRead(uint8_t b) {
     std::lock_guard<std::mutex> lock(mtx_);
     write_history_.push_back(b);
-    for (auto& resp : responses_) {
+    for (auto& reaction : reactions_) {
+      if (reaction.repeat_count == -1) continue;  // Disabled, skip
+
       // Check if the current history suffix matches the trigger pattern
       bool match = true;
-      if (write_history_.size() < resp.trigger_pattern.size())
+      size_t hist_size = write_history_.size();
+      size_t pat_size = reaction.trigger.size();
+
+      if (hist_size < pat_size) {
         match = false;
-      else {
-        size_t hist_size = write_history_.size();
-        size_t pat_size = resp.trigger_pattern.size();
+      } else {
+        // Compare wire-format bytes directly for Section 7 compliance
+        size_t start_idx = hist_size - pat_size;
         for (size_t i = 0; i < pat_size; ++i) {
-          if (write_history_[hist_size - pat_size + i] !=
-              resp.trigger_pattern[i]) {
+          if (write_history_[start_idx + i] != reaction.trigger[i]) {
             match = false;
             break;
           }
@@ -154,15 +132,17 @@ class BusSimulator {
       }
 
       if (match) {
-        bool infinite = (resp.repeat_count == 0);
-        if (infinite || resp.repeat_count > 0) {
-          if (!infinite) resp.repeat_count--;
-          // Non-blocking push. If the simulator is overwhelmed, we skip.
-          ResponseItem item;
-          item.len = static_cast<uint8_t>(
-              std::min(resp.response_data.size(), sizeof(item.data)));
-          std::memcpy(item.data, resp.response_data.data(), item.len);
-          outbound_queue_.tryPush(item);
+        ResponseItem item;
+        item.delay_ms = reaction.delay_ms;
+        item.len = static_cast<uint8_t>(
+            std::min(reaction.action.size(), sizeof(item.data)));
+        std::memcpy(item.data, reaction.action.data(), item.len);
+        if (outbound_queue_.tryPush(item)) {
+          if (reaction.repeat_count > 0) {
+            reaction.repeat_count--;
+            if (reaction.repeat_count == 0) reaction.repeat_count = -1;
+          }
+          return;
         }
       }
     }
@@ -172,6 +152,9 @@ class BusSimulator {
     ResponseItem item;
     // Blocking pop handles the sleep/wait automatically
     while (outbound_queue_.pop(item)) {
+      if (item.delay_ms > 0) {
+        platform::sleepMilli(item.delay_ms);
+      }
       for (size_t i = 0; i < item.len; ++i) {
         bus_.writeByte(item.data[i]);
       }

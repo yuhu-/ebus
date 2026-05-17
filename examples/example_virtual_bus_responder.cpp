@@ -44,25 +44,20 @@ int main() {
   std::cout << "[VirtualBus] Configuring automated response for slave 0x15 ID "
                "request..."
             << std::endl;
-  virtualBus.addResponse(
+  virtualBus.addSlaveReaction(
       0x01,                     // Source of the master request (our controller)
-      "15070400",               // Master payload: request ID from 0x15
-      "0ab54d4f434b0001020304"  // Slave response: mock ID data
+      "15070400",               // Trigger: request ID from 0x15
+      "0ab54d4f434b0001020304"  // Action: mock ID data
   );
 
   // --- 4. Configure another Automated Response (Simulating a Broadcast
   // Listener) --- Simulate a device that responds to a specific broadcast.
   // Let's say a broadcast "fe070000" (Inquiry of Existence) triggers a simple
   // ACK from a listening device.
-  std::cout << "[VirtualBus] Configuring automated response for broadcast "
-               "'fe070000'..."
-            << std::endl;
-  virtualBus.addResponse({
-      ebus::toVector("fe070000"),  // Trigger pattern (broadcast message)
-      ebus::toVector(
-          "00"),  // Response (e.g., a simple ACK from a listening device)
-      1           // Repeat once
-  });
+  // std::cout << "[VirtualBus] Configuring automated response for broadcast "
+  //              "'fe070000'..."
+  //           << std::endl;
+  // virtualBus.addResponse("fe070000", "00", 1, 5);
 
   // --- 5. Set up a Telegram Callback to Observe Traffic ---
   // This callback will be invoked for all successfully processed telegrams.
