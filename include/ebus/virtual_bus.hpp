@@ -26,20 +26,6 @@ class VirtualBus {
   friend class Controller;
 
  public:
-  ~VirtualBus();
-
-  /**
-   * @brief Constructs a VirtualBus instance tied to an internal simulation.
-   */
-  explicit VirtualBus(detail::platform::BusSimulation& internal_bus);
-
-  /**
-   * @brief Injects a master message onto the bus (QQ ZZ PB SB NN DBx CRC).
-   * @param source The source address (QQ).
-   * @param payload The master payload bytes (ZZ through DBx).
-   */
-  void injectMasterMessage(uint8_t source, ebus::ByteView payload);
-
   /**
    * @brief A MockReaction defines an automated action taken by the simulator
    * when a specific sequence of bytes is observed on the wire.
@@ -50,6 +36,30 @@ class VirtualBus {
     int repeat_count = 1;   ///< 0 for infinite, -1 for disabled, > 0 finite.
     uint32_t delay_ms = 5;  ///< Delay before injecting the action bytes.
   };
+
+  ~VirtualBus();
+
+  /**
+   * @brief Constructs a VirtualBus instance tied to an internal simulation.
+   */
+  explicit VirtualBus(detail::platform::BusSimulation& internal_bus);
+
+  /**
+   * @brief Returns the underlying simulator engine for low-level test access.
+   */
+  detail::BusSimulator& getSimulator();
+
+  /**
+   * @brief Clears all configured reactions from the virtual bus.
+   */
+  void clear();
+
+  /**
+   * @brief Injects a master message onto the bus (QQ ZZ PB SB NN DBx CRC).
+   * @param source The source address (QQ).
+   * @param payload The master payload bytes (ZZ through DBx).
+   */
+  void injectMasterMessage(uint8_t source, ebus::ByteView payload);
 
   /**
    * @brief Adds a raw mock reaction to the simulator.
@@ -132,16 +142,6 @@ class VirtualBus {
                                const std::string& slave_hex,
                                uint8_t action_byte, int repeat_count = 1,
                                uint32_t delay_ms = 0);
-
-  /**
-   * @brief Clears all configured reactions from the virtual bus.
-   */
-  void clear();
-
-  /**
-   * @brief Returns the underlying simulator engine for low-level test access.
-   */
-  detail::BusSimulator& getSimulator();
 
  private:
   struct Impl;

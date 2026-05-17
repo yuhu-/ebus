@@ -24,6 +24,10 @@ VirtualBus::VirtualBus(detail::platform::BusSimulation& internal_bus)
     : impl_(std::make_unique<Impl>(internal_bus)) {}
 VirtualBus::~VirtualBus() = default;
 
+detail::BusSimulator& VirtualBus::getSimulator() { return *impl_; }
+
+void VirtualBus::clear() { impl_->clear(); }
+
 void VirtualBus::injectMasterMessage(uint8_t source, ebus::ByteView payload) {
   impl_->injectMasterMessage(source, makeSequence(payload));
 }
@@ -34,10 +38,6 @@ void VirtualBus::addMockReaction(const MockReaction& reaction) {
   impl_->addMockReaction({reaction.trigger, reaction.action,
                           reaction.repeat_count, reaction.delay_ms});
 }
-
-void VirtualBus::clear() { impl_->clear(); }
-
-detail::BusSimulator& VirtualBus::getSimulator() { return *impl_; }
 
 void VirtualBus::addSlaveReaction(uint8_t source,
                                   const std::string& trigger_hex,
