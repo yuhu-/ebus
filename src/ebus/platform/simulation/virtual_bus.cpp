@@ -32,9 +32,33 @@ void VirtualBus::injectMasterMessage(uint8_t source,
   impl_->injectMasterMessage(source, ebus::toVector(payload_hex));
 }
 
-void VirtualBus::addMockReaction(const MockReaction& reaction) {
-  impl_->addMockReaction({reaction.trigger, reaction.action,
-                          reaction.repeat_count, reaction.delay_ms});
+void VirtualBus::injectMasterMessage(uint8_t source, ebus::ByteView payload) {
+  impl_->injectMasterMessage(source, payload);
+}
+
+void VirtualBus::injectMasterSlaveMessage(
+    uint8_t source, const std::string& master_payload_hex,
+    const std::string& slave_payload_hex) {
+  impl_->injectMasterSlaveMessage(source, ebus::toVector(master_payload_hex),
+                                  ebus::toVector(slave_payload_hex));
+}
+
+void VirtualBus::injectMasterSlaveMessage(uint8_t source,
+                                          ebus::ByteView master_payload,
+                                          ebus::ByteView slave_payload) {
+  impl_->injectMasterSlaveMessage(source, master_payload, slave_payload);
+}
+
+uint32_t VirtualBus::addMockReaction(const MockReaction& reaction) {
+  return impl_->addMockReaction(reaction);
+}
+
+void VirtualBus::removeMockReaction(uint32_t id) {
+  impl_->removeMockReaction(id);
+}
+
+void VirtualBus::removeMockReaction(const Sequence& trigger) {
+  impl_->removeMockReaction(trigger);
 }
 
 void VirtualBus::addSlaveReaction(uint8_t source,

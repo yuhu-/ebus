@@ -59,9 +59,27 @@ class BusSimulator {
     outbound_queue_.clear();
   }
 
-  void addMockReaction(VirtualBus::MockReaction reaction) {
+  uint32_t addMockReaction(VirtualBus::MockReaction reaction) {
     std::lock_guard<std::mutex> lock(mtx_);
+    reaction.id = ++next_reaction_id_;
     reactions_.push_back(std::move(reaction));
+    return reaction.id;
+  }
+
+  void removeMockReaction(uint32_t id) {
+    std::lock_guard<std::mutex> lock(mtx_);
+    reactions_.erase(std::remove_if(reactions_.begin(), reactions_.end(),
+                                    [id](const auto& r) { return r.id == id; }),
+                     reactions_.end());
+  }
+
+  void removeMockReaction(const ebus::Sequence& trigger) {
+    std::lock_guard<std::mutex> lock(mtx_);
+    reactions_.erase(std::remove_if(reactions_.begin(), reactions_.end(),
+                                    [&](const auto& r) {
+                                      return r.trigger.logicallyEquals(trigger);
+                                    }),
+                     reactions_.end());
   }
 
   /**
@@ -76,9 +94,29 @@ class BusSimulator {
     }
   }
 
+  /**
+   * @brief Injects a complete master-slave message exchange onto the bus.
+   * Master message -> Master ACK -> Slave message -> Slave ACK -> SYN.
+   * @param source The source address (QQ).
+   * @param master_payload The master payload bytes (ZZ through DBx).
+   * @param slave_payload The slave payload bytes (NN DBx).
+   */
+  void injectMasterSlaveMessage(uint8_t source, ebus::ByteView master_payload,
+                                ebus::ByteView slave_payload) {
+    auto master_msg = ebus::frameMaster(source, master_payload);
+    for (uint8_t b : master_msg) bus_.writeByte(b);
+    bus_.writeByte(ebus::Symbols::ack);
+
+    auto slave_msg = ebus::frameSlave(slave_payload);
+    for (uint8_t b : slave_msg) bus_.writeByte(b);
+    bus_.writeByte(ebus::Symbols::ack);
+    bus_.writeByte(ebus::Symbols::syn);
+  }
+
  private:
   platform::BusSimulation& bus_;
   std::mutex mtx_;
+  uint32_t next_reaction_id_ = 0;
 
   struct ResponseItem {
     uint8_t data[SequenceLimits::default_capacity];

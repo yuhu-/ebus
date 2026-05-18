@@ -13,15 +13,15 @@
 #include "ebus/sequence.hpp"
 #include "ebus/utils.hpp"
 
+namespace ebus::detail {
+class BusSimulator;
+} // namespace ebus::detail
+
 namespace ebus::detail::platform {
 class BusSimulation;
 }  // namespace ebus::detail::platform
 
 namespace ebus {
-
-namespace detail {
-class BusSimulator;
-}
 
 class VirtualBus {
   friend class Controller;
@@ -32,10 +32,18 @@ class VirtualBus {
    * when a specific sequence of bytes is observed on the wire.
    */
   struct MockReaction {
+    uint32_t id = 0;        ///< Unique ID assigned by the simulator.
     Sequence trigger;       ///< The sequence of bytes that triggers the action.
     Sequence action;        ///< The sequence of bytes to inject as a result.
     int repeat_count = 1;   ///< 0 for infinite, -1 for disabled, > 0 finite.
     uint32_t delay_ms = 0;  ///< Delay before injecting the action bytes.
+
+    MockReaction() = default;
+    MockReaction(Sequence t, Sequence a, int r = 1, uint32_t d = 0)
+        : trigger(std::move(t)),
+          action(std::move(a)),
+          repeat_count(r),
+          delay_ms(d) {}
   };
 
   ~VirtualBus();
@@ -63,9 +71,49 @@ class VirtualBus {
   void injectMasterMessage(uint8_t source, const std::string& payload_hex);
 
   /**
-   * @brief Adds a raw mock reaction to the simulator.
+   * @brief Injects a master message onto the bus.
+   * @param source The source address (QQ).
+   * @param payload The master payload bytes.
    */
-  void addMockReaction(const MockReaction& reaction);
+  void injectMasterMessage(uint8_t source, ebus::ByteView payload);
+
+  /**
+   * @brief Injects a complete master-slave message exchange onto the bus.
+   * Master message -> Master ACK -> Slave message -> Slave ACK -> SYN.
+   * @param source The source address (QQ).
+   * @param master_payload_hex The master payload (ZZ through DBx) in hex.
+   * @param slave_payload_hex The slave payload (NN DBx) in hex.
+   */
+  void injectMasterSlaveMessage(uint8_t source,
+                                const std::string& master_payload_hex,
+                                const std::string& slave_payload_hex);
+
+  /**
+   * @brief Injects a complete master-slave message exchange onto the bus.
+   * @param source The source address (QQ).
+   * @param master_payload The master payload bytes.
+   * @param slave_payload The slave payload bytes.
+   */
+  void injectMasterSlaveMessage(uint8_t source, ebus::ByteView master_payload,
+                                ebus::ByteView slave_payload);
+
+  /**
+   * @brief Adds a raw mock reaction to the simulator.
+   * @return The unique ID assigned to this reaction.
+   */
+  uint32_t addMockReaction(const MockReaction& reaction);
+
+  /**
+   * @brief Removes a mock reaction by its unique ID.
+   * @param id The ID returned by addMockReaction.
+   */
+  void removeMockReaction(uint32_t id);
+
+  /**
+   * @brief Removes all mock reactions that match the given trigger sequence.
+   * @param trigger The trigger sequence to match.
+   */
+  void removeMockReaction(const Sequence& trigger);
 
   /**
    * @brief Mocks a slave responding to a specific master request.

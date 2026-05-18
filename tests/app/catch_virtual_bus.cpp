@@ -131,5 +131,42 @@ TEST_CASE("VirtualBus: Reaction Logic", "[app][virtualbus]") {
     REQUIRE(bus_history[bus_history.size() - 1] == ebus::Symbols::syn);
   }
 
+  SECTION("Removal by ID works correctly") {
+    ebus::VirtualBus::MockReaction r;
+    r.trigger = ebus::Sequence({0x22});
+    r.action = ebus::Sequence({0x33});
+    r.repeat_count = 1;
+    uint32_t id = vb.addMockReaction(r);
+
+    // Remove the reaction immediately using the returned ID
+    vb.removeMockReaction(id);
+
+    bus.writeByte(0x22);
+    platform::sleepMilli(50);  // Allow time for a potential reaction
+
+    std::lock_guard<std::mutex> lock(history_mutex);
+    // History should only contain the trigger (0x22), no action (0x33)
+    std::vector<uint8_t> expected = {0x22};
+    REQUIRE(bus_history == expected);
+  }
+
+  SECTION("Removal by Trigger works correctly") {
+    ebus::VirtualBus::MockReaction r;
+    r.trigger = ebus::Sequence({0x44});
+    r.action = ebus::Sequence({0x55});
+    vb.addMockReaction(r);
+
+    // Remove all reactions matching this specific trigger sequence
+    vb.removeMockReaction(ebus::Sequence({0x44}));
+
+    bus.writeByte(0x44);
+    platform::sleepMilli(50);
+
+    std::lock_guard<std::mutex> lock(history_mutex);
+    // History should only contain the trigger (0x44), no action (0x55)
+    std::vector<uint8_t> expected = {0x44};
+    REQUIRE(bus_history == expected);
+  }
+
   bus.stop();
 }
