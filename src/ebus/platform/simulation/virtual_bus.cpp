@@ -5,7 +5,6 @@
 
 #if EBUS_SIMULATION
 #include <ebus/protocol_math.hpp>
-#include <ebus/sequence.hpp>
 #include <ebus/utils.hpp>
 #include <ebus/virtual_bus.hpp>
 
@@ -28,13 +27,12 @@ detail::BusSimulator& VirtualBus::getSimulator() { return *impl_; }
 
 void VirtualBus::clear() { impl_->clear(); }
 
-void VirtualBus::injectMasterMessage(uint8_t source, ebus::ByteView payload) {
-  impl_->injectMasterMessage(source, makeSequence(payload));
+void VirtualBus::injectMasterMessage(uint8_t source,
+                                     const std::string& payload_hex) {
+  impl_->injectMasterMessage(source, ebus::toVector(payload_hex));
 }
 
 void VirtualBus::addMockReaction(const MockReaction& reaction) {
-  // Map public repeat_count to internal BusSimulator logic:
-  // Logic is now aligned: 0=infinite, -1=disabled. No mapping needed.
   impl_->addMockReaction({reaction.trigger, reaction.action,
                           reaction.repeat_count, reaction.delay_ms});
 }

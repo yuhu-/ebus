@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "ebus/protocol_math.hpp"
+#include "ebus/sequence.hpp"
 #include "ebus/utils.hpp"
 
 namespace ebus::detail::platform {
@@ -57,9 +58,9 @@ class VirtualBus {
   /**
    * @brief Injects a master message onto the bus (QQ ZZ PB SB NN DBx CRC).
    * @param source The source address (QQ).
-   * @param payload The master payload bytes (ZZ through DBx).
+   * @param payload_hex The master payload (ZZ through DBx) in hex.
    */
-  void injectMasterMessage(uint8_t source, ebus::ByteView payload);
+  void injectMasterMessage(uint8_t source, const std::string& payload_hex);
 
   /**
    * @brief Adds a raw mock reaction to the simulator.

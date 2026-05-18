@@ -85,7 +85,7 @@ int main() {
   std::cout << "[VirtualBus] Injecting broadcast from simulated external "
                "master 0x03..."
             << std::endl;
-  virtualBus.injectMasterMessage(0x03, ebus::toVector("fe070000"));
+  virtualBus.injectMasterMessage(0x03, "fe070000");
 
   // --- 8. Run for a while to observe interactions ---
   std::cout << "Running simulation for 5 seconds..." << std::endl;

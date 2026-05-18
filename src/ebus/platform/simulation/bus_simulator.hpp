@@ -35,16 +35,6 @@ namespace ebus::detail {
  */
 class BusSimulator {
  public:
-  /**
-   * @brief Configuration for an automated mock action.
-   */
-  struct MockReaction {
-    Sequence trigger;       ///< Sequence of bytes that triggers the mock.
-    Sequence action;        ///< Bytes to inject when triggered.
-    int repeat_count = 1;   ///< 0 for infinite, -1 for disabled, > 0 finite.
-    uint32_t delay_ms = 0;  ///< Delay before injection.
-  };
-
   explicit BusSimulator(platform::BusSimulation& bus)
       : bus_(bus), outbound_queue_(16) {
     bus_.addReadListener([this](uint8_t b) { this->onRead(b); });
@@ -69,7 +59,7 @@ class BusSimulator {
     outbound_queue_.clear();
   }
 
-  void addMockReaction(MockReaction reaction) {
+  void addMockReaction(VirtualBus::MockReaction reaction) {
     std::lock_guard<std::mutex> lock(mtx_);
     reactions_.push_back(std::move(reaction));
   }
@@ -79,13 +69,8 @@ class BusSimulator {
    * This remains synchronous because it simulates an external participant
    * and is usually called from test setup, not from inside a bus listener.
    */
-  void injectMasterMessage(uint8_t source, ebus::Sequence payload) {
-    payload.reduce();
-    ebus::Sequence msg;
-    msg.pushBack(source, false);
-    msg.append(payload);
-    msg.pushBack(msg.crc(), false);
-    msg.extend();
+  void injectMasterMessage(uint8_t source, ebus::ByteView payload) {
+    auto msg = ebus::frameMaster(source, payload);
     for (uint8_t b : msg) {
       bus_.writeByte(b);
     }
@@ -102,7 +87,7 @@ class BusSimulator {
   };
 
   CircularBuffer<uint8_t, SequenceLimits::default_capacity> write_history_;
-  std::vector<MockReaction> reactions_;
+  std::vector<VirtualBus::MockReaction> reactions_;
   platform::Queue<ResponseItem> outbound_queue_;
   std::unique_ptr<platform::ServiceThread> worker_;
 
@@ -114,22 +99,9 @@ class BusSimulator {
       if (reaction.repeat_count == -1) continue;  // Disabled, skip
 
       // Check if the current history suffix matches the trigger pattern
-      bool match = true;
-      size_t hist_size = write_history_.size();
-      size_t pat_size = reaction.trigger.size();
-
-      if (hist_size < pat_size) {
-        match = false;
-      } else {
-        // Compare wire-format bytes directly for Section 7 compliance
-        size_t start_idx = hist_size - pat_size;
-        for (size_t i = 0; i < pat_size; ++i) {
-          if (write_history_[start_idx + i] != reaction.trigger[i]) {
-            match = false;
-            break;
-          }
-        }
-      }
+      bool match =
+          ebus::matches(write_history_, reaction.trigger,
+                        write_history_.size() - reaction.trigger.size());
 
       if (match) {
         ResponseItem item;
