@@ -12,68 +12,56 @@
 #include <initializer_list>
 #include <iterator>
 #include <string>
+#include <string_view>
 #include <type_traits>
 #include <utility>
 #include <vector>
 
+#include "ebus/detail/protocol_limits.hpp"
 #include "ebus/protocol_math.hpp"
-#include "ebus/sequence.hpp"
 #include "ebus/types.hpp"
 
 namespace ebus {
+
+/**
+ * @brief Global helper to create a JSON string for any object supporting
+ * the toJson(std::string&) append pattern.
+ */
+template <typename T>
+std::string toJson(const T& obj, const size_t reserve) {
+  std::string json;
+  json.reserve(reserve);
+  obj.toJson(json);
+  return json;
+}
+
+/**
+ * Forward declaration for Sequence to break header dependency.
+ */
+template <std::size_t kInlineCapacity>
+class SequenceImpl;
+using Sequence = SequenceImpl<detail::SequenceLimits::default_capacity>;
 
 // --- Hex and String Conversion ---
 
 /**
  * Escapes a string for use in a JSON value.
  */
-inline std::string escapeJson(const std::string& s) {
-  std::string res;
-  res.reserve(s.length());
-  for (char c : s) {
-    switch (c) {
-      case '"':
-        res += "\\\"";
-        break;
-      case '\\':
-        res += "\\\\";
-        break;
-      case '\b':
-        res += "\\b";
-        break;
-      case '\f':
-        res += "\\f";
-        break;
-      case '\n':
-        res += "\\n";
-        break;
-      case '\r':
-        res += "\\r";
-        break;
-      case '\t':
-        res += "\\t";
-        break;
-      default:
-        if (static_cast<unsigned char>(c) < 0x20) {
-          static const char hex[] = "0123456789abcdef";
-          res += "\\u00";
-          res += hex[(static_cast<unsigned char>(c) >> 4) & 0xf];
-          res += hex[static_cast<unsigned char>(c) & 0xf];
-        } else {
-          res += c;
-        }
-    }
-  }
-  return res;
+std::string escapeJson(std::string_view s);
+
+/**
+ * Appends an escaped version of the string to the provided buffer.
+ * Prevents temporary string allocations during JSON serialization.
+ */
+void appendEscapedJson(std::string& out, std::string_view s);
+
+std::string toString(uint8_t byte);
+
+inline std::string byteToChar(ByteView data) {
+  return std::string(reinterpret_cast<const char*>(data.data()), data.size());
 }
 
-inline std::string toString(uint8_t byte) {
-  static constexpr char hex_chars[] = "0123456789abcdef";
-  std::string s;
-  s.push_back(hex_chars[byte >> 4]);
-  s.push_back(hex_chars[byte & 0xf]);
-  return s;
-}
+std::string byteToHex(ByteView data);
 
 /**
  * Converts any byte container to a hex string.
@@ -81,37 +69,13 @@ inline std::string toString(uint8_t byte) {
 template <typename T, typename = std::enable_if_t<!std::is_arithmetic_v<T>>>
 std::string toString(const T& container) {
   if (std::empty(container)) return {};
-  static constexpr char hex_chars[] = "0123456789abcdef";
-  std::string res;
-  res.reserve(container.size() * 2);
-  for (auto b : container) {
-    uint8_t byte = static_cast<uint8_t>(b);
-    res.push_back(hex_chars[byte >> 4]);
-    res.push_back(hex_chars[byte & 0xf]);
-  }
-  return res;
+  return byteToHex(ByteView(std::data(container), std::size(container)));
 }
-
-inline std::string byteToChar(ByteView data) {
-  return std::string(reinterpret_cast<const char*>(data.data()), data.size());
-}
-
-inline std::string byteToHex(ByteView data) { return toString(data); }
-
-inline std::vector<uint8_t> toVector(const std::string& str) {
-  if (str.empty()) return {};
-  std::vector<uint8_t> result;
-  result.reserve(str.size() / 2);
-  for (size_t i = 0; i + 1 < str.size(); i += 2) {
-    uint8_t value = 0;
-    auto [ptr, ec] =
-        std::from_chars(str.data() + i, str.data() + i + 2, value, 16);
-    if (ec == std::errc{}) {
-      result.push_back(value);
-    }
-  }
-  return result;
-}
+std::vector<uint8_t> toVector(const std::string& str);
+// Returns a pointer to the null terminator of the formatted string within the
+// buffer. Returns buffer if formatting failed or resulted in an empty string.
+char* formatFloat(float value, int precision, char* buffer, size_t buffer_size,
+                  float lower_threshold = 1e-6f, float upper_threshold = 1e10f);
 
 /**
  * Converts a non-owning ByteView to an owning std::vector.
@@ -126,22 +90,11 @@ inline std::vector<uint8_t> toVector(ByteView data) {
  * @param payload The master payload bytes (QQ - DBx).
  * @return The framed master telegram (QQ - DBx + CRC).
  */
-inline Sequence frameMaster(uint8_t source, ByteView payload) {
-  ebus::Sequence msg;
-  msg.pushBack(source, false);
-  msg.append(makeSequence(payload));
-  msg.pushBack(msg.crc(), false);
-  msg.extend();
-  return msg;
-}
+Sequence frameMaster(uint8_t source, ByteView payload);
 
-inline std::string frameMasterHex(uint8_t source, ByteView payload) {
-  return toString(frameMaster(source, payload));
-}
+std::string frameMasterHex(uint8_t source, ByteView payload);
 
-inline std::string frameMasterHex(uint8_t source, const std::string& payload) {
-  return frameMasterHex(source, toVector(payload));
-}
+std::string frameMasterHex(uint8_t source, const std::string& payload);
 
 /**
  * Helper to frame a slave response with CRC from a ByteView.
@@ -149,29 +102,16 @@ inline std::string frameMasterHex(uint8_t source, const std::string& payload) {
  * @param payload The slave payload bytes (NN + DBx).
  * @return The framed slave response (NN + DBx + CRC).
  */
-inline Sequence frameSlave(ByteView payload) {
-  ebus::Sequence msg;
-  msg.append(makeSequence(payload));
-  msg.pushBack(msg.crc(), false);
-  msg.extend();
-  return msg;
-}
+Sequence frameSlave(ByteView payload);
 
-inline std::string frameSlaveHex(ByteView payload) {
-  return toString(frameSlave(payload));
-}
+std::string frameSlaveHex(ByteView payload);
 
-inline std::string frameSlaveHex(const std::string& payload) {
-  return frameSlaveHex(toVector(payload));
-}
+std::string frameSlaveHex(const std::string& payload);
 
 /**
  * Rounds a floating point value to a specific number of decimal places.
  */
-inline float roundDigits(float value, uint8_t digits) noexcept {
-  float decimals = std::pow(10.0f, static_cast<float>(digits));
-  return std::round(value * decimals) / decimals;
-}
+float roundDigits(float value, uint8_t digits) noexcept;
 
 // --- Vector Helpers ---
 

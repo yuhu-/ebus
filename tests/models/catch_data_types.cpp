@@ -149,7 +149,7 @@ TEST_CASE("Datatypes: 16-bit and data2", "[models][datatypes]") {
     if (v == -32768) {
       REQUIRE(ebus::isNull(*decoded));
     } else {
-      REQUIRE(std::fabs(ebus::asFloat(*decoded) - value) < 1e-3);
+      REQUIRE(std::fabs(ebus::asFloat(*decoded) - value) < 1e-5f);
     }
   }
 
@@ -161,7 +161,7 @@ TEST_CASE("Datatypes: 16-bit and data2", "[models][datatypes]") {
     if (v == -32768) {
       REQUIRE(ebus::isNull(*decoded));
     } else {
-      REQUIRE(std::fabs(ebus::asFloat(*decoded) - value) < 1e-3);
+      REQUIRE(std::fabs(ebus::asFloat(*decoded) - value) < 1e-5f);
     }
   }
 
@@ -185,7 +185,7 @@ TEST_CASE("Datatypes: 16-bit and data2", "[models][datatypes]") {
     if (v == -32768) {
       REQUIRE(ebus::isNull(*decoded));
     } else {
-      REQUIRE(std::fabs(ebus::asFloat(*decoded) - value) < 1e-3);
+      REQUIRE(std::fabs(ebus::asFloat(*decoded) - value) < 1e-5f);
     }
   }
 }
@@ -332,13 +332,18 @@ TEST_CASE("Datatypes: auto detection", "[models][datatypes]") {
   REQUIRE(s2.size() == 4);
   auto d2 = ebus::decode(DataType::float4, s2);
   REQUIRE(d2);
-  REQUIRE(std::fabs(ebus::asFloat(*d2) - 21.5) < 1e-5);
+  REQUIRE(std::fabs(ebus::asFloat(*d2) - 21.5f) < 1e-5f);
 
   // char8 (default for string)
   DataValue v3 = std::string("EBUS");
   Sequence s3 = ebus::encode(DataType::auto_detect, v3);
   REQUIRE(s3.size() == 8);
   REQUIRE(std::string(reinterpret_cast<const char*>(s3.data()), 4) == "EBUS");
+
+  // Fixed-point int64_t (should not auto-detect to a specific eBUS DataType)
+  DataValue v4 = 123456789LL;  // Example fixed-point value
+  Sequence s4 = ebus::encode(DataType::auto_detect, v4);
+  REQUIRE(s4.empty());  // Should return empty sequence as auto-detect fails
 }
 
 TEST_CASE("Datatypes: getAs", "[models][datatypes]") {
@@ -374,24 +379,113 @@ TEST_CASE("Datatypes: encode range checking", "[models][datatypes]") {
   REQUIRE(ebus::encode(DataType::uint16, 65536).empty());
 }
 
+TEST_CASE("Datatypes: Fixed-point int64_t conversions", "[models][datatypes]") {
+  // Test DATA2B (resolution 1/256)
+  // Value 12.5 -> raw 3200 (0x0C80)
+  // Fixed-point: 12.5 * 1,000,000 = 12,500,000
+  static const std::array<uint8_t, 2> data2b_12_5 = {0x80, 0x0C};
+  DataValue fixed_data2b =
+      ebus::decode(DataType::data2b,
+                   ebus::ByteView(data2b_12_5.data(), data2b_12_5.size()))
+          .value();
+  REQUIRE(std::holds_alternative<int64_t>(fixed_data2b));
+  REQUIRE(ebus::asFloat(fixed_data2b) == Catch::Approx(12.5f));
+  // The original code had a comment: "Should round to nearest integer".
+  // 12.5 rounds to 13.
+  REQUIRE(ebus::asInt64(fixed_data2b) ==
+          13);  // Should round to nearest integer
+
+  // Test DATA1C (resolution 0.5)
+  // Value 1.5 -> raw 3 (0x03)
+  // Fixed-point: 1.5 * 1,000,000 = 1,500,000
+  DataValue fixed_data1c =
+      ebus::decode(DataType::data1c,
+                   ebus::ByteView(std::array<uint8_t, 1>{0x03}.data(), 1))
+          .value();
+  REQUIRE(std::holds_alternative<int64_t>(fixed_data1c));
+  REQUIRE(ebus::asFloat(fixed_data1c) == Catch::Approx(1.5f));
+  // 1.5 rounds to 2.
+  REQUIRE(ebus::asInt64(fixed_data1c) == 2);  // Should round to nearest integer
+
+  // Test negative fixed-point
+  // DATA2B: -12.5 -> raw -3200 (0xF380)
+  // Fixed-point: -12.5 * 1,000,000 = -12,500,000
+  static const std::array<uint8_t, 2> data2b_neg_12_5 = {0x80, 0xF3};
+  DataValue fixed_neg_data2b =
+      ebus::decode(DataType::data2b, ebus::ByteView(data2b_neg_12_5.data(),
+                                                    data2b_neg_12_5.size()))
+          .value();
+  REQUIRE(std::holds_alternative<int64_t>(fixed_neg_data2b));
+  REQUIRE(ebus::asFloat(fixed_neg_data2b) == Catch::Approx(-12.5f));
+  // -12.5 rounds to -12.
+  REQUIRE(ebus::asInt64(fixed_neg_data2b) ==
+          -12);  // Should round to nearest integer
+
+  // Test zero fixed-point.
+  static const std::array<uint8_t, 2> data2b_zero = {0x00, 0x00};
+  DataValue fixed_zero =
+      ebus::decode(DataType::data2b,
+                   ebus::ByteView(data2b_zero.data(), data2b_zero.size()))
+          .value();
+  REQUIRE(std::holds_alternative<int64_t>(fixed_zero));
+  REQUIRE(ebus::asFloat(fixed_zero) == Catch::Approx(0.0f));
+  REQUIRE(ebus::asInt64(fixed_zero) == 0);
+
+  // Test encoding fixed-point back to bytes
+  // Encode 12.5 (as fixed-point int64_t) to DATA2B
+  Sequence encoded_fixed = ebus::encode(
+      DataType::data2b, static_cast<int64_t>(12.5f * FIXED_POINT_SCALE));
+  REQUIRE(encoded_fixed.size() == 2);
+  REQUIRE(encoded_fixed[0] == 0x80);
+  REQUIRE(encoded_fixed[1] == 0x0C);
+
+  // Encode 1.5 (as fixed-point int64_t) to DATA1C
+  Sequence encoded_fixed_1c = ebus::encode(
+      DataType::data1c, static_cast<int64_t>(1.5f * FIXED_POINT_SCALE));
+  REQUIRE(encoded_fixed_1c.size() == 1);
+  REQUIRE(encoded_fixed_1c[0] == 0x03);
+
+  // Encoding a float that would be represented as fixed-point
+  Sequence encoded_float_to_fixed = ebus::encode(DataType::data2b, 12.5f);
+  REQUIRE(encoded_float_to_fixed.size() == 2);
+  REQUIRE(encoded_float_to_fixed[0] == 0x80);
+  REQUIRE(encoded_float_to_fixed[1] == 0x0C);
+
+  // Encoding an integer that would be represented as fixed-point
+  Sequence encoded_int_to_fixed = ebus::encode(DataType::data2b, 12);
+  REQUIRE(encoded_int_to_fixed.size() == 2);
+  REQUIRE(encoded_int_to_fixed[0] == 0x00);  // 12 * 256 = 3072 = 0x0C00
+  REQUIRE(encoded_int_to_fixed[1] == 0x0C);
+}
+
 TEST_CASE("Datatypes: isValid", "[models][datatypes]") {
   // BCD validation
-  REQUIRE(ebus::isValid(DataType::bcd, ebus::ByteView({0x12})));  // "12"
-  REQUIRE(
-      !ebus::isValid(DataType::bcd, ebus::ByteView({0x1a})));  // Invalid nibble
+  static const std::array<uint8_t, 1> bcd_12 = {0x12};
+  REQUIRE(ebus::isValid(DataType::bcd,
+                        ebus::ByteView(bcd_12.data(), bcd_12.size())));  // "12"
+  static const std::array<uint8_t, 1> bcd_1a = {0x1a};
+  REQUIRE(!ebus::isValid(
+      DataType::bcd,
+      ebus::ByteView(bcd_1a.data(), bcd_1a.size())));  // Invalid nibble
+  static const std::array<uint8_t, 1> bcd_ff = {0xff};
   REQUIRE(ebus::isValid(
       DataType::bcd,
       ebus::ByteView(
-          {0xff})));  // Spec Replacement Value is valid protocol data
+          bcd_ff.data(),
+          bcd_ff.size())));  // Spec Replacement Value is valid protocol data
 
   // Size validation
-  REQUIRE(
-      !ebus::isValid(DataType::uint16, ebus::ByteView({0x01})));  // Too short
+  static const std::array<uint8_t, 1> uint16_too_short = {0x01};
+  REQUIRE(!ebus::isValid(
+      DataType::uint16, ebus::ByteView(uint16_too_short.data(),
+                                       uint16_too_short.size())));  // Too short
 }
 
 TEST_CASE("Datatypes: sentinels", "[models][datatypes]") {
   // BCD 0xFF -> null
-  auto v1 = ebus::decode(DataType::bcd, ebus::ByteView({0xff}));
+  static const std::array<uint8_t, 1> bcd_ff_sentinel = {0xff};
+  auto v1 = ebus::decode(DataType::bcd, ebus::ByteView(bcd_ff_sentinel.data(),
+                                                       bcd_ff_sentinel.size()));
   REQUIRE(v1);
   REQUIRE(ebus::isNull(*v1));
 
@@ -401,12 +495,18 @@ TEST_CASE("Datatypes: sentinels", "[models][datatypes]") {
   REQUIRE(ebus::isNull(*v2));
 
   // DATA1C 0xFF -> null
-  auto v3 = ebus::decode(DataType::data1c, ebus::ByteView({0xff}));
+  static const std::array<uint8_t, 1> data1c_ff_sentinel = {0xff};
+  auto v3 = ebus::decode(
+      DataType::data1c,
+      ebus::ByteView(data1c_ff_sentinel.data(), data1c_ff_sentinel.size()));
   REQUIRE(v3);
   REQUIRE(ebus::isNull(*v3));
 
   // UINT16 0xFFFF -> null
-  auto v4 = ebus::decode(DataType::uint16, ebus::ByteView({0xff, 0xff}));
+  static const std::array<uint8_t, 2> uint16_ff_sentinel = {0xff, 0xff};
+  auto v4 = ebus::decode(
+      DataType::uint16,
+      ebus::ByteView(uint16_ff_sentinel.data(), uint16_ff_sentinel.size()));
   REQUIRE(v4);
   REQUIRE(ebus::isNull(*v4));
 }

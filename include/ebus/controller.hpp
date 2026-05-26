@@ -22,12 +22,10 @@
 #include "ebus/metrics.hpp"
 #include "ebus/status.hpp"
 #include "ebus/types.hpp"
-#if EBUS_SIMULATION
-#include "ebus/virtual_bus.hpp"
-#endif
 
 namespace ebus {
 
+class VirtualBus;
 struct Impl;
 
 /**

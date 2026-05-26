@@ -6,21 +6,24 @@
 #include "models/device.hpp"
 
 #include <algorithm>
+#include <array>
 #include <ebus/device.hpp>
 #include <ebus/utils.hpp>
 
+#include "utils/json_utils.hpp"
+
 namespace ebus::detail {
 
-constexpr uint8_t VENDOR_VAILLANT = 0xb5;
+static constexpr uint8_t VENDOR_VAILLANT = 0xb5;
 
 // Identification (Service 07h 04h)
-const std::vector<uint8_t> VEC_070400 = {0x07, 0x04, 0x00};
+static constexpr std::array<uint8_t, 3> VEC_070400 = {0x07, 0x04, 0x00};
 
 // Vaillant identification (Service B5h 09h 24h-27h)
-const std::vector<uint8_t> VEC_b5090124 = {0xb5, 0x09, 0x01, 0x24};
-const std::vector<uint8_t> VEC_b5090125 = {0xb5, 0x09, 0x01, 0x25};
-const std::vector<uint8_t> VEC_b5090126 = {0xb5, 0x09, 0x01, 0x26};
-const std::vector<uint8_t> VEC_b5090127 = {0xb5, 0x09, 0x01, 0x27};
+static constexpr std::array<uint8_t, 4> VEC_b5090124 = {0xb5, 0x09, 0x01, 0x24};
+static constexpr std::array<uint8_t, 4> VEC_b5090125 = {0xb5, 0x09, 0x01, 0x25};
+static constexpr std::array<uint8_t, 4> VEC_b5090126 = {0xb5, 0x09, 0x01, 0x26};
+static constexpr std::array<uint8_t, 4> VEC_b5090127 = {0xb5, 0x09, 0x01, 0x27};
 
 uint8_t Device::getSlave() const { return slave_; }
 
@@ -69,7 +72,9 @@ ebus::DeviceInfo Device::getDeviceInfo() const {
   if (isVaillant() && isVaillantValid()) {
     // Reconstruct the 28-character Vaillant serial number from the 4 B5
     // sub-services
-    std::string serial = ebus::byteToChar(ebus::range(vec_b5090124_, 2, 8));
+    std::string serial;
+    serial.reserve(28);
+    serial += ebus::byteToChar(ebus::range(vec_b5090124_, 2, 8));
     serial += ebus::byteToChar(ebus::range(vec_b5090125_, 1, 9));
     serial += ebus::byteToChar(ebus::range(vec_b5090126_, 1, 9));
     serial += ebus::byteToChar(ebus::range(vec_b5090127_, 1, 2));
@@ -133,6 +138,33 @@ bool Device::isVaillantValid() const {
 }  // namespace ebus::detail
 
 namespace ebus {
+
+void DeviceInfo::toJson(std::string& json) const {
+  json += "{";
+  bool first_field = true;
+  append_hex_field(json, "slave_address", ByteView(&slave_address, 1),
+                   first_field);
+  append_hex_field(json, "manufacturer", ByteView(&manufacturer, 1),
+                   first_field);
+  append_field(json, "manufacturer_name", manufacturer_name, first_field);
+  append_field(json, "unit_id", unit_id, first_field);
+  append_field(json, "software_version", software_version, first_field);
+  append_field(json, "hardware_version", hardware_version, first_field);
+
+  if (!vaillant.serial_number.empty()) {
+    json += ",\"vaillant\":{";
+    bool vaillant_first_field = true;
+    append_field(json, "serial_number", vaillant.serial_number,
+                 vaillant_first_field);
+    append_field(json, "product_code", vaillant.product_code,
+                 vaillant_first_field);
+    json += "}";
+  }
+
+  append_field(json, "frequency", static_cast<uint64_t>(frequency),
+               first_field);
+  json += "}";
+}
 
 static constexpr const char* kManufacturerTable[256] = {
     nullptr,         nullptr,         nullptr,      "Junkers",   "Bosch",

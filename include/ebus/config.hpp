@@ -57,7 +57,7 @@ struct RuntimeConfig {
 
   void reset() { *this = RuntimeConfig{}; }
 
-  std::string toJson() const;
+  void toJson(std::string& json) const;
 
   /**
    * @brief Deserializes a JSON string into a RuntimeConfig object.
@@ -91,7 +91,7 @@ struct BusConfig {
   std::string device = "/dev/null";
 #endif
 
-  std::string toJson() const;
+  void toJson(std::string& json) const;
 };
 
 /**
@@ -101,7 +101,7 @@ struct EbusConfig {
   RuntimeConfig runtime = {};
   BusConfig bus = {};
 
-  std::string toJson() const;
+  void toJson(std::string& json) const;
 };
 
 }  // namespace ebus

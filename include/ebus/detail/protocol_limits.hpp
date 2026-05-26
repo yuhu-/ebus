@@ -19,6 +19,8 @@ namespace ebus::detail {
 // --- Physical Layer ---
 namespace Physical {
 inline constexpr uint32_t baud_rate = 2400;
+inline constexpr uint64_t bit_time_num = 1250;
+inline constexpr uint64_t bit_time_den = 3;
 inline constexpr float bit_time_us = 1000000.0f / 2400.0f;  // ~416.67 us
 inline constexpr float byte_center_bits = 9.5;      // midpoint of the stop bit
 inline constexpr float start_bit_tolerance = 1.5f;  // bit times
@@ -157,7 +159,7 @@ inline constexpr uint16_t window_max_us = 5000;
 inline constexpr uint16_t offset_max_us = 500;
 
 #ifndef EBUS_BUS_QUEUE_SIZE
-inline constexpr size_t queue_size = 512;
+inline constexpr size_t queue_size = 256;
 #else
 inline constexpr size_t queue_size = EBUS_BUS_QUEUE_SIZE;
 #endif
@@ -221,7 +223,7 @@ inline constexpr size_t max_clients = EBUS_MAX_CLIENTS;
 // --- Application Layer ---
 namespace ControllerLimits {
 #ifndef EBUS_PUBLIC_QUEUE_SIZE
-inline constexpr size_t public_queue_size = 16;
+inline constexpr size_t public_queue_size = 8;
 #else
 inline constexpr size_t public_queue_size = EBUS_PUBLIC_QUEUE_SIZE;
 #endif
@@ -246,7 +248,7 @@ namespace SchedulerLimits {
 inline constexpr size_t queue_reserve = 32;
 
 #ifndef EBUS_SCHEDULER_MAX_ITEMS
-inline constexpr size_t max_items = 128;
+inline constexpr size_t max_items = 32;
 #else
 inline constexpr size_t max_items = EBUS_SCHEDULER_MAX_ITEMS;
 #endif

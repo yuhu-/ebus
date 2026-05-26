@@ -131,16 +131,12 @@ int main() {
                 << ebus::byteToHex(std::vector<uint8_t>(logBuf, logBuf + n))
                 << std::endl;
     }
-
-    // Print metrics to see bus health
-    auto metrics = deviceB.getMetrics();
-    std::cout << "[Device B] Bus Quality: " << metrics.quality << "%"
-              << std::endl;
   }
 
   // Print metrics to see bus health
   auto metrics = deviceB.getMetrics();
-  std::cout << "[Device B] Metrics: " << metrics.toJson() << std::endl;
+  std::cout << "[Device B] Metrics: " << ebus::toJson(metrics, 256)
+            << std::endl;
 
   auto status = deviceB.getServiceStatusJson();
   std::cout << "[Device B] Status: " << status << std::endl;

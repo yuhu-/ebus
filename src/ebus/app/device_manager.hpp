@@ -56,6 +56,8 @@ class DeviceManager {
 
   std::map<uint8_t, Device> devices_;
   std::bitset<256> identified_devices_{};
+  std::bitset<256> masters_{};
+  std::bitset<256> slaves_{};
 };
 
 }  // namespace ebus::detail

@@ -60,6 +60,9 @@ class BusMonitor {
     std::lock_guard<std::mutex> lock(metrics_mutex_);
     updater(controller_acc_);
   }
+  void recordBusError();
+  void recordLowBits(uint32_t bits);
+  void clearHistory();
 
   void logHandlerTransition(HandlerState from, HandlerState to);
   void logRequestTransition(RequestState from, RequestState to);
@@ -70,19 +73,12 @@ class BusMonitor {
   TimingStats passive_data;
   TimingStats active_first;
   TimingStats active_data;
-  TimingStats callback_won;
-  TimingStats callback_lost;
-  TimingStats callback_reactive;
-  TimingStats callback_telegram;
-  TimingStats callback_error;
 
   // Physical Layer stats (moved from BusPosix/BusFreeRtos)
   TimingStats delay;
   TimingStats window;
   TimingStats transmit;
-  TimingStats uptime;
   TimingStats syn_postpone;
-  RollingStats utilization;
 
   CircularBuffer<HandlerTransition, FsmLimits::transition_history_size>
       handler_history_;
@@ -91,14 +87,15 @@ class BusMonitor {
   CircularBuffer<float, DiagnosticsLimits::log_history_size>
       utilization_history_;
 
-  // State-machine execution timings
-  std::array<TimingStats, FsmLimits::num_handler_states> handler_timing = {};
-
  private:
   mutable std::mutex metrics_mutex_;
 
   mutable Clock::time_point congestion_start_point_{};
   mutable bool congestion_active_ = false;
+  Clock::time_point uptime_start_{Clock::now()};
+  uint64_t total_low_bits_ = 0;
+  uint64_t last_history_low_bits_ = 0;
+  uint64_t last_history_uptime_us_ = 0;
 
   metrics::HandlerMetrics handler_acc_;
   metrics::RequestMetrics request_acc_;

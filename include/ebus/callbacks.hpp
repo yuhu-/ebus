@@ -33,7 +33,7 @@ struct TelegramInfo {
   ByteView master_view;
   ByteView slave_view;
 
-  std::string toJson() const;
+  void toJson(std::string& json) const;
 };
 
 struct ErrorInfo {
@@ -47,9 +47,8 @@ struct ErrorInfo {
   RequestState request_state;
   ByteView master_view;
   ByteView slave_view;
-  float utilization = 0.0f;
 
-  std::string toJson() const;
+  void toJson(std::string& json) const;
 };
 
 struct ReactiveInfo {
@@ -57,7 +56,7 @@ struct ReactiveInfo {
   ByteView master_view;
   Sequence& slave_response;
 
-  std::string toJson() const;
+  void toJson(std::string& json) const;
 };
 
 struct ResultInfo {
@@ -69,7 +68,7 @@ struct ResultInfo {
   ByteView master_view;
   ByteView slave_view;
 
-  std::string toJson() const;
+  void toJson(std::string& json) const;
 };
 
 /**
@@ -84,7 +83,7 @@ struct BusEventInfo {
   uint8_t lock_counter = 0;
   Clock::time_point timestamp = {};
 
-  std::string toJson() const;
+  void toJson(std::string& json) const;
 };
 
 /**
@@ -107,7 +106,6 @@ struct ProtocolEvent {
       TelegramType telegram_type;
     } tel;
     struct {
-      float utilization;
       ProtocolError protocol_error;
       RequestResult result;
       SequenceState sequence_state;

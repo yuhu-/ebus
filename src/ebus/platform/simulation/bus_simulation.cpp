@@ -44,7 +44,6 @@ void BusSimulation::start() {
       OrchestrationLimits::bus_stack_size, OrchestrationLimits::bus_priority);
   worker_->start();
 
-  if (monitor_) monitor_->uptime.markBegin();
   if (runtime_.bus.syn_gen) {
     syn_running_.store(true);
     syn_worker_ = std::make_unique<ServiceThread>(
@@ -69,8 +68,6 @@ void BusSimulation::stop() {
 
   if (syn_worker_) syn_worker_->join();
   if (worker_) worker_->join();
-
-  if (monitor_) monitor_->uptime.markEnd();
 }
 
 Queue<BusEvent>* BusSimulation::getQueue() const { return byte_queue_.get(); }
@@ -189,9 +186,8 @@ ebus::BusStatus BusSimulation::getStatus() const {
 }
 
 void BusSimulation::recordUtilization(uint8_t byte) {
-  // 1 (start bit) + zero bits in data. eBUS bit time is ~416.67us
-  float low_time = (countZeroBits(byte) + 1) * Physical::bit_time_us;
-  if (monitor_) monitor_->utilization.addSample(low_time);
+  // 1 (start bit) + zero bits in data.
+  if (monitor_) monitor_->recordLowBits(countZeroBits(byte) + 1);
 }
 
 void BusSimulation::simulationReaderLoop() {

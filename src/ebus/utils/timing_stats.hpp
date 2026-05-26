@@ -6,7 +6,6 @@
 #pragma once
 
 #include <chrono>
-#include <cmath>
 #include <cstdint>
 #include <ebus/metrics.hpp>
 #include <mutex>
@@ -14,92 +13,39 @@
 namespace ebus::detail {
 
 /**
- * Math engine for online statistics calculation using Welford's algorithm.
+ * Specialized metric tracker for measuring durations between time points
+ * and generic value samples.
  */
-class RollingStats {
+class TimingStats {
  public:
-  RollingStats()
-      : last_(0.0f),
-        min_(0.0f),
-        max_(0.0f),
-        count_(0),
-        mean_(0.0f),
-        m2_(0.0f) {}
-  virtual ~RollingStats() = default;
+  TimingStats() : last_(0), max_(0), count_(0), marked_(false), begin_time_() {}
+  virtual ~TimingStats() = default;
 
-  inline void addSample(float value) {
+  inline void addSample(uint32_t value) {
     std::lock_guard<std::mutex> lock(mutex_);
     addSampleUnsynced(value);
   }
 
   inline void reset() {
     std::lock_guard<std::mutex> lock(mutex_);
-    last_ = min_ = max_ = mean_ = m2_ = 0.0f;
+    last_ = max_ = 0;
     count_ = 0;
   }
 
   inline MetricValues getValues() const {
     std::lock_guard<std::mutex> lock(mutex_);
-    return {last_, min_, max_, mean_, static_cast<float>(getStdDev()), count_};
+    return {last_, max_, count_};
   }
 
-  float getSum() const {
-    std::lock_guard<std::mutex> lock(mutex_);
-    return mean_ * count_;
-  }
-
-  float getLast() const {
+  uint32_t getLast() const {
     std::lock_guard<std::mutex> lock(mutex_);
     return last_;
   }
 
-  float getMean() const {
-    std::lock_guard<std::mutex> lock(mutex_);
-    return mean_;
-  }
-
-  uint32_t getCount() const {
+  uint64_t getCount() const {
     std::lock_guard<std::mutex> lock(mutex_);
     return count_;
   }
-
-  inline float getStdDev() const {
-    // Note: Caller in getValues already holds lock, but direct calls need it.
-    return (count_ == 0) ? 0.0f : std::sqrt(m2_ / static_cast<float>(count_));
-  }
-
- protected:
-  void addSampleUnsynced(float value) {
-    last_ = value;
-    if (count_ == 0) {
-      min_ = value;
-      max_ = value;
-    } else {
-      if (value < min_) min_ = value;
-      if (value > max_) max_ = value;
-    }
-    ++count_;
-    float delta = value - mean_;
-    mean_ += delta / count_;
-    float delta2 = value - mean_;
-    m2_ += delta * delta2;
-  }
-
-  mutable std::mutex mutex_;
-  float last_;
-  float min_;
-  float max_;
-  uint32_t count_;
-  float mean_;
-  float m2_;
-};
-
-/**
- * Specialized metric tracker for measuring durations between time points.
- */
-class TimingStats : public RollingStats {
- public:
-  TimingStats() : RollingStats(), marked_(false), begin_time_() {}
 
   inline void markBegin(const Clock::time_point& begin = Clock::now()) {
     std::unique_lock<std::mutex> lock(mutex_);
@@ -113,7 +59,7 @@ class TimingStats : public RollingStats {
       auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
                           end - begin_time_)
                           .count();
-      addSampleUnsynced(static_cast<float>(duration));
+      addSampleUnsynced(static_cast<uint32_t>(duration));
       marked_ = false;
     }
   }
@@ -123,8 +69,20 @@ class TimingStats : public RollingStats {
     auto duration =
         std::chrono::duration_cast<std::chrono::microseconds>(end - begin)
             .count();
-    addSample(static_cast<float>(duration));
+    addSample(static_cast<uint32_t>(duration));
   }
+
+ protected:
+  void addSampleUnsynced(uint32_t value) {
+    last_ = value;
+    if (value > max_) max_ = value;
+    ++count_;
+  }
+
+  mutable std::mutex mutex_;
+  uint32_t last_;
+  uint32_t max_;
+  uint64_t count_;
 
  private:
   bool marked_;

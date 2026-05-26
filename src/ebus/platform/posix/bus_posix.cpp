@@ -257,9 +257,8 @@ ebus::BusStatus BusPosix::getStatus() const {
 }
 
 void BusPosix::recordUtilization(uint8_t byte) {
-  // 1 (start bit) + zero bits in data. eBUS bit time is ~416.67us
-  float low_time = (countZeroBits(byte) + 1) * detail::Physical::bit_time_us;
-  if (monitor_) monitor_->utilization.addSample(low_time);
+  // 1 (start bit) + zero bits in data.
+  if (monitor_) monitor_->recordLowBits(countZeroBits(byte) + 1);
 }
 
 void BusPosix::ensureOpen() const {

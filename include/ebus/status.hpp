@@ -6,6 +6,7 @@
 #pragma once
 
 #include <cstddef>
+#include <bitset>
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -24,7 +25,7 @@ struct ThreadStatus {
   int32_t task_stack_bytes = -1;
   int32_t task_stack_free_bytes = -1;
 
-  std::string toJson() const;
+  void toJson(std::string& json) const;
 };
 
 /**
@@ -33,7 +34,7 @@ struct ThreadStatus {
 struct ControllerStatus {
   ThreadStatus thread;
 
-  std::string toJson() const;
+  void toJson(std::string& json) const;
 };
 
 /**
@@ -43,7 +44,7 @@ struct BusStatus {
   ThreadStatus bus_thread;
   ThreadStatus syn_thread;
 
-  std::string toJson() const;
+  void toJson(std::string& json) const;
 };
 
 /**
@@ -54,7 +55,7 @@ struct BusHandlerStatus {
   size_t queue_size = 0;
   size_t queue_capacity = 0;
 
-  std::string toJson() const;
+  void toJson(std::string& json) const;
 };
 
 /**
@@ -65,7 +66,7 @@ struct SchedulerStatus {
   size_t queue_size = 0;
   size_t queue_capacity = 0;
 
-  std::string toJson() const;
+  void toJson(std::string& json) const;
 };
 
 /**
@@ -79,7 +80,7 @@ struct ClientManagerStatus {
   std::string session_state;
   std::string last_error;
 
-  std::string toJson() const;
+  void toJson(std::string& json) const;
 };
 
 /**
@@ -88,8 +89,10 @@ struct ClientManagerStatus {
 struct DeviceManagerStatus {
   size_t identified_count = 0;
   size_t unknown_count = 0;
+  std::bitset<256> masters{};
+  std::bitset<256> slaves{};
 
-  std::string toJson() const;
+  void toJson(std::string& json) const;
 };
 
 /**
@@ -104,7 +107,7 @@ struct DeviceScannerStatus {
   size_t manual_queue_size = 0;
   size_t startup_queue_size = 0;
 
-  std::string toJson() const;
+  void toJson(std::string& json) const;
 };
 
 /**
@@ -113,7 +116,7 @@ struct DeviceScannerStatus {
 struct PollManagerStatus {
   size_t item_count = 0;
 
-  std::string toJson() const;
+  void toJson(std::string& json) const;
 };
 
 /**
@@ -128,11 +131,11 @@ struct SystemResources {
     size_t size = 0;
     size_t capacity = 0;
 
-    std::string toJson() const;
+    void toJson(std::string& json) const;
   };
   std::vector<QueueInfo> queues;
 
-  std::string toJson() const;
+  void toJson(std::string& json) const;
 };
 
 /**
@@ -149,7 +152,7 @@ struct ServiceStatus {
   DeviceScannerStatus device_scanner;
   PollManagerStatus poll_manager;
 
-  std::string toJson() const;
+  void toJson(std::string& json) const;
 };
 
 /**
@@ -160,8 +163,8 @@ struct ServiceStatus {
  * @param reset_histories If true and monitor is provided, resets history
  * buffers after serialization.
  */
-std::string serializeServiceStatus(const ServiceStatus& status,
-                                   detail::BusMonitor* monitor = nullptr,
-                                   bool reset_histories = false);
+void serializeServiceStatus(std::string& json_str, const ServiceStatus& status,
+                            detail::BusMonitor* monitor = nullptr,
+                            bool reset_histories = false);
 
 }  // namespace ebus

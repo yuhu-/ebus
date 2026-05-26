@@ -31,7 +31,7 @@ struct DeviceInfo {
   // Statistics
   uint32_t frequency = 0;  // Total messages observed from this device
 
-  std::string toJson() const;
+  void toJson(std::string& json) const;
 };
 
 /**

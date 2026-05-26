@@ -41,7 +41,7 @@ set(EBUS_SCHEDULER_PRIORITY 10 CACHE STRING "Priority for Scheduler thread")
 set(EBUS_CLIENT_MANAGER_STACK_SIZE 2048 CACHE STRING "Stack size for ClientManager")
 set(EBUS_CLIENT_MANAGER_PRIORITY 10 CACHE STRING "Priority for ClientManager thread")
 # Bus Layer
-set(EBUS_BUS_QUEUE_SIZE 512 CACHE STRING "Size of the physical bus event queue")
+set(EBUS_BUS_QUEUE_SIZE 256 CACHE STRING "Size of the physical bus event queue")
 set(EBUS_MAX_LISTENERS 4 CACHE STRING "Maximum number of internal bus listeners")
 # Diagnostics Layer
 set(EBUS_LOG_HISTORY_SIZE 60 CACHE STRING "Number of error entries to keep in memory")
@@ -49,10 +49,10 @@ set(EBUS_TRACE_HISTORY_SIZE 100 CACHE STRING "Number of trace events to keep in 
 # Networking Layer
 set(EBUS_MAX_CLIENTS 4 CACHE STRING "Maximum number of network bridge clients")
 # Application Layer
-set(EBUS_PUBLIC_QUEUE_SIZE 16 CACHE STRING "Size of the public event queue")
+set(EBUS_PUBLIC_QUEUE_SIZE 8 CACHE STRING "Size of the public event queue")
 set(EBUS_MAX_DEVICES 32 CACHE STRING "Maximum number of devices to manage")
 set(EBUS_MAX_MANUAL_QUEUE 16 CACHE STRING "Maximum pending manual scan requests")
-set(EBUS_SCHEDULER_MAX_ITEMS 128 CACHE STRING "Maximum items in the priority scheduler")
+set(EBUS_SCHEDULER_MAX_ITEMS 32 CACHE STRING "Maximum items in the priority scheduler")
 set(EBUS_POLL_MAX_ITEMS 128 CACHE STRING "Maximum items in the poll manager")
 
 set(EBUS_SIMULATION_VAL 0)

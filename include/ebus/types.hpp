@@ -427,7 +427,7 @@ struct HandlerTransition {
   HandlerState to;
   uint64_t timestamp;  // ms since epoch
 
-  std::string toJson() const;
+  void toJson(std::string& json) const;
 };
 
 /**
@@ -438,7 +438,7 @@ struct RequestTransition {
   RequestState to;
   uint64_t timestamp;  // ms since epoch
 
-  std::string toJson() const;
+  void toJson(std::string& json) const;
 };
 
 /**
@@ -456,10 +456,9 @@ struct ErrorEntry {
   RequestState request_state;
   StaticSequence<detail::SequenceLimits::default_capacity> master;
   StaticSequence<detail::SequenceLimits::default_capacity> slave;
-  float utilization;
   uint64_t timestamp;  // ms since epoch
 
-  std::string toJson() const;
+  void toJson(std::string& json) const;
 
   // Custom stringifier for human-readable logs
   std::string toString() const {

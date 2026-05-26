@@ -2,9 +2,11 @@
 
 # High-level Application Logic
 set(APP_SOURCES
-    app/controller.cpp
     app/client.cpp
     app/client_manager.cpp
+    app/config.cpp
+    app/config_validator.cpp
+    app/controller.cpp
     app/device_manager.cpp
     app/device_scanner.cpp
     app/poll_manager.cpp
@@ -14,8 +16,10 @@ set(APP_SOURCES
 # Core Protocol Logic
 set(CORE_SOURCES
     core/bus_monitor.cpp
+    core/callbacks.cpp
     core/handler.cpp
     core/request.cpp
+    core/types.cpp
 )
 
 # Data Models and Types

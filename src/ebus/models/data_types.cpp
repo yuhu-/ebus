@@ -10,11 +10,11 @@
 #include <ebus/data_types.hpp>
 #include <ebus/sequence.hpp>
 #include <ebus/utils.hpp>
-#include <iomanip>
 #include <limits>
-#include <sstream>
 #include <string_view>
 #include <utility>
+
+#include "utils/json_utils.hpp"
 
 namespace ebus {
 
@@ -72,15 +72,20 @@ constexpr Meta kMetaTable[] = {
 // clang-format on
 
 /**
+ * Maps a DataType enum value to the kMetaLookup table index.
+ */
+constexpr int getDataTypeIndex(DataType dt) {
+  const uint32_t val = static_cast<uint32_t>(dt);
+  return static_cast<int>(((val >> 8) << 4) | (val & 0xff));
+}
+
+/**
  * Internal helper to generate the lookup table at compile time.
  */
 constexpr std::array<const Meta*, 144> generateMetaLookup() {
   std::array<const Meta*, 144> arr{};
-  for (size_t i = 0; i < 144; ++i) arr[i] = nullptr;
   for (const auto& m : kMetaTable) {
-    const int32_t val = static_cast<int32_t>(m.dt);
-    const int idx = ((val >> 8) << 4) | (val & 0xff);
-    arr[idx] = &m;
+    arr[getDataTypeIndex(m.dt)] = &m;
   }
   return arr;
 }
@@ -90,12 +95,67 @@ static constexpr auto kMetaLookup = generateMetaLookup();
 const Meta* metaFor(DataType dt) {
   if (dt == DataType::error || dt == DataType::auto_detect) return nullptr;
 
-  const int32_t val = static_cast<int32_t>(dt);
-  const int idx = ((val >> 8) << 4) | (val & 0xff);
-
-  if (idx < 0 || idx >= 144) return nullptr;
+  const int idx = getDataTypeIndex(dt);
+  if (idx < 0 || static_cast<size_t>(idx) >= kMetaLookup.size()) return nullptr;
   return kMetaLookup[idx];
 }
+
+/**
+ * Visitor for DataValue variant to collapse integral logic into two
+ * non-templated overloads (int64/uint64), minimizing monomorphization bloat in
+ * Flash.
+ */
+struct JsonValueVisitor {
+  std::string& json_str;
+
+  void operator()(std::monostate) const { json_str += "null"; }
+
+  void operator()(const std::string& s) const {
+    json_str += "\"";
+    appendEscapedJson(json_str, s);
+    json_str += "\"";
+  }
+
+  void operator()(int64_t val) const {
+    // This handles the generic int64_t in the variant, which represents
+    // fixed-point scaled values in our protocol.
+    char buffer[64];
+    char* end_ptr = formatFloat(static_cast<float>(val) / FIXED_POINT_SCALE, 4,
+                                buffer, sizeof(buffer));
+    json_str.append(buffer, end_ptr - buffer);
+  }
+
+  void operator()(float val) const {
+    char buffer[64];
+    char* end_ptr = formatFloat(val, 4, buffer, sizeof(buffer));
+    json_str.append(buffer, end_ptr - buffer);
+  }
+
+  // Handler for all other integral types in the variant
+  template <typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
+  void operator()(T val) const {
+    append_int(static_cast<int64_t>(val));
+  }
+
+ private:
+  void append_int(int64_t val) const {
+    char buffer[24];
+    auto [ptr, ec] = std::to_chars(buffer, buffer + sizeof(buffer), val);
+    if (ec == std::errc{})
+      json_str.append(buffer, ptr - buffer);
+    else
+      json_str += "null";
+  }
+
+  void append_int(uint64_t val) const {
+    char buffer[24];
+    auto [ptr, ec] = std::to_chars(buffer, buffer + sizeof(buffer), val);
+    if (ec == std::errc{})
+      json_str.append(buffer, ptr - buffer);
+    else
+      json_str += "null";
+  }
+};
 
 template <typename IntType>
 constexpr IntType readInt(ebus::ByteView data, bool flip) {
@@ -122,12 +182,25 @@ void writeInt(ebus::Sequence& s, IntType val, bool flip) {
 template <typename T>
 constexpr int64_t integerScale(T val, int32_t num, int32_t den) {
   if (den == 0) return 0;
+#ifdef __SIZEOF_INT128__
+  // Use __int128_t for intermediate calculation to prevent overflow
+  __int128_t intermediate_numerator = static_cast<__int128_t>(val) * num;
+  __int128_t half =
+      static_cast<__int128_t>(den) / 2;  // Keep original rounding logic
+  if (intermediate_numerator >= 0) {
+    return static_cast<int64_t>((intermediate_numerator + half) / den);
+  }
+  return static_cast<int64_t>((intermediate_numerator - half) / den);
+#else
+  // Fallback for compilers without __int128_t (e.g., MSVC).
+  // This version is susceptible to overflow if (val * num) exceeds int64_t max.
   int64_t numerator = static_cast<int64_t>(val) * num;
-  int64_t half = den / 2;
+  int64_t half = (den > 0) ? (den / 2) : (-den / 2);
   if (numerator >= 0) {
     return (numerator + half) / den;
   }
   return (numerator - half) / den;
+#endif
 }
 
 template <typename T>
@@ -218,9 +291,10 @@ std::optional<DataValue> decode(DataType dt, ByteView data, Endian e) {
 
   // Handle scaled integer types (DATA1C, DATA2B, etc.)
   if (m->scale.num != 1 || m->scale.den != 1) {
-    // Perform scaling in floating point to preserve fractional resolutions
-    return static_cast<float>(raw_val) * static_cast<float>(m->scale.num) /
-           static_cast<float>(m->scale.den);
+    // Store as int64_t fixed-point: value * FIXED_POINT_SCALE
+    return static_cast<int64_t>(
+        (static_cast<int64_t>(raw_val) * m->scale.num * FIXED_POINT_SCALE) /
+        m->scale.den);
   }
 
   // Handle unscaled integer types
@@ -314,6 +388,12 @@ Sequence encode(DataType dt, const DataValue& value, Endian e) {
   if (std::holds_alternative<float>(value)) {
     raw_int = static_cast<int64_t>(
         std::round(asFloat(value) * m->scale.den / m->scale.num));
+  } else if (std::holds_alternative<int64_t>(value)) {  // Fixed-point int64_t
+    // Convert from fixed-point to float, then unscale.
+    // Direct integer math for unscaling can overflow int64_t for large values.
+    raw_int = static_cast<int64_t>(std::round(
+        (static_cast<float>(std::get<int64_t>(value)) / FIXED_POINT_SCALE) *
+        m->scale.den / m->scale.num));
   } else {
     raw_int = integerScale(asInt64(value), m->scale.den, m->scale.num);
   }
@@ -354,6 +434,9 @@ float asFloat(const DataValue& value) noexcept {
   return std::visit(
       [](auto&& arg) -> float {
         using T = std::decay_t<decltype(arg)>;
+        if constexpr (std::is_same_v<T, int64_t>) {  // Fixed-point int64_t
+          return static_cast<float>(arg) / FIXED_POINT_SCALE;
+        }
         if constexpr (std::is_arithmetic_v<T>) return static_cast<float>(arg);
         return 0.0f;
       },
@@ -364,6 +447,10 @@ int64_t asInt64(const DataValue& value) noexcept {
   return std::visit(
       [](auto&& arg) -> int64_t {
         using T = std::decay_t<decltype(arg)>;
+        if constexpr (std::is_same_v<T, int64_t>) {  // Fixed-point int64_t
+          // Convert from fixed-point to integer with rounding (FPU-free)
+          return (arg + FIXED_POINT_SCALE / 2) / FIXED_POINT_SCALE;
+        }
         if constexpr (std::is_integral_v<T>) return static_cast<int64_t>(arg);
         if constexpr (std::is_floating_point_v<T>)
           return static_cast<int64_t>(std::round(arg));
@@ -399,33 +486,37 @@ std::string const& asString(const DataValue& value) noexcept {
   return empty;
 }
 
-std::string toString(const DataValue& value, std::string_view unit) {
-  return std::visit(
-      [unit](auto&& arg) -> std::string {
-        using T = std::decay_t<decltype(arg)>;
-        std::string s;
-        if constexpr (std::is_same_v<T, std::monostate>) {
-          return "null";
-        } else if constexpr (std::is_same_v<T, std::string>) {
-          s = arg;
-        } else if constexpr (std::is_floating_point_v<T>) {
-          std::ostringstream oss;
-          // Format floats with fixed precision for consistent logging
-          oss << std::fixed << std::setprecision(2) << arg;
-          s = oss.str();
-        } else if constexpr (std::is_integral_v<T>) {
-          s = std::to_string(arg);
-        } else {
-          s = "";
-        }
+// New struct for the visitor
+struct ToStringValueVisitor {
+  std::string operator()(std::monostate) const { return "null"; }
+  std::string operator()(const std::string& s) const { return s; }
 
-        if (!unit.empty()) {
-          s += " ";
-          s += unit;
-        }
-        return s;
-      },
-      value);
+  std::string operator()(int64_t val) const {
+    char buffer[64];
+    char* end = formatFloat(static_cast<float>(val) / FIXED_POINT_SCALE, 2,
+                            buffer, sizeof(buffer));
+    return std::string(buffer, end - buffer);
+  }
+
+  std::string operator()(float val) const {
+    char buffer[64];
+    char* end = formatFloat(val, 2, buffer, sizeof(buffer));
+    return std::string(buffer, end - buffer);
+  }
+
+  template <typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
+  std::string operator()(T val) const {
+    return std::to_string(val);
+  }
+};
+
+std::string toString(const DataValue& value, std::string_view unit) {
+  std::string s = std::visit(ToStringValueVisitor{}, value);
+  if (!unit.empty() && s != "null" && !s.empty()) {
+    s += " ";
+    s += unit;
+  }
+  return s;
 }
 
 std::string toHexString(const DataValue& value, char separator) {
@@ -469,6 +560,9 @@ DataType getDataType(const DataValue& value) noexcept {
         if constexpr (std::is_same_v<T, int16_t>) return DataType::int16;
         if constexpr (std::is_same_v<T, uint32_t>) return DataType::uint32;
         if constexpr (std::is_same_v<T, int32_t>) return DataType::int32;
+        if constexpr (std::is_same_v<T, int64_t>)
+          return DataType::error;  // Cannot infer specific scaled type from
+                                   // generic int64_t
         if constexpr (std::is_floating_point_v<T>) return DataType::float4;
         if constexpr (std::is_same_v<T, std::string>) return DataType::char8;
         return DataType::error;
@@ -488,18 +582,6 @@ std::vector<DataTypeInfo> getSupportedDataTypes() {
   return types;
 }
 
-std::string getSupportedDataTypesJson() {
-  std::ostringstream oss;
-  oss << "[";
-  const auto types = ebus::getSupportedDataTypes();
-  for (size_t i = 0; i < types.size(); ++i) {
-    if (i > 0) oss << ",";
-    oss << types[i].toJson();
-  }
-  oss << "]";
-  return oss.str();
-}
-
 const char* dataTypeToString(DataType data_type) noexcept {
   auto m = getMeta(data_type);
   return m ? m->name : "UNKNOWN";
@@ -514,51 +596,65 @@ DataType stringToDataType(const char* str) {
   return DataType::error;
 }
 
-std::string decodeToJson(DataType dt, ByteView data) {
-  std::ostringstream oss;
-  oss << "{";
+void DataTypeInfo::toJson(std::string& json) const {
+  json += "{";
+  bool first_field = true;
+  append_field(json, "type", static_cast<int64_t>(dt), first_field);
+  append_field(json, "name", name, first_field);
+  append_field(json, "size", static_cast<int64_t>(size), first_field);
+  append_field(json, "is_numeric", is_numeric, first_field);
+  append_field(json, "is_signed", is_signed, first_field);
+  append_field(json, "is_float", is_float, first_field);
+  append_field(json, "has_replacement", has_replacement, first_field);
+  append_field(json, "replacement_value",
+               static_cast<uint64_t>(replacement_value), first_field);
+  append_json_float_custom_precision(json, "factor", factor, 4, first_field);
+  json += "}";
+}
 
+std::string getSupportedDataTypesJson() {
+  std::string json_str = "[";
+  json_str.reserve(8192);  // ~35 types * ~200 bytes per type
+  const auto types = getSupportedDataTypes();
+  for (size_t i = 0; i < types.size(); ++i) {
+    if (i > 0) json_str += ",";
+    types[i].toJson(json_str);
+  }
+  json_str += "]";
+  return json_str;
+}
+
+std::string decodeToJson(DataType dt, ByteView data) {
+  std::string json_str;
+  json_str.reserve(512);
+  json_str += "{";
+  bool first_field = true;
   auto meta_opt = getMeta(dt);
   if (!meta_opt) {
-    oss << "\"error\":\"Invalid DataType\"";
+    append_field(json_str, "error", "Invalid DataType", first_field);
   } else {
     const auto& meta = *meta_opt;
-    oss << "\"type\":" << static_cast<int32_t>(meta.dt) << ",";
-    oss << "\"name\":\"" << meta.name << "\",";
-    oss << "\"raw_hex\":\"" << toString(data) << "\",";
-
-    auto decoded_value_opt = decode(dt, data);
-    oss << "\"value\":";
-    if (decoded_value_opt) {
-      const auto& val = *decoded_value_opt;
-      if (isNull(val)) {
-        oss << "null";
-      } else if (std::holds_alternative<std::string>(val)) {
-        oss << "\"" << escapeJson(std::get<std::string>(val)) << "\"";
-      } else if (std::holds_alternative<float>(val)) {
-        oss << std::fixed << std::setprecision(4) << std::get<float>(val);
-      } else if (std::holds_alternative<uint8_t>(val)) {
-        oss << static_cast<int>(std::get<uint8_t>(val));
-      } else if (std::holds_alternative<int8_t>(val)) {
-        oss << static_cast<int>(std::get<int8_t>(val));
-      } else if (std::holds_alternative<uint16_t>(val)) {
-        oss << std::get<uint16_t>(val);
-      } else if (std::holds_alternative<int16_t>(val)) {
-        oss << std::get<int16_t>(val);
-      } else if (std::holds_alternative<uint32_t>(val)) {
-        oss << std::get<uint32_t>(val);
-      } else if (std::holds_alternative<int32_t>(val)) {
-        oss << std::get<int32_t>(val);
-      } else {
-        oss << "null";  // Should not happen with current DataValue types
-      }
-    } else {
-      oss << "null";
-    }
-    oss << ",\"factor\":" << std::fixed << std::setprecision(4) << meta.factor;
+    append_field(json_str, "type", static_cast<int64_t>(meta.dt), first_field);
+    append_field(json_str, "name", meta.name, first_field);
+    append_hex_field(json_str, "raw_hex", data, first_field);
+    auto decoded = decode(dt, data);
+    if (!first_field) json_str += ",";
+    json_str += "\"value\":";
+    if (decoded)
+      std::visit(JsonValueVisitor{json_str}, *decoded);
+    else
+      json_str += "null";
+    // Use the new formatFloat directly to avoid std::string creation in
+    // append_json_float_custom_precision
+    char float_buffer[64];
+    char* end_ptr =
+        formatFloat(meta.factor, 4, float_buffer, sizeof(float_buffer));
+    append_key(json_str, "factor",
+               first_field);  // This will add the comma if needed and the key
+    json_str.append(float_buffer, end_ptr - float_buffer);
   }
-  oss << "}";
-  return oss.str();
+  json_str += "}";
+  return json_str;
 }
 
 }  // namespace ebus

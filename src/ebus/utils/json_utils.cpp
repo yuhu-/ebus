@@ -3,30 +3,231 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+#include "utils/json_utils.hpp"
+
 #include <charconv>
+#include <cmath>
 #include <ctime>
-#include <ebus/callbacks.hpp>
-#include <ebus/config.hpp>
-#include <ebus/data_types.hpp>
-#include <ebus/device.hpp>
-#include <ebus/metrics.hpp>
-#include <ebus/status.hpp>
+#include <ebus/sequence.hpp>
 #include <ebus/types.hpp>
 #include <ebus/utils.hpp>
-#include <iomanip>
-#include <sstream>
-#include <string>
-#include <string_view>
-#include <vector>
-
-#include "core/bus_monitor.hpp"
 
 namespace ebus {
 
-namespace {
+std::string escapeJson(std::string_view s) {
+  std::string res;
+  res.reserve(s.length());
+  appendEscapedJson(res, s);
+  return res;
+}
+
+void appendEscapedJson(std::string& out, std::string_view s) {
+  for (char c : s) {
+    switch (c) {
+      case '"':
+        out += "\\\"";
+        break;
+      case '\\':
+        out += "\\\\";
+        break;
+      case '\b':
+        out += "\\b";
+        break;
+      case '\f':
+        out += "\\f";
+        break;
+      case '\n':
+        out += "\\n";
+        break;
+      case '\r':
+        out += "\\r";
+        break;
+      case '\t':
+        out += "\\t";
+        break;
+      default:
+        if (static_cast<unsigned char>(c) < 0x20) {
+          static const char hex[] = "0123456789abcdef";
+          out += "\\u00";
+          out += hex[(static_cast<unsigned char>(c) >> 4) & 0xf];
+          out += hex[static_cast<unsigned char>(c) & 0xf];
+        } else {
+          out += c;
+        }
+    }
+  }
+}
+
+std::string toString(uint8_t byte) {
+  static constexpr char hex_chars[] = "0123456789abcdef";
+  std::string s;
+  s.push_back(hex_chars[byte >> 4]);
+  s.push_back(hex_chars[byte & 0xf]);
+  return s;
+}
+
+std::string byteToHex(ByteView data) {
+  if (data.empty()) return {};
+  std::string res;
+  res.reserve(data.size() * 2);
+  appendHex(res, data);
+  return res;
+}
+
+void appendHex(std::string& out, ByteView data) {
+  static constexpr char hex_chars[] = "0123456789abcdef";
+  for (auto b : data) {
+    out.push_back(hex_chars[b >> 4]);
+    out.push_back(hex_chars[b & 0xf]);
+  }
+}
+
+std::vector<uint8_t> toVector(const std::string& str) {
+  if (str.empty()) return {};
+  std::vector<uint8_t> result;
+  result.reserve(str.size() / 2);
+  for (size_t i = 0; i + 1 < str.size(); i += 2) {
+    uint8_t value = 0;
+    auto [ptr, ec] =
+        std::from_chars(str.data() + i, str.data() + i + 2, value, 16);
+    if (ec == std::errc{}) result.push_back(value);
+  }
+  return result;
+}
+
+char* formatFloat(float value, int precision, char* buffer, size_t buffer_size,
+                  float lower_threshold, float upper_threshold) {
+  if (buffer_size == 0) return buffer;
+  buffer[0] = '\0';  // Ensure buffer is empty initially
+
+  if (std::isnan(value)) {
+    std::strncpy(buffer, "null", buffer_size);
+    buffer[buffer_size - 1] = '\0';
+    return buffer + std::min(buffer_size - 1, (size_t)4);
+  }
+  if (std::isinf(value)) {
+    if (value < 0) {
+      std::strncpy(buffer, "-inf", buffer_size);
+      buffer[buffer_size - 1] = '\0';
+      return buffer + std::min(buffer_size - 1, (size_t)4);
+    } else {
+      std::strncpy(buffer, "inf", buffer_size);
+      buffer[buffer_size - 1] = '\0';
+      return buffer + std::min(buffer_size - 1, (size_t)3);
+    }
+  }
+
+  char* ptr = buffer;
+  std::errc ec;
+
+  if ((std::abs(value) > 0 && std::abs(value) < lower_threshold) ||
+      std::abs(value) >= upper_threshold) {
+    auto res = std::to_chars(buffer, buffer + buffer_size, value,
+                             std::chars_format::scientific, precision);
+    ptr = res.ptr;
+    ec = res.ec;
+  } else {
+    auto res = std::to_chars(buffer, buffer + buffer_size, value,
+                             std::chars_format::fixed, precision);
+    ptr = res.ptr;
+    ec = res.ec;
+  }
+
+  if (ec == std::errc{}) {
+    size_t current_len = ptr - buffer;
+    if (current_len == 0) {
+      std::strncpy(buffer, "0", buffer_size);
+      buffer[buffer_size - 1] = '\0';
+      return buffer + 1;
+    }
+
+    // Post-processing: remove trailing zeros and decimal point if no fractional
+    // part
+    bool is_scientific = false;
+    for (size_t i = 0; i < current_len; ++i) {
+      if (buffer[i] == 'e' || buffer[i] == 'E') {
+        is_scientific = true;
+        break;
+      }
+    }
+
+    if (!is_scientific) {
+      size_t decimal_pos = current_len;
+      bool has_decimal = false;
+      for (size_t i = 0; i < current_len; ++i) {
+        if (buffer[i] == '.') {
+          has_decimal = true;
+          decimal_pos = i;
+          break;
+        }
+      }
+
+      if (has_decimal) {
+        // Remove trailing zeros
+        while (current_len > decimal_pos + 1 &&
+               buffer[current_len - 1] == '0') {
+          current_len--;
+        }
+        // Remove trailing decimal point if no digits follow
+        if (current_len > decimal_pos && buffer[current_len - 1] == '.') {
+          current_len--;
+        }
+      }
+    }
+
+    // Ensure null termination and return end pointer
+    buffer[current_len] = '\0';
+    return buffer + current_len;
+  }
+
+  std::strncpy(buffer, "ERR_FLOAT_FORMAT", buffer_size);
+  buffer[buffer_size - 1] = '\0';
+  return buffer + std::min(buffer_size - 1, (size_t)16);
+}
+
+Sequence frameMaster(uint8_t source, ByteView payload) {
+  Sequence msg;
+  msg.pushBack(source, false);
+  msg.append(makeSequence(payload));
+  msg.pushBack(msg.crc(), false);
+  msg.extend();
+  return msg;
+}
+
+std::string frameMasterHex(uint8_t source, ByteView payload) {
+  return byteToHex(frameMaster(source, payload));
+}
+
+std::string frameMasterHex(uint8_t source, const std::string& payload) {
+  return frameMasterHex(source, toVector(payload));
+}
+
+Sequence frameSlave(ByteView payload) {
+  Sequence msg;
+  msg.append(makeSequence(payload));
+  msg.pushBack(msg.crc(), false);
+  msg.extend();
+  return msg;
+}
+
+std::string frameSlaveHex(ByteView payload) {
+  return byteToHex(frameSlave(payload));
+}
+
+std::string frameSlaveHex(const std::string& payload) {
+  return frameSlaveHex(toVector(payload));
+}
+
+float roundDigits(float value, uint8_t digits) noexcept {
+  float decimals = std::pow(10.0f, static_cast<float>(digits));
+  return std::round(value * decimals) / decimals;
+}
+
+// json_utils.hpp
+
 /**
  * Finds a key safely by ensuring it is wrapped in quotes and followed by a
- * colon. This prevents matching keys that are substrings of other keys.
+ * colon.
  */
 size_t findKey(std::string_view json, std::string_view key) {
   size_t pos = 0;
@@ -82,651 +283,131 @@ std::string_view extractSub(std::string_view json, std::string_view key) {
   return "";
 }
 
-template <typename T>
-T toNum(std::string_view s) {
-  if (s.empty() || s == "null") return 0;
-  T val = 0;
-  std::from_chars(s.data(), s.data() + s.size(), val);
-  return val;
-}
-}  // namespace
-
-// --- config.hpp ---
-
-std::string RuntimeConfig::toJson() const {
-  std::ostringstream oss;
-  oss << "{"
-      << "\"address\": " << static_cast<int>(address) << ","
-      << "\"lock_counter\": " << static_cast<int>(lock_counter) << ","
-      << "\"system_inquiry\": " << (system_inquiry ? "true" : "false") << ","
-      << "\"system_response\": " << (system_response ? "true" : "false") << ","
-      << "\"bus\": {"
-      << "\"window_us\": " << bus.window_us << ","
-      << "\"offset_us\": " << bus.offset_us << ","
-      << "\"watchdog_timeout_ms\": " << bus.watchdog_timeout_ms << ","
-      << "\"syn_gen\": " << (bus.syn_gen ? "true" : "false") << "},"
-      << "\"diagnostics\": {"
-      << "\"level\": " << static_cast<int>(diagnostics.level) << ","
-      << "\"log_size\": " << diagnostics.log_size << "},"
-      << "\"network\": {"
-      << "\"session_timeout_ms\": " << network.session_timeout_ms << ","
-      << "\"transmit_timeout_ms\": " << network.transmit_timeout_ms << ","
-      << "\"outbound_buffer_size\": " << network.outbound_buffer_size << "},"
-      << "\"device\": {"
-      << "\"scan_on_startup\": " << (device.scan_on_startup ? "true" : "false")
-      << ","
-      << "\"initial_delay_s\": " << device.initial_delay_s << ","
-      << "\"startup_interval_s\": " << device.startup_interval_s << ","
-      << "\"max_startup_scans\": " << static_cast<int>(device.max_startup_scans)
-      << "},"
-      << "\"scheduler\": {"
-      << "\"max_send_attempts\": " << scheduler.max_send_attempts << ","
-      << "\"base_backoff_ms\": " << scheduler.base_backoff_ms << ","
-      << "\"fsm_timeout_ms\": " << scheduler.fsm_timeout_ms << ","
-      << "\"total_timeout_ms\": " << scheduler.total_timeout_ms << "}}";
-
-  return oss.str();
+/**
+ * Shared internal helper to handle JSON structural formatting.
+ * Using non-templated overloads instead of a single template reduces
+ * code duplication in Flash memory on targets like ESP32.
+ */
+void append_key(std::string& json, const char* key, bool& first) {
+  if (!first) json += ",";
+  json += "\"";
+  json += key;
+  json += "\":";
+  first = false;
 }
 
-RuntimeConfig RuntimeConfig::fromJson(const std::string& json) {
-  RuntimeConfig cfg;
-  if (!isValidJson(json)) {
-    // Return a default-constructed config if the JSON is invalid
-    return RuntimeConfig{};
-  }
-  std::string_view j = json;
-  cfg.address = static_cast<uint8_t>(toNum<int>(extract(j, "address")));
-  cfg.lock_counter =
-      static_cast<uint8_t>(toNum<int>(extract(j, "lock_counter")));
-  cfg.system_inquiry = extract(j, "system_inquiry") == "true";
-  cfg.system_response = extract(j, "system_response") == "true";
-  auto bus_j = extractSub(j, "bus");
-  if (!bus_j.empty()) {
-    cfg.bus.window_us =
-        static_cast<uint16_t>(toNum<int>(extract(bus_j, "window_us")));
-    cfg.bus.offset_us =
-        static_cast<uint16_t>(toNum<int>(extract(bus_j, "offset_us")));
-    cfg.bus.watchdog_timeout_ms =
-        toNum<uint32_t>(extract(bus_j, "watchdog_timeout_ms"));
-    cfg.bus.syn_gen = extract(bus_j, "syn_gen") == "true";
-  }
-  auto diag_j = extractSub(j, "diagnostics");
-  if (!diag_j.empty()) {
-    cfg.diagnostics.level =
-        static_cast<LogLevel>(toNum<int>(extract(diag_j, "level")));
-    cfg.diagnostics.log_size = toNum<size_t>(extract(diag_j, "log_size"));
-  }
-  auto net_j = extractSub(j, "network");
-  if (!net_j.empty()) {
-    cfg.network.session_timeout_ms =
-        toNum<uint32_t>(extract(net_j, "session_timeout_ms"));
-    cfg.network.transmit_timeout_ms =
-        toNum<uint32_t>(extract(net_j, "transmit_timeout_ms"));
-    cfg.network.outbound_buffer_size =
-        toNum<size_t>(extract(net_j, "outbound_buffer_size"));
-  }
-  auto device_j = extractSub(j, "device");
-  if (!device_j.empty()) {
-    cfg.device.scan_on_startup = extract(device_j, "scan_on_startup") == "true";
-    cfg.device.initial_delay_s =
-        toNum<uint32_t>(extract(device_j, "initial_delay_s"));
-    cfg.device.startup_interval_s =
-        toNum<uint32_t>(extract(device_j, "startup_interval_s"));
-    cfg.device.max_startup_scans = static_cast<uint8_t>(
-        toNum<int>(extract(device_j, "max_startup_scans")));
-  }
-  auto sched_j = extractSub(j, "scheduler");
-  if (!sched_j.empty()) {
-    cfg.scheduler.max_send_attempts =
-        static_cast<uint8_t>(toNum<int>(extract(sched_j, "max_send_attempts")));
-    cfg.scheduler.base_backoff_ms =
-        toNum<uint32_t>(extract(sched_j, "base_backoff_ms"));
-    cfg.scheduler.fsm_timeout_ms =
-        toNum<uint32_t>(extract(sched_j, "fsm_timeout_ms"));
-    cfg.scheduler.total_timeout_ms =
-        toNum<uint32_t>(extract(sched_j, "total_timeout_ms"));
-  }
-  return cfg;
+void append_field(std::string& json, const char* key, std::string_view val,
+                  bool& first) {
+  append_key(json, key, first);
+  json += "\"";
+  appendEscapedJson(json, val);
+  json += "\"";
 }
 
-bool RuntimeConfig::isValidJson(const std::string& json) {
-  std::string_view sv = json;
-  if (sv.empty()) return false;
-  // Trim whitespace
-  size_t first = sv.find_first_not_of(" \t\n\r");
-  size_t last = sv.find_last_not_of(" \t\n\r");
-  if (first == std::string::npos || last == std::string::npos)
-    return false;  // All whitespace
-
-  std::string_view trimmed_json = sv.substr(first, last - first + 1);
-
-  if (trimmed_json.empty() || trimmed_json.front() != '{' ||
-      trimmed_json.back() != '}') {
-    return false;
-  }
-
-  // Basic check for balanced braces/brackets and string escaping
-  int brace_count = 0;
-  int bracket_count = 0;
-  bool in_string = false;
-  for (size_t i = 0; i < trimmed_json.length(); ++i) {
-    char c = trimmed_json[i];
-    if (c == '\\') {  // Skip escaped characters
-      i++;
-    } else if (c == '"') {
-      in_string = !in_string;
-    } else if (!in_string) {
-      if (c == '{')
-        brace_count++;
-      else if (c == '}')
-        brace_count--;
-      else if (c == '[')
-        bracket_count++;
-      else if (c == ']')
-        bracket_count--;
-    }
-    if (brace_count < 0 || bracket_count < 0) return false;  // Unbalanced
-  }
-  return brace_count == 0 && bracket_count == 0 && !in_string;
+void append_field(std::string& json, const char* key, bool val, bool& first) {
+  append_key(json, key, first);
+  json += (val ? "true" : "false");
 }
 
-std::string BusConfig::toJson() const {
-  std::ostringstream oss;
-  oss << "{";
-
-#if defined(ESP_PLATFORM) && !EBUS_SIMULATION
-  oss << "\"platform\": \"esp32\","
-      << "\"uart_port\": " << static_cast<int>(uart_port) << ","
-      << "\"rx_pin\": " << static_cast<int>(rx_pin) << ","
-      << "\"tx_pin\": " << static_cast<int>(tx_pin) << ","
-      << "\"timer_group\": " << static_cast<int>(timer_group) << ","
-      << "\"timer_idx\": " << static_cast<int>(timer_idx);
-#elif defined(POSIX) && !EBUS_SIMULATION
-  oss << "\"platform\": \"posix\","
-      << "\"device\": \"" << escapeJson(device) << "\",";
-#endif
-  oss << "}";
-  return oss.str();
+void append_field(std::string& json, const char* key, int64_t val,
+                  bool& first) {
+  append_key(json, key, first);
+  char buffer[24];
+  auto [ptr, ec] = std::to_chars(buffer, buffer + sizeof(buffer), val);
+  if (ec == std::errc{})
+    json.append(buffer, ptr - buffer);
+  else
+    json += "null";
 }
 
-std::string EbusConfig::toJson() const {
-  std::ostringstream oss;
-  oss << "{"
-      << "\"runtime\":" << runtime.toJson() << ","
-      << "\"bus_hardware\":" << bus.toJson() << "}";
-  return oss.str();
+void append_field(std::string& json, const char* key, uint64_t val,
+                  bool& first) {
+  append_key(json, key, first);
+  char buffer[24];
+  auto [ptr, ec] = std::to_chars(buffer, buffer + sizeof(buffer), val);
+  if (ec == std::errc{})
+    json.append(buffer, ptr - buffer);
+  else
+    json += "null";
 }
 
-// --- callbacks.hpp ---
-
-std::string TelegramInfo::toJson() const {
-  std::ostringstream oss;
-  oss << "{"
-      << "\"session_id\":" << session_id << ","
-      << "\"poll_id\":" << poll_id << ","
-      << "\"retry_count\":" << retry_count << ","
-      << "\"message_type\":\"" << toString(message_type) << "\","
-      << "\"telegram_type\":\"" << toString(telegram_type) << "\","
-      << "\"handler_state\":\"" << toString(handler_state) << "\","
-      << "\"request_state\":\"" << toString(request_state) << "\","
-      << "\"master\":\"" << toString(master_view) << "\","
-      << "\"slave\":\"" << toString(slave_view) << "\"}";
-  return oss.str();
-}
-
-std::string ErrorInfo::toJson() const {
-  std::ostringstream oss;
-  oss << "{"
-      << "\"session_id\":" << session_id << ","
-      << "\"poll_id\":" << poll_id << ","
-      << "\"level\":\"" << toString(level) << "\","
-      << "\"protocol_error\":\"" << toString(protocol_error) << "\","
-      << "\"result\":\"" << toString(result) << "\","
-      << "\"sequence_state\":\"" << toString(sequence_state) << "\","
-      << "\"handler_state\":\"" << toString(handler_state) << "\","
-      << "\"request_state\":\"" << toString(request_state) << "\","
-      << "\"master\":\"" << toString(master_view) << "\","
-      << "\"slave\":\"" << toString(slave_view) << "\","
-      << "\"utilization\":" << std::fixed << std::setprecision(2) << utilization
-      << "}";
-  return oss.str();
-}
-
-std::string ReactiveInfo::toJson() const {
-  std::ostringstream oss;
-  oss << "{"
-      << "\"session_id\":" << session_id << ","
-      << "\"master\":\"" << ebus::toString(master_view) << "\","
-      << "\"slave_response\":\"" << slave_response.toString() << "\"}";
-  return oss.str();
-}
-
-std::string ResultInfo::toJson() const {
-  std::ostringstream oss;
-  oss << "{"
-      << "\"session_id\":" << session_id << ","
-      << "\"poll_id\":" << poll_id << ","
-      << "\"success\":" << (success ? "true" : "false") << ","
-      << "\"result\":\"" << toString(result) << "\","
-      << "\"sequence_state\":\"" << toString(sequence_state) << "\","
-      << "\"master\":\"" << toString(master_view) << "\","
-      << "\"slave\":\"" << toString(slave_view) << "\"}";
-  return oss.str();
-}
-
-std::string BusEventInfo::toJson() const {
-  std::ostringstream oss;
-  // Convert steady_clock to system_clock (approximation for external logs)
-  auto wall_time =
-      std::chrono::system_clock::now() +
-      std::chrono::duration_cast<std::chrono::system_clock::duration>(
-          timestamp - Clock::now());
-  time_t t = std::chrono::system_clock::to_time_t(wall_time);
-  auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                wall_time.time_since_epoch())
-                .count() %
-            1000;
-  struct tm tm_info;
-  gmtime_r(&t, &tm_info);
-
-  oss << "{"
-      << "\"byte\":\"" << toString(byte) << "\","
-      << "\"handler_state\":\"" << toString(handler_state) << "\","
-      << "\"request_state\":\"" << toString(request_state) << "\","
-      << "\"result\":\"" << toString(result) << "\","
-      << "\"lock_counter\":" << static_cast<int>(lock_counter) << ","
-      << "\"timestamp\":\"" << std::put_time(&tm_info, "%Y-%m-%dT%H:%M:%S")
-      << "." << std::setw(3) << std::setfill('0') << ms << "Z\""
-      << "}";
-  return oss.str();
-}
-
-// --- device.hpp ---
-
-std::string DeviceInfo::toJson() const {
-  std::ostringstream oss;
-  oss << "{"
-      << "\"slave_address\":\"" << toString(slave_address) << "\","
-      << "\"manufacturer\":\"" << toString(manufacturer) << "\","
-      << "\"manufacturer_name\":\"" << escapeJson(manufacturer_name) << "\","
-      << "\"unit_id\":\"" << escapeJson(unit_id) << "\","
-      << "\"software_version\":\"" << escapeJson(software_version) << "\","
-      << "\"hardware_version\":\"" << escapeJson(hardware_version) << "\"";
-
-  if (!vaillant.serial_number.empty()) {
-    oss << ",\"vaillant\":{"
-        << "\"serial_number\":\"" << vaillant.serial_number << "\","
-        << "\"product_code\":\"" << vaillant.product_code << "\""
-        << "}";
-  }
-
-  oss << ",\"frequency\":" << frequency << "}";
-  return oss.str();
-}
-
-// --- types.hpp ---
-
-std::string HandlerTransition::toJson() const {
-  std::ostringstream oss;
-  time_t s = static_cast<time_t>(timestamp / 1000);
-  struct tm tm_info;
-  gmtime_r(&s, &tm_info);
-
-  oss << "{"
-      << "\"from\":\"" << toString(from) << "\","
-      << "\"to\":\"" << toString(to) << "\","
-      << "\"timestamp\":\"" << std::put_time(&tm_info, "%Y-%m-%dT%H:%M:%SZ")
-      << "\""
-      << "}";
-  return oss.str();
-}
-
-std::string RequestTransition::toJson() const {
-  std::ostringstream oss;
-  time_t s = static_cast<time_t>(timestamp / 1000);
-  struct tm tm_info;
-  gmtime_r(&s, &tm_info);
-
-  oss << "{"
-      << "\"from\":\"" << toString(from) << "\","
-      << "\"to\":\"" << toString(to) << "\","
-      << "\"timestamp\":\"" << std::put_time(&tm_info, "%Y-%m-%dT%H:%M:%SZ")
-      << "\""
-      << "}";
-  return oss.str();
-}
-
-std::string ErrorEntry::toJson() const {
-  std::ostringstream oss;
-  time_t t = static_cast<time_t>(timestamp / 1000);
-  struct tm tm_info;
-  gmtime_r(&t, &tm_info);
-
-  oss << "{"
-      << "\"session_id\":" << session_id << ","
-      << "\"poll_id\":" << poll_id << ","
-      << "\"level\":\"" << ebus::toString(level) << "\","
-      << "\"protocol_error\":\"" << ebus::toString(protocol_error) << "\","
-      << "\"result\":\"" << ebus::toString(result) << "\","
-      << "\"sequence_state\":\"" << ebus::toString(sequence_state) << "\","
-      << "\"handler_state\":\"" << ebus::toString(handler_state) << "\","
-      << "\"request_state\":\"" << ebus::toString(request_state) << "\","
-      << "\"master\":\"" << ebus::toString(master) << "\","
-      << "\"slave\":\"" << ebus::toString(slave) << "\","
-      << "\"utilization\":" << std::fixed << std::setprecision(2) << utilization
-      << ","
-      << "\"timestamp\":\"" << std::put_time(&tm_info, "%Y-%m-%dT%H:%M:%SZ")
-      << "\""
-      << "}";
-  return oss.str();
-}
-
-std::string metrics::HandlerMetrics::toJson() const {
-  std::ostringstream oss;
-  oss << std::fixed << std::setprecision(2);
-  oss << "{\"error_rate\":" << error_rate
-      << ",\"protocol_data_utilization_rate\":"
-      << protocol_data_utilization_rate
-      << ",\"messages_total\":" << messages_total
-      << ",\"error_total\":" << error_total
-      << ",\"error_passive\":" << error_passive
-      << ",\"error_reactive\":" << error_reactive
-      << ",\"error_active\":" << error_active
-      << ",\"total_data_bytes_sent\":" << total_data_bytes_sent
-      << ",\"total_protocol_bytes_sent\":" << total_protocol_bytes_sent
-      << ",\"sync\":" << sync.toJson() << ",\"write\":" << write.toJson()
-      << ",\"passive_first\":" << passive_first.toJson()
-      << ",\"passive_data\":" << passive_data.toJson()
-      << ",\"active_first\":" << active_first.toJson()
-      << ",\"active_data\":" << active_data.toJson()
-      << ",\"callback_won\":" << callback_won.toJson()
-      << ",\"callback_lost\":" << callback_lost.toJson()
-      << ",\"callback_reactive\":" << callback_reactive.toJson()
-      << ",\"callback_telegram\":" << callback_telegram.toJson()
-      << ",\"callback_error\":" << callback_error.toJson();
-
-  oss << ",\"state_timings\":{";
-  for (size_t i = 0; i < detail::FsmLimits::num_handler_states; ++i) {
-    if (i > 0) oss << ",";
-    oss << "\"" << toString(static_cast<HandlerState>(i))
-        << "\":" << state_timings[i].toJson();
-  }
-  oss << "}}";
-  return oss.str();
-}
-
-std::string metrics::RequestMetrics::toJson() const {
-  std::ostringstream oss;
-  oss << std::fixed << std::setprecision(2);
-  oss << "{\"contention_rate\":" << contention_rate
-      << ",\"collision_rate\":" << collision_rate
-      << ",\"won_total\":" << won_total << ",\"lost_total\":" << lost_total
-      << ",\"first_syn\":" << first_syn << ",\"first_won\":" << first_won
-      << ",\"first_retry\":" << first_retry << ",\"first_lost\":" << first_lost
-      << ",\"first_error\":" << first_error << ",\"retry_syn\":" << retry_syn
-      << ",\"retry_error\":" << retry_error << ",\"second_won\":" << second_won
-      << ",\"second_lost\":" << second_lost
-      << ",\"second_error\":" << second_error << "}";
-
-  return oss.str();
-}
-
-std::string metrics::BusMetrics::toJson() const {
-  std::ostringstream oss;
-  oss << std::fixed << std::setprecision(2);
-  oss << "{\"utilization\":" << utilization
-      << ",\"start_bit_errors\":" << start_bit_errors
-      << ",\"syn_postponed_count\":" << syn_postponed_count;
-  oss << ",\"congestion\":" << (congestion ? "true" : "false")
-      << ",\"high_jitter\":" << (high_jitter ? "true" : "false");
-
-  if (last_error_timestamp > 0) {
-    time_t t = static_cast<time_t>(last_error_timestamp / 1000);
-    struct tm tm_info;
-    gmtime_r(&t, &tm_info);
-
-    oss << ",\"last_error_timestamp\":\""
-        << std::put_time(&tm_info, "%Y-%m-%dT%H:%M:%SZ") << "\"";
-  }
-
-  oss << ",\"delay\":" << delay.toJson() << ",\"window\":" << window.toJson()
-      << ",\"transmit\":" << transmit.toJson()
-      << ",\"uptime\":" << uptime.toJson()
-      << ",\"syn_postpone\":" << syn_postpone.toJson() << "}";
-  return oss.str();
-}
-
-std::string metrics::DeviceMetrics::toJson() const {
-  std::ostringstream oss;
-  oss << "{\"unknown_devices\":" << unknown_devices << ",\"masters\":[";
-  bool first = true;
-  for (size_t i = 0; i < 256; ++i) {
-    if (masters.test(i)) {
-      if (!first) oss << ",";
-      static constexpr char hex[] = "0123456789abcdef";
-      oss << "\"0x" << hex[i >> 4] << hex[i & 0xf] << "\"";
-      first = false;
-    }
-  }
-  oss << "],\"slaves\":[";
-  first = true;
-  for (size_t i = 0; i < 256; ++i) {
-    if (slaves.test(i)) {
-      if (!first) oss << ",";
-      static constexpr char hex[] = "0123456789abcdef";
-      oss << "\"0x" << hex[i >> 4] << hex[i & 0xf] << "\"";
-      first = false;
-    }
-  }
-  oss << "]}";
-  return oss.str();
-}
-
-std::string metrics::ControllerMetrics::toJson() const {
-  std::ostringstream oss;
-  oss << "{\"public_queue_dropped\":" << public_queue_dropped << "}";
-  return oss.str();
-}
-
-std::string metrics::SystemMetrics::toJson() const {
-  std::ostringstream oss;
-  oss << std::fixed << std::setprecision(2);
-  oss << "{\"handler\":" << handler.toJson()
-      << ",\"request\":" << request.toJson() << ",\"bus\":" << bus.toJson()
-      << ",\"devices\":" << devices.toJson()
-      << ",\"controller\":" << controller.toJson() << ",\"quality\":" << quality
-      << "}";
-  return oss.str();
-}
-
-// --- metrics.hpp ---
-
-std::string MetricValues::toJson() const {
-  std::ostringstream oss;
-  oss << std::fixed << std::setprecision(2);
-  oss << "{\"last\":" << last << ",\"min\":" << min << ",\"max\":" << max
-      << ",\"mean\":" << mean << ",\"std_dev\":" << stddev
-      << ",\"count\":" << count << "}";
-  return oss.str();
-}
-
-namespace {
-std::string threadToJson(const ThreadStatus& s) {
-  std::ostringstream oss;
-  oss << "{"
-      << "\"name\":\"" << (s.name.empty() ? "unknown" : escapeJson(s.name))
-      << "\","
-      << "\"stack_size\":" << s.task_stack_bytes << ","
-      << "\"stack_free\":" << s.task_stack_free_bytes << "}";
-  return oss.str();
-}
-
-std::string queueToJson(const ThreadStatus& thread, size_t size,
-                        size_t capacity) {
-  std::ostringstream oss;
-  oss << "{"
-      << "\"thread\":" << thread.toJson() << ","
-      << "\"queue_size\":" << size << ","
-      << "\"queue_capacity\":" << capacity << "}";
-  return oss.str();
-}
-}  // namespace
-
-std::string ThreadStatus::toJson() const { return threadToJson(*this); }
-
-std::string ControllerStatus::toJson() const {
-  return "{\"thread\":" + thread.toJson() + "}";
-}
-
-std::string BusStatus::toJson() const {
-  return "{\"bus_thread\":" + bus_thread.toJson() +
-         ",\"syn_thread\":" + syn_thread.toJson() + "}";
-}
-
-std::string BusHandlerStatus::toJson() const {
-  return queueToJson(thread, queue_size, queue_capacity);
-}
-
-std::string SchedulerStatus::toJson() const {
-  return queueToJson(thread, queue_size, queue_capacity);
-}
-
-std::string ClientManagerStatus::toJson() const {
-  std::ostringstream oss;
-  oss << "{"
-      << "\"thread\":" << thread.toJson() << ","
-      << "\"queue_size\":" << queue_size << ","
-      << "\"queue_capacity\":" << queue_capacity << ","
-      << "\"session_active\":" << (session_active ? "true" : "false")
-      << ",\"session_state\":\"" << escapeJson(session_state) << "\","
-      << "\"last_error\":\"" << escapeJson(last_error) << "\"}";
-  return oss.str();
-}
-
-std::string DeviceManagerStatus::toJson() const {
-  std::ostringstream oss;
-  oss << "{"
-      << "\"identified_count\":" << identified_count << ","
-      << "\"unknown_count\":" << unknown_count << "}";
-  return oss.str();
-}
-
-std::string DeviceScannerStatus::toJson() const {
-  std::ostringstream oss;
-  oss << "{"
-      << "\"is_scanning\":" << (is_scanning ? "true" : "false") << ","
-      << "\"full_scan_active\":" << (full_scan_active ? "true" : "false") << ","
-      << "\"full_scan_address\":" << full_scan_address << ","
-      << "\"scan_on_startup_enabled\":"
-      << (scan_on_startup_enabled ? "true" : "false") << ","
-      << "\"startup_scan_count\":" << static_cast<int>(startup_scan_count)
-      << ","
-      << "\"manual_queue_size\":" << manual_queue_size << ","
-      << "\"startup_queue_size\":" << startup_queue_size << "}";
-  return oss.str();
-}
-
-std::string PollManagerStatus::toJson() const {
-  std::ostringstream oss;
-  oss << "{"
-      << "\"item_count\":" << item_count << "}";
-  return oss.str();
-}
-
-std::string SystemResources::QueueInfo::toJson() const {
-  std::ostringstream oss;
-  oss << "{"
-      << "\"name\":\"" << escapeJson(name) << "\","
-      << "\"size\":" << size << ","
-      << "\"capacity\":" << capacity << "}";
-  return oss.str();
-}
-
-std::string SystemResources::toJson() const {
-  std::ostringstream oss;
-  oss << "{"
-      << "\"timestamp_ms\":" << timestamp_ms << ","
-      << "\"threads\":[";
-  for (size_t i = 0; i < threads.size(); ++i) {
-    if (i > 0) oss << ",";
-    oss << threads[i].toJson();
-  }
-  oss << "],\"queues\":[";
-  for (size_t i = 0; i < queues.size(); ++i) {
-    if (i > 0) oss << ",";
-    oss << queues[i].toJson();
-  }
-  oss << "]}";
-  return oss.str();
-}
-
-std::string ServiceStatus::toJson() const {
-  return serializeServiceStatus(*this);
+void append_field(std::string& json, const char* key, double val, bool& first) {
+  append_key(json, key, first);
+  char buffer[64];
+  char* end = formatFloat(static_cast<float>(val), 2, buffer, sizeof(buffer));
+  json.append(buffer, end - buffer);
 }
 
 /**
- * To implement the zero-allocation requirement, we would need to pass
- * the actual BusMonitor to this function, as ServiceStatus no longer
- * holds the history vectors.
+ * Non-templated hex formatter.
  */
-std::string serializeServiceStatus(const ServiceStatus& status,
-                                   detail::BusMonitor* monitor,
-                                   bool reset_histories) {
-  std::ostringstream oss;
-  oss << "{"
-      << "\"last_update_timestamp_ms\":" << status.last_update_timestamp_ms
-      << ",\"controller\":" << status.controller.toJson()
-      << ",\"bus\":" << status.bus.toJson()
-      << ",\"bus_handler\":" << status.bus_handler.toJson()
-      << ",\"scheduler\":" << status.scheduler.toJson()
-      << ",\"client_manager\":" << status.client_manager.toJson()
-      << ",\"device_manager\":" << status.device_manager.toJson()
-      << ",\"device_scanner\":" << status.device_scanner.toJson()
-      << ",\"poll_manager\":" << status.poll_manager.toJson();
-
-  if (monitor) {
-    oss << ",\"handler_history\":[";
-    bool first = true;
-    monitor->handler_history_.forEach([&](const HandlerTransition& t) {
-      if (!first) oss << ",";
-      oss << t.toJson();
-      first = false;
-    });
-    oss << "],\"request_history\":[";
-    first = true;
-    monitor->request_history_.forEach([&](const RequestTransition& t) {
-      if (!first) oss << ",";
-      oss << t.toJson();
-      first = false;
-    });
-    oss << "]";
-
-    if (reset_histories) {
-      monitor->handler_history_.clear();
-      monitor->request_history_.clear();
-      monitor->utilization_history_.clear();
-    }
-  }
-
-  oss << "}";
-  return oss.str();
+void append_hex_field(std::string& json, const char* key, ByteView data,
+                      bool& first) {
+  append_key(json, key, first);
+  json += "\"";
+  appendHex(json, data);
+  json += "\"";
 }
 
-// --- data_types.hpp ---
+// Helper for appending a formatted timestamp (ISO 8601 UTC)
+void append_json_timestamp(std::string& json_str, const char* key,
+                           uint64_t timestamp_ms, bool& first_field) {
+  if (!first_field) {
+    json_str += ",";
+  }
+  json_str += "\"";
+  json_str += key;
+  json_str += "\":\"";
+  time_t s = static_cast<time_t>(timestamp_ms / 1000);
+  struct tm tm_info;
+  gmtime_r(&s, &tm_info);
+  char buffer[32];
+  strftime(buffer, sizeof(buffer), "%Y-%m-%dT%H:%M:%SZ", &tm_info);
+  json_str += buffer;
+  json_str += "\"";
+  first_field = false;
+}
 
-std::string DataTypeInfo::toJson() const {
-  std::ostringstream oss;
-  oss << "{"
-      << "\"type\":" << static_cast<int32_t>(dt) << ","
-      << "\"name\":\"" << name << "\","
-      << "\"size\":" << static_cast<int>(size) << ","
-      << "\"is_numeric\":" << (is_numeric ? "true" : "false") << ","
-      << "\"is_signed\":" << (is_signed ? "true" : "false") << ","
-      << "\"is_float\":" << (is_float ? "true" : "false") << ","
-      << "\"has_replacement\":" << (has_replacement ? "true" : "false") << ","
-      << "\"replacement_value\":" << replacement_value << ","
-      << "\"factor\":" << std::fixed << std::setprecision(4) << factor << "}";
-  return oss.str();
+// Helper for appending raw JSON objects/arrays (already formatted strings)
+void append_json_raw(std::string& json_str, const char* key,
+                     const std::string& raw_json, bool& first_field) {
+  if (!first_field) {
+    json_str += ",";
+  }
+  json_str += "\"";
+  json_str += key;
+  json_str += "\":";
+  json_str += raw_json;
+  first_field = false;
+}
+
+// Helper for appending raw JSON values (e.g., null, true, false, numbers)
+void append_json_value_raw(std::string& json_str, const char* key,
+                           const char* raw_value, bool& first_field) {
+  if (!first_field) {
+    json_str += ",";
+  }
+  json_str += "\"";
+  json_str += key;
+  json_str += "\":";
+  json_str += raw_value;
+  first_field = false;
+}
+
+// Helper for appending formatted floats with custom precision
+void append_json_float_custom_precision(std::string& json_str, const char* key,
+                                        float value, int precision,
+                                        bool& first_field) {
+  if (!first_field) {
+    json_str += ",";
+  }
+  json_str += "\"";
+  json_str += key;
+  json_str += "\":";
+  char buffer[64];
+  char* end = formatFloat(value, precision, buffer, sizeof(buffer));
+  json_str.append(buffer, end - buffer);
+  first_field = false;
 }
 
 }  // namespace ebus

@@ -17,6 +17,9 @@
 #include "core/bus_handler.hpp"
 #include "core/bus_monitor.hpp"
 #include "core/handler.hpp"
+#if EBUS_SIMULATION
+#include "ebus/virtual_bus.hpp"
+#endif
 #include "core/request.hpp"
 #include "platform/bus.hpp"
 #include "platform/service_thread.hpp"
@@ -58,6 +61,9 @@ struct Impl {
 #endif
   std::unique_ptr<detail::ClientManager> client_manager_;
   std::unique_ptr<detail::platform::ServiceThread> worker_;
+
+  // Persistent scratch buffer to avoid heap fragmentation during JSON exports
+  mutable std::string telemetry_scratch_;
 };
 
 Controller::Controller() : impl_(new Impl()) {}
@@ -426,6 +432,9 @@ size_t Controller::getErrorLogCapacity() const {
 void Controller::clearErrors() { impl_->error_buffer_.clear(); }
 
 std::string Controller::getSystemResourcesJson() const {
+  impl_->telemetry_scratch_.clear();
+  impl_->telemetry_scratch_.reserve(1024);
+
   SystemResources res;
   res.timestamp_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
                          std::chrono::system_clock::now().time_since_epoch())
@@ -467,12 +476,19 @@ std::string Controller::getSystemResourcesJson() const {
         {"client_manager", c_stat.queue_size, c_stat.queue_capacity});
   }
 
-  return res.toJson();
+  res.toJson(impl_->telemetry_scratch_);
+  return impl_->telemetry_scratch_;
 }
 
 std::string Controller::getServiceStatusJson(bool reset_histories) const {
-  return serializeServiceStatus(getServiceStatus(), impl_->bus_monitor_.get(),
-                                reset_histories);
+  impl_->telemetry_scratch_.clear();
+  impl_->telemetry_scratch_.reserve(8192);
+
+  // Use the append pattern to populate the persistent buffer
+  serializeServiceStatus(impl_->telemetry_scratch_, getServiceStatus(),
+                         impl_->bus_monitor_.get(), reset_histories);
+
+  return impl_->telemetry_scratch_;
 }
 
 ServiceStatus Controller::getServiceStatus() const {
@@ -503,7 +519,7 @@ ServiceStatus Controller::getServiceStatus() const {
     status.poll_manager = impl_->poll_manager_->getStatus();
   }
 
-  EBUS_LOG_DEBUG("Service Status Update: " + status.toJson());
+  EBUS_LOG_DEBUG("Service Status Update: " + ebus::toJson(status, 4096));
 
   return status;
 }
@@ -524,17 +540,11 @@ void Controller::processPublicEvents() {
     }
     if (callback &&
         detail::Logger::getInstance().isEnabled(ev.data.err.level)) {
-      ErrorInfo info{ev.session_id,
-                     ev.poll_id,
-                     ev.data.err.level,
-                     ev.data.err.protocol_error,
-                     ev.data.err.result,
-                     ev.data.err.sequence_state,
-                     ev.handler_state,
-                     ev.request_state,
-                     ev.master,
-                     ev.slave,
-                     ev.data.err.utilization};
+      ErrorInfo info{ev.session_id,      ev.poll_id,
+                     ev.data.err.level,  ev.data.err.protocol_error,
+                     ev.data.err.result, ev.data.err.sequence_state,
+                     ev.handler_state,   ev.request_state,
+                     ev.master,          ev.slave};
       callback(info);
     }
   }
@@ -671,7 +681,6 @@ void Controller::constructMembers() {
       ev.request_state = info.request_state;
       ev.master.assign(info.master_view.data(), info.master_view.size());
       ev.slave.assign(info.slave_view.data(), info.slave_view.size());
-      ev.data.err.utilization = info.utilization;
       if (!impl_->public_errors_.tryPush(std::move(ev))) {
         impl_->bus_monitor_->updateController(
             [](auto& m) { m.public_queue_dropped++; });
@@ -692,7 +701,6 @@ void Controller::constructMembers() {
         entry.request_state = info.request_state;
         entry.setMaster(info.master_view.data(), info.master_view.size());
         entry.setSlave(info.slave_view.data(), info.slave_view.size());
-        entry.utilization = info.utilization;
         entry.timestamp =
             std::chrono::duration_cast<std::chrono::milliseconds>(
                 std::chrono::system_clock::now().time_since_epoch())

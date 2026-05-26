@@ -11,21 +11,13 @@
 using namespace ebus::detail;
 
 TEST_CASE("JsonUtils: Serialization and Escaping", "[utils][json]") {
-  SECTION("Escaping special characters") {
-    ebus::ErrorInfo info;
-    info.utilization = 12.345;
-
-    std::string json = info.toJson();
-    REQUIRE(json.find("12.35") != std::string::npos);  // Rounded
-  }
-
   SECTION("Device info to JSON") {
     ebus::DeviceInfo info;
     info.slave_address = 0x15;
     info.manufacturer_name = "Vaillant";
     info.vaillant.serial_number = "2112345678901234567890123456";
 
-    std::string json = info.toJson();
+    std::string json = ebus::toJson(info, 512);
     REQUIRE(json.find("\"slave_address\":\"15\"") != std::string::npos);
     REQUIRE(json.find("\"vaillant\":{") != std::string::npos);
   }

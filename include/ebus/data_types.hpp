@@ -88,17 +88,17 @@ struct DataTypeInfoBase {
 struct DataTypeInfo : DataTypeInfoBase {
   float factor = 1.0f;
 
-  /**
-   * @brief Serializes DataTypeInfo to a JSON object string.
-   */
-  std::string toJson() const;
+  void toJson(std::string& json) const;
 };
+
+inline constexpr int64_t FIXED_POINT_SCALE = 1000000LL;  // 1,000,000
 
 /**
  * A variant containing any possible decoded eBUS value.
  */
-using DataValue = std::variant<std::monostate, uint8_t, int8_t, uint16_t,
-                               int16_t, uint32_t, int32_t, float, std::string>;
+using DataValue =
+    std::variant<std::monostate, uint8_t, int8_t, uint16_t, int16_t, uint32_t,
+                 int32_t, int64_t, float, std::string>;
 
 /* --- Core Operations --- */
 
@@ -287,7 +287,7 @@ std::string getSupportedDataTypesJson();
 /**
  * Returns the protocol-level byte size of an eBUS DataType.
  *
- * @param data_type The DataType enum.
+ * @param data_type The DataType to get metadata for.
  * @return The size in bytes.
  */
 constexpr size_t sizeOfDataType(DataType data_type) noexcept {

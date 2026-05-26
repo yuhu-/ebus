@@ -51,7 +51,6 @@ add_catch2_test_executable(catch_telegram core/catch_telegram.cpp)
 add_catch2_test_executable(catch_request core/catch_request.cpp)
 add_catch2_test_executable(catch_handler core/catch_handler.cpp)
 add_catch2_test_executable(catch_bus_handler core/catch_bus_handler.cpp)
-add_catch2_test_executable(catch_telemetry core/catch_telemetry.cpp)
 
 # Data Models and Types
 add_catch2_test_executable(catch_device models/catch_device.cpp)
@@ -68,3 +67,4 @@ add_catch2_test_executable(catch_utils utils/catch_utils.cpp)
 add_catch2_test_executable(catch_json_utils utils/catch_json_utils.cpp)
 add_catch2_test_executable(catch_logger utils/catch_logger.cpp)
 add_catch2_test_executable(catch_circular_buffer utils/catch_circular_buffer.cpp)
+add_catch2_test_executable(catch_format_float utils/catch_format_float.cpp)

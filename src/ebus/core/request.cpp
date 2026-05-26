@@ -135,7 +135,7 @@ void Request::first(uint8_t byte) {
     transitionTo(RequestState::first);
     result_ = RequestResult::first_syn;
   } else if (byte == request_address_) {
-    if (monitor_) monitor_->updateRequest([](auto& m) { m.first_won++; });
+    if (monitor_) monitor_->updateRequest([](auto& m) { m.won_total++; });
     lock_counter_ = lock_counter_max_;
     transitionTo(RequestState::observe);
     result_ = RequestResult::first_won;
@@ -149,7 +149,7 @@ void Request::first(uint8_t byte) {
     // If the Priority Class (Bits 0-3) matches our own, we are allowed
     // to retry immediately at the next SYN (Auto-SYN).
     if ((byte & 0x0f) == (request_address_ & 0x0f)) {
-      if (monitor_) monitor_->updateRequest([](auto& m) { m.first_retry++; });
+      if (monitor_) monitor_->updateRequest([](auto& m) { m.collisions++; });
       transitionTo(RequestState::retry);
       // CRITICAL: We must re-arm the bus request immediately here.
       // If we wait until we see the next SYN in 'retry()', the Bus thread
@@ -157,12 +157,13 @@ void Request::first(uint8_t byte) {
       bus_request_.store(true, std::memory_order_release);
       result_ = RequestResult::first_retry;
     } else {
-      if (monitor_) monitor_->updateRequest([](auto& m) { m.first_lost++; });
+      if (monitor_) monitor_->updateRequest([](auto& m) { m.lost_total++; });
       transitionTo(RequestState::observe);
       result_ = RequestResult::first_lost;
     }
   } else {
-    if (monitor_) monitor_->updateRequest([](auto& m) { m.first_error++; });
+    if (monitor_)
+      monitor_->updateRequest([](auto& m) { m.arbitration_errors++; });
     transitionTo(RequestState::observe);
     result_ = RequestResult::first_error;
   }
@@ -170,11 +171,11 @@ void Request::first(uint8_t byte) {
 
 void Request::retry(uint8_t byte) {
   if (byte == Symbols::syn) {
-    if (monitor_) monitor_->updateRequest([](auto& m) { m.retry_syn++; });
     transitionTo(RequestState::second);
     result_ = RequestResult::retry_syn;
   } else {
-    if (monitor_) monitor_->updateRequest([](auto& m) { m.retry_error++; });
+    if (monitor_)
+      monitor_->updateRequest([](auto& m) { m.arbitration_errors++; });
     transitionTo(RequestState::observe);
     result_ = RequestResult::retry_error;
   }
@@ -182,16 +183,17 @@ void Request::retry(uint8_t byte) {
 
 void Request::second(uint8_t byte) {
   if (byte == request_address_) {
-    if (monitor_) monitor_->updateRequest([](auto& m) { m.second_won++; });
+    if (monitor_) monitor_->updateRequest([](auto& m) { m.won_total++; });
     lock_counter_ = lock_counter_max_;
     transitionTo(RequestState::observe);
     result_ = RequestResult::second_won;
   } else if (isMaster(byte)) {
-    if (monitor_) monitor_->updateRequest([](auto& m) { m.second_lost++; });
+    if (monitor_) monitor_->updateRequest([](auto& m) { m.lost_total++; });
     transitionTo(RequestState::observe);
     result_ = RequestResult::second_lost;
   } else {
-    if (monitor_) monitor_->updateRequest([](auto& m) { m.second_error++; });
+    if (monitor_)
+      monitor_->updateRequest([](auto& m) { m.arbitration_errors++; });
     transitionTo(RequestState::observe);
     result_ = RequestResult::second_error;
   }

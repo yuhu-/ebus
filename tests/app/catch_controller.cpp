@@ -54,7 +54,7 @@ TEST_CASE("Controller: Lifecycle and API", "[app][controller]") {
 
   // Metrics
   auto metrics = controller.getMetrics();
-  REQUIRE(metrics.handler.messages_total == 1);
+  REQUIRE(metrics.handler.messages_active == 1);
 
   // Shutdown
   controller.stop();
