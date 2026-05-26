@@ -7,6 +7,7 @@
 #include <cstddef>
 #include <ebus/data_types.hpp>
 #include <ebus/sequence.hpp>
+#include <ebus/utils.hpp>
 #include <iomanip>
 #include <iostream>
 #include <sstream>

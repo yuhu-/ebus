@@ -26,10 +26,11 @@
 #include <cstring>
 #include <ctime>
 #include <ebus/data_types.hpp>
+#include <ebus/sequence.hpp>
 #include <fstream>
 #include <iostream>
-#include <string>
 #include <sstream>
+#include <string>
 #include <vector>
 
 #include "core/telegram.hpp"

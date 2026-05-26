@@ -5,6 +5,8 @@
 
 #include "app/device_manager.hpp"
 
+#include <set>
+
 #include "core/bus_monitor.hpp"
 
 namespace ebus::detail {
