@@ -4,80 +4,68 @@
  */
 
 #include <ebus/config.hpp>
+#include <ebus/detail/json_writer.hpp>  // For detail::JsonWriter
+#include <ebus/utils.hpp>
 #include <string_view>
-
-#include "utils/json_utils.hpp"
 
 namespace ebus {
 
-void RuntimeConfig::toJson(std::string& json) const {
-  json += "{";
-  bool first_field = true;
-  append_field(json, "address", static_cast<int64_t>(address), first_field);
-  append_field(json, "lock_counter", static_cast<int64_t>(lock_counter),
-               first_field);
-  append_field(json, "system_inquiry", system_inquiry, first_field);
-  append_field(json, "system_response", system_response, first_field);
+void RuntimeConfig::toJson(const JsonChunkVisitor& visitor) const {
+  detail::JsonWriter writer(visitor);
+  writer.startObject();
+  writer.writeField("address", static_cast<uint64_t>(address));
+  writer.writeField("lock_counter", static_cast<uint64_t>(lock_counter));
+  writer.writeField("system_inquiry", system_inquiry);
+  writer.writeField("system_response", system_response);
 
-  json += ",\"bus\":{";
-  bool bus_first_field = true;
-  append_field(json, "window_us", static_cast<int64_t>(bus.window_us),
-               bus_first_field);
-  append_field(json, "offset_us", static_cast<int64_t>(bus.offset_us),
-               bus_first_field);
-  append_field(json, "watchdog_timeout_ms",
-               static_cast<uint64_t>(bus.watchdog_timeout_ms), bus_first_field);
-  append_field(json, "syn_gen", bus.syn_gen, bus_first_field);
-  json += "}";
+  writer.appendKey("bus");
+  writer.startObject();
+  writer.writeField("window_us", static_cast<uint64_t>(bus.window_us));
+  writer.writeField("offset_us", static_cast<uint64_t>(bus.offset_us));
+  writer.writeField("watchdog_timeout_ms",
+                    static_cast<uint64_t>(bus.watchdog_timeout_ms));
+  writer.writeField("syn_gen", bus.syn_gen);
+  writer.endObject();
 
-  json += ",\"diagnostics\":{";
-  bool diag_first_field = true;
-  append_enum_field(json, "level", diagnostics.level, diag_first_field);
-  append_field(json, "log_size", static_cast<uint64_t>(diagnostics.log_size),
-               diag_first_field);
-  json += "}";
+  writer.appendKey("diagnostics");
+  writer.startObject();
+  writer.writeField("level", toString(diagnostics.level));
+  writer.writeField("log_size", static_cast<uint64_t>(diagnostics.log_size));
+  writer.endObject();
 
-  json += ",\"network\":{";
-  bool net_first_field = true;
-  append_field(json, "session_timeout_ms",
-               static_cast<uint64_t>(network.session_timeout_ms),
-               net_first_field);
-  append_field(json, "transmit_timeout_ms",
-               static_cast<uint64_t>(network.transmit_timeout_ms),
-               net_first_field);
-  append_field(json, "outbound_buffer_size",
-               static_cast<uint64_t>(network.outbound_buffer_size),
-               net_first_field);
-  json += "}";
+  writer.appendKey("network");
+  writer.startObject();
+  writer.writeField("session_timeout_ms",
+                    static_cast<uint64_t>(network.session_timeout_ms));
+  writer.writeField("transmit_timeout_ms",
+                    static_cast<uint64_t>(network.transmit_timeout_ms));
+  writer.writeField("outbound_buffer_size",
+                    static_cast<uint64_t>(network.outbound_buffer_size));
+  writer.endObject();
 
-  json += ",\"device\":{";
-  bool dev_first_field = true;
-  append_field(json, "scan_on_startup", device.scan_on_startup,
-               dev_first_field);
-  append_field(json, "initial_delay_s",
-               static_cast<uint64_t>(device.initial_delay_s), dev_first_field);
-  append_field(json, "startup_interval_s",
-               static_cast<uint64_t>(device.startup_interval_s),
-               dev_first_field);
-  append_field(json, "max_startup_scans",
-               static_cast<int64_t>(device.max_startup_scans), dev_first_field);
-  json += "}";
+  writer.appendKey("device");
+  writer.startObject();
+  writer.writeField("scan_on_startup", device.scan_on_startup);
+  writer.writeField("initial_delay_s",
+                    static_cast<uint64_t>(device.initial_delay_s));
+  writer.writeField("startup_interval_s",
+                    static_cast<uint64_t>(device.startup_interval_s));
+  writer.writeField("max_startup_scans",
+                    static_cast<uint64_t>(device.max_startup_scans));
+  writer.endObject();
 
-  json += ",\"scheduler\":{";
-  bool sched_first_field = true;
-  append_field(json, "max_send_attempts",
-               static_cast<int64_t>(scheduler.max_send_attempts),
-               sched_first_field);
-  append_field(json, "base_backoff_ms",
-               static_cast<uint64_t>(scheduler.base_backoff_ms),
-               sched_first_field);
-  append_field(json, "fsm_timeout_ms",
-               static_cast<uint64_t>(scheduler.fsm_timeout_ms),
-               sched_first_field);
-  append_field(json, "total_timeout_ms",
-               static_cast<uint64_t>(scheduler.total_timeout_ms),
-               sched_first_field);
-  json += "}}";
+  writer.appendKey("scheduler");
+  writer.startObject();
+  writer.writeField("max_send_attempts",
+                    static_cast<uint64_t>(scheduler.max_send_attempts));
+  writer.writeField("base_backoff_ms",
+                    static_cast<uint64_t>(scheduler.base_backoff_ms));
+  writer.writeField("fsm_timeout_ms",
+                    static_cast<uint64_t>(scheduler.fsm_timeout_ms));
+  writer.writeField("total_timeout_ms",
+                    static_cast<uint64_t>(scheduler.total_timeout_ms));
+  writer.endObject();
+  writer.endObject();
 }
 
 RuntimeConfig RuntimeConfig::fromJson(const std::string& json) {
@@ -182,31 +170,32 @@ bool RuntimeConfig::isValidJson(const std::string& json) {
   return brace_count == 0 && bracket_count == 0 && !in_string;
 }
 
-void BusConfig::toJson(std::string& json) const {
-  json += "{";
-  [[maybe_unused]] bool first_field = true;
+void BusConfig::toJson(const JsonChunkVisitor& visitor) const {
+  detail::JsonWriter writer(visitor);
+  writer.startObject();
 
 #if defined(ESP_PLATFORM) && !EBUS_SIMULATION
-  append_field(json, "platform", "esp32", first_field);
-  append_field(json, "uart_port", static_cast<int64_t>(uart_port), first_field);
-  append_field(json, "rx_pin", static_cast<int64_t>(rx_pin), first_field);
-  append_field(json, "tx_pin", static_cast<int64_t>(tx_pin), first_field);
-  append_field(json, "timer_group", static_cast<int64_t>(timer_group),
-               first_field);
-  append_field(json, "timer_idx", static_cast<int64_t>(timer_idx), first_field);
+  writer.writeField("platform", "esp32");
+  writer.writeField("uart_port", static_cast<uint64_t>(uart_port));
+  writer.writeField("rx_pin", static_cast<uint64_t>(rx_pin));
+  writer.writeField("tx_pin", static_cast<uint64_t>(tx_pin));
+  writer.writeField("timer_group", static_cast<uint64_t>(timer_group));
+  writer.writeField("timer_idx", static_cast<uint64_t>(timer_idx));
 #elif defined(POSIX) && !EBUS_SIMULATION
-  append_field(json, "platform", "posix", first_field);
-  append_field(json, "device", device, first_field);
+  writer.writeField("platform", "posix");
+  writer.writeField("device", device);
 #endif
-  json += "}";
+  writer.endObject();
 }
 
-void EbusConfig::toJson(std::string& json) const {
-  json += "{\"runtime\":";
-  runtime.toJson(json);
-  json += ",\"bus_hardware\":";
-  bus.toJson(json);
-  json += "}";
+void EbusConfig::toJson(const JsonChunkVisitor& visitor) const {
+  detail::JsonWriter writer(visitor);
+  writer.startObject();
+  writer.appendKey("runtime");
+  runtime.toJson(visitor);
+  writer.appendKey("bus_hardware");
+  bus.toJson(visitor);
+  writer.endObject();
 }
 
 }  // namespace ebus

@@ -4,108 +4,87 @@
  */
 
 #include <ebus/callbacks.hpp>
+#include <ebus/detail/json_writer.hpp>  // For detail::JsonWriter
 #include <ebus/sequence.hpp>
-
-#include "utils/json_utils.hpp"
+#include <ebus/utils.hpp>
 
 namespace ebus {
 
-void TelegramInfo::toJson(std::string& json) const {
-  json += "{";
-  bool first_field = true;
-  append_field(json, "session_id", static_cast<uint64_t>(session_id),
-               first_field);
-  append_field(json, "poll_id", static_cast<uint64_t>(poll_id), first_field);
-  append_field(json, "retry_count", static_cast<uint64_t>(retry_count),
-               first_field);
-  append_enum_field(json, "message_type", message_type, first_field);
-  append_enum_field(json, "telegram_type", telegram_type, first_field);
-  append_enum_field(json, "handler_state", handler_state, first_field);
-  append_enum_field(json, "request_state", request_state, first_field);
-  append_hex_field(json, "master", master_view, first_field);
-  append_hex_field(json, "slave", slave_view, first_field);
-  json += "}";
+void TelegramInfo::toJson(const JsonChunkVisitor& visitor) const {
+  detail::JsonWriter writer(visitor);
+  writer.startObject();
+  writer.writeField("session_id", static_cast<uint64_t>(session_id));
+  writer.writeField("poll_id", static_cast<uint64_t>(poll_id));
+  writer.writeField("retry_count", static_cast<uint64_t>(retry_count));
+  writer.writeField("message_type", toString(message_type));
+  writer.writeField("telegram_type", toString(telegram_type));
+  writer.writeField("handler_state", toString(handler_state));
+  writer.writeField("request_state", toString(request_state));
+  writer.writeHexField("master", master_view);
+  writer.writeHexField("slave", slave_view);
+  writer.endObject();
 }
 
-void ErrorInfo::toJson(std::string& json) const {
-  json += "{";
-  bool first_field = true;
-  append_field(json, "session_id", static_cast<uint64_t>(session_id),
-               first_field);
-  append_field(json, "poll_id", static_cast<uint64_t>(poll_id), first_field);
-  append_enum_field(json, "level", level, first_field);
-  append_enum_field(json, "protocol_error", protocol_error, first_field);
-  append_enum_field(json, "result", result, first_field);
-  append_enum_field(json, "sequence_state", sequence_state, first_field);
-  append_enum_field(json, "handler_state", handler_state, first_field);
-  append_enum_field(json, "request_state", request_state, first_field);
-  append_hex_field(json, "master", master_view, first_field);
-  append_hex_field(json, "slave", slave_view, first_field);
-  json += "}";
+void ErrorInfo::toJson(const JsonChunkVisitor& visitor) const {
+  detail::JsonWriter writer(visitor);
+  writer.startObject();
+  writer.writeField("session_id", static_cast<uint64_t>(session_id));
+  writer.writeField("poll_id", static_cast<uint64_t>(poll_id));
+  writer.writeField("level", toString(level));
+  writer.writeField("protocol_error", toString(protocol_error));
+  writer.writeField("result", toString(result));
+  writer.writeField("sequence_state", toString(sequence_state));
+  writer.writeField("handler_state", toString(handler_state));
+  writer.writeField("request_state", toString(request_state));
+  writer.writeHexField("master", master_view);
+  writer.writeHexField("slave", slave_view);
+  writer.endObject();
 }
 
-void ReactiveInfo::toJson(std::string& json) const {
-  json += "{";
-  bool first_field = true;
-  append_field(json, "session_id", static_cast<uint64_t>(session_id),
-               first_field);
-  append_hex_field(json, "master", master_view, first_field);
-  append_field(json, "slave_response", slave_response.toString(), first_field);
-  json += "}";
+void ReactiveInfo::toJson(const JsonChunkVisitor& visitor) const {
+  detail::JsonWriter writer(visitor);
+  writer.startObject();
+  writer.writeField("session_id", static_cast<uint64_t>(session_id));
+  writer.writeHexField("master", master_view);
+  writer.writeField("slave_response", slave_response.toString());
+  writer.endObject();
 }
 
-void ResultInfo::toJson(std::string& json) const {
-  json += "{";
-  bool first_field = true;
-  append_field(json, "session_id", static_cast<uint64_t>(session_id),
-               first_field);
-  append_field(json, "poll_id", static_cast<uint64_t>(poll_id), first_field);
-  append_field(json, "success", success, first_field);
-  append_enum_field(json, "result", result, first_field);
-  append_enum_field(json, "sequence_state", sequence_state, first_field);
-  append_hex_field(json, "master", master_view, first_field);
-  append_hex_field(json, "slave", slave_view, first_field);
-  json += "}";
+void ResultInfo::toJson(const JsonChunkVisitor& visitor) const {
+  detail::JsonWriter writer(visitor);
+  writer.startObject();
+  writer.writeField("session_id", static_cast<uint64_t>(session_id));
+  writer.writeField("poll_id", static_cast<uint64_t>(poll_id));
+  writer.writeField("success", success);
+  writer.writeField("result", toString(result));
+  writer.writeField("sequence_state", toString(sequence_state));
+  writer.writeHexField("master", master_view);
+  writer.writeHexField("slave", slave_view);
+  writer.endObject();
 }
 
-void BusEventInfo::toJson(std::string& json) const {
+void BusEventInfo::toJson(const JsonChunkVisitor& visitor) const {
   // Convert steady_clock to system_clock (approximation for external logs)
   auto wall_time =
       std::chrono::system_clock::now() +
       std::chrono::duration_cast<std::chrono::system_clock::duration>(
           timestamp - Clock::now());
-  time_t t = std::chrono::system_clock::to_time_t(wall_time);
 
-  json += "{";
-  bool first_field = true;  // Reset for this function
-  append_hex_field(json, "byte", ByteView(&byte, 1), first_field);
-  append_enum_field(json, "handler_state", handler_state, first_field);
-  append_enum_field(json, "request_state", request_state, first_field);
-  append_enum_field(json, "result", result, first_field);
-  append_field(json, "lock_counter", static_cast<int64_t>(lock_counter),
-               first_field);
+  char iso_buffer[26];
+  ebus::formatIso8601Fast(std::chrono::duration_cast<std::chrono::milliseconds>(
+                              wall_time.time_since_epoch())
+                              .count(),
+                          iso_buffer);
 
-  // Manual timestamp formatting for milliseconds
-  if (!first_field) {
-    json += ",";
-  }
-  json += "\"timestamp\":\"";
-  struct tm tm_info;
-  gmtime_r(&t, &tm_info);
-  char time_buffer[32];  // YYYY-MM-DDTHH:MM:SS.mmmZ
-  strftime(time_buffer, sizeof(time_buffer), "%Y-%m-%dT%H:%M:%S", &tm_info);
-  json += time_buffer;
-  auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                wall_time.time_since_epoch())
-                .count() %
-            1000;
-  char ms_buffer[8];
-  snprintf(ms_buffer, sizeof(ms_buffer), ".%03lldZ", (long long)ms);
-  json += ms_buffer;
-  json += "\"";
-  first_field = false;
-
-  json += "}";
+  detail::JsonWriter writer(visitor);
+  writer.startObject();
+  writer.writeHexField("byte", ByteView(&byte, 1));
+  writer.writeField("handler_state", ebus::toString(handler_state));
+  writer.writeField("request_state", ebus::toString(request_state));
+  writer.writeField("result", ebus::toString(result));
+  writer.writeField("lock_counter", static_cast<int64_t>(lock_counter));
+  writer.writeField("timestamp", std::string_view(iso_buffer));
+  writer.endObject();
 }
 
 }  // namespace ebus

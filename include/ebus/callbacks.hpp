@@ -13,6 +13,10 @@
 #include "ebus/detail/protocol_limits.hpp"
 #include "ebus/types.hpp"
 
+namespace ebus::detail {
+class JsonWriter; // Forward declaration
+}
+
 namespace ebus {
 
 /**
@@ -33,7 +37,7 @@ struct TelegramInfo {
   ByteView master_view;
   ByteView slave_view;
 
-  void toJson(std::string& json) const;
+  void toJson(const JsonChunkVisitor& visitor) const;
 };
 
 struct ErrorInfo {
@@ -48,7 +52,7 @@ struct ErrorInfo {
   ByteView master_view;
   ByteView slave_view;
 
-  void toJson(std::string& json) const;
+  void toJson(const JsonChunkVisitor& visitor) const;
 };
 
 struct ReactiveInfo {
@@ -56,7 +60,7 @@ struct ReactiveInfo {
   ByteView master_view;
   Sequence& slave_response;
 
-  void toJson(std::string& json) const;
+  void toJson(const JsonChunkVisitor& visitor) const;
 };
 
 struct ResultInfo {
@@ -68,7 +72,7 @@ struct ResultInfo {
   ByteView master_view;
   ByteView slave_view;
 
-  void toJson(std::string& json) const;
+  void toJson(const JsonChunkVisitor& visitor) const;
 };
 
 /**
@@ -83,7 +87,7 @@ struct BusEventInfo {
   uint8_t lock_counter = 0;
   Clock::time_point timestamp = {};
 
-  void toJson(std::string& json) const;
+  void toJson(const JsonChunkVisitor& visitor) const;
 };
 
 /**

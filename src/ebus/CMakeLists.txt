@@ -43,7 +43,8 @@ endif()
 
 # Utils
 set(UTILS_SOURCES
-    utils/json_utils.cpp
+    utils/utils.cpp
+    utils/json_writer.cpp
 )
 
 set(SOURCES

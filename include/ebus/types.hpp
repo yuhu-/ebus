@@ -10,6 +10,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <functional>
 #include <iterator>
 #include <string>
 #include <string_view>
@@ -27,6 +28,15 @@ namespace ebus {
  * clock injection during unit testing.
  */
 using Clock = std::chrono::steady_clock;
+
+/**
+ * @brief Callback for streaming JSON chunks.
+ */
+using JsonChunkVisitor = std::function<void(std::string_view)>;
+
+namespace detail {
+class JsonWriter; // Forward declaration
+}
 
 // --- Protocol Enums ---
 
@@ -427,7 +437,7 @@ struct HandlerTransition {
   HandlerState to;
   uint64_t timestamp;  // ms since epoch
 
-  void toJson(std::string& json) const;
+  void toJson(const JsonChunkVisitor& visitor) const;
 };
 
 /**
@@ -438,7 +448,7 @@ struct RequestTransition {
   RequestState to;
   uint64_t timestamp;  // ms since epoch
 
-  void toJson(std::string& json) const;
+  void toJson(const JsonChunkVisitor& visitor) const;
 };
 
 /**
@@ -458,7 +468,7 @@ struct ErrorEntry {
   StaticSequence<detail::SequenceLimits::default_capacity> slave;
   uint64_t timestamp;  // ms since epoch
 
-  void toJson(std::string& json) const;
+  void toJson(const JsonChunkVisitor& visitor) const;
 
   // Custom stringifier for human-readable logs
   std::string toString() const {

@@ -24,11 +24,23 @@ class BusMonitor {
  public:
   BusMonitor();
   void resetMetrics();
-  metrics::SystemMetrics getMetrics() const;
+  void fetchMetrics(const std::function<void(const Metrics&)>& callback) const;
+
+  using HandlerHistory =
+      CircularBuffer<HandlerTransition, FsmLimits::transition_history_size>;
+  using RequestHistory =
+      CircularBuffer<RequestTransition, FsmLimits::transition_history_size>;
+  using UtilizationHistory =
+      CircularBuffer<float, DiagnosticsLimits::log_history_size>;
+
+  void fetchHistory(
+      const std::function<void(const HandlerHistory&, const RequestHistory&,
+                               const UtilizationHistory&)>& callback) const;
 
   float getBusUtilization() const;
   void updateUtilizationHistory();
-  std::vector<float> getUtilizationHistory() const;
+  void fetchUtilizationHistory(
+      const std::function<void(float)>& callback) const;
 
   // Thread-safe update helpers
   template <typename F>
@@ -80,13 +92,6 @@ class BusMonitor {
   TimingStats transmit;
   TimingStats syn_postpone;
 
-  CircularBuffer<HandlerTransition, FsmLimits::transition_history_size>
-      handler_history_;
-  CircularBuffer<RequestTransition, FsmLimits::transition_history_size>
-      request_history_;
-  CircularBuffer<float, DiagnosticsLimits::log_history_size>
-      utilization_history_;
-
  private:
   mutable std::mutex metrics_mutex_;
 
@@ -102,6 +107,13 @@ class BusMonitor {
   metrics::BusMetrics bus_acc_;
   metrics::DeviceMetrics device_acc_;
   metrics::ControllerMetrics controller_acc_;
+
+  CircularBuffer<HandlerTransition, FsmLimits::transition_history_size>
+      handler_history_;
+  CircularBuffer<RequestTransition, FsmLimits::transition_history_size>
+      request_history_;
+  CircularBuffer<float, DiagnosticsLimits::log_history_size>
+      utilization_history_;
 };
 
 }  // namespace ebus::detail

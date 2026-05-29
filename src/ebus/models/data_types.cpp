@@ -8,13 +8,12 @@
 #include <cmath>
 #include <cstring>
 #include <ebus/data_types.hpp>
+#include <ebus/detail/json_writer.hpp>  // For detail::JsonWriter
 #include <ebus/sequence.hpp>
 #include <ebus/utils.hpp>
 #include <limits>
 #include <string_view>
 #include <utility>
-
-#include "utils/json_utils.hpp"
 
 namespace ebus {
 
@@ -106,14 +105,14 @@ const Meta* metaFor(DataType dt) {
  * Flash.
  */
 struct JsonValueVisitor {
-  std::string& json_str;
+  detail::JsonWriter& writer;
 
-  void operator()(std::monostate) const { json_str += "null"; }
+  void operator()(std::monostate) const { writer.write("null"); }
 
   void operator()(const std::string& s) const {
-    json_str += "\"";
-    appendEscapedJson(json_str, s);
-    json_str += "\"";
+    writer.write("\"");
+    writer.writeEscaped(s);
+    writer.write("\"");
   }
 
   void operator()(int64_t val) const {
@@ -121,14 +120,18 @@ struct JsonValueVisitor {
     // fixed-point scaled values in our protocol.
     char buffer[64];
     char* end_ptr = formatFloat(static_cast<float>(val) / FIXED_POINT_SCALE, 4,
-                                buffer, sizeof(buffer));
-    json_str.append(buffer, end_ptr - buffer);
+                                buffer, sizeof(buffer),
+                                detail::FormattingLimits::float_lower_threshold,
+                                detail::FormattingLimits::float_upper_threshold);
+    writer.write(std::string_view(buffer, end_ptr - buffer));
   }
 
   void operator()(float val) const {
     char buffer[64];
-    char* end_ptr = formatFloat(val, 4, buffer, sizeof(buffer));
-    json_str.append(buffer, end_ptr - buffer);
+    char* end_ptr = formatFloat(val, 4, buffer, sizeof(buffer),
+                                detail::FormattingLimits::float_lower_threshold,
+                                detail::FormattingLimits::float_upper_threshold);
+    writer.write(std::string_view(buffer, end_ptr - buffer));
   }
 
   // Handler for all other integral types in the variant
@@ -142,18 +145,18 @@ struct JsonValueVisitor {
     char buffer[24];
     auto [ptr, ec] = std::to_chars(buffer, buffer + sizeof(buffer), val);
     if (ec == std::errc{})
-      json_str.append(buffer, ptr - buffer);
+      writer.write(std::string_view(buffer, ptr - buffer));
     else
-      json_str += "null";
+      writer.write("null");
   }
 
   void append_int(uint64_t val) const {
     char buffer[24];
     auto [ptr, ec] = std::to_chars(buffer, buffer + sizeof(buffer), val);
     if (ec == std::errc{})
-      json_str.append(buffer, ptr - buffer);
+      writer.write(std::string_view(buffer, ptr - buffer));
     else
-      json_str += "null";
+      writer.write("null");
   }
 };
 
@@ -494,13 +497,17 @@ struct ToStringValueVisitor {
   std::string operator()(int64_t val) const {
     char buffer[64];
     char* end = formatFloat(static_cast<float>(val) / FIXED_POINT_SCALE, 2,
-                            buffer, sizeof(buffer));
+                            buffer, sizeof(buffer),
+                            detail::FormattingLimits::float_lower_threshold,
+                            detail::FormattingLimits::float_upper_threshold);
     return std::string(buffer, end - buffer);
   }
 
   std::string operator()(float val) const {
     char buffer[64];
-    char* end = formatFloat(val, 2, buffer, sizeof(buffer));
+    char* end = formatFloat(val, 2, buffer, sizeof(buffer),
+                            detail::FormattingLimits::float_lower_threshold,
+                            detail::FormattingLimits::float_upper_threshold);
     return std::string(buffer, end - buffer);
   }
 
@@ -596,65 +603,69 @@ DataType stringToDataType(const char* str) {
   return DataType::error;
 }
 
-void DataTypeInfo::toJson(std::string& json) const {
-  json += "{";
-  bool first_field = true;
-  append_field(json, "type", static_cast<int64_t>(dt), first_field);
-  append_field(json, "name", name, first_field);
-  append_field(json, "size", static_cast<int64_t>(size), first_field);
-  append_field(json, "is_numeric", is_numeric, first_field);
-  append_field(json, "is_signed", is_signed, first_field);
-  append_field(json, "is_float", is_float, first_field);
-  append_field(json, "has_replacement", has_replacement, first_field);
-  append_field(json, "replacement_value",
-               static_cast<uint64_t>(replacement_value), first_field);
-  append_json_float_custom_precision(json, "factor", factor, 4, first_field);
-  json += "}";
+void DataTypeInfo::toJson(const JsonChunkVisitor& visitor) const {
+  detail::JsonWriter writer(visitor);
+  writer.startObject();
+  writer.writeField("type", static_cast<int64_t>(dt));
+  writer.writeField("name", name);
+  writer.writeField("size", static_cast<uint64_t>(size));
+  writer.writeField("is_numeric", is_numeric);
+  writer.writeField("is_signed", is_signed);
+  writer.writeField("is_float", is_float);
+  writer.writeField("has_replacement", has_replacement);
+  writer.writeField("replacement_value",
+                    static_cast<uint64_t>(replacement_value));
+  writer.writeFieldFloat("factor", factor, 4);
+  writer.endObject();
 }
 
 std::string getSupportedDataTypesJson() {
-  std::string json_str = "[";
-  json_str.reserve(8192);  // ~35 types * ~200 bytes per type
+  std::string json;
+  json.reserve(8192);
+  getSupportedDataTypesJson([&json](std::string_view s) { json.append(s); });
+  return json;
+}
+
+void getSupportedDataTypesJson(const JsonChunkVisitor& visitor) {
+  detail::JsonWriter writer(visitor);
+  writer.startArray();
+  bool first = true;
   const auto types = getSupportedDataTypes();
-  for (size_t i = 0; i < types.size(); ++i) {
-    if (i > 0) json_str += ",";
-    types[i].toJson(json_str);
+  for (const auto& t : types) {
+    if (!first) writer.write(",");
+    t.toJson(visitor);
+    first = false;
   }
-  json_str += "]";
-  return json_str;
+  writer.endArray();
 }
 
 std::string decodeToJson(DataType dt, ByteView data) {
-  std::string json_str;
-  json_str.reserve(512);
-  json_str += "{";
-  bool first_field = true;
+  std::string json;
+  json.reserve(512);
+  decodeToJson([&json](std::string_view s) { json.append(s); }, dt, data);
+  return json;
+}
+
+void decodeToJson(const JsonChunkVisitor& visitor, DataType dt, ByteView data) {
+  detail::JsonWriter writer(visitor);
+  writer.startObject();
   auto meta_opt = getMeta(dt);
   if (!meta_opt) {
-    append_field(json_str, "error", "Invalid DataType", first_field);
+    writer.writeField("error", "Invalid DataType");
   } else {
     const auto& meta = *meta_opt;
-    append_field(json_str, "type", static_cast<int64_t>(meta.dt), first_field);
-    append_field(json_str, "name", meta.name, first_field);
-    append_hex_field(json_str, "raw_hex", data, first_field);
+    writer.writeField("type", static_cast<int64_t>(meta.dt));
+    writer.writeField("name", meta.name);
+    writer.writeHexField("raw_hex", data);
     auto decoded = decode(dt, data);
-    if (!first_field) json_str += ",";
-    json_str += "\"value\":";
+    writer.appendKey("value");
     if (decoded)
-      std::visit(JsonValueVisitor{json_str}, *decoded);
+      std::visit(JsonValueVisitor{writer}, *decoded);
     else
-      json_str += "null";
-    // Use the new formatFloat directly to avoid std::string creation in
-    // append_json_float_custom_precision
-    char float_buffer[64];
-    char* end_ptr =
-        formatFloat(meta.factor, 4, float_buffer, sizeof(float_buffer));
-    append_key(json_str, "factor",
-               first_field);  // This will add the comma if needed and the key
-    json_str.append(float_buffer, end_ptr - float_buffer);
+      writer.write("null");
+    writer.writeFieldFloat("factor", meta.factor, 4);
   }
-  json_str += "}";
-  return json_str;
+  writer.endObject();
 }
 
 }  // namespace ebus

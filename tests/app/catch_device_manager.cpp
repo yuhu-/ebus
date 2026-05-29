@@ -57,7 +57,11 @@ TEST_CASE("DeviceManager: Device Update", "[app][devicemanager]") {
 
   dm.update(master, slave);
 
-  auto devices = dm.getDeviceInfo();
+  std::vector<ebus::DeviceInfo> devices;
+  dm.fetchDeviceInfo([&](const ebus::DeviceInfo& info) {
+    devices.push_back(info);
+  });
+
   REQUIRE(devices.size() == 1);
   REQUIRE(devices[0].slave_address == 0x08);
 

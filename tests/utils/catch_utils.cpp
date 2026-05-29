@@ -5,9 +5,14 @@
 
 #include <algorithm>
 #include <catch2/catch_all.hpp>
+#include <ebus/callbacks.hpp>
+#include <ebus/detail/json_writer.hpp>
+#include <ebus/device.hpp>
 #include <ebus/utils.hpp>
 #include <string>
 #include <vector>
+
+using namespace ebus::detail;
 
 TEST_CASE("Utils: Addressing logic", "[utils][utils]") {
   REQUIRE(ebus::isMaster(0x00));

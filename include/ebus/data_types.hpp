@@ -16,6 +16,10 @@
 #include "ebus/sequence.hpp"
 #include "ebus/types.hpp"
 
+namespace ebus::detail {
+class JsonWriter; // Forward declaration
+}
+
 namespace ebus {
 
 enum class Endian { little, big };
@@ -88,7 +92,7 @@ struct DataTypeInfoBase {
 struct DataTypeInfo : DataTypeInfoBase {
   float factor = 1.0f;
 
-  void toJson(std::string& json) const;
+  void toJson(const JsonChunkVisitor& visitor) const;
 };
 
 inline constexpr int64_t FIXED_POINT_SCALE = 1000000LL;  // 1,000,000
@@ -285,6 +289,11 @@ std::vector<DataTypeInfo> getSupportedDataTypes();
 std::string getSupportedDataTypesJson();
 
 /**
+ * @brief Streams a JSON array of all supported eBUS data types to the visitor.
+ */
+void getSupportedDataTypesJson(const JsonChunkVisitor& visitor);
+
+/**
  * Returns the protocol-level byte size of an eBUS DataType.
  *
  * @param data_type The DataType to get metadata for.
@@ -320,5 +329,10 @@ DataType stringToDataType(const char* str);
  * @return A JSON string representing the decoded value and its metadata.
  */
 std::string decodeToJson(DataType dt, ByteView data);
+
+/**
+ * @brief Decodes raw eBUS bytes and streams it as a JSON object to the visitor.
+ */
+void decodeToJson(const JsonChunkVisitor& visitor, DataType dt, ByteView data);
 
 }  // namespace ebus

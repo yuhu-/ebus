@@ -308,7 +308,7 @@ class Controller {
   /**
    * @brief Returns information about all discovered devices.
    */
-  std::vector<DeviceInfo> getDeviceInfo() const;
+  void fetchDeviceInfo(std::function<void(const DeviceInfo&)> callback) const;
 
   // Health Metrics
 
@@ -318,26 +318,29 @@ class Controller {
   void resetMetrics();
 
   /**
-   * @brief Returns a snapshot of the current system performance metrics.
+   * @brief Invokes a visitor callback with a snapshot of system performance
+   * metrics.
+   * @param callback Function to process the metrics reference.
    */
-  ebus::Metrics getMetrics() const;
+  void fetchMetrics(std::function<void(const Metrics&)> callback) const;
 
   /**
    * @brief Returns the recent history of bus utilization percentages.
    */
-  std::vector<float> getUtilizationHistory() const;
+  void fetchUtilizationHistory(std::function<void(float)> callback) const;
 
   /**
    * @brief Returns the raw event trace of the last processed bytes.
    */
-  std::vector<BusEventInfo> getTraceHistory() const;
+  void fetchTraceHistory(
+      std::function<void(const BusEventInfo&)> callback) const;
 
   // Diagnostic Log
 
   /**
    * @brief Returns a snapshot of the diagnostic error log.
    */
-  std::vector<ErrorEntry> getErrors() const;
+  void fetchErrors(std::function<void(const ErrorEntry&)> callback) const;
 
   /**
    * @brief Returns the current capacity of the diagnostic error log.
@@ -350,16 +353,22 @@ class Controller {
   void clearErrors();
 
   /**
-   * @brief Returns a minimal JSON string containing only thread stacks and
-   * queue sizes.
+   * @brief Invokes a visitor callback with a snapshot of system resource usage.
    */
-  std::string getSystemResourcesJson() const;
+  void fetchSystemResources(
+      std::function<void(const SystemResources&)> callback) const;
 
   /**
    * @brief Returns the service status as a JSON string.
    * @param reset_histories If true, resets history buffers after serialization.
    */
   std::string getServiceStatusJson(bool reset_histories = false) const;
+
+  /**
+   * @brief Streams the service status JSON in chunks to the provided visitor.
+   */
+  void fetchServiceStatus(const JsonChunkVisitor& visitor,
+                          bool reset_histories = false) const;
 
 #if EBUS_SIMULATION
   /**

@@ -5,14 +5,19 @@
 
 #pragma once
 
-#include <cstddef>
 #include <bitset>
+#include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <string>
 #include <vector>
 
 namespace ebus::detail {
 class BusMonitor;
+}
+
+namespace ebus::detail {
+class JsonWriter; // Forward declaration
 }
 
 namespace ebus {
@@ -25,7 +30,7 @@ struct ThreadStatus {
   int32_t task_stack_bytes = -1;
   int32_t task_stack_free_bytes = -1;
 
-  void toJson(std::string& json) const;
+  void toJson(const JsonChunkVisitor& visitor) const;
 };
 
 /**
@@ -34,7 +39,7 @@ struct ThreadStatus {
 struct ControllerStatus {
   ThreadStatus thread;
 
-  void toJson(std::string& json) const;
+  void toJson(const JsonChunkVisitor& visitor) const;
 };
 
 /**
@@ -44,7 +49,7 @@ struct BusStatus {
   ThreadStatus bus_thread;
   ThreadStatus syn_thread;
 
-  void toJson(std::string& json) const;
+  void toJson(const JsonChunkVisitor& visitor) const;
 };
 
 /**
@@ -55,7 +60,7 @@ struct BusHandlerStatus {
   size_t queue_size = 0;
   size_t queue_capacity = 0;
 
-  void toJson(std::string& json) const;
+  void toJson(const JsonChunkVisitor& visitor) const;
 };
 
 /**
@@ -66,7 +71,7 @@ struct SchedulerStatus {
   size_t queue_size = 0;
   size_t queue_capacity = 0;
 
-  void toJson(std::string& json) const;
+  void toJson(const JsonChunkVisitor& visitor) const;
 };
 
 /**
@@ -80,7 +85,7 @@ struct ClientManagerStatus {
   std::string session_state;
   std::string last_error;
 
-  void toJson(std::string& json) const;
+  void toJson(const JsonChunkVisitor& visitor) const;
 };
 
 /**
@@ -92,7 +97,7 @@ struct DeviceManagerStatus {
   std::bitset<256> masters{};
   std::bitset<256> slaves{};
 
-  void toJson(std::string& json) const;
+  void toJson(const JsonChunkVisitor& visitor) const;
 };
 
 /**
@@ -107,7 +112,7 @@ struct DeviceScannerStatus {
   size_t manual_queue_size = 0;
   size_t startup_queue_size = 0;
 
-  void toJson(std::string& json) const;
+  void toJson(const JsonChunkVisitor& visitor) const;
 };
 
 /**
@@ -116,7 +121,7 @@ struct DeviceScannerStatus {
 struct PollManagerStatus {
   size_t item_count = 0;
 
-  void toJson(std::string& json) const;
+  void toJson(const JsonChunkVisitor& visitor) const;
 };
 
 /**
@@ -131,11 +136,11 @@ struct SystemResources {
     size_t size = 0;
     size_t capacity = 0;
 
-    void toJson(std::string& json) const;
+    void toJson(const JsonChunkVisitor& visitor) const;
   };
   std::vector<QueueInfo> queues;
 
-  void toJson(std::string& json) const;
+  void toJson(const JsonChunkVisitor& visitor) const;
 };
 
 /**
@@ -152,18 +157,24 @@ struct ServiceStatus {
   DeviceScannerStatus device_scanner;
   PollManagerStatus poll_manager;
 
-  void toJson(std::string& json) const;
+  void toJson(const JsonChunkVisitor& visitor) const;
 };
 
 /**
- * @brief Serializes ServiceStatus to a JSON object string, optionally including
- * history from the BusMonitor.
+ * @brief Serializes ServiceStatus to a visitor, optionally including history
+ * from the BusMonitor.
+ *
+ * This method yields chunks of JSON to minimize memory spikes on the
+ * stack/heap.
+ *
+ * @param visitor Callback to receive JSON chunks.
  * @param status The ServiceStatus snapshot.
  * @param monitor Optional pointer to the BusMonitor for history serialization.
  * @param reset_histories If true and monitor is provided, resets history
  * buffers after serialization.
  */
-void serializeServiceStatus(std::string& json_str, const ServiceStatus& status,
+void serializeServiceStatus(const JsonChunkVisitor& visitor,
+                            const ServiceStatus& status,
                             detail::BusMonitor* monitor = nullptr,
                             bool reset_histories = false);
 

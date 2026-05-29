@@ -7,10 +7,10 @@
 
 #include <algorithm>
 #include <array>
+#include <ebus/data_types.hpp>
+#include <ebus/detail/json_writer.hpp>
 #include <ebus/device.hpp>
 #include <ebus/utils.hpp>
-
-#include "utils/json_utils.hpp"
 
 namespace ebus::detail {
 
@@ -60,13 +60,22 @@ ebus::DeviceInfo Device::getDeviceInfo() const {
   info.frequency = message_count_;
 
   if (vec_070400_.size() > 1) {
-    info.manufacturer = vec_070400_[1];
-    info.manufacturer_name = manufacturerName(info.manufacturer);
-    info.unit_id = ebus::byteToChar(ebus::range(vec_070400_, 2, 5));
-    info.software_version =
-        ebus::toString(ebus::ByteView(vec_070400_.data() + 7, 2));
-    info.hardware_version =
-        ebus::toString(ebus::ByteView(vec_070400_.data() + 9, 2));
+    const auto m_id =
+        ebus::decode(ebus::DataType::uint8, ebus::range(vec_070400_, 1, 1));
+    if (m_id) {
+      info.manufacturer = static_cast<uint8_t>(ebus::asInt64(*m_id));
+      info.manufacturer_name = manufacturerName(info.manufacturer);
+    }
+
+    if (auto uid =
+            ebus::decode(ebus::DataType::char5, ebus::range(vec_070400_, 2, 5)))
+      info.unit_id = ebus::asString(*uid);
+    if (auto sw =
+            ebus::decode(ebus::DataType::hex2, ebus::range(vec_070400_, 7, 2)))
+      info.software_version = ebus::toString(*sw);
+    if (auto hw =
+            ebus::decode(ebus::DataType::hex2, ebus::range(vec_070400_, 9, 2)))
+      info.hardware_version = ebus::toString(*hw);
   }
 
   if (isVaillant() && isVaillantValid()) {
@@ -139,31 +148,26 @@ bool Device::isVaillantValid() const {
 
 namespace ebus {
 
-void DeviceInfo::toJson(std::string& json) const {
-  json += "{";
-  bool first_field = true;
-  append_hex_field(json, "slave_address", ByteView(&slave_address, 1),
-                   first_field);
-  append_hex_field(json, "manufacturer", ByteView(&manufacturer, 1),
-                   first_field);
-  append_field(json, "manufacturer_name", manufacturer_name, first_field);
-  append_field(json, "unit_id", unit_id, first_field);
-  append_field(json, "software_version", software_version, first_field);
-  append_field(json, "hardware_version", hardware_version, first_field);
+void DeviceInfo::toJson(const JsonChunkVisitor& visitor) const {
+  detail::JsonWriter writer(visitor);
+  writer.startObject();
+  writer.writeHexField("slave_address", ByteView(&slave_address, 1));
+  writer.writeHexField("manufacturer", ByteView(&manufacturer, 1));
+  writer.writeField("manufacturer_name", manufacturer_name);
+  writer.writeField("unit_id", unit_id);
+  writer.writeField("software_version", software_version);
+  writer.writeField("hardware_version", hardware_version);
 
   if (!vaillant.serial_number.empty()) {
-    json += ",\"vaillant\":{";
-    bool vaillant_first_field = true;
-    append_field(json, "serial_number", vaillant.serial_number,
-                 vaillant_first_field);
-    append_field(json, "product_code", vaillant.product_code,
-                 vaillant_first_field);
-    json += "}";
+    writer.appendKey("vaillant");
+    writer.startObject();
+    writer.writeField("serial_number", vaillant.serial_number);
+    writer.writeField("product_code", vaillant.product_code);
+    writer.endObject();
   }
 
-  append_field(json, "frequency", static_cast<uint64_t>(frequency),
-               first_field);
-  json += "}";
+  writer.writeField("frequency", static_cast<uint64_t>(frequency));
+  writer.endObject();
 }
 
 static constexpr const char* kManufacturerTable[256] = {

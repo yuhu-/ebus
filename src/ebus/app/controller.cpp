@@ -4,6 +4,7 @@
  */
 
 #include <ebus/controller.hpp>
+#include <ebus/detail/json_writer.hpp> // For detail::JsonWriter
 #include <ebus/detail/config_validator.hpp>
 #include <ebus/detail/protocol_limits.hpp>
 #include <ebus/utils.hpp>
@@ -42,10 +43,10 @@ struct Impl {
   ebus::TraceCallback user_trace_callback_;
 
   // Decoupled queues for user callbacks (Prioritized drainage)
-  detail::platform::Queue<ebus::ProtocolEvent> public_errors_{
-      detail::ControllerLimits::public_queue_size};
-  detail::platform::Queue<ebus::ProtocolEvent> public_telegrams_{
-      detail::ControllerLimits::public_queue_size};
+  detail::platform::Queue<ebus::ProtocolEvent> event_errors_{
+      detail::ControllerLimits::event_queue_size};
+  detail::platform::Queue<ebus::ProtocolEvent> event_telegrams_{
+      detail::ControllerLimits::event_queue_size};
 
   std::unique_ptr<detail::Request> request_;
   std::unique_ptr<detail::BusMonitor> bus_monitor_;
@@ -390,39 +391,43 @@ void Controller::removeClient(int fd) {
   if (isConfigured()) impl_->client_manager_->removeClient(fd);
 }
 
-std::vector<DeviceInfo> Controller::getDeviceInfo() const {
-  if (!isConfigured()) return {};
-  return impl_->device_manager_->getDeviceInfo();
+void Controller::fetchDeviceInfo(
+    std::function<void(const DeviceInfo&)> callback) const {
+  if (isConfigured() && callback) {
+    impl_->device_manager_->fetchDeviceInfo(callback);
+  }
 }
 
 void Controller::resetMetrics() {
   if (isConfigured()) impl_->bus_monitor_->resetMetrics();
 }
 
-Metrics Controller::getMetrics() const {
-  return isConfigured() ? impl_->bus_monitor_->getMetrics() : Metrics{};
-}
-
-std::vector<float> Controller::getUtilizationHistory() const {
-  if (isConfigured()) return impl_->bus_monitor_->getUtilizationHistory();
-  return {};
-}
-
-std::vector<BusEventInfo> Controller::getTraceHistory() const {
-  if (isConfigured()) {
-    std::vector<BusEventInfo> history;
-    impl_->trace_buffer_.forEach(
-        [&](const BusEventInfo& info) { history.push_back(info); });
-    return history;
+void Controller::fetchMetrics(
+    std::function<void(const Metrics&)> callback) const {
+  if (isConfigured() && callback) {
+    impl_->bus_monitor_->fetchMetrics(callback);
   }
-  return {};
 }
 
-std::vector<ErrorEntry> Controller::getErrors() const {
-  std::vector<ErrorEntry> errors;
-  impl_->error_buffer_.forEach(
-      [&](const ErrorEntry& entry) { errors.push_back(entry); });
-  return errors;
+void Controller::fetchUtilizationHistory(
+    std::function<void(float)> callback) const {
+  if (isConfigured() && callback) {
+    impl_->bus_monitor_->fetchUtilizationHistory(callback);
+  }
+}
+
+void Controller::fetchTraceHistory(
+    std::function<void(const BusEventInfo&)> callback) const {
+  if (callback) {
+    impl_->trace_buffer_.forEach(callback);
+  }
+}
+
+void Controller::fetchErrors(
+    std::function<void(const ErrorEntry&)> callback) const {
+  if (callback) {
+    impl_->error_buffer_.forEach(callback);
+  }
 }
 
 size_t Controller::getErrorLogCapacity() const {
@@ -431,11 +436,11 @@ size_t Controller::getErrorLogCapacity() const {
 
 void Controller::clearErrors() { impl_->error_buffer_.clear(); }
 
-std::string Controller::getSystemResourcesJson() const {
-  impl_->telemetry_scratch_.clear();
-  impl_->telemetry_scratch_.reserve(1024);
-
+void Controller::fetchSystemResources(
+    std::function<void(const SystemResources&)> callback) const {
+  if (!callback) return;
   SystemResources res;
+
   res.timestamp_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
                          std::chrono::system_clock::now().time_since_epoch())
                          .count();
@@ -476,19 +481,24 @@ std::string Controller::getSystemResourcesJson() const {
         {"client_manager", c_stat.queue_size, c_stat.queue_capacity});
   }
 
-  res.toJson(impl_->telemetry_scratch_);
-  return impl_->telemetry_scratch_;
+  callback(res);
 }
 
 std::string Controller::getServiceStatusJson(bool reset_histories) const {
   impl_->telemetry_scratch_.clear();
   impl_->telemetry_scratch_.reserve(8192);
 
-  // Use the append pattern to populate the persistent buffer
-  serializeServiceStatus(impl_->telemetry_scratch_, getServiceStatus(),
-                         impl_->bus_monitor_.get(), reset_histories);
+  fetchServiceStatus([this](std::string_view chunk) {
+    impl_->telemetry_scratch_.append(chunk);
+  }, reset_histories);
 
   return impl_->telemetry_scratch_;
+}
+
+void Controller::fetchServiceStatus(const JsonChunkVisitor& visitor,
+                                    bool reset_histories) const {
+  serializeServiceStatus(visitor, getServiceStatus(), impl_->bus_monitor_.get(),
+                         reset_histories);
 }
 
 ServiceStatus Controller::getServiceStatus() const {
@@ -532,7 +542,7 @@ void Controller::processPublicEvents() {
   ProtocolEvent ev;
 
   // 1. Prioritize Errors: Drain all pending error events first
-  while (impl_->public_errors_.tryPop(ev)) {
+  while (impl_->event_errors_.tryPop(ev)) {
     ErrorCallback callback;
     {
       std::lock_guard<std::mutex> lock(config_mutex_);
@@ -550,7 +560,7 @@ void Controller::processPublicEvents() {
   }
 
   // 2. Process Telegrams
-  while (impl_->public_telegrams_.tryPop(ev)) {
+  while (impl_->event_telegrams_.tryPop(ev)) {
     TelegramCallback callback;
     {
       std::lock_guard<std::mutex> lock(config_mutex_);
@@ -631,9 +641,9 @@ void Controller::constructMembers() {
       ev.request_state = info.request_state;
       ev.master.assign(info.master_view.data(), info.master_view.size());
       ev.slave.assign(info.slave_view.data(), info.slave_view.size());
-      if (!impl_->public_telegrams_.tryPush(std::move(ev))) {
+      if (!impl_->event_telegrams_.tryPush(std::move(ev))) {
         impl_->bus_monitor_->updateController(
-            [](auto& m) { m.public_queue_dropped++; });
+            [](auto& m) { m.event_queue_dropped++; });
       }
       wake_cv_.notify_one();
 
@@ -681,9 +691,9 @@ void Controller::constructMembers() {
       ev.request_state = info.request_state;
       ev.master.assign(info.master_view.data(), info.master_view.size());
       ev.slave.assign(info.slave_view.data(), info.slave_view.size());
-      if (!impl_->public_errors_.tryPush(std::move(ev))) {
+      if (!impl_->event_errors_.tryPush(std::move(ev))) {
         impl_->bus_monitor_->updateController(
-            [](auto& m) { m.public_queue_dropped++; });
+            [](auto& m) { m.event_queue_dropped++; });
       }
       wake_cv_.notify_one();
 
@@ -835,8 +845,8 @@ void Controller::run() {
     wake_cv_.wait_until(lk, wait_until, [this, activity] {
       // Wake immediately if work was found, thread is stopping, or new events
       // arrived.
-      return !running_.load() || activity || impl_->public_errors_.size() > 0 ||
-             impl_->public_telegrams_.size() > 0 ||
+      return !running_.load() || activity || impl_->event_errors_.size() > 0 ||
+             impl_->event_telegrams_.size() > 0 ||
              impl_->poll_manager_->nextDueTime() <= Clock::now();
     });
   }

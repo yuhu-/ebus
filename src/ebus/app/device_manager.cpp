@@ -11,7 +11,9 @@
 
 namespace ebus::detail {
 
-DeviceManager::DeviceManager(BusMonitor* monitor) : monitor_(monitor) {}
+DeviceManager::DeviceManager(BusMonitor* monitor) : monitor_(monitor) {
+  address_map_.fill(-1);
+}
 
 void DeviceManager::setOwnAddress(uint8_t address) { own_address_ = address; }
 
@@ -42,37 +44,38 @@ void DeviceManager::update(ByteView master_view, ByteView slave_view) {
   }
 
   // Devices
-  if (devices_.size() >= max_devices_) {
-    // If the map is full, we can't add new devices.
-    // We could log an error here, but for a hot path, simply returning is
-    // safer.
-    return;
-  }
+  uint8_t target = master_view[1];
+  if (target == ebus::slaveOf(own_address_)) return;
 
-  if (master_view[1] == ebus::slaveOf(own_address_)) return;
-  if (ebus::isSlave(master_view[1])) {
-    if (!identified_devices_.test(master_view[1])) {
+  if (ebus::isSlave(target)) {
+    int16_t idx = address_map_[target];
+    if (idx == -1) {
+      if (pool_usage_ >= max_devices_) return;
+
+      idx = static_cast<int16_t>(pool_usage_++);
+      address_map_[target] = idx;
+      identified_devices_.set(target);
+
       if (monitor_) {
         monitor_->updateDevice([](auto& d) {
           if (d.unknown_devices > 0) d.unknown_devices--;
         });
       }
-      identified_devices_.set(master_view[1]);
     }
-    devices_[master_view[1]].update(master_view, slave_view);
+
+    device_pool_[idx].update(master_view, slave_view);
   }
 }
 
-std::vector<ebus::DeviceInfo> DeviceManager::getDeviceInfo() const {
+void DeviceManager::fetchDeviceInfo(
+    const std::function<void(const DeviceInfo&)>& callback) const {
   std::lock_guard<std::mutex> lock(mutex_);
-  std::vector<DeviceInfo> result;
-  result.reserve(devices_.size());
-  for (const auto& [addr, dev] : devices_) {
-    if (identified_devices_.test(addr)) {
-      result.push_back(dev.getDeviceInfo());
+  if (callback) {
+    for (size_t i = 0; i < 256; ++i) {
+      int16_t idx = address_map_[i];
+      if (idx != -1) callback(device_pool_[idx].getDeviceInfo());
     }
   }
-  return result;
 }
 
 void DeviceManager::getObservedSlaves(std::bitset<256>& observed) const {
@@ -90,9 +93,10 @@ void DeviceManager::getObservedSlaves(std::bitset<256>& observed) const {
 std::vector<ebus::Sequence> DeviceManager::vendorScanCommands() const {
   std::lock_guard<std::mutex> lock(mutex_);
   std::vector<Sequence> result;
-  for (const auto& [addr, dev] : devices_) {
-    if (identified_devices_.test(addr)) {
-      const auto commands = dev.createVendorScanCommands();
+  for (size_t i = 0; i < 256; ++i) {
+    int16_t idx = address_map_[i];
+    if (idx != -1) {
+      const auto commands = device_pool_[idx].createVendorScanCommands();
       if (!commands.empty())
         result.insert(result.end(), commands.begin(), commands.end());
     }
@@ -124,7 +128,8 @@ DeviceManagerStatus DeviceManager::getStatus() const {
   s.masters = masters_;
   s.slaves = slaves_;
   if (monitor_) {
-    s.unknown_count = monitor_->getMetrics().devices.unknown_devices;
+    monitor_->fetchMetrics(
+        [&](const Metrics& m) { s.unknown_count = m.devices.unknown_devices; });
   }
   return s;
 }

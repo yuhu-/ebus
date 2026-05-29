@@ -3,11 +3,10 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "utils/json_utils.hpp"
-
 #include <charconv>
 #include <cmath>
 #include <ctime>
+#include <ebus/detail/json_writer.hpp>
 #include <ebus/sequence.hpp>
 #include <ebus/types.hpp>
 #include <ebus/utils.hpp>
@@ -21,41 +20,12 @@ std::string escapeJson(std::string_view s) {
   return res;
 }
 
+void writeEscapedJson(std::string_view s, const JsonChunkVisitor& visitor) {
+  detail::writeEscapedJson(s, visitor);
+}
+
 void appendEscapedJson(std::string& out, std::string_view s) {
-  for (char c : s) {
-    switch (c) {
-      case '"':
-        out += "\\\"";
-        break;
-      case '\\':
-        out += "\\\\";
-        break;
-      case '\b':
-        out += "\\b";
-        break;
-      case '\f':
-        out += "\\f";
-        break;
-      case '\n':
-        out += "\\n";
-        break;
-      case '\r':
-        out += "\\r";
-        break;
-      case '\t':
-        out += "\\t";
-        break;
-      default:
-        if (static_cast<unsigned char>(c) < 0x20) {
-          static const char hex[] = "0123456789abcdef";
-          out += "\\u00";
-          out += hex[(static_cast<unsigned char>(c) >> 4) & 0xf];
-          out += hex[static_cast<unsigned char>(c) & 0xf];
-        } else {
-          out += c;
-        }
-    }
-  }
+  writeEscapedJson(s, [&out](std::string_view chunk) { out.append(chunk); });
 }
 
 std::string toString(uint8_t byte) {
@@ -223,8 +193,6 @@ float roundDigits(float value, uint8_t digits) noexcept {
   return std::round(value * decimals) / decimals;
 }
 
-// json_utils.hpp
-
 /**
  * Finds a key safely by ensuring it is wrapped in quotes and followed by a
  * colon.
@@ -281,133 +249,6 @@ std::string_view extractSub(std::string_view json, std::string_view key) {
     if (depth == 0) return json.substr(start, i - start + 1);
   }
   return "";
-}
-
-/**
- * Shared internal helper to handle JSON structural formatting.
- * Using non-templated overloads instead of a single template reduces
- * code duplication in Flash memory on targets like ESP32.
- */
-void append_key(std::string& json, const char* key, bool& first) {
-  if (!first) json += ",";
-  json += "\"";
-  json += key;
-  json += "\":";
-  first = false;
-}
-
-void append_field(std::string& json, const char* key, std::string_view val,
-                  bool& first) {
-  append_key(json, key, first);
-  json += "\"";
-  appendEscapedJson(json, val);
-  json += "\"";
-}
-
-void append_field(std::string& json, const char* key, bool val, bool& first) {
-  append_key(json, key, first);
-  json += (val ? "true" : "false");
-}
-
-void append_field(std::string& json, const char* key, int64_t val,
-                  bool& first) {
-  append_key(json, key, first);
-  char buffer[24];
-  auto [ptr, ec] = std::to_chars(buffer, buffer + sizeof(buffer), val);
-  if (ec == std::errc{})
-    json.append(buffer, ptr - buffer);
-  else
-    json += "null";
-}
-
-void append_field(std::string& json, const char* key, uint64_t val,
-                  bool& first) {
-  append_key(json, key, first);
-  char buffer[24];
-  auto [ptr, ec] = std::to_chars(buffer, buffer + sizeof(buffer), val);
-  if (ec == std::errc{})
-    json.append(buffer, ptr - buffer);
-  else
-    json += "null";
-}
-
-void append_field(std::string& json, const char* key, double val, bool& first) {
-  append_key(json, key, first);
-  char buffer[64];
-  char* end = formatFloat(static_cast<float>(val), 2, buffer, sizeof(buffer));
-  json.append(buffer, end - buffer);
-}
-
-/**
- * Non-templated hex formatter.
- */
-void append_hex_field(std::string& json, const char* key, ByteView data,
-                      bool& first) {
-  append_key(json, key, first);
-  json += "\"";
-  appendHex(json, data);
-  json += "\"";
-}
-
-// Helper for appending a formatted timestamp (ISO 8601 UTC)
-void append_json_timestamp(std::string& json_str, const char* key,
-                           uint64_t timestamp_ms, bool& first_field) {
-  if (!first_field) {
-    json_str += ",";
-  }
-  json_str += "\"";
-  json_str += key;
-  json_str += "\":\"";
-  time_t s = static_cast<time_t>(timestamp_ms / 1000);
-  struct tm tm_info;
-  gmtime_r(&s, &tm_info);
-  char buffer[32];
-  strftime(buffer, sizeof(buffer), "%Y-%m-%dT%H:%M:%SZ", &tm_info);
-  json_str += buffer;
-  json_str += "\"";
-  first_field = false;
-}
-
-// Helper for appending raw JSON objects/arrays (already formatted strings)
-void append_json_raw(std::string& json_str, const char* key,
-                     const std::string& raw_json, bool& first_field) {
-  if (!first_field) {
-    json_str += ",";
-  }
-  json_str += "\"";
-  json_str += key;
-  json_str += "\":";
-  json_str += raw_json;
-  first_field = false;
-}
-
-// Helper for appending raw JSON values (e.g., null, true, false, numbers)
-void append_json_value_raw(std::string& json_str, const char* key,
-                           const char* raw_value, bool& first_field) {
-  if (!first_field) {
-    json_str += ",";
-  }
-  json_str += "\"";
-  json_str += key;
-  json_str += "\":";
-  json_str += raw_value;
-  first_field = false;
-}
-
-// Helper for appending formatted floats with custom precision
-void append_json_float_custom_precision(std::string& json_str, const char* key,
-                                        float value, int precision,
-                                        bool& first_field) {
-  if (!first_field) {
-    json_str += ",";
-  }
-  json_str += "\"";
-  json_str += key;
-  json_str += "\":";
-  char buffer[64];
-  char* end = formatFloat(value, precision, buffer, sizeof(buffer));
-  json_str.append(buffer, end - buffer);
-  first_field = false;
 }
 
 }  // namespace ebus

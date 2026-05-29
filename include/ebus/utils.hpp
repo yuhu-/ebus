@@ -8,7 +8,8 @@
 #include <algorithm>
 #include <charconv>
 #include <cmath>
-#include <cstdint>
+#include <cstring>
+#include <ctime>
 #include <initializer_list>
 #include <iterator>
 #include <string>
@@ -19,21 +20,43 @@
 
 #include "ebus/detail/protocol_limits.hpp"
 #include "ebus/protocol_math.hpp"
-#include "ebus/types.hpp"
+#include "ebus/types.hpp"  // For JsonChunkVisitor, ByteView
 
 namespace ebus {
 
 /**
  * @brief Global helper to create a JSON string for any object supporting
- * the toJson(std::string&) append pattern.
+ * the toJson(const JsonChunkVisitor&) pattern.
  */
 template <typename T>
 std::string toJson(const T& obj, const size_t reserve) {
   std::string json;
   json.reserve(reserve);
-  obj.toJson(json);
+  obj.toJson([&json](std::string_view s) { json.append(s); });
   return json;
 }
+
+/**
+ * Escapes a string for use in a JSON value.
+ */
+std::string escapeJson(std::string_view s);
+
+/**
+ * @brief Writes an escaped version of the string to the provided visitor.
+ * Prevents temporary string allocations.
+ */
+void writeEscapedJson(std::string_view s, const JsonChunkVisitor& visitor);
+
+/**
+ * Appends an escaped version of the string to the provided buffer.
+ * Prevents temporary string allocations during JSON serialization.
+ */
+void appendEscapedJson(std::string& out, std::string_view s);
+
+/**
+ * Appends data as a hex string to the provided buffer.
+ */
+void appendHex(std::string& out, ByteView data);
 
 /**
  * Forward declaration for Sequence to break header dependency.
@@ -42,19 +65,71 @@ template <std::size_t kInlineCapacity>
 class SequenceImpl;
 using Sequence = SequenceImpl<detail::SequenceLimits::default_capacity>;
 
-// --- Hex and String Conversion ---
+// --- JSON Parsing Helpers ---
 
 /**
- * Escapes a string for use in a JSON value.
+ * Finds a key safely by ensuring it is wrapped in quotes and followed by a
+ * colon.
  */
-std::string escapeJson(std::string_view s);
+size_t findKey(std::string_view json, std::string_view key);
+std::string_view extract(std::string_view json, std::string_view key);
+std::string_view extractSub(std::string_view json, std::string_view key);
 
 /**
- * Appends an escaped version of the string to the provided buffer.
- * Prevents temporary string allocations during JSON serialization.
+ * @brief Fast ISO8601 formatter for embedded targets.
+ * Converts milliseconds since epoch to "YYYY-MM-DDTHH:MM:SS.mmmZ".
+ * Zero-allocation and avoids heavy printf/strftime.
  */
-void appendEscapedJson(std::string& out, std::string_view s);
+inline void formatIso8601Fast(uint64_t ms_since_epoch, char* out) {
+  time_t seconds = static_cast<time_t>(ms_since_epoch / 1000);
+  int ms = static_cast<int>(ms_since_epoch % 1000);
+  struct tm tm_info;
+  gmtime_r(&seconds, &tm_info);
 
+  auto write_2d = [](int val, char* p) {
+    p[0] = static_cast<char>('0' + (val / 10));
+    p[1] = static_cast<char>('0' + (val % 10));
+  };
+
+  int year = tm_info.tm_year + 1900;
+  out[0] = static_cast<char>('0' + (year / 1000));
+  out[1] = static_cast<char>('0' + ((year / 100) % 10));
+  out[2] = static_cast<char>('0' + ((year / 10) % 10));
+  out[3] = static_cast<char>('0' + (year % 10));
+  out[4] = '-';
+  write_2d(tm_info.tm_mon + 1, out + 5);
+  out[7] = '-';
+  write_2d(tm_info.tm_mday, out + 8);
+  out[10] = 'T';
+  write_2d(tm_info.tm_hour, out + 11);
+  out[13] = ':';
+  write_2d(tm_info.tm_min, out + 14);
+  out[16] = ':';
+  write_2d(tm_info.tm_sec, out + 17);
+  out[19] = '.';
+  out[20] = static_cast<char>('0' + (ms / 100));
+  out[21] = static_cast<char>('0' + ((ms / 10) % 10));
+  out[22] = static_cast<char>('0' + (ms % 10));
+  out[23] = 'Z';
+  out[24] = '\0';
+}
+
+/**
+ * Zero-allocation string-to-number converter.
+ */
+template <typename T>
+T toNum(std::string_view s) {
+  if (s.empty() || s == "null") return 0;
+  T val = 0;
+  std::from_chars(s.data(), s.data() + s.size(), val);
+  return val;
+}
+
+/**
+ * Formats a float to a buffer with scientific/fixed switching.
+ */
+char* formatFloat(float value, int precision, char* buffer, size_t buffer_size,
+                  float lower_threshold, float upper_threshold);
 std::string toString(uint8_t byte);
 
 inline std::string byteToChar(ByteView data) {
@@ -72,10 +147,6 @@ std::string toString(const T& container) {
   return byteToHex(ByteView(std::data(container), std::size(container)));
 }
 std::vector<uint8_t> toVector(const std::string& str);
-// Returns a pointer to the null terminator of the formatted string within the
-// buffer. Returns buffer if formatting failed or resulted in an empty string.
-char* formatFloat(float value, int precision, char* buffer, size_t buffer_size,
-                  float lower_threshold = 1e-6f, float upper_threshold = 1e10f);
 
 /**
  * Converts a non-owning ByteView to an owning std::vector.

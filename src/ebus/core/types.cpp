@@ -4,45 +4,48 @@
  */
 
 #include <ebus/types.hpp>
-
-#include "utils/json_utils.hpp"
+#include <ebus/detail/json_writer.hpp> // For detail::JsonWriter
+#include <ebus/utils.hpp>
 
 namespace ebus {
 
-void HandlerTransition::toJson(std::string& json) const {
-  json += "{";
-  bool first_field = true;
-  append_enum_field(json, "from", from, first_field);
-  append_enum_field(json, "to", to, first_field);
-  append_json_timestamp(json, "timestamp", timestamp, first_field);
-  json += "}";
+void HandlerTransition::toJson(const JsonChunkVisitor& visitor) const {
+  detail::JsonWriter writer(visitor);
+  writer.startObject();
+  writer.writeField("from", ebus::toString(from));
+  writer.writeField("to", ebus::toString(to));
+  writer.writeTimestampField("timestamp", timestamp);
+  writer.endObject();
 }
 
-void RequestTransition::toJson(std::string& json) const {
-  json += "{";
-  bool first_field = true;
-  append_enum_field(json, "from", from, first_field);
-  append_enum_field(json, "to", to, first_field);
-  append_json_timestamp(json, "timestamp", timestamp, first_field);
-  json += "}";
+void RequestTransition::toJson(const JsonChunkVisitor& visitor) const {
+  detail::JsonWriter writer(visitor);
+  writer.startObject();
+  writer.writeField("from", ebus::toString(from));
+  writer.writeField("to", ebus::toString(to));
+  writer.writeTimestampField("timestamp", timestamp);
+  writer.endObject();
 }
 
-void ErrorEntry::toJson(std::string& json) const {
-  json += "{";
-  bool first_field = true;
-  append_field(json, "session_id", static_cast<uint64_t>(session_id),
-               first_field);
-  append_field(json, "poll_id", static_cast<uint64_t>(poll_id), first_field);
-  append_enum_field(json, "level", level, first_field);
-  append_enum_field(json, "protocol_error", protocol_error, first_field);
-  append_enum_field(json, "result", result, first_field);
-  append_enum_field(json, "sequence_state", sequence_state, first_field);
-  append_enum_field(json, "handler_state", handler_state, first_field);
-  append_enum_field(json, "request_state", request_state, first_field);
-  append_hex_field(json, "master", master, first_field);
-  append_hex_field(json, "slave", slave, first_field);
-  append_json_timestamp(json, "timestamp", timestamp, first_field);
-  json += "}";
+void ErrorEntry::toJson(const JsonChunkVisitor& visitor) const {
+  detail::JsonWriter writer(visitor);
+  writer.startObject();
+  writer.writeField("session_id", static_cast<uint64_t>(session_id));
+  writer.writeField("poll_id", static_cast<uint64_t>(poll_id));
+  writer.writeField("level", ebus::toString(level));
+  writer.writeField("protocol_error", ebus::toString(protocol_error));
+  writer.writeField("result", ebus::toString(result));
+  writer.writeField("sequence_state", ebus::toString(sequence_state));
+  writer.writeField("handler_state", ebus::toString(handler_state));
+  writer.writeField("request_state", ebus::toString(request_state));
+  writer.writeHexField("master", master);
+  writer.writeHexField("slave", slave);
+
+  char iso_buffer[26];
+  ebus::formatIso8601Fast(timestamp, iso_buffer);
+  writer.writeField("timestamp", std::string_view(iso_buffer));
+
+  writer.endObject();
 }
 
 }  // namespace ebus

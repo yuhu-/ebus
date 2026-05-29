@@ -53,8 +53,9 @@ TEST_CASE("Controller: Lifecycle and API", "[app][controller]") {
   REQUIRE((waitCondition([&] { return telegramSeen.load(); }, 100)));
 
   // Metrics
-  auto metrics = controller.getMetrics();
-  REQUIRE(metrics.handler.messages_active == 1);
+  controller.fetchMetrics([](const ebus::Metrics& m) {
+    REQUIRE(m.handler.messages_active == 1);
+  });
 
   // Shutdown
   controller.stop();

@@ -134,9 +134,9 @@ int main() {
   }
 
   // Print metrics to see bus health
-  auto metrics = deviceB.getMetrics();
-  std::cout << "[Device B] Metrics: " << ebus::toJson(metrics, 256)
-            << std::endl;
+  deviceB.fetchMetrics([](const ebus::Metrics& m) {
+    std::cout << "[Device B] Metrics: " << ebus::toJson(m, 256) << std::endl;
+  });
 
   auto status = deviceB.getServiceStatusJson();
   std::cout << "[Device B] Status: " << status << std::endl;

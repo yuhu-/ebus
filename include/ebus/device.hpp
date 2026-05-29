@@ -8,6 +8,11 @@
 #include <cstdint>
 #include <string>
 #include <vector>
+#include "ebus/types.hpp"
+
+namespace ebus::detail {
+class JsonWriter; // Forward declaration
+}
 
 namespace ebus {
 
@@ -31,7 +36,7 @@ struct DeviceInfo {
   // Statistics
   uint32_t frequency = 0;  // Total messages observed from this device
 
-  void toJson(std::string& json) const;
+  void toJson(const JsonChunkVisitor& visitor) const;
 };
 
 /**

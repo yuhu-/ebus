@@ -222,10 +222,10 @@ inline constexpr size_t max_clients = EBUS_MAX_CLIENTS;
 
 // --- Application Layer ---
 namespace ControllerLimits {
-#ifndef EBUS_PUBLIC_QUEUE_SIZE
-inline constexpr size_t public_queue_size = 8;
+#ifndef EBUS_EVENT_QUEUE_SIZE
+inline constexpr size_t event_queue_size = 8;
 #else
-inline constexpr size_t public_queue_size = EBUS_PUBLIC_QUEUE_SIZE;
+inline constexpr size_t event_queue_size = EBUS_EVENT_QUEUE_SIZE;
 #endif
 }  // namespace ControllerLimits
 namespace DeviceLimits {
@@ -265,5 +265,11 @@ inline constexpr size_t max_items = 128;
 inline constexpr size_t max_items = EBUS_POLL_MAX_ITEMS;
 #endif
 }  // namespace PollLimits
+
+// --- Formatting Limits ---
+namespace FormattingLimits {
+inline constexpr float float_lower_threshold = 1e-6f;
+inline constexpr float float_upper_threshold = 1e10f;
+}  // namespace FormattingLimits
 
 }  // namespace ebus::detail

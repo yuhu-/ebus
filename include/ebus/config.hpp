@@ -11,6 +11,10 @@
 
 #include "ebus/types.hpp"
 
+namespace ebus::detail {
+class JsonWriter; // Forward declaration
+}
+
 namespace ebus {
 
 /**
@@ -57,7 +61,7 @@ struct RuntimeConfig {
 
   void reset() { *this = RuntimeConfig{}; }
 
-  void toJson(std::string& json) const;
+  void toJson(const JsonChunkVisitor& visitor) const;
 
   /**
    * @brief Deserializes a JSON string into a RuntimeConfig object.
@@ -91,7 +95,7 @@ struct BusConfig {
   std::string device = "/dev/null";
 #endif
 
-  void toJson(std::string& json) const;
+  void toJson(const JsonChunkVisitor& visitor) const;
 };
 
 /**
@@ -101,7 +105,7 @@ struct EbusConfig {
   RuntimeConfig runtime = {};
   BusConfig bus = {};
 
-  void toJson(std::string& json) const;
+  void toJson(const JsonChunkVisitor& visitor) const;
 };
 
 }  // namespace ebus

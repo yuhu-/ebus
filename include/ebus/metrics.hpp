@@ -15,6 +15,10 @@
 #include "ebus/detail/protocol_limits.hpp"
 #include "ebus/types.hpp"
 
+namespace ebus::detail {
+class JsonWriter; // Forward declaration
+}
+
 namespace ebus {
 
 /**
@@ -25,7 +29,7 @@ struct MetricValues {
   uint32_t max_us = 0;
   uint64_t count = 0;
 
-  void toJson(std::string& json) const;
+  void toJson(const JsonChunkVisitor& visitor) const;
 };
 
 namespace metrics {
@@ -80,7 +84,7 @@ struct HandlerMetrics {
     active_data = {};
   }
 
-  void toJson(std::string& json) const;
+  void toJson(const JsonChunkVisitor& visitor) const;
 };
 
 /**
@@ -113,7 +117,7 @@ struct RequestMetrics {
     session_timeouts = 0;
   }
 
-  void toJson(std::string& json) const;
+  void toJson(const JsonChunkVisitor& visitor) const;
 };
 
 /**
@@ -148,7 +152,7 @@ struct BusMetrics {
     syn_postpone = {};
   }
 
-  void toJson(std::string& json) const;
+  void toJson(const JsonChunkVisitor& visitor) const;
 };
 
 /**
@@ -162,18 +166,18 @@ struct DeviceMetrics {
     unknown_devices = 0;
   }
 
-  void toJson(std::string& json) const;
+  void toJson(const JsonChunkVisitor& visitor) const;
 };
 
 /**
  * Performance metrics for the orchestration/application layer.
  */
 struct ControllerMetrics {
-  uint32_t public_queue_dropped = 0;
+  uint32_t event_queue_dropped = 0;
 
-  void reset() { public_queue_dropped = 0; }
+  void reset() { event_queue_dropped = 0; }
 
-  void toJson(std::string& json) const;
+  void toJson(const JsonChunkVisitor& visitor) const;
 };
 
 /**
@@ -186,7 +190,7 @@ struct SystemMetrics {
   DeviceMetrics devices;
   ControllerMetrics controller;
 
-  void toJson(std::string& json) const;
+  void toJson(const JsonChunkVisitor& visitor) const;
 };
 
 }  // namespace metrics
