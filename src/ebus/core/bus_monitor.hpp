@@ -26,6 +26,7 @@ class BusMonitor {
   void resetMetrics();
   void fetchMetrics(const std::function<void(const Metrics&)>& callback) const;
 
+#ifndef EBUS_MINIMAL_DIAGNOSTICS
   using HandlerHistory =
       CircularBuffer<HandlerTransition, FsmLimits::transition_history_size>;
   using RequestHistory =
@@ -36,6 +37,7 @@ class BusMonitor {
   void fetchHistory(
       const std::function<void(const HandlerHistory&, const RequestHistory&,
                                const UtilizationHistory&)>& callback) const;
+#endif
 
   float getBusUtilization() const;
   void updateUtilizationHistory();
@@ -99,8 +101,6 @@ class BusMonitor {
   mutable bool congestion_active_ = false;
   Clock::time_point uptime_start_{Clock::now()};
   uint64_t total_low_bits_ = 0;
-  uint64_t last_history_low_bits_ = 0;
-  uint64_t last_history_uptime_us_ = 0;
 
   metrics::HandlerMetrics handler_acc_;
   metrics::RequestMetrics request_acc_;
@@ -108,12 +108,17 @@ class BusMonitor {
   metrics::DeviceMetrics device_acc_;
   metrics::ControllerMetrics controller_acc_;
 
+#ifndef EBUS_MINIMAL_DIAGNOSTICS
+  uint64_t last_history_low_bits_ = 0;
+  uint64_t last_history_uptime_us_ = 0;
+
   CircularBuffer<HandlerTransition, FsmLimits::transition_history_size>
       handler_history_;
   CircularBuffer<RequestTransition, FsmLimits::transition_history_size>
       request_history_;
   CircularBuffer<float, DiagnosticsLimits::log_history_size>
       utilization_history_;
+#endif
 };
 
 }  // namespace ebus::detail

@@ -23,6 +23,9 @@ endif()
 # --- Feature Options ---
 option(EBUS_SIMULATION "Enable virtual bus simulation mode" OFF)
 
+# --- Library Options ---
+option(EBUS_MINIMAL_DIAGNOSTICS "Enable minimal diagnostics" OFF)
+
 # --- Memory Tuning Options ---
 # These defaults match protocol_limits.hpp but can be overridden at build time.
 # Component Layer

@@ -359,12 +359,6 @@ class Controller {
       std::function<void(const SystemResources&)> callback) const;
 
   /**
-   * @brief Returns the service status as a JSON string.
-   * @param reset_histories If true, resets history buffers after serialization.
-   */
-  std::string getServiceStatusJson(bool reset_histories = false) const;
-
-  /**
    * @brief Streams the service status JSON in chunks to the provided visitor.
    */
   void fetchServiceStatus(const JsonChunkVisitor& visitor,

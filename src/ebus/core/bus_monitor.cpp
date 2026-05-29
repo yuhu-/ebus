@@ -43,11 +43,13 @@ void BusMonitor::resetMetrics() {
   transmit.reset();
   uptime_start_ = Clock::now();
   total_low_bits_ = 0;
+#ifndef EBUS_MINIMAL_DIAGNOSTICS
   last_history_low_bits_ = 0;
   last_history_uptime_us_ = 0;
 
   handler_history_.clear();
   request_history_.clear();
+#endif
 }
 
 void BusMonitor::fetchMetrics(
@@ -141,6 +143,7 @@ void BusMonitor::fetchMetrics(
   }
 }
 
+#ifndef EBUS_MINIMAL_DIAGNOSTICS
 void BusMonitor::fetchHistory(
     const std::function<void(const HandlerHistory&, const RequestHistory&,
                              const UtilizationHistory&)>& callback) const {
@@ -149,6 +152,7 @@ void BusMonitor::fetchHistory(
     callback(handler_history_, request_history_, utilization_history_);
   }
 }
+#endif
 
 float BusMonitor::getBusUtilization() const {
   std::lock_guard<std::mutex> lock(metrics_mutex_);
@@ -168,6 +172,7 @@ float BusMonitor::getBusUtilization() const {
 }
 
 void BusMonitor::updateUtilizationHistory() {
+#ifndef EBUS_MINIMAL_DIAGNOSTICS
   std::lock_guard<std::mutex> lock(metrics_mutex_);
   auto now = Clock::now();
   auto total_uptime_us =
@@ -189,24 +194,33 @@ void BusMonitor::updateUtilizationHistory() {
 
   last_history_low_bits_ = total_low_bits_;
   last_history_uptime_us_ = total_uptime_us;
+#endif
 }
 
 void BusMonitor::fetchUtilizationHistory(
-    const std::function<void(float)>& callback) const {
+    [[maybe_unused]] const std::function<void(float)>& callback) const {
+#ifndef EBUS_MINIMAL_DIAGNOSTICS
   std::lock_guard<std::mutex> lock(metrics_mutex_);
   if (callback) {
     utilization_history_.forEach(callback);
   }
+#endif
 }
 
-void BusMonitor::logHandlerTransition(HandlerState from, HandlerState to) {
+void BusMonitor::logHandlerTransition([[maybe_unused]] HandlerState from,
+                                      [[maybe_unused]] HandlerState to) {
+#ifndef EBUS_MINIMAL_DIAGNOSTICS
   std::lock_guard<std::mutex> lock(metrics_mutex_);
   handler_history_.push_back({from, to, getNowMs()});
+#endif
 }
 
-void BusMonitor::logRequestTransition(RequestState from, RequestState to) {
+void BusMonitor::logRequestTransition([[maybe_unused]] RequestState from,
+                                      [[maybe_unused]] RequestState to) {
+#ifndef EBUS_MINIMAL_DIAGNOSTICS
   std::lock_guard<std::mutex> lock(metrics_mutex_);
   request_history_.push_back({from, to, getNowMs()});
+#endif
 }
 
 void BusMonitor::recordBusError() {
@@ -223,6 +237,7 @@ void BusMonitor::recordLowBits(uint32_t bits) {
 }
 
 void BusMonitor::clearHistory() {
+#ifndef EBUS_MINIMAL_DIAGNOSTICS
   std::lock_guard<std::mutex> lock(metrics_mutex_);
   handler_history_.clear();
   request_history_.clear();
@@ -234,6 +249,7 @@ void BusMonitor::clearHistory() {
           .count();
   last_history_low_bits_ = total_low_bits_;
   last_history_uptime_us_ = uptime_us;
+#endif
 }
 
 }  // namespace ebus::detail
@@ -562,7 +578,8 @@ void ServiceStatus::toJson(const JsonChunkVisitor& visitor) const {
 
 void serializeServiceStatus(const JsonChunkVisitor& visitor,
                             const ServiceStatus& status,
-                            detail::BusMonitor* monitor, bool reset_histories) {
+                            detail::BusMonitor* monitor,
+                            [[maybe_unused]] bool reset_histories) {
   if (!visitor) return;
 
   detail::JsonWriter writer(visitor);
@@ -587,6 +604,7 @@ void serializeServiceStatus(const JsonChunkVisitor& visitor,
   status.poll_manager.toJson(visitor);
 
   if (monitor) {
+#ifndef EBUS_MINIMAL_DIAGNOSTICS
     monitor->fetchHistory([&](const auto& h_hist, const auto& r_hist,
                               const auto& u_hist) {
       writer.appendKey("handler_history");
@@ -608,6 +626,7 @@ void serializeServiceStatus(const JsonChunkVisitor& visitor,
     if (reset_histories) {
       monitor->clearHistory();
     }
+#endif
   }
   writer.endObject();
 }

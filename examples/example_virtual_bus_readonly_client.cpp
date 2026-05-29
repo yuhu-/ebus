@@ -138,8 +138,11 @@ int main() {
     std::cout << "[Device B] Metrics: " << ebus::toJson(m, 256) << std::endl;
   });
 
-  auto status = deviceB.getServiceStatusJson();
-  std::cout << "[Device B] Status: " << status << std::endl;
+  std::string json;
+  json.reserve(8192);
+  deviceB.fetchServiceStatus([&json](std::string_view s) { json.append(s); },
+                             true);
+  std::cout << "[Device B] Status: " << json << std::endl;
 
   // --- 9. Stop the simulation ---
   std::cout << "Stopping simulation on virtual bus..." << std::endl;

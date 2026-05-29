@@ -17,7 +17,7 @@
 #include "ebus/types.hpp"
 
 namespace ebus::detail {
-class JsonWriter; // Forward declaration
+class JsonWriter;  // Forward declaration
 }
 
 namespace ebus {
@@ -283,12 +283,6 @@ DataType getDataType(const DataValue& value) noexcept;
 std::vector<DataTypeInfo> getSupportedDataTypes();
 
 /**
- * @brief Returns a JSON array of all supported eBUS data types with their
- * metadata.
- */
-std::string getSupportedDataTypesJson();
-
-/**
  * @brief Streams a JSON array of all supported eBUS data types to the visitor.
  */
 void getSupportedDataTypesJson(const JsonChunkVisitor& visitor);
@@ -321,17 +315,10 @@ const char* dataTypeToString(DataType data_type) noexcept;
 DataType stringToDataType(const char* str);
 
 /**
- * @brief Decodes raw eBUS bytes into a high-level DataValue and serializes it
- * to a JSON object string, including metadata.
- *
- * @param dt The expected eBUS data type.
- * @param bytes The raw bytes from the bus.
- * @return A JSON string representing the decoded value and its metadata.
- */
-std::string decodeToJson(DataType dt, ByteView data);
-
-/**
  * @brief Decodes raw eBUS bytes and streams it as a JSON object to the visitor.
+ * @param dt The expected eBUS data type.
+ * @param data The raw bytes from the bus.
+ * @return A JSON string representing the decoded value and its metadata.
  */
 void decodeToJson(const JsonChunkVisitor& visitor, DataType dt, ByteView data);
 

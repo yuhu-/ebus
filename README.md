@@ -39,6 +39,13 @@ To enable simulation mode:
 cmake -DEBUS_SIMULATION=ON ..
 ```
 
+*   **EBUS_MINIMAL_DIAGNOSTICS** (Default: OFF): Disables the storage of historical FSM transitions and bus utilization data. This significantly reduces RAM usage, especially beneficial for resource-constrained targets like the ESP32-C3, by removing `CircularBuffer` instances from `BusMonitor`.
+
+To enable minimal diagnostics:
+```bash
+cmake -DEBUS_SIMULATION=ON ..
+```
+
 ### Key Features
 *   **Data Decoding**: Native support for 30+ eBUS data types including BCD, fixed-point (DATA2B/C), and float.
 *   **Device Discovery**: Automatic identification of manufacturers and device roles. Includes specialized support for Vaillant service identification and serial number reconstruction.

@@ -119,18 +119,19 @@ struct JsonValueVisitor {
     // This handles the generic int64_t in the variant, which represents
     // fixed-point scaled values in our protocol.
     char buffer[64];
-    char* end_ptr = formatFloat(static_cast<float>(val) / FIXED_POINT_SCALE, 4,
-                                buffer, sizeof(buffer),
-                                detail::FormattingLimits::float_lower_threshold,
-                                detail::FormattingLimits::float_upper_threshold);
+    char* end_ptr = formatFloat(
+        static_cast<float>(val) / FIXED_POINT_SCALE, 4, buffer, sizeof(buffer),
+        detail::FormattingLimits::float_lower_threshold,
+        detail::FormattingLimits::float_upper_threshold);
     writer.write(std::string_view(buffer, end_ptr - buffer));
   }
 
   void operator()(float val) const {
     char buffer[64];
-    char* end_ptr = formatFloat(val, 4, buffer, sizeof(buffer),
-                                detail::FormattingLimits::float_lower_threshold,
-                                detail::FormattingLimits::float_upper_threshold);
+    char* end_ptr =
+        formatFloat(val, 4, buffer, sizeof(buffer),
+                    detail::FormattingLimits::float_lower_threshold,
+                    detail::FormattingLimits::float_upper_threshold);
     writer.write(std::string_view(buffer, end_ptr - buffer));
   }
 
@@ -619,13 +620,6 @@ void DataTypeInfo::toJson(const JsonChunkVisitor& visitor) const {
   writer.endObject();
 }
 
-std::string getSupportedDataTypesJson() {
-  std::string json;
-  json.reserve(8192);
-  getSupportedDataTypesJson([&json](std::string_view s) { json.append(s); });
-  return json;
-}
-
 void getSupportedDataTypesJson(const JsonChunkVisitor& visitor) {
   detail::JsonWriter writer(visitor);
   writer.startArray();
@@ -637,13 +631,6 @@ void getSupportedDataTypesJson(const JsonChunkVisitor& visitor) {
     first = false;
   }
   writer.endArray();
-}
-
-std::string decodeToJson(DataType dt, ByteView data) {
-  std::string json;
-  json.reserve(512);
-  decodeToJson([&json](std::string_view s) { json.append(s); }, dt, data);
-  return json;
 }
 
 void decodeToJson(const JsonChunkVisitor& visitor, DataType dt, ByteView data) {

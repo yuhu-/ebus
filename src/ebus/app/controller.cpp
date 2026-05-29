@@ -4,8 +4,8 @@
  */
 
 #include <ebus/controller.hpp>
-#include <ebus/detail/json_writer.hpp> // For detail::JsonWriter
 #include <ebus/detail/config_validator.hpp>
+#include <ebus/detail/json_writer.hpp>  // For detail::JsonWriter
 #include <ebus/detail/protocol_limits.hpp>
 #include <ebus/utils.hpp>
 #include <mutex>
@@ -62,9 +62,6 @@ struct Impl {
 #endif
   std::unique_ptr<detail::ClientManager> client_manager_;
   std::unique_ptr<detail::platform::ServiceThread> worker_;
-
-  // Persistent scratch buffer to avoid heap fragmentation during JSON exports
-  mutable std::string telemetry_scratch_;
 };
 
 Controller::Controller() : impl_(new Impl()) {}
@@ -482,17 +479,6 @@ void Controller::fetchSystemResources(
   }
 
   callback(res);
-}
-
-std::string Controller::getServiceStatusJson(bool reset_histories) const {
-  impl_->telemetry_scratch_.clear();
-  impl_->telemetry_scratch_.reserve(8192);
-
-  fetchServiceStatus([this](std::string_view chunk) {
-    impl_->telemetry_scratch_.append(chunk);
-  }, reset_histories);
-
-  return impl_->telemetry_scratch_;
 }
 
 void Controller::fetchServiceStatus(const JsonChunkVisitor& visitor,

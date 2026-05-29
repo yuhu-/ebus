@@ -56,20 +56,14 @@ struct Symbols {
   }
 };
 
-enum class TelegramType : uint8_t { undefined, broadcast, master_master, master_slave };
+enum class TelegramType : uint8_t {
+  undefined,
+  broadcast,
+  master_master,
+  master_slave
+};
 
-constexpr const char* toString(TelegramType type) noexcept {
-  switch (type) {
-    case TelegramType::broadcast:
-      return "broadcast";
-    case TelegramType::master_master:
-      return "master_master";
-    case TelegramType::master_slave:
-      return "master_slave";
-    default:
-      return "unknown type";
-  }
-}
+const char* toString(TelegramType type) noexcept;
 
 // --- Addressing logic ---
 
