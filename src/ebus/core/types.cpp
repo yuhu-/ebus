@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+#include <charconv>
 #include <ebus/detail/json_writer.hpp>  // For detail::JsonWriter
 #include <ebus/types.hpp>
 #include <ebus/utils.hpp>
@@ -257,6 +258,44 @@ void RequestTransition::toJson(const JsonChunkVisitor& visitor) const {
   writer.writeField("to", ebus::toString(to));
   writer.writeTimestampField("timestamp", timestamp);
   writer.endObject();
+}
+
+std::string ErrorEntry::toString() const {
+  std::string res;
+  res.reserve(128);  // Pre-allocate to avoid reallocations
+  res += "[";
+
+  char buf[12];
+  if (poll_id > 0) {
+    res += "P:";
+    auto [ptr, ec] = std::to_chars(buf, buf + sizeof(buf), poll_id);
+    res.append(buf, static_cast<size_t>(ptr - buf));
+    res += "|";
+  }
+
+  res += "S:";
+  auto [ptr, ec] = std::to_chars(buf, buf + sizeof(buf), session_id);
+  res.append(buf, static_cast<size_t>(ptr - buf));
+
+  res += "][";
+  res += ebus::toString(handler_state);
+  res += "][";
+  res += ebus::toString(request_state);
+  res += "] ";
+  res += ebus::toString(protocol_error);
+
+  if (sequence_state != SequenceState::seq_ok &&
+      sequence_state != SequenceState::seq_empty) {
+    res += " (";
+    res += ebus::toString(sequence_state);
+    res += ")";
+  }
+
+  res += " (Result: ";
+  res += ebus::toString(result);
+  res += ")";
+
+  return res;
 }
 
 void ErrorEntry::toJson(const JsonChunkVisitor& visitor) const {

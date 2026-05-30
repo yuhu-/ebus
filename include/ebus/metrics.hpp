@@ -75,34 +75,7 @@ struct HandlerMetrics {
   MetricValues active_first;
   MetricValues active_data;
 
-  void reset() {
-    // Aggregated Counters
-    messages_passive = 0;
-    messages_reactive = 0;
-    messages_active = 0;
-    error_passive = 0;
-    error_reactive = 0;
-    error_active = 0;
-    resets_passive = 0;
-    resets_active = 0;
-    total_sent_data_bytes = 0;
-    total_sent_protocol_bytes = 0;
-    total_observed_data_bytes = 0;
-    total_observed_protocol_bytes = 0;
-    last_error_address = 0xff;
-    last_success_address = 0xff;
-    last_passive_reset_us = 0;
-    last_active_reset_us = 0;
-    top_errors.fill({});
-
-    // Explicit phase timings
-    sync = {};
-    write = {};
-    passive_first = {};
-    passive_data = {};
-    active_first = {};
-    active_data = {};
-  }
+  void reset();
 
   void toJson(const JsonChunkVisitor& visitor) const;
 };
@@ -123,19 +96,7 @@ struct RequestMetrics {
   uint32_t lock_counter_reset = 0;
   uint32_t session_timeouts = 0;
 
-  void reset() {
-    // Aggregated Counters
-    won_total = 0;
-    lost_total = 0;
-    collisions = 0;
-    arbitration_errors = 0;
-    first_syn = 0;
-
-    // Detailed Counters
-    bus_request_blocked = 0;
-    lock_counter_reset = 0;
-    session_timeouts = 0;
-  }
+  void reset();
 
   void toJson(const JsonChunkVisitor& visitor) const;
 };
@@ -158,19 +119,7 @@ struct BusMetrics {
   MetricValues transmit;
   MetricValues syn_postpone;
 
-  void reset() {
-    // Detailed Counters
-    start_bit_errors = 0;
-    syn_postponed_count = 0;
-    last_error_us = 0;
-    uptime_us = 0;
-
-    // Explicit phase timings
-    delay = {};
-    window = {};
-    transmit = {};
-    syn_postpone = {};
-  }
+  void reset();
 
   void toJson(const JsonChunkVisitor& visitor) const;
 };
@@ -182,7 +131,7 @@ struct DeviceMetrics {
   // Detailed Counters
   uint32_t unknown_devices = 0;
 
-  void reset() { unknown_devices = 0; }
+  void reset();
 
   void toJson(const JsonChunkVisitor& visitor) const;
 };
@@ -193,7 +142,7 @@ struct DeviceMetrics {
 struct ControllerMetrics {
   uint32_t event_queue_dropped = 0;
 
-  void reset() { event_queue_dropped = 0; }
+  void reset();
 
   void toJson(const JsonChunkVisitor& visitor) const;
 };

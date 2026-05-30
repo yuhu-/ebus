@@ -36,6 +36,10 @@ std::string toString(uint8_t byte) {
   return s;
 }
 
+std::string byteToChar(ByteView data) {
+  return std::string(reinterpret_cast<const char*>(data.data()), data.size());
+}
+
 std::string byteToHex(ByteView data) {
   if (data.empty()) return {};
   std::string res;
@@ -63,6 +67,40 @@ std::vector<uint8_t> toVector(const std::string& str) {
     if (ec == std::errc{}) result.push_back(value);
   }
   return result;
+}
+
+void formatIso8601Fast(uint64_t ms_since_epoch, char* out) {
+  time_t seconds = static_cast<time_t>(ms_since_epoch / 1000);
+  int ms = static_cast<int>(ms_since_epoch % 1000);
+  struct tm tm_info;
+  gmtime_r(&seconds, &tm_info);
+
+  auto write_2d = [](int val, char* p) {
+    p[0] = static_cast<char>('0' + (val / 10));
+    p[1] = static_cast<char>('0' + (val % 10));
+  };
+
+  int year = tm_info.tm_year + 1900;
+  out[0] = static_cast<char>('0' + (year / 1000));
+  out[1] = static_cast<char>('0' + ((year / 100) % 10));
+  out[2] = static_cast<char>('0' + ((year / 10) % 10));
+  out[3] = static_cast<char>('0' + (year % 10));
+  out[4] = '-';
+  write_2d(tm_info.tm_mon + 1, out + 5);
+  out[7] = '-';
+  write_2d(tm_info.tm_mday, out + 8);
+  out[10] = 'T';
+  write_2d(tm_info.tm_hour, out + 11);
+  out[13] = ':';
+  write_2d(tm_info.tm_min, out + 14);
+  out[16] = ':';
+  write_2d(tm_info.tm_sec, out + 17);
+  out[19] = '.';
+  out[20] = static_cast<char>('0' + (ms / 100));
+  out[21] = static_cast<char>('0' + ((ms / 10) % 10));
+  out[22] = static_cast<char>('0' + (ms % 10));
+  out[23] = 'Z';
+  out[24] = '\0';
 }
 
 char* formatFloat(float value, int precision, char* buffer, size_t buffer_size,

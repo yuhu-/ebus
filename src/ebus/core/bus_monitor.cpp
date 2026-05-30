@@ -324,6 +324,33 @@ void MetricValues::toJson(const JsonChunkVisitor& visitor) const {
   writer.endObject();
 }
 
+void metrics::HandlerMetrics::reset() {
+  messages_passive = 0;
+  messages_reactive = 0;
+  messages_active = 0;
+  error_passive = 0;
+  error_reactive = 0;
+  error_active = 0;
+  resets_passive = 0;
+  resets_active = 0;
+  total_sent_data_bytes = 0;
+  total_sent_protocol_bytes = 0;
+  total_observed_data_bytes = 0;
+  total_observed_protocol_bytes = 0;
+  last_error_address = 0xff;
+  last_success_address = 0xff;
+  last_passive_reset_us = 0;
+  last_active_reset_us = 0;
+  top_errors.fill({});
+
+  sync = {};
+  write = {};
+  passive_first = {};
+  passive_data = {};
+  active_first = {};
+  active_data = {};
+}
+
 void metrics::HandlerMetrics::toJson(const JsonChunkVisitor& visitor) const {
   uint32_t m_total = messages_passive + messages_active + messages_reactive;
   uint32_t e_total = error_passive + error_reactive + error_active;
@@ -362,7 +389,8 @@ void metrics::HandlerMetrics::toJson(const JsonChunkVisitor& visitor) const {
   writer.writeField("resets_active", resets_active);
   writer.writeHexField("last_error_address", ByteView(&last_error_address, 1));
   if (last_success_address != 0xff) {
-    writer.writeHexField("last_success_address", ByteView(&last_success_address, 1));
+    writer.writeHexField("last_success_address",
+                         ByteView(&last_success_address, 1));
   }
   if (last_passive_reset_us > 0) {
     writer.writeField("last_passive_reset_us", last_passive_reset_us);
@@ -405,6 +433,17 @@ void metrics::HandlerMetrics::toJson(const JsonChunkVisitor& visitor) const {
   writer.endObject();
 }
 
+void metrics::RequestMetrics::reset() {
+  won_total = 0;
+  lost_total = 0;
+  collisions = 0;
+  arbitration_errors = 0;
+  first_syn = 0;
+  bus_request_blocked = 0;
+  lock_counter_reset = 0;
+  session_timeouts = 0;
+}
+
 void metrics::RequestMetrics::toJson(const JsonChunkVisitor& visitor) const {
   uint32_t attempts =
       won_total + lost_total + collisions + arbitration_errors + first_syn;
@@ -425,6 +464,20 @@ void metrics::RequestMetrics::toJson(const JsonChunkVisitor& visitor) const {
   writer.writeField("arbitration_errors", arbitration_errors);
   writer.writeField("first_syn", first_syn);
   writer.endObject();
+}
+
+void metrics::BusMetrics::reset() {
+  start_bit_errors = 0;
+  syn_postponed_count = 0;
+  congestion = false;
+  high_jitter = false;
+  last_error_us = 0;
+  uptime_us = 0;
+
+  delay = {};
+  window = {};
+  transmit = {};
+  syn_postpone = {};
 }
 
 void metrics::BusMetrics::toJson(const JsonChunkVisitor& visitor) const {
@@ -454,12 +507,16 @@ void metrics::BusMetrics::toJson(const JsonChunkVisitor& visitor) const {
   writer.endObject();
 }
 
+void metrics::DeviceMetrics::reset() { unknown_devices = 0; }
+
 void metrics::DeviceMetrics::toJson(const JsonChunkVisitor& visitor) const {
   detail::JsonWriter writer(visitor);
   writer.startObject();
   writer.writeField("unknown_devices", unknown_devices);
   writer.endObject();
 }
+
+void metrics::ControllerMetrics::reset() { event_queue_dropped = 0; }
 
 void metrics::ControllerMetrics::toJson(const JsonChunkVisitor& visitor) const {
   detail::JsonWriter writer(visitor);

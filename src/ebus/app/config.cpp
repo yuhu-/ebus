@@ -10,6 +10,8 @@
 
 namespace ebus {
 
+void RuntimeConfig::reset() { *this = RuntimeConfig{}; }
+
 void RuntimeConfig::toJson(const JsonChunkVisitor& visitor) const {
   detail::JsonWriter writer(visitor);
   writer.startObject();

@@ -262,22 +262,7 @@ struct ErrorEntry {
   void toJson(const JsonChunkVisitor& visitor) const;
 
   // Custom stringifier for human-readable logs
-  std::string toString() const {
-    std::string res = "[";
-    if (poll_id > 0) res += "P:" + std::to_string(poll_id) + "|";
-    res += "S:" + std::to_string(session_id) + "][";
-    res += std::string(ebus::toString(handler_state)) + "][" +
-           ebus::toString(request_state) + "] " +
-           ebus::toString(protocol_error);
-
-    if (sequence_state != SequenceState::seq_ok &&
-        sequence_state != SequenceState::seq_empty) {
-      res += " (" + std::string(ebus::toString(sequence_state)) + ")";
-    }
-
-    res += " (Result: " + std::string(ebus::toString(result)) + ")";
-    return res;
-  }
+  std::string toString() const;
 
   void setMaster(const uint8_t* data, size_t len) { master.assign(data, len); }
 

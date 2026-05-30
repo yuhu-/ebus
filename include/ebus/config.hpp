@@ -59,7 +59,7 @@ struct RuntimeConfig {
     uint32_t total_timeout_ms = 2000;
   } scheduler;
 
-  void reset() { *this = RuntimeConfig{}; }
+  void reset();
 
   void toJson(const JsonChunkVisitor& visitor) const;
 
