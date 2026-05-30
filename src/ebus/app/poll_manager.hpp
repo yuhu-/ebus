@@ -15,8 +15,9 @@
 #include <ebus/status.hpp>
 #include <functional>
 #include <mutex>
-#include <set>
 #include <vector>
+
+#include "utils/static_vector.hpp"
 
 namespace ebus::detail {
 
@@ -28,10 +29,12 @@ struct PollItem {
   Clock::time_point next_due;
   ResultCallback callback;
 
-  bool operator<(const PollItem& other) const {
-    if (next_due != other.next_due) return next_due < other.next_due;
-    return poll_id < other.poll_id;
-  }
+  struct Greater {
+    bool operator()(const PollItem& lhs, const PollItem& rhs) const {
+      if (lhs.next_due != rhs.next_due) return lhs.next_due > rhs.next_due;
+      return lhs.poll_id > rhs.poll_id;
+    }
+  };
 };
 
 /**
@@ -71,7 +74,7 @@ class PollManager {
 
  private:
   mutable std::mutex mutex_;
-  std::set<PollItem> items_;
+  StaticVector<PollItem, PollLimits::max_items> items_;
   uint8_t own_address_ = 0xff;
   uint32_t next_poll_id_;
 };

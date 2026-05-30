@@ -765,8 +765,7 @@ void Controller::constructMembers() {
   // -- 6. Plumbing --
   if (!impl_->bus_handler_) {
     impl_->bus_handler_ = std::make_unique<detail::BusHandler>(
-        impl_->request_.get(), impl_->handler_.get(), impl_->bus_->getQueue(),
-        detail::BusLimits::max_listeners);
+        impl_->request_.get(), impl_->handler_.get(), impl_->bus_->getQueue());
 
     // Add the permanent tracing listener
     impl_->bus_handler_->addByteListener([this](const BusEventInfo& info) {

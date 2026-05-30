@@ -13,8 +13,6 @@ namespace ebus::detail {
 
 Scheduler::Scheduler(Handler* handler)
     : handler_(handler), stop_flag_(true), next_session_id_(1) {
-  // Reserve space for typical traffic bursts
-  scheduled_items_.reserve(SchedulerLimits::queue_reserve);
   attachHandlerCallbacks();
 }
 

@@ -23,6 +23,7 @@
 #include "core/handler.hpp"
 #include "platform/queue.hpp"
 #include "platform/service_thread.hpp"
+#include "utils/static_vector.hpp"
 
 namespace ebus::detail {
 
@@ -129,7 +130,7 @@ class Scheduler {
   Handler* handler_ = nullptr;
 
   // Queue management
-  std::vector<Item> scheduled_items_;
+  StaticVector<Item, SchedulerLimits::max_items> scheduled_items_;
   std::mutex data_mutex_;
   std::condition_variable data_ready_cv_;
 

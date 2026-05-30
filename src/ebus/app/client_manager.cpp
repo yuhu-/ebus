@@ -161,14 +161,17 @@ void ClientManager::run() {
     bool activity = has_bus_event;
 
     // 1. Snapshot clients only if changed
+    StaticVector<std::shared_ptr<AbstractClient>, NetworkLimits::max_clients>
+        active_clients;
     {
       std::lock_guard<std::mutex> lock(mutex_);
       if (clients_version_ != last_snapshot_version_) {
-        clients_cache_ = clients_;  // copy shared_ptrs
+        clients_cache_.clear();
+        for (const auto& c : clients_) clients_cache_.push_back(c);
         last_snapshot_version_ = clients_version_;
       }
+      for (const auto& c : clients_cache_) active_clients.push_back(c);
     }
-    auto active_clients = clients_cache_;  // local copy for iteration
 
     // 2. Housekeeping & select active sender (minimal lock)
     {

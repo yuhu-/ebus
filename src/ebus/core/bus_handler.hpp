@@ -24,6 +24,7 @@
 #include "platform/bus.hpp"
 #include "platform/queue.hpp"
 #include "platform/service_thread.hpp"
+#include "utils/static_vector.hpp"
 
 namespace ebus::detail {
 
@@ -37,11 +38,8 @@ class BusHandler {
   using ByteListener = std::function<void(const BusEventInfo& info)>;
 
   BusHandler(Request* request, Handler* handler,
-             platform::Queue<BusEvent>* queue,
-             size_t max_listeners = BusLimits::max_listeners)
-      : request_(request), handler_(handler), queue_(queue), running_(false) {
-    listeners_cache_.reserve(max_listeners);
-  }
+             platform::Queue<BusEvent>* queue)
+      : request_(request), handler_(handler), queue_(queue), running_(false) {}
 
   ~BusHandler() { stop(); }
 
@@ -117,8 +115,10 @@ class BusHandler {
   mutable std::mutex mutex_;
   uint32_t listeners_version_ = 0;
   uint32_t last_cache_version_ = 0xffffffff;
-  std::vector<std::pair<uint32_t, ByteListener>> listeners_;
-  std::vector<ByteListener> listeners_cache_;
+
+  StaticVector<std::pair<uint32_t, ByteListener>, BusLimits::max_listeners>
+      listeners_;
+  StaticVector<ByteListener, BusLimits::max_listeners> listeners_cache_;
 
   void run() {
     BusEvent bus_event;

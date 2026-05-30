@@ -21,6 +21,7 @@
 #include "platform/bus.hpp"
 #include "platform/queue.hpp"
 #include "platform/service_thread.hpp"
+#include "utils/static_vector.hpp"
 
 namespace ebus::detail {
 
@@ -73,8 +74,10 @@ class ClientManager {
   SessionState session_state_ = SessionState::idle;
 
   mutable std::mutex mutex_;
-  std::vector<std::shared_ptr<AbstractClient>> clients_;
-  std::vector<std::shared_ptr<AbstractClient>> clients_cache_;
+  StaticVector<std::shared_ptr<AbstractClient>, NetworkLimits::max_clients>
+      clients_;
+  StaticVector<std::shared_ptr<AbstractClient>, NetworkLimits::max_clients>
+      clients_cache_;
 
   // Versioning to avoid copying clients_ every loop iteration unless changed.
   std::atomic<uint64_t> clients_version_{0};

@@ -14,7 +14,7 @@
 #include "ebus/types.hpp"
 
 namespace ebus::detail {
-class JsonWriter; // Forward declaration
+class JsonWriter;  // Forward declaration
 }
 
 namespace ebus {
@@ -100,20 +100,20 @@ struct ProtocolEvent {
   // Shared metadata (Ordered to minimize padding)
   uint32_t session_id;
   uint32_t poll_id;
-  HandlerState handler_state;
-  RequestState request_state;
+  HandlerState handler_state;  // uint8_t
+  RequestState request_state;  // uint8_t
 
   union {
     struct {
       uint32_t retry_count;
-      MessageType message_type;
-      TelegramType telegram_type;
+      MessageType message_type;    // uint8_t
+      TelegramType telegram_type;  // uint8_t
     } tel;
     struct {
-      ProtocolError protocol_error;
-      RequestResult result;
-      SequenceState sequence_state;
-      LogLevel level;
+      ProtocolError protocol_error;  // uint8_t
+      RequestResult result;          // uint8_t
+      SequenceState sequence_state;  // uint8_t
+      LogLevel level;                // uint8_t
     } err;
   } data;
 

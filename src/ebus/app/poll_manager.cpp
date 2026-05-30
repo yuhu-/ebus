@@ -49,7 +49,8 @@ uint32_t PollManager::addPollItem(uint8_t priority, ByteView message,
   item.next_due = Clock::now();
   item.callback = std::move(callback);
 
-  items_.insert(std::move(item));
+  items_.push_back(std::move(item));
+  std::push_heap(items_.begin(), items_.end(), PollItem::Greater());
   return id;
 }
 
@@ -65,23 +66,25 @@ void PollManager::processDueItems(
   std::lock_guard<std::mutex> lock(mutex_);
   auto now = Clock::now();
 
-  while (!items_.empty() && items_.begin()->next_due <= now) {
-    // Extract the due item (node handles are C++17)
-    auto node = items_.extract(items_.begin());
-    const auto& item = node.value();
-    callback(item);
+  while (!items_.empty() && items_.front().next_due <= now) {
+    std::pop_heap(items_.begin(), items_.end(), PollItem::Greater());
+    PollItem item = std::move(items_.back());
+    items_.pop_back();
+
+    callback(item);  // Process item
     if (activity) *activity = true;
 
-    // Update timer and re-insert
-    node.value().next_due = now + item.interval;
-    items_.insert(std::move(node));
+    // Reschedule
+    item.next_due = now + item.interval;
+    items_.push_back(std::move(item));
+    std::push_heap(items_.begin(), items_.end(), PollItem::Greater());
   }
 }
 
 Clock::time_point PollManager::nextDueTime() const {
   std::lock_guard<std::mutex> lock(mutex_);
   if (items_.empty()) return Clock::time_point::max();
-  return items_.begin()->next_due;
+  return items_.front().next_due;
 }
 
 void PollManager::clear() {

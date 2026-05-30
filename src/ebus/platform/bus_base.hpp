@@ -6,9 +6,10 @@
 #pragma once
 
 #include <cstdint>
+#include <ebus/detail/protocol_limits.hpp>
 #include <functional>
-// #include <mutex>
-#include <vector>
+
+#include "utils/static_vector.hpp"
 
 namespace ebus::detail::platform {
 
@@ -30,11 +31,13 @@ class BusBase {
   auto& getSynListeners() { return syn_listeners_; }
 
  private:
-  // Common storage for listeners.
-  // Derived classes handle synchronization (Mutex vs Spinlock).
-  std::vector<ReadListener> read_listeners_;
-  std::vector<WriteListener> write_listeners_;
-  std::vector<SynListener> syn_listeners_;
+  /**
+   * Common storage for listeners using StaticVector to avoid heap
+   * fragmentation. Capacity is enforced by BusLimits::max_listeners.
+   */
+  StaticVector<ReadListener, BusLimits::max_listeners> read_listeners_;
+  StaticVector<WriteListener, BusLimits::max_listeners> write_listeners_;
+  StaticVector<SynListener, BusLimits::max_listeners> syn_listeners_;
 };
 
 }  // namespace ebus::detail::platform
