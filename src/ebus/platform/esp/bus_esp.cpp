@@ -110,7 +110,10 @@ void BusEsp::writeByte(const uint8_t byte) {
   portENTER_CRITICAL(&timer_mux_);
   last_activity_micros_ = esp_timer_get_time();
   portEXIT_CRITICAL(&timer_mux_);
-  uart_write_bytes(uart_port_num_, static_cast<const void*>(&byte), 1);
+  
+  // Use a 10ms timeout to avoid blocking the high-priority bus task
+  uart_write_bytes(uart_port_num_, static_cast<const void*>(&byte), 1, pdMS_TO_TICKS(10));
+
   if (monitor_) monitor_->transmit.markEnd();
 }
 
