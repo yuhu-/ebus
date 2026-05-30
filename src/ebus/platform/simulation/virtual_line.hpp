@@ -46,6 +46,12 @@ class VirtualLine {
     cv_.notify_all();
   }
 
+  inline void writeCollision(uint8_t byte1, uint8_t byte2) {
+    // eBUS is active-LOW, so bits are Wire-ANDed
+    uint8_t result = byte1 & byte2;
+    write(result);
+  }
+
   inline bool read(void* bus_key, uint8_t& out, int timeout_ms) {
     std::unique_lock<std::mutex> lock(mutex_);
     auto it = queues_.find(bus_key);
