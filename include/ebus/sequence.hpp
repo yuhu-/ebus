@@ -90,7 +90,7 @@ class SmallByteVector {
   void resize(size_t n) {
     if (n > capacity_) {
       grow(n);
-      if (n > capacity_) n = capacity_; // Cap at current limit
+      if (n > capacity_) n = capacity_;  // Cap at current limit
     }
     size_ = n;
   }
@@ -108,7 +108,7 @@ class SmallByteVector {
     size_t offset = static_cast<size_t>(std::distance(data(), pos));
     if (size_ + n > capacity_) {
       grow(size_ + n);
-      if (size_ + n > capacity_) return; // Drop insertion if grow failed
+      if (size_ + n > capacity_) return;  // Drop insertion if grow failed
     }
     T* start = data();
     std::move_backward(start + offset, start + size_, start + size_ + n);
@@ -197,18 +197,19 @@ class SequenceImpl {
     extended_ = sequence.isExtended();
   }
 
-  SequenceImpl(std::initializer_list<uint8_t> list) {
-    sequence_.assign(list.begin(), list.end());
+  /**
+   * Generic range-based constructor for any contiguous byte range.
+   * Handles ByteView, std::vector, std::array, and raw arrays.
+   */
+  template <typename T, typename = std::enable_if_t<
+                            detail::is_byte_range<T>::value &&
+                            !std::is_same_v<std::decay_t<T>, SequenceImpl>>>
+  explicit SequenceImpl(const T& data) {
+    sequence_.assign(std::data(data), std::data(data) + std::size(data));
   }
 
-  /**
-   * Compile-time size-checked constructor for raw arrays.
-   */
-  template <size_t N>
-  explicit SequenceImpl(const uint8_t (&arr)[N]) {
-    static_assert(N <= kInlineCapacity,
-                  "Initial data exceeds stack buffer capacity.");
-    sequence_.assign(arr, arr + N);
+  SequenceImpl(std::initializer_list<uint8_t> list) {
+    sequence_.assign(list.begin(), list.end());
   }
 
   void assignSlice(const SequenceImpl& other, size_t index, size_t len = 0) {
@@ -225,8 +226,10 @@ class SequenceImpl {
   /**
    * Assigns data from a ByteView.
    */
-  void assign(ByteView data, bool extended = false) {
-    sequence_.assign(data.begin(), data.end());
+  template <typename T,
+            typename = std::enable_if_t<detail::is_byte_range<T>::value>>
+  void assign(const T& data, bool extended = false) {
+    sequence_.assign(std::data(data), std::data(data) + std::size(data));
     extended_ = extended;
   }
 

@@ -35,8 +35,43 @@ using Clock = std::chrono::steady_clock;
 using JsonChunkVisitor = std::function<void(std::string_view)>;
 
 namespace detail {
-class JsonWriter; // Forward declaration
-}
+class JsonWriter;  // Forward declaration
+
+/**
+ * SFINAE helper to detect if a type has a toJson method.
+ */
+template <typename T, typename = void>
+struct has_to_json : std::false_type {};
+
+template <typename T>
+struct has_to_json<T, std::void_t<decltype(std::declval<T>().toJson(
+                          std::declval<JsonChunkVisitor>()))>>
+    : std::true_type {};
+
+/**
+ * SFINAE helper to detect a contiguous byte range (vector, array, ByteView).
+ */
+template <typename T, typename = void>
+struct is_byte_range : std::false_type {};
+
+template <typename T>
+struct is_byte_range<T, std::void_t<decltype(std::data(std::declval<T>())),
+                                    decltype(std::size(std::declval<T>()))>>
+    : std::is_same<std::decay_t<decltype(*std::data(std::declval<T>()))>,
+                   uint8_t> {};
+
+/**
+ * SFINAE helper to detect an indexable byte container (e.g. CircularBuffer).
+ * Unlike is_byte_range, this does not require contiguous storage (data()).
+ */
+template <typename T, typename = void>
+struct is_byte_indexable : std::false_type {};
+
+template <typename T>
+struct is_byte_indexable<T, std::void_t<decltype(std::declval<T>()[0]),
+                                        decltype(std::size(std::declval<T>()))>>
+    : std::is_same<std::decay_t<decltype(std::declval<T>()[0])>, uint8_t> {};
+}  // namespace detail
 
 // --- Protocol Enums ---
 

@@ -137,9 +137,11 @@ class BusSimulator {
       if (reaction.repeat_count == -1) continue;  // Disabled, skip
 
       // Check if the current history suffix matches the trigger pattern
-      bool match =
-          ebus::matches(write_history_, reaction.trigger,
-                        write_history_.size() - reaction.trigger.size());
+      bool match = false;
+      if (write_history_.size() >= reaction.trigger.size()) {
+        match = ebus::matches(write_history_, reaction.trigger,
+                              write_history_.size() - reaction.trigger.size());
+      }
 
       if (match) {
         ResponseItem item;

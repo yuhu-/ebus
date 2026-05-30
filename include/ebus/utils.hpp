@@ -28,7 +28,7 @@ namespace ebus {
  * Lock-free update of a maximum value stored in an atomic variable.
  * Uses a compare-and-swap loop to ensure thread safety without mutexes.
  */
-template <typename T>
+template <typename T, typename = std::enable_if_t<std::is_arithmetic_v<T>>>
 inline void updateMaxAtomic(std::atomic<T>& atomic_max, T value) {
   T current_max = atomic_max.load(std::memory_order_relaxed);
   while (value > current_max &&
@@ -40,7 +40,8 @@ inline void updateMaxAtomic(std::atomic<T>& atomic_max, T value) {
  * @brief Global helper to create a JSON string for any object supporting
  * the toJson(const JsonChunkVisitor&) pattern.
  */
-template <typename T>
+template <typename T,
+          typename = std::enable_if_t<detail::has_to_json<T>::value>>
 std::string toJson(const T& obj, const size_t reserve) {
   std::string json;
   json.reserve(reserve);
@@ -90,8 +91,8 @@ std::string_view extractSub(std::string_view json, std::string_view key);
 /**
  * Zero-allocation string-to-number converter.
  */
-template <typename T>
-T toNum(std::string_view s) {
+template <typename T, typename = std::enable_if_t<std::is_arithmetic_v<T>>>
+inline T toNum(std::string_view s) {
   if (s.empty() || s == "null") return 0;
   T val = 0;
   std::from_chars(s.data(), s.data() + s.size(), val);
@@ -119,11 +120,13 @@ std::string byteToHex(ByteView data);
 /**
  * Converts any byte container to a hex string.
  */
-template <typename T, typename = std::enable_if_t<!std::is_arithmetic_v<T>>>
+template <typename T,
+          typename = std::enable_if_t<detail::is_byte_range<T>::value>>
 std::string toString(const T& container) {
   if (std::empty(container)) return {};
   return byteToHex(ByteView(std::data(container), std::size(container)));
 }
+
 std::vector<uint8_t> toVector(const std::string& str);
 
 /**
@@ -167,14 +170,20 @@ float roundDigits(float value, uint8_t digits) noexcept;
 /**
  * Returns a non-owning ByteView of a range within a container.
  */
-template <typename T>
-ByteView range(const T& container, size_t index, size_t len) {
+template <typename T,
+          typename = std::enable_if_t<detail::is_byte_range<T>::value>>
+inline ByteView range(const T& container, size_t index, size_t len) {
   if (index >= container.size()) return {};
   size_t count = std::min(len, container.size() - index);
   return ByteView(container.data() + index, count);
 }
 
-template <typename T, typename U>
+/**
+ * Checks if a container contains a search pattern.
+ */
+template <typename T, typename U,
+          typename = std::enable_if_t<detail::is_byte_range<T>::value &&
+                                      detail::is_byte_range<U>::value>>
 bool contains(const T& container, const U& search) {
   if (std::empty(search) || std::empty(container) ||
       std::size(search) > std::size(container))
@@ -191,7 +200,12 @@ bool contains(const T& container, std::initializer_list<uint8_t> search) {
   return contains<T, std::initializer_list<uint8_t>>(container, search);
 }
 
-template <typename T, typename U>
+/**
+ * Checks if a search pattern matches a container at a specific index.
+ */
+template <typename T, typename U,
+          typename = std::enable_if_t<detail::is_byte_indexable<T>::value &&
+                                      detail::is_byte_range<U>::value>>
 inline bool matches(const T& container, const U& search, size_t index = 0) {
   const size_t search_size = std::size(search);
   const size_t cont_size = std::size(container);
