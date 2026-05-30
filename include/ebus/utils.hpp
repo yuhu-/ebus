@@ -6,6 +6,7 @@
 #pragma once
 
 #include <algorithm>
+#include <atomic>
 #include <charconv>
 #include <cmath>
 #include <cstring>
@@ -23,6 +24,18 @@
 #include "ebus/types.hpp"  // For JsonChunkVisitor, ByteView
 
 namespace ebus {
+
+/**
+ * Lock-free update of a maximum value stored in an atomic variable.
+ * Uses a compare-and-swap loop to ensure thread safety without mutexes.
+ */
+template <typename T>
+inline void updateMaxAtomic(std::atomic<T>& atomic_max, T value) {
+  T current_max = atomic_max.load(std::memory_order_relaxed);
+  while (value > current_max &&
+         !atomic_max.compare_exchange_weak(current_max, value,
+                                           std::memory_order_relaxed));
+}
 
 /**
  * @brief Global helper to create a JSON string for any object supporting

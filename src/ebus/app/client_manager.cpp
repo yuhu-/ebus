@@ -143,6 +143,7 @@ ClientManagerStatus ClientManager::getStatus() {
            static_cast<int32_t>(s.task_stack_free_bytes)},
           queueSize(),
           queueCapacity(),
+          max_queue_size_.load(),
           current_active_sender_ != nullptr,
           toString(session_state_),
           last_error_message_};

@@ -129,7 +129,8 @@ SchedulerStatus Scheduler::getStatus() {
   auto s = getThreadStatus();
   return {{s.name, s.task_stack_bytes, s.task_stack_free_bytes},
           queueSize(),
-          queueCapacity()};
+          queueCapacity(),
+          max_queue_size_};
 }
 
 bool Scheduler::pushItem(Item&& it) {
@@ -138,6 +139,8 @@ bool Scheduler::pushItem(Item&& it) {
     return false;  // Queue is full
   }
   scheduled_items_.push_back(std::move(it));
+  if (scheduled_items_.size() > max_queue_size_)
+    max_queue_size_ = scheduled_items_.size();
   std::push_heap(scheduled_items_.begin(), scheduled_items_.end(), Compare());
   data_ready_cv_.notify_one();
   return true;  // Successfully pushed

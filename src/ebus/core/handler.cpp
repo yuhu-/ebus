@@ -187,8 +187,7 @@ void Handler::run(const BusEventInfo& info) {
 
   last_point_ = info.timestamp;
   if (monitor_) {
-    monitor_->updateHandler(
-        [](auto& m) { m.total_observed_protocol_bytes++; });
+    monitor_->updateHandler([](auto& m) { m.total_observed_protocol_bytes++; });
   }
 
   if (measure_sync_) {
@@ -221,6 +220,28 @@ void Handler::run(const BusEventInfo& info) {
 
 void Handler::passiveReceiveMaster(uint8_t byte) {
   if (byte != Symbols::syn) {
+    // Plausibility Filtering: Check header fields before buffering
+    const size_t current_len = passive_master_.size();
+    if (current_len == 0) {
+      // QQ: Must be a master address
+      if (!ebus::isMaster(byte)) {
+        callPassiveReset();
+        return;
+      }
+    } else if (current_len == 1) {
+      // ZZ: Must be a valid target (Master/Slave/Broad)
+      if (!ebus::isTarget(byte)) {
+        callPassiveReset();
+        return;
+      }
+    } else if (current_len == 4) {
+      // NN: Number of data bytes must be 0-16
+      if (byte > SequenceLimits::max_data_bytes) {
+        callPassiveReset();
+        return;
+      }
+    }
+
     passive_master_.pushBack(byte);
 
     if (passive_master_.size() == 5) passive_master_dbx_ = passive_master_[4];
@@ -344,6 +365,14 @@ void Handler::passiveReceiveMasterAcknowledge(uint8_t byte) {
 }
 
 void Handler::passiveReceiveSlave(uint8_t byte) {
+  if (passive_slave_.empty()) {
+    // Plausibility: Slave NN must be 0-16
+    if (byte > SequenceLimits::max_data_bytes) {
+      callPassiveReset();
+      return;
+    }
+  }
+
   passive_slave_.pushBack(byte);
 
   if (passive_slave_.size() == 1) passive_slave_dbx_ = byte;
@@ -712,7 +741,7 @@ void Handler::checkPassiveBuffers() {
                 {passive_master_.data(), passive_master_.size()},
                 {passive_slave_.data(), passive_slave_.size()});
 
-    if (monitor_) monitor_->updateHandler([](auto& m) { m.resets_passive++; });
+    if (monitor_) monitor_->logPassiveReset();
 
     callPassiveReset();
   }
@@ -738,7 +767,7 @@ void Handler::checkActiveBuffers() {
                 sequence_state, {active_master_.data(), active_master_.size()},
                 {active_slave_.data(), active_slave_.size()});
 
-    if (monitor_) monitor_->updateHandler([](auto& m) { m.resets_active++; });
+    if (monitor_) monitor_->logActiveReset();
 
     callActiveReset();
   }
@@ -799,15 +828,19 @@ void Handler::callOnTelegram(MessageType message_type,
       uint32_t data_bytes = 0;
       // PB + SB + Master Data
       if (master_view.size() >= 5) {
-        data_bytes += 2; // PB and SB are considered payload data
-        data_bytes += master_view[4]; // NN
+        data_bytes += 2;               // PB and SB are considered payload data
+        data_bytes += master_view[4];  // NN
       }
       // Slave Data
       if (slave_view.size() >= 1) {
-        data_bytes += slave_view[0]; // NN
+        data_bytes += slave_view[0];  // NN
       }
       monitor_->updateHandler(
           [data_bytes](auto& m) { m.total_observed_data_bytes += data_bytes; });
+
+      if (telegram_type != TelegramType::broadcast && master_view.size() >= 2) {
+        monitor_->recordHandlerSuccess(master_view[1]);
+      }
     }
     telegram_callback_({0, 0, 0, message_type, telegram_type, state_,
                         request_->getState(), master_view, slave_view});
@@ -818,7 +851,10 @@ void Handler::callOnError(LogLevel level, ProtocolError protocol_error,
                           SequenceState sequence_state, ByteView master_view,
                           ByteView slave_view) {
   if (error_callback_) {
-    if (monitor_) monitor_->recordBusError();
+    if (monitor_) {
+      monitor_->recordBusError();
+      monitor_->recordHandlerError(master_view.empty() ? 0xff : master_view[0]);
+    }
     error_callback_({0, 0, level, protocol_error, last_result_, sequence_state,
                      state_, request_->getState(), master_view, slave_view});
   }

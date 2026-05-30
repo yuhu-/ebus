@@ -5,6 +5,7 @@
 
 #include "core/bus_monitor.hpp"
 
+#include <algorithm>
 #include <chrono>
 #include <ebus/detail/json_writer.hpp>
 #include <ebus/status.hpp>
@@ -236,6 +237,60 @@ void BusMonitor::recordLowBits(uint32_t bits) {
   total_low_bits_ += bits;
 }
 
+void BusMonitor::recordHandlerError(uint8_t address) {
+  std::lock_guard<std::mutex> lock(metrics_mutex_);
+  auto now_us = std::chrono::duration_cast<std::chrono::microseconds>(
+                    Clock::now() - uptime_start_)
+                    .count();
+
+  handler_acc_.last_error_address = address;
+  auto& top = handler_acc_.top_errors;
+
+  int min_idx = 0;
+  bool found = false;
+  for (int i = 0; i < 3; ++i) {
+    if (top[i].address == address) {
+      top[i].count++;
+      top[i].last_seen_us = now_us;
+      found = true;
+      break;
+    }
+    if (top[i].count < top[min_idx].count) min_idx = i;
+  }
+
+  if (!found) {
+    top[min_idx] = {address, 1, static_cast<uint64_t>(now_us)};
+  }
+
+  std::sort(top.begin(), top.end(), [](const auto& a, const auto& b) {
+    if (a.count != b.count) return a.count > b.count;
+    return a.last_seen_us > b.last_seen_us;
+  });
+}
+
+void BusMonitor::recordHandlerSuccess(uint8_t address) {
+  std::lock_guard<std::mutex> lock(metrics_mutex_);
+  handler_acc_.last_success_address = address;
+}
+
+void BusMonitor::logPassiveReset() {
+  std::lock_guard<std::mutex> lock(metrics_mutex_);
+  handler_acc_.last_passive_reset_us =
+      std::chrono::duration_cast<std::chrono::microseconds>(Clock::now() -
+                                                            uptime_start_)
+          .count();
+  handler_acc_.resets_passive++;
+}
+
+void BusMonitor::logActiveReset() {
+  std::lock_guard<std::mutex> lock(metrics_mutex_);
+  handler_acc_.last_active_reset_us =
+      std::chrono::duration_cast<std::chrono::microseconds>(Clock::now() -
+                                                            uptime_start_)
+          .count();
+  handler_acc_.resets_active++;
+}
+
 void BusMonitor::clearHistory() {
 #ifndef EBUS_MINIMAL_DIAGNOSTICS
   std::lock_guard<std::mutex> lock(metrics_mutex_);
@@ -261,8 +316,10 @@ namespace ebus {
 void MetricValues::toJson(const JsonChunkVisitor& visitor) const {
   detail::JsonWriter writer(visitor);
   writer.startObject();
+  float mean_us = (count > 0) ? static_cast<float>(sum_us) / count : 0.0f;
   writer.writeField("last_us", static_cast<uint64_t>(last_us));
   writer.writeField("max_us", static_cast<uint64_t>(max_us));
+  writer.writeFieldFloat("mean_us", mean_us);
   writer.writeField("count", static_cast<uint64_t>(count));
   writer.endObject();
 }
@@ -276,9 +333,9 @@ void metrics::HandlerMetrics::toJson(const JsonChunkVisitor& visitor) const {
           ? (static_cast<float>(e_total) / (m_total + e_total)) * 100.0f
           : 0.0f;
 
-  float pd_util = (total_protocol_bytes_sent > 0)
-                      ? (static_cast<float>(total_data_bytes_sent) /
-                         total_protocol_bytes_sent) *
+  float pd_util = (total_sent_protocol_bytes > 0)
+                      ? (static_cast<float>(total_sent_data_bytes) /
+                         total_sent_protocol_bytes) *
                             100.0f
                       : 0.0f;
 
@@ -293,25 +350,45 @@ void metrics::HandlerMetrics::toJson(const JsonChunkVisitor& visitor) const {
   writer.writeFieldFloat("error_rate", e_rate);
   writer.writeFieldFloat("protocol_data_utilization_rate", pd_util);
   writer.writeFieldFloat("global_payload_efficiency", global_eff);
-  writer.writeField("messages_total", static_cast<uint64_t>(m_total));
-  writer.writeField("messages_passive",
-                    static_cast<uint64_t>(messages_passive));
-  writer.writeField("messages_reactive",
-                    static_cast<uint64_t>(messages_reactive));
-  writer.writeField("messages_active", static_cast<uint64_t>(messages_active));
-  writer.writeField("error_total", static_cast<uint64_t>(e_total));
-  writer.writeField("error_passive", static_cast<uint64_t>(error_passive));
-  writer.writeField("error_reactive", static_cast<uint64_t>(error_reactive));
-  writer.writeField("error_active", static_cast<uint64_t>(error_active));
-  writer.writeField("resets_passive", static_cast<uint64_t>(resets_passive));
-  writer.writeField("resets_active", static_cast<uint64_t>(resets_active));
+  writer.writeField("messages_total", m_total);
+  writer.writeField("messages_passive", messages_passive);
+  writer.writeField("messages_reactive", messages_reactive);
+  writer.writeField("messages_active", messages_active);
+  writer.writeField("error_total", e_total);
+  writer.writeField("error_passive", error_passive);
+  writer.writeField("error_reactive", error_reactive);
+  writer.writeField("error_active", error_active);
+  writer.writeField("resets_passive", resets_passive);
+  writer.writeField("resets_active", resets_active);
+  writer.writeHexField("last_error_address", ByteView(&last_error_address, 1));
+  if (last_success_address != 0xff) {
+    writer.writeHexField("last_success_address", ByteView(&last_success_address, 1));
+  }
+  if (last_passive_reset_us > 0) {
+    writer.writeField("last_passive_reset_us", last_passive_reset_us);
+  }
+  if (last_active_reset_us > 0) {
+    writer.writeField("last_active_reset_us", last_active_reset_us);
+  }
+
+  writer.appendKey("top_errors");
+  writer.startArray();
+  for (const auto& entry : top_errors) {
+    if (entry.count > 0) {
+      writer.startObject();
+      writer.writeHexField("address", ByteView(&entry.address, 1));
+      writer.writeField("count", static_cast<uint64_t>(entry.count));
+      writer.writeField("last_seen_us", entry.last_seen_us);
+      writer.endObject();
+    }
+  }
+  writer.endArray();
+
+  writer.writeField("total_sent_data_bytes", total_sent_data_bytes);
+  writer.writeField("total_sent_protocol_bytes", total_sent_protocol_bytes);
   writer.writeField("total_observed_data_bytes", total_observed_data_bytes);
   writer.writeField("total_observed_protocol_bytes",
                     total_observed_protocol_bytes);
-  writer.writeField("total_data_bytes_sent",
-                    static_cast<uint64_t>(total_data_bytes_sent));
-  writer.writeField("total_protocol_bytes_sent",
-                    static_cast<uint64_t>(total_protocol_bytes_sent));
 
   writer.appendKey("sync");
   sync.toJson(visitor);
@@ -342,12 +419,11 @@ void metrics::RequestMetrics::toJson(const JsonChunkVisitor& visitor) const {
   writer.startObject();
   writer.writeFieldFloat("contention_rate", cont_rate);
   writer.writeFieldFloat("collision_rate", coll_rate);
-  writer.writeField("won_total", static_cast<uint64_t>(won_total));
-  writer.writeField("lost_total", static_cast<uint64_t>(lost_total));
-  writer.writeField("collisions", static_cast<uint64_t>(collisions));
-  writer.writeField("arbitration_errors",
-                    static_cast<uint64_t>(arbitration_errors));
-  writer.writeField("first_syn", static_cast<uint64_t>(first_syn));
+  writer.writeField("won_total", won_total);
+  writer.writeField("lost_total", lost_total);
+  writer.writeField("collisions", collisions);
+  writer.writeField("arbitration_errors", arbitration_errors);
+  writer.writeField("first_syn", first_syn);
   writer.endObject();
 }
 
@@ -360,14 +436,12 @@ void metrics::BusMetrics::toJson(const JsonChunkVisitor& visitor) const {
   // We keep the utilization key for dashboards, but app will calculate from
   // raw.
   writer.writeField("utilization", "null");  // Raw value, not a number
-  writer.writeField("start_bit_errors",
-                    static_cast<uint64_t>(start_bit_errors));
-  writer.writeField("syn_postponed_count",
-                    static_cast<uint64_t>(syn_postponed_count));
+  writer.writeField("start_bit_errors", start_bit_errors);
+  writer.writeField("syn_postponed_count", syn_postponed_count);
   writer.writeField("congestion", congestion);
   writer.writeField("high_jitter", high_jitter);
-  writer.writeField("last_error_us", static_cast<uint64_t>(last_error_us));
-  writer.writeField("uptime_us", static_cast<uint64_t>(uptime_us));
+  writer.writeField("last_error_us", last_error_us);
+  writer.writeField("uptime_us", uptime_us);
 
   writer.appendKey("delay");
   delay.toJson(visitor);
@@ -383,15 +457,14 @@ void metrics::BusMetrics::toJson(const JsonChunkVisitor& visitor) const {
 void metrics::DeviceMetrics::toJson(const JsonChunkVisitor& visitor) const {
   detail::JsonWriter writer(visitor);
   writer.startObject();
-  writer.writeField("unknown_devices", static_cast<uint64_t>(unknown_devices));
+  writer.writeField("unknown_devices", unknown_devices);
   writer.endObject();
 }
 
 void metrics::ControllerMetrics::toJson(const JsonChunkVisitor& visitor) const {
   detail::JsonWriter writer(visitor);
   writer.startObject();
-  writer.writeField("event_queue_dropped",
-                    static_cast<uint64_t>(event_queue_dropped));
+  writer.writeField("event_queue_dropped", event_queue_dropped);
   writer.endObject();
 }
 
@@ -470,6 +543,7 @@ void BusHandlerStatus::toJson(const JsonChunkVisitor& visitor) const {
   thread.toJson(visitor);
   writer.writeField("queue_size", static_cast<uint64_t>(queue_size));
   writer.writeField("queue_capacity", static_cast<uint64_t>(queue_capacity));
+  writer.writeField("max_queue_size", static_cast<uint64_t>(max_queue_size));
   writer.endObject();
 }
 
@@ -480,6 +554,7 @@ void SchedulerStatus::toJson(const JsonChunkVisitor& visitor) const {
   thread.toJson(visitor);
   writer.writeField("queue_size", static_cast<uint64_t>(queue_size));
   writer.writeField("queue_capacity", static_cast<uint64_t>(queue_capacity));
+  writer.writeField("max_queue_size", static_cast<uint64_t>(max_queue_size));
   writer.endObject();
 }
 
@@ -490,6 +565,7 @@ void ClientManagerStatus::toJson(const JsonChunkVisitor& visitor) const {
   thread.toJson(visitor);
   writer.writeField("queue_size", static_cast<uint64_t>(queue_size));
   writer.writeField("queue_capacity", static_cast<uint64_t>(queue_capacity));
+  writer.writeField("max_queue_size", static_cast<uint64_t>(max_queue_size));
   writer.writeField("session_active", session_active);
   writer.writeField("session_state", session_state);
   writer.writeField("last_error", last_error);
@@ -535,6 +611,7 @@ void SystemResources::QueueInfo::toJson(const JsonChunkVisitor& visitor) const {
   writer.writeField("name", name);
   writer.writeField("size", static_cast<uint64_t>(size));
   writer.writeField("capacity", static_cast<uint64_t>(capacity));
+  writer.writeField("max_size", static_cast<uint64_t>(max_size));
   writer.endObject();
 }
 

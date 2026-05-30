@@ -48,6 +48,9 @@ struct Impl {
   detail::platform::Queue<ebus::ProtocolEvent> event_telegrams_{
       detail::ControllerLimits::event_queue_size};
 
+  std::atomic<size_t> max_event_errors_{0};
+  std::atomic<size_t> max_event_telegrams_{0};
+
   std::unique_ptr<detail::Request> request_;
   std::unique_ptr<detail::BusMonitor> bus_monitor_;
   std::unique_ptr<detail::platform::Bus> bus_;
@@ -462,20 +465,28 @@ void Controller::fetchSystemResources(
     // Bus Handler
     auto bh_stat = impl_->bus_handler_->getStatus();
     res.threads.push_back(bh_stat.thread);
-    res.queues.push_back(
-        {"bus_handler", bh_stat.queue_size, bh_stat.queue_capacity});
+    res.queues.push_back({"bus_handler", bh_stat.queue_size,
+                          bh_stat.queue_capacity, bh_stat.max_queue_size});
+
+    // Public Event Queues
+    res.queues.push_back({"event_errors", impl_->event_errors_.size(),
+                          detail::ControllerLimits::event_queue_size,
+                          impl_->max_event_errors_.load()});
+    res.queues.push_back({"event_telegrams", impl_->event_telegrams_.size(),
+                          detail::ControllerLimits::event_queue_size,
+                          impl_->max_event_telegrams_.load()});
 
     // Scheduler
     auto s_stat = impl_->scheduler_->getStatus();
     res.threads.push_back(s_stat.thread);
-    res.queues.push_back(
-        {"scheduler", s_stat.queue_size, s_stat.queue_capacity});
+    res.queues.push_back({"scheduler", s_stat.queue_size, s_stat.queue_capacity,
+                          s_stat.max_queue_size});
 
     // Client Manager
     auto c_stat = impl_->client_manager_->getStatus();
     res.threads.push_back(c_stat.thread);
-    res.queues.push_back(
-        {"client_manager", c_stat.queue_size, c_stat.queue_capacity});
+    res.queues.push_back({"client_manager", c_stat.queue_size,
+                          c_stat.queue_capacity, c_stat.max_queue_size});
   }
 
   callback(res);
@@ -630,6 +641,10 @@ void Controller::constructMembers() {
       if (!impl_->event_telegrams_.tryPush(std::move(ev))) {
         impl_->bus_monitor_->updateController(
             [](auto& m) { m.event_queue_dropped++; });
+      } else {
+        // Update high watermark
+        updateMaxAtomic(impl_->max_event_telegrams_,
+                        impl_->event_telegrams_.size());
       }
       wake_cv_.notify_one();
 
@@ -680,6 +695,9 @@ void Controller::constructMembers() {
       if (!impl_->event_errors_.tryPush(std::move(ev))) {
         impl_->bus_monitor_->updateController(
             [](auto& m) { m.event_queue_dropped++; });
+      } else {
+        // Update high watermark
+        updateMaxAtomic(impl_->max_event_errors_, impl_->event_errors_.size());
       }
       wake_cv_.notify_one();
 

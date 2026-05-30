@@ -5,10 +5,11 @@
 
 #pragma once
 
+#include <atomic>
 #include <chrono>
 #include <cstdint>
 #include <ebus/metrics.hpp>
-#include <mutex>
+#include <ebus/utils.hpp>
 
 namespace ebus::detail {
 
@@ -18,49 +19,59 @@ namespace ebus::detail {
  */
 class TimingStats {
  public:
-  TimingStats() : last_(0), max_(0), count_(0), marked_(false), begin_time_() {}
+  TimingStats()
+      : last_(0),
+        max_(0),
+        sum_(0),
+        count_(0),
+        marked_(false),
+        begin_time_us_(0) {}
   virtual ~TimingStats() = default;
 
   inline void addSample(uint32_t value) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    addSampleUnsynced(value);
+    last_.store(value, std::memory_order_relaxed);
+    sum_.fetch_add(value, std::memory_order_relaxed);
+    updateMaxAtomic(max_, value);
+
+    count_.fetch_add(1, std::memory_order_relaxed);
   }
 
   inline void reset() {
-    std::lock_guard<std::mutex> lock(mutex_);
-    last_ = max_ = 0;
-    count_ = 0;
+    last_.store(0, std::memory_order_relaxed);
+    max_.store(0, std::memory_order_relaxed);
+    sum_.store(0, std::memory_order_relaxed);
+    count_.store(0, std::memory_order_relaxed);
+    marked_.store(false, std::memory_order_relaxed);
   }
 
   inline MetricValues getValues() const {
-    std::lock_guard<std::mutex> lock(mutex_);
-    return {last_, max_, count_};
+    return {last_.load(std::memory_order_relaxed),
+            max_.load(std::memory_order_relaxed),
+            sum_.load(std::memory_order_relaxed),
+            count_.load(std::memory_order_relaxed)};
   }
 
-  uint32_t getLast() const {
-    std::lock_guard<std::mutex> lock(mutex_);
-    return last_;
-  }
+  uint32_t getLast() const { return last_.load(std::memory_order_relaxed); }
 
-  uint64_t getCount() const {
-    std::lock_guard<std::mutex> lock(mutex_);
-    return count_;
-  }
+  uint64_t getCount() const { return count_.load(std::memory_order_relaxed); }
 
   inline void markBegin(const Clock::time_point& begin = Clock::now()) {
-    std::unique_lock<std::mutex> lock(mutex_);
-    begin_time_ = begin;
-    marked_ = true;
+    begin_time_us_.store(std::chrono::duration_cast<std::chrono::microseconds>(
+                             begin.time_since_epoch())
+                             .count(),
+                         std::memory_order_relaxed);
+    marked_.store(true, std::memory_order_release);
   }
 
   inline void markEnd(const Clock::time_point& end = Clock::now()) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    if (marked_) {
-      auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
-                          end - begin_time_)
-                          .count();
-      addSampleUnsynced(static_cast<uint32_t>(duration));
-      marked_ = false;
+    if (marked_.load(std::memory_order_acquire)) {
+      uint64_t end_us = std::chrono::duration_cast<std::chrono::microseconds>(
+                            end.time_since_epoch())
+                            .count();
+      uint64_t duration =
+          end_us - begin_time_us_.load(std::memory_order_relaxed);
+      addSample(static_cast<uint32_t>(duration));
+      marked_.store(false, std::memory_order_release);
     }
   }
 
@@ -72,21 +83,13 @@ class TimingStats {
     addSample(static_cast<uint32_t>(duration));
   }
 
- protected:
-  void addSampleUnsynced(uint32_t value) {
-    last_ = value;
-    if (value > max_) max_ = value;
-    ++count_;
-  }
-
-  mutable std::mutex mutex_;
-  uint32_t last_;
-  uint32_t max_;
-  uint64_t count_;
-
  private:
-  bool marked_;
-  Clock::time_point begin_time_;
+  std::atomic<uint32_t> last_{0};
+  std::atomic<uint32_t> max_{0};
+  std::atomic<uint64_t> sum_{0};
+  std::atomic<uint64_t> count_{0};
+  std::atomic<bool> marked_{false};
+  std::atomic<uint64_t> begin_time_us_{0};
 };
 
 }  // namespace ebus::detail

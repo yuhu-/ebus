@@ -66,6 +66,8 @@ class ClientManager {
   BusMonitor* monitor_;
 
   platform::Queue<BusEventInfo> bus_byte_queue_;
+  std::atomic<size_t> max_queue_size_{0};
+
   std::atomic<bool> running_{false};
 
   SessionState session_state_ = SessionState::idle;

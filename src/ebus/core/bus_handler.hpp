@@ -98,7 +98,8 @@ class BusHandler {
     auto s = getThreadStatus();
     return {{s.name, s.task_stack_bytes, s.task_stack_free_bytes},
             queueSize(),
-            queueCapacity()};
+            queueCapacity(),
+            max_queue_size_};
   }
 
  private:
@@ -109,6 +110,7 @@ class BusHandler {
   std::chrono::milliseconds watchdog_timeout_ms_{
       ebus::RuntimeConfig{}.bus.watchdog_timeout_ms};
 
+  size_t max_queue_size_ = 0;
   std::unique_ptr<platform::ServiceThread> worker_;
 
   uint32_t next_listener_id_ = 0;
@@ -122,6 +124,9 @@ class BusHandler {
     BusEvent bus_event;
     while (running_) {
       if (queue_->pop(bus_event, watchdog_timeout_ms_)) {
+        size_t q_size = queueSize() + 1;  // Current popped item
+        if (q_size > max_queue_size_) max_queue_size_ = q_size;
+
         BusEventInfo info{bus_event.byte,
                           HandlerState::passive_receive_master,
                           RequestState::observe,

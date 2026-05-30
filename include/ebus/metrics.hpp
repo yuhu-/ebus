@@ -16,7 +16,7 @@
 #include "ebus/types.hpp"
 
 namespace ebus::detail {
-class JsonWriter; // Forward declaration
+class JsonWriter;  // Forward declaration
 }
 
 namespace ebus {
@@ -27,9 +27,19 @@ namespace ebus {
 struct MetricValues {
   uint32_t last_us = 0;
   uint32_t max_us = 0;
+  uint64_t sum_us = 0;
   uint64_t count = 0;
 
   void toJson(const JsonChunkVisitor& visitor) const;
+};
+
+/**
+ * Frequency tracking for error-producing addresses.
+ */
+struct ErrorAddressStats {
+  uint8_t address = 0xff;
+  uint32_t count = 0;
+  uint64_t last_seen_us = 0;
 };
 
 namespace metrics {
@@ -47,10 +57,15 @@ struct HandlerMetrics {
   uint32_t error_active = 0;
   uint32_t resets_passive = 0;
   uint32_t resets_active = 0;
-  uint32_t total_data_bytes_sent = 0;
-  uint32_t total_protocol_bytes_sent = 0;
+  uint64_t total_sent_data_bytes = 0;
+  uint64_t total_sent_protocol_bytes = 0;
   uint64_t total_observed_data_bytes = 0;
   uint64_t total_observed_protocol_bytes = 0;
+  uint8_t last_error_address = 0xff;
+  uint8_t last_success_address = 0xff;
+  uint64_t last_passive_reset_us = 0;
+  uint64_t last_active_reset_us = 0;
+  std::array<ErrorAddressStats, 3> top_errors{};
 
   // Explicit phase timings
   MetricValues sync;
@@ -70,10 +85,15 @@ struct HandlerMetrics {
     error_active = 0;
     resets_passive = 0;
     resets_active = 0;
-    total_data_bytes_sent = 0;
-    total_protocol_bytes_sent = 0;
+    total_sent_data_bytes = 0;
+    total_sent_protocol_bytes = 0;
     total_observed_data_bytes = 0;
     total_observed_protocol_bytes = 0;
+    last_error_address = 0xff;
+    last_success_address = 0xff;
+    last_passive_reset_us = 0;
+    last_active_reset_us = 0;
+    top_errors.fill({});
 
     // Explicit phase timings
     sync = {};
@@ -129,8 +149,8 @@ struct BusMetrics {
   uint32_t syn_postponed_count = 0;
   bool congestion = false;
   bool high_jitter = false;
-  uint64_t last_error_us = 0;         // us since start
-  uint64_t uptime_us = 0;             // us since start
+  uint64_t last_error_us = 0;  // us since start
+  uint64_t uptime_us = 0;      // us since start
 
   // Explicit phase timings
   MetricValues delay;
@@ -162,9 +182,7 @@ struct DeviceMetrics {
   // Detailed Counters
   uint32_t unknown_devices = 0;
 
-  void reset() {
-    unknown_devices = 0;
-  }
+  void reset() { unknown_devices = 0; }
 
   void toJson(const JsonChunkVisitor& visitor) const;
 };

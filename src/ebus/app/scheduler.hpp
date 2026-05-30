@@ -133,6 +133,7 @@ class Scheduler {
   std::mutex data_mutex_;
   std::condition_variable data_ready_cv_;
 
+  size_t max_queue_size_ = 0;
   // Worker thread
   std::unique_ptr<platform::ServiceThread> worker_;
   std::atomic<bool> stop_flag_;

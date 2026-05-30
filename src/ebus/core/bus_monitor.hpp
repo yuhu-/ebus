@@ -76,6 +76,10 @@ class BusMonitor {
   }
   void recordBusError();
   void recordLowBits(uint32_t bits);
+  void recordHandlerError(uint8_t address);
+  void recordHandlerSuccess(uint8_t address);
+  void logPassiveReset();
+  void logActiveReset();
   void clearHistory();
 
   void logHandlerTransition(HandlerState from, HandlerState to);

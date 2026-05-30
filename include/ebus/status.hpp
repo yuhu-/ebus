@@ -17,7 +17,7 @@ class BusMonitor;
 }
 
 namespace ebus::detail {
-class JsonWriter; // Forward declaration
+class JsonWriter;  // Forward declaration
 }
 
 namespace ebus {
@@ -59,6 +59,7 @@ struct BusHandlerStatus {
   ThreadStatus thread;
   size_t queue_size = 0;
   size_t queue_capacity = 0;
+  size_t max_queue_size = 0;
 
   void toJson(const JsonChunkVisitor& visitor) const;
 };
@@ -70,6 +71,7 @@ struct SchedulerStatus {
   ThreadStatus thread;
   size_t queue_size = 0;
   size_t queue_capacity = 0;
+  size_t max_queue_size = 0;
 
   void toJson(const JsonChunkVisitor& visitor) const;
 };
@@ -81,6 +83,7 @@ struct ClientManagerStatus {
   ThreadStatus thread;
   size_t queue_size = 0;
   size_t queue_capacity = 0;
+  size_t max_queue_size = 0;
   bool session_active = false;
   std::string session_state;
   std::string last_error;
@@ -135,6 +138,7 @@ struct SystemResources {
     std::string name;
     size_t size = 0;
     size_t capacity = 0;
+    size_t max_size = 0;
 
     void toJson(const JsonChunkVisitor& visitor) const;
   };
