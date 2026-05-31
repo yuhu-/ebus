@@ -1,11 +1,10 @@
 /*
- * Copyright (C) 2025-2026 Roland Jax
+ * Copyright (C) 2026 Roland Jax
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "ebus/detail/json_writer.hpp"
-
-#include "ebus/utils.hpp"  // For ebus::formatFloat, ebus::formatIso8601Fast
+#include <ebus/detail/json_writer.hpp>
+#include <ebus/utils.hpp>
 
 namespace ebus::detail {
 
@@ -75,6 +74,7 @@ void JsonWriter::writeTimestampField(std::string_view key, uint64_t ms) {
   write("\"");
   write(std::string_view(iso_buffer));
   write("\"");
+  first_ = false;
 }
 
 }  // namespace ebus::detail

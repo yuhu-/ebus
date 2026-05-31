@@ -11,9 +11,9 @@
 #include <functional>
 #include <string_view>
 #include <type_traits>
-#include <utility>  // For std::move
+#include <utility>
 
-#include "ebus/types.hpp"  // For JsonChunkVisitor, ByteView
+#include "ebus/types.hpp"
 
 namespace ebus {
 
@@ -83,7 +83,7 @@ class JsonWriter {
     write("\"");
     write(key);
     write("\":");
-    first_ = false;
+    first_ = true;  // The following value is the 'first' for this key
   }
 
   void writeEscaped(std::string_view s) {
@@ -98,6 +98,15 @@ class JsonWriter {
     write("\"");
     writeEscaped(val);
     write("\"");
+    first_ = false;
+  }
+
+  template <typename T>
+  std::enable_if_t<detail::has_to_json<T>::value, void> writeValue(
+      const T& val) {
+    if (!first_) write(",");
+    flush();
+    val.toJson(visitor_);
     first_ = false;
   }
 
@@ -142,6 +151,16 @@ class JsonWriter {
     write("\"");
     writeEscaped(val);
     write("\"");
+    first_ = false;
+  }
+
+  template <typename T>
+  std::enable_if_t<detail::has_to_json<T>::value, void> writeField(
+      std::string_view key, const T& val) {
+    appendKey(key);
+    flush();
+    val.toJson(visitor_);
+    first_ = false;
   }
 
   void writeField(std::string_view key, const char* val) {
@@ -153,6 +172,7 @@ class JsonWriter {
     } else {
       write("null");
     }
+    first_ = false;
   }
 
   template <typename T>
@@ -160,6 +180,7 @@ class JsonWriter {
       std::string_view key, T val) {
     appendKey(key);
     write(val ? "true" : "false");
+    first_ = false;
   }
 
   template <typename T>
@@ -173,6 +194,7 @@ class JsonWriter {
     if (ec == std::errc{}) {
       write(std::string_view(buf, ptr - buf));
     }
+    first_ = false;
   }
 
   void writeFieldFloat(std::string_view key, float val, int precision = 2) {
@@ -186,19 +208,19 @@ class JsonWriter {
         ebus::detail::FormattingLimits::float_upper_threshold);
 
     write(std::string_view(buf, end - buf));
+    first_ = false;
   }
 
   void writeHexField(std::string_view key, ByteView data) {
     appendKey(key);
     write("\"");
-    ebus::detail::appendHexFieldToWriter(*this,
-                                         data);  // Use fully qualified name
+    ebus::detail::appendHexFieldToWriter(*this, data);
     write("\"");
+    first_ = false;
   }
 
-  void writeTimestampField(std::string_view key,
-                           uint64_t ms);  // Implementation in .cpp
-  void appendHexField(ByteView data);     // Implementation in .cpp
+  void writeTimestampField(std::string_view key, uint64_t ms);
+  void appendHexField(ByteView data);
 
   bool isFirst() const { return first_; }
 

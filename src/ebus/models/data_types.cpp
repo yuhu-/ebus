@@ -623,12 +623,9 @@ void DataTypeInfo::toJson(const JsonChunkVisitor& visitor) const {
 void getSupportedDataTypesJson(const JsonChunkVisitor& visitor) {
   detail::JsonWriter writer(visitor);
   writer.startArray();
-  bool first = true;
   const auto types = getSupportedDataTypes();
   for (const auto& t : types) {
-    if (!first) writer.write(",");
-    t.toJson(visitor);
-    first = false;
+    writer.writeValue(t);
   }
   writer.endArray();
 }

@@ -3,10 +3,9 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "ebus/detail/config_validator.hpp"
-
-#include "ebus/address.hpp"
-#include "ebus/detail/protocol_limits.hpp"
+#include <ebus/address.hpp>
+#include <ebus/detail/config_validator.hpp>
+#include <ebus/detail/protocol_limits.hpp>
 
 namespace ebus::detail {
 

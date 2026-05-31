@@ -7,8 +7,7 @@
 
 #include <chrono>
 #include <cstdint>
-
-#include "ebus/types.hpp"
+#include <ebus/types.hpp>
 
 namespace ebus::detail {
 

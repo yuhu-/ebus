@@ -418,18 +418,12 @@ void metrics::HandlerMetrics::toJson(const JsonChunkVisitor& visitor) const {
   writer.writeField("total_observed_protocol_bytes",
                     total_observed_protocol_bytes);
 
-  writer.appendKey("sync");
-  sync.toJson(visitor);
-  writer.appendKey("write");
-  write.toJson(visitor);
-  writer.appendKey("passive_first");
-  passive_first.toJson(visitor);
-  writer.appendKey("passive_data");
-  passive_data.toJson(visitor);
-  writer.appendKey("active_first");
-  active_first.toJson(visitor);
-  writer.appendKey("active_data");
-  active_data.toJson(visitor);
+  writer.writeField("sync", sync);
+  writer.writeField("write", write);
+  writer.writeField("passive_first", passive_first);
+  writer.writeField("passive_data", passive_data);
+  writer.writeField("active_first", active_first);
+  writer.writeField("active_data", active_data);
   writer.endObject();
 }
 
@@ -486,9 +480,7 @@ void metrics::BusMetrics::toJson(const JsonChunkVisitor& visitor) const {
   // BusMonitor::getBusUtilization() provides the real-time calculated value.
   detail::JsonWriter writer(visitor);
   writer.startObject();
-  // We keep the utilization key for dashboards, but app will calculate from
-  // raw.
-  writer.writeField("utilization", "null");  // Raw value, not a number
+  writer.writeField("utilization", (const char*)nullptr);
   writer.writeField("start_bit_errors", start_bit_errors);
   writer.writeField("syn_postponed_count", syn_postponed_count);
   writer.writeField("congestion", congestion);
@@ -496,14 +488,10 @@ void metrics::BusMetrics::toJson(const JsonChunkVisitor& visitor) const {
   writer.writeField("last_error_us", last_error_us);
   writer.writeField("uptime_us", uptime_us);
 
-  writer.appendKey("delay");
-  delay.toJson(visitor);
-  writer.appendKey("window");
-  window.toJson(visitor);
-  writer.appendKey("transmit");
-  transmit.toJson(visitor);
-  writer.appendKey("syn_postpone");
-  syn_postpone.toJson(visitor);
+  writer.writeField("delay", delay);
+  writer.writeField("window", window);
+  writer.writeField("transmit", transmit);
+  writer.writeField("syn_postpone", syn_postpone);
   writer.endObject();
 }
 
@@ -551,15 +539,15 @@ void metrics::SystemMetrics::toJson(const JsonChunkVisitor& visitor) const {
   detail::JsonWriter writer(visitor);
   writer.startObject();
   writer.appendKey("handler");
-  handler.toJson(visitor);
+  writer.writeValue(handler);
   writer.appendKey("request");
-  request.toJson(visitor);
+  writer.writeValue(request);
   writer.appendKey("bus");
-  bus.toJson(visitor);
+  writer.writeValue(bus);
   writer.appendKey("devices");
-  devices.toJson(visitor);
+  writer.writeValue(devices);
   writer.appendKey("controller");
-  controller.toJson(visitor);
+  writer.writeValue(controller);
   writer.writeFieldFloat("quality", quality);
   writer.endObject();
 }
@@ -569,35 +557,42 @@ void metrics::SystemMetrics::toJson(const JsonChunkVisitor& visitor) const {
 void ThreadStatus::toJson(const JsonChunkVisitor& visitor) const {
   detail::JsonWriter writer(visitor);
   writer.startObject();
-  writer.writeField("name", name.empty() ? "unknown" : name);
-  writer.writeField("stack_size", static_cast<int64_t>(task_stack_bytes));
-  writer.writeField("stack_free", static_cast<int64_t>(task_stack_free_bytes));
+  if (name.empty()) {
+    writer.writeField("name", "unknown");
+  } else {
+    writer.writeField("name", name);
+  }
+
+  // Only output stack metrics if they are actually available (ESP32)
+  if (task_stack_bytes != -1) {
+    writer.writeField("stack_size", static_cast<int64_t>(task_stack_bytes));
+    writer.writeField("stack_free",
+                      static_cast<int64_t>(task_stack_free_bytes));
+  }
   writer.endObject();
 }
 
 void ControllerStatus::toJson(const JsonChunkVisitor& visitor) const {
   detail::JsonWriter writer(visitor);
   writer.startObject();
-  writer.appendKey("thread");
-  thread.toJson(visitor);
+  writer.writeField("thread", thread);
   writer.endObject();
 }
 
 void BusStatus::toJson(const JsonChunkVisitor& visitor) const {
   detail::JsonWriter writer(visitor);
   writer.startObject();
-  writer.appendKey("bus_thread");
-  bus_thread.toJson(visitor);
-  writer.appendKey("syn_thread");
-  syn_thread.toJson(visitor);
+  writer.writeField("bus_thread", bus_thread);
+  if (!syn_thread.name.empty()) {
+    writer.writeField("syn_thread", syn_thread);
+  }
   writer.endObject();
 }
 
 void BusHandlerStatus::toJson(const JsonChunkVisitor& visitor) const {
   detail::JsonWriter writer(visitor);
   writer.startObject();
-  writer.appendKey("thread");
-  thread.toJson(visitor);
+  writer.writeField("thread", thread);
   writer.writeField("queue_size", static_cast<uint64_t>(queue_size));
   writer.writeField("queue_capacity", static_cast<uint64_t>(queue_capacity));
   writer.writeField("max_queue_size", static_cast<uint64_t>(max_queue_size));
@@ -607,8 +602,7 @@ void BusHandlerStatus::toJson(const JsonChunkVisitor& visitor) const {
 void SchedulerStatus::toJson(const JsonChunkVisitor& visitor) const {
   detail::JsonWriter writer(visitor);
   writer.startObject();
-  writer.appendKey("thread");
-  thread.toJson(visitor);
+  writer.writeField("thread", thread);
   writer.writeField("queue_size", static_cast<uint64_t>(queue_size));
   writer.writeField("queue_capacity", static_cast<uint64_t>(queue_capacity));
   writer.writeField("max_queue_size", static_cast<uint64_t>(max_queue_size));
@@ -618,8 +612,7 @@ void SchedulerStatus::toJson(const JsonChunkVisitor& visitor) const {
 void ClientManagerStatus::toJson(const JsonChunkVisitor& visitor) const {
   detail::JsonWriter writer(visitor);
   writer.startObject();
-  writer.appendKey("thread");
-  thread.toJson(visitor);
+  writer.writeField("thread", thread);
   writer.writeField("queue_size", static_cast<uint64_t>(queue_size));
   writer.writeField("queue_capacity", static_cast<uint64_t>(queue_capacity));
   writer.writeField("max_queue_size", static_cast<uint64_t>(max_queue_size));
@@ -720,22 +713,14 @@ void serializeServiceStatus(const JsonChunkVisitor& visitor,
   writer.startObject();
   writer.writeField("last_update_timestamp_ms",
                     status.last_update_timestamp_ms);
-  writer.appendKey("controller");
-  status.controller.toJson(visitor);
-  writer.appendKey("bus");
-  status.bus.toJson(visitor);
-  writer.appendKey("bus_handler");
-  status.bus_handler.toJson(visitor);
-  writer.appendKey("scheduler");
-  status.scheduler.toJson(visitor);
-  writer.appendKey("client_manager");
-  status.client_manager.toJson(visitor);
-  writer.appendKey("device_manager");
-  status.device_manager.toJson(visitor);
-  writer.appendKey("device_scanner");
-  status.device_scanner.toJson(visitor);
-  writer.appendKey("poll_manager");
-  status.poll_manager.toJson(visitor);
+  writer.writeField("controller", status.controller);
+  writer.writeField("bus", status.bus);
+  writer.writeField("bus_handler", status.bus_handler);
+  writer.writeField("scheduler", status.scheduler);
+  writer.writeField("client_manager", status.client_manager);
+  writer.writeField("device_manager", status.device_manager);
+  writer.writeField("device_scanner", status.device_scanner);
+  writer.writeField("poll_manager", status.poll_manager);
 
   if (monitor) {
 #ifndef EBUS_MINIMAL_DIAGNOSTICS
@@ -743,12 +728,12 @@ void serializeServiceStatus(const JsonChunkVisitor& visitor,
                               const auto& u_hist) {
       writer.appendKey("handler_history");
       writer.startArray();
-      h_hist.forEach([&](const HandlerTransition& t) { t.toJson(visitor); });
+      h_hist.forEach([&](const HandlerTransition& t) { writer.writeValue(t); });
       writer.endArray();
 
       writer.appendKey("request_history");
       writer.startArray();
-      r_hist.forEach([&](const RequestTransition& t) { t.toJson(visitor); });
+      r_hist.forEach([&](const RequestTransition& t) { writer.writeValue(t); });
       writer.endArray();
 
       writer.appendKey("utilization_history");

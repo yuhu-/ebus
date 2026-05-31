@@ -193,10 +193,8 @@ void BusConfig::toJson(const JsonChunkVisitor& visitor) const {
 void EbusConfig::toJson(const JsonChunkVisitor& visitor) const {
   detail::JsonWriter writer(visitor);
   writer.startObject();
-  writer.appendKey("runtime");
-  runtime.toJson(visitor);
-  writer.appendKey("bus_hardware");
-  bus.toJson(visitor);
+  writer.writeField("runtime", runtime);
+  writer.writeField("bus_hardware", bus);
   writer.endObject();
 }
 

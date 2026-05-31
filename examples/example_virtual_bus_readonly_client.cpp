@@ -22,6 +22,12 @@
 using namespace std::chrono_literals;
 
 int main() {
+  // --- 0. Setup Global Logging Sink ---
+  ebus::Controller::setLogSink([](ebus::LogLevel level,
+                                  const std::string& msg) {
+    std::cout << "[LIB][" << ebus::toString(level) << "] " << msg << std::endl;
+  });
+
   // --- 1. Configuration for Device A (Traffic Generator) ---
   // This device will act as a Master at address 0x01.
   ebus::EbusConfig configA;
@@ -30,6 +36,8 @@ int main() {
   configA.runtime.system_inquiry = false;
   configA.runtime.system_response = true;
   configA.runtime.device.scan_on_startup = false;
+
+  // configA.runtime.diagnostics.level = ebus::LogLevel::debug;
 
   ebus::Controller deviceA(configA);
 
@@ -40,6 +48,8 @@ int main() {
   configB.runtime.system_inquiry = false;  // true to send at startup
   configB.runtime.system_response = false;
   configB.runtime.device.scan_on_startup = false;
+
+  // configB.runtime.diagnostics.level = ebus::LogLevel::debug;
 
   ebus::Controller deviceB(configB);
 

@@ -12,6 +12,8 @@
 #include <string>
 #include <vector>
 
+#include "ebus/types.hpp"
+
 namespace ebus::detail {
 class BusMonitor;
 }

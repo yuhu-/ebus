@@ -8,6 +8,9 @@
 #include <ebus/detail/json_writer.hpp>  // For detail::JsonWriter
 #include <ebus/detail/protocol_limits.hpp>
 #include <ebus/utils.hpp>
+#if EBUS_SIMULATION
+#include <ebus/virtual_bus.hpp>
+#endif
 #include <mutex>
 
 #include "app/client_manager.hpp"
@@ -18,9 +21,6 @@
 #include "core/bus_handler.hpp"
 #include "core/bus_monitor.hpp"
 #include "core/handler.hpp"
-#if EBUS_SIMULATION
-#include "ebus/virtual_bus.hpp"
-#endif
 #include "core/request.hpp"
 #include "platform/bus.hpp"
 #include "platform/service_thread.hpp"
