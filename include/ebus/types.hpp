@@ -229,7 +229,7 @@ struct FixedString {
   uint8_t size_bytes = 0;
 
   FixedString() = default;
-  FixedString(std::string_view s) { assign(s); }
+  explicit FixedString(std::string_view s) { assign(s); }
 
   void assign(std::string_view s) {
     size_bytes = static_cast<uint8_t>((s.size() < Cap) ? s.size() : Cap - 1);
