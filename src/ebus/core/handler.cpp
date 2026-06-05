@@ -101,6 +101,12 @@ Handler::Handler(uint8_t source_address, platform::Bus* bus, Request* request,
   last_point_ = Clock::now();
 }
 
+void Handler::reset() {
+  transitionTo(HandlerState::passive_receive_master);
+  callActiveReset();
+  callPassiveReset();
+}
+
 void Handler::setSourceAddress(uint8_t source_address) {
   source_address_ = ebus::isMaster(source_address)
                         ? source_address
@@ -133,12 +139,6 @@ void Handler::setErrorCallback(ErrorCallback callback) {
   error_callback_ = std::move(callback);
 }
 
-ebus::HandlerState Handler::getState() const { return state_; }
-
-ebus::SequenceState Handler::getActiveSequenceState() const {
-  return active_telegram_.getMasterState();
-}
-
 bool Handler::sendActiveMessage(ByteView message) {
   if (active_message_) return false;
   if (message.empty()) return false;
@@ -161,14 +161,6 @@ bool Handler::sendActiveMessage(ByteView message) {
   }
 
   return active_message_;
-}
-
-bool Handler::isActiveMessagePending() const { return active_message_; }
-
-void Handler::reset() {
-  transitionTo(HandlerState::passive_receive_master);
-  callActiveReset();
-  callPassiveReset();
 }
 
 void Handler::run(const BusEventInfo& info) {
@@ -224,6 +216,14 @@ void Handler::run(const BusEventInfo& info) {
     if (monitor_) monitor_->write.markEnd();
   }
 }
+
+ebus::HandlerState Handler::getState() const { return state_; }
+
+ebus::SequenceState Handler::getActiveSequenceState() const {
+  return active_telegram_.getMasterState();
+}
+
+bool Handler::isActiveMessagePending() const { return active_message_; }
 
 void Handler::passiveReceiveMaster(uint8_t byte) {
   if (byte != Symbols::syn) {

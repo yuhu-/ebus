@@ -38,27 +38,26 @@ class Handler {
  public:
   Handler(uint8_t source_address, platform::Bus* bus, Request* request,
           BusMonitor* monitor);
+  void reset();
 
+  // Configuration
   void setSourceAddress(uint8_t source_address);
   uint8_t getSourceAddress() const;
   uint8_t getTargetAddress() const;
-
   void setBusRequestWonCallback(BusRequestWonCallback callback);
   void setBusRequestLostCallback(BusRequestLostCallback callback);
   void setReactiveMasterSlaveCallback(ReactiveMasterSlaveCallback callback);
   void setTelegramCallback(TelegramCallback callback);
   void setErrorCallback(ErrorCallback callback);
 
-  HandlerState getState() const;
-
-  ebus::SequenceState getActiveSequenceState() const;
-
+  // Working Methods
   bool sendActiveMessage(ByteView message);
-  bool isActiveMessagePending() const;
-
-  void reset();
-
   void run(const BusEventInfo& info);
+
+  // Status/Telemetry
+  HandlerState getState() const;
+  ebus::SequenceState getActiveSequenceState() const;
+  bool isActiveMessagePending() const;
 
  private:
   platform::Bus* bus_ = nullptr;
