@@ -5,6 +5,7 @@
 
 #include "app/scheduler.hpp"
 
+#include <algorithm>
 #include <ebus/types.hpp>
 #include <ebus/utils.hpp>
 #include <memory>

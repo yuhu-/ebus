@@ -5,9 +5,11 @@
 
 #include "app/device_scanner.hpp"
 
+#include <algorithm>
 #include <bitset>
 #include <ebus/types.hpp>
 #include <ebus/utils.hpp>
+#include <iterator>
 
 namespace ebus::detail {
 

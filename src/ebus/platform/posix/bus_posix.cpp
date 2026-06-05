@@ -6,8 +6,9 @@
 #if defined(POSIX) && !EBUS_SIMULATION
 #include "platform/posix/bus_posix.hpp"
 
-#include <cstring>
 #include <algorithm>
+#include <cerrno>
+#include <cstring>
 #include <ebus/detail/protocol_limits.hpp>
 #include <ebus/protocol_math.hpp>
 
