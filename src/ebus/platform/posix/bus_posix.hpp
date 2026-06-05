@@ -52,23 +52,25 @@ class BusPosix : public BusBase {
   BusPosix(const BusConfig& config, const ebus::RuntimeConfig& runtime,
            detail::Request* request, detail::BusMonitor* monitor = nullptr);
   ~BusPosix();
-
-  BusPosix(const BusPosix&) = delete;
-  BusPosix& operator=(const BusPosix&) = delete;
-
   void start();
   void stop();
 
-  void writeByte(const uint8_t byte);
+  // Special Members & Operators
+  BusPosix(const BusPosix&) = delete;
+  BusPosix& operator=(const BusPosix&) = delete;
 
-  // kept for BusFreeRtos compatibility, but not used in Posix implementation
+  // Configuration
+  // kept for BusEsp compatibility, but not used in Posix implementation
   void setWindow(const uint16_t window);
   void setOffset(const uint16_t offset);
   void setRuntimeConfig(const RuntimeConfig& runtime);
 
+  // Working Methods
+  void writeByte(const uint8_t byte);
+
+  // Status/Telemetry
   platform::ServiceThread::Status getThreadStatus() const;
   platform::ServiceThread::Status getSynThreadStatus() const;
-
   ebus::BusStatus getStatus() const;
 
  private:

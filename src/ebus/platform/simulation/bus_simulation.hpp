@@ -39,24 +39,25 @@ class BusSimulation : public BusBase {
   explicit BusSimulation(const BusConfig& config, const RuntimeConfig& runtime,
                          detail::Request* request, detail::BusMonitor* monitor);
   ~BusSimulation();
-
-  BusSimulation(const BusSimulation&) = delete;
-  BusSimulation& operator=(const BusSimulation&) = delete;
-
   void start();
   void stop();
 
-  void writeByte(const uint8_t byte);
+  // Special Members & Operators
+  BusSimulation(const BusSimulation&) = delete;
+  BusSimulation& operator=(const BusSimulation&) = delete;
 
+  // Configuration
   void setWindow(const uint16_t window_us);
   void setOffset(const uint16_t offset_us);
   void setRuntimeConfig(const RuntimeConfig& runtime);
 
+  // Working Methods
+  void writeByte(const uint8_t byte);
   void recordUtilization(uint8_t byte);
 
+  // Status/Telemetry
   platform::ServiceThread::Status getThreadStatus() const;
   platform::ServiceThread::Status getSynThreadStatus() const;
-
   ebus::BusStatus getStatus() const;
 
  private:

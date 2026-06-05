@@ -39,30 +39,7 @@ namespace ebus::detail::platform {
  */
 class BusEsp : public BusBase {
  public:
-  explicit BusEsp(const BusConfig& config, const RuntimeConfig& runtime,
-                  detail::Request* request, detail::BusMonitor* monitor);
-  ~BusEsp();
-
-  BusEsp(const BusEsp&) = delete;
-  BusEsp& operator=(const BusEsp&) = delete;
-
-  void start();
-  void stop();
-
-  void writeByte(const uint8_t byte);
-
-  void setWindow(const uint16_t window_us);
-  void setOffset(const uint16_t offset_us);
-  void setRuntimeConfig(const RuntimeConfig& runtime);
-
-  void recordUtilization(uint8_t byte);
-
-  platform::ServiceThread::Status getThreadStatus() const;
-  platform::ServiceThread::Status getSynThreadStatus() const;
-
-  ebus::BusStatus getStatus() const;
-
-  // --- Lockable Wrappers for ESP32 Critical Sections ---
+  // Public Types & Constants
   struct CriticalSection {
     portMUX_TYPE* mux;
     void lock() { portENTER_CRITICAL(mux); }
@@ -74,6 +51,31 @@ class BusEsp : public BusBase {
     void lock() { portENTER_CRITICAL_ISR(mux); }
     void unlock() { portEXIT_CRITICAL_ISR(mux); }
   };
+
+  // Lifecycle & Static Factories
+  explicit BusEsp(const BusConfig& config, const RuntimeConfig& runtime,
+                  detail::Request* request, detail::BusMonitor* monitor);
+  ~BusEsp();
+  void start();
+  void stop();
+
+  // Special Members & Operators
+  BusEsp(const BusEsp&) = delete;
+  BusEsp& operator=(const BusEsp&) = delete;
+
+  // Configuration
+  void setWindow(const uint16_t window_us);
+  void setOffset(const uint16_t offset_us);
+  void setRuntimeConfig(const RuntimeConfig& runtime);
+
+  // Working Methods
+  void writeByte(const uint8_t byte);
+  void recordUtilization(uint8_t byte);
+
+  // Status/Telemetry
+  platform::ServiceThread::Status getThreadStatus() const;
+  platform::ServiceThread::Status getSynThreadStatus() const;
+  ebus::BusStatus getStatus() const;
 
  private:
   BusConfig config_;

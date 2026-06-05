@@ -106,32 +106,6 @@ void BusPosix::stop() {
   open_ = false;
 }
 
-void BusPosix::writeByte(const uint8_t byte) {
-  {
-    std::lock_guard<std::mutex> lock(syn_mutex_);
-    auto now = Clock::now();
-    last_activity_time_ = now;
-    // Postpone automated SYN generation. Add 4ms to account for serialization.
-    if (byte != Symbols::syn) {
-      syn_active_ = false;
-    }
-    next_syn_expiry_ =
-        now + current_t_unique_ +
-        std::chrono::milliseconds(BusLimits::Syn::serialization_delay_ms);
-    syn_cv_.notify_one();
-  }
-
-  if (monitor_) monitor_->transmit.markBegin();
-
-  lockAndInvoke(listeners_mutex_, getWriteListeners(), byte);
-
-  ensureOpen();
-  if (::write(fd_, &byte, 1) == -1)
-    throw std::runtime_error("BusPosix: write error");
-
-  if (monitor_) monitor_->transmit.markEnd();
-}
-
 void BusPosix::setWindow(const uint16_t window_us) {
   // Validate window
   runtime_.bus.window_us = (window_us < BusLimits::window_min_us ||
@@ -206,6 +180,32 @@ void BusPosix::setRuntimeConfig(const RuntimeConfig& runtime) {
     if (syn_worker_) syn_worker_->join();  // Join existing thread if any
     syn_worker_.reset();                   // Release the unique_ptr
   }
+}
+
+void BusPosix::writeByte(const uint8_t byte) {
+  {
+    std::lock_guard<std::mutex> lock(syn_mutex_);
+    auto now = Clock::now();
+    last_activity_time_ = now;
+    // Postpone automated SYN generation. Add 4ms to account for serialization.
+    if (byte != Symbols::syn) {
+      syn_active_ = false;
+    }
+    next_syn_expiry_ =
+        now + current_t_unique_ +
+        std::chrono::milliseconds(BusLimits::Syn::serialization_delay_ms);
+    syn_cv_.notify_one();
+  }
+
+  if (monitor_) monitor_->transmit.markBegin();
+
+  lockAndInvoke(listeners_mutex_, getWriteListeners(), byte);
+
+  ensureOpen();
+  if (::write(fd_, &byte, 1) == -1)
+    throw std::runtime_error("BusPosix: write error");
+
+  if (monitor_) monitor_->transmit.markEnd();
 }
 
 ServiceThread::Status BusPosix::getThreadStatus() const {

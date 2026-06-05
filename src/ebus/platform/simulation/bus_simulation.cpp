@@ -65,25 +65,6 @@ void BusSimulation::stop() {
   if (worker_) worker_->join();
 }
 
-void BusSimulation::writeByte(const uint8_t byte) {
-  lockAndInvoke(listeners_mutex_, getWriteListeners(), byte);
-
-  if (monitor_) monitor_->transmit.markBegin();
-
-  if (byte != Symbols::syn) {
-    std::lock_guard<std::mutex> lock(syn_mutex_);
-    syn_active_ = false;
-  }
-  // 1. Simulate the time it takes for the UART to shift the bits out
-  // 10 bits (Start + 8 Data + Stop) at 2400 baud
-  platform::sleepMicro(static_cast<uint32_t>(10 * Physical::bit_time_us));
-
-  // 2. Only now does the byte actually appear on the "Wire"
-  VirtualLine::get().write(byte);
-
-  if (monitor_) monitor_->transmit.markEnd();
-}
-
 void BusSimulation::setWindow(const uint16_t window_us) {
   // Not directly used in simulation, but kept for API compatibility
   runtime_.bus.window_us = window_us;
@@ -136,6 +117,30 @@ void BusSimulation::setRuntimeConfig(const RuntimeConfig& runtime) {
   }
 }
 
+void BusSimulation::writeByte(const uint8_t byte) {
+  lockAndInvoke(listeners_mutex_, getWriteListeners(), byte);
+
+  if (monitor_) monitor_->transmit.markBegin();
+
+  if (byte != Symbols::syn) {
+    std::lock_guard<std::mutex> lock(syn_mutex_);
+    syn_active_ = false;
+  }
+  // 1. Simulate the time it takes for the UART to shift the bits out
+  // 10 bits (Start + 8 Data + Stop) at 2400 baud
+  platform::sleepMicro(static_cast<uint32_t>(10 * Physical::bit_time_us));
+
+  // 2. Only now does the byte actually appear on the "Wire"
+  VirtualLine::get().write(byte);
+
+  if (monitor_) monitor_->transmit.markEnd();
+}
+
+void BusSimulation::recordUtilization(uint8_t byte) {
+  // 1 (start bit) + zero bits in data.
+  if (monitor_) monitor_->recordLowBits(countZeroBits(byte) + 1);
+}
+
 ServiceThread::Status BusSimulation::getThreadStatus() const {
   if (worker_) {
     return worker_->status();
@@ -156,11 +161,6 @@ ebus::BusStatus BusSimulation::getStatus() const {
     return {s.name, s.task_stack_bytes, s.task_stack_free_bytes};
   };
   return {map(getThreadStatus()), map(getSynThreadStatus())};
-}
-
-void BusSimulation::recordUtilization(uint8_t byte) {
-  // 1 (start bit) + zero bits in data.
-  if (monitor_) monitor_->recordLowBits(countZeroBits(byte) + 1);
 }
 
 void BusSimulation::simulationReaderLoop() {

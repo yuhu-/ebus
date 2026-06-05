@@ -93,22 +93,6 @@ void BusEsp::stop() {
   }
 }
 
-void BusEsp::writeByte(const uint8_t byte) {
-  lockAndInvoke(listeners_mutex_, getWriteListeners(), byte);
-
-  if (monitor_) monitor_->transmit.markBegin();
-
-  portENTER_CRITICAL(&timer_mux_);
-  last_activity_micros_ = esp_timer_get_time();
-  portEXIT_CRITICAL(&timer_mux_);
-
-  // Use a 10ms timeout to avoid blocking the high-priority bus task
-  uart_write_bytes(uart_port_num_, static_cast<const void*>(&byte), 1,
-                   pdMS_TO_TICKS(10));
-
-  if (monitor_) monitor_->transmit.markEnd();
-}
-
 void BusEsp::setWindow(const uint16_t window_us) {
   portENTER_CRITICAL(&timer_mux_);
   // Validate window against limits
@@ -176,6 +160,27 @@ void BusEsp::setRuntimeConfig(const RuntimeConfig& runtime) {
   }
 }
 
+void BusEsp::writeByte(const uint8_t byte) {
+  lockAndInvoke(listeners_mutex_, getWriteListeners(), byte);
+
+  if (monitor_) monitor_->transmit.markBegin();
+
+  portENTER_CRITICAL(&timer_mux_);
+  last_activity_micros_ = esp_timer_get_time();
+  portEXIT_CRITICAL(&timer_mux_);
+
+  // Use a 10ms timeout to avoid blocking the high-priority bus task
+  uart_write_bytes(uart_port_num_, static_cast<const void*>(&byte), 1,
+                   pdMS_TO_TICKS(10));
+
+  if (monitor_) monitor_->transmit.markEnd();
+}
+
+void BusEsp::recordUtilization(uint8_t byte) {
+  // 1 (start bit) + zero bits in data.
+  if (monitor_) monitor_->recordLowBits(countZeroBits(byte) + 1);
+}
+
 ServiceThread::Status BusEsp::getThreadStatus() const {
   if (worker_) {
     return worker_->status();
@@ -196,11 +201,6 @@ ebus::BusStatus BusEsp::getStatus() const {
     return {s.name, s.task_stack_bytes, s.task_stack_free_bytes};
   };
   return {map(getThreadStatus()), map(getSynThreadStatus())};
-}
-
-void BusEsp::recordUtilization(uint8_t byte) {
-  // 1 (start bit) + zero bits in data.
-  if (monitor_) monitor_->recordLowBits(countZeroBits(byte) + 1);
 }
 
 void BusEsp::configureUart() {
