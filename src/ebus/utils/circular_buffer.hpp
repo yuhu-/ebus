@@ -19,8 +19,10 @@ namespace ebus::detail {
 template <typename T, size_t Cap>
 class CircularBuffer {
  public:
+  // Lifecycle
   CircularBuffer() : head_(0), size_(0) {}
 
+  // Working Methods
   // Pushes an item into the buffer. Returns true if an old element was
   // overwritten.
   bool push_back(const T& item) {
@@ -56,13 +58,13 @@ class CircularBuffer {
     }
   }
 
+  // Status/Telemetry
   size_t size() const {
     std::lock_guard<std::mutex> lock(mutex_);
     return size_;
   }
 
   constexpr size_t capacity() const { return Cap; }
-
   bool empty() const {
     std::lock_guard<std::mutex> lock(mutex_);
     return size_ == 0;

@@ -19,6 +19,7 @@ namespace ebus::detail {
  */
 class TimingStats {
  public:
+  // Lifecycle
   TimingStats()
       : last_(0),
         max_(0),
@@ -28,11 +29,11 @@ class TimingStats {
         begin_time_us_(0) {}
   virtual ~TimingStats() = default;
 
+  // Working Methods
   inline void addSample(uint32_t value) {
     last_.store(value, std::memory_order_relaxed);
     sum_.fetch_add(value, std::memory_order_relaxed);
     updateMaxAtomic(max_, value);
-
     count_.fetch_add(1, std::memory_order_relaxed);
   }
 
@@ -43,17 +44,6 @@ class TimingStats {
     count_.store(0, std::memory_order_relaxed);
     marked_.store(false, std::memory_order_relaxed);
   }
-
-  inline MetricValues getValues() const {
-    return {last_.load(std::memory_order_relaxed),
-            max_.load(std::memory_order_relaxed),
-            sum_.load(std::memory_order_relaxed),
-            count_.load(std::memory_order_relaxed)};
-  }
-
-  uint32_t getLast() const { return last_.load(std::memory_order_relaxed); }
-
-  uint64_t getCount() const { return count_.load(std::memory_order_relaxed); }
 
   inline void markBegin(const Clock::time_point& begin = Clock::now()) {
     begin_time_us_.store(std::chrono::duration_cast<std::chrono::microseconds>(
@@ -82,6 +72,16 @@ class TimingStats {
             .count();
     addSample(static_cast<uint32_t>(duration));
   }
+
+  // Status/Telemetry
+  inline MetricValues getValues() const {
+    return {last_.load(std::memory_order_relaxed),
+            max_.load(std::memory_order_relaxed),
+            sum_.load(std::memory_order_relaxed),
+            count_.load(std::memory_order_relaxed)};
+  }
+  uint32_t getLast() const { return last_.load(std::memory_order_relaxed); }
+  uint64_t getCount() const { return count_.load(std::memory_order_relaxed); }
 
  private:
   std::atomic<uint32_t> last_{0};

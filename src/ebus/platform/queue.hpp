@@ -16,12 +16,14 @@
 namespace ebus::detail::platform {
 
 /**
- * @brief A thread-safe, blocking Queue implementation using standard C++ libraries.
- * Fully compatible with move-only types and runs on both POSIX and FreeRTOS (ESP-IDF) platforms.
+ * @brief A thread-safe, blocking Queue implementation using standard C++
+ * libraries. Fully compatible with move-only types and runs on both POSIX and
+ * FreeRTOS (ESP-IDF) platforms.
  */
 template <typename T>
 class Queue {
  public:
+  // Lifecycle
   explicit Queue(size_t capacity = 32)
       : buffer_(capacity),
         capacity_(capacity),
@@ -32,9 +34,9 @@ class Queue {
     if (capacity == 0)
       throw std::invalid_argument("Queue capacity must be > 0");
   }
-
   ~Queue() = default;
 
+  // Working Methods
   // Blocking push with duration (Standard C++ naming alias)
   template <typename Rep, typename Period>
   bool tryPushFor(const T& item, std::chrono::duration<Rep, Period> timeout) {
@@ -117,7 +119,9 @@ class Queue {
   bool push(T&& item, std::chrono::duration<Rep, Period> timeout) {
     auto dur_ms =
         std::chrono::duration_cast<std::chrono::milliseconds>(timeout);
-    uint32_t ms_val = (dur_ms.count() < 0) ? 0xffffffff : static_cast<uint32_t>(dur_ms.count());
+    uint32_t ms_val = (dur_ms.count() < 0)
+                          ? 0xffffffff
+                          : static_cast<uint32_t>(dur_ms.count());
     return push(std::move(item), ms_val);
   }
 
@@ -197,11 +201,7 @@ class Queue {
     return true;
   }
 
-  size_t size() const {
-    std::lock_guard<std::mutex> lock(mutex_);
-    return size_;
-  }
-
+  // Status/Telemetry
   void shutdown() {
     {
       std::lock_guard<std::mutex> lock(mutex_);
@@ -209,6 +209,11 @@ class Queue {
     }
     not_empty_.notify_all();
     not_full_.notify_all();
+  }
+
+  size_t size() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return size_;
   }
 
   bool isShutdown() const {

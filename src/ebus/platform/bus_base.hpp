@@ -21,13 +21,16 @@ namespace ebus::detail::platform {
  */
 class BusBase {
  public:
+  // Public Types & Constants
   using ReadListener = std::function<void(const uint8_t& byte)>;
   using WriteListener = std::function<void(const uint8_t& byte)>;
   using SynListener = std::function<void()>;
   using BusEventListener = std::function<void(const BusEvent& event)>;
 
+  // Lifecycle
   virtual ~BusBase() = default;
 
+  // Working Methods
   void addReadListener(ReadListener listener) {
     std::lock_guard<std::mutex> lock(listeners_mutex_);
     read_listeners_.push_back(std::move(listener));
@@ -48,6 +51,7 @@ class BusBase {
     bus_event_listeners_.push_back(std::move(listener));
   }
 
+  // Status/Telemetry
  protected:
   mutable std::mutex listeners_mutex_;
 
@@ -55,14 +59,17 @@ class BusBase {
       const {
     return read_listeners_;
   }
+
   const StaticVector<WriteListener, BusLimits::max_listeners>&
   getWriteListeners() const {
     return write_listeners_;
   }
+
   const StaticVector<SynListener, BusLimits::max_listeners>& getSynListeners()
       const {
     return syn_listeners_;
   }
+
   const StaticVector<BusEventListener, BusLimits::max_listeners>&
   getBusEventListeners() const {
     return bus_event_listeners_;
