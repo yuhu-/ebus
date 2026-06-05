@@ -14,6 +14,20 @@ Thank you for your interest in contributing to the eBUS library! To maintain hig
 *   **Private Members**: `snake_case_` with a trailing underscore (e.g., `bus_handle_`, `state_`).
 *   **Files and Directories**: `snake_case` (e.g., `serial_bus.cpp`, `data_types.hpp`).
 
+### Class Structure and Ordering
+To maintain consistency across the library, class members in headers and their implementations should follow this order:
+
+1.  **Public Types & Constants**: Enums, `using` aliases, and nested public structs.
+2.  **Lifecycle & Static Factories**: Constructors, Destructor, `start()`, `stop()`, and `static` creation methods.
+3.  **Special Members & Operators**: Deleted/defaulted copy/move functions and operator overloads.
+4.  **Configuration**: Setters and Getters.
+5.  **Working Methods**: The core functional logic of the class.
+6.  **Status/Telemetry**: Methods for inspecting current state (e.g., `getStatus()`, `getMetrics()`).
+7.  **Private Section**: 
+    *   Internal type definitions and structs.
+    *   Private member variables.
+    *   Private helper methods.
+
 ### Memory Management
 *   **Avoid Heap Allocation**: Do not allocate memory on the heap within the protocol processing loop (the "hot path"). Use pre-allocated buffers and reuse existing capacities.
 *   **Small Buffer Optimization**: Use `ebus::Sequence` for byte arrays. It utilizes an internal 64-byte stack buffer before falling back to the heap. Ensure new protocol sequences stay within this limit where possible.

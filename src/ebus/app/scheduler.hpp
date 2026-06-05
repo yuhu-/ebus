@@ -41,49 +41,15 @@ class Scheduler {
   using TimePoint = Clock::time_point;
   using Duration = Clock::duration;
 
-  struct Item {
-    uint8_t priority = 0;  // larger = higher priority (e.g. 255 is top)
-    TimePoint due = Clock::now();
-    uint32_t session_id = 0;
-    uint32_t poll_id = 0;
-    int send_attempts = 0;
-    Sequence message;
-    ResultCallback result_callback = nullptr;
-  };
-
   explicit Scheduler(Handler* handler);
   ~Scheduler();
 
+  void stop();
   Scheduler(const Scheduler&) = delete;
   Scheduler& operator=(const Scheduler&) = delete;
 
-  void start();
-  void stop();
-
-  /**
-   * @brief Injects a protocol result from the Controller's Reactor loop.
-   * Bridges the decoupled events to the Scheduler's processing thread.
-   * @return true if the event resulted in a state change (e.g. terminal
-   * result).
-   */
-  bool injectProtocolEvent(const ProtocolEvent& event);
-
-  /**
-   * @brief Performs periodic maintenance. Returns true if work was done.
-   */
-  bool tick();
-  Clock::time_point nextDueTime() const;
-
   using EventSink = std::function<void(OrchestrationEvent&&)>;
   void setEventSink(EventSink sink);
-
-  void attachHandlerCallbacks();
-
-  bool enqueue(uint8_t priority, ByteView message,
-               ResultCallback callback = nullptr, uint32_t poll_id = 0);
-  bool enqueueAt(uint8_t priority, ByteView message, TimePoint when,
-                 ResultCallback callback = nullptr, uint32_t poll_id = 0);
-
   void setMaxSendAttempts(uint8_t send_attempts);
   void setBaseBackoff(uint32_t base_backoff_ms);
   void setFsmTimeout(uint32_t timeout_ms);
@@ -93,32 +59,57 @@ class Scheduler {
   void setTelegramCallback(TelegramCallback callback);
   void setErrorCallback(ErrorCallback callback);
 
+  void attachHandlerCallbacks();
+  void detachHandlerCallbacks();
+  /**
+   * @brief Injects a protocol result from the Controller's Reactor loop.
+   * Bridges the decoupled events to the Scheduler's processing thread.
+   * @return true if the event resulted in a state change (e.g. terminal
+   * result).
+   */
+  bool injectProtocolEvent(const ProtocolEvent& event);
+  /**
+   * @brief Performs periodic maintenance. Returns true if work was done.
+   */
+  bool tick();
+  Clock::time_point nextDueTime() const;
+  bool enqueue(uint8_t priority, ByteView message,
+               ResultCallback callback = nullptr, uint32_t poll_id = 0);
+  bool enqueueAt(uint8_t priority, ByteView message, TimePoint when,
+                 ResultCallback callback = nullptr, uint32_t poll_id = 0);
   void clear();
 
   size_t queueSize();
   size_t queueCapacity() const;
-
   SchedulerStatus getStatus();
-
   void resetPeakMetrics();
 
  private:
+  struct Item {
+    uint8_t priority = 0;  // larger = higher priority (e.g. 255 is top)
+    TimePoint due;         // set during enqueue
+    uint32_t session_id = 0;
+    uint32_t poll_id = 0;
+    int send_attempts = 0;
+    Sequence message;
+    ResultCallback result_callback = nullptr;
+  };
+
   struct Compare {
     bool operator()(Item const& lhs, Item const& rhs) const {
-      // Group items enqueued within the jitter window as logically concurrent
-      const auto diff =
-          (lhs.due > rhs.due) ? (lhs.due - rhs.due) : (rhs.due - lhs.due);
-      if (diff >
-          std::chrono::milliseconds(SchedulerLimits::jitter_threshold_ms)) {
-        return lhs.due > rhs.due;  // Earlier due time first
-      }
+      static constexpr Duration kJitter =
+          std::chrono::milliseconds(SchedulerLimits::jitter_threshold_ms);
 
-      // Within the jitter window, higher priority items are "greater" (top of
-      // heap)
+      // 1. Temporal ordering: if dates are far apart, earlier wins
+      if (lhs.due > rhs.due + kJitter) return true;
+      if (rhs.due > lhs.due + kJitter) return false;
+
+      // 2. Jitter window: within 2ms, priority takes precedence (Max-Heap)
       if (lhs.priority != rhs.priority) {
         return lhs.priority < rhs.priority;
       }
-      // Maintain stability via session ID if everything else is equal
+
+      // 3. FIFO stability: older session ID wins for equal priority
       return lhs.session_id > rhs.session_id;
     }
   };
@@ -166,7 +157,6 @@ class Scheduler {
 
   bool handleAttemptResult(const ProtocolEvent& ev);
   Duration backoffDuration(int attempt) const;
-  void detachHandlerCallbacks();
 };
 
 }  // namespace ebus::detail
