@@ -388,8 +388,6 @@ void Controller::clearPollItems() {
 }
 
 void Controller::triggerInquiryOfExistence() {
-  // Standard eBUS System Discovery: Broadcast "Inquiry of Existence" (07h FEh)
-  // This advises other masters that a new participant has entered the bus.
   enqueue(detail::DeviceLimits::scan_priority,
           ebus::Sequence::InquiryOfExistence());
 }

@@ -232,6 +232,12 @@ class Controller {
    * @brief Clears all poll items.
    */
   void clearPollItems();
+
+  /**
+   * @brief Standard eBUS System Discovery: Broadcast "Inquiry of Existence"
+   * (07h FEh) This advises other masters that a new participant has entered the
+   * bus.
+   */
   void triggerInquiryOfExistence();
 
   /**
