@@ -138,6 +138,7 @@ struct BusMetrics {
 struct DeviceMetrics {
   // Detailed Counters
   uint32_t unknown_devices = 0;
+  uint32_t identified_devices = 0;
 
   void reset();
 

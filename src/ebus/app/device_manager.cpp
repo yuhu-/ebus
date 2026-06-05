@@ -60,6 +60,7 @@ void DeviceManager::update(ByteView master_view, ByteView slave_view) {
         monitor_->updateDevice([](auto& d) {
           if (d.unknown_devices > 0) d.unknown_devices--;
         });
+        monitor_->updateDevice([](auto& d) { d.identified_devices++; });
       }
     }
 

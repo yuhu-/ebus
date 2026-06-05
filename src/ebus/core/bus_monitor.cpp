@@ -516,11 +516,15 @@ void metrics::BusMetrics::toJson(detail::JsonWriter& writer) const {
   writer.endObject();
 }
 
-void metrics::DeviceMetrics::reset() { unknown_devices = 0; }
+void metrics::DeviceMetrics::reset() {
+  unknown_devices = 0;
+  identified_devices = 0;
+}
 
 void metrics::DeviceMetrics::toJson(detail::JsonWriter& writer) const {
   writer.startObject();
   writer.writeField("unknown_devices", unknown_devices);
+  writer.writeField("identified_devices", identified_devices);
   writer.endObject();
 }
 
@@ -568,8 +572,12 @@ void metrics::SystemMetrics::toJson(detail::JsonWriter& writer) const {
        m_total > 0)
           ? 0.9f
           : 1.0f;
+  float start_bit_error_penalty =
+      (bus.start_bit_errors.load(std::memory_order_relaxed) > 0) ? 0.9f : 1.0f;
+
   float quality = (100.0f - e_rate) * (1.0f - (cont_rate / 100.0f)) *
-                  drop_penalty * jitter_penalty * postpone_penalty;
+                  drop_penalty * jitter_penalty * postpone_penalty *
+                  start_bit_error_penalty;
 
   writer.startObject();
   writer.appendKey("handler");
