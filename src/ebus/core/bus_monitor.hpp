@@ -22,10 +22,7 @@ namespace ebus::detail {
  */
 class BusMonitor {
  public:
-  BusMonitor();
-  void resetMetrics();
-  void fetchMetrics(const std::function<void(const Metrics&)>& callback) const;
-
+  // --- Public Types & Constants ---
 #ifndef EBUS_MINIMAL_DIAGNOSTICS
   using HandlerHistory =
       CircularBuffer<HandlerTransition, FsmLimits::transition_history_size>;
@@ -33,16 +30,17 @@ class BusMonitor {
       CircularBuffer<RequestTransition, FsmLimits::transition_history_size>;
   using UtilizationHistory =
       CircularBuffer<float, DiagnosticsLimits::log_history_size>;
-
-  void fetchHistory(
-      const std::function<void(const HandlerHistory&, const RequestHistory&,
-                               const UtilizationHistory&)>& callback) const;
 #endif
 
-  float getBusUtilization() const;
-  void updateUtilizationHistory();
-  void fetchUtilizationHistory(
-      const std::function<void(float)>& callback) const;
+  // --- Lifecycle Methods ---
+  BusMonitor();
+
+  // --- Special Member Functions ---
+  BusMonitor(const BusMonitor&) = delete;
+  BusMonitor& operator=(const BusMonitor&) = delete;
+
+  // --- Working Methods ---
+  void resetMetrics();
 
   // Thread-safe update helpers
   template <typename F>
@@ -95,18 +93,28 @@ class BusMonitor {
   void recordLowBits(uint32_t bits);
   void recordHandlerError(uint8_t address);
   void recordHandlerSuccess(uint8_t address);
+  void recordIsrStartBitError();
+  void recordIsrSynPostponed(uint32_t count);
+
+  void updateUtilizationHistory();
+
   void logPassiveReset();
-  void recordIsrStartBitError() {
-    bus_acc_.start_bit_errors.fetch_add(1, std::memory_order_relaxed);
-  }
-  void recordIsrSynPostponed(uint32_t count) {
-    bus_acc_.syn_postponed_count.fetch_add(count, std::memory_order_relaxed);
-  }
   void logActiveReset();
   void clearHistory();
 
   void logHandlerTransition(HandlerState from, HandlerState to);
   void logRequestTransition(RequestState from, RequestState to);
+
+  // --- Status/Telemetry ---
+  void fetchMetrics(const std::function<void(const Metrics&)>& callback) const;
+  float getBusUtilization() const;
+  void fetchUtilizationHistory(
+      const std::function<void(float)>& callback) const;
+#ifndef EBUS_MINIMAL_DIAGNOSTICS
+  void fetchHistory(
+      const std::function<void(const HandlerHistory&, const RequestHistory&,
+                               const UtilizationHistory&)>& callback) const;
+#endif
 
   TimingStats sync;
   TimingStats write;
