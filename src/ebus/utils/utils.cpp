@@ -6,6 +6,7 @@
 #include <charconv>
 #include <cmath>
 #include <ctime>
+#include <cstring>
 #include <ebus/detail/json_writer.hpp>
 #include <ebus/sequence.hpp>
 #include <ebus/types.hpp>

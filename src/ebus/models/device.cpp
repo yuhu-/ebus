@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cstring>
 #include <ebus/data_types.hpp>
 #include <ebus/detail/json_writer.hpp>
 #include <ebus/device.hpp>

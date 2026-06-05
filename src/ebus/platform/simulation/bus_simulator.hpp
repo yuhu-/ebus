@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <cstring>
 #include <condition_variable>
 #include <cstdint>
 #include <ebus/data_types.hpp>
@@ -25,6 +26,7 @@
 #include "core/telegram.hpp"
 #include "platform/queue.hpp"
 #include "platform/service_thread.hpp"
+#include "platform/simulation/virtual_line.hpp"
 #include "platform/simulation/bus_simulation.hpp"
 #include "platform/system.hpp"
 #include "utils/circular_buffer.hpp"
@@ -36,6 +38,7 @@ namespace ebus::detail {
  */
 class BusSimulator {
  public:
+  // Lifecycle
   explicit BusSimulator(platform::BusSimulation& bus)
       : bus_(bus), outbound_queue_(16) {
     bus_.addReadListener([this](uint8_t b) { this->onRead(b); });
@@ -45,14 +48,13 @@ class BusSimulator {
         OrchestrationLimits::default_priority);
     worker_->start();
   }
-
   ~BusSimulator() { stop(); }
-
   void stop() {
     outbound_queue_.shutdown();
     if (worker_) worker_->join();
   }
 
+  // Working Methods
   void clear() {
     std::lock_guard<std::mutex> lock(mtx_);
     reactions_.clear();
@@ -93,6 +95,18 @@ class BusSimulator {
     for (uint8_t b : msg) {
       bus_.writeByte(b);
     }
+  }
+
+  /**
+   * @brief Injects a single raw byte.
+   */
+  void injectRawByte(uint8_t byte) { bus_.writeByte(byte); }
+
+  /**
+   * @brief Simulates a physical collision on the wire.
+   */
+  void injectCollision(uint8_t byte1, uint8_t byte2) {
+    platform::VirtualLine::get().writeCollision(byte1, byte2);
   }
 
   /**

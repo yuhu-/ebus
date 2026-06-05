@@ -8,7 +8,6 @@
 #include <cstddef>
 #include <iterator>
 #include <new>
-#include <stdexcept>
 #include <type_traits>
 #include <utility>
 
@@ -30,10 +29,11 @@ class StaticVector {
   using iterator = T*;
   using const_iterator = const T*;
 
+  // Lifecycle
   StaticVector() = default;
-
   ~StaticVector() { clear(); }
 
+  // Special Members & Operators
   StaticVector(const StaticVector& other) {
     for (const auto& item : other) {
       push_back(item);
@@ -66,6 +66,7 @@ class StaticVector {
     other.clear();
   }
 
+  // Working Methods
   bool push_back(const T& value) {
     if (size_ >= Cap) return false;
     new (ptr(size_++)) T(value);
@@ -116,7 +117,6 @@ class StaticVector {
     }
   }
 
-  // Accessors
   T& operator[](std::size_t i) { return *ptr(i); }
   const T& operator[](std::size_t i) const { return *ptr(i); }
 
@@ -125,13 +125,12 @@ class StaticVector {
   T& back() { return *ptr(size_ - 1); }
   const T& back() const { return *ptr(size_ - 1); }
 
-  // Iterators
   iterator begin() noexcept { return ptr(0); }
   const_iterator begin() const noexcept { return ptr(0); }
   iterator end() noexcept { return ptr(size_); }
   const_iterator end() const noexcept { return ptr(size_); }
 
-  // Status
+  // Status/Telemetry
   std::size_t size() const noexcept { return size_; }
   constexpr std::size_t capacity() const noexcept { return Cap; }
   bool empty() const noexcept { return size_ == 0; }

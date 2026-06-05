@@ -5,6 +5,8 @@
 
 #include "core/bus_handler.hpp"
 
+#include <algorithm>
+
 namespace ebus::detail {
 
 BusHandler::BusHandler(Request* request, Handler* handler)

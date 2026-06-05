@@ -8,7 +8,6 @@
 #include <cstddef>
 #include <mutex>
 #include <utility>
-#include <vector>
 
 namespace ebus::detail {
 
