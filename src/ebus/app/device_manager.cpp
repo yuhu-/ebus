@@ -67,29 +67,6 @@ void DeviceManager::update(ByteView master_view, ByteView slave_view) {
   }
 }
 
-void DeviceManager::fetchDeviceInfo(
-    const std::function<void(const DeviceInfo&)>& callback) const {
-  std::lock_guard<std::mutex> lock(mutex_);
-  if (callback) {
-    for (size_t i = 0; i < 256; ++i) {
-      int16_t idx = address_map_[i];
-      if (idx != -1) callback(device_pool_[idx].getDeviceInfo());
-    }
-  }
-}
-
-void DeviceManager::getObservedSlaves(std::bitset<256>& observed) const {
-  observed.reset();  // Clear any previous state
-  for (size_t i = 0; i < 256; ++i) {
-    if (masters_.test(i) && i != own_address_) {
-      observed.set(ebus::slaveOf(static_cast<uint8_t>(i)));
-    }
-    if (slaves_.test(i) && i != ebus::slaveOf(own_address_)) {
-      observed.set(static_cast<uint8_t>(i));
-    }
-  }
-}
-
 void DeviceManager::vendorScanCommands(
     const std::function<void(const Sequence&)>& callback) const {
   std::lock_guard<std::mutex> lock(mutex_);
@@ -117,6 +94,29 @@ void DeviceManager::createScanCommands(
   for (size_t slave = 0; slave < 256; ++slave) {
     if (scan_slaves.test(slave)) {
       callback(Device::createScanCommand(static_cast<uint8_t>(slave)));
+    }
+  }
+}
+
+void DeviceManager::fetchDeviceInfo(
+    const std::function<void(const DeviceInfo&)>& callback) const {
+  std::lock_guard<std::mutex> lock(mutex_);
+  if (callback) {
+    for (size_t i = 0; i < 256; ++i) {
+      int16_t idx = address_map_[i];
+      if (idx != -1) callback(device_pool_[idx].getDeviceInfo());
+    }
+  }
+}
+
+void DeviceManager::getObservedSlaves(std::bitset<256>& observed) const {
+  observed.reset();  // Clear any previous state
+  for (size_t i = 0; i < 256; ++i) {
+    if (masters_.test(i) && i != own_address_) {
+      observed.set(ebus::slaveOf(static_cast<uint8_t>(i)));
+    }
+    if (slaves_.test(i) && i != ebus::slaveOf(own_address_)) {
+      observed.set(static_cast<uint8_t>(i));
     }
   }
 }

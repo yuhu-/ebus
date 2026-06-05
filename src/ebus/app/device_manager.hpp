@@ -32,21 +32,24 @@ class BusMonitor;
  */
 class DeviceManager {
  public:
+  // Lifecycle
   explicit DeviceManager(BusMonitor* monitor = nullptr);
 
+  // Configuration
   void setOwnAddress(uint8_t address);
 
+  // Working Methods
   void update(ByteView master_view, ByteView slave_view);
-
-  void fetchDeviceInfo(
-      const std::function<void(const DeviceInfo&)>& callback) const;
-  void getObservedSlaves(std::bitset<256>& observed) const;
   void vendorScanCommands(
       const std::function<void(const Sequence&)>& callback) const;
   void createScanCommands(
       const std::vector<std::string>& addresses,
       const std::function<void(const Sequence&)>& callback) const;
 
+  // Status/Telemetry
+  void fetchDeviceInfo(
+      const std::function<void(const DeviceInfo&)>& callback) const;
+  void getObservedSlaves(std::bitset<256>& observed) const;
   DeviceManagerStatus getStatus() const;
 
  private:
