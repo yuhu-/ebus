@@ -5,11 +5,11 @@
 
 #pragma once
 
+#include <cassert>
 #include <chrono>
 #include <condition_variable>
 #include <cstddef>
 #include <mutex>
-#include <stdexcept>
 #include <utility>
 #include <vector>
 
@@ -31,8 +31,7 @@ class Queue {
         tail_(0),
         size_(0),
         shutdown_(false) {
-    if (capacity == 0)
-      throw std::invalid_argument("Queue capacity must be > 0");
+    assert(capacity > 0 && "Queue capacity must be > 0");
   }
   ~Queue() = default;
 

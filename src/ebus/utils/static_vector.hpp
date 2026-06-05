@@ -143,7 +143,11 @@ class StaticVector {
     return reinterpret_cast<const T*>(&storage_[i]);
   }
 
-  typename std::aligned_storage<sizeof(T), alignof(T)>::type storage_[Cap];
+  struct alignas(T) ElementStorage {
+    unsigned char data[sizeof(T)];
+  };
+  ElementStorage storage_[Cap];
+
   std::size_t size_ = 0;
 };
 
