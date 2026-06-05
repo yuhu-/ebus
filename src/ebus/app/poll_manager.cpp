@@ -13,6 +13,8 @@
 
 namespace ebus::detail {
 
+PollManager::PollManager() : next_poll_id_(1) {}
+
 void PollManager::setOwnAddress(uint8_t address) {
   std::lock_guard<std::mutex> lock(mutex_);
   own_address_ = address;
@@ -92,6 +94,11 @@ void PollManager::processDueItems(
   }
 }
 
+void PollManager::clear() {
+  std::lock_guard<std::mutex> lock(mutex_);
+  items_.clear();
+}
+
 Clock::time_point PollManager::nextDueTime() const {
   std::lock_guard<std::mutex> lock(mutex_);
   if (items_.empty()) return Clock::time_point::max();
@@ -101,11 +108,6 @@ Clock::time_point PollManager::nextDueTime() const {
 void PollManager::resetPeakMetrics() {
   std::lock_guard<std::mutex> lock(mutex_);
   max_item_count_ = items_.size();
-}
-
-void PollManager::clear() {
-  std::lock_guard<std::mutex> lock(mutex_);
-  items_.clear();
 }
 
 PollManagerStatus PollManager::getStatus() const {

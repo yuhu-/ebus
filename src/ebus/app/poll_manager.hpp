@@ -49,18 +49,18 @@ class PollManager {
     };
   };
 
-  // --- Lifecycle Methods ---
-  PollManager() : next_poll_id_(1) {}
+  // Lifecycle & Static Factories
+  PollManager();
 
-  // --- Special Member Functions ---
+  // Special Members & Operators
   PollManager(const PollManager&) = delete;
   PollManager& operator=(const PollManager&) = delete;
 
-  // --- Configuration ---
+  // Configuration
   // Sets the current master address and purges items that would poll itself.
   void setOwnAddress(uint8_t address);
 
-  // --- Working Methods ---
+  // Working Methods
   // Register a new recurring command. Returns a unique ID.
   uint32_t addPollItem(uint8_t priority, ByteView message, uint32_t interval_ms,
                        ResultCallback callback = nullptr);
@@ -72,7 +72,7 @@ class PollManager {
                        bool* activity);
   void clear();
 
-  // --- Status/Telemetry ---
+  // Status/Telemetry
   // Returns the time point when the next item is due, or max if empty.
   Clock::time_point nextDueTime() const;
   void resetPeakMetrics();
