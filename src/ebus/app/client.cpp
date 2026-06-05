@@ -72,12 +72,6 @@ ReadOnlyClient::ReadOnlyClient(int fd, Request* request, size_t max_buffer)
 
 bool ReadOnlyClient::wantsToSend() { return false; }
 
-ClientInfo ReadOnlyClient::getClientInfo() const {
-  std::lock_guard<std::mutex> lock(buffer_mutex_);
-  return ClientInfo{fd_, "read_only", isConnected(), write_capable_,
-                    outbound_buffer_.size()};
-}
-
 bool ReadOnlyClient::recvFromClient(uint8_t& out) {
   (void)out;  // unused
   return false;
@@ -108,18 +102,18 @@ BridgeAction ReadOnlyClient::onBusByte(const BusEventInfo&) {
   return BridgeAction::stop_session;
 }
 
+ClientInfo ReadOnlyClient::getClientInfo() const {
+  std::lock_guard<std::mutex> lock(buffer_mutex_);
+  return ClientInfo{fd_, "read_only", isConnected(), write_capable_,
+                    outbound_buffer_.size()};
+}
+
 RegularClient::RegularClient(int fd, Request* request, size_t max_buffer)
     : AbstractClient(fd, request, true, max_buffer) {}
 
 bool RegularClient::wantsToSend() {
   uint8_t dummy;
   return platform::recv(fd_, &dummy, 1, platform::Flags::peek) > 0;
-}
-
-ClientInfo RegularClient::getClientInfo() const {
-  std::lock_guard<std::mutex> lock(buffer_mutex_);
-  return ClientInfo{fd_, "regular", isConnected(), write_capable_,
-                    outbound_buffer_.size()};
 }
 
 bool RegularClient::recvFromClient(uint8_t& out) {
@@ -178,19 +172,24 @@ BridgeAction RegularClient::onBusByte(const BusEventInfo& info) {
   }
 }
 
+ClientInfo RegularClient::getClientInfo() const {
+  std::lock_guard<std::mutex> lock(buffer_mutex_);
+  return ClientInfo{fd_, "regular", isConnected(), write_capable_,
+                    outbound_buffer_.size()};
+}
+
 EnhancedClient::EnhancedClient(int fd, Request* request, size_t max_buffer)
     : AbstractClient(fd, request, true, max_buffer) {}
+
+void EnhancedClient::onSessionStart(uint32_t session_id) {
+  (void)session_id;
+  inbound_len_ = 0;
+}
 
 bool EnhancedClient::wantsToSend() {
   if (inbound_len_ > 0) return true;
   uint8_t dummy;
   return platform::recv(fd_, &dummy, 1, platform::Flags::peek) > 0;
-}
-
-ClientInfo EnhancedClient::getClientInfo() const {
-  std::lock_guard<std::mutex> lock(buffer_mutex_);
-  return ClientInfo{fd_, "enhanced", isConnected(), write_capable_,
-                    outbound_buffer_.size()};
 }
 
 bool EnhancedClient::recvFromClient(uint8_t& out) {
@@ -257,11 +256,6 @@ bool EnhancedClient::recvFromClient(uint8_t& out) {
   return false;
 }
 
-void EnhancedClient::sendEnhancedResponse(enhanced::Response res, uint8_t val) {
-  const uint8_t raw[2] = {static_cast<uint8_t>(res), val};
-  sendToClient(ByteView(raw, 2));
-}
-
 void EnhancedClient::sendToClient(ByteView data) {
   if (fd_ < 0 || data.empty()) return;
 
@@ -302,11 +296,6 @@ void EnhancedClient::sendToClient(ByteView data) {
   }
 }
 
-void EnhancedClient::onSessionStart(uint32_t session_id) {
-  (void)session_id;
-  inbound_len_ = 0;
-}
-
 BridgeAction EnhancedClient::onBusByte(const BusEventInfo& info) {
   if (!isConnected()) return BridgeAction::stop_session;
 
@@ -342,6 +331,17 @@ BridgeAction EnhancedClient::onBusByte(const BusEventInfo& info) {
       return BridgeAction::keep_active;
   }
   return BridgeAction::stop_session;
+}
+
+ClientInfo EnhancedClient::getClientInfo() const {
+  std::lock_guard<std::mutex> lock(buffer_mutex_);
+  return ClientInfo{fd_, "enhanced", isConnected(), write_capable_,
+                    outbound_buffer_.size()};
+}
+
+void EnhancedClient::sendEnhancedResponse(enhanced::Response res, uint8_t val) {
+  const uint8_t raw[2] = {static_cast<uint8_t>(res), val};
+  sendToClient(ByteView(raw, 2));
 }
 
 std::unique_ptr<AbstractClient> createClient(int fd, Request* req,

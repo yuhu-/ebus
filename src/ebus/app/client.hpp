@@ -34,40 +34,39 @@ enum class BridgeAction {
  */
 class AbstractClient {
  public:
+  // Lifecycle
   AbstractClient(int fd, Request* request, bool write_capable,
                  size_t max_buffer);
   virtual ~AbstractClient();
-
   void stop();
 
+  // Special Members & Operators
+  AbstractClient(const AbstractClient&) = delete;
+  AbstractClient& operator=(const AbstractClient&) = delete;
+
+  // Configuration
+  int getFd() const { return fd_; }
+  bool isWriteCapable() const { return write_capable_; }
+
+  // Working Methods
   /**
    * Attempts to flush the outbound buffer.
    * @return true if the client is still connected, false if the socket was
    * closed.
    */
   bool tryFlushOutboundBuffer();
-
-  int getFd() const { return fd_; }
-  bool isWriteCapable() const { return write_capable_; }
-  bool isConnected() const { return fd_ >= 0; }
-  bool hasPendingData() const { return !outbound_buffer_.empty(); }
-
-  /**
-   * Called when the manager starts a new active session for this client.
-   */
   virtual void onSessionStart(uint32_t session_id) { (void)session_id; }
-
-  virtual ClientInfo getClientInfo() const = 0;
-
-  /**
-   * Returns true if the client has data available to read from its socket.
-   */
   virtual bool wantsToSend() = 0;
   virtual bool recvFromClient(uint8_t& out) = 0;
   virtual void sendToClient(ByteView data) = 0;
 
   // Logic to determine if the client wants to continue sending after a byte
   virtual BridgeAction onBusByte(const BusEventInfo& info) = 0;
+
+  // Status/Telemetry
+  bool isConnected() const { return fd_ >= 0; }
+  bool hasPendingData() const { return !outbound_buffer_.empty(); }
+  virtual ClientInfo getClientInfo() const = 0;
 
  protected:
   int fd_;
@@ -87,15 +86,17 @@ class AbstractClient {
  */
 class ReadOnlyClient : public AbstractClient {
  public:
+  // Lifecycle
   ReadOnlyClient(int fd, Request* request, size_t max_buffer);
 
-  ClientInfo getClientInfo() const override;
-
+  // Working Methods
   bool wantsToSend() override;
   bool recvFromClient(uint8_t& out) override;
   void sendToClient(ByteView data) override;
-
   BridgeAction onBusByte(const BusEventInfo& info) override;
+
+  // Status/Telemetry
+  ClientInfo getClientInfo() const override;
 };
 
 /**
@@ -104,15 +105,17 @@ class ReadOnlyClient : public AbstractClient {
  */
 class RegularClient : public AbstractClient {
  public:
+  // Lifecycle
   RegularClient(int fd, Request* request, size_t max_buffer);
 
-  ClientInfo getClientInfo() const override;
-
+  // Working Methods
   bool wantsToSend() override;
   bool recvFromClient(uint8_t& out) override;
   void sendToClient(ByteView data) override;
-
   BridgeAction onBusByte(const BusEventInfo& info) override;
+
+  // Status/Telemetry
+  ClientInfo getClientInfo() const override;
 };
 
 /**
@@ -121,17 +124,18 @@ class RegularClient : public AbstractClient {
  */
 class EnhancedClient : public AbstractClient {
  public:
+  // Lifecycle
   EnhancedClient(int fd, Request* request, size_t max_buffer);
+  void onSessionStart(uint32_t session_id) override;
 
-  ClientInfo getClientInfo() const override;
-
+  // Working Methods
   bool wantsToSend() override;
   bool recvFromClient(uint8_t& out) override;
   void sendToClient(ByteView data) override;
-
-  void onSessionStart(uint32_t session_id) override;
-
   BridgeAction onBusByte(const BusEventInfo& info) override;
+
+  // Status/Telemetry
+  ClientInfo getClientInfo() const override;
 
  private:
   // The Enhanced protocol accumulation buffer (max 2 bytes for escaped
