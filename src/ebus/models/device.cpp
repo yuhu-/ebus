@@ -25,7 +25,12 @@ static constexpr std::array<uint8_t, 4> VEC_b5090125 = {0xb5, 0x09, 0x01, 0x25};
 static constexpr std::array<uint8_t, 4> VEC_b5090126 = {0xb5, 0x09, 0x01, 0x26};
 static constexpr std::array<uint8_t, 4> VEC_b5090127 = {0xb5, 0x09, 0x01, 0x27};
 
-uint8_t Device::getSlave() const { return slave_; }
+ebus::Sequence Device::createScanCommand(uint8_t slave) {
+  Sequence sequence;
+  sequence.pushBack(slave, false);
+  for (uint8_t b : VEC_070400) sequence.pushBack(b, false);
+  return sequence;
+}
 
 void Device::update(ByteView master_view, ByteView slave_view) {
   slave_ = master_view[1];
@@ -41,6 +46,31 @@ void Device::update(ByteView master_view, ByteView slave_view) {
   else if (ebus::matches(master_view, VEC_b5090127, 2))
     vec_b5090127_.assign(slave_view);
 }
+
+void Device::createVendorScanCommands(
+    const std::function<void(const Sequence&)>& callback) const {
+  if (!callback) return;
+
+  if (isVaillant()) {
+    const ModelSequence* storage_fields[] = {&vec_b5090124_, &vec_b5090125_,
+                                             &vec_b5090126_, &vec_b5090127_};
+    const std::array<uint8_t, 4>* command_prefixes[] = {
+        &VEC_b5090124, &VEC_b5090125, &VEC_b5090126, &VEC_b5090127};
+
+    for (size_t i = 0; i < 4; ++i) {
+      if (storage_fields[i]->empty()) {
+        Sequence command;
+        command.pushBack(slave_, false);
+        for (uint8_t b : *command_prefixes[i]) command.pushBack(b, false);
+        callback(command);
+      }
+    }
+  }
+  // To support a new vendor, add a similar block here or use a manufacturer
+  // lookup table.
+}
+
+uint8_t Device::getSlave() const { return slave_; }
 
 std::vector<uint8_t> Device::getIdentificationData() const {
   return vec_070400_.toVector();
@@ -88,36 +118,6 @@ ebus::DeviceInfo Device::getDeviceInfo() const {
   }
 
   return info;
-}
-
-ebus::Sequence Device::createScanCommand(uint8_t slave) {
-  Sequence sequence;
-  sequence.pushBack(slave, false);
-  for (uint8_t b : VEC_070400) sequence.pushBack(b, false);
-  return sequence;
-}
-
-void Device::createVendorScanCommands(
-    const std::function<void(const Sequence&)>& callback) const {
-  if (!callback) return;
-
-  if (isVaillant()) {
-    const ModelSequence* storage_fields[] = {&vec_b5090124_, &vec_b5090125_,
-                                             &vec_b5090126_, &vec_b5090127_};
-    const std::array<uint8_t, 4>* command_prefixes[] = {
-        &VEC_b5090124, &VEC_b5090125, &VEC_b5090126, &VEC_b5090127};
-
-    for (size_t i = 0; i < 4; ++i) {
-      if (storage_fields[i]->empty()) {
-        Sequence command;
-        command.pushBack(slave_, false);
-        for (uint8_t b : *command_prefixes[i]) command.pushBack(b, false);
-        callback(command);
-      }
-    }
-  }
-  // To support a new vendor, add a similar block here or use a manufacturer
-  // lookup table.
 }
 
 bool Device::isVaillant() const {

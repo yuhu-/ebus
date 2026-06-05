@@ -22,24 +22,26 @@ namespace ebus::detail {
  */
 class Device {
  public:
-  uint8_t getSlave() const;
-
-  void update(ByteView master_view, ByteView slave_view);
-
-  std::vector<uint8_t> getIdentificationData() const;
-  std::vector<uint8_t> getVendorData(uint8_t sub) const;
-
-  DeviceInfo getDeviceInfo() const;
-
+  // Lifecycle & Static Factories
   static Sequence createScanCommand(uint8_t slave);
+
+  // Working Methods
+  void update(ByteView master_view, ByteView slave_view);
   void createVendorScanCommands(
       const std::function<void(const Sequence&)>& callback) const;
 
+  // Status/Telemetry
+  uint8_t getSlave() const;
+  std::vector<uint8_t> getIdentificationData() const;
+  std::vector<uint8_t> getVendorData(uint8_t sub) const;
+  DeviceInfo getDeviceInfo() const;
+
  private:
+  // Internal types
+  using ModelSequence = SequenceImpl<detail::SequenceLimits::model_capacity>;
+
   uint8_t slave_ = 0;
   uint32_t message_count_ = 0;
-
-  using ModelSequence = SequenceImpl<detail::SequenceLimits::model_capacity>;
 
   ModelSequence vec_070400_;
 
