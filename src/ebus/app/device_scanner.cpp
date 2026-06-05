@@ -16,6 +16,13 @@ DeviceScanner::DeviceScanner(uint8_t address, DeviceManager* device_manager)
       own_address_(address),
       next_startup_scan_time_(Clock::time_point::max()) {}
 
+void DeviceScanner::stop() {
+  std::lock_guard<std::mutex> lock(mutex_);
+  // Stop manual scanning and any active full scan, but preserve startup scans.
+  full_scan_ = false;
+  manual_queue_.clear();
+}
+
 void DeviceScanner::setOwnAddress(uint8_t address) {
   std::lock_guard<std::mutex> lock(mutex_);
   own_address_ = address;
@@ -75,11 +82,6 @@ void DeviceScanner::initFullScan(bool enable) {
   }
 }
 
-bool DeviceScanner::isFullScan() const {
-  std::lock_guard<std::mutex> lock(mutex_);
-  return full_scan_;
-}
-
 bool DeviceScanner::scanObservedDevices() {
   bool queued_any = false;
   // device_manager is thread-safe, so we can query it outside our lock
@@ -126,19 +128,6 @@ bool DeviceScanner::scanAddresses(const std::vector<uint8_t>& addresses) {
     }
   }
   return all_success;
-}
-
-bool DeviceScanner::isScanning() const {
-  std::lock_guard<std::mutex> lock(mutex_);
-  return full_scan_ || scan_on_startup_ || !manual_queue_.empty() ||
-         !startup_queue_.empty();
-}
-
-void DeviceScanner::stop() {
-  std::lock_guard<std::mutex> lock(mutex_);
-  // Stop manual scanning and any active full scan, but preserve startup scans.
-  full_scan_ = false;
-  manual_queue_.clear();
 }
 
 ebus::Sequence DeviceScanner::nextCommand() {
@@ -240,6 +229,17 @@ void DeviceScanner::resetPeakMetrics() {
   std::lock_guard<std::mutex> lock(mutex_);
   max_manual_queue_size_ = manual_queue_.size();
   max_startup_queue_size_ = startup_queue_.size();
+}
+
+bool DeviceScanner::isFullScan() const {
+  std::lock_guard<std::mutex> lock(mutex_);
+  return full_scan_;
+}
+
+bool DeviceScanner::isScanning() const {
+  std::lock_guard<std::mutex> lock(mutex_);
+  return full_scan_ || scan_on_startup_ || !manual_queue_.empty() ||
+         !startup_queue_.empty();
 }
 
 DeviceScannerStatus DeviceScanner::getStatus() const {

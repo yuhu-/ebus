@@ -34,34 +34,29 @@ namespace ebus::detail {
  */
 class DeviceScanner {
  public:
+  // Lifecycle
   DeviceScanner(uint8_t address, DeviceManager* device_manager);
+  void stop();
 
+  // Configuration
   void setOwnAddress(uint8_t address);
-
-  // Startup scanning
   void setScanOnStartup(bool enable);
   bool isScanOnStartup() const;
   void setMaxStartupScans(uint8_t max);
   void setInitialScanDelay(uint32_t delay_s);
   void setStartupScanInterval(uint32_t interval_s);
 
-  // Full scanning
+  // Working Methods
   void initFullScan(bool enable);
-  bool isFullScan() const;
-
-  // Manual scanning
   bool scanObservedDevices();
   bool scanAddress(uint8_t address);
   bool scanAddresses(const std::vector<uint8_t>& addresses);
-
-  bool isScanning() const;
-  void stop();
-
-  // Returns the next command to send, or empty vector if idle
   Sequence nextCommand();
-
   void resetPeakMetrics();
 
+  // Status/Telemetry
+  bool isFullScan() const;
+  bool isScanning() const;
   DeviceScannerStatus getStatus() const;
 
  private:
