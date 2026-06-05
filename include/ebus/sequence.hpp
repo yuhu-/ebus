@@ -174,10 +174,27 @@ namespace ebus {
 template <size_t kInlineCapacity = detail::SequenceLimits::default_capacity>
 class SequenceImpl {
  public:
+  // Lifecycle & Static Factories
   static_assert(kInlineCapacity >= detail::SequenceLimits::max_data_bytes,
                 "Sequence capacity too small");
 
   SequenceImpl() = default;
+
+  /**
+   * @brief Creates a logical eBUS Inquiry of Existence broadcast sequence.
+   * ZZ=FE, PB=07, SB=FE, NN=00.
+   */
+  static SequenceImpl InquiryOfExistence() {
+    return {Symbols::broad, 0x07, 0xfe, 0x00};
+  }
+
+  /**
+   * @brief Creates a logical eBUS Sign of Life broadcast sequence.
+   * ZZ=FE, PB=07, SB=FF, NN=00.
+   */
+  static SequenceImpl SignOfLife() {
+    return {Symbols::broad, 0x07, 0xff, 0x00};
+  }
 
   /**
    * Slicing constructor.
@@ -212,6 +229,25 @@ class SequenceImpl {
     sequence_.assign(list.begin(), list.end());
   }
 
+  // Special Members & Operators
+  /**
+   * Compares two sequences based on their internal data and extension state.
+   */
+  bool operator==(const SequenceImpl& other) const {
+    return sequence_ == other.sequence_ && extended_ == other.extended_;
+  }
+
+  bool operator!=(const SequenceImpl& other) const { return !(*this == other); }
+
+  // --- Configuration ---
+
+  /**
+   * Reserves capacity in the underlying buffer to avoid heap allocations.
+   */
+  void reserve(size_t capacity) { sequence_.reserve(capacity); }
+
+  // --- Working Methods ---
+
   void assignSlice(const SequenceImpl& other, size_t index, size_t len = 0) {
     if (index >= other.size()) {
       clear();
@@ -242,15 +278,6 @@ class SequenceImpl {
   }
 
   /**
-   * Compares two sequences based on their internal data and extension state.
-   */
-  bool operator==(const SequenceImpl& other) const {
-    return sequence_ == other.sequence_ && extended_ == other.extended_;
-  }
-
-  bool operator!=(const SequenceImpl& other) const { return !(*this == other); }
-
-  /**
    * Compares two sequences semantically. Returns true if they represent the
    * same protocol data, even if one is extended (wire format) and the other
    * is reduced (logical format).
@@ -268,13 +295,6 @@ class SequenceImpl {
     return a.sequence_ == b.sequence_;
   }
 
-  void pushBack(const uint8_t byte, const bool extended = true) {
-    sequence_.push_back(byte);
-    extended_ = extended;
-  }
-
-  uint8_t operator[](size_t index) const { return sequence_[index]; }
-
   /**
    * Appends data while normalizing to the target extension state.
    */
@@ -288,45 +308,15 @@ class SequenceImpl {
     sequence_.insert(sequence_.end(), temp.begin(), temp.end());
   }
 
-  /**
-   * Reserves capacity in the underlying buffer to avoid heap allocations.
-   */
-  void reserve(size_t capacity) { sequence_.reserve(capacity); }
+  void pushBack(const uint8_t byte, const bool extended = true) {
+    sequence_.push_back(byte);
+    extended_ = extended;
+  }
 
   void clear() {
     sequence_.clear();
     extended_ = false;
   }
-  size_t size() const { return sequence_.size(); }
-  bool empty() const { return size() == 0; }
-
-  const uint8_t* data() const { return sequence_.data(); }
-  const uint8_t* begin() const { return sequence_.begin(); }
-  const uint8_t* end() const { return sequence_.end(); }
-  uint8_t* begin() { return sequence_.begin(); }
-  uint8_t* end() { return sequence_.end(); }
-
-  bool isExtended() const { return extended_; }
-
-  /**
-   * Returns true if the sequence contains bytes that require eBUS stuffing
-   * (0xAA or 0xA9).
-   */
-  bool needsExtension() const noexcept {
-    return std::any_of(sequence_.begin(), sequence_.end(),
-                       [](uint8_t b) { return Symbols::needsEscape(b); });
-  }
-
-  /**
-   * Returns true if the sequence is extended and contains bytes that require
-   * eBUS unstuffing (A9 00 or A9 01).
-   */
-  bool needsReduction() const noexcept {
-    if (!extended_) return false;
-    return std::any_of(sequence_.begin(), sequence_.end(),
-                       [](uint8_t b) { return b == Symbols::ext; });
-  }
-
   void extend() {
     if (extended_) return;
 
@@ -380,6 +370,39 @@ class SequenceImpl {
     extended_ = false;
   }
 
+  // --- Status/Telemetry ---
+  size_t size() const { return sequence_.size(); }
+  bool empty() const { return size() == 0; }
+
+  const uint8_t* data() const { return sequence_.data(); }
+  const uint8_t* begin() const { return sequence_.begin(); }
+  const uint8_t* end() const { return sequence_.end(); }
+  uint8_t* begin() { return sequence_.begin(); }
+  uint8_t* end() { return sequence_.end(); }
+
+  bool isExtended() const { return extended_; }
+
+  /**
+   * Returns true if the sequence contains bytes that require eBUS stuffing
+   * (0xAA or 0xA9).
+   */
+  bool needsExtension() const noexcept {
+    return std::any_of(sequence_.begin(), sequence_.end(),
+                       [](uint8_t b) { return Symbols::needsEscape(b); });
+  }
+
+  /**
+   * Returns true if the sequence is extended and contains bytes that require
+   * eBUS unstuffing (A9 00 or A9 01).
+   */
+  bool needsReduction() const noexcept {
+    if (!extended_) return false;
+    return std::any_of(sequence_.begin(), sequence_.end(),
+                       [](uint8_t b) { return b == Symbols::ext; });
+  }
+
+  uint8_t operator[](size_t index) const { return sequence_[index]; }
+
   /**
    * @brief Calculates the eBUS CRC for a raw buffer.
    * @param data The bytes to process.
@@ -430,22 +453,6 @@ class SequenceImpl {
    * Implicit conversion to ByteView for zero-copy interoperability.
    */
   operator ByteView() const { return ByteView(data(), size()); }
-
-  /**
-   * @brief Creates a logical eBUS Inquiry of Existence broadcast sequence.
-   * ZZ=FE, PB=07, SB=FE, NN=00.
-   */
-  static SequenceImpl InquiryOfExistence() {
-    return {Symbols::broad, 0x07, 0xfe, 0x00};
-  }
-
-  /**
-   * @brief Creates a logical eBUS Sign of Life broadcast sequence.
-   * ZZ=FE, PB=07, SB=FF, NN=00.
-   */
-  static SequenceImpl SignOfLife() {
-    return {Symbols::broad, 0x07, 0xff, 0x00};
-  }
 
  private:
   detail::SmallByteVector<uint8_t, kInlineCapacity> sequence_;

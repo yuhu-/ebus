@@ -557,8 +557,9 @@ void metrics::SystemMetrics::toJson(detail::JsonWriter& writer) const {
   // Quality Score: Protocol health * Arbitration success * Reactor integrity
   // We penalize the quality if the reactor loop has dropped events.
   float drop_penalty = (controller.event_queue_dropped > 0) ? 0.7f : 1.0f;
-  float quality =
-      (100.0f - e_rate) * (1.0f - (cont_rate / 100.0f)) * drop_penalty;
+  float jitter_penalty = bus.high_jitter ? 0.8f : 1.0f;
+  float quality = (100.0f - e_rate) * (1.0f - (cont_rate / 100.0f)) *
+                  drop_penalty * jitter_penalty;
 
   writer.startObject();
   writer.appendKey("handler");

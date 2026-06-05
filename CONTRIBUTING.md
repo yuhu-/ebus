@@ -15,7 +15,7 @@ Thank you for your interest in contributing to the eBUS library! To maintain hig
 *   **Files and Directories**: `snake_case` (e.g., `serial_bus.cpp`, `data_types.hpp`).
 
 ### Class Structure and Ordering
-To maintain consistency across the library, class members in headers and their implementations should follow this order:
+To maintain consistency across the library, members in classes that implement logic or state machines should follow this order. Simple data-only `struct` definitions (e.g., metrics or status containers) are exempt from this strict ordering.
 
 1.  **Public Types & Constants**: Enums, `using` aliases, and nested public structs.
 2.  **Lifecycle & Static Factories**: Constructors, Destructor, `start()`, `stop()`, and `static` creation methods.

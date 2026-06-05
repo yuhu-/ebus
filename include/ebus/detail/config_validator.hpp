@@ -14,7 +14,8 @@ namespace ebus::detail {
  * Validates EbusConfig against protocol limits and logical constraints.
  */
 class ConfigValidator {
- public:  // Static methods
+ public:
+  // Working Methods
   static bool validate(const EbusConfig& config);
 
   /**
