@@ -100,9 +100,13 @@ class Scheduler {
       static constexpr Duration kJitter =
           std::chrono::milliseconds(SchedulerLimits::jitter_threshold_ms);
 
-      // 1. Temporal ordering: if dates are far apart, earlier wins
-      if (lhs.due > rhs.due + kJitter) return true;
-      if (rhs.due > lhs.due + kJitter) return false;
+      // Group due times into buckets of kJitter size to guarantee a strict weak ordering
+      const auto lhs_bucket = lhs.due.time_since_epoch() / kJitter;
+      const auto rhs_bucket = rhs.due.time_since_epoch() / kJitter;
+
+      if (lhs_bucket != rhs_bucket) {
+        return lhs_bucket > rhs_bucket; // Earlier bucket wins (Min-Heap behavior for due time)
+      }
 
       // 2. Jitter window: within 2ms, priority takes precedence (Max-Heap)
       if (lhs.priority != rhs.priority) {
@@ -113,6 +117,7 @@ class Scheduler {
       return lhs.session_id > rhs.session_id;
     }
   };
+
 
   Handler* handler_ = nullptr;
 
