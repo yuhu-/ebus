@@ -258,6 +258,7 @@ void BusMonitor::fetchMetrics(
       float utilization =
           (static_cast<float>(total_low_us) / static_cast<float>(uptime_us)) *
           100.0f;
+      bm.utilization = utilization;
       // Congestion Logic: > 70% for > 10 seconds
       // If a single uptime sample already indicates the bus has been up for
       // at least 10s (samples are in microseconds), treat high utilization
@@ -472,12 +473,16 @@ void metrics::RequestMetrics::toJson(detail::JsonWriter& writer) const {
   writer.writeField("collisions", collisions);
   writer.writeField("arbitration_errors", arbitration_errors);
   writer.writeField("first_syn", first_syn);
+  writer.writeField("bus_request_blocked", bus_request_blocked);
+  writer.writeField("lock_counter_reset", lock_counter_reset);
+  writer.writeField("session_timeouts", session_timeouts);
   writer.endObject();
 }
 
 void metrics::BusMetrics::reset() {
   start_bit_errors = 0;
   syn_postponed_count = 0;
+  utilization = 0.0f;
   congestion = false;
   high_jitter = false;
   last_error_us = 0;
@@ -494,7 +499,7 @@ void metrics::BusMetrics::toJson(detail::JsonWriter& writer) const {
   // and the other timing samples provide sufficient operational context.
   // BusMonitor::getBusUtilization() provides the real-time calculated value.
   writer.startObject();
-  writer.writeField("utilization", (const char*)nullptr);
+  writer.writeFieldFloat("utilization", utilization);
   writer.writeField("start_bit_errors",
                     start_bit_errors.load(std::memory_order_relaxed));
   writer.writeField("syn_postponed_count",
@@ -558,8 +563,13 @@ void metrics::SystemMetrics::toJson(detail::JsonWriter& writer) const {
   // We penalize the quality if the reactor loop has dropped events.
   float drop_penalty = (controller.event_queue_dropped > 0) ? 0.7f : 1.0f;
   float jitter_penalty = bus.high_jitter ? 0.8f : 1.0f;
+  float postpone_penalty =
+      (bus.syn_postponed_count.load(std::memory_order_relaxed) > m_total &&
+       m_total > 0)
+          ? 0.9f
+          : 1.0f;
   float quality = (100.0f - e_rate) * (1.0f - (cont_rate / 100.0f)) *
-                  drop_penalty * jitter_penalty;
+                  drop_penalty * jitter_penalty * postpone_penalty;
 
   writer.startObject();
   writer.appendKey("handler");

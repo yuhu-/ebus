@@ -115,6 +115,7 @@ struct BusMetrics {
   // Detailed Counters
   std::atomic<uint32_t> start_bit_errors = 0;
   std::atomic<uint32_t> syn_postponed_count = 0;
+  float utilization = 0.0f;
   bool congestion = false;
   bool high_jitter = false;
   uint64_t last_error_us = 0;  // us since start
