@@ -32,25 +32,31 @@ class BusMonitor;
  */
 class ClientManager {
  public:
+  // Lifecycle
   ClientManager(platform::Bus* bus, BusHandler* bus_handler, Request* request,
                 BusMonitor* monitor);
   ~ClientManager();
-
   void start();
   void stop();
 
+  // Special Members & Operators
+  ClientManager(const ClientManager&) = delete;
+  ClientManager& operator=(const ClientManager&) = delete;
+
+  // Configuration
   void setSessionTimeout(uint32_t timeout_ms);
   void setTransmitTimeout(uint32_t timeout_ms);
   void setOutboundBufferSize(size_t size);
 
+  // Working Methods
   void addClient(int fd, ClientType type);
   void addClient(std::shared_ptr<AbstractClient> client);
   void removeClient(int fd);
-
   bool tick();
   void handleBusEvent(const BusEventInfo& info);
-  Clock::time_point nextDueTime() const;
 
+  // Status/Telemetry
+  Clock::time_point nextDueTime() const;
   ClientManagerStatus getStatus();
 
  private:

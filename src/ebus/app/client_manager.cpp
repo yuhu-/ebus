@@ -108,19 +108,6 @@ void ClientManager::removeClient(int fd) {
   }
 }
 
-ClientManagerStatus ClientManager::getStatus() {
-  std::lock_guard<std::mutex> lock(mutex_);
-  ClientManagerStatus s{current_active_sender_ != nullptr,
-                        ebus::toString(session_state_), last_error_message_};
-
-  for (const auto& client : clients_) {
-    if (client) {
-      s.clients.push_back(client->getClientInfo());
-    }
-  }
-  return s;
-}
-
 bool ClientManager::tick() {
   if (!running_.load(std::memory_order_acquire)) return false;
   bool work_done = false;
@@ -269,6 +256,19 @@ Clock::time_point ClientManager::nextDueTime() const {
 
   return Clock::now() +
          std::chrono::milliseconds(NetworkLimits::wake_interval_ms);
+}
+
+ClientManagerStatus ClientManager::getStatus() {
+  std::lock_guard<std::mutex> lock(mutex_);
+  ClientManagerStatus s{current_active_sender_ != nullptr,
+                        ebus::toString(session_state_), last_error_message_};
+
+  for (const auto& client : clients_) {
+    if (client) {
+      s.clients.push_back(client->getClientInfo());
+    }
+  }
+  return s;
 }
 
 void ClientManager::stopActiveSession() {
