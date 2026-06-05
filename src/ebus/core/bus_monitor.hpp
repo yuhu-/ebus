@@ -32,14 +32,12 @@ class BusMonitor {
       CircularBuffer<float, DiagnosticsLimits::log_history_size>;
 #endif
 
-  // --- Lifecycle Methods ---
+  // Lifecycle
   BusMonitor();
-
-  // --- Special Member Functions ---
   BusMonitor(const BusMonitor&) = delete;
   BusMonitor& operator=(const BusMonitor&) = delete;
 
-  // --- Working Methods ---
+  // Working Methods
   void resetMetrics();
 
   // Thread-safe update helpers
@@ -105,9 +103,9 @@ class BusMonitor {
   void logHandlerTransition(HandlerState from, HandlerState to);
   void logRequestTransition(RequestState from, RequestState to);
 
-  // --- Status/Telemetry ---
-  void fetchMetrics(const std::function<void(const Metrics&)>& callback) const;
+  // Status/Telemetry
   float getBusUtilization() const;
+  void fetchMetrics(const std::function<void(const Metrics&)>& callback) const;
   void fetchUtilizationHistory(
       const std::function<void(float)>& callback) const;
 #ifndef EBUS_MINIMAL_DIAGNOSTICS
@@ -116,6 +114,7 @@ class BusMonitor {
                                const UtilizationHistory&)>& callback) const;
 #endif
 
+  // Performance Timing Stats (Public for Hot Path optimization)
   TimingStats sync;
   TimingStats write;
   TimingStats passive_first;
