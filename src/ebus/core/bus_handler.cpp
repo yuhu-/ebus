@@ -7,6 +7,9 @@
 
 namespace ebus::detail {
 
+BusHandler::BusHandler(Request* request, Handler* handler)
+    : request_(request), handler_(handler) {}
+
 BusHandler::~BusHandler() = default;
 
 void BusHandler::setWatchdogTimeout(uint32_t timeout_ms) {

@@ -34,24 +34,26 @@ namespace ebus::detail {
  */
 class BusHandler {
  public:
+  // Public Types & Constants
   using ByteListener = std::function<void(const BusEventInfo& info)>;
 
-  BusHandler(Request* request, Handler* handler)
-      : request_(request), handler_(handler) {}
-
+  // Lifecycle
+  BusHandler(Request* request, Handler* handler);
   ~BusHandler();
 
+  // Configuration
   void setWatchdogTimeout(uint32_t timeout_ms);
-
   uint32_t addByteListener(ByteListener listener);
   void removeByteListener(uint32_t id);
 
+  // Working Methods
   /**
    * @brief Processes a single bus event.
    * This logic is now called directly from the Controller's Reactor loop.
    */
   void processEvent(const BusEvent& bus_event);
 
+  // Status/Telemetry
   BusHandlerStatus getStatus() const;
 
  private:
