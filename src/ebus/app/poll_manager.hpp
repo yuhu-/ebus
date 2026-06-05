@@ -21,22 +21,6 @@
 
 namespace ebus::detail {
 
-struct PollItem {
-  uint32_t poll_id;
-  uint8_t priority;
-  Sequence message;
-  std::chrono::milliseconds interval;
-  Clock::time_point next_due;
-  ResultCallback callback;
-
-  struct Greater {
-    bool operator()(const PollItem& lhs, const PollItem& rhs) const {
-      if (lhs.next_due != rhs.next_due) return lhs.next_due > rhs.next_due;
-      return lhs.poll_id > rhs.poll_id;
-    }
-  };
-};
-
 /**
  * The PollManager allows registering recurring eBUS commands with specified
  * intervals and priorities. It maintains an internal schedule and provides a
@@ -48,35 +32,55 @@ struct PollItem {
  */
 class PollManager {
  public:
+  // --- Public Types & Constants ---
+  struct Item {
+    uint32_t poll_id;
+    uint8_t priority;
+    Sequence message;
+    std::chrono::milliseconds interval;
+    Clock::time_point next_due;
+    ResultCallback callback;
+
+    struct Greater {
+      bool operator()(const Item& lhs, const Item& rhs) const {
+        if (lhs.next_due != rhs.next_due) return lhs.next_due > rhs.next_due;
+        return lhs.poll_id > rhs.poll_id;
+      }
+    };
+  };
+
+  // --- Lifecycle Methods ---
   PollManager() : next_poll_id_(1) {}
 
+  // --- Special Member Functions ---
+  PollManager(const PollManager&) = delete;
+  PollManager& operator=(const PollManager&) = delete;
+
+  // --- Configuration ---
   // Sets the current master address and purges items that would poll itself.
   void setOwnAddress(uint8_t address);
 
+  // --- Working Methods ---
   // Register a new recurring command. Returns a unique ID.
   uint32_t addPollItem(uint8_t priority, ByteView message, uint32_t interval_ms,
                        ResultCallback callback = nullptr);
-
   // Remove a recurring command by ID.
   void removePollItem(uint32_t id);
-
   // Processes commands that are currently due and updates their internal
   // timers. Using a callback avoids heap allocations from returning a vector.
-  void processDueItems(const std::function<void(const PollItem&)>& callback,
+  void processDueItems(const std::function<void(const Item&)>& callback,
                        bool* activity);
-
-  // Returns the time point when the next item is due, or max if empty.
-  Clock::time_point nextDueTime() const;
-
-  void resetPeakMetrics();
-
   void clear();
 
+  // --- Status/Telemetry ---
+  // Returns the time point when the next item is due, or max if empty.
+  Clock::time_point nextDueTime() const;
+  void resetPeakMetrics();
   PollManagerStatus getStatus() const;
 
  private:
   mutable std::mutex mutex_;
-  StaticVector<PollItem, PollLimits::max_items> items_;
+  StaticVector<Item, PollLimits::max_items> items_;
   uint8_t own_address_ = 0xff;
   size_t max_item_count_ = 0;
   uint32_t next_poll_id_;

@@ -21,7 +21,7 @@ TEST_CASE("PollManager: Registration", "[app][pollmanager]") {
 
   size_t count = 0;
   bool activity = false;
-  pm.processDueItems([&](const PollItem&) { count++; }, &activity);
+  pm.processDueItems([&](const PollManager::Item&) { count++; }, &activity);
   REQUIRE(id1 != id2);
   REQUIRE(count == 2);
 }
@@ -33,17 +33,17 @@ TEST_CASE("PollManager: Timing and Recurrence", "[app][pollmanager]") {
 
   size_t count = 0;
   bool activity = false;
-  pm.processDueItems([&](const PollItem&) { count++; }, &activity);
+  pm.processDueItems([&](const PollManager::Item&) { count++; }, &activity);
   REQUIRE(count == 1);
 
   count = 0;
-  pm.processDueItems([&](const PollItem&) { count++; }, &activity);
+  pm.processDueItems([&](const PollManager::Item&) { count++; }, &activity);
   REQUIRE(count == 0);
 
   platform::sleepMilli(1100);
   count = 0;
   pm.processDueItems(
-      [&](const PollItem& item) {
+      [&](const PollManager::Item& item) {
         count++;
         REQUIRE(item.message == ebus::Sequence({0xaa, 0xbb}));
         REQUIRE(item.priority == 5);
@@ -52,13 +52,13 @@ TEST_CASE("PollManager: Timing and Recurrence", "[app][pollmanager]") {
   REQUIRE(count == 1);
 
   count = 0;
-  pm.processDueItems([&](const PollItem&) { count++; }, &activity);
+  pm.processDueItems([&](const PollManager::Item&) { count++; }, &activity);
   REQUIRE(count == 0);
 
   platform::sleepMilli(1100);
 
   count = 0;
-  pm.processDueItems([&](const PollItem&) { count++; }, &activity);
+  pm.processDueItems([&](const PollManager::Item&) { count++; }, &activity);
   REQUIRE(count == 1);
 }
 
@@ -70,13 +70,13 @@ TEST_CASE("PollManager: Removal", "[app][pollmanager]") {
 
   size_t count = 0;
   bool activity = false;
-  pm.processDueItems([&](const PollItem&) { count++; }, &activity);
+  pm.processDueItems([&](const PollManager::Item&) { count++; }, &activity);
   REQUIRE(count == 1);
 
   pm.removePollItem(id);
   platform::sleepMilli(1100);
   count = 0;
-  pm.processDueItems([&](const PollItem&) { count++; }, &activity);
+  pm.processDueItems([&](const PollManager::Item&) { count++; }, &activity);
   REQUIRE(count == 0);
 }
 
@@ -92,7 +92,7 @@ TEST_CASE("PollManager: Address Filtering", "[app][pollmanager]") {
 
   size_t count = 0;
   bool activity = false;
-  pm.processDueItems([&](const PollItem&) { count++; }, &activity);
+  pm.processDueItems([&](const PollManager::Item&) { count++; }, &activity);
 
   REQUIRE(count == 1);  // Only the external one should remain
 }

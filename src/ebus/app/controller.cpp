@@ -959,7 +959,7 @@ void Controller::run() {
     processPublicEvents();
 
     impl_->poll_manager_->processDueItems(
-        [this, &activity](const detail::PollItem& item) {
+        [this, &activity](const detail::PollManager::Item& item) {
           if (impl_->scheduler_->enqueue(item.priority, item.message,
                                          item.callback, item.poll_id))
             activity = true;

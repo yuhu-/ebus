@@ -43,7 +43,7 @@ uint32_t PollManager::addPollItem(uint8_t priority, ByteView message,
   }
 
   uint32_t id = next_poll_id_++;
-  PollItem item;
+  Item item;
   item.poll_id = id;
   item.priority = priority;
   item.message.assign(message);
@@ -56,25 +56,25 @@ uint32_t PollManager::addPollItem(uint8_t priority, ByteView message,
   if (items_.size() > max_item_count_) {
     max_item_count_ = items_.size();
   }
-  std::push_heap(items_.begin(), items_.end(), PollItem::Greater());
+  std::push_heap(items_.begin(), items_.end(), Item::Greater());
   return id;
 }
 
 void PollManager::removePollItem(uint32_t id) {
   std::lock_guard<std::mutex> lock(mutex_);
   auto it = std::find_if(items_.begin(), items_.end(),
-                         [id](const PollItem& i) { return i.poll_id == id; });
+                         [id](const Item& i) { return i.poll_id == id; });
   if (it != items_.end()) items_.erase(it);
 }
 
 void PollManager::processDueItems(
-    const std::function<void(const PollItem&)>& callback, bool* activity) {
+    const std::function<void(const Item&)>& callback, bool* activity) {
   std::lock_guard<std::mutex> lock(mutex_);
   auto now = Clock::now();
 
   while (!items_.empty() && items_.front().next_due <= now) {
-    std::pop_heap(items_.begin(), items_.end(), PollItem::Greater());
-    PollItem item = std::move(items_.back());
+    std::pop_heap(items_.begin(), items_.end(), Item::Greater());
+    Item item = std::move(items_.back());
     items_.pop_back();
 
     EBUS_LOG_DEBUG(
@@ -88,7 +88,7 @@ void PollManager::processDueItems(
     // Reschedule
     item.next_due = now + item.interval;
     items_.push_back(std::move(item));
-    std::push_heap(items_.begin(), items_.end(), PollItem::Greater());
+    std::push_heap(items_.begin(), items_.end(), Item::Greater());
   }
 }
 
