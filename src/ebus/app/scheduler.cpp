@@ -291,15 +291,6 @@ bool Scheduler::tick() {
   return false;
 }
 
-Clock::time_point Scheduler::nextDueTime() const {
-  std::lock_guard<std::mutex> lock(data_mutex_);
-  if (active_item_) {
-    return active_item_->start_time + total_timeout_;
-  }
-  if (scheduled_items_.empty()) return Clock::time_point::max();
-  return scheduled_items_.front().due;
-}
-
 bool Scheduler::enqueue(uint8_t priority, ByteView message,
                         ResultCallback callback, uint32_t poll_id) {
   Item it;
@@ -328,6 +319,15 @@ void Scheduler::clear() {
   std::lock_guard<std::mutex> lock(data_mutex_);
   scheduled_items_.clear();
   std::make_heap(scheduled_items_.begin(), scheduled_items_.end(), Compare());
+}
+
+Clock::time_point Scheduler::nextDueTime() const {
+  std::lock_guard<std::mutex> lock(data_mutex_);
+  if (active_item_) {
+    return active_item_->start_time + total_timeout_;
+  }
+  if (scheduled_items_.empty()) return Clock::time_point::max();
+  return scheduled_items_.front().due;
 }
 
 size_t Scheduler::queueSize() {

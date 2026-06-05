@@ -38,17 +38,21 @@ namespace ebus::detail {
  */
 class Scheduler {
  public:
+  // Public Types & Constants
   using TimePoint = Clock::time_point;
   using Duration = Clock::duration;
+  using EventSink = std::function<void(OrchestrationEvent&&)>;
 
+  // Lifecycle
   explicit Scheduler(Handler* handler);
   ~Scheduler();
-
   void stop();
+
+  // Special Members & Operators
   Scheduler(const Scheduler&) = delete;
   Scheduler& operator=(const Scheduler&) = delete;
 
-  using EventSink = std::function<void(OrchestrationEvent&&)>;
+  // Configuration
   void setEventSink(EventSink sink);
   void setMaxSendAttempts(uint8_t send_attempts);
   void setBaseBackoff(uint32_t base_backoff_ms);
@@ -59,6 +63,7 @@ class Scheduler {
   void setTelegramCallback(TelegramCallback callback);
   void setErrorCallback(ErrorCallback callback);
 
+  // Working Methods
   void attachHandlerCallbacks();
   void detachHandlerCallbacks();
   /**
@@ -72,13 +77,14 @@ class Scheduler {
    * @brief Performs periodic maintenance. Returns true if work was done.
    */
   bool tick();
-  Clock::time_point nextDueTime() const;
   bool enqueue(uint8_t priority, ByteView message,
                ResultCallback callback = nullptr, uint32_t poll_id = 0);
   bool enqueueAt(uint8_t priority, ByteView message, TimePoint when,
                  ResultCallback callback = nullptr, uint32_t poll_id = 0);
   void clear();
 
+  // Status/Telemetry
+  Clock::time_point nextDueTime() const;
   size_t queueSize();
   size_t queueCapacity() const;
   SchedulerStatus getStatus();
@@ -100,12 +106,14 @@ class Scheduler {
       static constexpr Duration kJitter =
           std::chrono::milliseconds(SchedulerLimits::jitter_threshold_ms);
 
-      // Group due times into buckets of kJitter size to guarantee a strict weak ordering
+      // Group due times into buckets of kJitter size to guarantee a strict weak
+      // ordering
       const auto lhs_bucket = lhs.due.time_since_epoch() / kJitter;
       const auto rhs_bucket = rhs.due.time_since_epoch() / kJitter;
 
       if (lhs_bucket != rhs_bucket) {
-        return lhs_bucket > rhs_bucket; // Earlier bucket wins (Min-Heap behavior for due time)
+        return lhs_bucket > rhs_bucket;  // Earlier bucket wins (Min-Heap
+                                         // behavior for due time)
       }
 
       // 2. Jitter window: within 2ms, priority takes precedence (Max-Heap)
@@ -117,7 +125,6 @@ class Scheduler {
       return lhs.session_id > rhs.session_id;
     }
   };
-
 
   Handler* handler_ = nullptr;
 
@@ -158,8 +165,8 @@ class Scheduler {
   TelegramCallback extern_telegram_callback_ = nullptr;
   ErrorCallback extern_error_callback_ = nullptr;
 
+  // Private Helper Methods
   bool pushItem(Item&& it);
-
   bool handleAttemptResult(const ProtocolEvent& ev);
   Duration backoffDuration(int attempt) const;
 };
