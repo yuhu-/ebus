@@ -36,6 +36,15 @@ static constexpr uint8_t kTransitionMasks[] = {
 
 Request::Request(BusMonitor* monitor) : monitor_(monitor) {}
 
+void Request::reset() {
+  lock_counter_ = lock_counter_max_;
+  bytes_since_syn_ = 0;
+  if (monitor_)
+    monitor_->updateRequest([](auto& m) { m.lock_counter_reset++; });
+  bus_request_.store(false, std::memory_order_release);
+  transitionTo(RequestState::observe);
+}
+
 void Request::setLockCounter(uint8_t lock_counter) {
   lock_counter_max_ = std::min(lock_counter, RequestLimits::lock_counter_max);
   if (lock_counter_ > lock_counter_max_) lock_counter_ = lock_counter_max_;
@@ -43,9 +52,16 @@ void Request::setLockCounter(uint8_t lock_counter) {
 
 uint8_t Request::getLockCounter() const { return lock_counter_; }
 
-bool Request::busAvailable() const {
-  return result_ == RequestResult::observe_syn && lock_counter_ == 0 &&
-         !bus_request_.load(std::memory_order_acquire);
+void Request::setHandlerBusRequestedCallback(BusRequestedCallback callback) {
+  handler_bus_requested_callback_ = std::move(callback);
+}
+
+void Request::setExternalBusRequestedCallback(BusRequestedCallback callback) {
+  external_bus_requested_callback_ = std::move(callback);
+}
+
+void Request::setStartBitCallback(StartBitCallback callback) {
+  start_bit_callback_ = std::move(callback);
 }
 
 bool Request::requestBus(uint8_t address, bool external) {
@@ -58,14 +74,6 @@ bool Request::requestBus(uint8_t address, bool external) {
     monitor_->updateRequest([](auto& m) { m.bus_request_blocked++; });
   }
   return bus_request_.load(std::memory_order_acquire);
-}
-
-void Request::setHandlerBusRequestedCallback(BusRequestedCallback callback) {
-  handler_bus_requested_callback_ = std::move(callback);
-}
-
-void Request::setExternalBusRequestedCallback(BusRequestedCallback callback) {
-  external_bus_requested_callback_ = std::move(callback);
 }
 
 void Request::busRequestCompleted() {
@@ -90,23 +98,6 @@ void Request::startBit() {
   if (start_bit_callback_) start_bit_callback_();
 }
 
-void Request::setStartBitCallback(StartBitCallback callback) {
-  start_bit_callback_ = std::move(callback);
-}
-
-ebus::RequestState Request::getState() const { return state_; }
-
-ebus::RequestResult Request::getResult() const { return result_; }
-
-void Request::reset() {
-  lock_counter_ = lock_counter_max_;
-  bytes_since_syn_ = 0;
-  if (monitor_)
-    monitor_->updateRequest([](auto& m) { m.lock_counter_reset++; });
-  bus_request_.store(false, std::memory_order_release);
-  transitionTo(RequestState::observe);
-}
-
 ebus::RequestResult Request::run(uint8_t byte) {
   size_t idx = static_cast<size_t>(state_);
   if (idx < FsmLimits::num_request_states && kStateRequests[idx])
@@ -114,6 +105,15 @@ ebus::RequestResult Request::run(uint8_t byte) {
 
   return result_;
 }
+
+bool Request::busAvailable() const {
+  return result_ == RequestResult::observe_syn && lock_counter_ == 0 &&
+         !bus_request_.load(std::memory_order_acquire);
+}
+
+ebus::RequestState Request::getState() const { return state_; }
+
+ebus::RequestResult Request::getResult() const { return result_; }
 
 void Request::observe(uint8_t byte) {
   if (byte == Symbols::syn) {

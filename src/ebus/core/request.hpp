@@ -30,36 +30,31 @@ using StartBitCallback = std::function<void()>;
 class Request {
  public:
   explicit Request(BusMonitor* monitor = nullptr);
+  void reset();
 
+  // Configuration
   void setLockCounter(uint8_t lock_counter);
   uint8_t getLockCounter() const;
-
-  bool busAvailable() const;
-
-  // Request the bus from handler or external
-  bool requestBus(uint8_t address, bool external = false);
-
   void setHandlerBusRequestedCallback(BusRequestedCallback callback);
   void setExternalBusRequestedCallback(BusRequestedCallback callback);
-
-  // Inline and non-virtual for ESP32 ISR safety (IRAM) and performance
-  inline uint8_t busRequestAddress() const { return request_address_; }
-
-  inline bool busRequestPending() const {
-    return bus_request_.load(std::memory_order_acquire);
-  }
-
-  void busRequestCompleted();
-
-  void startBit();
   void setStartBitCallback(StartBitCallback callback);
 
+  // Working Methods
+  bool requestBus(uint8_t address, bool external = false);
+  void busRequestCompleted();
+  void startBit();
+  RequestResult run(uint8_t byte);
+
+  // Status/Telemetry
+  bool busAvailable() const;
   RequestState getState() const;
   RequestResult getResult() const;
 
-  void reset();
-
-  RequestResult run(uint8_t byte);
+  // Inline and non-virtual for ESP32 ISR safety (IRAM) and performance
+  inline uint8_t busRequestAddress() const { return request_address_; }
+  inline bool busRequestPending() const {
+    return bus_request_.load(std::memory_order_acquire);
+  }
 
  private:
   BusMonitor* monitor_ = nullptr;
