@@ -22,7 +22,6 @@
 
 #include "core/handler.hpp"
 #include "platform/queue.hpp"
-#include "platform/service_thread.hpp"
 #include "utils/static_vector.hpp"
 
 namespace ebus::detail {
@@ -61,6 +60,25 @@ class Scheduler {
   void start();
   void stop();
 
+  /**
+   * @brief Injects a protocol result from the Controller's Reactor loop.
+   * Bridges the decoupled events to the Scheduler's processing thread.
+   * @return true if the event resulted in a state change (e.g. terminal
+   * result).
+   */
+  bool injectProtocolEvent(const ProtocolEvent& event);
+
+  /**
+   * @brief Performs periodic maintenance. Returns true if work was done.
+   */
+  bool tick();
+  Clock::time_point nextDueTime() const;
+
+  using EventSink = std::function<void(OrchestrationEvent&&)>;
+  void setEventSink(EventSink sink);
+
+  void attachHandlerCallbacks();
+
   bool enqueue(uint8_t priority, ByteView message,
                ResultCallback callback = nullptr, uint32_t poll_id = 0);
   bool enqueueAt(uint8_t priority, ByteView message, TimePoint when,
@@ -80,9 +98,9 @@ class Scheduler {
   size_t queueSize();
   size_t queueCapacity() const;
 
-  platform::ServiceThread::Status getThreadStatus() const;
-
   SchedulerStatus getStatus();
+
+  void resetPeakMetrics();
 
  private:
   struct Compare {
@@ -105,45 +123,29 @@ class Scheduler {
     }
   };
 
-  enum class EventType { won, lost, telegram, error };
-
-  struct Event {
-    EventType type;
-    uint32_t session_id;
-    uint32_t poll_id;
-    MessageType message_type;
-    TelegramType telegram_type;
-    HandlerState handler_state;
-    RequestState request_state;
-    LogLevel level;
-    RequestResult result;
-    SequenceState sequence_state;
-    StaticSequence<detail::SequenceLimits::default_capacity> master;
-    StaticSequence<detail::SequenceLimits::default_capacity> slave;
-    ProtocolError protocol_error = ProtocolError::none;
-  };
-
-  static_assert(std::is_trivially_copyable_v<Event>,
-                "Scheduler::Event must be trivially copyable for FreeRTOS "
-                "queue safety.");
-
   Handler* handler_ = nullptr;
 
   // Queue management
   StaticVector<Item, SchedulerLimits::max_items> scheduled_items_;
-  std::mutex data_mutex_;
-  std::condition_variable data_ready_cv_;
+  mutable std::mutex data_mutex_;
+  mutable std::mutex callback_mutex_;
 
   size_t max_queue_size_ = 0;
-  // Worker thread
-  std::unique_ptr<platform::ServiceThread> worker_;
-  std::atomic<bool> stop_flag_;
+
+  struct ActiveAttempt {
+    Item item;
+    Clock::time_point start_time;
+    uint32_t session_id;
+  };
+  std::optional<ActiveAttempt> active_item_;
+
+  EventSink event_sink_;
+
   std::atomic<uint32_t> next_session_id_;
 
   // Active transfer state
   std::atomic<uint32_t> current_session_id_{0};
   std::atomic<uint32_t> current_poll_id_{0};
-  platform::Queue<Event> event_queue_{SchedulerLimits::queue_reserve};
 
   // Configuration
   uint8_t max_send_attempts_ =
@@ -161,10 +163,9 @@ class Scheduler {
   ErrorCallback extern_error_callback_ = nullptr;
 
   bool pushItem(Item&& it);
-  void run();
 
+  bool handleAttemptResult(const ProtocolEvent& ev);
   Duration backoffDuration(int attempt) const;
-  void attachHandlerCallbacks();
   void detachHandlerCallbacks();
 };
 

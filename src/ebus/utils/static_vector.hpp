@@ -34,9 +34,30 @@ class StaticVector {
 
   ~StaticVector() { clear(); }
 
-  // Non-copyable for orchestration components to prevent accidental overhead
-  StaticVector(const StaticVector&) = delete;
-  StaticVector& operator=(const StaticVector&) = delete;
+  StaticVector(const StaticVector& other) {
+    for (const auto& item : other) {
+      push_back(item);
+    }
+  }
+
+  StaticVector& operator=(const StaticVector& other) {
+    if (this != &other) {
+      clear();
+      for (const auto& item : other) push_back(item);
+    }
+    return *this;
+  }
+
+  StaticVector& operator=(StaticVector&& other) noexcept {
+    if (this != &other) {
+      clear();
+      for (std::size_t i = 0; i < other.size_; ++i) {
+        emplace_back(std::move(other[i]));
+      }
+      other.clear();
+    }
+    return *this;
+  }
 
   StaticVector(StaticVector&& other) noexcept {
     for (std::size_t i = 0; i < other.size_; ++i) {

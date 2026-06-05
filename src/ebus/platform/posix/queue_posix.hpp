@@ -245,6 +245,15 @@ class QueuePosix {
     if (capacity_ > 0) not_full_.notify_all();
   }
 
+  void reset() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    head_ = 0;
+    tail_ = 0;
+    size_ = 0;
+    shutdown_ = false;
+    not_full_.notify_all();
+  }
+
  private:
   std::vector<T> buffer_;
   mutable std::mutex mutex_;

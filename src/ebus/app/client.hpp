@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <ebus/callbacks.hpp>
 #include <ebus/config.hpp>
+#include <ebus/status.hpp>
 #include <ebus/types.hpp>
 #include <memory>
 #include <mutex>
@@ -56,6 +57,8 @@ class AbstractClient {
    */
   virtual void onSessionStart(uint32_t session_id) { (void)session_id; }
 
+  virtual ClientInfo getClientInfo() const = 0;
+
   /**
    * Returns true if the client has data available to read from its socket.
    */
@@ -86,6 +89,8 @@ class ReadOnlyClient : public AbstractClient {
  public:
   ReadOnlyClient(int fd, Request* request, size_t max_buffer);
 
+  ClientInfo getClientInfo() const override;
+
   bool wantsToSend() override;
   bool recvFromClient(uint8_t& out) override;
   void sendToClient(ByteView data) override;
@@ -101,6 +106,8 @@ class RegularClient : public AbstractClient {
  public:
   RegularClient(int fd, Request* request, size_t max_buffer);
 
+  ClientInfo getClientInfo() const override;
+
   bool wantsToSend() override;
   bool recvFromClient(uint8_t& out) override;
   void sendToClient(ByteView data) override;
@@ -115,6 +122,8 @@ class RegularClient : public AbstractClient {
 class EnhancedClient : public AbstractClient {
  public:
   EnhancedClient(int fd, Request* request, size_t max_buffer);
+
+  ClientInfo getClientInfo() const override;
 
   bool wantsToSend() override;
   bool recvFromClient(uint8_t& out) override;

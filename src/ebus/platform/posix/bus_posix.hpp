@@ -59,19 +59,12 @@ class BusPosix : public BusBase {
   void start();
   void stop();
 
-  Queue<detail::BusEvent>* getQueue() const;
-
   void writeByte(const uint8_t byte);
 
   // kept for BusFreeRtos compatibility, but not used in Posix implementation
   void setWindow(const uint16_t window);
   void setOffset(const uint16_t offset);
   void setRuntimeConfig(const RuntimeConfig& runtime);
-
-  // Listeners
-  void addReadListener(ReadListener listener);
-  void addWriteListener(WriteListener listener);
-  void addSynListener(SynListener listener);
 
   platform::ServiceThread::Status getThreadStatus() const;
   platform::ServiceThread::Status getSynThreadStatus() const;
@@ -90,11 +83,8 @@ class BusPosix : public BusBase {
   bool open_;
   struct termios old_settings_{};
 
-  std::unique_ptr<Queue<detail::BusEvent>> byte_queue_;
   std::unique_ptr<ServiceThread> worker_;
   std::atomic<bool> running_;
-
-  mutable std::mutex listeners_mutex_;
 
   // SYN generator members
   std::unique_ptr<ServiceThread> syn_worker_;
@@ -125,6 +115,7 @@ class BusPosix : public BusBase {
 
   // called when a symbol (end-of-byte) is recognised
   void resetSynTimer(uint8_t byte);
+  void resetSynTimerInternal(uint8_t byte);
 };
 
 }  // namespace ebus::detail::platform

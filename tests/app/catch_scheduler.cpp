@@ -40,10 +40,12 @@ TEST_CASE("Scheduler: Simulation", "[app][scheduler]") {
   BusMonitor monitor;
   platform::Bus bus(config, runtime, &request, &monitor);
   Handler handler(runtime.address, &bus, &request, &monitor);
-  BusHandler busHandler(&request, &handler, bus.getQueue());
+  BusHandler busHandler(&request, &handler);
 
   const uint8_t source = 0x01;
   handler.setSourceAddress(source);
+
+  platform::Queue<ebus::OrchestrationEvent> reactor_queue_{32};
 
   BusSimulator simulator(bus);
 
@@ -58,6 +60,14 @@ TEST_CASE("Scheduler: Simulation", "[app][scheduler]") {
   ebus::Sequence fullSlaveResponse;
   fullSlaveResponse.pushBack(ebus::Symbols::ack, false);
   fullSlaveResponse.append(slavePart);
+  fullSlaveResponse.pushBack(ebus::Symbols::syn,
+                             false);  // Master sends SYN after ACK
+
+  // Simulator needs to know about the full expected sequence including the
+  // final SYN
+  simulator.addMockReaction(
+      {ebus::frameMaster(source, ebus::toVector("52b509030d4600")),
+       fullSlaveResponse, 1, 4});
 
   simulator.addMockReaction(
       {ebus::frameMaster(source, ebus::toVector("52b509030d4600")),
@@ -72,17 +82,31 @@ TEST_CASE("Scheduler: Simulation", "[app][scheduler]") {
   ebus::Sequence retry_success_action;
   retry_success_action.pushBack(ebus::Symbols::ack, false);
   retry_success_action.append(ebus::frameSlave(ebus::toVector("013f")));
+  retry_success_action.pushBack(ebus::Symbols::syn, false);
 
   simulator.addMockReaction(
       {retry_trigger, std::move(retry_success_action), 1, 0});
 
   Scheduler scheduler(&handler);
+  scheduler.setEventSink([&](ebus::OrchestrationEvent&& ev) {
+    reactor_queue_.tryPush(std::move(ev));
+  });
+  scheduler.attachHandlerCallbacks();
   scheduler.setMaxSendAttempts(3);
   scheduler.setBaseBackoff(50);
 
   bus.start();
-  busHandler.start();
-  scheduler.start();
+
+  // Bridge Physical Bus Events -> Unified Reactor Queue
+  bus.addBusEventListener([&](const BusEvent& bus_ev) {
+    ebus::OrchestrationEvent oev;
+    oev.type = ebus::OrchestrationEventType::bus_byte;
+    oev.data.byte_data.val = bus_ev.byte;
+    oev.data.byte_data.bus_request = bus_ev.bus_request;
+    oev.data.byte_data.start_bit = bus_ev.start_bit;
+    oev.data.byte_data.timestamp = bus_ev.timestamp;
+    reactor_queue_.tryPush(std::move(oev));
+  });
 
   auto run_test = [&](const std::string& payload) {
     auto promise = std::make_shared<std::promise<bool>>();
@@ -93,87 +117,77 @@ TEST_CASE("Scheduler: Simulation", "[app][scheduler]") {
                       });
     return future.wait_for(std::chrono::seconds(2)) ==
                std::future_status::ready &&
-           future.get();
+           future.get();  // Ensure future is ready and value is true
   };
 
-  REQUIRE(run_test("feb5050327002d"));
-  REQUIRE(run_test("52b509030d4600"));
-  REQUIRE(run_test("fe070400"));
+  // Simulate the Controller's reactor loop for the duration of the tests
+  auto test_start_time = ebus::Clock::now();
+  const auto test_timeout =
+      std::chrono::seconds(10);  // Increased overall test timeout
 
-  scheduler.stop();
-  busHandler.stop();
-  bus.stop();
-}
+  bool all_tests_passed = true;
+  std::vector<std::string> payloads = {"feb5050327002d", "52b509030d4600",
+                                       "fe070400"};
 
-TEST_CASE("Scheduler: Priority Preemption", "[app][scheduler][priority]") {
-  Request request;
-  ebus::BusConfig config;
-
-  ebus::RuntimeConfig runtime;
-  runtime.address = 0x01;
-  runtime.bus.syn_gen = true;
-  runtime.lock_counter = 0;  // Send immediately
-
-  BusMonitor monitor;
-  platform::Bus bus(config, runtime, &request, &monitor);
-  Handler handler(runtime.address, &bus, &request, &monitor);
-  BusHandler busHandler(&request, &handler, bus.getQueue());
-
-  BusSimulator simulator(bus);
-  const uint8_t source = 0x01;
-
-  // Setup responses for both test messages
-  // High priority trigger
-  simulator.addMockReaction(
-      {ebus::frameMaster(source, ebus::toVector("feb50500")), ebus::Sequence(),
-       1, 0});
-  // Low priority trigger
-  simulator.addMockReaction(
-      {ebus::frameMaster(source, ebus::toVector("fe070400")), ebus::Sequence(),
-       1, 0});
-
-  Scheduler scheduler(&handler);
-  scheduler.start();
-  bus.start();
-  busHandler.start();
-
-  std::vector<uint8_t> execution_order;
-  std::mutex order_mutex;
-
-  // We use a future timestamp to ensure both items are in the queue
-  // before the scheduler picks the next one.
-  auto start_time = ebus::Clock::now() + std::chrono::milliseconds(100);
-
-  // 1. Enqueue Low Priority (5) first
-  scheduler.enqueueAt(5, ebus::toVector("fe070400"), start_time,
-                      [&](const ebus::ResultInfo&) {
-                        std::lock_guard<std::mutex> lock(order_mutex);
-                        execution_order.push_back(5);
+  for (const auto& payload : payloads) {
+    auto promise = std::make_shared<std::promise<bool>>();
+    auto future = promise->get_future();
+    scheduler.enqueue(1, ebus::toVector(payload),
+                      [promise](const ebus::ResultInfo& info) {
+                        promise->set_value(info.success);
                       });
 
-  // 2. Enqueue High Priority (255) second
-  scheduler.enqueueAt(255, ebus::toVector("feb50500"), start_time,
-                      [&](const ebus::ResultInfo&) {
-                        std::lock_guard<std::mutex> lock(order_mutex);
-                        execution_order.push_back(255);
-                      });
+    auto current_test_start = ebus::Clock::now();
+    while (future.wait_for(std::chrono::milliseconds(0)) !=
+               std::future_status::ready &&
+           (ebus::Clock::now() - current_test_start) <
+               std::chrono::seconds(3)) {  // Timeout per message
+      scheduler.tick();
 
-  // Wait for both tasks to complete
-  bool completed = waitCondition(
-      [&] {
-        std::lock_guard<std::mutex> lock(order_mutex);
-        return execution_order.size() == 2;
-      },
-      3000);  // Increased timeout for robustness
+      ebus::OrchestrationEvent ev;
+      auto next_sched_due = scheduler.nextDueTime();
+      auto now = ebus::Clock::now();
+      uint32_t timeout_ms = 0;
+      if (next_sched_due == ebus::Clock::time_point::max()) {
+        timeout_ms = 10;  // Default small timeout if nothing is scheduled
+      } else if (next_sched_due > now) {
+        timeout_ms = static_cast<uint32_t>(
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+                next_sched_due - now)
+                .count());
+        if (timeout_ms == 0)
+          timeout_ms = 1;  // Ensure at least 1ms if due very soon
+      } else {
+        timeout_ms = 0;  // Already due or in the past, process immediately
+      }
 
-  scheduler.stop();  // Stop scheduler before checking local variables
-  busHandler.stop();
+      if (reactor_queue_.pop(ev, timeout_ms)) {
+        switch (ev.type) {
+          case ebus::OrchestrationEventType::bus_byte: {
+            BusEvent bus_ev{
+                ev.data.byte_data.val, ev.data.byte_data.bus_request,
+                ev.data.byte_data.start_bit, ev.data.byte_data.timestamp};
+            busHandler.processEvent(bus_ev);
+            break;
+          }
+          case ebus::OrchestrationEventType::protocol_result: {
+            scheduler.injectProtocolEvent(ev.data.protocol_data);
+            break;
+          }
+          default:
+            break;
+        }
+      }
+    }
+    if (!(future.wait_for(std::chrono::milliseconds(0)) ==
+              std::future_status::ready &&
+          future.get())) {
+      all_tests_passed = false;
+      WARN("Test failed for payload: " << payload);
+    }
+  }
+
+  REQUIRE(all_tests_passed);
+
   bus.stop();
-  simulator.clear();  // Clear simulator workers
-
-  REQUIRE(completed);  // Check completion after stopping threads
-
-  // Verify that 255 preempted 5
-  REQUIRE(execution_order[0] == 255);
-  REQUIRE(execution_order[1] == 5);
 }

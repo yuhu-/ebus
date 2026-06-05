@@ -10,9 +10,9 @@
 #include <cstdint>
 #include <functional>
 #include <string>
-#include <vector>
 
 #include "ebus/types.hpp"
+#include "utils/static_vector.hpp"
 
 namespace ebus::detail {
 class BusMonitor;
@@ -28,69 +28,114 @@ namespace ebus {
  * Snapshot of a service thread's health.
  */
 struct ThreadStatus {
-  std::string name;
+  ThreadStatus() = default;
+  ThreadStatus(std::string_view n, int32_t stack_bytes,
+               int32_t stack_free_bytes)
+      : name(n),
+        task_stack_bytes(stack_bytes),
+        task_stack_free_bytes(stack_free_bytes) {}
+  FixedString<24> name;
   int32_t task_stack_bytes = -1;
   int32_t task_stack_free_bytes = -1;
 
-  void toJson(const JsonChunkVisitor& visitor) const;
+  void toJson(detail::JsonWriter& writer) const;
 };
 
 /**
  * Snapshot of the controller's current state.
  */
 struct ControllerStatus {
+  ControllerStatus() = default;
+  ControllerStatus(ThreadStatus t, size_t q_size, size_t q_max,
+                   uint32_t dropped, uint32_t loop_us)
+      : thread(std::move(t)),
+        reactor_queue_size(q_size),
+        max_reactor_queue_size(q_max),
+        event_queue_dropped(dropped),
+        max_loop_cycle_us(loop_us) {}
   ThreadStatus thread;
 
-  void toJson(const JsonChunkVisitor& visitor) const;
+  size_t reactor_queue_size = 0;
+  size_t max_reactor_queue_size = 0;
+  uint32_t event_queue_dropped = 0;
+  uint32_t max_loop_cycle_us = 0;
+
+  void toJson(detail::JsonWriter& writer) const;
 };
 
 /**
  * Snapshot of the bus layer's current state.
  */
 struct BusStatus {
+  BusStatus() = default;
+  BusStatus(ThreadStatus bus, ThreadStatus syn)
+      : bus_thread(std::move(bus)), syn_thread(std::move(syn)) {}
   ThreadStatus bus_thread;
   ThreadStatus syn_thread;
 
-  void toJson(const JsonChunkVisitor& visitor) const;
+  void toJson(detail::JsonWriter& writer) const;
 };
 
 /**
  * Snapshot of the bus handler's current state.
  */
 struct BusHandlerStatus {
-  ThreadStatus thread;
-  size_t queue_size = 0;
-  size_t queue_capacity = 0;
-  size_t max_queue_size = 0;
+  BusHandlerStatus() = default;
+  BusHandlerStatus(HandlerState hs, RequestState rs)
+      : handler_state(hs), request_state(rs) {}
+  HandlerState handler_state = HandlerState::passive_receive_master;
+  RequestState request_state = RequestState::observe;
 
-  void toJson(const JsonChunkVisitor& visitor) const;
+  void toJson(detail::JsonWriter& writer) const;
 };
 
 /**
  * Snapshot of the scheduler's current state.
  */
 struct SchedulerStatus {
-  ThreadStatus thread;
+  SchedulerStatus() = default;
+  SchedulerStatus(size_t s, size_t cap, size_t max_s)
+      : queue_size(s), queue_capacity(cap), max_queue_size(max_s) {}
   size_t queue_size = 0;
   size_t queue_capacity = 0;
   size_t max_queue_size = 0;
 
-  void toJson(const JsonChunkVisitor& visitor) const;
+  void toJson(detail::JsonWriter& writer) const;
+};
+
+/**
+ * Detailed information about a connected network client.
+ */
+struct ClientInfo {
+  ClientInfo() = default;
+  ClientInfo(int f, std::string_view t, bool conn, bool write, size_t buf_usage)
+      : fd(f),
+        type(t),
+        connected(conn),
+        write_capable(write),
+        outbound_buffer_usage(buf_usage) {}
+  int fd = -1;
+  FixedString<12> type;
+  bool connected = false;
+  bool write_capable = false;
+  size_t outbound_buffer_usage = 0;
+
+  void toJson(detail::JsonWriter& writer) const;
 };
 
 /**
  * Snapshot of the client manager's current state.
  */
 struct ClientManagerStatus {
-  ThreadStatus thread;
-  size_t queue_size = 0;
-  size_t queue_capacity = 0;
-  size_t max_queue_size = 0;
+  ClientManagerStatus() = default;
+  ClientManagerStatus(bool active, std::string_view state, std::string_view err)
+      : session_active(active), session_state(state), last_error(err) {}
   bool session_active = false;
-  std::string session_state;
-  std::string last_error;
+  FixedString<12> session_state;
+  FixedString<48> last_error;
+  detail::StaticVector<ClientInfo, detail::NetworkLimits::max_clients> clients;
 
-  void toJson(const JsonChunkVisitor& visitor) const;
+  void toJson(detail::JsonWriter& writer) const;
 };
 
 /**
@@ -99,10 +144,11 @@ struct ClientManagerStatus {
 struct DeviceManagerStatus {
   size_t identified_count = 0;
   size_t unknown_count = 0;
+  size_t device_capacity = 0;
   std::bitset<256> masters{};
   std::bitset<256> slaves{};
 
-  void toJson(const JsonChunkVisitor& visitor) const;
+  void toJson(detail::JsonWriter& writer) const;
 };
 
 /**
@@ -115,18 +161,24 @@ struct DeviceScannerStatus {
   bool scan_on_startup_enabled = false;
   uint8_t startup_scan_count = 0;
   size_t manual_queue_size = 0;
+  size_t max_manual_queue_size = 0;
   size_t startup_queue_size = 0;
+  size_t max_startup_queue_size = 0;
 
-  void toJson(const JsonChunkVisitor& visitor) const;
+  void toJson(detail::JsonWriter& writer) const;
 };
 
 /**
  * Snapshot of the poll manager's current state.
  */
 struct PollManagerStatus {
+  PollManagerStatus() = default;
+  PollManagerStatus(size_t count, size_t max_count)
+      : item_count(count), max_item_count(max_count) {}
   size_t item_count = 0;
+  size_t max_item_count = 0;
 
-  void toJson(const JsonChunkVisitor& visitor) const;
+  void toJson(detail::JsonWriter& writer) const;
 };
 
 /**
@@ -134,19 +186,23 @@ struct PollManagerStatus {
  */
 struct SystemResources {
   uint64_t timestamp_ms = 0;
-  std::vector<ThreadStatus> threads;
+  detail::StaticVector<ThreadStatus, 8> threads;
 
   struct QueueInfo {
-    std::string name;
+    QueueInfo() = default;
+    QueueInfo(std::string_view n, size_t s, size_t cap, size_t max_s)
+        : name(n), size(s), capacity(cap), max_size(max_s) {}
+
+    FixedString<24> name;
     size_t size = 0;
     size_t capacity = 0;
     size_t max_size = 0;
 
-    void toJson(const JsonChunkVisitor& visitor) const;
+    void toJson(detail::JsonWriter& writer) const;
   };
-  std::vector<QueueInfo> queues;
+  detail::StaticVector<QueueInfo, 16> queues;
 
-  void toJson(const JsonChunkVisitor& visitor) const;
+  void toJson(detail::JsonWriter& writer) const;
 };
 
 /**
@@ -163,7 +219,7 @@ struct ServiceStatus {
   DeviceScannerStatus device_scanner;
   PollManagerStatus poll_manager;
 
-  void toJson(const JsonChunkVisitor& visitor) const;
+  void toJson(detail::JsonWriter& writer) const;
 };
 
 /**

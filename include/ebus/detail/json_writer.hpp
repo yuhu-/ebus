@@ -7,12 +7,12 @@
 
 #include <charconv>
 #include <cstring>
-#include <ebus/detail/protocol_limits.hpp>
 #include <functional>
 #include <string_view>
 #include <type_traits>
 #include <utility>
 
+#include "ebus/detail/protocol_limits.hpp"
 #include "ebus/types.hpp"
 
 namespace ebus {
@@ -34,7 +34,7 @@ void appendHexFieldToWriter(JsonWriter& writer, ByteView data);
  */
 class JsonWriter {
  public:
-  explicit JsonWriter(JsonChunkVisitor v) : visitor_(std::move(v)) {}
+  explicit JsonWriter(JsonChunkVisitor v) : visitor_(std::move(v)), buffer_{} {}
   ~JsonWriter() { flush(); }
 
   void write(std::string_view s) {
@@ -106,7 +106,7 @@ class JsonWriter {
       const T& val) {
     if (!first_) write(",");
     flush();
-    val.toJson(visitor_);
+    val.toJson(*this);
     first_ = false;
   }
 
@@ -135,7 +135,7 @@ class JsonWriter {
   void writeValueFloat(float val, int precision = 2) {
     if (!first_) write(",");
     char buf[32];
-    char* end = ebus::formatFloat(
+    const char* end = ebus::formatFloat(
         val, precision, buf, sizeof(buf),
         ebus::detail::FormattingLimits::float_lower_threshold,
         ebus::detail::FormattingLimits::float_upper_threshold);
@@ -159,7 +159,7 @@ class JsonWriter {
       std::string_view key, const T& val) {
     appendKey(key);
     flush();
-    val.toJson(visitor_);
+    val.toJson(*this);
     first_ = false;
   }
 
@@ -202,7 +202,7 @@ class JsonWriter {
     char buf[32];
     // Pass thresholds explicitly to match the forward declaration without
     // defaults
-    char* end = ebus::formatFloat(
+    const char* end = ebus::formatFloat(
         val, precision, buf, sizeof(buf),
         ebus::detail::FormattingLimits::float_lower_threshold,
         ebus::detail::FormattingLimits::float_upper_threshold);
@@ -226,7 +226,7 @@ class JsonWriter {
 
  private:
   JsonChunkVisitor visitor_;
-  char buffer_[256];
+  char buffer_[128];  // Optimized for ESP32-C3 stack usage
   size_t pos_ = 0;
   bool first_ = true;
 };

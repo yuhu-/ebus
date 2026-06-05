@@ -53,9 +53,8 @@ TEST_CASE("Controller: Lifecycle and API", "[app][controller]") {
   REQUIRE((waitCondition([&] { return telegramSeen.load(); }, 100)));
 
   // Metrics
-  controller.fetchMetrics([](const ebus::Metrics& m) {
-    REQUIRE(m.handler.messages_active == 1);
-  });
+  controller.fetchMetrics(
+      [](const ebus::Metrics& m) { REQUIRE(m.handler.messages_active == 1); });
 
   // Shutdown
   controller.stop();
@@ -118,4 +117,93 @@ TEST_CASE("Controller: System Discovery automated response",
 
   controller.stop();
   peerBus.stop();
+}
+
+TEST_CASE("Controller Reactor: Enqueue Synchronization",
+          "[app][controller][reactor]") {
+  ebus::EbusConfig config;
+  config.runtime.address = 0x10;
+  config.runtime.bus.syn_gen = true;
+  config.runtime.lock_counter = 0;
+
+  ebus::Controller controller(config);
+  auto& vbus = controller.getVirtualBus();
+
+  REQUIRE(controller.start());
+
+  std::atomic<bool> result_called{false};
+  std::atomic<bool> success{false};
+
+  // Enqueue a simple Identification Request (07 04)
+  std::vector<uint8_t> msg = {0x15, 0x07, 0x04, 0x00};
+  controller.enqueue(10, msg, [&](const ebus::ResultInfo& info) {
+    success = info.success;
+    result_called = true;
+  });
+
+  // Inject a mock slave response
+  vbus.addSlaveReaction(0x10, "15070400", "020102");
+
+  // Wait for the result - ensures UserRequest -> Scheduler -> ProtocolResult
+  // loop
+  REQUIRE(
+      ebus::detail::waitCondition([&] { return result_called.load(); }, 2000));
+  REQUIRE(success.load());
+
+  controller.stop();
+}
+
+TEST_CASE("Controller Reactor: Immediate Rejection",
+          "[app][controller][reactor]") {
+  ebus::EbusConfig config;
+  config.runtime.address = 0x10;
+  config.runtime.bus.syn_gen = true;
+
+  ebus::Controller controller(config);
+  REQUIRE(controller.start());
+
+  std::atomic<bool> error_called{false};
+  ebus::ProtocolError last_err = ebus::ProtocolError::none;
+
+  controller.setErrorCallback([&](const ebus::ErrorInfo& info) {
+    last_err = info.protocol_error;
+    error_called = true;
+  });
+
+  // Enqueue invalid 1-byte message (0xff) - needs explicit vector conversion
+  controller.enqueue(10, std::vector<uint8_t>{0xff});
+
+  // The Reactor must catch the immediate rejection from Scheduler::tick
+  REQUIRE(
+      ebus::detail::waitCondition([&] { return error_called.load(); }, 2000));
+  REQUIRE(last_err == ebus::ProtocolError::invalid_message);
+
+  controller.stop();
+}
+
+TEST_CASE("Controller Reactor: Drain Loop Burst",
+          "[app][controller][reactor]") {
+  ebus::EbusConfig config;
+  config.runtime.address = 0x10;
+  config.runtime.bus.syn_gen = true;
+
+  ebus::Controller controller(config);
+  auto& vbus = controller.getVirtualBus();
+
+  REQUIRE(controller.start());
+
+  std::atomic<int> telegram_count{0};
+  controller.setTelegramCallback(
+      [&](const ebus::TelegramInfo&) { telegram_count++; });
+
+  // Rapid injection of 10 messages
+  for (int i = 0; i < 10; ++i) {
+    vbus.injectMasterMessage(0x03, "fe070000");
+  }
+
+  // Reactor must drain the queue and dispatch all callbacks
+  REQUIRE(
+      ebus::detail::waitCondition([&] { return telegram_count >= 10; }, 3000));
+
+  controller.stop();
 }

@@ -5,6 +5,7 @@
 
 #include "core/handler.hpp"
 
+#include <algorithm>
 #include <ebus/detail/protocol_limits.hpp>
 #include <ebus/utils.hpp>
 #include <utility>
@@ -145,6 +146,12 @@ bool Handler::sendActiveMessage(ByteView message) {
   active_telegram_.createMaster(source_address_, message);
   if (active_telegram_.getMasterState() == SequenceState::seq_ok) {
     active_message_ = true;
+    // Proactively request the bus if it's currently idle. This ensures that
+    // the low-level physical layer (ISR or Simulation reader) sees the
+    // intent before the next SYN arrives on the wire.
+    if (request_ && request_->busAvailable()) {
+      request_->requestBus(source_address_);
+    }
   } else {
     if (monitor_) monitor_->updateHandler([](auto& m) { m.error_active++; });
     callOnError(LogLevel::error, ProtocolError::error_active_master,

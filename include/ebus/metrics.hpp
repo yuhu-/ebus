@@ -6,6 +6,7 @@
 #pragma once
 
 #include <array>
+#include <atomic>
 #include <bitset>
 #include <cstddef>
 #include <cstdint>
@@ -25,18 +26,25 @@ namespace ebus {
  * Results of a rolling metric calculation.
  */
 struct MetricValues {
+  MetricValues() = default;
+  MetricValues(uint32_t last, uint32_t max, uint64_t sum, uint64_t cnt)
+      : last_us(last), max_us(max), sum_us(sum), count(cnt) {}
   uint32_t last_us = 0;
   uint32_t max_us = 0;
   uint64_t sum_us = 0;
   uint64_t count = 0;
 
-  void toJson(const JsonChunkVisitor& visitor) const;
+  void toJson(detail::JsonWriter& writer) const;
 };
 
 /**
  * Frequency tracking for error-producing addresses.
  */
 struct ErrorAddressStats {
+  ErrorAddressStats() = default;
+  ErrorAddressStats(uint8_t addr, uint32_t c, uint64_t last_us)
+      : address(addr), count(c), last_seen_us(last_us) {}
+
   uint8_t address = 0xff;
   uint32_t count = 0;
   uint64_t last_seen_us = 0;
@@ -77,7 +85,7 @@ struct HandlerMetrics {
 
   void reset();
 
-  void toJson(const JsonChunkVisitor& visitor) const;
+  void toJson(detail::JsonWriter& writer) const;
 };
 
 /**
@@ -98,7 +106,7 @@ struct RequestMetrics {
 
   void reset();
 
-  void toJson(const JsonChunkVisitor& visitor) const;
+  void toJson(detail::JsonWriter& writer) const;
 };
 
 /**
@@ -106,8 +114,8 @@ struct RequestMetrics {
  */
 struct BusMetrics {
   // Detailed Counters
-  uint32_t start_bit_errors = 0;
-  uint32_t syn_postponed_count = 0;
+  std::atomic<uint32_t> start_bit_errors = 0;
+  std::atomic<uint32_t> syn_postponed_count = 0;
   bool congestion = false;
   bool high_jitter = false;
   uint64_t last_error_us = 0;  // us since start
@@ -121,7 +129,7 @@ struct BusMetrics {
 
   void reset();
 
-  void toJson(const JsonChunkVisitor& visitor) const;
+  void toJson(detail::JsonWriter& writer) const;
 };
 
 /**
@@ -133,7 +141,7 @@ struct DeviceMetrics {
 
   void reset();
 
-  void toJson(const JsonChunkVisitor& visitor) const;
+  void toJson(detail::JsonWriter& writer) const;
 };
 
 /**
@@ -141,10 +149,12 @@ struct DeviceMetrics {
  */
 struct ControllerMetrics {
   uint32_t event_queue_dropped = 0;
+  uint32_t max_reactor_queue_size = 0;
+  uint32_t max_loop_cycle_us = 0;
 
   void reset();
 
-  void toJson(const JsonChunkVisitor& visitor) const;
+  void toJson(detail::JsonWriter& writer) const;
 };
 
 /**
@@ -157,7 +167,7 @@ struct SystemMetrics {
   DeviceMetrics devices;
   ControllerMetrics controller;
 
-  void toJson(const JsonChunkVisitor& visitor) const;
+  void toJson(detail::JsonWriter& writer) const;
 };
 
 }  // namespace metrics

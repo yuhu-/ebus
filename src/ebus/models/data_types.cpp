@@ -119,7 +119,7 @@ struct JsonValueVisitor {
     // This handles the generic int64_t in the variant, which represents
     // fixed-point scaled values in our protocol.
     char buffer[64];
-    char* end_ptr = formatFloat(
+    const char* end_ptr = formatFloat(
         static_cast<float>(val) / FIXED_POINT_SCALE, 4, buffer, sizeof(buffer),
         detail::FormattingLimits::float_lower_threshold,
         detail::FormattingLimits::float_upper_threshold);
@@ -128,7 +128,7 @@ struct JsonValueVisitor {
 
   void operator()(float val) const {
     char buffer[64];
-    char* end_ptr =
+    const char* end_ptr =
         formatFloat(val, 4, buffer, sizeof(buffer),
                     detail::FormattingLimits::float_lower_threshold,
                     detail::FormattingLimits::float_upper_threshold);
@@ -497,18 +497,19 @@ struct ToStringValueVisitor {
 
   std::string operator()(int64_t val) const {
     char buffer[64];
-    char* end = formatFloat(static_cast<float>(val) / FIXED_POINT_SCALE, 2,
-                            buffer, sizeof(buffer),
-                            detail::FormattingLimits::float_lower_threshold,
-                            detail::FormattingLimits::float_upper_threshold);
+    const char* end = formatFloat(
+        static_cast<float>(val) / FIXED_POINT_SCALE, 2, buffer, sizeof(buffer),
+        detail::FormattingLimits::float_lower_threshold,
+        detail::FormattingLimits::float_upper_threshold);
     return std::string(buffer, end - buffer);
   }
 
   std::string operator()(float val) const {
     char buffer[64];
-    char* end = formatFloat(val, 2, buffer, sizeof(buffer),
-                            detail::FormattingLimits::float_lower_threshold,
-                            detail::FormattingLimits::float_upper_threshold);
+    const char* end =
+        formatFloat(val, 2, buffer, sizeof(buffer),
+                    detail::FormattingLimits::float_lower_threshold,
+                    detail::FormattingLimits::float_upper_threshold);
     return std::string(buffer, end - buffer);
   }
 
@@ -590,6 +591,17 @@ std::vector<DataTypeInfo> getSupportedDataTypes() {
   return types;
 }
 
+void fetchSupportedDataTypes(
+    std::function<void(const DataTypeInfo&)> callback) {
+  if (!callback) return;
+  for (const auto& m : kMetaTable) {
+    DataTypeInfo info;
+    static_cast<DataTypeInfoBase&>(info) = m;
+    info.factor = static_cast<float>(m.scale.num) / m.scale.den;
+    callback(info);
+  }
+}
+
 const char* dataTypeToString(DataType data_type) noexcept {
   auto m = getMeta(data_type);
   return m ? m->name : "UNKNOWN";
@@ -604,18 +616,16 @@ DataType stringToDataType(const char* str) {
   return DataType::error;
 }
 
-void DataTypeInfo::toJson(const JsonChunkVisitor& visitor) const {
-  detail::JsonWriter writer(visitor);
+void DataTypeInfo::toJson(detail::JsonWriter& writer) const {
   writer.startObject();
-  writer.writeField("type", static_cast<int64_t>(dt));
+  writer.writeField("type", static_cast<int32_t>(dt));
   writer.writeField("name", name);
-  writer.writeField("size", static_cast<uint64_t>(size));
+  writer.writeField("size", size);
   writer.writeField("is_numeric", is_numeric);
   writer.writeField("is_signed", is_signed);
   writer.writeField("is_float", is_float);
   writer.writeField("has_replacement", has_replacement);
-  writer.writeField("replacement_value",
-                    static_cast<uint64_t>(replacement_value));
+  writer.writeField("replacement_value", replacement_value);
   writer.writeFieldFloat("factor", factor, 4);
   writer.endObject();
 }
@@ -638,7 +648,7 @@ void decodeToJson(const JsonChunkVisitor& visitor, DataType dt, ByteView data) {
     writer.writeField("error", "Invalid DataType");
   } else {
     const auto& meta = *meta_opt;
-    writer.writeField("type", static_cast<int64_t>(meta.dt));
+    writer.writeField("type", static_cast<int32_t>(meta.dt));
     writer.writeField("name", meta.name);
     writer.writeHexField("raw_hex", data);
     auto decoded = decode(dt, data);

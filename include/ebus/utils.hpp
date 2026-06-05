@@ -18,6 +18,7 @@
 #include <utility>
 #include <vector>
 
+#include "ebus/detail/json_writer.hpp"
 #include "ebus/detail/protocol_limits.hpp"
 #include "ebus/protocol_math.hpp"
 #include "ebus/types.hpp"  // For JsonChunkVisitor, ByteView
@@ -45,7 +46,8 @@ template <typename T,
 std::string toJson(const T& obj, const size_t reserve) {
   std::string json;
   json.reserve(reserve);
-  obj.toJson([&json](std::string_view s) { json.append(s); });
+  detail::JsonWriter writer([&json](std::string_view s) { json.append(s); });
+  obj.toJson(writer);
   return json;
 }
 

@@ -21,11 +21,7 @@ BusSimulation::BusSimulation(const BusConfig& config,
                              const RuntimeConfig& runtime,
                              detail::Request* request,
                              detail::BusMonitor* monitor)
-    : config_(config),
-      runtime_(runtime),
-      request_(request),
-      monitor_(monitor),
-      byte_queue_(std::make_unique<Queue<BusEvent>>(BusLimits::queue_size)) {
+    : config_(config), runtime_(runtime), request_(request), monitor_(monitor) {
   VirtualLine::get().attach(this);
 
   syn_base_ms_ = BusLimits::Syn::base_ms;
@@ -59,7 +55,6 @@ void BusSimulation::stop() {
   running_.store(false, std::memory_order_release);
   syn_running_.store(false);
 
-  if (byte_queue_) byte_queue_->shutdown();
   VirtualLine::get().detach(this);
   {
     std::unique_lock<std::mutex> lock(syn_mutex_);
@@ -70,13 +65,9 @@ void BusSimulation::stop() {
   if (worker_) worker_->join();
 }
 
-Queue<BusEvent>* BusSimulation::getQueue() const { return byte_queue_.get(); }
-
 void BusSimulation::writeByte(const uint8_t byte) {
-  {
-    std::lock_guard<std::mutex> lock(listeners_mutex_);
-    for (const auto& listener : getWriteListeners()) listener(byte);
-  }
+  lockAndInvoke(listeners_mutex_, getWriteListeners(), byte);
+
   if (monitor_) monitor_->transmit.markBegin();
 
   if (byte != Symbols::syn) {
@@ -125,7 +116,7 @@ void BusSimulation::setRuntimeConfig(const RuntimeConfig& runtime) {
 
     // If SYN generator is active, update its next expiry based on new config
     if (syn_running_.load() && !should_stop_syn) {
-      resetSynTimerSim(
+      resetSynTimerSimInternal(
           Symbols::syn);  // Force re-evaluation of next_syn_expiry_
     }
   }
@@ -143,21 +134,6 @@ void BusSimulation::setRuntimeConfig(const RuntimeConfig& runtime) {
     if (syn_worker_) syn_worker_->join();
     syn_worker_.reset();
   }
-}
-
-void BusSimulation::addReadListener(ReadListener listener) {
-  std::lock_guard<std::mutex> lock(listeners_mutex_);
-  getReadListeners().push_back(std::move(listener));
-}
-
-void BusSimulation::addWriteListener(WriteListener listener) {
-  std::lock_guard<std::mutex> lock(listeners_mutex_);
-  getWriteListeners().push_back(std::move(listener));
-}
-
-void BusSimulation::addSynListener(SynListener listener) {
-  std::lock_guard<std::mutex> lock(listeners_mutex_);
-  getSynListeners().push_back(std::move(listener));
 }
 
 ServiceThread::Status BusSimulation::getThreadStatus() const {
@@ -179,10 +155,7 @@ ebus::BusStatus BusSimulation::getStatus() const {
       [](const platform::ServiceThread::Status& s) -> ebus::ThreadStatus {
     return {s.name, s.task_stack_bytes, s.task_stack_free_bytes};
   };
-  ebus::BusStatus s;
-  s.bus_thread = map(getThreadStatus());
-  s.syn_thread = map(getSynThreadStatus());
-  return s;
+  return {map(getThreadStatus()), map(getSynThreadStatus())};
 }
 
 void BusSimulation::recordUtilization(uint8_t byte) {
@@ -193,14 +166,13 @@ void BusSimulation::recordUtilization(uint8_t byte) {
 void BusSimulation::simulationReaderLoop() {
   uint8_t byte;
   while (running_.load()) {
+    EBUS_LOG_DEBUG("[BusSim] Reader Loop for 0x" +
+                   ebus::toString(runtime_.address) + " is alive.");
     if (VirtualLine::get().read(
             this, byte, BusLimits::platform::Posix::virtual_read_timeout_ms)) {
       auto arrival_time = Clock::now();
-      {
-        std::lock_guard<std::mutex> lock(listeners_mutex_);
-        for (const auto& listener : getReadListeners()) listener(byte);
-      }
 
+      lockAndInvoke(listeners_mutex_, getReadListeners(), byte);
       recordUtilization(byte);
       resetSynTimerSim(byte);
 
@@ -210,12 +182,14 @@ void BusSimulation::simulationReaderLoop() {
       event.bus_request =
           bus_request_flag_.exchange(false, std::memory_order_acq_rel);
       event.start_bit = false;  // Not applicable in simulation
+      lockAndInvoke(listeners_mutex_, getBusEventListeners(), event);
 
-      if (byte_queue_) byte_queue_->push(event);
-
+      // --- CRITICAL POINT: Spec 6.3 Immediate Bus Access ---
+      // We check for arbitration intent AFTER notifying software to ensure
+      // the state machine can pre-load the intent for the NEXT syn, while
+      // hardware acts on the CURRENT syn.
       if (byte == Symbols::syn && request_->busRequestPending()) {
-        sleepMicro(BusLimits::platform::Posix::
-                       request_delay_us);  // Simulate arbitration window
+        sleepMicro(BusLimits::platform::Posix::request_delay_us);
         writeByte(request_->busRequestAddress());
         bus_request_flag_.store(true, std::memory_order_release);
       }
@@ -225,6 +199,10 @@ void BusSimulation::simulationReaderLoop() {
 
 void BusSimulation::resetSynTimerSim(uint8_t byte) {
   std::lock_guard<std::mutex> lock(syn_mutex_);
+  resetSynTimerSimInternal(byte);
+}
+
+void BusSimulation::resetSynTimerSimInternal(uint8_t byte) {
   auto now = Clock::now();
   last_activity_time_ = now;
 
@@ -286,10 +264,8 @@ void BusSimulation::simulationSynLoop() {
     syn_active_ = true;
     lock.unlock();
 
-    {
-      std::lock_guard<std::mutex> l_lock(listeners_mutex_);
-      for (const auto& listener : getSynListeners()) listener();
-    }
+    lockAndInvoke(listeners_mutex_, getSynListeners());
+
     writeByte(Symbols::syn);
 
     lock.lock();

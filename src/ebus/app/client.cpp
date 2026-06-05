@@ -72,6 +72,12 @@ ReadOnlyClient::ReadOnlyClient(int fd, Request* request, size_t max_buffer)
 
 bool ReadOnlyClient::wantsToSend() { return false; }
 
+ClientInfo ReadOnlyClient::getClientInfo() const {
+  std::lock_guard<std::mutex> lock(buffer_mutex_);
+  return ClientInfo{fd_, "read_only", isConnected(), write_capable_,
+                    outbound_buffer_.size()};
+}
+
 bool ReadOnlyClient::recvFromClient(uint8_t& out) {
   (void)out;  // unused
   return false;
@@ -81,10 +87,16 @@ void ReadOnlyClient::sendToClient(ByteView data) {
   if (fd_ < 0 || data.empty()) return;
   {
     std::lock_guard<std::mutex> lock(buffer_mutex_);
-    if (outbound_buffer_.size() + data.size() > max_buffer_size_) {
-      stop();
-      return;
+    // DRAIN: Discard oldest data if buffer is full to prevent
+    // backpressure/hangs.
+    while (outbound_buffer_.size() + data.size() > max_buffer_size_) {
+      // Drop a substantial chunk (approx 12.5%) to amortize erase costs.
+      size_t to_drop = std::max(data.size(), max_buffer_size_ / 8);
+      if (to_drop > outbound_buffer_.size()) to_drop = outbound_buffer_.size();
+      outbound_buffer_.erase(outbound_buffer_.begin(),
+                             outbound_buffer_.begin() + to_drop);
     }
+
     outbound_buffer_.insert(outbound_buffer_.end(), data.begin(), data.end());
     flushLocked();
   }
@@ -104,6 +116,12 @@ bool RegularClient::wantsToSend() {
   return platform::recv(fd_, &dummy, 1, platform::Flags::peek) > 0;
 }
 
+ClientInfo RegularClient::getClientInfo() const {
+  std::lock_guard<std::mutex> lock(buffer_mutex_);
+  return ClientInfo{fd_, "regular", isConnected(), write_capable_,
+                    outbound_buffer_.size()};
+}
+
 bool RegularClient::recvFromClient(uint8_t& out) {
   bool ret = platform::recv(fd_, &out, 1, platform::Flags::dont_wait) == 1;
   if (ret) last_sent_byte_ = out;
@@ -114,10 +132,16 @@ void RegularClient::sendToClient(ByteView data) {
   if (fd_ < 0 || data.empty()) return;
   {
     std::lock_guard<std::mutex> lock(buffer_mutex_);
-    if (outbound_buffer_.size() + data.size() > max_buffer_size_) {
-      stop();
-      return;
+    // DRAIN: Discard oldest data if buffer is full to prevent
+    // backpressure/hangs.
+    while (outbound_buffer_.size() + data.size() > max_buffer_size_) {
+      // Drop a substantial chunk (approx 12.5%) to amortize erase costs.
+      size_t to_drop = std::max(data.size(), max_buffer_size_ / 8);
+      if (to_drop > outbound_buffer_.size()) to_drop = outbound_buffer_.size();
+      outbound_buffer_.erase(outbound_buffer_.begin(),
+                             outbound_buffer_.begin() + to_drop);
     }
+
     outbound_buffer_.insert(outbound_buffer_.end(), data.begin(), data.end());
     flushLocked();
   }
@@ -161,6 +185,12 @@ bool EnhancedClient::wantsToSend() {
   if (inbound_len_ > 0) return true;
   uint8_t dummy;
   return platform::recv(fd_, &dummy, 1, platform::Flags::peek) > 0;
+}
+
+ClientInfo EnhancedClient::getClientInfo() const {
+  std::lock_guard<std::mutex> lock(buffer_mutex_);
+  return ClientInfo{fd_, "enhanced", isConnected(), write_capable_,
+                    outbound_buffer_.size()};
 }
 
 bool EnhancedClient::recvFromClient(uint8_t& out) {
@@ -249,9 +279,14 @@ void EnhancedClient::sendToClient(ByteView data) {
 
   {
     std::lock_guard<std::mutex> lock(buffer_mutex_);
-    if (outbound_buffer_.size() + 2 > max_buffer_size_) {
-      stop();
-      return;
+    // DRAIN: Discard oldest data if buffer is full to prevent
+    // backpressure/hangs.
+    while (outbound_buffer_.size() + 2 > max_buffer_size_) {
+      // Drop a substantial chunk (approx 12.5%) to amortize erase costs.
+      size_t to_drop = std::max(static_cast<size_t>(2), max_buffer_size_ / 8);
+      if (to_drop > outbound_buffer_.size()) to_drop = outbound_buffer_.size();
+      outbound_buffer_.erase(outbound_buffer_.begin(),
+                             outbound_buffer_.begin() + to_drop);
     }
 
     // Short form is allowed for RECEIVED notifications where value < 0x80

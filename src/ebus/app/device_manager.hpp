@@ -38,12 +38,14 @@ class DeviceManager {
 
   void update(ByteView master_view, ByteView slave_view);
 
-  void fetchDeviceInfo(const std::function<void(const DeviceInfo&)>& callback) const;
-
+  void fetchDeviceInfo(
+      const std::function<void(const DeviceInfo&)>& callback) const;
   void getObservedSlaves(std::bitset<256>& observed) const;
-  std::vector<Sequence> vendorScanCommands() const;
-  std::vector<Sequence> createScanCommands(
-      const std::vector<std::string>& addresses) const;
+  void vendorScanCommands(
+      const std::function<void(const Sequence&)>& callback) const;
+  void createScanCommands(
+      const std::vector<std::string>& addresses,
+      const std::function<void(const Sequence&)>& callback) const;
 
   DeviceManagerStatus getStatus() const;
 
@@ -55,10 +57,12 @@ class DeviceManager {
   mutable std::mutex mutex_;
 
   std::array<Device, DeviceLimits::max_devices> device_pool_;
-  std::array<int16_t, 256> address_map_; // Maps slave address to pool index, -1 if unused
+  std::array<int16_t, 256>
+      address_map_;  // Maps slave address to pool index, -1 if unused
   size_t pool_usage_ = 0;
 
-  std::bitset<256> identified_devices_{}; // Tracks if address has an associated Device entry
+  std::bitset<256> identified_devices_{};  // Tracks if address has an
+                                           // associated Device entry
   std::bitset<256> masters_{};
   std::bitset<256> slaves_{};
 };

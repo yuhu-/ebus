@@ -59,38 +59,31 @@ ebus::DeviceInfo Device::getDeviceInfo() const {
   info.slave_address = slave_;
   info.frequency = message_count_;
 
-  if (vec_070400_.size() > 1) {
-    const auto m_id =
-        ebus::decode(ebus::DataType::uint8, ebus::range(vec_070400_, 1, 1));
-    if (m_id) {
-      info.manufacturer = static_cast<uint8_t>(ebus::asInt64(*m_id));
-      info.manufacturer_name = manufacturerName(info.manufacturer);
-    }
-
-    if (auto uid =
-            ebus::decode(ebus::DataType::char5, ebus::range(vec_070400_, 2, 5)))
-      info.unit_id = ebus::asString(*uid);
-    if (auto sw =
-            ebus::decode(ebus::DataType::hex2, ebus::range(vec_070400_, 7, 2)))
-      info.software_version = ebus::toString(*sw);
-    if (auto hw =
-            ebus::decode(ebus::DataType::hex2, ebus::range(vec_070400_, 9, 2)))
-      info.hardware_version = ebus::toString(*hw);
+  if (vec_070400_.size() >= 11) {
+    info.manufacturer = vec_070400_[1];
+    info.manufacturer_name = manufacturerName(info.manufacturer);
+    info.unit_id = ebus::range(vec_070400_, 2, 5);
+    info.software_version = ebus::range(vec_070400_, 7, 2);
+    info.hardware_version = ebus::range(vec_070400_, 9, 2);
   }
 
   if (isVaillant() && isVaillantValid()) {
-    // Reconstruct the 28-character Vaillant serial number from the 4 B5
-    // sub-services
-    std::string serial;
-    serial.reserve(28);
-    serial += ebus::byteToChar(ebus::range(vec_b5090124_, 2, 8));
-    serial += ebus::byteToChar(ebus::range(vec_b5090125_, 1, 9));
-    serial += ebus::byteToChar(ebus::range(vec_b5090126_, 1, 9));
-    serial += ebus::byteToChar(ebus::range(vec_b5090127_, 1, 2));
+    auto& sn = info.vaillant.serial_number;
+    sn.clear();
+    auto appendSegment = [&](ByteView src, size_t offset, size_t len) {
+      if (src.size() >= offset + len && sn.size_bytes + len <= 28) {
+        std::memcpy(sn.buffer + sn.size_bytes, src.data() + offset, len);
+        sn.size_bytes += static_cast<uint8_t>(len);
+      }
+    };
 
-    info.vaillant.serial_number = serial;
-    if (serial.length() >= 16) {
-      info.vaillant.product_code = serial.substr(6, 10);
+    appendSegment(vec_b5090124_, 2, 8);
+    appendSegment(vec_b5090125_, 1, 9);
+    appendSegment(vec_b5090126_, 1, 9);
+    appendSegment(vec_b5090127_, 1, 2);
+
+    if (sn.size_bytes >= 16) {
+      info.vaillant.product_code = ByteView(sn.buffer + 6, 10);
     }
   }
 
@@ -104,35 +97,27 @@ ebus::Sequence Device::createScanCommand(uint8_t slave) {
   return sequence;
 }
 
-std::vector<ebus::Sequence> Device::createVendorScanCommands() const {
-  std::vector<Sequence> commands;
+void Device::createVendorScanCommands(
+    const std::function<void(const Sequence&)>& callback) const {
+  if (!callback) return;
+
   if (isVaillant()) {
-    if (vec_b5090124_.size() == 0) {
-      Sequence command;
-      command.pushBack(slave_);
-      for (uint8_t b : VEC_b5090124) command.pushBack(b, false);
-      commands.push_back(command);
-    }
-    if (vec_b5090125_.size() == 0) {
-      Sequence command;
-      command.pushBack(slave_, false);
-      for (uint8_t b : VEC_b5090125) command.pushBack(b, false);
-      commands.push_back(command);
-    }
-    if (vec_b5090126_.size() == 0) {
-      Sequence command;
-      command.pushBack(slave_, false);
-      for (uint8_t b : VEC_b5090126) command.pushBack(b, false);
-      commands.push_back(command);
-    }
-    if (vec_b5090127_.size() == 0) {
-      Sequence command;
-      command.pushBack(slave_, false);
-      for (uint8_t b : VEC_b5090127) command.pushBack(b, false);
-      commands.push_back(command);
+    const ModelSequence* storage_fields[] = {&vec_b5090124_, &vec_b5090125_,
+                                             &vec_b5090126_, &vec_b5090127_};
+    const std::array<uint8_t, 4>* command_prefixes[] = {
+        &VEC_b5090124, &VEC_b5090125, &VEC_b5090126, &VEC_b5090127};
+
+    for (size_t i = 0; i < 4; ++i) {
+      if (storage_fields[i]->empty()) {
+        Sequence command;
+        command.pushBack(slave_, false);
+        for (uint8_t b : *command_prefixes[i]) command.pushBack(b, false);
+        callback(command);
+      }
     }
   }
-  return commands;
+  // To support a new vendor, add a similar block here or use a manufacturer
+  // lookup table.
 }
 
 bool Device::isVaillant() const {
@@ -148,25 +133,32 @@ bool Device::isVaillantValid() const {
 
 namespace ebus {
 
-void DeviceInfo::toJson(const JsonChunkVisitor& visitor) const {
-  detail::JsonWriter writer(visitor);
+void DeviceInfo::toJson(detail::JsonWriter& writer) const {
   writer.startObject();
   writer.writeHexField("slave_address", ByteView(&slave_address, 1));
   writer.writeHexField("manufacturer", ByteView(&manufacturer, 1));
-  writer.writeField("manufacturer_name", manufacturer_name);
-  writer.writeField("unit_id", unit_id);
-  writer.writeField("software_version", software_version);
-  writer.writeField("hardware_version", hardware_version);
+  writer.writeField("manufacturer_name",
+                    manufacturer_name ? manufacturer_name : "Unknown");
 
-  if (!vaillant.serial_number.empty()) {
+  auto writeAscii = [&](std::string_view key, ByteView val) {
+    writer.writeField(
+        key, std::string_view(reinterpret_cast<const char*>(val.data()),
+                              val.size()));
+  };
+
+  writeAscii("unit_id", unit_id);
+  writer.writeHexField("software_version", software_version);
+  writer.writeHexField("hardware_version", hardware_version);
+
+  if (vaillant.serial_number.size() > 0) {
     writer.appendKey("vaillant");
     writer.startObject();
-    writer.writeField("serial_number", vaillant.serial_number);
-    writer.writeField("product_code", vaillant.product_code);
+    writeAscii("serial_number", vaillant.serial_number);
+    writeAscii("product_code", vaillant.product_code);
     writer.endObject();
   }
 
-  writer.writeField("frequency", static_cast<uint64_t>(frequency));
+  writer.writeField("frequency", frequency);
   writer.endObject();
 }
 

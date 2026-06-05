@@ -126,8 +126,7 @@ class Controller {
   /**
    * @brief Sets a callback for internal library log messages.
    */
-  static void setLogSink(
-      std::function<void(LogLevel, const std::string&)> sink);
+  static void setLogSink(std::function<void(LogLevel, std::string_view)> sink);
 
   /**
    * @brief Sets the maximum number of errors to keep in the diagnostic log.
@@ -382,19 +381,21 @@ class Controller {
   std::atomic<bool> configured_{false};
   std::atomic<bool> running_{false};
 
-  mutable std::mutex config_mutex_;
-  mutable std::mutex wake_mutex_;
-  std::condition_variable wake_cv_;
+  mutable std::recursive_mutex config_mutex_;
 
   /**
    * @brief Internal helper to capture a snapshot of all service states.
    */
-  ServiceStatus getServiceStatus() const;
+  void getServiceStatus(ServiceStatus& status) const;
 
   void processPublicEvents();
 
   void constructMembers();
   void run();
+
+  void logError(const std::string& msg) const;
+  void logInfo(const std::string& msg) const;
+  void logDebug(const std::string& msg) const;
 };
 
 }  // namespace ebus

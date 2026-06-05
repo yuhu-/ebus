@@ -17,11 +17,11 @@
 #include <ebus/metrics.hpp>
 #include <ebus/sequence.hpp>
 #include <mutex>
-#include <queue>
 #include <vector>
 
 #include "app/device_manager.hpp"
 #include "core/handler.hpp"
+#include "utils/static_vector.hpp"
 
 namespace ebus::detail {
 
@@ -60,6 +60,8 @@ class DeviceScanner {
   // Returns the next command to send, or empty vector if idle
   Sequence nextCommand();
 
+  void resetPeakMetrics();
+
   DeviceScannerStatus getStatus() const;
 
  private:
@@ -71,7 +73,7 @@ class DeviceScanner {
 
   // Commands explicitly requested via scanAddress() or scanObservedDevices().
   // These are always returned first.
-  std::queue<Sequence> manual_queue_;
+  StaticVector<Sequence, DeviceLimits::max_manual_queue> manual_queue_;
 
   // Timing configuration for the discovery/startup phase.
   std::chrono::seconds initial_scan_delay_{
@@ -94,7 +96,10 @@ class DeviceScanner {
   // Threshold to stop periodic discovery
   uint8_t max_startup_scans_ = ebus::RuntimeConfig{}.device.max_startup_scans;
   // Buffer of commands for the currently active startup scan iteration
-  std::queue<Sequence> startup_queue_;
+  StaticVector<Sequence, DeviceLimits::max_startup_queue> startup_queue_;
+
+  size_t max_manual_queue_size_ = 0;
+  size_t max_startup_queue_size_ = 0;
 
   // Internal helper to add a scan command without locking (caller must hold
   // lock)

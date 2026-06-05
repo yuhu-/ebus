@@ -24,7 +24,6 @@ BusPosix::BusPosix(const BusConfig& config, const ebus::RuntimeConfig& runtime,
       monitor_(monitor),
       fd_(-1),
       open_(false),
-      byte_queue_(std::make_unique<Queue<BusEvent>>(BusLimits::queue_size)),
       worker_(),
       running_(false),  // Initialize running_ before syn_worker_
       syn_worker_() {}  // Initialize syn_worker_ after running_
@@ -88,8 +87,6 @@ void BusPosix::stop() {
   running_.store(false);
   syn_running_.store(false);
 
-  if (byte_queue_) byte_queue_->shutdown();
-
   {
     std::unique_lock<std::mutex> lock(syn_mutex_);
     syn_cv_.notify_all();
@@ -109,8 +106,6 @@ void BusPosix::stop() {
   open_ = false;
 }
 
-Queue<BusEvent>* BusPosix::getQueue() const { return byte_queue_.get(); }
-
 void BusPosix::writeByte(const uint8_t byte) {
   {
     std::lock_guard<std::mutex> lock(syn_mutex_);
@@ -128,10 +123,7 @@ void BusPosix::writeByte(const uint8_t byte) {
 
   if (monitor_) monitor_->transmit.markBegin();
 
-  {
-    std::lock_guard<std::mutex> lock(listeners_mutex_);
-    for (const auto& listener : getWriteListeners()) listener(byte);
-  }
+  lockAndInvoke(listeners_mutex_, getWriteListeners(), byte);
 
   ensureOpen();
   if (::write(fd_, &byte, 1) == -1)
@@ -197,7 +189,7 @@ void BusPosix::setRuntimeConfig(const RuntimeConfig& runtime) {
       // If generator was already running, re-align next_syn_expiry_ to the
       // new t_unique
       if (runtime_.bus.syn_gen && !should_start && syn_running_.load()) {
-        next_syn_expiry_ = Clock::now() + current_t_unique_;
+        resetSynTimerInternal(Symbols::syn);
       }
     }
   }
@@ -214,21 +206,6 @@ void BusPosix::setRuntimeConfig(const RuntimeConfig& runtime) {
     if (syn_worker_) syn_worker_->join();  // Join existing thread if any
     syn_worker_.reset();                   // Release the unique_ptr
   }
-}
-
-void BusPosix::addReadListener(ReadListener listener) {
-  std::lock_guard<std::mutex> lock(listeners_mutex_);
-  getReadListeners().push_back(listener);
-}
-
-void BusPosix::addWriteListener(WriteListener listener) {
-  std::lock_guard<std::mutex> lock(listeners_mutex_);
-  getWriteListeners().push_back(listener);
-}
-
-void BusPosix::addSynListener(SynListener listener) {
-  std::lock_guard<std::mutex> lock(listeners_mutex_);
-  getSynListeners().push_back(listener);
 }
 
 ServiceThread::Status BusPosix::getThreadStatus() const {
@@ -250,10 +227,7 @@ ebus::BusStatus BusPosix::getStatus() const {
       [](const platform::ServiceThread::Status& s) -> ebus::ThreadStatus {
     return {s.name, s.task_stack_bytes, s.task_stack_free_bytes};
   };
-  ebus::BusStatus s;
-  s.bus_thread = map(getThreadStatus());
-  s.syn_thread = map(getSynThreadStatus());
-  return s;
+  return {map(getThreadStatus()), map(getSynThreadStatus())};
 }
 
 void BusPosix::recordUtilization(uint8_t byte) {
@@ -274,10 +248,7 @@ void BusPosix::readerThread() {
 
     if (n == 1) {
       auto arrival_time = Clock::now();
-      {
-        std::lock_guard<std::mutex> lock(listeners_mutex_);
-        for (const auto& listener : getReadListeners()) listener(byte);
-      }
+      lockAndInvoke(listeners_mutex_, getReadListeners(), byte);
 
       recordUtilization(byte);
 
@@ -297,10 +268,12 @@ void BusPosix::readerThread() {
       // m.start_bit_errors++;
       // });
       event.timestamp = arrival_time;
+      lockAndInvoke(listeners_mutex_, getBusEventListeners(), event);
 
-      if (byte_queue_) byte_queue_->push(event);
-
-      // Hit the 4300-4456us window (approx 200us after SYN reception)
+      // --- CRITICAL POINT: Spec 6.3 Immediate Bus Access ---
+      // We check for arbitration intent AFTER notifying software to ensure
+      // the state machine can pre-load the intent for the NEXT syn, while
+      // hardware acts on the CURRENT syn.
       if (byte == Symbols::syn && request_->busRequestPending()) {
         sleepMicro(BusLimits::platform::Posix::request_delay_us);
         writeByte(request_->busRequestAddress());
@@ -320,6 +293,10 @@ void BusPosix::readerThread() {
 
 void BusPosix::resetSynTimer(uint8_t byte) {
   std::lock_guard<std::mutex> lock(syn_mutex_);
+  resetSynTimerInternal(byte);
+}
+
+void BusPosix::resetSynTimerInternal(uint8_t byte) {
   auto now = Clock::now();
   last_activity_time_ = now;
 
@@ -372,10 +349,8 @@ void BusPosix::synThread() {
     syn_active_ = true;
     lock.unlock();
 
-    {
-      std::lock_guard<std::mutex> l_lock(listeners_mutex_);
-      for (const auto& listener : getSynListeners()) listener();
-    }
+    lockAndInvoke(listeners_mutex_, getSynListeners());
+
     writeByte(Symbols::syn);
 
     lock.lock();

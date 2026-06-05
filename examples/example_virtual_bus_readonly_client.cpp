@@ -23,8 +23,14 @@ using namespace std::chrono_literals;
 
 int main() {
   // --- 0. Setup Global Logging Sink ---
-  ebus::Controller::setLogSink([](ebus::LogLevel level,
-                                  const std::string& msg) {
+  ebus::Controller::setLogSink([](ebus::LogLevel level, std::string_view msg) {
+    // Detect latency warning specifically for Device A (0x01)
+    if (msg.find("[0x01]") != std::string_view::npos &&
+        msg.find("Loop iteration latency warning") != std::string_view::npos) {
+      std::cerr << "\n>>> PROGRAMMATIC ALERT: Device A Reactor Loop is "
+                   "over-utilized! <<<\n"
+                << std::endl;
+    }
     std::cout << "[LIB][" << ebus::toString(level) << "] " << msg << std::endl;
   });
 
@@ -131,14 +137,15 @@ int main() {
   for (int i = 0; i < 30; ++i) {
     std::this_thread::sleep_for(1s);
 
-    // Poll the Read-Only client's socket (on deviceA)
-    uint8_t logBuf[256];
-    ssize_t n = read(sv[1], logBuf, sizeof(logBuf));
-    if (n > 0) {
-      // If you see 0xaa here, the virtual connection is working.
-      // If you see nothing, the VirtualLine is isolated.
-      std::cout << "[Device A] Logged " << n << " bytes: "
-                << ebus::byteToHex(std::vector<uint8_t>(logBuf, logBuf + n))
+    // Poll the Read-Only client's socket (on deviceA).
+    // We must drain the socket buffer entirely to prevent backpressure.
+    uint8_t logBuf[1024];
+    while (true) {
+      ssize_t n = read(sv[1], logBuf, sizeof(logBuf));
+      if (n <= 0) break;
+      // Use ByteView to avoid temporary vector allocation
+      std::cout << "[Device A] Logged " << n
+                << " bytes: " << ebus::byteToHex(ebus::ByteView(logBuf, n))
                 << std::endl;
     }
   }

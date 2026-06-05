@@ -19,6 +19,7 @@
 #include "core/handler.hpp"
 #include "core/request.hpp"
 #include "platform/bus.hpp"
+#include "platform/socket.hpp"
 #include "platform/system.hpp"
 #include "test_utils.hpp"
 
@@ -41,7 +42,7 @@ TEST_CASE("ClientManager Orchestration (Regular + ReadOnly)") {
   BusMonitor monitor;
   platform::Bus bus(config, runtime, &req, &monitor);
   Handler handler(runtime.address, &bus, &req, &monitor);
-  BusHandler busHandler(&req, &handler, bus.getQueue());
+  BusHandler busHandler(&req, &handler);
   ClientManager manager(&bus, &busHandler, &req, &monitor);
 
   int svReg[2];
@@ -53,10 +54,9 @@ TEST_CASE("ClientManager Orchestration (Regular + ReadOnly)") {
   manager.addClient(svRO[0], ebus::ClientType::read_only);
 
   bus.start();
-  busHandler.start();
   manager.start();
 
-  REQUIRE((waitCondition([&] { return bus.getQueue() != nullptr; })));
+  TestReactor reactor(bus, busHandler, &manager);
 
   std::vector<uint8_t> telegram = {0x33, 0xfe, 0xb5, 0x05, 0x04,
                                    0x27, 0x00, 0x2d, 0x00, 0x2c};
@@ -64,34 +64,32 @@ TEST_CASE("ClientManager Orchestration (Regular + ReadOnly)") {
   bus.writeByte(ebus::Symbols::syn);
 
   send(svReg[1], &telegram[0], 1, 0);
-  manager.wake();  // Immediate wake
 
   bus.writeByte(ebus::Symbols::syn);
   bus.writeByte(ebus::Symbols::syn);
 
-  CHECK_TEST("Request is pending",
-             (waitCondition([&] { return req.busRequestPending(); })));
+  REQUIRE(reactor.waitFor([&] { return req.busRequestPending(); }));
 
   bus.writeByte(ebus::Symbols::syn);
 
-  CHECK_TEST("Request resolved and won", (waitCondition([&] {
-               return req.getResult() == ebus::RequestResult::first_won;
-             })));
+  REQUIRE(reactor.waitFor(
+      [&] { return req.getResult() == ebus::RequestResult::first_won; }));
+
   CHECK_TEST("LockCounter reset to max", req.getLockCounter() == 3);
 
   uint8_t echo;
   for (int i = 0; i < 4; ++i) {
-    REQUIRE(readExact(svReg[1], &echo, 1));
+    REQUIRE(reactor.readFromSocket(svReg[1], &echo, 1));
     CHECK_TEST("Regular received correct SYN echo", echo == ebus::Symbols::syn);
   }
 
-  REQUIRE(readExact(svReg[1], &echo, 1));
+  REQUIRE(reactor.readFromSocket(svReg[1], &echo, 1));
   CHECK_TEST("Regular received correct address byte echo", echo == telegram[0]);
 
   for (size_t i = 1; i < telegram.size(); ++i) {
     send(svReg[1], &telegram[i], 1, 0);
-    manager.wake();
-    REQUIRE(readExact(svReg[1], &echo, 1));
+
+    REQUIRE(reactor.readFromSocket(svReg[1], &echo, 1));
     CHECK_TEST("Client received correct byte echo", echo == telegram[i]);
   }
 
@@ -102,7 +100,6 @@ TEST_CASE("ClientManager Orchestration (Regular + ReadOnly)") {
   CHECK_TEST("ReadOnly client received full trace", actualRO == expectedRO);
 
   manager.stop();
-  busHandler.stop();
   bus.stop();
   close(svReg[1]);
   close(svRO[1]);
@@ -119,7 +116,7 @@ TEST_CASE("ClientManager Enhanced Active Sending") {
   BusMonitor monitor;
   platform::Bus bus(config, runtime, &req, &monitor);
   Handler handler(runtime.address, &bus, &req, &monitor);
-  BusHandler busHandler(&req, &handler, bus.getQueue());
+  BusHandler busHandler(&req, &handler);
   ClientManager manager(&bus, &busHandler, &req, &monitor);
 
   int svEnh[2], svRO[2];
@@ -130,45 +127,42 @@ TEST_CASE("ClientManager Enhanced Active Sending") {
   manager.addClient(svRO[0], ebus::ClientType::read_only);
 
   bus.start();
-  busHandler.start();
   manager.start();
 
-  REQUIRE((waitCondition([&] { return bus.getQueue() != nullptr; })));
+  TestReactor reactor(bus, busHandler, &manager);
 
   bus.writeByte(ebus::Symbols::syn);
 
   uint8_t cmdStart[] = {0xc8, 0xb3};
   send(svEnh[1], cmdStart, 2, 0);
-  manager.wake();
 
   bus.writeByte(ebus::Symbols::syn);
   bus.writeByte(ebus::Symbols::syn);
 
-  CHECK_TEST("Request is pending",
-             (waitCondition([&] { return req.busRequestPending(); })));
+  REQUIRE(reactor.waitFor([&] { return req.busRequestPending(); }));
 
   bus.writeByte(ebus::Symbols::syn);
 
-  CHECK_TEST("Arbitration resolved and won", (waitCondition([&] {
-               return req.getResult() == ebus::RequestResult::first_won;
-             })));
+  REQUIRE(reactor.waitFor(
+      [&] { return req.getResult() == ebus::RequestResult::first_won; }));
+
   CHECK_TEST("LockCounter reset to max", req.getLockCounter() == 3);
 
   uint8_t resp[2];
   for (int i = 0; i < 4; ++i) {
-    readExact(svEnh[1], resp, 2);
+    reactor.readFromSocket(svEnh[1], resp, 2);
     CHECK_TEST("Enhanced received correct SYN echo",
                (resp[0] == 0xc6 && resp[1] == 0xaa));
   }
 
-  REQUIRE(readExact(svEnh[1], resp, 2));
+  REQUIRE(reactor.readFromSocket(svEnh[1], resp, 2));
   CHECK_TEST("Enhanced received STARTED", resp[0] == 0xc8 && resp[1] == 0xb3);
 
   uint8_t cmdSend[] = {0xc7, 0xbe};
   send(svEnh[1], cmdSend, 2, 0);
-  manager.wake();
+  REQUIRE(reactor.waitFor([&] { return true; }, std::chrono::milliseconds(10)));
 
-  REQUIRE(readExact(svEnh[1], resp, 2));
+  REQUIRE(reactor.readFromSocket(svEnh[1], resp, 2));
   CHECK_TEST("Enhanced received encoded 0xfe",
              resp[0] == 0xc7 && resp[1] == 0xbe);
 
@@ -178,7 +172,6 @@ TEST_CASE("ClientManager Enhanced Active Sending") {
   CHECK_TEST("ReadOnly client received full trace", actualRO == expectedRO);
 
   manager.stop();
-  busHandler.stop();
   bus.stop();
   close(svEnh[1]);
   close(svRO[1]);
@@ -192,7 +185,7 @@ TEST_CASE("ClientManager Watchdog Timeout") {
 
   BusMonitor monitor;
   platform::Bus bus(config, runtime, &req, &monitor);
-  BusHandler busHandler(&req, nullptr, bus.getQueue());
+  BusHandler busHandler(&req, nullptr);
   ClientManager manager(&bus, &busHandler, &req, &monitor);
 
   int sv[2];
@@ -202,32 +195,31 @@ TEST_CASE("ClientManager Watchdog Timeout") {
   bus.start();
   manager.start();
 
+  TestReactor reactor(bus, busHandler, &manager);
+
   uint8_t addr = 0x33;
   send(sv[1], &addr, 1, 0);
 
-  int timeout = 100;
-  while (timeout-- > 0 && !req.busRequestPending()) {
-    platform::sleepMilli(1);
-  }
-  CHECK_TEST("Client is now active", req.busRequestPending());
+  REQUIRE(reactor.waitFor([&] { return req.busRequestPending(); }));
 
+  // Wait for session timeout (default 500ms) while keeping reactor alive
   platform::sleepMilli(600);
 
-  CHECK_TEST("Watchdog cleared active client", !req.busRequestPending());
+  REQUIRE(reactor.waitFor([&] { return !req.busRequestPending(); }));
 
   manager.stop();
   bus.stop();
   close(sv[1]);
 }
 
-TEST_CASE("Client Removal") {
+TEST_CASE("ClientManager Client Removal") {
   Request req;
   ebus::BusConfig config;
   ebus::RuntimeConfig runtime = {.address = 0xff};
 
   BusMonitor monitor;
   platform::Bus bus(config, runtime, &req, &monitor);
-  BusHandler busHandler(&req, nullptr, bus.getQueue());
+  BusHandler busHandler(&req, nullptr);
   ClientManager manager(&bus, &busHandler, &req, &monitor);
 
   int sv[2];

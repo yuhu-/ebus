@@ -49,8 +49,6 @@ class BusEsp : public BusBase {
   void start();
   void stop();
 
-  Queue<BusEvent>* getQueue() const;
-
   void writeByte(const uint8_t byte);
 
   void setWindow(const uint16_t window_us);
@@ -59,15 +57,23 @@ class BusEsp : public BusBase {
 
   void recordUtilization(uint8_t byte);
 
-  // Listeners
-  void addReadListener(ReadListener listener);
-  void addWriteListener(WriteListener listener);
-  void addSynListener(SynListener listener);
-
   platform::ServiceThread::Status getThreadStatus() const;
   platform::ServiceThread::Status getSynThreadStatus() const;
 
   ebus::BusStatus getStatus() const;
+
+  // --- Lockable Wrappers for ESP32 Critical Sections ---
+  struct CriticalSection {
+    portMUX_TYPE* mux;
+    void lock() { portENTER_CRITICAL(mux); }
+    void unlock() { portEXIT_CRITICAL(mux); }
+  };
+
+  struct CriticalSectionISR {
+    portMUX_TYPE* mux;
+    void lock() { portENTER_CRITICAL_ISR(mux); }
+    void unlock() { portEXIT_CRITICAL_ISR(mux); }
+  };
 
  private:
   BusConfig config_;
@@ -83,9 +89,6 @@ class BusEsp : public BusBase {
   gptimer_handle_t gp_timer_ = nullptr;
   gptimer_handle_t syn_gp_timer_ = nullptr;
   esp_timer_handle_t syn_postpone_timer_ = nullptr;
-
-  // owned queue
-  std::unique_ptr<Queue<BusEvent>> byte_queue_;
 
   std::unique_ptr<ServiceThread> syn_worker_;
 
@@ -132,7 +135,7 @@ class BusEsp : public BusBase {
   void configureGpio();
   void configureTimer();
 
-  // UART event task: reads UART events and pushes bytes to byteQueue
+  // UART event task: reads UART events and notifies listeners
   static void s_ebusUartEventRunner(void* arg);
   void ebusUartEventRunner();  // instance worker used by static trampoline
 

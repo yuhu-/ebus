@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <ebus/device.hpp>
 #include <ebus/sequence.hpp>
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -31,7 +32,8 @@ class Device {
   DeviceInfo getDeviceInfo() const;
 
   static Sequence createScanCommand(uint8_t slave);
-  std::vector<Sequence> createVendorScanCommands() const;
+  void createVendorScanCommands(
+      const std::function<void(const Sequence&)>& callback) const;
 
  private:
   uint8_t slave_ = 0;

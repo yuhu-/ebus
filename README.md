@@ -21,7 +21,7 @@ The library is designed with a clear separation between the public API and inter
 
 ### Diagnostics & Bus Health
 
-The library includes a high-performance telemetry system accessible via `Controller::getMetrics()`. Metrics can be exported to JSON using `ebus::toJson(metrics)`. It provides:
+The library includes a high-performance telemetry system accessible via `Controller::fetchMetrics()`. Metrics can be exported to JSON using `ebus::toJson(metrics)`. It provides:
 - **Bus Utilization**: Real-time physical wire occupancy (compliant with eBUS Spec 2.2).
 - **ebusd Compatibility:** Supports the Enhanced binary protocol for high-speed bridging.
 - **Error Rate**: Percentage-based protocol health.
@@ -43,7 +43,7 @@ cmake -DEBUS_SIMULATION=ON ..
 
 To enable minimal diagnostics:
 ```bash
-cmake -DEBUS_SIMULATION=ON ..
+cmake -DEBUS_MINIMAL_DIAGNOSTICS=ON ..
 ```
 
 ### Key Features

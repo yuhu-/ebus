@@ -20,7 +20,7 @@ namespace ebus::detail {
  */
 class Logger {
  public:
-  using LogSink = std::function<void(LogLevel level, const std::string& msg)>;
+  using LogSink = std::function<void(LogLevel level, std::string_view msg)>;
 
   static Logger& getInstance() {
     static Logger instance;
@@ -31,6 +31,8 @@ class Logger {
     if (level_.load(std::memory_order_relaxed) == level) return;
     level_.store(level, std::memory_order_relaxed);
   }
+
+  LogLevel getLevel() const { return level_.load(std::memory_order_relaxed); }
 
   void setSink(LogSink sink) {
     auto new_sink = std::make_shared<LogSink>(std::move(sink));
@@ -43,7 +45,7 @@ class Logger {
    * @note The LogSink is called synchronously. The caller must ensure
    * the sink is non-blocking to protect eBUS protocol timing.
    */
-  void log(LogLevel level, const std::string& msg) {
+  void log(LogLevel level, std::string_view msg) {
     if (!isEnabled(level)) return;
 
     std::shared_ptr<LogSink> current_sink;

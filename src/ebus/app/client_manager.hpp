@@ -20,7 +20,6 @@
 #include "core/request.hpp"
 #include "platform/bus.hpp"
 #include "platform/queue.hpp"
-#include "platform/service_thread.hpp"
 #include "utils/static_vector.hpp"
 
 namespace ebus::detail {
@@ -48,15 +47,9 @@ class ClientManager {
   void addClient(std::shared_ptr<AbstractClient> client);
   void removeClient(int fd);
 
-  /**
-   * Signals the manager loop to wake up and process pending work immediately.
-   */
-  void wake();
-
-  size_t queueSize();
-  size_t queueCapacity() const;
-
-  platform::ServiceThread::Status getThreadStatus() const;
+  bool tick();
+  void handleBusEvent(const BusEventInfo& info);
+  Clock::time_point nextDueTime() const;
 
   ClientManagerStatus getStatus();
 
@@ -66,12 +59,10 @@ class ClientManager {
   Request* request_;
   BusMonitor* monitor_;
 
-  platform::Queue<BusEventInfo> bus_byte_queue_;
-  std::atomic<size_t> max_queue_size_{0};
-
   std::atomic<bool> running_{false};
 
   SessionState session_state_ = SessionState::idle;
+  Clock::time_point last_state_change_;
 
   mutable std::mutex mutex_;
   StaticVector<std::shared_ptr<AbstractClient>, NetworkLimits::max_clients>
@@ -83,18 +74,12 @@ class ClientManager {
   std::atomic<uint64_t> clients_version_{0};
   uint64_t last_snapshot_version_{0};
 
-  std::unique_ptr<platform::ServiceThread> worker_;
-
   uint32_t session_counter_ = 0;
   std::shared_ptr<AbstractClient> current_active_sender_ = nullptr;
   std::atomic<bool> bus_requested_{false};
   uint8_t last_sent_byte_ = 0;
 
   std::string last_error_message_;
-  // Wake primitives to reduce busy-waiting
-  std::mutex wake_mutex_;
-  std::condition_variable wake_cv_;
-  std::atomic<bool> wake_flag_{false};
 
   // Listener id from BusHandler so we can remove the listener safely.
   uint32_t bus_listener_id_{0};
@@ -108,11 +93,7 @@ class ClientManager {
   size_t outbound_buffer_size_ =
       ebus::RuntimeConfig{}.network.outbound_buffer_size;
 
-  void run();
-
   void stopActiveSession();
-
-  void notifyWake();
 };
 
 }  // namespace ebus::detail

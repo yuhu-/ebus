@@ -8,10 +8,11 @@
 #include <cstdint>
 #include <string>
 #include <vector>
+
 #include "ebus/types.hpp"
 
 namespace ebus::detail {
-class JsonWriter; // Forward declaration
+class JsonWriter;  // Forward declaration
 }
 
 namespace ebus {
@@ -20,23 +21,25 @@ namespace ebus {
  * Device related information
  */
 struct DeviceInfo {
+  DeviceInfo() = default;
+
   uint8_t slave_address = 0xff;
   uint8_t manufacturer = 0;
-  std::string manufacturer_name;
-  std::string unit_id;
-  std::string software_version;
-  std::string hardware_version;
+  const char* manufacturer_name = nullptr;
+  ByteView unit_id;
+  ByteView software_version;
+  ByteView hardware_version;
 
   // Vendor-specific data
   struct VaillantData {
-    std::string serial_number;  // Full 28-character serial number
-    std::string product_code;   // 10-digit product identifier (digits 7-16)
+    StaticSequence<28> serial_number;  // Full 28-character serial number
+    ByteView product_code;  // 10-digit product identifier (digits 7-16)
   } vaillant;
 
   // Statistics
   uint32_t frequency = 0;  // Total messages observed from this device
 
-  void toJson(const JsonChunkVisitor& visitor) const;
+  void toJson(detail::JsonWriter& writer) const;
 };
 
 /**

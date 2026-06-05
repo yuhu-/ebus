@@ -11,6 +11,9 @@
 #if EBUS_SIMULATION
 #include <ebus/virtual_bus.hpp>
 #endif
+#include <algorithm>
+#include <chrono>
+#include <memory>
 #include <mutex>
 
 #include "app/client_manager.hpp"
@@ -48,8 +51,12 @@ struct Impl {
   detail::platform::Queue<ebus::ProtocolEvent> event_telegrams_{
       detail::ControllerLimits::event_queue_size};
 
+  detail::platform::Queue<ebus::OrchestrationEvent> reactor_queue_{
+      detail::ControllerLimits::reactor_queue_size};
+
   std::atomic<size_t> max_event_errors_{0};
   std::atomic<size_t> max_event_telegrams_{0};
+  std::atomic<size_t> max_reactor_queue_{0};
 
   std::unique_ptr<detail::Request> request_;
   std::unique_ptr<detail::BusMonitor> bus_monitor_;
@@ -65,6 +72,12 @@ struct Impl {
 #endif
   std::unique_ptr<detail::ClientManager> client_manager_;
   std::unique_ptr<detail::platform::ServiceThread> worker_;
+
+  mutable std::mutex status_mutex_;  // Keep as standard mutex, no recursion
+                                     // needed for status snapshots
+  std::atomic<LogLevel> log_level_{LogLevel::error};
+  std::atomic<uint8_t> address_{0xff};
+  ServiceStatus status_cache_;
 };
 
 Controller::Controller() : impl_(new Impl()) {}
@@ -82,13 +95,16 @@ bool Controller::start() {
   bool expected = false;
   if (!running_.compare_exchange_strong(expected, true)) return true;
 
+  // Reset internal queues to clear any previous shutdown state or stale events
+  impl_->reactor_queue_.reset();
+  impl_->event_errors_.reset();
+  impl_->event_telegrams_.reset();
+
+  std::lock_guard<std::recursive_mutex> lock(config_mutex_);
   impl_->bus_->start();
-  impl_->bus_handler_->start();
-  impl_->scheduler_->start();
   impl_->client_manager_->start();
 
   // Trigger initial system discovery if enabled
-  std::lock_guard<std::mutex> lock(config_mutex_);
   if (config_.runtime.system_inquiry) triggerInquiryOfExistence();
 
   impl_->worker_ = std::make_unique<detail::platform::ServiceThread>(
@@ -101,13 +117,22 @@ bool Controller::start() {
 }
 
 void Controller::stop() {
+  logInfo("Controller::stop() called.");
+  logInfo("Stopping controller services...");
   bool expected = true;
   if (!running_.compare_exchange_strong(expected, false)) return;
+
+  // Signal the worker thread to shut down and unblock its queue.
+  OrchestrationEvent shutdown_ev;
+  shutdown_ev.type = OrchestrationEventType::shutdown;
+  // Attempt to push the shutdown event. If the queue is full, the shutdown()
+  // call below will still ensure termination.
+  impl_->reactor_queue_.tryPush(std::move(shutdown_ev));
+  impl_->reactor_queue_.shutdown();
 
   if (impl_->worker_) impl_->worker_->join();
   impl_->client_manager_->stop();
   impl_->scheduler_->stop();
-  impl_->bus_handler_->stop();
   impl_->bus_->stop();
 }
 
@@ -125,7 +150,7 @@ bool Controller::configure(const EbusConfig& config) {
   }
 
   // 3. Apply changes
-  std::lock_guard<std::mutex> lock(config_mutex_);
+  std::lock_guard<std::recursive_mutex> lock(config_mutex_);
   config_ = config;
   constructMembers();
   configured_.store(true);
@@ -135,13 +160,14 @@ bool Controller::configure(const EbusConfig& config) {
 bool Controller::isConfigured() const noexcept { return configured_.load(); }
 
 EbusConfig Controller::getConfig() const {
-  std::lock_guard<std::mutex> lock(config_mutex_);
+  std::lock_guard<std::recursive_mutex> lock(config_mutex_);
   return config_;
 }
 
 void Controller::setAddress(const uint8_t& address) {
-  std::lock_guard<std::mutex> lock(config_mutex_);
+  std::lock_guard<std::recursive_mutex> lock(config_mutex_);
   config_.runtime.address = address;
+  impl_->address_.store(address, std::memory_order_relaxed);
   if (isConfigured()) {
     impl_->handler_->setSourceAddress(address);
     impl_->handler_->reset();
@@ -155,7 +181,7 @@ void Controller::setAddress(const uint8_t& address) {
 }
 
 void Controller::setLockCounter(const uint8_t& lock_counter) {
-  std::lock_guard<std::mutex> lock(config_mutex_);
+  std::lock_guard<std::recursive_mutex> lock(config_mutex_);
   config_.runtime.lock_counter = lock_counter;
   if (isConfigured()) {
     impl_->request_->setLockCounter(lock_counter);
@@ -163,29 +189,29 @@ void Controller::setLockCounter(const uint8_t& lock_counter) {
 }
 
 void Controller::setSystemInquiry(bool enable) {
-  std::lock_guard<std::mutex> lock(config_mutex_);
+  std::lock_guard<std::recursive_mutex> lock(config_mutex_);
   config_.runtime.system_inquiry = enable;
 }
 
 void Controller::setSystemResponse(bool enable) {
-  std::lock_guard<std::mutex> lock(config_mutex_);
+  std::lock_guard<std::recursive_mutex> lock(config_mutex_);
   config_.runtime.system_response = enable;
 }
 
 void Controller::setWindow(const uint16_t& window_us) {
-  std::lock_guard<std::mutex> lock(config_mutex_);
+  std::lock_guard<std::recursive_mutex> lock(config_mutex_);
   config_.runtime.bus.window_us = window_us;
   if (isConfigured()) impl_->bus_->setWindow(window_us);
 }
 
 void Controller::setOffset(const uint16_t& offset_us) {
-  std::lock_guard<std::mutex> lock(config_mutex_);
+  std::lock_guard<std::recursive_mutex> lock(config_mutex_);
   config_.runtime.bus.offset_us = offset_us;
   if (isConfigured()) impl_->bus_->setOffset(offset_us);
 }
 
 void Controller::setWatchdogTimeout(uint32_t timeout_ms) {
-  std::lock_guard<std::mutex> lock(config_mutex_);
+  std::lock_guard<std::recursive_mutex> lock(config_mutex_);
   config_.runtime.bus.watchdog_timeout_ms = timeout_ms;
   if (isConfigured()) {
     impl_->bus_handler_->setWatchdogTimeout(timeout_ms);
@@ -193,36 +219,42 @@ void Controller::setWatchdogTimeout(uint32_t timeout_ms) {
 }
 
 void Controller::setLogLevel(LogLevel level) {
-  std::lock_guard<std::mutex> lock(config_mutex_);
+  std::lock_guard<std::recursive_mutex> lock(config_mutex_);
   config_.runtime.diagnostics.level = level;
-  detail::Logger::getInstance().setLevel(level);
+  impl_->log_level_.store(level, std::memory_order_relaxed);
+  // In multi-controller environments (sim), we keep the most verbose level
+  // requested.
+  auto current = detail::Logger::getInstance().getLevel();
+  if (static_cast<uint8_t>(level) > static_cast<uint8_t>(current)) {
+    detail::Logger::getInstance().setLevel(level);
+  }
 }
 
 void Controller::setLogSink(
-    std::function<void(LogLevel, const std::string&)> sink) {
+    std::function<void(LogLevel, std::string_view)> sink) {
   detail::Logger::getInstance().setSink(std::move(sink));
 }
 
 void Controller::setErrorLogSize(size_t size) {
-  std::lock_guard<std::mutex> lock(config_mutex_);
+  std::lock_guard<std::recursive_mutex> lock(config_mutex_);
   config_.runtime.diagnostics.log_size = size;
   if (isConfigured()) impl_->error_buffer_.clear();  // Reset log on size change
 }
 
 void Controller::setSessionTimeout(uint32_t timeout_ms) {
-  std::lock_guard<std::mutex> lock(config_mutex_);
+  std::lock_guard<std::recursive_mutex> lock(config_mutex_);
   config_.runtime.network.session_timeout_ms = timeout_ms;
   if (isConfigured()) impl_->client_manager_->setSessionTimeout(timeout_ms);
 }
 
 void Controller::setTransmitTimeout(uint32_t timeout_ms) {
-  std::lock_guard<std::mutex> lock(config_mutex_);
+  std::lock_guard<std::recursive_mutex> lock(config_mutex_);
   config_.runtime.network.transmit_timeout_ms = timeout_ms;
   if (isConfigured()) impl_->client_manager_->setTransmitTimeout(timeout_ms);
 }
 
 void Controller::setOutboundBufferSize(size_t size) {
-  std::lock_guard<std::mutex> lock(config_mutex_);
+  std::lock_guard<std::recursive_mutex> lock(config_mutex_);
   config_.runtime.network.outbound_buffer_size = size;
   if (isConfigured()) {
     impl_->client_manager_->setOutboundBufferSize(size);
@@ -230,13 +262,13 @@ void Controller::setOutboundBufferSize(size_t size) {
 }
 
 void Controller::setScanOnStartup(bool enable) {
-  std::lock_guard<std::mutex> lock(config_mutex_);
+  std::lock_guard<std::recursive_mutex> lock(config_mutex_);
   config_.runtime.device.scan_on_startup = enable;
   if (isConfigured()) impl_->device_scanner_->setScanOnStartup(enable);
 }
 
 void Controller::setMaxStartupScans(uint8_t max_scans) {
-  std::lock_guard<std::mutex> lock(config_mutex_);
+  std::lock_guard<std::recursive_mutex> lock(config_mutex_);
   config_.runtime.device.max_startup_scans = max_scans;
   if (isConfigured()) {
     impl_->device_scanner_->setMaxStartupScans(max_scans);
@@ -244,7 +276,7 @@ void Controller::setMaxStartupScans(uint8_t max_scans) {
 }
 
 void Controller::setInitialScanDelay(uint32_t delay_s) {
-  std::lock_guard<std::mutex> lock(config_mutex_);
+  std::lock_guard<std::recursive_mutex> lock(config_mutex_);
   config_.runtime.device.initial_delay_s = delay_s;
   if (isConfigured()) {
     impl_->device_scanner_->setInitialScanDelay(delay_s);
@@ -252,7 +284,7 @@ void Controller::setInitialScanDelay(uint32_t delay_s) {
 }
 
 void Controller::setStartupScanInterval(uint32_t interval_s) {
-  std::lock_guard<std::mutex> lock(config_mutex_);
+  std::lock_guard<std::recursive_mutex> lock(config_mutex_);
   config_.runtime.device.startup_interval_s = interval_s;
   if (isConfigured()) {
     impl_->device_scanner_->setStartupScanInterval(interval_s);
@@ -260,7 +292,7 @@ void Controller::setStartupScanInterval(uint32_t interval_s) {
 }
 
 void Controller::setMaxSendAttempts(uint8_t max_send_attempts) {
-  std::lock_guard<std::mutex> lock(config_mutex_);
+  std::lock_guard<std::recursive_mutex> lock(config_mutex_);
   config_.runtime.scheduler.max_send_attempts = max_send_attempts;
   if (isConfigured()) {
     impl_->scheduler_->setMaxSendAttempts(max_send_attempts);
@@ -268,13 +300,13 @@ void Controller::setMaxSendAttempts(uint8_t max_send_attempts) {
 }
 
 void Controller::setBaseBackoff(uint32_t base_backoff_ms) {
-  std::lock_guard<std::mutex> lock(config_mutex_);
+  std::lock_guard<std::recursive_mutex> lock(config_mutex_);
   config_.runtime.scheduler.base_backoff_ms = base_backoff_ms;
   if (isConfigured()) impl_->scheduler_->setBaseBackoff(base_backoff_ms);
 }
 
 void Controller::setFsmTimeout(uint32_t timeout_ms) {
-  std::lock_guard<std::mutex> lock(config_mutex_);
+  std::lock_guard<std::recursive_mutex> lock(config_mutex_);
   config_.runtime.scheduler.fsm_timeout_ms = timeout_ms;
   if (isConfigured()) {
     impl_->scheduler_->setFsmTimeout(timeout_ms);
@@ -282,14 +314,14 @@ void Controller::setFsmTimeout(uint32_t timeout_ms) {
 }
 
 void Controller::setTotalTimeout(uint32_t timeout_ms) {
-  std::lock_guard<std::mutex> lock(config_mutex_);
+  std::lock_guard<std::recursive_mutex> lock(config_mutex_);
   config_.runtime.scheduler.total_timeout_ms = timeout_ms;
   if (isConfigured()) impl_->scheduler_->setTotalTimeout(timeout_ms);
 }
 
 void Controller::setReactiveMasterSlaveCallback(
     ReactiveMasterSlaveCallback callback) {
-  std::lock_guard<std::mutex> lock(config_mutex_);
+  std::lock_guard<std::recursive_mutex> lock(config_mutex_);
   impl_->user_reactive_callback_ = std::move(callback);
   if (isConfigured())
     impl_->scheduler_->setReactiveMasterSlaveCallback(
@@ -297,34 +329,43 @@ void Controller::setReactiveMasterSlaveCallback(
 }
 
 void Controller::setTelegramCallback(TelegramCallback callback) {
-  std::lock_guard<std::mutex> lock(config_mutex_);
+  std::lock_guard<std::recursive_mutex> lock(config_mutex_);
   impl_->user_telegram_callback_ = std::move(callback);
 }
 
 void Controller::setErrorCallback(ErrorCallback callback) {
-  std::lock_guard<std::mutex> lock(config_mutex_);
+  std::lock_guard<std::recursive_mutex> lock(config_mutex_);
   impl_->user_error_callback_ = std::move(callback);
 }
 
 void Controller::setTraceCallback(TraceCallback callback) {
-  std::lock_guard<std::mutex> lock(config_mutex_);
+  std::lock_guard<std::recursive_mutex> lock(config_mutex_);
   impl_->user_trace_callback_ = std::move(callback);
 }
 
 bool Controller::enqueue(uint8_t priority, ByteView message,
                          ResultCallback callback) {
-  if (isConfigured())
-    return impl_->scheduler_->enqueue(priority, message, std::move(callback));
-
-  return false;
+  if (!isConfigured()) return false;
+  bool ok = impl_->scheduler_->enqueue(priority, message, std::move(callback));
+  if (ok) {
+    OrchestrationEvent ev;
+    ev.type = OrchestrationEventType::user_request;
+    impl_->reactor_queue_.tryPush(std::move(ev));
+  }
+  return ok;
 }
 
 bool Controller::enqueueAt(uint8_t priority, ByteView message,
                            Clock::time_point when, ResultCallback callback) {
-  if (isConfigured())
-    return impl_->scheduler_->enqueueAt(priority, message, when,
-                                        std::move(callback));
-  return false;
+  if (!isConfigured()) return false;
+  bool ok = impl_->scheduler_->enqueueAt(priority, message, when,
+                                         std::move(callback));
+  if (ok) {
+    OrchestrationEvent ev;
+    ev.type = OrchestrationEventType::user_request;
+    impl_->reactor_queue_.tryPush(std::move(ev));
+  }
+  return ok;
 }
 
 uint32_t Controller::addPollItem(uint8_t priority, ByteView message,
@@ -334,7 +375,11 @@ uint32_t Controller::addPollItem(uint8_t priority, ByteView message,
                     ? impl_->poll_manager_->addPollItem(
                           priority, message, interval_ms, std::move(callback))
                     : 0;
-  wake_cv_.notify_one();
+  if (id != 0) {
+    OrchestrationEvent ev;
+    ev.type = OrchestrationEventType::timer_wakeup;
+    impl_->reactor_queue_.tryPush(std::move(ev));
+  }
   return id;
 }
 
@@ -359,18 +404,24 @@ void Controller::initFullScan(bool enable) {
 
 bool Controller::scanAddress(uint8_t address) {
   if (isConfigured()) {
-    bool ret = impl_->device_scanner_->scanAddress(address);
-    if (ret) wake_cv_.notify_one();
-    return ret;
+    if (impl_->device_scanner_->scanAddress(address)) {
+      OrchestrationEvent ev;
+      ev.type = OrchestrationEventType::timer_wakeup;
+      impl_->reactor_queue_.tryPush(std::move(ev));
+      return true;
+    }
   }
   return false;
 }
 
 bool Controller::scanAddresses(const std::vector<uint8_t>& addresses) {
   if (isConfigured()) {
-    bool ret = impl_->device_scanner_->scanAddresses(addresses);
-    if (ret) wake_cv_.notify_one();
-    return ret;
+    if (impl_->device_scanner_->scanAddresses(addresses)) {
+      OrchestrationEvent ev;
+      ev.type = OrchestrationEventType::timer_wakeup;
+      impl_->reactor_queue_.tryPush(std::move(ev));
+      return true;
+    }
   }
   return false;
 }
@@ -462,12 +513,6 @@ void Controller::fetchSystemResources(
       res.threads.push_back(b_stat.syn_thread);
     }
 
-    // Bus Handler
-    auto bh_stat = impl_->bus_handler_->getStatus();
-    res.threads.push_back(bh_stat.thread);
-    res.queues.push_back({"bus_handler", bh_stat.queue_size,
-                          bh_stat.queue_capacity, bh_stat.max_queue_size});
-
     // Public Event Queues
     res.queues.push_back({"event_errors", impl_->event_errors_.size(),
                           detail::ControllerLimits::event_queue_size,
@@ -476,17 +521,14 @@ void Controller::fetchSystemResources(
                           detail::ControllerLimits::event_queue_size,
                           impl_->max_event_telegrams_.load()});
 
+    res.queues.push_back({"reactor_queue", impl_->reactor_queue_.size(),
+                          detail::ControllerLimits::reactor_queue_size,
+                          impl_->max_reactor_queue_.load()});
+
     // Scheduler
     auto s_stat = impl_->scheduler_->getStatus();
-    res.threads.push_back(s_stat.thread);
     res.queues.push_back({"scheduler", s_stat.queue_size, s_stat.queue_capacity,
                           s_stat.max_queue_size});
-
-    // Client Manager
-    auto c_stat = impl_->client_manager_->getStatus();
-    res.threads.push_back(c_stat.thread);
-    res.queues.push_back({"client_manager", c_stat.queue_size,
-                          c_stat.queue_capacity, c_stat.max_queue_size});
   }
 
   callback(res);
@@ -494,13 +536,16 @@ void Controller::fetchSystemResources(
 
 void Controller::fetchServiceStatus(const JsonChunkVisitor& visitor,
                                     bool reset_histories) const {
-  serializeServiceStatus(visitor, getServiceStatus(), impl_->bus_monitor_.get(),
+  ServiceStatus snapshot;
+  {
+    std::lock_guard<std::mutex> lock(impl_->status_mutex_);
+    snapshot = impl_->status_cache_;
+  }
+  serializeServiceStatus(visitor, snapshot, impl_->bus_monitor_.get(),
                          reset_histories);
 }
 
-ServiceStatus Controller::getServiceStatus() const {
-  ServiceStatus status;
-
+void Controller::getServiceStatus(ServiceStatus& status) const {
   status.last_update_timestamp_ms =
       std::chrono::duration_cast<std::chrono::milliseconds>(
           std::chrono::system_clock::now().time_since_epoch())
@@ -516,6 +561,16 @@ ServiceStatus Controller::getServiceStatus() const {
     status.controller.thread = mapThreadStatus(impl_->worker_->status());
   }
 
+  if (impl_->bus_monitor_) {
+    status.controller.reactor_queue_size = impl_->reactor_queue_.size();
+    impl_->bus_monitor_->fetchMetrics([&](const Metrics& m) {
+      status.controller.max_reactor_queue_size =
+          m.controller.max_reactor_queue_size;
+      status.controller.event_queue_dropped = m.controller.event_queue_dropped;
+      status.controller.max_loop_cycle_us = m.controller.max_loop_cycle_us;
+    });
+  }
+
   if (isConfigured()) {
     status.bus = impl_->bus_->getStatus();
     status.bus_handler = impl_->bus_handler_->getStatus();
@@ -525,10 +580,6 @@ ServiceStatus Controller::getServiceStatus() const {
     status.device_scanner = impl_->device_scanner_->getStatus();
     status.poll_manager = impl_->poll_manager_->getStatus();
   }
-
-  EBUS_LOG_DEBUG("Service Status Update: " + ebus::toJson(status, 4096));
-
-  return status;
 }
 
 #if EBUS_SIMULATION
@@ -536,15 +587,20 @@ VirtualBus& Controller::getVirtualBus() { return *impl_->virtual_bus_; }
 #endif
 
 void Controller::processPublicEvents() {
-  ProtocolEvent ev;
+  // Capture callbacks once to avoid mutex contention inside the drainage loops.
+  // std::function is safe to copy and call outside the lock.
+  ErrorCallback err_callback;
+  TelegramCallback tel_callback;
+  {
+    std::lock_guard<std::recursive_mutex> lock(config_mutex_);
+    err_callback = impl_->user_error_callback_;
+    tel_callback = impl_->user_telegram_callback_;
+  }
 
+  ProtocolEvent ev;
   // 1. Prioritize Errors: Drain all pending error events first
   while (impl_->event_errors_.tryPop(ev)) {
-    ErrorCallback callback;
-    {
-      std::lock_guard<std::mutex> lock(config_mutex_);
-      callback = impl_->user_error_callback_;
-    }
+    const auto& callback = err_callback;
     if (callback &&
         detail::Logger::getInstance().isEnabled(ev.data.err.level)) {
       ErrorInfo info{ev.session_id,      ev.poll_id,
@@ -558,11 +614,7 @@ void Controller::processPublicEvents() {
 
   // 2. Process Telegrams
   while (impl_->event_telegrams_.tryPop(ev)) {
-    TelegramCallback callback;
-    {
-      std::lock_guard<std::mutex> lock(config_mutex_);
-      callback = impl_->user_telegram_callback_;
-    }
+    const auto& callback = tel_callback;
     if (callback) {
       TelegramInfo info{ev.session_id,
                         ev.poll_id,
@@ -584,13 +636,10 @@ void Controller::constructMembers() {
     impl_->bus_monitor_ = std::make_unique<detail::BusMonitor>();
   }
 
-  detail::Logger::getInstance().setLevel(config_.runtime.diagnostics.level);
-
   if (!impl_->request_) {
     impl_->request_ =
         std::make_unique<detail::Request>(impl_->bus_monitor_.get());
   }
-  impl_->request_->setLockCounter(config_.runtime.lock_counter);
 
   // -- 2. Physical Layer --
   // Note: configure() ensures we don't change hardware params while running
@@ -598,8 +647,6 @@ void Controller::constructMembers() {
     impl_->bus_ = std::make_unique<detail::platform::Bus>(
         config_.bus, config_.runtime, impl_->request_.get(),
         impl_->bus_monitor_.get());
-  } else {
-    impl_->bus_->setRuntimeConfig(config_.runtime);
   }
 
 #if EBUS_SIMULATION
@@ -615,14 +662,31 @@ void Controller::constructMembers() {
     impl_->handler_ = std::make_unique<detail::Handler>(
         config_.runtime.address, impl_->bus_.get(), impl_->request_.get(),
         impl_->bus_monitor_.get());
-  } else {
-    impl_->handler_->setSourceAddress(config_.runtime.address);
   }
 
   // -- 4. Scheduler --
   if (!impl_->scheduler_) {
     impl_->scheduler_ =
         std::make_unique<detail::Scheduler>(impl_->handler_.get());
+
+    impl_->scheduler_->setEventSink([this](OrchestrationEvent&& oev) {
+      if (!impl_->reactor_queue_.tryPush(oev)) {
+        // DRAIN: Make room for terminal protocol results
+        OrchestrationEvent dummy;
+        if (impl_->reactor_queue_.tryPop(dummy)) {
+          impl_->reactor_queue_.tryPush(std::move(oev));
+          impl_->bus_monitor_->updateController(
+              [](auto& m) { m.event_queue_dropped++; });
+        }
+      }
+      size_t current_size = impl_->reactor_queue_.size();
+      updateMaxAtomic(impl_->max_reactor_queue_, current_size);
+      impl_->bus_monitor_->updateController([current_size](auto& m) {
+        if (current_size > m.max_reactor_queue_size)
+          m.max_reactor_queue_size = static_cast<uint32_t>(current_size);
+      });
+    });
+    impl_->scheduler_->attachHandlerCallbacks();
 
     // Setup internal event dispatchers
     impl_->scheduler_->setTelegramCallback([this](const TelegramInfo& info) {
@@ -638,21 +702,33 @@ void Controller::constructMembers() {
       ev.request_state = info.request_state;
       ev.master.assign(info.master_view.data(), info.master_view.size());
       ev.slave.assign(info.slave_view.data(), info.slave_view.size());
-      if (!impl_->event_telegrams_.tryPush(std::move(ev))) {
+      if (!impl_->event_telegrams_.tryPush(ev)) {
+        // DRAIN: Drop oldest telegram if public queue is full
+        ProtocolEvent dummy;
+        if (impl_->event_telegrams_.tryPop(dummy)) {
+          impl_->event_telegrams_.tryPush(std::move(ev));
+        }
         impl_->bus_monitor_->updateController(
             [](auto& m) { m.event_queue_dropped++; });
       } else {
         // Update high watermark
         updateMaxAtomic(impl_->max_event_telegrams_,
                         impl_->event_telegrams_.size());
+
+        // Signal the reactor loop that a callback is ready for dispatch
+        OrchestrationEvent callback_ev;
+        callback_ev.type = OrchestrationEventType::callback_ready;
+        if (!impl_->reactor_queue_.tryPush(std::move(callback_ev))) {
+          impl_->bus_monitor_->updateController(
+              [](auto& m) { m.event_queue_dropped++; });
+        }
       }
-      wake_cv_.notify_one();
 
       // 2. Handle internal discovery logic immediately
       bool response_enabled = false;
       uint8_t own_address = 0xff;
       {
-        std::lock_guard<std::mutex> lock(config_mutex_);
+        std::lock_guard<std::recursive_mutex> lock(config_mutex_);
         response_enabled = config_.runtime.system_response;
         own_address = config_.runtime.address;
       }
@@ -692,14 +768,26 @@ void Controller::constructMembers() {
       ev.request_state = info.request_state;
       ev.master.assign(info.master_view.data(), info.master_view.size());
       ev.slave.assign(info.slave_view.data(), info.slave_view.size());
-      if (!impl_->event_errors_.tryPush(std::move(ev))) {
+      if (!impl_->event_errors_.tryPush(ev)) {
+        // DRAIN: Drop oldest error if public queue is full
+        ProtocolEvent dummy;
+        if (impl_->event_errors_.tryPop(dummy)) {
+          impl_->event_errors_.tryPush(std::move(ev));
+        }
         impl_->bus_monitor_->updateController(
             [](auto& m) { m.event_queue_dropped++; });
       } else {
         // Update high watermark
         updateMaxAtomic(impl_->max_event_errors_, impl_->event_errors_.size());
       }
-      wake_cv_.notify_one();
+
+      // Signal the reactor loop that a callback is ready for dispatch
+      OrchestrationEvent callback_ev;
+      callback_ev.type = OrchestrationEventType::callback_ready;
+      if (!impl_->reactor_queue_.tryPush(std::move(callback_ev))) {
+        impl_->bus_monitor_->updateController(
+            [](auto& m) { m.event_queue_dropped++; });
+      }
 
       // 2. Handle internal diagnostic logging. The ConfigValidator ensures
       // log_size > 0.
@@ -724,48 +812,55 @@ void Controller::constructMembers() {
     });
   }
 
-  // Update scheduler settings in-place
-  impl_->scheduler_->setMaxSendAttempts(
-      config_.runtime.scheduler.max_send_attempts);
-  impl_->scheduler_->setBaseBackoff(config_.runtime.scheduler.base_backoff_ms);
-  impl_->scheduler_->setFsmTimeout(config_.runtime.scheduler.fsm_timeout_ms);
-  impl_->scheduler_->setTotalTimeout(
-      config_.runtime.scheduler.total_timeout_ms);
-  if (impl_->user_reactive_callback_) {
-    impl_->scheduler_->setReactiveMasterSlaveCallback(
-        impl_->user_reactive_callback_);
-  }
-
   // -- 5. Application Logic --
   if (!impl_->device_manager_) {
     impl_->device_manager_ =
         std::make_unique<detail::DeviceManager>(impl_->bus_monitor_.get());
   }
-  impl_->device_manager_->setOwnAddress(config_.runtime.address);
 
   if (!impl_->device_scanner_) {
     impl_->device_scanner_ = std::make_unique<detail::DeviceScanner>(
         config_.runtime.address, impl_->device_manager_.get());
   }
-  impl_->device_scanner_->setOwnAddress(config_.runtime.address);
-  impl_->device_scanner_->setScanOnStartup(
-      config_.runtime.device.scan_on_startup);
-  impl_->device_scanner_->setInitialScanDelay(
-      config_.runtime.device.initial_delay_s);
-  impl_->device_scanner_->setStartupScanInterval(
-      config_.runtime.device.startup_interval_s);
-  impl_->device_scanner_->setMaxStartupScans(
-      config_.runtime.device.max_startup_scans);
 
   if (!impl_->poll_manager_) {
     impl_->poll_manager_ = std::make_unique<detail::PollManager>();
   }
-  impl_->poll_manager_->setOwnAddress(config_.runtime.address);
 
   // -- 6. Plumbing --
   if (!impl_->bus_handler_) {
     impl_->bus_handler_ = std::make_unique<detail::BusHandler>(
-        impl_->request_.get(), impl_->handler_.get(), impl_->bus_->getQueue());
+        impl_->request_.get(), impl_->handler_.get());
+
+    // Bridge Physical Bus Events -> Unified Reactor Queue
+    impl_->bus_->addBusEventListener([this](const detail::BusEvent& bus_ev) {
+      OrchestrationEvent ev;
+      ev.type = OrchestrationEventType::bus_byte;
+      ev.data.byte_data.val = bus_ev.byte;
+      ev.data.byte_data.bus_request = bus_ev.bus_request;
+      ev.data.byte_data.start_bit = bus_ev.start_bit;
+      ev.data.byte_data.timestamp = bus_ev.timestamp;
+      if (bus_ev.byte != Symbols::syn) {
+        logDebug("HAL Bridge: tryPush 0x" + ebus::toString(bus_ev.byte));
+      }
+      if (!impl_->reactor_queue_.tryPush(ev)) {
+        EBUS_LOG_ERROR("[Controller] Reactor queue FULL! Dropping event.");
+        // DRAIN: Drop oldest byte event to ensure loop stays moving
+        OrchestrationEvent dummy;
+        if (impl_->reactor_queue_.tryPop(dummy)) {
+          impl_->reactor_queue_.tryPush(std::move(ev));
+        }
+        impl_->bus_monitor_->updateController(
+            [](auto& m) { m.event_queue_dropped++; });
+      }
+
+      size_t current_size = impl_->reactor_queue_.size();
+      updateMaxAtomic(impl_->max_reactor_queue_, current_size);
+      impl_->bus_monitor_->updateController([current_size](auto& m) {
+        if (current_size > m.max_reactor_queue_size)
+          m.max_reactor_queue_size = static_cast<uint32_t>(current_size);
+      });
+    });
 
     // Add the permanent tracing listener
     impl_->bus_handler_->addByteListener([this](const BusEventInfo& info) {
@@ -775,34 +870,91 @@ void Controller::constructMembers() {
       // Invoke user callback if registered
       TraceCallback user_callback;
       {
-        std::lock_guard<std::mutex> lock(config_mutex_);
+        std::lock_guard<std::recursive_mutex> lock(config_mutex_);
         user_callback = impl_->user_trace_callback_;
       }
       if (user_callback) user_callback(info);
     });
   }
-  impl_->bus_handler_->setWatchdogTimeout(
-      config_.runtime.bus.watchdog_timeout_ms);
 
   if (!impl_->client_manager_) {
     impl_->client_manager_ = std::make_unique<detail::ClientManager>(
         impl_->bus_.get(), impl_->bus_handler_.get(), impl_->request_.get(),
         impl_->bus_monitor_.get());
-  }  // Update client manager settings in-place
-  impl_->client_manager_->setSessionTimeout(
-      config_.runtime.network.session_timeout_ms);
-  impl_->client_manager_->setTransmitTimeout(
-      config_.runtime.network.transmit_timeout_ms);
-  impl_->client_manager_->setOutboundBufferSize(
-      config_.runtime.network.outbound_buffer_size);
+  }
 
-  impl_->bus_->setWindow(config_.runtime.bus.window_us);
-  impl_->bus_->setOffset(config_.runtime.bus.offset_us);
+  // Centralized synchronization using setters. Recursive mutex allows this
+  // safely.
+  setLogLevel(config_.runtime.diagnostics.level);
+  setAddress(config_.runtime.address);
+  setLockCounter(config_.runtime.lock_counter);
+  setWindow(config_.runtime.bus.window_us);
+  setOffset(config_.runtime.bus.offset_us);
+  setWatchdogTimeout(config_.runtime.bus.watchdog_timeout_ms);
+  setSessionTimeout(config_.runtime.network.session_timeout_ms);
+  setTransmitTimeout(config_.runtime.network.transmit_timeout_ms);
+  setOutboundBufferSize(config_.runtime.network.outbound_buffer_size);
+  setScanOnStartup(config_.runtime.device.scan_on_startup);
+  setMaxStartupScans(config_.runtime.device.max_startup_scans);
+  setInitialScanDelay(config_.runtime.device.initial_delay_s);
+  setStartupScanInterval(config_.runtime.device.startup_interval_s);
+  setMaxSendAttempts(config_.runtime.scheduler.max_send_attempts);
+  setBaseBackoff(config_.runtime.scheduler.base_backoff_ms);
+  setFsmTimeout(config_.runtime.scheduler.fsm_timeout_ms);
+  setTotalTimeout(config_.runtime.scheduler.total_timeout_ms);
+  if (impl_->user_reactive_callback_) {
+    setReactiveMasterSlaveCallback(impl_->user_reactive_callback_);
+  }
 }
 
 void Controller::run() {
+  OrchestrationEvent ev;
+
+  auto processEvent = [&](const OrchestrationEvent& event) -> bool {
+    switch (event.type) {
+      case OrchestrationEventType::shutdown:
+        logDebug("Shutdown signal received");
+        running_.store(false, std::memory_order_release);
+        return true;
+
+      case OrchestrationEventType::bus_byte: {
+        detail::BusEvent bus_ev{
+            event.data.byte_data.val, event.data.byte_data.bus_request,
+            event.data.byte_data.start_bit, event.data.byte_data.timestamp};
+        impl_->bus_handler_->processEvent(bus_ev);
+        return true;
+      }
+
+      case OrchestrationEventType::protocol_result: {
+        return impl_->scheduler_->injectProtocolEvent(event.data.protocol_data);
+      }
+      case OrchestrationEventType::network_byte: {
+        // Handle external bridge data directly via ClientManager
+        impl_->client_manager_->handleBusEvent(BusEventInfo{
+            event.data.byte_data.val, HandlerState::passive_receive_master,
+            RequestState::observe, RequestResult::observe_data, 0,
+            event.data.byte_data.timestamp});
+        return true;
+      }
+      case OrchestrationEventType::user_request:  // Fallthrough
+      case OrchestrationEventType::timer_wakeup:  // Fallthrough
+      case OrchestrationEventType::callback_ready:
+        return true;  // These events are primarily used to wake the pop() block
+      default:
+        logError("Unknown orchestration event type received in Reactor Loop: " +
+                 std::to_string(static_cast<uint8_t>(event.type)));
+        return false;
+    }
+  };
+
+  auto last_status_update = Clock::now();
+
   while (running_.load()) {
+    auto loop_start = Clock::now();
     bool activity = false;
+
+    if (impl_->scheduler_->tick()) activity = true;
+    if (impl_->client_manager_->tick()) activity = true;
 
     processPublicEvents();
 
@@ -818,41 +970,119 @@ void Controller::run() {
         detail::SchedulerLimits::scan_threshold) {
       auto scan_cmd = impl_->device_scanner_->nextCommand();
       if (!scan_cmd.empty()) {
-        impl_->scheduler_->enqueue(
-            detail::DeviceLimits::scan_priority, scan_cmd,
-            [this](const ebus::ResultInfo& info) {
-              if (!info.success &&
-                  (info.result == RequestResult::first_lost ||
-                   info.result == RequestResult::second_lost)) {
-                // Re-enqueue address for scan if we lost arbitration.
-                // Note: We whiltelist arbitration loss to avoid re-probing on
-                // structural protocol errors (SequenceState) which would be
-                // futile. Noise (first_error) is handled by the Scheduler's
-                // own retry logic.
-                if (info.master_view.size() > 1) {
-                  impl_->device_scanner_->scanAddress(info.master_view[1]);
-                }
-              }
-            });
-        activity = true;
+        if (impl_->scheduler_->enqueue(
+                detail::DeviceLimits::scan_priority, scan_cmd,
+                [this](const ebus::ResultInfo& info) {
+                  if (!info.success &&
+                      (info.result == RequestResult::first_lost ||
+                       info.result == RequestResult::second_lost)) {
+                    // Re-enqueue address for scan if we lost arbitration.
+                    // Note: We whiltelist arbitration loss to avoid re-probing
+                    // on structural protocol errors (SequenceState) which would
+                    // be futile. Noise (first_error) is handled by the
+                    // Scheduler's own retry logic.
+                    if (info.master_view.size() > 1) {
+                      impl_->device_scanner_->scanAddress(info.master_view[1]);
+                    }
+                  }
+                })) {
+          activity = true;
+        }
       }
     }
 
-    auto next_poll = impl_->poll_manager_->nextDueTime();
-    auto tick_limit =
+    const auto next_sched = impl_->scheduler_->nextDueTime();
+    const auto next_client = impl_->client_manager_->nextDueTime();
+    const auto next_poll = impl_->poll_manager_->nextDueTime();
+    const auto tick_limit =
         Clock::now() +
         std::chrono::milliseconds(detail::SchedulerLimits::controller_tick_ms);
-    auto wait_until = std::min(next_poll, tick_limit);
+    const auto next_wakeup =
+        std::min({next_sched, next_client, next_poll, tick_limit});
 
-    std::unique_lock<std::mutex> lk(wake_mutex_);
-    wake_cv_.wait_until(lk, wait_until, [this, activity] {
-      // Wake immediately if work was found, thread is stopping, or new events
-      // arrived.
-      return !running_.load() || activity || impl_->event_errors_.size() > 0 ||
-             impl_->event_telegrams_.size() > 0 ||
-             impl_->poll_manager_->nextDueTime() <= Clock::now();
+    const auto now = Clock::now();
+    uint32_t timeout_ms = 0;
+
+    // If activity happened, don't wait at all (poll the queue)
+    if (!activity && next_wakeup > now) {
+      auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
+          next_wakeup - now);
+      timeout_ms = static_cast<uint32_t>(duration.count());
+    }
+
+    // Block on the Unified Event Queue
+    if (impl_->reactor_queue_.pop(ev, timeout_ms)) {
+      if (processEvent(ev)) activity = true;
+
+      // DRAIN loop: process all pending events before doing housekeeping again.
+      // This ensures that even if a burst of bytes arrives, we catch up with
+      // the protocol state immediately, prioritizing the "Hot Path" over
+      // background tasks.
+      while (impl_->reactor_queue_.tryPop(ev)) {
+        if (processEvent(ev)) activity = true;
+        if (!running_.load()) return;
+      }
+    }
+
+    // Ensure public events are processed even if the queue pop didn't happen
+    // or if tick() queued new items. This prevents starvation of user
+    // callbacks during high bus activity.
+    if (activity) {
+      processPublicEvents();
+    }
+
+    // Update loop performance metrics
+    auto loop_duration = std::chrono::duration_cast<std::chrono::microseconds>(
+                             Clock::now() - loop_start)
+                             .count();
+    if (loop_duration > 100000) {  // 100ms warning
+      logInfo("Loop iteration latency warning: " +
+              std::to_string(loop_duration) + " us. Possible starvation?");
+    }
+
+    impl_->bus_monitor_->updateController([loop_duration](auto& m) {
+      if (loop_duration > m.max_loop_cycle_us)
+        m.max_loop_cycle_us = static_cast<uint32_t>(loop_duration);
     });
+
+    // Throttle status updates (e.g., max once per 100ms) to save CPU/Stack
+    // Only refresh if no high-priority activity is currently pending
+    if (!activity &&
+        (Clock::now() - last_status_update > std::chrono::milliseconds(100))) {
+      std::lock_guard<std::mutex> lock(impl_->status_mutex_);
+      getServiceStatus(impl_->status_cache_);
+      last_status_update = Clock::now();
+
+      // Reset the windowed loop peak metrics so the next snapshot shows the
+      // peak for the upcoming interval.
+      impl_->bus_monitor_->resetLoopCycle();
+      impl_->bus_monitor_->resetMaxReactorQueueSize(
+          impl_->reactor_queue_.size());
+      impl_->scheduler_->resetPeakMetrics();
+      impl_->device_scanner_->resetPeakMetrics();
+      impl_->poll_manager_->resetPeakMetrics();
+    }
   }
+}
+
+void Controller::logError(const std::string& msg) const {
+  uint8_t addr = impl_->address_.load(std::memory_order_relaxed);
+  detail::Logger::getInstance().log(LogLevel::error,
+                                    "[0x" + ebus::toString(addr) + "] " + msg);
+}
+
+void Controller::logInfo(const std::string& msg) const {
+  uint8_t addr = impl_->address_.load(std::memory_order_relaxed);
+  detail::Logger::getInstance().log(LogLevel::info,
+                                    "[0x" + ebus::toString(addr) + "] " + msg);
+}
+
+void Controller::logDebug(const std::string& msg) const {
+  if (impl_->log_level_.load(std::memory_order_relaxed) < LogLevel::debug)
+    return;
+  uint8_t addr = impl_->address_.load(std::memory_order_relaxed);
+  detail::Logger::getInstance().log(LogLevel::debug,
+                                    "[0x" + ebus::toString(addr) + "] " + msg);
 }
 
 }  // namespace ebus

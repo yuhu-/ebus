@@ -31,7 +31,7 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
     BusMonitor monitor;
     platform::Bus bus(config, runtime, &request, &monitor);
     Handler handler(runtime.address, &bus, &request, &monitor);
-    BusHandler busHandler(&request, &handler, bus.getQueue());
+    BusHandler busHandler(&request, &handler);
 
     std::atomic<int> telegram_count{0};
     std::atomic<int> error_count{0};
@@ -41,13 +41,11 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
     handler.setErrorCallback(
         [&](const ebus::ErrorInfo& info) { error_count++; });
 
-    bus.addWriteListener(
-        [&](const uint8_t b) { INFO("<- write: " << ebus::toString(b)); });
-    bus.addReadListener(
-        [&](const uint8_t b) { INFO("->  read: " << ebus::toString(b)); });
+    // PUMP BRIDGE: Required because BusHandler is now a passive logic engine
+    bus.addBusEventListener(
+        [&](const BusEvent& ev) { busHandler.processEvent(ev); });
 
     bus.start();
-    busHandler.start();
 
     struct TestCase {
       ebus::MessageType message_type;
@@ -75,7 +73,6 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
       error_count.store(0);
       handler.reset();
       request.reset();
-      bus.getQueue()->clear();
       handler.setSourceAddress(tc.address);
 
       if (tc.message_type == ebus::MessageType::active) {
@@ -99,26 +96,28 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
       REQUIRE(error_count.load() == tc.expect_err);
     }
 
-    busHandler.stop();
     bus.stop();
   }
 
   SECTION("Lock counter behavior and arbitration pumping") {
     ebus::BusConfig config;
-    ebus::RuntimeConfig runtime = {.address = 0x33};
+    ebus::RuntimeConfig runtime = {.address = 0x01};
 
     Request request;
     BusMonitor monitor;
     platform::Bus bus(config, runtime, &request, &monitor);
     Handler handler(runtime.address, &bus, &request, &monitor);
-    BusHandler busHandler(&request, &handler, bus.getQueue());
+    BusHandler busHandler(&request, &handler);
 
     std::atomic<int> telegram_count{0};
     handler.setTelegramCallback(
         [&](const ebus::TelegramInfo& info) { telegram_count++; });
 
+    // PUMP BRIDGE: Required because BusHandler is now a passive logic engine
+    bus.addBusEventListener(
+        [&](const BusEvent& ev) { busHandler.processEvent(ev); });
+
     bus.start();
-    busHandler.start();
 
     request.setLockCounter(3);
 
@@ -127,7 +126,7 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
     handler.sendActiveMessage(msg);
 
     // Pump SYNs until arbitration starts.
-    for (int i = 0; i < 4; ++i) {
+    for (int i = 0; i < 3; ++i) {
       bus.writeByte(ebus::Symbols::syn);
       platform::sleepMilli(50);
       if (handler.getState() != ebus::HandlerState::passive_receive_master)
@@ -139,14 +138,7 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
       platform::sleepMilli(10);
 
     REQUIRE(telegram_count.load() == 1);
-
-    // after release bus a SYN was generated: check lock counter behavior
-    // Wait for the background BusHandler to process the trailing SYN
-    for (int i = 0; i < 50 && request.getLockCounter() != 2; ++i) {
-      platform::sleepMilli(10);
-    }
-
-    REQUIRE(request.getLockCounter() == 2);
+    REQUIRE(request.getLockCounter() == 2);  // 2 because of release SYN
 
     // send second message and step through SYNs to force arbitration
     telegram_count.store(0);
@@ -158,23 +150,22 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
 
     bus.writeByte(ebus::Symbols::syn);
     platform::sleepMilli(20);
-    REQUIRE(request.getLockCounter() == 0);
+    REQUIRE(request.getLockCounter() == 3);  // resetted to 3 during sending
 
-    bus.writeByte(ebus::Symbols::syn);
     // wait for completion
     for (int i = 0; i < 50 && telegram_count.load() == 0; ++i)
       platform::sleepMilli(10);
 
     REQUIRE(telegram_count.load() == 1);
+    REQUIRE(request.getLockCounter() == 2);  // 2 because of release SYN
 
-    busHandler.stop();
     bus.stop();
   }
 
   SECTION("External client callback path") {
     ebus::BusConfig config;
     ebus::RuntimeConfig runtime;
-    runtime.address = 0x33;
+    runtime.address = 0x01;
     runtime.bus.syn_gen = true;
 
     Request request;
@@ -182,14 +173,17 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
     BusMonitor monitor;
     platform::Bus bus(config, runtime, &request, &monitor);
     Handler handler(runtime.address, &bus, &request, &monitor);
-    BusHandler busHandler(&request, &handler, bus.getQueue());
+    BusHandler busHandler(&request, &handler);
 
     std::atomic<int> telegram_count{0};
     handler.setTelegramCallback(
         [&](const ebus::TelegramInfo& info) { telegram_count++; });
 
+    // PUMP BRIDGE: Required because BusHandler is now a passive logic engine
+    bus.addBusEventListener(
+        [&](const BusEvent& ev) { busHandler.processEvent(ev); });
+
     bus.start();
-    busHandler.start();
 
     std::atomic<bool> callbackFired{false};
     std::vector<uint8_t> clientData = ebus::toVector("feb5050427002d002c");
@@ -215,7 +209,6 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
     REQUIRE(callbackFired.load() == true);
     REQUIRE(telegram_count.load() == 1);
 
-    busHandler.stop();
     bus.stop();
   }
 }

@@ -13,7 +13,7 @@ bool ConfigValidator::validate(const EbusConfig& config) {
   const auto& r = config.runtime;
 
   // 1. Addressing
-  if (!ebus::isMaster(r.address) && r.address != 0xff) return false;
+  if (!ebus::isMaster(r.address)) return false;
   if (r.lock_counter > RequestLimits::lock_counter_max) return false;
 
   // 2. Bus Layer

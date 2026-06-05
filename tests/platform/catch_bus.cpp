@@ -39,15 +39,21 @@ TEST_CASE("Bus: Basic Communication", "[platform][bus]") {
   BusMonitor monitor;
   platform::Bus bus(config, runtime, &req, &monitor);
 
+  platform::Queue<BusEvent> queue;
+  std::mutex mtx;
+  bus.addBusEventListener([&](const BusEvent& ev) {
+    std::lock_guard<std::mutex> lock(mtx);
+    queue.push(ev);
+  });
+
   bus.start();
   force_request(req, 0x03);
-  auto* queue = bus.getQueue();
 
   std::vector<BusEvent> received;
   BusEvent ev;
 
   for (int i = 0; i < 2; ++i) {
-    if (queue->pop(ev, std::chrono::milliseconds(100))) {
+    if (queue.pop(ev, std::chrono::milliseconds(100))) {
       received.push_back(ev);
     }
   }
@@ -62,7 +68,7 @@ TEST_CASE("Bus: Basic Communication", "[platform][bus]") {
     bus.writeByte(0xff);
     platform::sleepMilli(20);
     BusEvent tempEv;
-    while (queue->tryPop(tempEv)) {
+    while (queue.tryPop(tempEv)) {
       if (tempEv.byte == ebus::Symbols::syn) prematureSyn = true;
     }
   }
@@ -80,7 +86,13 @@ TEST_CASE("Bus: SYN Timing", "[platform][bus]") {
   Request req;
   BusMonitor monitor;
   platform::Bus bus(config, runtime, &req, &monitor);
-  auto* queue = bus.getQueue();
+
+  platform::Queue<BusEvent> queue;
+  std::mutex mtx;
+  bus.addBusEventListener([&](const BusEvent& ev) {
+    std::lock_guard<std::mutex> lock(mtx);
+    queue.push(ev);
+  });
 
   auto start = ebus::Clock::now();
   bus.start();
@@ -89,7 +101,7 @@ TEST_CASE("Bus: SYN Timing", "[platform][bus]") {
   BusEvent ev;
 
   for (int i = 0; i < 4; ++i) {
-    if (queue->pop(ev, std::chrono::milliseconds(200))) {
+    if (queue.pop(ev, std::chrono::milliseconds(200))) {
       if (ev.byte == ebus::Symbols::syn)
         timestamps.push_back(ebus::Clock::now());
     }
@@ -128,7 +140,13 @@ TEST_CASE("Bus: Raw Reception (Broadcast Simulation)", "[platform][bus]") {
   Request req;
   BusMonitor monitor;
   platform::Bus bus(config, runtime, &req, &monitor);
-  auto* queue = bus.getQueue();
+
+  platform::Queue<BusEvent> queue;
+  std::mutex mtx;
+  bus.addBusEventListener([&](const BusEvent& ev) {
+    std::lock_guard<std::mutex> lock(mtx);
+    queue.push(ev);
+  });
 
   bus.start();
 
@@ -141,7 +159,7 @@ TEST_CASE("Bus: Raw Reception (Broadcast Simulation)", "[platform][bus]") {
 
   std::vector<uint8_t> received;
   BusEvent ev;
-  while (queue->pop(ev, std::chrono::milliseconds(50))) {
+  while (queue.pop(ev, std::chrono::milliseconds(50))) {
     received.push_back(ev.byte);
   }
 

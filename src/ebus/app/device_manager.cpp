@@ -90,41 +90,42 @@ void DeviceManager::getObservedSlaves(std::bitset<256>& observed) const {
   }
 }
 
-std::vector<ebus::Sequence> DeviceManager::vendorScanCommands() const {
+void DeviceManager::vendorScanCommands(
+    const std::function<void(const Sequence&)>& callback) const {
   std::lock_guard<std::mutex> lock(mutex_);
-  std::vector<Sequence> result;
   for (size_t i = 0; i < 256; ++i) {
     int16_t idx = address_map_[i];
     if (idx != -1) {
-      const auto commands = device_pool_[idx].createVendorScanCommands();
-      if (!commands.empty())
-        result.insert(result.end(), commands.begin(), commands.end());
+      device_pool_[idx].createVendorScanCommands(callback);
     }
   }
-  return result;
 }
 
-std::vector<ebus::Sequence> DeviceManager::createScanCommands(
-    const std::vector<std::string>& addresses) const {
-  std::set<uint8_t> scan_slaves;
+void DeviceManager::createScanCommands(
+    const std::vector<std::string>& addresses,
+    const std::function<void(const Sequence&)>& callback) const {
+  std::bitset<256> scan_slaves;  // Use bitset for presence tracking
   for (const std::string& address : addresses) {
     const std::vector<uint8_t> bytes = ebus::toVector(address);
     if (bytes.empty()) continue;
     uint8_t first_byte = bytes[0];
     if (ebus::isSlave(first_byte) &&
-        (first_byte != ebus::slaveOf(own_address_)))
-      scan_slaves.insert(first_byte);
+        (first_byte != ebus::slaveOf(own_address_))) {
+      scan_slaves.set(first_byte);
+    }
   }
-  std::vector<Sequence> result;
-  for (const uint8_t slave : scan_slaves)
-    result.push_back(Device::createScanCommand(slave));
-  return result;
+  for (size_t slave = 0; slave < 256; ++slave) {
+    if (scan_slaves.test(slave)) {
+      callback(Device::createScanCommand(static_cast<uint8_t>(slave)));
+    }
+  }
 }
 
 DeviceManagerStatus DeviceManager::getStatus() const {
   std::lock_guard<std::mutex> lock(mutex_);
   DeviceManagerStatus s;
   s.identified_count = identified_devices_.count();
+  s.device_capacity = max_devices_;
   s.masters = masters_;
   s.slaves = slaves_;
   if (monitor_) {

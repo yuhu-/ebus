@@ -140,6 +140,11 @@ class QueueEsp {
   // Clears all items from the queue
   void clear() { xQueueReset(queue_); }
 
+  void reset() {
+    xQueueReset(queue_);
+    shutdown_.store(false);
+  }
+
   void shutdown() { shutdown_.store(true); }
   bool isShutdown() const { return shutdown_.load(); }
 

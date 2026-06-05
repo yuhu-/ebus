@@ -5,6 +5,7 @@
 
 #include "core/request.hpp"
 
+#include <algorithm>
 #include <ebus/utils.hpp>
 
 #include "core/bus_monitor.hpp"
@@ -99,6 +100,7 @@ ebus::RequestResult Request::getResult() const { return result_; }
 
 void Request::reset() {
   lock_counter_ = lock_counter_max_;
+  bytes_since_syn_ = 0;
   if (monitor_)
     monitor_->updateRequest([](auto& m) { m.lock_counter_reset++; });
   bus_request_.store(false, std::memory_order_release);
@@ -134,11 +136,13 @@ void Request::first(uint8_t byte) {
     if (monitor_) monitor_->updateRequest([](auto& m) { m.first_syn++; });
     transitionTo(RequestState::first);
     result_ = RequestResult::first_syn;
+    bytes_since_syn_ = 0;
   } else if (byte == request_address_) {
     if (monitor_) monitor_->updateRequest([](auto& m) { m.won_total++; });
     lock_counter_ = lock_counter_max_;
     transitionTo(RequestState::observe);
     result_ = RequestResult::first_won;
+    bytes_since_syn_ = 0;
   } else if (isMaster(byte)) {
     // ARBITRATION LOSS (Wire-AND Logic):
     // We sent our address, but read back a different master address.
@@ -156,16 +160,19 @@ void Request::first(uint8_t byte) {
       // will have already passed the write window for that SYN.
       bus_request_.store(true, std::memory_order_release);
       result_ = RequestResult::first_retry;
+      bytes_since_syn_ = 1;
     } else {
       if (monitor_) monitor_->updateRequest([](auto& m) { m.lost_total++; });
       transitionTo(RequestState::observe);
       result_ = RequestResult::first_lost;
+      bytes_since_syn_ = 1;
     }
   } else {
     if (monitor_)
       monitor_->updateRequest([](auto& m) { m.arbitration_errors++; });
     transitionTo(RequestState::observe);
     result_ = RequestResult::first_error;
+    bytes_since_syn_ = 1;
   }
 }
 
@@ -173,11 +180,13 @@ void Request::retry(uint8_t byte) {
   if (byte == Symbols::syn) {
     transitionTo(RequestState::second);
     result_ = RequestResult::retry_syn;
+    bytes_since_syn_ = 0;
   } else {
     if (monitor_)
       monitor_->updateRequest([](auto& m) { m.arbitration_errors++; });
     transitionTo(RequestState::observe);
     result_ = RequestResult::retry_error;
+    bytes_since_syn_ = 1;
   }
 }
 
@@ -187,15 +196,18 @@ void Request::second(uint8_t byte) {
     lock_counter_ = lock_counter_max_;
     transitionTo(RequestState::observe);
     result_ = RequestResult::second_won;
+    bytes_since_syn_ = 0;
   } else if (isMaster(byte)) {
     if (monitor_) monitor_->updateRequest([](auto& m) { m.lost_total++; });
     transitionTo(RequestState::observe);
     result_ = RequestResult::second_lost;
+    bytes_since_syn_ = 1;
   } else {
     if (monitor_)
       monitor_->updateRequest([](auto& m) { m.arbitration_errors++; });
     transitionTo(RequestState::observe);
     result_ = RequestResult::second_error;
+    bytes_since_syn_ = 1;
   }
 }
 

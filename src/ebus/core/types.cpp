@@ -242,8 +242,7 @@ const char* toString(SessionState state) noexcept {
   }
 }
 
-void HandlerTransition::toJson(const JsonChunkVisitor& visitor) const {
-  detail::JsonWriter writer(visitor);
+void HandlerTransition::toJson(detail::JsonWriter& writer) const {
   writer.startObject();
   writer.writeField("from", ebus::toString(from));
   writer.writeField("to", ebus::toString(to));
@@ -251,8 +250,7 @@ void HandlerTransition::toJson(const JsonChunkVisitor& visitor) const {
   writer.endObject();
 }
 
-void RequestTransition::toJson(const JsonChunkVisitor& visitor) const {
-  detail::JsonWriter writer(visitor);
+void RequestTransition::toJson(detail::JsonWriter& writer) const {
   writer.startObject();
   writer.writeField("from", ebus::toString(from));
   writer.writeField("to", ebus::toString(to));
@@ -298,11 +296,10 @@ std::string ErrorEntry::toString() const {
   return res;
 }
 
-void ErrorEntry::toJson(const JsonChunkVisitor& visitor) const {
-  detail::JsonWriter writer(visitor);
+void ErrorEntry::toJson(detail::JsonWriter& writer) const {
   writer.startObject();
-  writer.writeField("session_id", static_cast<uint64_t>(session_id));
-  writer.writeField("poll_id", static_cast<uint64_t>(poll_id));
+  writer.writeField("session_id", session_id);
+  writer.writeField("poll_id", poll_id);
   writer.writeField("level", ebus::toString(level));
   writer.writeField("protocol_error", ebus::toString(protocol_error));
   writer.writeField("result", ebus::toString(result));

@@ -37,12 +37,6 @@ set(EBUS_BUS_STACK_SIZE 2048 CACHE STRING "Stack size for Bus")
 set(EBUS_BUS_PRIORITY 15 CACHE STRING "Priority for Bus thread")
 set(EBUS_BUS_SYN_STACK_SIZE 2048 CACHE STRING "Stack size for Bus SYN thread")
 set(EBUS_BUS_SYN_PRIORITY 5 CACHE STRING "Priority for Bus SYN thread")
-set(EBUS_BUS_HANDLER_STACK_SIZE 3072 CACHE STRING "Stack size for BusHandler")
-set(EBUS_BUS_HANDLER_PRIORITY 10 CACHE STRING "Priority for BusHandler thread")
-set(EBUS_SCHEDULER_STACK_SIZE 3072 CACHE STRING "Stack size for Scheduler")
-set(EBUS_SCHEDULER_PRIORITY 10 CACHE STRING "Priority for Scheduler thread")
-set(EBUS_CLIENT_MANAGER_STACK_SIZE 2048 CACHE STRING "Stack size for ClientManager")
-set(EBUS_CLIENT_MANAGER_PRIORITY 10 CACHE STRING "Priority for ClientManager thread")
 # Bus Layer
 set(EBUS_BUS_QUEUE_SIZE 256 CACHE STRING "Size of the physical bus event queue")
 set(EBUS_MAX_LISTENERS 4 CACHE STRING "Maximum number of internal bus listeners")
@@ -52,9 +46,19 @@ set(EBUS_TRACE_HISTORY_SIZE 100 CACHE STRING "Number of trace events to keep in 
 # Networking Layer
 set(EBUS_MAX_CLIENTS 4 CACHE STRING "Maximum number of network bridge clients")
 # Application Layer
-set(EBUS_PUBLIC_QUEUE_SIZE 8 CACHE STRING "Size of the public event queue")
+set(EBUS_EVENT_QUEUE_SIZE 8 CACHE STRING "Size of the public event queue")
 set(EBUS_MAX_DEVICES 32 CACHE STRING "Maximum number of devices to manage")
-set(EBUS_MAX_MANUAL_QUEUE 16 CACHE STRING "Maximum pending manual scan requests")
+if(EBUS_MINIMAL_DIAGNOSTICS)
+    set(EBUS_REACTOR_QUEUE_SIZE 1 CACHE STRING "Size of the internal reactor queue")
+    set(EBUS_LOG_HISTORY_SIZE 1 CACHE STRING "Size of the diagnostic error log history")
+    set(EBUS_TRACE_HISTORY_SIZE 1 CACHE STRING "Size of the protocol trace history")
+else()
+    set(EBUS_REACTOR_QUEUE_SIZE 32 CACHE STRING "Size of the internal reactor queue")
+    set(EBUS_LOG_HISTORY_SIZE 60 CACHE STRING "Size of the diagnostic error log history")
+    set(EBUS_TRACE_HISTORY_SIZE 100 CACHE STRING "Size of the protocol trace history")
+endif()
+set(EBUS_MAX_MANUAL_QUEUE 64 CACHE STRING "Maximum pending manual scan requests")
+set(EBUS_MAX_STARTUP_QUEUE 64 CACHE STRING "Maximum pending startup requests")
 set(EBUS_SCHEDULER_MAX_ITEMS 32 CACHE STRING "Maximum items in the priority scheduler")
 set(EBUS_POLL_MAX_ITEMS 128 CACHE STRING "Maximum items in the poll manager")
 
@@ -75,12 +79,6 @@ add_compile_definitions(
     EBUS_BUS_PRIORITY=${EBUS_BUS_PRIORITY}
     EBUS_BUS_SYN_STACK_SIZE=${EBUS_BUS_SYN_STACK_SIZE}
     EBUS_BUS_SYN_PRIORITY=${EBUS_BUS_SYN_PRIORITY}
-    EBUS_BUS_HANDLER_STACK_SIZE=${EBUS_BUS_HANDLER_STACK_SIZE}
-    EBUS_BUS_HANDLER_PRIORITY=${EBUS_BUS_HANDLER_PRIORITY}
-    EBUS_SCHEDULER_STACK_SIZE=${EBUS_SCHEDULER_STACK_SIZE}
-    EBUS_SCHEDULER_PRIORITY=${EBUS_SCHEDULER_PRIORITY}
-    EBUS_CLIENT_MANAGER_STACK_SIZE=${EBUS_CLIENT_MANAGER_STACK_SIZE}
-    EBUS_CLIENT_MANAGER_PRIORITY=${EBUS_CLIENT_MANAGER_PRIORITY}
     # Bus Layer
     EBUS_BUS_QUEUE_SIZE=${EBUS_BUS_QUEUE_SIZE}
     # Diagnostics Layer
@@ -90,12 +88,17 @@ add_compile_definitions(
     # Networking Layer
     EBUS_MAX_CLIENTS=${EBUS_MAX_CLIENTS}
     # Application Layer
-    EBUS_PUBLIC_QUEUE_SIZE=${EBUS_PUBLIC_QUEUE_SIZE}
+    EBUS_EVENT_QUEUE_SIZE=${EBUS_EVENT_QUEUE_SIZE}
+    EBUS_REACTOR_QUEUE_SIZE=${EBUS_REACTOR_QUEUE_SIZE}
     EBUS_MAX_DEVICES=${EBUS_MAX_DEVICES}
     EBUS_MAX_MANUAL_QUEUE=${EBUS_MAX_MANUAL_QUEUE}
     EBUS_SCHEDULER_MAX_ITEMS=${EBUS_SCHEDULER_MAX_ITEMS}
     EBUS_POLL_MAX_ITEMS=${EBUS_POLL_MAX_ITEMS}
 )
+
+if(EBUS_MINIMAL_DIAGNOSTICS)
+    add_compile_definitions(EBUS_MINIMAL_DIAGNOSTICS)
+endif()
 
 add_subdirectory(src/ebus)
 add_subdirectory(tools)

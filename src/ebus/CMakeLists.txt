@@ -15,6 +15,7 @@ set(APP_SOURCES
 
 # Core Protocol Logic
 set(CORE_SOURCES
+    core/bus_handler.cpp
     core/bus_monitor.cpp
     core/callbacks.cpp
     core/handler.cpp

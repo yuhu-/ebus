@@ -5,6 +5,7 @@
 
 #include <catch2/catch_all.hpp>
 #include <string>
+
 #include "utils/logger.hpp"
 
 using namespace ebus::detail;
@@ -14,14 +15,14 @@ TEST_CASE("Logger: Filtering and Sinks", "[utils][logger]") {
   std::string last_msg;
   ebus::LogLevel last_level = ebus::LogLevel::none;
 
-  logger.setSink([&](ebus::LogLevel level, const std::string& msg) {
+  logger.setSink([&](ebus::LogLevel level, std::string_view msg) {
     last_level = level;
     last_msg = msg;
   });
 
   SECTION("Level filtering") {
     logger.setLevel(ebus::LogLevel::error);
-    
+
     logger.log(ebus::LogLevel::debug, "invisible");
     REQUIRE(last_msg.empty());
 
@@ -34,6 +35,6 @@ TEST_CASE("Logger: Filtering and Sinks", "[utils][logger]") {
     logger.log(ebus::LogLevel::error, "should not see this");
     REQUIRE(last_level != ebus::LogLevel::error);
   }
-  
-  logger.setSink(nullptr); // Cleanup
+
+  logger.setSink(nullptr);  // Cleanup
 }

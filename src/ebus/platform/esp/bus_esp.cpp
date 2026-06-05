@@ -30,8 +30,7 @@ BusEsp::BusEsp(const BusConfig& config, const RuntimeConfig& runtime,
       uart_port_num_(static_cast<uart_port_t>(config.uart_port)),
       rx_pin_(config.rx_pin),
       tx_pin_(config.tx_pin),
-
-      byte_queue_(std::make_unique<Queue<BusEvent>>(BusLimits::queue_size)) {
+      monitor_(monitor) {
   // Initialize postponement timer
   esp_timer_create_args_t postpone_args = {};
   postpone_args.callback = &BusEsp::s_onSynPostpone;
@@ -69,8 +68,6 @@ void BusEsp::stop() {
   running_.store(false, std::memory_order_release);
   syn_running_.store(false);
 
-  if (byte_queue_) byte_queue_->shutdown();
-
   gpio_isr_handler_remove(static_cast<gpio_num_t>(rx_pin_));
   gpio_intr_disable(static_cast<gpio_num_t>(rx_pin_));
   gpio_set_intr_type(static_cast<gpio_num_t>(rx_pin_), GPIO_INTR_DISABLE);
@@ -97,22 +94,18 @@ void BusEsp::stop() {
   }
 }
 
-Queue<BusEvent>* BusEsp::getQueue() const { return byte_queue_.get(); }
-
 void BusEsp::writeByte(const uint8_t byte) {
-  {
-    portENTER_CRITICAL(&listener_mux_);
-    for (const auto& listener : getWriteListeners()) listener(byte);
-    portEXIT_CRITICAL(&listener_mux_);
-  }
+  lockAndInvoke(listeners_mutex_, getWriteListeners(), byte);
+
   if (monitor_) monitor_->transmit.markBegin();
 
   portENTER_CRITICAL(&timer_mux_);
   last_activity_micros_ = esp_timer_get_time();
   portEXIT_CRITICAL(&timer_mux_);
-  
+
   // Use a 10ms timeout to avoid blocking the high-priority bus task
-  uart_write_bytes(uart_port_num_, static_cast<const void*>(&byte), 1, pdMS_TO_TICKS(10));
+  uart_write_bytes(uart_port_num_, static_cast<const void*>(&byte), 1,
+                   pdMS_TO_TICKS(10));
 
   if (monitor_) monitor_->transmit.markEnd();
 }
@@ -184,24 +177,6 @@ void BusEsp::setRuntimeConfig(const RuntimeConfig& runtime) {
   }
 }
 
-void BusEsp::addReadListener(ReadListener listener) {
-  portENTER_CRITICAL(&listener_mux_);
-  getReadListeners().push_back(std::move(listener));
-  portEXIT_CRITICAL(&listener_mux_);
-}
-
-void BusEsp::addWriteListener(WriteListener listener) {
-  portENTER_CRITICAL(&listener_mux_);
-  getWriteListeners().push_back(std::move(listener));
-  portEXIT_CRITICAL(&listener_mux_);
-}
-
-void BusEsp::addSynListener(SynListener listener) {
-  portENTER_CRITICAL(&listener_mux_);
-  getSynListeners().push_back(std::move(listener));
-  portEXIT_CRITICAL(&listener_mux_);
-}
-
 ServiceThread::Status BusEsp::getThreadStatus() const {
   if (worker_) {
     return worker_->status();
@@ -221,10 +196,7 @@ ebus::BusStatus BusEsp::getStatus() const {
       [](const platform::ServiceThread::Status& s) -> ebus::ThreadStatus {
     return {s.name, s.task_stack_bytes, s.task_stack_free_bytes};
   };
-  ebus::BusStatus s;
-  s.bus_thread = map(getThreadStatus());
-  s.syn_thread = map(getSynThreadStatus());
-  return s;
+  return {map(getThreadStatus()), map(getSynThreadStatus())};
 }
 
 void BusEsp::recordUtilization(uint8_t byte) {
@@ -363,13 +335,10 @@ void BusEsp::ebusUartEventRunner() {
           const auto arrival_time = Clock::now();
           const uint8_t byte = data[i];
 
-          portENTER_CRITICAL(&listener_mux_);
-          for (const auto& listener : getReadListeners()) listener(byte);
-          portEXIT_CRITICAL(&listener_mux_);
+          CriticalSection l_lock{&listener_mux_};
+          lockAndInvoke(l_lock, getReadListeners(), byte);
 
           recordUtilization(byte);
-
-          if (!byte_queue_) continue;
 
           if (byte == Symbols::syn && request_->busRequestPending()) {
             const int64_t now =
@@ -431,8 +400,7 @@ void BusEsp::ebusUartEventRunner() {
             } else {
               portENTER_CRITICAL(&timer_mux_);
               start_bit_flag_ = true;
-              if (monitor_)
-                monitor_->updateBus([](auto& m) { m.start_bit_errors++; });
+              if (monitor_) monitor_->recordIsrStartBitError();
               portEXIT_CRITICAL(&timer_mux_);
             }
           }
@@ -477,14 +445,14 @@ void BusEsp::ebusUartEventRunner() {
                   static_cast<float>(postpone_sample));
             }
             if (postponed_count > 0) {
-              monitor_->updateBus(
-                  [=](auto& m) { m.syn_postponed_count += postponed_count; });
+              monitor_->recordIsrSynPostponed(postponed_count);
             }
           }
 
           bus_event.timestamp = arrival_time;
 
-          if (byte_queue_) byte_queue_->push(bus_event);
+          CriticalSection l_lock{&listener_mux_};
+          lockAndInvoke(l_lock, getBusEventListeners(), bus_event);
 
           // Reset SYN Timer (Arbitration Logic)
           portENTER_CRITICAL(&timer_mux_);
@@ -595,11 +563,8 @@ bool IRAM_ATTR BusEsp::onSynGenTimer() {
   last_activity_micros_ = now;
   portEXIT_CRITICAL_ISR(&timer_mux_);
 
-  portENTER_CRITICAL_ISR(&listener_mux_);
-  for (const auto& listener : getSynListeners()) {
-    listener();
-  }
-  portEXIT_CRITICAL_ISR(&listener_mux_);
+  CriticalSectionISR l_lock_isr{&listener_mux_};
+  lockAndInvoke(l_lock_isr, getSynListeners());
 
   uint8_t syn = Symbols::syn;
   uart_ll_write_txfifo(UART_LL_GET_HW(uart_port_num_), &syn, 1);

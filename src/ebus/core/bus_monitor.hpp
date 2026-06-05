@@ -74,11 +74,34 @@ class BusMonitor {
     std::lock_guard<std::mutex> lock(metrics_mutex_);
     updater(controller_acc_);
   }
+
+  /**
+   * @brief Resets the interval-based loop timing peak.
+   */
+  void resetLoopCycle() {
+    std::lock_guard<std::mutex> lock(metrics_mutex_);
+    controller_acc_.max_loop_cycle_us = 0;
+  }
+
+  /**
+   * @brief Resets the interval-based max reactor queue size.
+   */
+  void resetMaxReactorQueueSize(size_t current) {
+    std::lock_guard<std::mutex> lock(metrics_mutex_);
+    controller_acc_.max_reactor_queue_size = static_cast<uint32_t>(current);
+  }
+
   void recordBusError();
   void recordLowBits(uint32_t bits);
   void recordHandlerError(uint8_t address);
   void recordHandlerSuccess(uint8_t address);
   void logPassiveReset();
+  void recordIsrStartBitError() {
+    bus_acc_.start_bit_errors.fetch_add(1, std::memory_order_relaxed);
+  }
+  void recordIsrSynPostponed(uint32_t count) {
+    bus_acc_.syn_postponed_count.fetch_add(count, std::memory_order_relaxed);
+  }
   void logActiveReset();
   void clearHistory();
 

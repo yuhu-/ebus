@@ -68,6 +68,8 @@ class PollManager {
   // Returns the time point when the next item is due, or max if empty.
   Clock::time_point nextDueTime() const;
 
+  void resetPeakMetrics();
+
   void clear();
 
   PollManagerStatus getStatus() const;
@@ -76,6 +78,7 @@ class PollManager {
   mutable std::mutex mutex_;
   StaticVector<PollItem, PollLimits::max_items> items_;
   uint8_t own_address_ = 0xff;
+  size_t max_item_count_ = 0;
   uint32_t next_poll_id_;
 };
 

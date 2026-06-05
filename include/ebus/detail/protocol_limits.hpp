@@ -53,7 +53,7 @@ inline constexpr size_t controller_stack_size = EBUS_CONTROLLER_STACK_SIZE;
 #endif
 
 #ifndef EBUS_CONTROLLER_PRIORITY
-inline constexpr uint8_t controller_priority = 5;
+inline constexpr uint8_t controller_priority = 10;
 #else
 inline constexpr uint8_t controller_priority = EBUS_CONTROLLER_PRIORITY;
 #endif
@@ -80,43 +80,6 @@ inline constexpr size_t bus_syn_stack_size = EBUS_BUS_SYN_STACK_SIZE;
 inline constexpr uint8_t bus_syn_priority = 5;
 #else
 inline constexpr uint8_t bus_syn_priority = EBUS_BUS_SYN_PRIORITY;
-#endif
-
-#ifndef EBUS_BUS_HANDLER_STACK_SIZE
-inline constexpr size_t bus_handler_stack_size = 3072;
-#else
-inline constexpr size_t bus_handler_stack_size = EBUS_BUS_HANDLER_STACK_SIZE;
-#endif
-
-#ifndef EBUS_BUS_HANDLER_PRIORITY
-inline constexpr uint8_t bus_handler_priority = 10;
-#else
-inline constexpr uint8_t bus_handler_priority = EBUS_BUS_HANDLER_PRIORITY;
-#endif
-
-#ifndef EBUS_SCHEDULER_STACK_SIZE
-inline constexpr size_t scheduler_stack_size = 3072;
-#else
-inline constexpr size_t scheduler_stack_size = EBUS_SCHEDULER_STACK_SIZE;
-#endif
-
-#ifndef EBUS_SCHEDULER_PRIORITY
-inline constexpr uint8_t scheduler_priority = 10;
-#else
-inline constexpr uint8_t scheduler_priority = EBUS_SCHEDULER_PRIORITY;
-#endif
-
-#ifndef EBUS_CLIENT_MANAGER_STACK_SIZE
-inline constexpr size_t client_manager_stack_size = 2048;
-#else
-inline constexpr size_t client_manager_stack_size =
-    EBUS_CLIENT_MANAGER_STACK_SIZE;
-#endif
-
-#ifndef EBUS_CLIENT_MANAGER_PRIORITY
-inline constexpr uint8_t client_manager_priority = 10;
-#else
-inline constexpr uint8_t client_manager_priority = EBUS_CLIENT_MANAGER_PRIORITY;
 #endif
 
 // ESP Service Threads
@@ -165,7 +128,7 @@ inline constexpr size_t queue_size = EBUS_BUS_QUEUE_SIZE;
 #endif
 
 #ifndef EBUS_MAX_LISTENERS
-inline constexpr size_t max_listeners = 4;
+inline constexpr size_t max_listeners = 8;
 #else
 inline constexpr size_t max_listeners = EBUS_MAX_LISTENERS;
 #endif
@@ -227,7 +190,15 @@ inline constexpr size_t event_queue_size = 8;
 #else
 inline constexpr size_t event_queue_size = EBUS_EVENT_QUEUE_SIZE;
 #endif
+
+#ifndef EBUS_REACTOR_QUEUE_SIZE
+inline constexpr size_t reactor_queue_size = 32;
+#else
+inline constexpr size_t reactor_queue_size = EBUS_REACTOR_QUEUE_SIZE;
+#endif
+static_assert(reactor_queue_size >= 1, "Reactor queue size must be at least 1");
 }  // namespace ControllerLimits
+
 namespace DeviceLimits {
 #ifndef EBUS_MAX_DEVICES
 inline constexpr size_t max_devices = 32;
@@ -238,9 +209,15 @@ inline constexpr size_t max_devices = EBUS_MAX_DEVICES;
 inline constexpr uint8_t scan_priority = 5;
 
 #ifndef EBUS_MAX_MANUAL_QUEUE
-inline constexpr size_t max_manual_queue = 16;
+inline constexpr size_t max_manual_queue = 64;
 #else
 inline constexpr size_t max_manual_queue = EBUS_MAX_MANUAL_QUEUE;
+#endif
+
+#ifndef EBUS_MAX_STARTUP_QUEUE
+inline constexpr size_t max_startup_queue = 64;
+#else
+inline constexpr size_t max_startup_queue = EBUS_MAX_STARTUP_QUEUE;
 #endif
 }  // namespace DeviceLimits
 

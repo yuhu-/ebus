@@ -7,6 +7,9 @@
 
 #include <algorithm>
 #include <ebus/detail/protocol_limits.hpp>
+#include <ebus/utils.hpp>
+
+#include "utils/logger.hpp"
 
 namespace ebus::detail {
 
@@ -50,6 +53,9 @@ uint32_t PollManager::addPollItem(uint8_t priority, ByteView message,
   item.callback = std::move(callback);
 
   items_.push_back(std::move(item));
+  if (items_.size() > max_item_count_) {
+    max_item_count_ = items_.size();
+  }
   std::push_heap(items_.begin(), items_.end(), PollItem::Greater());
   return id;
 }
@@ -71,6 +77,11 @@ void PollManager::processDueItems(
     PollItem item = std::move(items_.back());
     items_.pop_back();
 
+    EBUS_LOG_DEBUG(
+        "[PollManager][0x" + ebus::toString(own_address_) + "] Item " +
+        std::to_string(item.poll_id) +
+        " is due. Interval=" + std::to_string(item.interval.count()) + "ms");
+
     callback(item);  // Process item
     if (activity) *activity = true;
 
@@ -87,6 +98,11 @@ Clock::time_point PollManager::nextDueTime() const {
   return items_.front().next_due;
 }
 
+void PollManager::resetPeakMetrics() {
+  std::lock_guard<std::mutex> lock(mutex_);
+  max_item_count_ = items_.size();
+}
+
 void PollManager::clear() {
   std::lock_guard<std::mutex> lock(mutex_);
   items_.clear();
@@ -94,9 +110,7 @@ void PollManager::clear() {
 
 PollManagerStatus PollManager::getStatus() const {
   std::lock_guard<std::mutex> lock(mutex_);
-  PollManagerStatus s;
-  s.item_count = items_.size();
-  return s;
+  return PollManagerStatus{items_.size(), max_item_count_};
 }
 
 }  // namespace ebus::detail

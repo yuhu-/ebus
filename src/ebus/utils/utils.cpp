@@ -125,7 +125,7 @@ char* formatFloat(float value, int precision, char* buffer, size_t buffer_size,
     }
   }
 
-  char* ptr = buffer;
+  const char* ptr;
   std::errc ec;
 
   if ((std::abs(value) > 0 && std::abs(value) < lower_threshold) ||

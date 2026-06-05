@@ -10,6 +10,7 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <string_view>
 
 #if defined(ESP_PLATFORM)
 #include <esp_heap_caps.h>
@@ -72,7 +73,7 @@ class ServiceThread {
 
   struct Status {
     // -1 if not available
-    std::string name;
+    std::string_view name;
     int32_t task_stack_bytes;       // configured stack size in bytes
     int32_t task_stack_free_bytes;  // free stack (high-water) in bytes
   };
@@ -84,7 +85,7 @@ class ServiceThread {
     // configured stack bytes
     s.task_stack_bytes =
         static_cast<int32_t>(stack_size_ * sizeof(StackType_t));
-    // if task handle exists, get high water mark (words) -> bytes
+    // if task handle exists, get high water mark (words) -> bytes.
     if (handle_) {
       UBaseType_t words_free = uxTaskGetStackHighWaterMark(handle_);
       s.task_stack_free_bytes =

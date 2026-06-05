@@ -78,7 +78,15 @@ void BusMonitor::fetchMetrics(
 
     // 3. Populate Bus Part
     metrics::BusMetrics& bm = sm.bus;
-    bm = bus_acc_;
+    bm.start_bit_errors.store(
+        bus_acc_.start_bit_errors.load(std::memory_order_relaxed),
+        std::memory_order_relaxed);
+    bm.syn_postponed_count.store(
+        bus_acc_.syn_postponed_count.load(std::memory_order_relaxed),
+        std::memory_order_relaxed);
+    bm.congestion = bus_acc_.congestion;
+    bm.high_jitter = bus_acc_.high_jitter;
+    bm.last_error_us = bus_acc_.last_error_us;
 
     // Map Timing
     bm.delay = delay.getValues();
@@ -135,6 +143,7 @@ void BusMonitor::fetchMetrics(
     dm = device_acc_;
 
     // 5. Populate Controller Part
+    // This is the "shadow state" for controller metrics
     sm.controller = controller_acc_;
   }
 
@@ -313,14 +322,13 @@ namespace ebus {
 
 // --- Metrics Implementations ---
 
-void MetricValues::toJson(const JsonChunkVisitor& visitor) const {
-  detail::JsonWriter writer(visitor);
+void MetricValues::toJson(detail::JsonWriter& writer) const {
   writer.startObject();
   float mean_us = (count > 0) ? static_cast<float>(sum_us) / count : 0.0f;
-  writer.writeField("last_us", static_cast<uint64_t>(last_us));
-  writer.writeField("max_us", static_cast<uint64_t>(max_us));
+  writer.writeField("last_us", last_us);
+  writer.writeField("max_us", max_us);
   writer.writeFieldFloat("mean_us", mean_us);
-  writer.writeField("count", static_cast<uint64_t>(count));
+  writer.writeField("count", count);
   writer.endObject();
 }
 
@@ -351,7 +359,7 @@ void metrics::HandlerMetrics::reset() {
   active_data = {};
 }
 
-void metrics::HandlerMetrics::toJson(const JsonChunkVisitor& visitor) const {
+void metrics::HandlerMetrics::toJson(detail::JsonWriter& writer) const {
   uint32_t m_total = messages_passive + messages_active + messages_reactive;
   uint32_t e_total = error_passive + error_reactive + error_active;
 
@@ -372,7 +380,6 @@ void metrics::HandlerMetrics::toJson(const JsonChunkVisitor& visitor) const {
                                100.0f
                          : 0.0f;
 
-  detail::JsonWriter writer(visitor);
   writer.startObject();
   writer.writeFieldFloat("error_rate", e_rate);
   writer.writeFieldFloat("protocol_data_utilization_rate", pd_util);
@@ -405,7 +412,7 @@ void metrics::HandlerMetrics::toJson(const JsonChunkVisitor& visitor) const {
     if (entry.count > 0) {
       writer.startObject();
       writer.writeHexField("address", ByteView(&entry.address, 1));
-      writer.writeField("count", static_cast<uint64_t>(entry.count));
+      writer.writeField("count", entry.count);
       writer.writeField("last_seen_us", entry.last_seen_us);
       writer.endObject();
     }
@@ -438,7 +445,7 @@ void metrics::RequestMetrics::reset() {
   session_timeouts = 0;
 }
 
-void metrics::RequestMetrics::toJson(const JsonChunkVisitor& visitor) const {
+void metrics::RequestMetrics::toJson(detail::JsonWriter& writer) const {
   uint32_t attempts =
       won_total + lost_total + collisions + arbitration_errors + first_syn;
   float cont_rate =
@@ -448,7 +455,6 @@ void metrics::RequestMetrics::toJson(const JsonChunkVisitor& visitor) const {
   float coll_rate = (attempts > 0)
                         ? (static_cast<float>(collisions) / attempts) * 100.0f
                         : 0.0f;
-  detail::JsonWriter writer(visitor);
   writer.startObject();
   writer.writeFieldFloat("contention_rate", cont_rate);
   writer.writeFieldFloat("collision_rate", coll_rate);
@@ -474,15 +480,16 @@ void metrics::BusMetrics::reset() {
   syn_postpone = {};
 }
 
-void metrics::BusMetrics::toJson(const JsonChunkVisitor& visitor) const {
+void metrics::BusMetrics::toJson(detail::JsonWriter& writer) const {
   // Note: we'd need total_low_bits_ here for perfect accuracy, but uptime_us
   // and the other timing samples provide sufficient operational context.
   // BusMonitor::getBusUtilization() provides the real-time calculated value.
-  detail::JsonWriter writer(visitor);
   writer.startObject();
   writer.writeField("utilization", (const char*)nullptr);
-  writer.writeField("start_bit_errors", start_bit_errors);
-  writer.writeField("syn_postponed_count", syn_postponed_count);
+  writer.writeField("start_bit_errors",
+                    start_bit_errors.load(std::memory_order_relaxed));
+  writer.writeField("syn_postponed_count",
+                    syn_postponed_count.load(std::memory_order_relaxed));
   writer.writeField("congestion", congestion);
   writer.writeField("high_jitter", high_jitter);
   writer.writeField("last_error_us", last_error_us);
@@ -497,23 +504,27 @@ void metrics::BusMetrics::toJson(const JsonChunkVisitor& visitor) const {
 
 void metrics::DeviceMetrics::reset() { unknown_devices = 0; }
 
-void metrics::DeviceMetrics::toJson(const JsonChunkVisitor& visitor) const {
-  detail::JsonWriter writer(visitor);
+void metrics::DeviceMetrics::toJson(detail::JsonWriter& writer) const {
   writer.startObject();
   writer.writeField("unknown_devices", unknown_devices);
   writer.endObject();
 }
 
-void metrics::ControllerMetrics::reset() { event_queue_dropped = 0; }
+void metrics::ControllerMetrics::reset() {
+  event_queue_dropped = 0;
+  max_reactor_queue_size = 0;
+  max_loop_cycle_us = 0;
+}
 
-void metrics::ControllerMetrics::toJson(const JsonChunkVisitor& visitor) const {
-  detail::JsonWriter writer(visitor);
+void metrics::ControllerMetrics::toJson(detail::JsonWriter& writer) const {
   writer.startObject();
   writer.writeField("event_queue_dropped", event_queue_dropped);
+  writer.writeField("max_reactor_queue_size", max_reactor_queue_size);
+  writer.writeField("max_loop_cycle_us", max_loop_cycle_us);
   writer.endObject();
 }
 
-void metrics::SystemMetrics::toJson(const JsonChunkVisitor& visitor) const {
+void metrics::SystemMetrics::toJson(detail::JsonWriter& writer) const {
   // Pre-calculate rates for the composite Quality score
   uint32_t m_total = handler.messages_passive + handler.messages_active +
                      handler.messages_reactive;
@@ -534,9 +545,12 @@ void metrics::SystemMetrics::toJson(const JsonChunkVisitor& visitor) const {
                 100.0f
           : 0.0f;
 
-  float quality = (100.0f - e_rate) * (1.0f - (cont_rate / 100.0f));
+  // Quality Score: Protocol health * Arbitration success * Reactor integrity
+  // We penalize the quality if the reactor loop has dropped events.
+  float drop_penalty = (controller.event_queue_dropped > 0) ? 0.7f : 1.0f;
+  float quality =
+      (100.0f - e_rate) * (1.0f - (cont_rate / 100.0f)) * drop_penalty;
 
-  detail::JsonWriter writer(visitor);
   writer.startObject();
   writer.appendKey("handler");
   writer.writeValue(handler);
@@ -554,8 +568,7 @@ void metrics::SystemMetrics::toJson(const JsonChunkVisitor& visitor) const {
 
 // --- Status Implementations ---
 
-void ThreadStatus::toJson(const JsonChunkVisitor& visitor) const {
-  detail::JsonWriter writer(visitor);
+void ThreadStatus::toJson(detail::JsonWriter& writer) const {
   writer.startObject();
   if (name.empty()) {
     writer.writeField("name", "unknown");
@@ -565,22 +578,23 @@ void ThreadStatus::toJson(const JsonChunkVisitor& visitor) const {
 
   // Only output stack metrics if they are actually available (ESP32)
   if (task_stack_bytes != -1) {
-    writer.writeField("stack_size", static_cast<int64_t>(task_stack_bytes));
-    writer.writeField("stack_free",
-                      static_cast<int64_t>(task_stack_free_bytes));
+    writer.writeField("stack_size", task_stack_bytes);
+    writer.writeField("stack_free", task_stack_free_bytes);
   }
   writer.endObject();
 }
 
-void ControllerStatus::toJson(const JsonChunkVisitor& visitor) const {
-  detail::JsonWriter writer(visitor);
+void ControllerStatus::toJson(detail::JsonWriter& writer) const {
   writer.startObject();
   writer.writeField("thread", thread);
+  writer.writeField("reactor_queue_size", reactor_queue_size);
+  writer.writeField("max_reactor_queue_size", max_reactor_queue_size);
+  writer.writeField("event_queue_dropped", event_queue_dropped);
+  writer.writeField("max_loop_cycle_us", max_loop_cycle_us);
   writer.endObject();
 }
 
-void BusStatus::toJson(const JsonChunkVisitor& visitor) const {
-  detail::JsonWriter writer(visitor);
+void BusStatus::toJson(detail::JsonWriter& writer) const {
   writer.startObject();
   writer.writeField("bus_thread", bus_thread);
   if (!syn_thread.name.empty()) {
@@ -589,117 +603,119 @@ void BusStatus::toJson(const JsonChunkVisitor& visitor) const {
   writer.endObject();
 }
 
-void BusHandlerStatus::toJson(const JsonChunkVisitor& visitor) const {
-  detail::JsonWriter writer(visitor);
+void BusHandlerStatus::toJson(detail::JsonWriter& writer) const {
   writer.startObject();
-  writer.writeField("thread", thread);
-  writer.writeField("queue_size", static_cast<uint64_t>(queue_size));
-  writer.writeField("queue_capacity", static_cast<uint64_t>(queue_capacity));
-  writer.writeField("max_queue_size", static_cast<uint64_t>(max_queue_size));
+  writer.writeField("handler_state", ebus::toString(handler_state));
+  writer.writeField("request_state", ebus::toString(request_state));
   writer.endObject();
 }
 
-void SchedulerStatus::toJson(const JsonChunkVisitor& visitor) const {
-  detail::JsonWriter writer(visitor);
+void SchedulerStatus::toJson(detail::JsonWriter& writer) const {
   writer.startObject();
-  writer.writeField("thread", thread);
-  writer.writeField("queue_size", static_cast<uint64_t>(queue_size));
-  writer.writeField("queue_capacity", static_cast<uint64_t>(queue_capacity));
-  writer.writeField("max_queue_size", static_cast<uint64_t>(max_queue_size));
+  writer.writeField("queue_size", queue_size);
+  writer.writeField("queue_capacity", queue_capacity);
+  writer.writeField("max_queue_size", max_queue_size);
   writer.endObject();
 }
 
-void ClientManagerStatus::toJson(const JsonChunkVisitor& visitor) const {
-  detail::JsonWriter writer(visitor);
+void ClientInfo::toJson(detail::JsonWriter& writer) const {
   writer.startObject();
-  writer.writeField("thread", thread);
-  writer.writeField("queue_size", static_cast<uint64_t>(queue_size));
-  writer.writeField("queue_capacity", static_cast<uint64_t>(queue_capacity));
-  writer.writeField("max_queue_size", static_cast<uint64_t>(max_queue_size));
+  writer.writeField("fd", fd);
+  writer.writeField("type", type);
+  writer.writeField("connected", connected);
+  writer.writeField("write_capable", write_capable);
+  writer.writeField("outbound_buffer_usage", outbound_buffer_usage);
+  writer.endObject();
+}
+
+void ClientManagerStatus::toJson(detail::JsonWriter& writer) const {
+  writer.startObject();
   writer.writeField("session_active", session_active);
   writer.writeField("session_state", session_state);
   writer.writeField("last_error", last_error);
+
+  writer.appendKey("clients");
+  writer.startArray();
+  for (const auto& c : clients) {
+    c.toJson(writer);
+  }
+  writer.endArray();
+
   writer.endObject();
 }
 
-void DeviceManagerStatus::toJson(const JsonChunkVisitor& visitor) const {
-  detail::JsonWriter writer(visitor);
+void DeviceManagerStatus::toJson(detail::JsonWriter& writer) const {
   writer.startObject();
-  writer.writeField("identified_count",
-                    static_cast<uint64_t>(identified_count));
-  writer.writeField("unknown_count", static_cast<uint64_t>(unknown_count));
+  writer.writeField("identified_count", identified_count);
+  writer.writeField("device_capacity", device_capacity);
+  writer.writeField("unknown_count", unknown_count);
   writer.endObject();
 }
 
-void DeviceScannerStatus::toJson(const JsonChunkVisitor& visitor) const {
-  detail::JsonWriter writer(visitor);
+void DeviceScannerStatus::toJson(detail::JsonWriter& writer) const {
   writer.startObject();
   writer.writeField("is_scanning", is_scanning);
   writer.writeField("full_scan_active", full_scan_active);
-  writer.writeField("full_scan_address",
-                    static_cast<uint64_t>(full_scan_address));
+  writer.writeField("full_scan_address", full_scan_address);
   writer.writeField("scan_on_startup_enabled", scan_on_startup_enabled);
-  writer.writeField("startup_scan_count",
-                    static_cast<uint64_t>(startup_scan_count));
-  writer.writeField("manual_queue_size",
-                    static_cast<uint64_t>(manual_queue_size));
-  writer.writeField("startup_queue_size",
-                    static_cast<uint64_t>(startup_queue_size));
+  writer.writeField("startup_scan_count", startup_scan_count);
+  writer.writeField("manual_queue_size", manual_queue_size);
+  writer.writeField("max_manual_queue_size", max_manual_queue_size);
+  writer.writeField("startup_queue_size", startup_queue_size);
+  writer.writeField("max_startup_queue_size", max_startup_queue_size);
   writer.endObject();
 }
 
-void PollManagerStatus::toJson(const JsonChunkVisitor& visitor) const {
-  detail::JsonWriter writer(visitor);
+void PollManagerStatus::toJson(detail::JsonWriter& writer) const {
   writer.startObject();
-  writer.writeField("item_count", static_cast<uint64_t>(item_count));
+  writer.writeField("item_count", item_count);
+  writer.writeField("max_item_count", max_item_count);
+  writer.writeField("poll_capacity", detail::PollLimits::max_items);
   writer.endObject();
 }
 
-void SystemResources::QueueInfo::toJson(const JsonChunkVisitor& visitor) const {
-  detail::JsonWriter writer(visitor);
+void SystemResources::QueueInfo::toJson(detail::JsonWriter& writer) const {
   writer.startObject();
   writer.writeField("name", name);
-  writer.writeField("size", static_cast<uint64_t>(size));
-  writer.writeField("capacity", static_cast<uint64_t>(capacity));
-  writer.writeField("max_size", static_cast<uint64_t>(max_size));
+  writer.writeField("size", size);
+  writer.writeField("capacity", capacity);
+  writer.writeField("max_size", max_size);
   writer.endObject();
 }
 
-void SystemResources::toJson(const JsonChunkVisitor& visitor) const {
-  detail::JsonWriter writer(visitor);
+void SystemResources::toJson(detail::JsonWriter& writer) const {
   writer.startObject();
   writer.writeField("timestamp_ms", timestamp_ms);
   writer.appendKey("threads");
   writer.startArray();
-  for (const auto& t : threads) t.toJson(visitor);
+  for (const auto& t : threads) t.toJson(writer);
   writer.endArray();
   writer.appendKey("queues");
   writer.startArray();
-  for (const auto& q : queues) q.toJson(visitor);
+  for (const auto& q : queues) q.toJson(writer);
   writer.endArray();
   writer.endObject();
 }
 
-void ServiceStatus::toJson(const JsonChunkVisitor& visitor) const {
-  detail::JsonWriter writer(visitor);
+void ServiceStatus::toJson(detail::JsonWriter& writer) const {
   writer.startObject();
   writer.writeField("last_update_timestamp_ms", last_update_timestamp_ms);
   writer.appendKey("controller");
-  controller.toJson(visitor);
+  controller.toJson(writer);
   writer.appendKey("bus");
-  bus.toJson(visitor);
+  bus.toJson(writer);
   writer.appendKey("bus_handler");
-  bus_handler.toJson(visitor);
+  bus_handler.toJson(writer);
   writer.appendKey("scheduler");
-  scheduler.toJson(visitor);
+  scheduler.toJson(writer);
   writer.appendKey("client_manager");
-  client_manager.toJson(visitor);
+  client_manager.toJson(writer);
   writer.appendKey("device_manager");
-  device_manager.toJson(visitor);
+  device_manager.toJson(writer);
   writer.appendKey("device_scanner");
-  device_scanner.toJson(visitor);
+  device_scanner.toJson(writer);
   writer.appendKey("poll_manager");
-  poll_manager.toJson(visitor);
+  poll_manager.toJson(writer);
   writer.endObject();
 }
 

@@ -58,16 +58,42 @@ TEST_CASE("DeviceManager: Device Update", "[app][devicemanager]") {
   dm.update(master, slave);
 
   std::vector<ebus::DeviceInfo> devices;
-  dm.fetchDeviceInfo([&](const ebus::DeviceInfo& info) {
-    devices.push_back(info);
-  });
+  dm.fetchDeviceInfo(
+      [&](const ebus::DeviceInfo& info) { devices.push_back(info); });
 
   REQUIRE(devices.size() == 1);
   REQUIRE(devices[0].slave_address == 0x08);
 
-  auto cmds = dm.vendorScanCommands();
-  REQUIRE(cmds.size() == 4);
-  REQUIRE(cmds[0][0] == 0x08);
+  std::vector<ebus::Sequence> vendor_cmds;
+  dm.vendorScanCommands(
+      [&](const ebus::Sequence& cmd) { vendor_cmds.push_back(cmd); });
+  REQUIRE(vendor_cmds.size() == 4);
+  REQUIRE(vendor_cmds[0][0] == 0x08);
+}
+
+TEST_CASE("DeviceManager: Manufacturer Filtering", "[app][devicemanager]") {
+  ebus::BusConfig config;
+  ebus::RuntimeConfig runtime = {.address = 0xff};
+  Request request;
+  BusMonitor monitor;
+  DeviceManager dm(&monitor);
+  platform::Bus bus(config, runtime, &request, &monitor);
+
+  dm.setOwnAddress(runtime.address);
+
+  // ID for a Bosch device (Manufacturer ID 0x05)
+  std::vector<uint8_t> master = {0x10, 0x08, 0x07, 0x04, 0x00};
+  std::vector<uint8_t> slave = {0x0a, 0x05, 0x42, 0x4f, 0x53, 0x43,
+                                0x48, 0x01, 0x01, 0x01, 0x01};
+
+  dm.update(master, slave);
+
+  std::vector<ebus::Sequence> vendor_cmds;
+  dm.vendorScanCommands(
+      [&](const ebus::Sequence& cmd) { vendor_cmds.push_back(cmd); });
+
+  // Bosch devices do not currently have vendor-specific scan commands defined.
+  REQUIRE(vendor_cmds.empty());
 }
 
 TEST_CASE("DeviceManager: Create Scan Commands", "[app][devicemanager]") {
@@ -80,7 +106,9 @@ TEST_CASE("DeviceManager: Create Scan Commands", "[app][devicemanager]") {
   Handler handler(runtime.address, &bus, &request, &monitor);
 
   std::vector<std::string> inputs = {"08", "15", "50"};
-  auto cmds = dm.createScanCommands(inputs);
+  std::vector<ebus::Sequence> cmds;
+  dm.createScanCommands(
+      inputs, [&](const ebus::Sequence& cmd) { cmds.push_back(cmd); });
 
   REQUIRE(cmds.size() == 3);
   REQUIRE(cmds[0][0] == 0x08);

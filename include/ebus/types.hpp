@@ -45,8 +45,7 @@ struct has_to_json : std::false_type {};
 
 template <typename T>
 struct has_to_json<T, std::void_t<decltype(std::declval<T>().toJson(
-                          std::declval<JsonChunkVisitor>()))>>
-    : std::true_type {};
+                          std::declval<JsonWriter&>()))>> : std::true_type {};
 
 /**
  * SFINAE helper to detect a contiguous byte range (vector, array, ByteView).
@@ -221,6 +220,38 @@ static_assert(std::is_trivially_copyable_v<ByteView>,
               "hot path.");
 
 /**
+ * A trivially copyable, fixed-capacity string.
+ * Prevents heap allocations during status updates and orchestration.
+ */
+template <size_t Cap>
+struct FixedString {
+  char buffer[Cap]{};
+  uint8_t size_bytes = 0;
+
+  FixedString() = default;
+  FixedString(std::string_view s) { assign(s); }
+
+  void assign(std::string_view s) {
+    size_bytes = static_cast<uint8_t>((s.size() < Cap) ? s.size() : Cap - 1);
+    if (size_bytes > 0) std::memcpy(buffer, s.data(), size_bytes);
+    buffer[size_bytes] = '\0';
+  }
+
+  const char* c_str() const noexcept { return buffer; }
+  size_t size() const noexcept { return size_bytes; }
+  bool empty() const noexcept { return size_bytes == 0; }
+
+  FixedString& operator=(std::string_view s) {
+    assign(s);
+    return *this;
+  }
+
+  operator std::string_view() const noexcept {
+    return std::string_view(buffer, size_bytes);
+  }
+};
+
+/**
  * A trivially copyable, owning byte sequence for use in bitwise-copy queues.
  */
 template <size_t Cap>
@@ -242,12 +273,19 @@ struct StaticSequence {
   const uint8_t* data() const noexcept { return buffer; }
 
   size_t size() const noexcept { return size_bytes; }
-  size_t capacity() const noexcept { return Cap; }
+  static constexpr size_t capacity() noexcept { return Cap; }
   void clear() noexcept { size_bytes = 0; }
   bool empty() const { return size_bytes == 0; }
 
   uint8_t& operator[](size_t i) { return buffer[i]; }
   const uint8_t& operator[](size_t i) const { return buffer[i]; }
+
+  template <size_t N>
+  StaticSequence& operator=(const char (&str)[N]) {
+    assign(reinterpret_cast<const uint8_t*>(str),
+           N > 0 && str[N - 1] == '\0' ? N - 1 : N);
+    return *this;
+  }
 
   /**
    * Implicit conversion to ByteView for zero-copy interoperability.
@@ -256,25 +294,126 @@ struct StaticSequence {
 };
 
 /**
+ * Internal carrier for protocol results and decoupled public callbacks.
+ */
+struct ProtocolEvent {
+  enum class Type : uint8_t { won, lost, telegram, error } type;
+
+  // Shared metadata
+  uint32_t session_id;
+  uint32_t poll_id;
+  HandlerState handler_state;
+  RequestState request_state;
+
+  union {
+    struct {
+      uint32_t retry_count;
+      MessageType message_type;
+      TelegramType telegram_type;
+    } tel;
+    struct {
+      ProtocolError protocol_error;
+      RequestResult result;
+      SequenceState sequence_state;
+      LogLevel level;
+    } err;
+  } data;
+
+  // Optimization for ESP32-C3: Reduced buffer size for internal event passing.
+  // Logical eBUS telegrams are max 21 bytes (master) / 17 bytes (slave).
+  StaticSequence<detail::SequenceLimits::model_capacity> master;
+  StaticSequence<detail::SequenceLimits::model_capacity> slave;
+};
+
+static_assert(std::is_trivially_copyable_v<ProtocolEvent>,
+              "ProtocolEvent must be trivially copyable for Reactor Queue.");
+static_assert(
+    sizeof(ProtocolEvent) <= 192,
+    "ProtocolEvent exceeds the memory threshold for constrained targets. "
+    "Verify enum packing and buffer sizes.");
+
+/**
+ * Internal event types for the Unified Reactor loop.
+ */
+enum class OrchestrationEventType : uint8_t {
+  bus_byte,         // Byte received from the physical bus (ISR/Low-level task)
+  network_byte,     // Byte received from an external client (ebusd bridge)
+  user_request,     // New message enqueued by the application
+  protocol_result,  // Signal from Handler (Won/Lost/Telegram/Error)
+  timer_wakeup,     // Triggered when a Poll or Scheduler retry is due
+  callback_ready,   // Signal that a user callback is pending dispatch
+  shutdown          // Signal to terminate the worker thread
+};
+
+/**
+ * Trivially copyable carrier for all orchestration signals.
+ * Sized to fit comfortably in a FreeRTOS queue.
+ */
+struct OrchestrationEvent {
+  OrchestrationEvent()
+      : type(OrchestrationEventType::shutdown),
+        timestamp(Clock::now()),
+        session_id(0) {
+    std::memset(static_cast<void*>(&data), 0, sizeof(data));
+  }
+
+  OrchestrationEventType type;
+
+  // Shared metadata
+  Clock::time_point timestamp;
+  uint32_t session_id = 0;
+
+  union Data {
+    /**
+     * Explicitly define default constructor to do nothing.
+     * Required because request_data contains StaticSequence, which has
+     * default member initializers making it non-trivial for unions.
+     */
+    Data() {}
+
+    struct {
+      uint8_t val;
+      bool bus_request;
+      bool start_bit;
+      Clock::time_point timestamp;
+    } byte_data;
+    struct {
+      uint8_t priority;
+      uint32_t poll_id;
+      StaticSequence<detail::SequenceLimits::model_capacity> payload;
+    } request_data;
+    ProtocolEvent protocol_data;
+  } data;
+};
+
+/**
  * Records a single state transition in the protocol handler.
  */
 struct HandlerTransition {
-  HandlerState from;
-  HandlerState to;
-  uint64_t timestamp;  // ms since epoch
+  HandlerTransition() = default;
+  HandlerTransition(HandlerState from_state, HandlerState to_state, uint64_t ts)
+      : from(from_state), to(to_state), timestamp(ts) {}
 
-  void toJson(const JsonChunkVisitor& visitor) const;
+  HandlerState from = HandlerState::passive_receive_master;
+  HandlerState to = HandlerState::passive_receive_master;
+  uint64_t timestamp = 0;  // ms since epoch
+
+  void toJson(detail::JsonWriter& writer) const;
 };
 
 /**
  * Records a single state transition in the arbitration engine.
  */
 struct RequestTransition {
-  RequestState from;
-  RequestState to;
-  uint64_t timestamp;  // ms since epoch
+  RequestTransition() = default;
+  RequestTransition(RequestState from_state, RequestState to_state, uint64_t ts)
+      : from(from_state), to(to_state), timestamp(ts) {}
 
-  void toJson(const JsonChunkVisitor& visitor) const;
+  RequestState from = RequestState::observe;
+  RequestState to = RequestState::observe;
+  uint64_t timestamp = 0;  // ms since epoch
+
+  void toJson(detail::JsonWriter& writer) const;
 };
 
 /**
@@ -282,19 +421,36 @@ struct RequestTransition {
  * Uses fixed-size buffers to ensure zero heap allocation during logging.
  */
 struct ErrorEntry {
+  ErrorEntry() = default;
+  ErrorEntry(uint32_t s_id, uint32_t p_id, LogLevel lvl, ProtocolError pe,
+             RequestResult res, SequenceState ss, HandlerState hs,
+             RequestState rs, ByteView m_view, ByteView s_view, uint64_t ts)
+      : session_id(s_id),
+        poll_id(p_id),
+        level(lvl),
+        protocol_error(pe),
+        result(res),
+        sequence_state(ss),
+        handler_state(hs),
+        request_state(rs),
+        timestamp(ts) {
+    master.assign(m_view.data(), m_view.size());
+    slave.assign(s_view.data(), s_view.size());
+  }
+
   uint32_t session_id = 0;
   uint32_t poll_id = 0;
-  LogLevel level;
-  ProtocolError protocol_error;
-  RequestResult result;
-  SequenceState sequence_state;
-  HandlerState handler_state;
-  RequestState request_state;
-  StaticSequence<detail::SequenceLimits::default_capacity> master;
-  StaticSequence<detail::SequenceLimits::default_capacity> slave;
-  uint64_t timestamp;  // ms since epoch
+  LogLevel level = LogLevel::error;
+  ProtocolError protocol_error = ProtocolError::none;
+  RequestResult result = RequestResult::observe_data;
+  SequenceState sequence_state = SequenceState::seq_empty;
+  HandlerState handler_state = HandlerState::passive_receive_master;
+  RequestState request_state = RequestState::observe;
+  StaticSequence<detail::SequenceLimits::model_capacity> master;
+  StaticSequence<detail::SequenceLimits::model_capacity> slave;
+  uint64_t timestamp = 0;  // ms since epoch
 
-  void toJson(const JsonChunkVisitor& visitor) const;
+  void toJson(detail::JsonWriter& writer) const;
 
   // Custom stringifier for human-readable logs
   std::string toString() const;

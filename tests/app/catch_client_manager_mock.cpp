@@ -30,36 +30,33 @@ TEST_CASE("ClientManager: Mock Orchestration", "[app][clientmanager][mock]") {
   BusMonitor monitor;
   platform::Bus bus(config, runtime, &req, &monitor);
   Handler handler(runtime.address, &bus, &req, &monitor);
-  BusHandler busHandler(&req, &handler, bus.getQueue());
+  BusHandler busHandler(&req, &handler);
   ClientManager manager(&bus, &busHandler, &req, &monitor);
 
   auto mockClient = std::make_shared<MockClient>(&req);
   manager.addClient(mockClient);
 
   bus.start();
-  busHandler.start();
-  manager.start();
+  manager.start(); // CRITICAL: Manager must be running to process ticks
 
-  // Wait for background threads to stabilize
-  REQUIRE(waitCondition([&] { return bus.getQueue() != nullptr; }));
+  TestReactor reactor(bus, busHandler, &manager);
 
   SECTION("Full bridge cycle: Request -> Arbitration -> Transmit") {
     // 1. Client wants to send an address (0x33)
     mockClient->pushInput(0x33);
-    manager.wake();
 
     // Wait for Manager to see data and request bus
-    REQUIRE(waitCondition([&] { return req.busRequestPending(); }));
+    REQUIRE(reactor.waitFor([&] { return req.busRequestPending(); }));
 
     // 2. Simulate the Bus providing the SYN to start arbitration
     bus.writeByte(ebus::Symbols::syn);
 
     // Wait for FSM to move to 'first_won' and clear pending flag
-    REQUIRE(waitCondition([&] { return !req.busRequestPending(); }));
+    REQUIRE(reactor.waitFor([&] { return !req.busRequestPending(); }));
     REQUIRE(req.getResult() == ebus::RequestResult::first_won);
 
     // 3. Client should have received the SYN echo and the address echo
-    REQUIRE(waitCondition([&] { return !mockClient->getOutput().empty(); }));
+    REQUIRE(reactor.waitFor([&] { return !mockClient->getOutput().empty(); }));
     REQUIRE(mockClient->getOutput()[0] == ebus::Symbols::syn);
     REQUIRE(mockClient->getOutput()[1] == 0x33);
 
@@ -69,10 +66,9 @@ TEST_CASE("ClientManager: Mock Orchestration", "[app][clientmanager][mock]") {
     std::vector<uint8_t> body = {0xfe, 0xb5, 0x05, 0x01, 0xec};
     for (auto b : body) {
       mockClient->pushInput(b);
-      manager.wake();
     }
 
-    REQUIRE(waitCondition([&] { return mockClient->getOutput().size() >= 7; }));
+    REQUIRE(reactor.waitFor([&] { return mockClient->getOutput().size() >= 7; }));
     REQUIRE(mockClient->getOutput().back() == 0xec);
   }
 
@@ -80,26 +76,20 @@ TEST_CASE("ClientManager: Mock Orchestration", "[app][clientmanager][mock]") {
     // 1. Setup client with very small buffer (2 bytes)
     auto smallClient = std::make_shared<MockClient>(&req, true, 2);
     manager.addClient(smallClient);
-    REQUIRE(waitCondition([&] { return smallClient->isConnected(); }));
+    REQUIRE(reactor.waitFor([&] { return smallClient->isConnected(); }));
 
     // 2. Send bytes from bus. 1st byte (SYN) -> ok (buffer size 1)
     bus.writeByte(ebus::Symbols::syn);
-    REQUIRE(
-        waitCondition([&] { return smallClient->getOutput().size() == 1; }));
+    REQUIRE(reactor.waitFor([&] { return smallClient->getOutput().size() == 1; }));
     REQUIRE(smallClient->isConnected());
 
     // 3. 2nd byte -> ok (buffer size 2)
     bus.writeByte(0x11);
-    REQUIRE(
-        waitCondition([&] { return smallClient->getOutput().size() == 2; }));
+    REQUIRE(reactor.waitFor([&] { return smallClient->getOutput().size() == 2; }));
     REQUIRE(smallClient->isConnected());
 
     // 4. 3rd byte -> overflow -> stop() called
     bus.writeByte(0x22);
-    REQUIRE(waitCondition([&] { return !smallClient->isConnected(); }));
+    REQUIRE(reactor.waitFor([&] { return !smallClient->isConnected(); }));
   }
-
-  manager.stop();
-  busHandler.stop();
-  bus.stop();
 }

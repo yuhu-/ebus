@@ -92,7 +92,7 @@ struct DataTypeInfoBase {
 struct DataTypeInfo : DataTypeInfoBase {
   float factor = 1.0f;
 
-  void toJson(const JsonChunkVisitor& visitor) const;
+  void toJson(detail::JsonWriter& writer) const;
 };
 
 inline constexpr int64_t FIXED_POINT_SCALE = 1000000LL;  // 1,000,000
@@ -281,6 +281,12 @@ DataType getDataType(const DataValue& value) noexcept;
  * @return A vector of supported DataType enums.
  */
 std::vector<DataTypeInfo> getSupportedDataTypes();
+
+/**
+ * @brief Invokes a callback for each supported eBUS data type.
+ * Prevents heap allocation of a result vector.
+ */
+void fetchSupportedDataTypes(std::function<void(const DataTypeInfo&)> callback);
 
 /**
  * @brief Streams a JSON array of all supported eBUS data types to the visitor.

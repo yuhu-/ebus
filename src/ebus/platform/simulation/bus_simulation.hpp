@@ -46,8 +46,6 @@ class BusSimulation : public BusBase {
   void start();
   void stop();
 
-  Queue<BusEvent>* getQueue() const;
-
   void writeByte(const uint8_t byte);
 
   void setWindow(const uint16_t window_us);
@@ -55,11 +53,6 @@ class BusSimulation : public BusBase {
   void setRuntimeConfig(const RuntimeConfig& runtime);
 
   void recordUtilization(uint8_t byte);
-
-  // Listeners
-  void addReadListener(ReadListener listener);
-  void addWriteListener(WriteListener listener);
-  void addSynListener(SynListener listener);
 
   platform::ServiceThread::Status getThreadStatus() const;
   platform::ServiceThread::Status getSynThreadStatus() const;
@@ -73,15 +66,10 @@ class BusSimulation : public BusBase {
   detail::Request* request_ = nullptr;
   detail::BusMonitor* monitor_ = nullptr;
 
-  // owned queue
-  std::unique_ptr<Queue<BusEvent>> byte_queue_;
-
   std::unique_ptr<ServiceThread> worker_;
   std::unique_ptr<ServiceThread> syn_worker_;
   std::atomic<bool> running_{false};
   std::atomic<bool> syn_running_{false};
-
-  mutable std::mutex listeners_mutex_;  // Protects listener vectors
 
   // Simulation SYN generator state
   std::mutex syn_mutex_;
@@ -102,6 +90,7 @@ class BusSimulation : public BusBase {
   void simulationReaderLoop();
   void simulationSynLoop();
   void resetSynTimerSim(uint8_t byte);
+  void resetSynTimerSimInternal(uint8_t byte);
 };
 
 }  // namespace ebus::detail::platform
