@@ -128,7 +128,7 @@ inline constexpr size_t queue_size = EBUS_BUS_QUEUE_SIZE;
 #endif
 
 #ifndef EBUS_MAX_LISTENERS
-inline constexpr size_t max_listeners = 8;
+inline constexpr size_t max_listeners = 4;
 #else
 inline constexpr size_t max_listeners = EBUS_MAX_LISTENERS;
 #endif
