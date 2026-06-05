@@ -37,30 +37,18 @@ struct Impl;
  */
 class Controller {
  public:
+  // Lifecycle
   Controller();
   explicit Controller(const EbusConfig& config);
   ~Controller();
+  bool start();
+  void stop();
 
+  // Special Members & Operators
   Controller(const Controller&) = delete;
   Controller& operator=(const Controller&) = delete;
 
-  /**
-   * @brief Starts all internal service threads and the hardware interface.
-   * @return true if the controller was started successfully.
-   */
-  bool start();
-
-  /**
-   * @brief Stops all background processing and releases hardware resources.
-   */
-  void stop();
-
-  /**
-   * @brief Checks if the controller is currently running.
-   */
-  bool isRunning() const noexcept;
-
-  // --- Configuration Section ---
+  // Configuration
 
   /**
    * @brief Applies a complete configuration to the stack.
@@ -70,11 +58,6 @@ class Controller {
    * while the controller is running.
    */
   bool configure(const EbusConfig& config);
-
-  /**
-   * @brief Checks if the controller has been configured.
-   */
-  bool isConfigured() const noexcept;
 
   /**
    * @brief Returns the current configuration.
@@ -189,8 +172,6 @@ class Controller {
    */
   void setTotalTimeout(uint32_t timeout_ms);
 
-  // --- Callbacks Section ---
-
   /**
    * @brief Registers a callback for when this controller is addressed as a
    * slave.
@@ -213,9 +194,7 @@ class Controller {
    */
   void setTraceCallback(TraceCallback callback);
 
-  // --- Runtime Section ---
-
-  // Messaging & Scheduling
+  // Working Methods
 
   /**
    * @brief Enqueues a message for transmission with a given priority.
@@ -232,8 +211,6 @@ class Controller {
    */
   bool enqueueAt(uint8_t priority, ByteView message, Clock::time_point when,
                  ResultCallback callback = nullptr);
-
-  // Polling
 
   /**
    * @brief Adds a recurring polling job.
@@ -255,12 +232,6 @@ class Controller {
    * @brief Clears all poll items.
    */
   void clearPollItems();
-
-  // Device Discovery & Scanning
-
-  /**
-   * @brief Triggers an eBUS "Inquiry of Existence" broadcast.
-   */
   void triggerInquiryOfExistence();
 
   /**
@@ -284,37 +255,20 @@ class Controller {
   bool scanObservedDevices();
 
   /**
-   * @brief Checks if a discovery scan is currently in progress.
-   */
-  bool isScanning() const;
-
-  // External Client Bridge (WiFi/TCP)
-
-  /**
    * @brief Adds a network client bridge via an existing file descriptor.
    */
   void addClient(int fd, ClientType type);
-
-  /**
-   * @brief Disconnects and removes a network client.
-   */
   void removeClient(int fd);
 
-  // --- Diagnostics Section ---
-
-  // Device Information
+  // Status/Telemetry
+  bool isRunning() const noexcept;
+  bool isConfigured() const noexcept;
+  bool isScanning() const;
 
   /**
    * @brief Returns information about all discovered devices.
    */
   void fetchDeviceInfo(std::function<void(const DeviceInfo&)> callback) const;
-
-  // Health Metrics
-
-  /**
-   * @brief Resets all hardware and protocol counters.
-   */
-  void resetMetrics();
 
   /**
    * @brief Invokes a visitor callback with a snapshot of system performance
@@ -329,14 +283,6 @@ class Controller {
   void fetchUtilizationHistory(std::function<void(float)> callback) const;
 
   /**
-   * @brief Returns the raw event trace of the last processed bytes.
-   */
-  void fetchTraceHistory(
-      std::function<void(const BusEventInfo&)> callback) const;
-
-  // Diagnostic Log
-
-  /**
    * @brief Returns a snapshot of the diagnostic error log.
    */
   void fetchErrors(std::function<void(const ErrorEntry&)> callback) const;
@@ -347,15 +293,26 @@ class Controller {
   size_t getErrorLogCapacity() const;
 
   /**
-   * @brief Clears the diagnostic error log.
-   */
-  void clearErrors();
-
-  /**
    * @brief Invokes a visitor callback with a snapshot of system resource usage.
    */
   void fetchSystemResources(
       std::function<void(const SystemResources&)> callback) const;
+
+  /**
+   * @brief Resets all hardware and protocol counters.
+   */
+  void resetMetrics();
+
+  /**
+   * @brief Returns the raw event trace of the last processed bytes.
+   */
+  void fetchTraceHistory(
+      std::function<void(const BusEventInfo&)> callback) const;
+
+  /**
+   * @brief Clears the diagnostic error log.
+   */
+  void clearErrors();
 
   /**
    * @brief Streams the service status JSON in chunks to the provided visitor.

@@ -136,8 +136,6 @@ void Controller::stop() {
   impl_->bus_->stop();
 }
 
-bool Controller::isRunning() const noexcept { return running_.load(); }
-
 bool Controller::configure(const EbusConfig& config) {
   // 1. Exhaustive Validation
   if (!detail::ConfigValidator::validate(config)) return false;
@@ -156,8 +154,6 @@ bool Controller::configure(const EbusConfig& config) {
   configured_.store(true);
   return true;
 }
-
-bool Controller::isConfigured() const noexcept { return configured_.load(); }
 
 EbusConfig Controller::getConfig() const {
   std::lock_guard<std::recursive_mutex> lock(config_mutex_);
@@ -430,10 +426,6 @@ bool Controller::scanObservedDevices() {
   return isConfigured() ? impl_->device_scanner_->scanObservedDevices() : false;
 }
 
-bool Controller::isScanning() const {
-  return isConfigured() ? impl_->device_scanner_->isScanning() : false;
-}
-
 void Controller::addClient(int fd, ClientType type) {
   if (isConfigured()) impl_->client_manager_->addClient(fd, type);
 }
@@ -442,15 +434,19 @@ void Controller::removeClient(int fd) {
   if (isConfigured()) impl_->client_manager_->removeClient(fd);
 }
 
+bool Controller::isRunning() const noexcept { return running_.load(); }
+
+bool Controller::isConfigured() const noexcept { return configured_.load(); }
+
+bool Controller::isScanning() const {
+  return isConfigured() ? impl_->device_scanner_->isScanning() : false;
+}
+
 void Controller::fetchDeviceInfo(
     std::function<void(const DeviceInfo&)> callback) const {
   if (isConfigured() && callback) {
     impl_->device_manager_->fetchDeviceInfo(callback);
   }
-}
-
-void Controller::resetMetrics() {
-  if (isConfigured()) impl_->bus_monitor_->resetMetrics();
 }
 
 void Controller::fetchMetrics(
@@ -484,8 +480,6 @@ void Controller::fetchErrors(
 size_t Controller::getErrorLogCapacity() const {
   return impl_->error_buffer_.capacity();
 }
-
-void Controller::clearErrors() { impl_->error_buffer_.clear(); }
 
 void Controller::fetchSystemResources(
     std::function<void(const SystemResources&)> callback) const {
@@ -545,6 +539,16 @@ void Controller::fetchServiceStatus(const JsonChunkVisitor& visitor,
                          reset_histories);
 }
 
+void Controller::resetMetrics() {
+  if (isConfigured()) impl_->bus_monitor_->resetMetrics();
+}
+
+void Controller::clearErrors() { impl_->error_buffer_.clear(); }
+
+#if EBUS_SIMULATION
+VirtualBus& Controller::getVirtualBus() { return *impl_->virtual_bus_; }
+#endif
+
 void Controller::getServiceStatus(ServiceStatus& status) const {
   status.last_update_timestamp_ms =
       std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -581,10 +585,6 @@ void Controller::getServiceStatus(ServiceStatus& status) const {
     status.poll_manager = impl_->poll_manager_->getStatus();
   }
 }
-
-#if EBUS_SIMULATION
-VirtualBus& Controller::getVirtualBus() { return *impl_->virtual_bus_; }
-#endif
 
 void Controller::processPublicEvents() {
   // Capture callbacks once to avoid mutex contention inside the drainage loops.
