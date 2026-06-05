@@ -29,8 +29,7 @@ BusEsp::BusEsp(const BusConfig& config, const RuntimeConfig& runtime,
       monitor_(monitor),
       uart_port_num_(static_cast<uart_port_t>(config.uart_port)),
       rx_pin_(config.rx_pin),
-      tx_pin_(config.tx_pin),
-      monitor_(monitor) {
+      tx_pin_(config.tx_pin) {
   // Initialize postponement timer
   esp_timer_create_args_t postpone_args = {};
   postpone_args.callback = &BusEsp::s_onSynPostpone;

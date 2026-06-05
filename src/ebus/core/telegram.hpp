@@ -15,13 +15,12 @@
 
 namespace ebus::detail {
 
-namespace {
 // Protocol header sizes excluding data and CRC
-constexpr size_t kMasterHeaderSize = 5;  // QQ ZZ PB SB NN
-constexpr size_t kSlaveHeaderSize = 1;   // NN
-constexpr size_t kCrcSize = 1;
-constexpr size_t kAckSize = 1;
-}  // namespace
+inline constexpr size_t kMasterHeaderSize = 5;  // QQ ZZ PB SB NN
+inline constexpr size_t kSlaveHeaderSize = 1;   // NN
+inline constexpr size_t kCrcSize = 1;
+inline constexpr size_t kAckSize = 1;
+
 
 /**
  * Based on the eBUS specification, the Telegram class can parse, create, and
