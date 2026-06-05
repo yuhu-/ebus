@@ -21,21 +21,24 @@ namespace ebus::detail::platform {
  */
 class VirtualLine {
  public:
+  // Lifecycle & Static Factories
   static VirtualLine& get() {
     static VirtualLine instance;
     return instance;
   }
 
+  // Working Methods
+  // Participant registration
   inline void attach(void* bus_key) {
     std::lock_guard<std::mutex> lock(mutex_);
     queues_[bus_key] = std::queue<uint8_t>();
   }
-
   inline void detach(void* bus_key) {
     std::lock_guard<std::mutex> lock(mutex_);
     queues_.erase(bus_key);
   }
 
+  // Wire Logic
   inline void write(uint8_t byte) {
     {
       std::lock_guard<std::mutex> lock(mutex_);

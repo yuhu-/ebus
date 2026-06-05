@@ -5,7 +5,6 @@
 
 #include "core/bus_monitor.hpp"
 
-#include <algorithm>
 #include <chrono>
 #include <ebus/detail/json_writer.hpp>
 #include <ebus/status.hpp>

@@ -62,7 +62,6 @@ class CircularBuffer {
     std::lock_guard<std::mutex> lock(mutex_);
     return size_;
   }
-
   constexpr size_t capacity() const { return Cap; }
   bool empty() const {
     std::lock_guard<std::mutex> lock(mutex_);

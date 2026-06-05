@@ -30,12 +30,20 @@ namespace ebus::detail::platform {
  */
 class ServiceThread {
  public:
+  // Public Types & Constants
+  struct Status {
+    // -1 if not available
+    std::string_view name;
+    int32_t task_stack_bytes;       // configured stack size in bytes
+    int32_t task_stack_free_bytes;  // free stack (high-water) in bytes
+  };
+
+  // Lifecycle
   ServiceThread(std::string name, std::function<void()> func,
                 uint32_t stack_size = OrchestrationLimits::default_stack_size,
                 uint8_t priority = OrchestrationLimits::default_priority,
                 int core = -1);
   ~ServiceThread() { join(); }
-
   void start() {
 #if defined(ESP_PLATFORM)
     if (done_sem_ == nullptr) done_sem_ = xSemaphoreCreateBinary();
@@ -71,13 +79,7 @@ class ServiceThread {
 #endif
   }
 
-  struct Status {
-    // -1 if not available
-    std::string_view name;
-    int32_t task_stack_bytes;       // configured stack size in bytes
-    int32_t task_stack_free_bytes;  // free stack (high-water) in bytes
-  };
-
+  // Status/Telemetry
   inline Status status() const {
     Status s;
     s.name = name_;

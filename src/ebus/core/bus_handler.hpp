@@ -14,8 +14,6 @@
 #include <functional>
 #include <memory>
 #include <mutex>
-#include <utility>
-#include <vector>
 
 #include "core/bus_events.hpp"
 #include "core/handler.hpp"

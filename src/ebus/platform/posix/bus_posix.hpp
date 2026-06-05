@@ -27,8 +27,6 @@
 #include <memory>
 #include <mutex>
 #include <stdexcept>
-#include <string>
-#include <vector>
 
 #include "core/bus_events.hpp"
 #include "platform/bus_base.hpp"
@@ -49,6 +47,7 @@ namespace ebus::detail::platform {
  */
 class BusPosix : public BusBase {
  public:
+  // Lifecycle
   BusPosix(const BusConfig& config, const ebus::RuntimeConfig& runtime,
            detail::Request* request, detail::BusMonitor* monitor = nullptr);
   ~BusPosix();

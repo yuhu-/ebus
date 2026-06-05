@@ -15,8 +15,6 @@
 #include <ebus/status.hpp>
 #include <functional>
 #include <memory>
-#include <mutex>
-#include <vector>
 
 #include "core/bus_events.hpp"
 #include "platform/bus_base.hpp"
@@ -36,6 +34,7 @@ namespace ebus::detail::platform {
  */
 class BusSimulation : public BusBase {
  public:
+  // Lifecycle
   explicit BusSimulation(const BusConfig& config, const RuntimeConfig& runtime,
                          detail::Request* request, detail::BusMonitor* monitor);
   ~BusSimulation();

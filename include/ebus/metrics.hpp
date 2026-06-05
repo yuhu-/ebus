@@ -9,7 +9,6 @@
 #include <atomic>
 #include <bitset>
 #include <cstddef>
-#include <cstdint>
 #include <string>
 #include <vector>
 

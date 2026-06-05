@@ -11,7 +11,6 @@
 #include <ebus/types.hpp>
 #include <ebus/utils.hpp>
 #include <string>
-#include <vector>
 
 namespace ebus::detail {
 
