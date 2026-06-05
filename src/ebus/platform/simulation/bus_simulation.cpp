@@ -13,7 +13,6 @@
 #include "core/request.hpp"
 #include "platform/simulation/virtual_line.hpp"
 #include "platform/system.hpp"
-#include "utils/logger.hpp"
 
 namespace ebus::detail::platform {
 
@@ -166,8 +165,6 @@ ebus::BusStatus BusSimulation::getStatus() const {
 void BusSimulation::simulationReaderLoop() {
   uint8_t byte;
   while (running_.load()) {
-    EBUS_LOG_DEBUG("[BusSim] Reader Loop for 0x" +
-                   ebus::toString(runtime_.address) + " is alive.");
     if (VirtualLine::get().read(
             this, byte, BusLimits::platform::Posix::virtual_read_timeout_ms)) {
       auto arrival_time = Clock::now();

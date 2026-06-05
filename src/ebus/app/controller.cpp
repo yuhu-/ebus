@@ -117,7 +117,6 @@ bool Controller::start() {
 }
 
 void Controller::stop() {
-  logInfo("Controller::stop() called.");
   logInfo("Stopping controller services...");
   bool expected = true;
   if (!running_.compare_exchange_strong(expected, false)) return;
@@ -487,6 +486,8 @@ void Controller::fetchSystemResources(
   res.timestamp_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
                          std::chrono::system_clock::now().time_since_epoch())
                          .count();
+  res.is_configured = isConfigured();
+  res.is_running = isRunning();
 
   auto mapThreadStatus =
       [](const detail::platform::ServiceThread::Status& s) -> ThreadStatus {
@@ -497,27 +498,26 @@ void Controller::fetchSystemResources(
     res.threads.push_back(mapThreadStatus(impl_->worker_->status()));
   }
 
-  if (isConfigured()) {
-    // Bus threads
+  if (impl_->bus_) {
     auto b_stat = impl_->bus_->getStatus();
     res.threads.push_back(b_stat.bus_thread);
     if (!b_stat.syn_thread.name.empty()) {
       res.threads.push_back(b_stat.syn_thread);
     }
+  }
 
-    // Public Event Queues
-    res.queues.push_back({"event_errors", impl_->event_errors_.size(),
-                          detail::ControllerLimits::event_queue_size,
-                          impl_->max_event_errors_.load()});
-    res.queues.push_back({"event_telegrams", impl_->event_telegrams_.size(),
-                          detail::ControllerLimits::event_queue_size,
-                          impl_->max_event_telegrams_.load()});
+  res.queues.push_back({"event_errors", impl_->event_errors_.size(),
+                        detail::ControllerLimits::event_queue_size,
+                        impl_->max_event_errors_.load()});
+  res.queues.push_back({"event_telegrams", impl_->event_telegrams_.size(),
+                        detail::ControllerLimits::event_queue_size,
+                        impl_->max_event_telegrams_.load()});
 
-    res.queues.push_back({"reactor_queue", impl_->reactor_queue_.size(),
-                          detail::ControllerLimits::reactor_queue_size,
-                          impl_->max_reactor_queue_.load()});
+  res.queues.push_back({"reactor_queue", impl_->reactor_queue_.size(),
+                        detail::ControllerLimits::reactor_queue_size,
+                        impl_->max_reactor_queue_.load()});
 
-    // Scheduler
+  if (impl_->scheduler_) {
     auto s_stat = impl_->scheduler_->getStatus();
     res.queues.push_back({"scheduler", s_stat.queue_size, s_stat.queue_capacity,
                           s_stat.max_queue_size});
@@ -842,7 +842,7 @@ void Controller::constructMembers() {
         logDebug("HAL Bridge: tryPush 0x" + ebus::toString(bus_ev.byte));
       }
       if (!impl_->reactor_queue_.tryPush(ev)) {
-        EBUS_LOG_ERROR("[Controller] Reactor queue FULL! Dropping event.");
+        logError("[Controller] Reactor queue FULL! Dropping event.");
         // DRAIN: Drop oldest byte event to ensure loop stays moving
         OrchestrationEvent dummy;
         if (impl_->reactor_queue_.tryPop(dummy)) {

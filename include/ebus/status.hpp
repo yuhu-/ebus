@@ -185,6 +185,8 @@ struct PollManagerStatus {
  */
 struct SystemResources {
   uint64_t timestamp_ms = 0;
+  bool is_configured = false;
+  bool is_running = false;
   detail::StaticVector<ThreadStatus, 8> threads;
 
   struct QueueInfo {

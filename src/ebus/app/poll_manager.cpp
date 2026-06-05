@@ -9,8 +9,6 @@
 #include <ebus/detail/protocol_limits.hpp>
 #include <ebus/utils.hpp>
 
-#include "utils/logger.hpp"
-
 namespace ebus::detail {
 
 PollManager::PollManager() : next_poll_id_(1) {}
@@ -78,11 +76,6 @@ void PollManager::processDueItems(
     std::pop_heap(items_.begin(), items_.end(), Item::Greater());
     Item item = std::move(items_.back());
     items_.pop_back();
-
-    EBUS_LOG_DEBUG(
-        "[PollManager][0x" + ebus::toString(own_address_) + "] Item " +
-        std::to_string(item.poll_id) +
-        " is due. Interval=" + std::to_string(item.interval.count()) + "ms");
 
     callback(item);  // Process item
     if (activity) *activity = true;

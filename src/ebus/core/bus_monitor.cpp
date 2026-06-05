@@ -715,13 +715,15 @@ void SystemResources::QueueInfo::toJson(detail::JsonWriter& writer) const {
 void SystemResources::toJson(detail::JsonWriter& writer) const {
   writer.startObject();
   writer.writeField("timestamp_ms", timestamp_ms);
+  writer.writeField("is_configured", is_configured);
+  writer.writeField("is_running", is_running);
   writer.appendKey("threads");
   writer.startArray();
-  for (const auto& t : threads) t.toJson(writer);
+  for (const auto& t : threads) writer.writeValue(t);
   writer.endArray();
   writer.appendKey("queues");
   writer.startArray();
-  for (const auto& q : queues) q.toJson(writer);
+  for (const auto& q : queues) writer.writeValue(q);
   writer.endArray();
   writer.endObject();
 }

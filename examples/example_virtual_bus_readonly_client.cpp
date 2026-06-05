@@ -133,6 +133,11 @@ int main() {
   deviceA.start();
   deviceB.start();
 
+  deviceA.fetchSystemResources([](const ebus::SystemResources& res) {
+    std::cout << "[Device A] System resources: " << ebus::toJson(res, 256)
+              << std::endl;
+  });
+
   // Run for a while to observe traffic
   for (int i = 0; i < 30; ++i) {
     std::this_thread::sleep_for(1s);
