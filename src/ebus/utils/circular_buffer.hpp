@@ -34,6 +34,20 @@ class CircularBuffer {
     return push_impl(std::move(item));
   }
 
+  /**
+   * @brief Attempts to remove and return the oldest element.
+   * @param out Reference to store the popped item.
+   * @return true if an item was popped, false if empty.
+   */
+  bool tryPop(T& out) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (size_ == 0) return false;
+    out = std::move(buffer_[head_]);
+    head_ = (head_ + 1) % Cap;
+    size_--;
+    return true;
+  }
+
   void clear() {
     std::lock_guard<std::mutex> lock(mutex_);
     size_ = 0;
@@ -47,13 +61,8 @@ class CircularBuffer {
   template <typename Func>
   void forEach(Func&& callback) const {
     std::lock_guard<std::mutex> lock(mutex_);
-    if (size_ == 0) return;
-    if (size_ < Cap) {
-      for (size_t i = 0; i < size_; ++i) callback(buffer_[i]);
-    } else {
-      for (size_t i = 0; i < Cap; ++i) {
-        callback(buffer_[(head_ + i) % Cap]);
-      }
+    for (size_t i = 0; i < size_; ++i) {
+      callback(buffer_[(head_ + i) % Cap]);
     }
   }
 
@@ -70,8 +79,7 @@ class CircularBuffer {
 
   T operator[](size_t index) const {
     std::lock_guard<std::mutex> lock(mutex_);
-    if (size_ < Cap) return buffer_[index];
-    if (index >= Cap) return T();
+    if (index >= size_) return T();
     return buffer_[(head_ + index) % Cap];
   }
 
@@ -84,12 +92,13 @@ class CircularBuffer {
   template <typename U>
   bool push_impl(U&& item) {
     bool overwritten = false;
-    if (size_ < Cap) {
-      buffer_[size_++] = std::forward<U>(item);
-    } else {
+    if (size_ == Cap) {
       buffer_[head_] = std::forward<U>(item);
       head_ = (head_ + 1) % Cap;
       overwritten = true;
+    } else {
+      buffer_[(head_ + size_) % Cap] = std::forward<U>(item);
+      size_++;
     }
     return overwritten;
   }

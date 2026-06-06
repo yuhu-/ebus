@@ -613,6 +613,23 @@ void ThreadStatus::toJson(detail::JsonWriter& writer) const {
   writer.endObject();
 }
 
+void MemoryStatus::toJson(detail::JsonWriter& writer) const {
+  writer.startObject();
+  writer.writeField("total_heap_bytes", total_heap_bytes);
+  writer.writeField("free_heap_bytes", free_heap_bytes);
+  writer.writeField("min_free_heap_bytes", min_free_heap_bytes);
+  writer.endObject();
+}
+
+void QueueStatus::toJson(detail::JsonWriter& writer) const {
+  writer.startObject();
+  writer.writeField("name", name);
+  writer.writeField("size", size);
+  writer.writeField("capacity", capacity);
+  writer.writeField("max_size", max_size);
+  writer.endObject();
+}
+
 void ControllerStatus::toJson(detail::JsonWriter& writer) const {
   writer.startObject();
   writer.writeField("thread", thread);
@@ -641,9 +658,7 @@ void BusHandlerStatus::toJson(detail::JsonWriter& writer) const {
 
 void SchedulerStatus::toJson(detail::JsonWriter& writer) const {
   writer.startObject();
-  writer.writeField("queue_size", queue_size);
-  writer.writeField("queue_capacity", queue_capacity);
-  writer.writeField("max_queue_size", max_queue_size);
+  writer.writeField("queue", queue);
   writer.endObject();
 }
 
@@ -703,15 +718,6 @@ void PollManagerStatus::toJson(detail::JsonWriter& writer) const {
   writer.endObject();
 }
 
-void SystemResources::QueueInfo::toJson(detail::JsonWriter& writer) const {
-  writer.startObject();
-  writer.writeField("name", name);
-  writer.writeField("size", size);
-  writer.writeField("capacity", capacity);
-  writer.writeField("max_size", max_size);
-  writer.endObject();
-}
-
 void SystemResources::toJson(detail::JsonWriter& writer) const {
   writer.startObject();
   writer.writeField("timestamp_ms", timestamp_ms);
@@ -725,6 +731,7 @@ void SystemResources::toJson(detail::JsonWriter& writer) const {
   writer.startArray();
   for (const auto& q : queues) writer.writeValue(q);
   writer.endArray();
+  writer.writeField("memory", memory);
   writer.endObject();
 }
 
@@ -747,6 +754,7 @@ void ServiceStatus::toJson(detail::JsonWriter& writer) const {
   device_scanner.toJson(writer);
   writer.appendKey("poll_manager");
   poll_manager.toJson(writer);
+  writer.writeField("memory", memory);
   writer.endObject();
 }
 
@@ -768,6 +776,7 @@ void serializeServiceStatus(const JsonChunkVisitor& visitor,
   writer.writeField("device_manager", status.device_manager);
   writer.writeField("device_scanner", status.device_scanner);
   writer.writeField("poll_manager", status.poll_manager);
+  writer.writeField("memory", status.memory);
 
   if (monitor) {
 #ifndef EBUS_MINIMAL_DIAGNOSTICS

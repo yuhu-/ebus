@@ -41,6 +41,38 @@ struct ThreadStatus {
 };
 
 /**
+ * Snapshot of system-wide memory usage.
+ */
+struct MemoryStatus {
+  MemoryStatus() = default;
+  MemoryStatus(size_t total, size_t free, size_t min_free)
+      : total_heap_bytes(total),
+        free_heap_bytes(free),
+        min_free_heap_bytes(min_free) {}
+  size_t total_heap_bytes = 0;
+  size_t free_heap_bytes = 0;
+  size_t min_free_heap_bytes = 0;
+
+  void toJson(detail::JsonWriter& writer) const;
+};
+
+/**
+ * Snapshot of a system queue's health.
+ */
+struct QueueStatus {
+  QueueStatus() = default;
+  QueueStatus(std::string_view n, size_t s, size_t cap, size_t max_s)
+      : name(n), size(s), capacity(cap), max_size(max_s) {}
+
+  FixedString<24> name;
+  size_t size = 0;
+  size_t capacity = 0;
+  size_t max_size = 0;
+
+  void toJson(detail::JsonWriter& writer) const;
+};
+
+/**
  * Snapshot of the controller's current state.
  */
 struct ControllerStatus {
@@ -93,11 +125,8 @@ struct BusHandlerStatus {
  */
 struct SchedulerStatus {
   SchedulerStatus() = default;
-  SchedulerStatus(size_t s, size_t cap, size_t max_s)
-      : queue_size(s), queue_capacity(cap), max_queue_size(max_s) {}
-  size_t queue_size = 0;
-  size_t queue_capacity = 0;
-  size_t max_queue_size = 0;
+  explicit SchedulerStatus(QueueStatus q) : queue(std::move(q)) {}
+  QueueStatus queue;
 
   void toJson(detail::JsonWriter& writer) const;
 };
@@ -188,20 +217,8 @@ struct SystemResources {
   bool is_configured = false;
   bool is_running = false;
   detail::StaticVector<ThreadStatus, 8> threads;
-
-  struct QueueInfo {
-    QueueInfo() = default;
-    QueueInfo(std::string_view n, size_t s, size_t cap, size_t max_s)
-        : name(n), size(s), capacity(cap), max_size(max_s) {}
-
-    FixedString<24> name;
-    size_t size = 0;
-    size_t capacity = 0;
-    size_t max_size = 0;
-
-    void toJson(detail::JsonWriter& writer) const;
-  };
-  detail::StaticVector<QueueInfo, 16> queues;
+  detail::StaticVector<QueueStatus, 16> queues;
+  MemoryStatus memory;
 
   void toJson(detail::JsonWriter& writer) const;
 };
@@ -219,6 +236,7 @@ struct ServiceStatus {
   DeviceManagerStatus device_manager;
   DeviceScannerStatus device_scanner;
   PollManagerStatus poll_manager;
+  MemoryStatus memory;
 
   void toJson(detail::JsonWriter& writer) const;
 };

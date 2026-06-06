@@ -64,7 +64,6 @@ class JsonWriter {
   void endObject() {
     flush();
     write("}");
-    first_ = false;
   }
 
   void startArray() {
@@ -75,7 +74,6 @@ class JsonWriter {
   void endArray() {
     flush();
     write("]");
-    first_ = false;
   }
 
   void appendKey(std::string_view key) {
@@ -145,6 +143,11 @@ class JsonWriter {
   }
 
   // --- Field Writers (for objects) ---
+
+  void writeRaw(std::string_view s) {
+    write(s);
+    first_ = false;
+  }
 
   void writeField(std::string_view key, std::string_view val) {
     appendKey(key);

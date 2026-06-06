@@ -339,7 +339,8 @@ size_t Scheduler::queueSize() {
 size_t Scheduler::queueCapacity() const { return SchedulerLimits::max_items; }
 
 SchedulerStatus Scheduler::getStatus() {
-  return SchedulerStatus{queueSize(), queueCapacity(), max_queue_size_};
+  return SchedulerStatus{
+      QueueStatus("scheduler", queueSize(), queueCapacity(), max_queue_size_)};
 }
 
 void Scheduler::resetPeakMetrics() {

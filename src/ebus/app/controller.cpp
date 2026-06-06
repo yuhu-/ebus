@@ -30,6 +30,11 @@
 #include "utils/circular_buffer.hpp"
 #include "utils/logger.hpp"
 
+#if defined(ESP_PLATFORM)
+#include <esp_heap_caps.h>
+#include <esp_system.h>
+#endif
+
 namespace ebus {
 
 struct Impl {
@@ -518,10 +523,14 @@ void Controller::fetchSystemResources(
                         impl_->max_reactor_queue_.load()});
 
   if (impl_->scheduler_) {
-    auto s_stat = impl_->scheduler_->getStatus();
-    res.queues.push_back({"scheduler", s_stat.queue_size, s_stat.queue_capacity,
-                          s_stat.max_queue_size});
+    res.queues.push_back(impl_->scheduler_->getStatus().queue);
   }
+
+#if defined(ESP_PLATFORM)
+  res.memory =
+      MemoryStatus(heap_caps_get_total_size(MALLOC_CAP_DEFAULT),
+                   esp_get_free_heap_size(), esp_get_minimum_free_heap_size());
+#endif
 
   callback(res);
 }
@@ -581,6 +590,11 @@ void Controller::getServiceStatus(ServiceStatus& status) const {
     status.device_manager = impl_->device_manager_->getStatus();
     status.device_scanner = impl_->device_scanner_->getStatus();
     status.poll_manager = impl_->poll_manager_->getStatus();
+#if defined(ESP_PLATFORM)
+    status.memory = MemoryStatus(heap_caps_get_total_size(MALLOC_CAP_DEFAULT),
+                                 esp_get_free_heap_size(),
+                                 esp_get_minimum_free_heap_size());
+#endif
   }
 }
 
@@ -596,6 +610,9 @@ void Controller::processPublicEvents() {
   }
 
   ProtocolEvent ev;
+#if defined(ESP_PLATFORM)
+  uint8_t count = 0;
+#endif
   // 1. Prioritize Errors: Drain all pending error events first
   while (impl_->event_errors_.tryPop(ev)) {
     const auto& callback = err_callback;
@@ -608,6 +625,15 @@ void Controller::processPublicEvents() {
                      ev.master,          ev.slave};
       callback(info);
     }
+
+#if defined(ESP_PLATFORM)
+    // Cooperative yielding during burst of callbacks to allow lower priority
+    // threads (like SYN generator) to run.
+    if (++count > 4) {
+      count = 0;
+      vTaskDelay(1);
+    }
+#endif
   }
 
   // 2. Process Telegrams
@@ -625,6 +651,14 @@ void Controller::processPublicEvents() {
                         ev.slave};
       callback(info);
     }
+
+#if defined(ESP_PLATFORM)
+    // Cooperative yielding during burst of callbacks
+    if (++count > 4) {
+      count = 0;
+      vTaskDelay(1);
+    }
+#endif
   }
 }
 
@@ -946,6 +980,7 @@ void Controller::run() {
   };
 
   auto last_status_update = Clock::now();
+  uint32_t burst_count = 0;
 
   while (running_.load()) {
     auto loop_start = Clock::now();
@@ -1019,7 +1054,22 @@ void Controller::run() {
       while (impl_->reactor_queue_.tryPop(ev)) {
         if (processEvent(ev)) activity = true;
         if (!running_.load()) return;
+
+        // CPU Starvation Fix: If processing a large burst, force a yield to
+        // allow the IDLE task, watchdog, and lower priority threads (SYN gen)
+        // to breathe.
+        if (++burst_count > 10) {
+          burst_count = 0;
+#if defined(ESP_PLATFORM)
+          vTaskDelay(1);
+          // Mark activity as handled so we don't double-yield at the loop end
+          activity = false;
+#endif
+          break;
+        }
       }
+    } else {
+      burst_count = 0;
     }
 
     // Ensure public events are processed even if the queue pop didn't happen
@@ -1028,6 +1078,14 @@ void Controller::run() {
     if (activity) {
       processPublicEvents();
     }
+
+#if defined(ESP_PLATFORM)
+    // Mandatory yield on single-core if activity happened to ensure fairness.
+    // If pop() blocked above, the OS already handled yielding.
+    if (activity) {
+      vTaskDelay(1);
+    }
+#endif
 
     // Update loop performance metrics
     auto loop_duration = std::chrono::duration_cast<std::chrono::microseconds>(
@@ -1044,9 +1102,10 @@ void Controller::run() {
     });
 
     // Throttle status updates (e.g., max once per 100ms) to save CPU/Stack
-    // Only refresh if no high-priority activity is currently pending
-    if (!activity &&
-        (Clock::now() - last_status_update > std::chrono::milliseconds(100))) {
+    // Fixed: Update status even during activity if too much time has passed
+    auto time_since_update = Clock::now() - last_status_update;
+    if ((!activity && time_since_update > std::chrono::milliseconds(100)) ||
+        (time_since_update > std::chrono::milliseconds(500))) {
       std::lock_guard<std::mutex> lock(impl_->status_mutex_);
       getServiceStatus(impl_->status_cache_);
       last_status_update = Clock::now();
