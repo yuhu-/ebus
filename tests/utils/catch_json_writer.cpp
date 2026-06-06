@@ -70,6 +70,39 @@ TEST_CASE("JSON Utils: Streaming Writer", "[utils][json]") {
     }
     REQUIRE(result == "{\"list\":[1,2]}");
   }
+
+  SECTION("Deeply nested commas and delimiters") {
+    result.clear();
+    {
+      ebus::detail::JsonWriter writer(visitor);
+      writer.startObject();
+      writer.writeField("outer_val", 1);
+
+      writer.appendKey("nested_obj");
+      writer.startObject();
+      writer.writeField("inner_val", 2);
+      writer.endObject();
+
+      writer.appendKey("nested_arr");
+      writer.startArray();
+      // Manual calls to startObject in array (simulating user loops)
+      writer.startObject();
+      writer.writeField("id", 1);
+      writer.endObject();
+
+      writer.startObject();
+      writer.writeField("id", 2);
+      writer.endObject();
+      writer.endArray();
+
+      writer.writeField("tail", 3);
+      writer.endObject();
+    }
+    // Verify exact sequence of commas and braces
+    REQUIRE(result ==
+            "{\"outer_val\":1,\"nested_obj\":{\"inner_val\":2},\"nested_arr\":["
+            "{\"id\":1},{\"id\":2}],\"tail\":3}");
+  }
 }
 
 TEST_CASE("JSON Utils: Parsing Helpers", "[utils][json]") {
