@@ -57,6 +57,7 @@ class JsonWriter {
   }
 
   void startObject() {
+    if (!first_) write(",");
     write("{");
     first_ = true;
   }
@@ -64,9 +65,11 @@ class JsonWriter {
   void endObject() {
     flush();
     write("}");
+    first_ = false;
   }
 
   void startArray() {
+    if (!first_) write(",");
     write("[");
     first_ = true;
   }
@@ -74,6 +77,7 @@ class JsonWriter {
   void endArray() {
     flush();
     write("]");
+    first_ = false;
   }
 
   void appendKey(std::string_view key) {
@@ -103,6 +107,7 @@ class JsonWriter {
   std::enable_if_t<detail::has_to_json<T>::value, void> writeValue(
       const T& val) {
     if (!first_) write(",");
+    first_ = true; // Inform child toJson that comma is already handled
     flush();
     val.toJson(*this);
     first_ = false;
@@ -161,6 +166,7 @@ class JsonWriter {
   std::enable_if_t<detail::has_to_json<T>::value, void> writeField(
       std::string_view key, const T& val) {
     appendKey(key);
+    first_ = true; // Inform child toJson that comma is already handled
     flush();
     val.toJson(*this);
     first_ = false;
@@ -223,13 +229,12 @@ class JsonWriter {
   }
 
   void writeTimestampField(std::string_view key, uint64_t ms);
-  void appendHexField(ByteView data);
 
   bool isFirst() const { return first_; }
 
  private:
   JsonChunkVisitor visitor_;
-  char buffer_[128];  // Optimized for ESP32-C3 stack usage
+  char buffer_[256];  // Optimized for ESP32-C3 stack usage
   size_t pos_ = 0;
   bool first_ = true;
 };
