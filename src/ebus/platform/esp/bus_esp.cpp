@@ -169,9 +169,8 @@ void BusEsp::writeByte(const uint8_t byte) {
   last_activity_micros_ = esp_timer_get_time();
   portEXIT_CRITICAL(&timer_mux_);
 
-  // Use a 10ms timeout to avoid blocking the high-priority bus task
-  uart_write_bytes(uart_port_num_, static_cast<const void*>(&byte), 1,
-                   pdMS_TO_TICKS(10));
+  // Write the byte to the UART; this blocks until there is space in the TX FIFO
+  uart_write_bytes(uart_port_num_, static_cast<const void*>(&byte), 1);
 
   if (monitor_) monitor_->transmit.markEnd();
 }
@@ -334,8 +333,8 @@ void BusEsp::ebusUartEventRunner() {
           const auto arrival_time = Clock::now();
           const uint8_t byte = data[i];
 
-          CriticalSection l_lock{&listener_mux_};
-          lockAndInvoke(l_lock, getReadListeners(), byte);
+          CriticalSection r_lock{&listener_mux_};
+          lockAndInvoke(r_lock, getReadListeners(), byte);
 
           recordUtilization(byte);
 
@@ -450,8 +449,8 @@ void BusEsp::ebusUartEventRunner() {
 
           bus_event.timestamp = arrival_time;
 
-          CriticalSection l_lock{&listener_mux_};
-          lockAndInvoke(l_lock, getBusEventListeners(), bus_event);
+          CriticalSection ev_lock{&listener_mux_};
+          lockAndInvoke(ev_lock, getBusEventListeners(), bus_event);
 
           // Reset SYN Timer (Arbitration Logic)
           portENTER_CRITICAL(&timer_mux_);
