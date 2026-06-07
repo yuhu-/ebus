@@ -194,6 +194,14 @@ class JsonWriter {
     first_ = false;
   }
 
+  void writeHexValue(ByteView data) {
+    beforeValue();
+    write("\"");
+    ebus::detail::appendHexFieldToWriter(*this, data);
+    write("\"");
+    first_ = false;
+  }
+
   // --- Field Writers (for objects) ---
 
   void writeRaw(std::string_view s) {
