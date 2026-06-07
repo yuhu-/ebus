@@ -114,11 +114,12 @@ inline T toNum(std::string_view s) {
     else
       val = static_cast<T>(std::strtod(buf, &end));
   } else {
-    int base = 10;
     std::string_view sv = s;
-    if (sv.size() > 2 && sv[0] == '0' && (sv[1] == 'x' || sv[1] == 'X')) {
+    int base = (sv.size() > 2 && sv[0] == '0' && (sv[1] == 'x' || sv[1] == 'X'))
+                   ? 16
+                   : 10;
+    if (base == 16) {
       sv.remove_prefix(2);
-      base = 16;
     }
     std::from_chars(sv.data(), sv.data() + sv.size(), val, base);
   }
@@ -134,10 +135,10 @@ template <typename T, typename = std::enable_if_t<std::is_arithmetic_v<T>>>
 inline std::optional<T> toNumStrict(std::string_view s) {
   if (s.empty() || s == "null") return std::nullopt;
   T val = 0;
-  int base = 10;
-  std::string_view sv = s;
 
   if constexpr (!std::is_floating_point_v<T>) {
+    std::string_view sv = s;
+    int base = 10;
     if (sv.size() > 2 && sv[0] == '0' && (sv[1] == 'x' || sv[1] == 'X')) {
       sv.remove_prefix(2);
       base = 16;

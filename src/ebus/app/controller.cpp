@@ -1083,15 +1083,12 @@ void Controller::run() {
     // callbacks during high bus activity.
     if (activity) {
       processPublicEvents();
-    }
-
 #if defined(ESP_PLATFORM)
-    // Mandatory yield on single-core if activity happened to ensure fairness.
-    // If pop() blocked above, the OS already handled yielding.
-    if (activity) {
+      // Mandatory yield on single-core if activity happened to ensure fairness.
+      // If pop() blocked above, the OS already handled yielding.
       vTaskDelay(1);
-    }
 #endif
+    }
 
     // Update loop performance metrics
     auto loop_duration = std::chrono::duration_cast<std::chrono::microseconds>(

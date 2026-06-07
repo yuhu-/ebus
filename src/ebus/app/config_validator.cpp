@@ -89,9 +89,8 @@ bool ConfigValidator::validateJson(std::string_view json) {
   }
 
   // Check nested scheduler fields
-  int max_attempts = 1;
   if (reader.get("scheduler.max_send_attempts") == JsonReader::Token::Number) {
-    max_attempts = reader.asNum<int>();
+    int max_attempts = reader.asNum<int>();
     if (max_attempts < 1) return false;
   }
 
