@@ -26,7 +26,7 @@ class Device {
   static Sequence createScanCommand(uint8_t slave);
 
   // Working Methods
-  void update(ByteView master_view, ByteView slave_view);
+  void update(uint8_t slave_addr, ByteView master_view, ByteView slave_view);
   void createVendorScanCommands(
       const std::function<void(const Sequence&)>& callback) const;
 

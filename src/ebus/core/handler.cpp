@@ -232,18 +232,32 @@ void Handler::passiveReceiveMaster(uint8_t byte) {
     if (current_len == 0) {
       // QQ: Must be a master address
       if (!ebus::isMaster(byte)) {
+        if (monitor_)
+          monitor_->updateHandler([](auto& m) { m.invalid_bytes++; });
         callPassiveReset();
         return;
       }
     } else if (current_len == 1) {
       // ZZ: Must be a valid target (Master/Slave/Broad)
       if (!ebus::isTarget(byte)) {
+        if (monitor_)
+          monitor_->updateHandler([](auto& m) { m.invalid_bytes++; });
+        callPassiveReset();
+        return;
+      }
+    } else if (current_len == 2 || current_len == 3) {
+      // PB/SB: Must not be AA or A9 (Spec 5.4 & 5.5)
+      if (byte == Symbols::syn || byte == Symbols::ext) {
+        if (monitor_)
+          monitor_->updateHandler([](auto& m) { m.invalid_bytes++; });
         callPassiveReset();
         return;
       }
     } else if (current_len == 4) {
       // NN: Number of data bytes must be 0-16
       if (byte > SequenceLimits::max_data_bytes) {
+        if (monitor_)
+          monitor_->updateHandler([](auto& m) { m.invalid_bytes++; });
         callPassiveReset();
         return;
       }
@@ -375,6 +389,7 @@ void Handler::passiveReceiveSlave(uint8_t byte) {
   if (passive_slave_.empty()) {
     // Plausibility: Slave NN must be 0-16
     if (byte > SequenceLimits::max_data_bytes) {
+      if (monitor_) monitor_->updateHandler([](auto& m) { m.invalid_bytes++; });
       callPassiveReset();
       return;
     }
@@ -647,6 +662,22 @@ void Handler::activeReceiveMasterAcknowledge(uint8_t byte) {
 }
 
 void Handler::activeReceiveSlave(uint8_t byte) {
+  if (active_slave_.empty()) {
+    // Plausibility: Slave NN must be 0-16
+    if (byte > SequenceLimits::max_data_bytes) {
+      if (monitor_) monitor_->updateHandler([](auto& m) { m.invalid_bytes++; });
+      callOnError(LogLevel::error, ProtocolError::error_active_slave,
+                  SequenceState::err_data_byte,
+                  {active_master_.data(), active_master_.size()}, {});
+
+      active_slave_.clear();
+      active_slave_dbx_ = 0;
+      callWrite(Symbols::nak);
+      transitionTo(HandlerState::active_send_slave_negative_acknowledge);
+      return;
+    }
+  }
+
   active_slave_.pushBack(byte);
 
   if (active_slave_.size() == 1) active_slave_dbx_ = byte;
@@ -706,6 +737,9 @@ void Handler::activeSendSlaveNegativeAcknowledge(
 }
 
 void Handler::releaseBus([[maybe_unused]] uint8_t byte) {
+  // If we receive data bytes during bus release (before next SYN), it's noise.
+  if (byte != Symbols::syn && monitor_)
+    monitor_->updateHandler([](auto& m) { m.invalid_bytes++; });
   transitionTo(HandlerState::passive_receive_master);
 }
 

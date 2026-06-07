@@ -499,7 +499,7 @@ void Controller::fetchSystemResources(
   if (!callback) return;
   SystemResources res;
 
-  res.timestamp_ms = ebus::getWallTimeMs();
+  res.last_update_timestamp_ms = ebus::getWallTimeMs();
   res.is_configured = isConfigured();
   res.is_running = isRunning();
 
@@ -1109,6 +1109,9 @@ void Controller::run() {
     auto time_since_update = Clock::now() - last_status_update;
     if ((!activity && time_since_update > std::chrono::milliseconds(100)) ||
         (time_since_update > std::chrono::milliseconds(500))) {
+      // Populate the utilization history time-series before taking the snapshot
+      impl_->bus_monitor_->updateUtilizationHistory();
+
       std::lock_guard<std::mutex> lock(impl_->status_mutex_);
       getServiceStatus(impl_->status_cache_);
       last_status_update = Clock::now();

@@ -43,29 +43,41 @@ void DeviceManager::update(ByteView master_view, ByteView slave_view) {
     });
   }
 
-  // Devices
+  // Device Inventory & Frequency Tracking
   uint8_t target = master_view[1];
-  if (target == ebus::slaveOf(own_address_)) return;
 
-  if (ebus::isSlave(target)) {
-    int16_t idx = address_map_[target];
+  auto updateEntry = [&](uint8_t slave_addr, ByteView m_view, ByteView s_view) {
+    if (slave_addr == ebus::slaveOf(own_address_)) return;
+
+    int16_t idx = address_map_[slave_addr];
     if (idx == -1) {
       if (pool_usage_ >= max_devices_) return;
 
       idx = static_cast<int16_t>(pool_usage_++);
-      address_map_[target] = idx;
-      identified_devices_.set(target);
+      address_map_[slave_addr] = idx;
+      identified_devices_.set(slave_addr);
 
       if (monitor_) {
         monitor_->updateDevice([](auto& d) {
           if (d.unknown_devices > 0) d.unknown_devices--;
         });
-        monitor_->updateDevice([](auto& d) { d.identified_devices++; });
+        monitor_->updateDevice([this](auto& d) {
+          d.identified_devices = static_cast<uint32_t>(pool_usage_);
+        });
       }
     }
+    device_pool_[idx].update(slave_addr, m_view, s_view);
+  };
 
-    device_pool_[idx].update(master_view, slave_view);
-  }
+  // 1. Track Source Activity (Master)
+  if (ebus::isMaster(m_addr))
+    updateEntry(ebus::slaveOf(m_addr), master_view, {});
+
+  // 2. Track Target Activity (Master or Slave)
+  if (ebus::isMaster(target))
+    updateEntry(ebus::slaveOf(target), master_view, {});
+  else if (ebus::isSlave(target))
+    updateEntry(target, master_view, slave_view);
 }
 
 void DeviceManager::vendorScanCommands(
@@ -127,8 +139,6 @@ DeviceManagerStatus DeviceManager::getStatus() const {
   DeviceManagerStatus s;
   s.identified_count = identified_devices_.count();
   s.device_capacity = max_devices_;
-  s.masters = masters_;
-  s.slaves = slaves_;
   if (monitor_) {
     monitor_->fetchMetrics(
         [&](const Metrics& m) { s.unknown_count = m.devices.unknown_devices; });

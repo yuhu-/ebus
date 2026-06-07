@@ -68,6 +68,7 @@ struct HandlerMetrics {
   uint64_t total_sent_protocol_bytes = 0;
   uint64_t total_observed_data_bytes = 0;
   uint64_t total_observed_protocol_bytes = 0;
+  uint32_t invalid_bytes = 0;
   uint8_t last_error_address = 0xff;
   uint8_t last_success_address = 0xff;
   uint64_t last_passive_reset_us = 0;

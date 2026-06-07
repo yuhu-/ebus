@@ -158,7 +158,8 @@ void PollManager::resetPeakMetrics() {
 
 PollManagerStatus PollManager::getStatus() const {
   std::lock_guard<std::mutex> lock(mutex_);
-  return PollManagerStatus{items_.size(), max_item_count_};
+  return PollManagerStatus{items_.size(), max_item_count_,
+                           detail::PollLimits::max_items};
 }
 
 }  // namespace ebus::detail

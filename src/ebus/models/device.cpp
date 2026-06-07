@@ -33,9 +33,13 @@ ebus::Sequence Device::createScanCommand(uint8_t slave) {
   return sequence;
 }
 
-void Device::update(ByteView master_view, ByteView slave_view) {
-  slave_ = master_view[1];
+void Device::update(uint8_t slave_addr, ByteView master_view,
+                    ByteView slave_view) {
+  slave_ = slave_addr;
   message_count_++;
+
+  if (slave_view.empty()) return;
+
   if (ebus::matches(master_view, VEC_070400, 2))
     vec_070400_.assign(slave_view);
   else if (ebus::matches(master_view, VEC_b5090124, 2))

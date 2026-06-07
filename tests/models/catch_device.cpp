@@ -28,7 +28,7 @@ TEST_CASE("Device: update parsing", "[models][device]") {
   std::vector<uint8_t> slave = {0x0a, 0xda, 0x45, 0x53, 0x50, 0x44,
                                 0x41, 0x07, 0x02, 0x06, 0x03};
 
-  dev.update(master, slave);
+  dev.update(0x15, master, slave);
 
   auto info = dev.getDeviceInfo();
   REQUIRE(info.manufacturer == 0xda);
@@ -43,7 +43,7 @@ TEST_CASE("Device: Vaillant vendor scan commands", "[models][device]") {
   std::vector<uint8_t> master = {0x10, 0x15, 0x07, 0x04, 0x00};
   std::vector<uint8_t> slave = {0x0a, 0xb5, 0x00, 0x00, 0x00, 0x00, 0x00};
 
-  dev.update(master, slave);
+  dev.update(0x15, master, slave);
 
   std::vector<ebus::Sequence> vendor_cmds;
   dev.createVendorScanCommands(
@@ -75,10 +75,10 @@ TEST_CASE("Device: Vaillant full identification", "[models][device]") {
   std::vector<uint8_t> s4 = {0x09, 0x4e, 0x34, 0x00, 0x00,
                              0x00, 0x00, 0x00, 0x00, 0x00};
 
-  dev.update(m1, s1);
-  dev.update(m2, s2);
-  dev.update(m3, s3);
-  dev.update(m4, s4);
+  dev.update(0x52, m1, s1);
+  dev.update(0x52, m2, s2);
+  dev.update(0x52, m3, s3);
+  dev.update(0x52, m4, s4);
 
   REQUIRE(dev.getSlave() == 0x52);
 

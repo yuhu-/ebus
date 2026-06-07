@@ -347,6 +347,7 @@ void metrics::HandlerMetrics::reset() {
   total_sent_protocol_bytes = 0;
   total_observed_data_bytes = 0;
   total_observed_protocol_bytes = 0;
+  invalid_bytes = 0;
   last_error_address = 0xff;
   last_success_address = 0xff;
   last_passive_reset_us = 0;
@@ -396,6 +397,7 @@ void metrics::HandlerMetrics::toJson(detail::JsonWriter& writer) const {
   writer.writeField("error_active", error_active);
   writer.writeField("resets_passive", resets_passive);
   writer.writeField("resets_active", resets_active);
+  writer.writeField("invalid_bytes", invalid_bytes);
   writer.writeHexField("last_error_address", ByteView(&last_error_address, 1));
   if (last_success_address != 0xff) {
     writer.writeHexField("last_success_address",
@@ -408,18 +410,17 @@ void metrics::HandlerMetrics::toJson(detail::JsonWriter& writer) const {
     writer.writeField("last_active_reset_us", last_active_reset_us);
   }
 
-  writer.appendKey("top_errors");
-  writer.startArray();
-  for (const auto& entry : top_errors) {
-    if (entry.count > 0) {
-      writer.startObject();
-      writer.writeHexField("address", ByteView(&entry.address, 1));
-      writer.writeField("count", entry.count);
-      writer.writeField("last_seen_us", entry.last_seen_us);
-      writer.endObject();
+  {
+    auto arrayScope = writer.arrayScope("top_errors");
+    for (const auto& entry : top_errors) {
+      if (entry.count > 0) {
+        auto entryScope = writer.objectScope();
+        writer.writeHexField("address", ByteView(&entry.address, 1));
+        writer.writeField("count", entry.count);
+        writer.writeField("last_seen_us", entry.last_seen_us);
+      }
     }
   }
-  writer.endArray();
 
   writer.writeField("total_sent_data_bytes", total_sent_data_bytes);
   writer.writeField("total_sent_protocol_bytes", total_sent_protocol_bytes);
@@ -591,9 +592,9 @@ void ThreadStatus::toJson(detail::JsonWriter& writer) const {
   }
 
   // Only output stack metrics if they are actually available (ESP32)
-  if (task_stack_bytes != -1) {
-    writer.writeField("stack_size", task_stack_bytes);
-    writer.writeField("stack_free", task_stack_free_bytes);
+  if (stack_size != -1) {
+    writer.writeField("stack_size", stack_size);
+    writer.writeField("stack_free", stack_free);
   }
 }
 
@@ -668,34 +669,13 @@ void DeviceManagerStatus::toJson(detail::JsonWriter& writer) const {
   writer.writeField("identified_count", identified_count);
   writer.writeField("device_capacity", device_capacity);
   writer.writeField("unknown_count", unknown_count);
-
-  // Serialize bitsets as 32-byte hex strings (256 bits) for protocol visibility
-  auto writeBitset = [&](std::string_view key, const std::bitset<256>& bits) {
-    uint8_t bytes[32];
-    for (int i = 0; i < 32; ++i) {
-      uint8_t b = 0;
-      for (int j = 0; j < 8; ++j) {
-        if (bits.test(i * 8 + j)) b |= (1 << j);
-      }
-      bytes[i] = b;
-    }
-    writer.writeHexField(key, ByteView(bytes, 32));
-  };
-
-  writeBitset("masters_active", masters);
-  writeBitset("slaves_active", slaves);
 }
 
 void DeviceScannerStatus::toJson(detail::JsonWriter& writer) const {
   auto scope = writer.objectScope();
   writer.writeField("is_scanning", is_scanning);
   writer.writeField("full_scan_active", full_scan_active);
-  if (full_scan_address <= 0xff) {
-    uint8_t addr = static_cast<uint8_t>(full_scan_address);
-    writer.writeHexField("full_scan_address", ByteView(&addr, 1));
-  } else {
-    writer.writeField("full_scan_address", full_scan_address);
-  }
+  writer.writeField("full_scan_address", full_scan_address);
   writer.writeField("scan_on_startup_enabled", scan_on_startup_enabled);
   writer.writeField("startup_scan_count", startup_scan_count);
   writer.writeField("manual_queue_size", manual_queue_size);
@@ -708,12 +688,12 @@ void PollManagerStatus::toJson(detail::JsonWriter& writer) const {
   auto scope = writer.objectScope();
   writer.writeField("item_count", item_count);
   writer.writeField("max_item_count", max_item_count);
-  writer.writeField("poll_capacity", detail::PollLimits::max_items);
+  writer.writeField("poll_capacity", poll_capacity);
 }
 
 void SystemResources::toJson(detail::JsonWriter& writer) const {
   auto scope = writer.objectScope();
-  writer.writeField("timestamp_ms", timestamp_ms);
+  writer.writeField("last_update_timestamp_ms", last_update_timestamp_ms);
   writer.writeField("is_configured", is_configured);
   writer.writeField("is_running", is_running);
   {
@@ -788,7 +768,6 @@ void serializeServiceStatus(const JsonChunkVisitor& visitor,
     }
 #endif
   }
-  writer.endObject();
 }
 
 }  // namespace ebus

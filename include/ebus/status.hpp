@@ -30,12 +30,10 @@ struct ThreadStatus {
   ThreadStatus() = default;
   ThreadStatus(std::string_view n, int32_t stack_bytes,
                int32_t stack_free_bytes)
-      : name(n),
-        task_stack_bytes(stack_bytes),
-        task_stack_free_bytes(stack_free_bytes) {}
+      : name(n), stack_size(stack_bytes), stack_free(stack_free_bytes) {}
   FixedString<24> name;
-  int32_t task_stack_bytes = -1;
-  int32_t task_stack_free_bytes = -1;
+  int32_t stack_size = -1;
+  int32_t stack_free = -1;
 
   void toJson(detail::JsonWriter& writer) const;
 };
@@ -173,8 +171,6 @@ struct DeviceManagerStatus {
   size_t identified_count = 0;
   size_t unknown_count = 0;
   size_t device_capacity = 0;
-  std::bitset<256> masters{};
-  std::bitset<256> slaves{};
 
   void toJson(detail::JsonWriter& writer) const;
 };
@@ -185,7 +181,7 @@ struct DeviceManagerStatus {
 struct DeviceScannerStatus {
   bool is_scanning = false;
   bool full_scan_active = false;
-  uint16_t full_scan_address = 0;
+  uint8_t full_scan_address = 0;
   bool scan_on_startup_enabled = false;
   uint8_t startup_scan_count = 0;
   size_t manual_queue_size = 0;
@@ -201,10 +197,11 @@ struct DeviceScannerStatus {
  */
 struct PollManagerStatus {
   PollManagerStatus() = default;
-  PollManagerStatus(size_t count, size_t max_count)
-      : item_count(count), max_item_count(max_count) {}
+  PollManagerStatus(size_t count, size_t max_count, size_t capacity)
+      : item_count(count), max_item_count(max_count), poll_capacity(capacity) {}
   size_t item_count = 0;
   size_t max_item_count = 0;
+  size_t poll_capacity = 0;
 
   void toJson(detail::JsonWriter& writer) const;
 };
@@ -213,7 +210,7 @@ struct PollManagerStatus {
  * Minimal snapshot of system resources (stacks and queues).
  */
 struct SystemResources {
-  uint64_t timestamp_ms = 0;
+  uint64_t last_update_timestamp_ms = 0;
   bool is_configured = false;
   bool is_running = false;
   detail::StaticVector<ThreadStatus, 8> threads;
@@ -257,7 +254,6 @@ struct ServiceStatus {
 void serializeServiceStatus(const JsonChunkVisitor& visitor,
                             const ServiceStatus& status,
                             detail::BusMonitor* monitor = nullptr,
-                            bool reset_histories = false,
-                            bool pretty = false);
+                            bool reset_histories = false, bool pretty = false);
 
 }  // namespace ebus
