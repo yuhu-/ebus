@@ -56,12 +56,12 @@ class TelegramImpl {
   TelegramImpl() = default;
 
   template <size_t C>
-  explicit TelegramImpl(SequenceImpl<C>& sequence) {
+  explicit TelegramImpl(ebus::SequenceImpl<C>& sequence) {
     parse(sequence);
   }
 
   template <size_t C>
-  void parse(SequenceImpl<C>& sequence) {
+  void parse(ebus::SequenceImpl<C>& sequence) {
     clear();
     sequence.reduce();  // Normalise to logical bytes
     size_t cursor = 0;
@@ -72,10 +72,10 @@ class TelegramImpl {
     if (!parseSequencePart(sequence, cursor, true)) return;
 
     if (telegram_type_ != TelegramType::broadcast &&
-        master_ack_ == Symbols::nak) {
+        master_ack_ == ebus::Symbols::nak) {
       if (!parseSequencePart(sequence, cursor, true)) return;
       // If second attempt also results in NAK, it's a protocol failure.
-      if (master_ack_ == Symbols::nak)
+      if (master_ack_ == ebus::Symbols::nak)
         master_state_ = SequenceState::err_ack_negative;
     }
 
@@ -254,10 +254,8 @@ class TelegramImpl {
     writer.writeField("type", ebus::toString(telegram_type_));
     writer.writeField("valid", isValid());
 
-    writer.appendKey("master");
     {
-      detail::JsonWriter::Scope masterScope(writer,
-                                            detail::JsonWriter::Scope::Object);
+      auto masterScope = writer.objectScope("master");
       writer.writeHexField("source", ByteView(&master_[0], 1));
       writer.writeHexField("target", ByteView(&master_[1], 1));
       writer.writeHexField("pb", ByteView(&master_[2], 1));
@@ -270,9 +268,7 @@ class TelegramImpl {
     }
 
     if (telegram_type_ == TelegramType::master_slave) {
-      writer.appendKey("slave");
-      detail::JsonWriter::Scope slaveScope(writer,
-                                           detail::JsonWriter::Scope::Object);
+      auto slaveScope = writer.objectScope("slave");
       writer.writeField("nn", static_cast<uint32_t>(slave_[0]));
       writer.writeHexField("data", getSlaveDataBytes());
       writer.writeHexField("crc", ByteView(&slave_crc_, 1));

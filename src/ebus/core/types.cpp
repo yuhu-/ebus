@@ -243,14 +243,14 @@ const char* toString(SessionState state) noexcept {
 }
 
 void HandlerTransition::toJson(detail::JsonWriter& writer) const {
-  detail::JsonWriter::Scope scope(writer, detail::JsonWriter::Scope::Object);
+  auto scope = writer.objectScope();
   writer.writeField("from", ebus::toString(from));
   writer.writeField("to", ebus::toString(to));
   writer.writeTimestampField("timestamp", timestamp);
 }
 
 void RequestTransition::toJson(detail::JsonWriter& writer) const {
-  detail::JsonWriter::Scope scope(writer, detail::JsonWriter::Scope::Object);
+  auto scope = writer.objectScope();
   writer.writeField("from", ebus::toString(from));
   writer.writeField("to", ebus::toString(to));
   writer.writeTimestampField("timestamp", timestamp);
@@ -295,7 +295,7 @@ std::string ErrorEntry::toString() const {
 }
 
 void ErrorEntry::toJson(detail::JsonWriter& writer) const {
-  detail::JsonWriter::Scope scope(writer, detail::JsonWriter::Scope::Object);
+  auto scope = writer.objectScope();
   writer.writeField("session_id", session_id);
   writer.writeField("poll_id", poll_id);
   writer.writeField("level", ebus::toString(level));

@@ -73,7 +73,8 @@ class PollManager {
 
   /**
    * @brief Deserializes and adds poll items from a JSON array.
-   * Expected format: [{"priority": 10, "message": "aabbcc", "interval_ms": 1000}, ...]
+   * Expected format: [{"priority": 10, "message": "aabbcc", "interval_ms":
+   * 1000}, ...]
    * @return true if the JSON was partially or fully parsed.
    */
   bool mergeFromJson(const std::string& json);

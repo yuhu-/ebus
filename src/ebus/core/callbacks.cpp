@@ -11,7 +11,7 @@
 namespace ebus {
 
 void TelegramInfo::toJson(detail::JsonWriter& writer) const {
-  detail::JsonWriter::Scope scope(writer, detail::JsonWriter::Scope::Object);
+  auto scope = writer.objectScope();
   writer.writeField("session_id", session_id);
   writer.writeField("poll_id", poll_id);
   writer.writeField("retry_count", retry_count);
@@ -24,7 +24,7 @@ void TelegramInfo::toJson(detail::JsonWriter& writer) const {
 }
 
 void ErrorInfo::toJson(detail::JsonWriter& writer) const {
-  detail::JsonWriter::Scope scope(writer, detail::JsonWriter::Scope::Object);
+  auto scope = writer.objectScope();
   writer.writeField("session_id", session_id);
   writer.writeField("poll_id", poll_id);
   writer.writeField("level", toString(level));
@@ -38,14 +38,14 @@ void ErrorInfo::toJson(detail::JsonWriter& writer) const {
 }
 
 void ReactiveInfo::toJson(detail::JsonWriter& writer) const {
-  detail::JsonWriter::Scope scope(writer, detail::JsonWriter::Scope::Object);
+  auto scope = writer.objectScope();
   writer.writeField("session_id", session_id);
   writer.writeHexField("master", master_view);
   writer.writeHexField("slave_response", slave_response);
 }
 
 void ResultInfo::toJson(detail::JsonWriter& writer) const {
-  detail::JsonWriter::Scope scope(writer, detail::JsonWriter::Scope::Object);
+  auto scope = writer.objectScope();
   writer.writeField("session_id", session_id);
   writer.writeField("poll_id", poll_id);
   writer.writeField("success", success);
@@ -62,7 +62,7 @@ void BusEventInfo::toJson(detail::JsonWriter& writer) const {
       std::chrono::duration_cast<std::chrono::system_clock::duration>(
           timestamp - Clock::now());
 
-  detail::JsonWriter::Scope scope(writer, detail::JsonWriter::Scope::Object);
+  auto scope = writer.objectScope();
   writer.writeHexField("byte", ByteView(&byte, 1));
   writer.writeField("handler_state", ebus::toString(handler_state));
   writer.writeField("request_state", ebus::toString(request_state));

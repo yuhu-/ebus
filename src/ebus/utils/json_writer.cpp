@@ -61,9 +61,19 @@ void writeEscapedJson(std::string_view s, const JsonChunkVisitor& visitor) {
 
 void appendHexFieldToWriter(JsonWriter& writer, ByteView data) {
   static constexpr char hex_chars[] = "0123456789abcdef";
+  char buf[64];
+  size_t buf_pos = 0;
+
   for (uint8_t b : data) {
-    char pair[2] = {hex_chars[b >> 4], hex_chars[b & 0xf]};
-    writer.write(std::string_view(pair, 2));
+    buf[buf_pos++] = hex_chars[b >> 4];
+    buf[buf_pos++] = hex_chars[b & 0xf];
+    if (buf_pos == sizeof(buf)) {
+      writer.write(std::string_view(buf, buf_pos));
+      buf_pos = 0;
+    }
+  }
+  if (buf_pos > 0) {
+    writer.write(std::string_view(buf, buf_pos));
   }
 }
 

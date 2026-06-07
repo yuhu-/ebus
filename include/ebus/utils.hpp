@@ -13,6 +13,7 @@
 #include <cstring>
 #include <initializer_list>
 #include <iterator>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <type_traits>
@@ -93,7 +94,8 @@ std::string_view extract(std::string_view json, std::string_view key);
 std::string_view extractSub(std::string_view json, std::string_view key);
 
 /**
- * Zero-allocation string-to-number converter.
+ * @brief Zero-allocation string-to-number converter.
+ * Lenient: stops at the first non-numeric character. Returns 0 on error.
  */
 template <typename T, typename = std::enable_if_t<std::is_arithmetic_v<T>>>
 inline T toNum(std::string_view s) {
@@ -112,9 +114,51 @@ inline T toNum(std::string_view s) {
     else
       val = static_cast<T>(std::strtod(buf, &end));
   } else {
-    std::from_chars(s.data(), s.data() + s.size(), val);
+    int base = 10;
+    std::string_view sv = s;
+    if (sv.size() > 2 && sv[0] == '0' && (sv[1] == 'x' || sv[1] == 'X')) {
+      sv.remove_prefix(2);
+      base = 16;
+    }
+    std::from_chars(sv.data(), sv.data() + sv.size(), val, base);
   }
   return val;
+}
+
+/**
+ * @brief Strict string-to-number converter.
+ * @return std::optional containing the value if the entire string was numeric,
+ *         otherwise nullopt.
+ */
+template <typename T, typename = std::enable_if_t<std::is_arithmetic_v<T>>>
+inline std::optional<T> toNumStrict(std::string_view s) {
+  if (s.empty() || s == "null") return std::nullopt;
+  T val = 0;
+  int base = 10;
+  std::string_view sv = s;
+
+  if constexpr (!std::is_floating_point_v<T>) {
+    if (sv.size() > 2 && sv[0] == '0' && (sv[1] == 'x' || sv[1] == 'X')) {
+      sv.remove_prefix(2);
+      base = 16;
+    }
+    auto [ptr, ec] =
+        std::from_chars(sv.data(), sv.data() + sv.size(), val, base);
+    if (ec != std::errc{} || ptr != sv.data() + sv.size()) return std::nullopt;
+    return val;
+  }
+  // For floats, fall back to lenient toNum or implement similar check if needed
+  return toNum<T>(s);
+}
+
+/**
+ * @brief Returns the current system wall-clock time in milliseconds since
+ * epoch.
+ */
+inline uint64_t getWallTimeMs() {
+  return std::chrono::duration_cast<std::chrono::milliseconds>(
+             std::chrono::system_clock::now().time_since_epoch())
+      .count();
 }
 
 /**

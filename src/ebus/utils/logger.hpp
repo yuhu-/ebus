@@ -45,6 +45,9 @@ class Logger {
    * @brief Logs a message if the level is enabled.
    * @note The LogSink is called synchronously. The caller must ensure
    * the sink is non-blocking to protect eBUS protocol timing.
+   *
+   * @warning On ESP32, standard I/O (printf/cout) blocks when UART buffers
+   * are full. Ensure your sink uses a queue or non-blocking logic.
    */
   void log(LogLevel level, std::string_view msg) {
     if (!isEnabled(level)) return;

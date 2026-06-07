@@ -11,6 +11,7 @@
 #include <string_view>
 #include <type_traits>
 #include <utility>
+#include <variant>
 
 #include "ebus/detail/protocol_limits.hpp"
 #include "ebus/types.hpp"
@@ -68,6 +69,32 @@ class JsonWriter {
   explicit JsonWriter(JsonChunkVisitor v, bool pretty = false)
       : visitor_(std::move(v)), buffer_{}, pretty_(pretty) {}
   ~JsonWriter() { flush(); }
+
+  /**
+   * @brief Returns a RAII scope for an object.
+   */
+  Scope objectScope() { return Scope(*this, Scope::Object); }
+
+  /**
+   * @brief Returns a RAII scope for an array.
+   */
+  Scope arrayScope() { return Scope(*this, Scope::Array); }
+
+  /**
+   * @brief Writes a key and returns a RAII scope for a nested object.
+   */
+  Scope objectScope(std::string_view key) {
+    appendKey(key);
+    return Scope(*this, Scope::Object);
+  }
+
+  /**
+   * @brief Writes a key and returns a RAII scope for a nested array.
+   */
+  Scope arrayScope(std::string_view key) {
+    appendKey(key);
+    return Scope(*this, Scope::Array);
+  }
 
   void write(std::string_view s) {
     if (pos_ + s.size() > sizeof(buffer_)) {
@@ -136,11 +163,31 @@ class JsonWriter {
   }
 
   void writeEscaped(std::string_view s) {
-    flush();
-    ebus::detail::writeEscapedJson(s, visitor_);  // Use fully qualified name
+    // Optimized: Use a lambda to route chunks back through write() for
+    // buffering, instead of calling the raw visitor directly and bypassing the
+    // 256-byte buffer.
+    ebus::detail::writeEscapedJson(
+        s, [this](std::string_view chunk) { this->write(chunk); });
   }
 
   // --- Value Writers (for arrays or raw values) ---
+
+  /**
+   * @brief Writes a null value.
+   */
+  void writeValue(std::monostate) {
+    beforeValue();
+    write("null");
+    first_ = false;
+  }
+
+  /**
+   * @brief Writes a value from a variant.
+   */
+  template <typename... Ts>
+  void writeValue(const std::variant<Ts...>& val) {
+    std::visit([this](const auto& arg) { this->writeValue(arg); }, val);
+  }
 
   void writeValue(std::string_view val) {
     beforeValue();
@@ -167,6 +214,11 @@ class JsonWriter {
     write(val ? "true" : "false");
     first_ = false;
   }
+
+  /**
+   * @brief Overload to allow float usage in generic/variant contexts.
+   */
+  void writeValue(float val) { writeValueFloat(val); }
 
   template <typename T>
   std::enable_if_t<std::is_integral_v<std::decay_t<T>> &&
@@ -219,6 +271,17 @@ class JsonWriter {
     first_ = false;
   }
 
+  /**
+   * @brief Writes a field containing a variant value.
+   * Automatically handles the correct type mapping via std::visit.
+   */
+  template <typename... Ts>
+  void writeField(std::string_view key, const std::variant<Ts...>& val) {
+    appendKey(key);
+    // Pass directly to variant writeValue to reuse dispatch logic
+    writeValue(val);
+  }
+
   template <typename T>
   std::enable_if_t<detail::has_to_json<T>::value, void> writeField(
       std::string_view key, const T& val) {
@@ -263,6 +326,13 @@ class JsonWriter {
     first_ = false;
   }
 
+  /**
+   * @brief Overload to allow float usage in generic/variant contexts.
+   */
+  void writeField(std::string_view key, float val) {
+    writeFieldFloat(key, val);
+  }
+
   void writeFieldFloat(std::string_view key, float val, int precision = 2) {
     appendKey(key);
     char buf[32];
@@ -283,6 +353,13 @@ class JsonWriter {
     ebus::detail::appendHexFieldToWriter(*this, data);
     write("\"");
     first_ = false;
+  }
+
+  /**
+   * @brief Alias for writeHexField for naming consistency.
+   */
+  void writeFieldHex(std::string_view key, ByteView data) {
+    writeHexField(key, data);
   }
 
   void writeTimestampField(std::string_view key, uint64_t ms);

@@ -60,6 +60,14 @@ class Controller {
   bool configure(const EbusConfig& config);
 
   /**
+   * @brief Applies a configuration update from a JSON string.
+   * Validates the JSON schema and limits before applying.
+   * @param json The configuration JSON (can be partial).
+   * @return true if the configuration was valid and applied.
+   */
+  bool configure(std::string_view json);
+
+  /**
    * @brief Returns the current configuration.
    */
   EbusConfig getConfig() const;

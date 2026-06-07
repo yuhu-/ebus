@@ -19,6 +19,13 @@ class ConfigValidator {
   static bool validate(const EbusConfig& config);
 
   /**
+   * @brief Performs a "Schema-like" validation of raw JSON string.
+   * Verifies that numeric values for keys like 'address' and 'window_us'
+   * fall within eBUS protocol limits.
+   */
+  static bool validateJson(std::string_view json);
+
+  /**
    * Checks if two configs require a hardware restart (Bus/UART recreation).
    */
   static bool requiresHardwareRestart(const EbusConfig& old_cfg,

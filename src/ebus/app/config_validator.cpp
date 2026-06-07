@@ -5,6 +5,7 @@
 
 #include <ebus/address.hpp>
 #include <ebus/detail/config_validator.hpp>
+#include <ebus/detail/json_reader.hpp>
 #include <ebus/detail/protocol_limits.hpp>
 
 namespace ebus::detail {
@@ -45,6 +46,84 @@ bool ConfigValidator::validate(const EbusConfig& config) {
 #if defined(POSIX) && !EBUS_SIMULATION
   if (config.bus.device.empty()) return false;
 #endif
+
+  return true;
+}
+
+bool ConfigValidator::validateJson(std::string_view json) {
+  if (!JsonReader::validate(json)) return false;
+  JsonReader reader(json);
+
+  // Check root fields
+  auto address_token = reader.get("address");
+  if (address_token == JsonReader::Token::Number ||
+      address_token == JsonReader::Token::String) {
+    // Optimization Review: Use toNumStrict to reject illegal characters in
+    // hex/dec strings
+    auto val = reader.asNumStrict<int>();
+    if (!val || !ebus::isMaster(static_cast<uint8_t>(*val))) return false;
+  }
+
+  if (reader.get("lock_counter") == JsonReader::Token::Number) {
+    auto val = reader.asNumStrict<int>();
+    if (!val || *val > RequestLimits::lock_counter_max) return false;
+  }
+
+  // Check nested bus fields
+  auto window_token = reader.get("bus.window_us");
+  if (window_token == JsonReader::Token::Number ||
+      window_token == JsonReader::Token::String) {
+    auto val = reader.asNumStrict<int>();
+    if (!val || *val < BusLimits::window_min_us ||
+        *val > BusLimits::window_max_us)
+      return false;
+  }
+  auto offset_token = reader.get("bus.offset_us");
+  if (offset_token == JsonReader::Token::Number ||
+      offset_token == JsonReader::Token::String) {
+    auto val = reader.asNumStrict<int>();
+    if (!val || *val > BusLimits::offset_max_us) return false;
+  }
+  if (reader.get("bus.watchdog_timeout_ms") == JsonReader::Token::Number) {
+    if (reader.asNum<int>() == 0) return false;
+  }
+
+  // Check nested scheduler fields
+  int max_attempts = 1;
+  if (reader.get("scheduler.max_send_attempts") == JsonReader::Token::Number) {
+    max_attempts = reader.asNum<int>();
+    if (max_attempts < 1) return false;
+  }
+
+  uint32_t backoff = 100;
+  if (reader.get("scheduler.base_backoff_ms") == JsonReader::Token::Number) {
+    backoff = reader.asNum<uint32_t>();
+    if (backoff == 0) return false;
+  }
+
+  uint32_t fsm_timeout = 1000;
+  if (reader.get("scheduler.fsm_timeout_ms") == JsonReader::Token::Number) {
+    fsm_timeout = reader.asNum<uint32_t>();
+    if (fsm_timeout == 0) return false;
+  }
+
+  if (reader.get("scheduler.total_timeout_ms") == JsonReader::Token::Number) {
+    uint32_t total_timeout = reader.asNum<uint32_t>();
+    // Ensure total timeout allows for at least one full cycle + backoff
+    if (total_timeout <= fsm_timeout) return false;
+    if (total_timeout < (fsm_timeout + backoff)) return false;
+  }
+
+  // Check nested network fields (Parity with struct validate)
+  if (reader.get("network.outbound_buffer_size") == JsonReader::Token::Number) {
+    if (reader.asNum<size_t>() == 0) return false;
+  }
+  if (reader.get("network.session_timeout_ms") == JsonReader::Token::Number) {
+    if (reader.asNum<uint32_t>() == 0) return false;
+  }
+  if (reader.get("network.transmit_timeout_ms") == JsonReader::Token::Number) {
+    if (reader.asNum<uint32_t>() == 0) return false;
+  }
 
   return true;
 }

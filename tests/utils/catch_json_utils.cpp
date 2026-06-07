@@ -7,6 +7,7 @@
 #include <catch2/catch_all.hpp>
 #include <ebus/callbacks.hpp>
 #include <ebus/config.hpp>
+#include <ebus/detail/config_validator.hpp>
 #include <ebus/detail/json_reader.hpp>
 #include <ebus/detail/json_writer.hpp>
 #include <ebus/device.hpp>
@@ -104,6 +105,28 @@ TEST_CASE("JSON Utils: Streaming Writer", "[utils][json]") {
     REQUIRE(result ==
             "{\"outer_val\":1,\"nested_obj\":{\"inner_val\":2},\"nested_arr\":["
             "{\"id\":1},{\"id\":2}],\"tail\":3}");
+  }
+
+  SECTION("Deep recursion and stack safety test") {
+    result.clear();
+    {
+      ebus::detail::JsonWriter writer(visitor);
+      // Manually trigger deep nesting
+      writer.startObject();
+      for (int i = 0; i < 10; ++i) {
+        writer.appendKey("nest");
+        writer.startObject();
+      }
+      writer.writeField("leaf", true);
+      for (int i = 0; i < 10; ++i) {
+        writer.endObject();
+      }
+      writer.endObject();
+    }
+    // Check that we didn't crash and the leaf is reachable
+    REQUIRE(result.find("\"leaf\":true") != std::string::npos);
+    REQUIRE(std::count(result.begin(), result.end(), '{') == 11);
+    REQUIRE(std::count(result.begin(), result.end(), '}') == 11);
   }
 }
 
@@ -336,4 +359,39 @@ TEST_CASE("JSON Utils: Escaping", "[utils][json]") {
   REQUIRE(ebus::escapeJson("new\nline") == "new\\nline");
   // Control character (0x01)
   REQUIRE(ebus::escapeJson(std::string(1, 0x01)) == "\\u0001");
+}
+
+TEST_CASE("ConfigValidator: validateJson hex strings", "[app][config][json]") {
+  SECTION("Valid decimal address") {
+    std::string_view json = R"({"address": 49})";  // 0x31
+    REQUIRE(ConfigValidator::validateJson(json));
+  }
+  SECTION("Valid hex address string") {
+    std::string_view json = R"({"address": "0x31"})";
+    REQUIRE(ConfigValidator::validateJson(json));
+  }
+  SECTION("Invalid hex address string (slave)") {
+    std::string_view json = R"({"address": "0x15"})";
+    REQUIRE_FALSE(ConfigValidator::validateJson(json));
+  }
+  SECTION("Hex string for nested field") {
+    // window_us: 4500 = 0x1194
+    std::string_view json = R"({"bus": {"window_us": "0x1194"}})";
+    REQUIRE(ConfigValidator::validateJson(json));
+  }
+  SECTION("Illegal characters in hex string") {
+    // Trailing 'G' is not a hex digit
+    std::string_view json = R"({"address": "0x31G"})";
+    REQUIRE_FALSE(ConfigValidator::validateJson(json));
+  }
+  SECTION("Illegal characters in decimal string") {
+    // Trailing 'Z' is not a digit
+    std::string_view json = R"({"address": "49Z"})";
+    REQUIRE_FALSE(ConfigValidator::validateJson(json));
+  }
+  SECTION("Malformed hex prefix") {
+    // Just "0x" with no digits is invalid
+    std::string_view json = R"({"address": "0x"})";
+    REQUIRE_FALSE(ConfigValidator::validateJson(json));
+  }
 }

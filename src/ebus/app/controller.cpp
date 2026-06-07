@@ -159,6 +159,17 @@ bool Controller::configure(const EbusConfig& config) {
   return true;
 }
 
+bool Controller::configure(std::string_view json) {
+  if (!detail::ConfigValidator::validateJson(json)) return false;
+
+  std::lock_guard<std::recursive_mutex> lock(config_mutex_);
+  EbusConfig new_cfg = config_;
+  // mergeFromJson safely ignores unknown keys
+  if (!new_cfg.runtime.mergeFromJson(std::string(json))) return false;
+
+  return configure(new_cfg);
+}
+
 EbusConfig Controller::getConfig() const {
   std::lock_guard<std::recursive_mutex> lock(config_mutex_);
   return config_;
@@ -488,9 +499,7 @@ void Controller::fetchSystemResources(
   if (!callback) return;
   SystemResources res;
 
-  res.timestamp_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                         std::chrono::system_clock::now().time_since_epoch())
-                         .count();
+  res.timestamp_ms = ebus::getWallTimeMs();
   res.is_configured = isConfigured();
   res.is_running = isRunning();
 
@@ -557,10 +566,7 @@ VirtualBus& Controller::getVirtualBus() { return *impl_->virtual_bus_; }
 #endif
 
 void Controller::getServiceStatus(ServiceStatus& status) const {
-  status.last_update_timestamp_ms =
-      std::chrono::duration_cast<std::chrono::milliseconds>(
-          std::chrono::system_clock::now().time_since_epoch())
-          .count();
+  status.last_update_timestamp_ms = ebus::getWallTimeMs();
 
   auto mapThreadStatus =
       [](const detail::platform::ServiceThread::Status& s) -> ThreadStatus {

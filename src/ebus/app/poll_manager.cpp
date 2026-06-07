@@ -6,8 +6,8 @@
 #include "app/poll_manager.hpp"
 
 #include <algorithm>
-#include <ebus/detail/protocol_limits.hpp>
 #include <ebus/detail/json_reader.hpp>
+#include <ebus/detail/protocol_limits.hpp>
 #include <ebus/utils.hpp>
 
 namespace ebus::detail {
@@ -103,25 +103,34 @@ bool PollManager::mergeFromJson(const std::string& json) {
       uint8_t priority = 5;
       std::string message_hex;
       uint32_t interval = 1000;
+      bool ok = true;
 
       reader.forEachField([&](std::string_view key, detail::JsonReader& inner) {
         if (key == "priority") {
           inner.next();
-          priority = static_cast<uint8_t>(inner.asNum<int>());
-          return true;
+          auto val = inner.asNumStrict<int>();
+          if (val)
+            priority = static_cast<uint8_t>(*val);
+          else
+            ok = false;
+          return val.has_value();
         } else if (key == "message") {
           inner.next();
           message_hex = inner.value();
           return true;
         } else if (key == "interval_ms") {
           inner.next();
-          interval = inner.asNum<uint32_t>();
-          return true;
+          auto val = inner.asNumStrict<uint32_t>();
+          if (val)
+            interval = *val;
+          else
+            ok = false;
+          return val.has_value();
         }
         return false;
       });
 
-      if (!message_hex.empty()) {
+      if (ok && !message_hex.empty()) {
         addPollItem(priority, ebus::toVector(message_hex), interval);
       }
     } else {

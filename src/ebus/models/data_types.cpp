@@ -617,7 +617,7 @@ DataType stringToDataType(const char* str) {
 }
 
 void DataTypeInfo::toJson(detail::JsonWriter& writer) const {
-  detail::JsonWriter::Scope scope(writer, detail::JsonWriter::Scope::Object);
+  auto scope = writer.objectScope();
   writer.writeField("type", static_cast<int32_t>(dt));
   writer.writeField("name", name);
   writer.writeField("size", size);
@@ -631,17 +631,17 @@ void DataTypeInfo::toJson(detail::JsonWriter& writer) const {
 
 void getSupportedDataTypesJson(const JsonChunkVisitor& visitor) {
   detail::JsonWriter writer(visitor);
-  writer.startArray();
+  auto scope = writer.arrayScope();
   const auto types = getSupportedDataTypes();
   for (const auto& t : types) {
     writer.writeValue(t);
   }
-  writer.endArray();
 }
 
 void decodeToJson(const JsonChunkVisitor& visitor, DataType dt, ByteView data) {
   detail::JsonWriter writer(visitor);
-  writer.startObject();
+  auto scope = writer.objectScope();
+
   auto meta_opt = getMeta(dt);
   if (!meta_opt) {
     writer.writeField("error", "Invalid DataType");
@@ -658,7 +658,6 @@ void decodeToJson(const JsonChunkVisitor& visitor, DataType dt, ByteView data) {
       writer.write("null");
     writer.writeFieldFloat("factor", meta.factor, 4);
   }
-  writer.endObject();
 }
 
 }  // namespace ebus

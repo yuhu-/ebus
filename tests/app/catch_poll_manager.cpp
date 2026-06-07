@@ -159,4 +159,19 @@ TEST_CASE("PollManager: mergeFromJson", "[app][pollmanager]") {
     REQUIRE(pm.mergeFromJson("[]"));
     REQUIRE(pm.getStatus().item_count == 0);
   }
+
+  SECTION("Items with malformed numeric fields are rejected") {
+    // priority: "high" is invalid
+    // interval_ms: "1000ms" is invalid
+    // 3rd item is valid
+    std::string json = R"([
+      {"priority": "high", "message": "15070400"},
+      {"interval_ms": "1000ms", "message": "05070400"},
+      {"priority": 10, "message": "08070400", "interval_ms": 2000}
+    ])";
+
+    REQUIRE(pm.mergeFromJson(json));
+    // Only the last valid item should be added
+    REQUIRE(pm.getStatus().item_count == 1);
+  }
 }
