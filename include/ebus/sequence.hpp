@@ -401,7 +401,7 @@ class SequenceImpl {
                        [](uint8_t b) { return b == Symbols::ext; });
   }
 
-  uint8_t operator[](size_t index) const { return sequence_[index]; }
+  const uint8_t& operator[](size_t index) const { return sequence_[index]; }
 
   /**
    * @brief Calculates the eBUS CRC for a raw buffer.

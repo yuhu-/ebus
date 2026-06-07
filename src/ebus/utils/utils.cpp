@@ -5,8 +5,8 @@
 
 #include <charconv>
 #include <cmath>
-#include <ctime>
 #include <cstring>
+#include <ctime>
 #include <ebus/detail/json_writer.hpp>
 #include <ebus/sequence.hpp>
 #include <ebus/types.hpp>
@@ -126,24 +126,46 @@ char* formatFloat(float value, int precision, char* buffer, size_t buffer_size,
     }
   }
 
-  const char* ptr;
-  std::errc ec;
+  size_t current_len = 0;
+  bool success = false;
 
+#if !defined(ESP_PLATFORM)
+  // Attempt std::to_chars for platforms where it's fully supported for floats
   if ((std::abs(value) > 0 && std::abs(value) < lower_threshold) ||
       std::abs(value) >= upper_threshold) {
     auto res = std::to_chars(buffer, buffer + buffer_size, value,
                              std::chars_format::scientific, precision);
-    ptr = res.ptr;
-    ec = res.ec;
+    if (res.ec == std::errc{}) {
+      current_len = res.ptr - buffer;
+      success = true;
+    }
   } else {
     auto res = std::to_chars(buffer, buffer + buffer_size, value,
                              std::chars_format::fixed, precision);
-    ptr = res.ptr;
-    ec = res.ec;
+    if (res.ec == std::errc{}) {
+      current_len = res.ptr - buffer;
+      success = true;
+    }
+  }
+#endif
+
+  if (!success) {
+    // Fallback for ESP32 or if to_chars failed: use snprintf.
+    // Use literals directly to avoid "format-nonliteral" warnings.
+    int n;
+    if (((std::abs(value) > 0 && std::abs(value) < lower_threshold) ||
+         std::abs(value) >= upper_threshold)) {
+      n = std::snprintf(buffer, buffer_size, "%.*e", precision, value);
+    } else {
+      n = std::snprintf(buffer, buffer_size, "%.*f", precision, value);
+    }
+    if (n > 0 && static_cast<size_t>(n) < buffer_size) {
+      current_len = static_cast<size_t>(n);
+      success = true;
+    }
   }
 
-  if (ec == std::errc{}) {
-    size_t current_len = ptr - buffer;
+  if (success) {
     if (current_len == 0) {
       std::strncpy(buffer, "0", buffer_size);
       buffer[buffer_size - 1] = '\0';

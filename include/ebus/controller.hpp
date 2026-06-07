@@ -324,7 +324,8 @@ class Controller {
    * @brief Streams the service status JSON in chunks to the provided visitor.
    */
   void fetchServiceStatus(const JsonChunkVisitor& visitor,
-                          bool reset_histories = false) const;
+                          bool reset_histories = false,
+                          bool pretty = false) const;
 
 #if EBUS_SIMULATION
   /**

@@ -72,6 +72,14 @@ struct RuntimeConfig {
   static RuntimeConfig fromJson(const std::string& json);
 
   /**
+   * @brief Merges a partial JSON string into the current configuration.
+   * Only keys present in the JSON are updated; others remain unchanged.
+   * Unknown keys are safely ignored.
+   * @return true if the JSON was partially or fully parsed, false on error.
+   */
+  bool mergeFromJson(const std::string& json);
+
+  /**
    * @brief Performs a basic structural validation of a JSON string.
    * Checks for non-empty string, starts/ends with braces, and balanced
    * braces/brackets.

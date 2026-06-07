@@ -26,6 +26,7 @@
 #include <cstring>
 #include <ctime>
 #include <ebus/data_types.hpp>
+#include <ebus/detail/json_writer.hpp>
 #include <ebus/sequence.hpp>
 #include <fstream>
 #include <iostream>
@@ -57,6 +58,15 @@ bool parse = false;
 bool raw = false;
 bool split = false;
 bool type = false;
+bool json_output = false;
+bool pretty = false;
+bool status_report = false;
+
+struct {
+  uint32_t total = 0;
+  uint32_t valid = 0;
+  uint32_t errors = 0;
+} stats;
 
 const char* timestamp() {
   static char time[24];
@@ -133,6 +143,24 @@ std::string services(ebus::ByteView master, ebus::ByteView slave) {
   return ostr.str();
 }
 
+void printStatus() {
+  if (!status_report) return;
+  std::cerr << std::endl << "--- Reader Status ---" << std::endl;
+  ebus::detail::JsonWriter writer([](std::string_view s) { std::cerr << s; },
+                                  pretty);
+  writer.startObject();
+  writer.writeField("tool", "ebusread");
+  writer.writeField("total_telegrams", stats.total);
+  writer.writeField("valid_telegrams", stats.valid);
+  writer.writeField("errors", stats.errors);
+  if (stats.total > 0) {
+    writer.writeFieldFloat("error_rate",
+                           (float)stats.errors / stats.total * 100.0f);
+  }
+  writer.endObject();
+  std::cerr << std::endl;
+}
+
 std::string collect(uint8_t byte) {
   static ebus::Sequence sequence;
   std::string result = "";
@@ -142,106 +170,116 @@ std::string collect(uint8_t byte) {
   if (byte == ebus::Symbols::syn) {
     static bool running = false;
     if (sequence.size() > 0 && running) {
+      stats.total++;
       ebus::detail::Telegram tel(sequence);
-      std::ostringstream ostr;
+      if (tel.isValid())
+        stats.valid++;
+      else
+        stats.errors++;
 
-      if (tel.isValid()) {
-        if (!notime) {
-          ostr << timestamp();
-          ostr << " ";
-        }
-        if (type) {
-          if (color) ostr << CYAN;
-          if (tel.getType() == ebus::TelegramType::master_slave)
-            ostr << "MS";
-          else if (tel.getType() == ebus::TelegramType::master_master)
-            ostr << "MM";
-          else
-            ostr << "BC";
-          if (color) ostr << RESET;
-          ostr << " ";
-        }
-        if (color) ostr << GREEN;
-        ostr << ebus::toString(tel.getSourceAddress());
-        ostr << ebus::toString(tel.getTargetAddress());
-        if (color) ostr << RESET;
-        if (split) ostr << " ";
-        if (color) ostr << BLUE;
-        ostr << ebus::toString(tel.getPrimaryCommand());
-        ostr << ebus::toString(tel.getSecondaryCommand());
-        if (color) ostr << RESET;
-        if (split) ostr << " ";
-        if (color) ostr << YELLOW;
-        ostr << ebus::toString(tel.getMasterNumberBytes());
-        if (color) ostr << RESET;
-        if (tel.getMasterNumberBytes() > 0) {
-          if (split) ostr << " ";
+      if (json_output) {
+        std::ostringstream ostr;
+        ebus::detail::JsonWriter writer([&](std::string_view s) { ostr << s; },
+                                        pretty);
+        tel.toJson(writer);
+        result = ostr.str();
+      } else {
+        std::ostringstream ostr;
 
-          if (bold) ostr << BOLD;
-          ostr << ebus::toString(tel.getMasterDataBytes());
-          if (bold) ostr << RESET;
-        }
-        if (split) ostr << " ";
-        if (color) ostr << MAGENTA;
-        ostr << ebus::toString(tel.getMasterCRC());
-        if (color) ostr << RESET;
-        if (tel.getType() != ebus::TelegramType::broadcast) {
-          if (split) ostr << " ";
-          ostr << ebus::toString(tel.getSlaveACK());
-          if (tel.getType() == ebus::TelegramType::master_slave) {
-            if (split) ostr << " ";
-            if (color) ostr << YELLOW;
-            ostr << ebus::toString(tel.getSlaveNumberBytes());
-            if (color) ostr << RESET;
-            if (tel.getSlaveNumberBytes() > 0) {
-              if (split) ostr << " ";
-              if (bold) ostr << BOLD;
-              ostr << ebus::toString(tel.getSlaveDataBytes());
-              if (bold) ostr << RESET;
-            }
-            if (split) ostr << " ";
-            if (color) ostr << MAGENTA;
-            ostr << ebus::toString(tel.getSlaveCRC());
-            if (color) ostr << RESET;
-            if (split) ostr << " ";
-            ostr << ebus::toString(tel.getMasterACK());
+        if (tel.isValid()) {
+          if (!notime) {
+            ostr << timestamp();
+            ostr << " ";
           }
-        }
-        if (parse) {
-          std::string tmp =
-              services(tel.getMaster().toVector(), tel.getSlave().toVector());
-          if (!tmp.empty()) {
-            ostr << std::endl;
+          if (type) {
             if (color) ostr << CYAN;
-            if (!notime) {
-              ostr << "---SERVICE-DETECTED---> ";
-              if (type) ostr << "   ";
-            }
-            ostr << tmp;
+            if (tel.getType() == ebus::TelegramType::master_slave)
+              ostr << "MS";
+            else if (tel.getType() == ebus::TelegramType::master_master)
+              ostr << "MM";
+            else
+              ostr << "BC";
             if (color) ostr << RESET;
+            ostr << " ";
           }
-        }
-      } else if (!noerror) {
-        if (!notime) {
-          ostr << timestamp();
-          ostr << " ";
-        }
-        if (type) ostr << "   ";
-        ostr << sequence.toString() << std::endl;
-        if (color) ostr << RED;
-        if (!notime) {
-          ostr << "----ERROR-DETECTED----> ";
+          if (color) ostr << GREEN;
+          ostr << ebus::toString(tel.getSourceAddress());
+          ostr << ebus::toString(tel.getTargetAddress());
+          if (color) ostr << RESET;
+          if (split) ostr << " ";
+          if (color) ostr << BLUE;
+          ostr << ebus::toString(tel.getPrimaryCommand());
+          ostr << ebus::toString(tel.getSecondaryCommand());
+          if (color) ostr << RESET;
+          if (split) ostr << " ";
+          if (color) ostr << YELLOW;
+          ostr << ebus::toString(tel.getMasterNumberBytes());
+          if (color) ostr << RESET;
+          if (tel.getMasterNumberBytes() > 0) {
+            if (split) ostr << " ";
+
+            if (bold) ostr << BOLD;
+            ostr << ebus::toString(tel.getMasterDataBytes());
+            if (bold) ostr << RESET;
+          }
+          if (split) ostr << " ";
+          if (color) ostr << MAGENTA;
+          ostr << ebus::toString(tel.getMasterCRC());
+          if (color) ostr << RESET;
+          if (tel.getType() != ebus::TelegramType::broadcast) {
+            if (split) ostr << " ";
+            ostr << ebus::toString(tel.getSlaveACK());
+            if (tel.getType() == ebus::TelegramType::master_slave) {
+              if (split) ostr << " ";
+              if (color) ostr << YELLOW;
+              ostr << ebus::toString(tel.getSlaveNumberBytes());
+              if (color) ostr << RESET;
+              if (tel.getSlaveNumberBytes() > 0) {
+                if (split) ostr << " ";
+                if (bold) ostr << BOLD;
+                ostr << ebus::toString(tel.getSlaveDataBytes());
+                if (bold) ostr << RESET;
+              }
+              if (split) ostr << " ";
+              if (color) ostr << MAGENTA;
+              ostr << ebus::toString(tel.getSlaveCRC());
+              if (color) ostr << RESET;
+              if (split) ostr << " ";
+              ostr << ebus::toString(tel.getMasterACK());
+            }
+          }
+          if (parse) {
+            std::string tmp =
+                services(tel.getMaster().toVector(), tel.getSlave().toVector());
+            if (!tmp.empty()) {
+              ostr << std::endl;
+              if (color) ostr << CYAN;
+              if (!notime) {
+                ostr << "---SERVICE-DETECTED---> ";
+                if (type) ostr << "   ";
+              }
+              ostr << tmp;
+              if (color) ostr << RESET;
+            }
+          }
+        } else if (!noerror) {
+          if (!notime) {
+            ostr << timestamp();
+            ostr << " ";
+          }
           if (type) ostr << "   ";
+          ostr << sequence.toString() << std::endl;
+          if (color) ostr << RED;
+          if (!notime) {
+            ostr << "----ERROR-DETECTED----> ";
+            if (type) ostr << "   ";
+          }
+          ostr << tel.toString();
+          if (color) ostr << RESET;
         }
-        ostr << tel.toString();
-        if (color) ostr << RESET;
+        result = ostr.str();
       }
 
-      result = ostr.str();
-      if (!notime) {
-        ostr << timestamp();
-        ostr << " ";
-      }
       sequence.clear();
     }
     running = true;
@@ -431,6 +469,9 @@ void usage() {
   std::cout << "  -r, --raw        print raw values" << std::endl;
   std::cout << "  -s, --split      split telegram parts" << std::endl;
   std::cout << "  -t, --type       print telegram type" << std::endl;
+  std::cout << "  -j, --json       output telegrams as JSON" << std::endl;
+  std::cout << "  -P, --pretty     pretty print JSON output" << std::endl;
+  std::cout << "  -S, --status     print session summary on exit" << std::endl;
   std::cout << "  -h, --help       show this page" << std::endl;
 }
 
@@ -444,11 +485,14 @@ int main(int argc, char* argv[]) {
                                     {"raw", no_argument, nullptr, 'r'},
                                     {"split", no_argument, nullptr, 's'},
                                     {"type", no_argument, nullptr, 't'},
+                                    {"json", no_argument, nullptr, 'j'},
+                                    {"pretty", no_argument, nullptr, 'P'},
+                                    {"status", no_argument, nullptr, 'S'},
                                     {"help", no_argument, nullptr, 'h'},
                                     {nullptr, 0, nullptr, 0}};
 
   int option;
-  while ((option = getopt_long(argc, argv, "bcdefnprsth", options, nullptr)) !=
+  while ((option = getopt_long(argc, argv, "bcdefnprstjPSh", options, nullptr)) !=
          -1) {
     switch (option) {
       case 'b':
@@ -478,6 +522,15 @@ int main(int argc, char* argv[]) {
       case 't':
         type = true;
         break;
+      case 'j':
+        json_output = true;
+        break;
+      case 'P':
+        pretty = true;
+        break;
+      case 'S':
+        status_report = true;
+        break;
       case 'h':
       case '?':
         usage();
@@ -501,6 +554,7 @@ int main(int argc, char* argv[]) {
           if (result.size() > 0) std::cout << result << std::endl;
         }
         stream.close();
+        printStatus();
       } else {
         std::cerr << "file '" << argv[optind] << "' not found" << std::endl;
         std::exit(EXIT_FAILURE);
@@ -526,6 +580,7 @@ int main(int argc, char* argv[]) {
       std::string result = collect(static_cast<uint8_t>(byte));
       if (result.size() > 0) std::cout << result << std::endl;
     }
+    printStatus();
   }
 
   return EXIT_SUCCESS;

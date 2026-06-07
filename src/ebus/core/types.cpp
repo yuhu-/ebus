@@ -4,7 +4,7 @@
  */
 
 #include <charconv>
-#include <ebus/detail/json_writer.hpp>  // For detail::JsonWriter
+#include <ebus/detail/json_writer.hpp>
 #include <ebus/types.hpp>
 #include <ebus/utils.hpp>
 
@@ -243,19 +243,17 @@ const char* toString(SessionState state) noexcept {
 }
 
 void HandlerTransition::toJson(detail::JsonWriter& writer) const {
-  writer.startObject();
+  detail::JsonWriter::Scope scope(writer, detail::JsonWriter::Scope::Object);
   writer.writeField("from", ebus::toString(from));
   writer.writeField("to", ebus::toString(to));
   writer.writeTimestampField("timestamp", timestamp);
-  writer.endObject();
 }
 
 void RequestTransition::toJson(detail::JsonWriter& writer) const {
-  writer.startObject();
+  detail::JsonWriter::Scope scope(writer, detail::JsonWriter::Scope::Object);
   writer.writeField("from", ebus::toString(from));
   writer.writeField("to", ebus::toString(to));
   writer.writeTimestampField("timestamp", timestamp);
-  writer.endObject();
 }
 
 std::string ErrorEntry::toString() const {
@@ -297,7 +295,7 @@ std::string ErrorEntry::toString() const {
 }
 
 void ErrorEntry::toJson(detail::JsonWriter& writer) const {
-  writer.startObject();
+  detail::JsonWriter::Scope scope(writer, detail::JsonWriter::Scope::Object);
   writer.writeField("session_id", session_id);
   writer.writeField("poll_id", poll_id);
   writer.writeField("level", ebus::toString(level));
@@ -312,8 +310,6 @@ void ErrorEntry::toJson(detail::JsonWriter& writer) const {
   char iso_buffer[26];
   ebus::formatIso8601Fast(timestamp, iso_buffer);
   writer.writeField("timestamp", std::string_view(iso_buffer));
-
-  writer.endObject();
 }
 
 }  // namespace ebus

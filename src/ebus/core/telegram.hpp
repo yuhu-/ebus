@@ -20,7 +20,6 @@ inline constexpr size_t kSlaveHeaderSize = 1;   // NN
 inline constexpr size_t kCrcSize = 1;
 inline constexpr size_t kAckSize = 1;
 
-
 /**
  * Based on the eBUS specification, the Telegram class can parse, create, and
  * evaluate sequences of bytes that represent Master-Slave, Master-Master, and
@@ -248,6 +247,38 @@ class TelegramImpl {
 
     return (master_state_ == SequenceState::seq_ok &&
             slave_state_ == SequenceState::seq_ok);
+  }
+
+  void toJson(detail::JsonWriter& writer) const {
+    detail::JsonWriter::Scope scope(writer, detail::JsonWriter::Scope::Object);
+    writer.writeField("type", ebus::toString(telegram_type_));
+    writer.writeField("valid", isValid());
+
+    writer.appendKey("master");
+    {
+      detail::JsonWriter::Scope masterScope(writer,
+                                            detail::JsonWriter::Scope::Object);
+      writer.writeHexField("source", ByteView(&master_[0], 1));
+      writer.writeHexField("target", ByteView(&master_[1], 1));
+      writer.writeHexField("pb", ByteView(&master_[2], 1));
+      writer.writeHexField("sb", ByteView(&master_[3], 1));
+      writer.writeField("nn", static_cast<uint32_t>(master_[4]));
+      writer.writeHexField("data", getMasterDataBytes());
+      writer.writeHexField("crc", ByteView(&master_crc_, 1));
+      writer.writeHexField("ack", ByteView(&master_ack_, 1));
+      writer.writeField("state", ebus::toString(master_state_));
+    }
+
+    if (telegram_type_ == TelegramType::master_slave) {
+      writer.appendKey("slave");
+      detail::JsonWriter::Scope slaveScope(writer,
+                                           detail::JsonWriter::Scope::Object);
+      writer.writeField("nn", static_cast<uint32_t>(slave_[0]));
+      writer.writeHexField("data", getSlaveDataBytes());
+      writer.writeHexField("crc", ByteView(&slave_crc_, 1));
+      writer.writeHexField("ack", ByteView(&slave_ack_, 1));
+      writer.writeField("state", ebus::toString(slave_state_));
+    }
   }
 
   std::string toString() const {

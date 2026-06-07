@@ -63,7 +63,7 @@ add_catch2_test_executable(catch_service_thread platform/catch_service_thread.cp
 
 # Utilities
 add_catch2_test_executable(catch_timing_stats utils/catch_timing_stats.cpp)
-add_catch2_test_executable(catch_json_writer utils/catch_json_writer.cpp)
+add_catch2_test_executable(catch_json_utils utils/catch_json_utils.cpp)
 add_catch2_test_executable(catch_utils utils/catch_utils.cpp)
 add_catch2_test_executable(catch_logger utils/catch_logger.cpp)
 add_catch2_test_executable(catch_circular_buffer utils/catch_circular_buffer.cpp)

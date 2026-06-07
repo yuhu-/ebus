@@ -34,7 +34,39 @@ void appendHexFieldToWriter(JsonWriter& writer, ByteView data);
  */
 class JsonWriter {
  public:
-  explicit JsonWriter(JsonChunkVisitor v) : visitor_(std::move(v)), buffer_{} {}
+  /**
+   * @brief RAII helper to ensure JSON containers (objects/arrays) are closed.
+   */
+  class Scope {
+   public:
+    enum Type { Object, Array };
+
+    Scope(JsonWriter& writer, Type type) : writer_(writer), type_(type) {
+      if (type_ == Object) {
+        writer_.startObject();
+      } else {
+        writer_.startArray();
+      }
+    }
+
+    ~Scope() {
+      if (type_ == Object) {
+        writer_.endObject();
+      } else {
+        writer_.endArray();
+      }
+    }
+
+    Scope(const Scope&) = delete;
+    Scope& operator=(const Scope&) = delete;
+
+   private:
+    JsonWriter& writer_;
+    Type type_;
+  };
+
+  explicit JsonWriter(JsonChunkVisitor v, bool pretty = false)
+      : visitor_(std::move(v)), buffer_{}, pretty_(pretty) {}
   ~JsonWriter() { flush(); }
 
   void write(std::string_view s) {
@@ -57,35 +89,50 @@ class JsonWriter {
   }
 
   void startObject() {
-    if (!first_) write(",");
+    beforeValue();
     write("{");
+    if (pretty_) indent_level_++;
     first_ = true;
   }
 
   void endObject() {
-    flush();
+    if (pretty_) {
+      indent_level_--;
+      writeIndent();
+    }
     write("}");
+    flush();
     first_ = false;
+    after_key_ = false;
   }
 
   void startArray() {
-    if (!first_) write(",");
+    beforeValue();
     write("[");
+    if (pretty_) indent_level_++;
     first_ = true;
   }
 
   void endArray() {
-    flush();
+    if (pretty_) {
+      indent_level_--;
+      writeIndent();
+    }
     write("]");
+    flush();
     first_ = false;
+    after_key_ = false;
   }
 
   void appendKey(std::string_view key) {
     if (!first_) write(",");
+    if (pretty_) writeIndent();
     write("\"");
     write(key);
     write("\":");
+    if (pretty_) write(" ");
     first_ = true;  // The following value is the 'first' for this key
+    after_key_ = true;
   }
 
   void writeEscaped(std::string_view s) {
@@ -96,7 +143,7 @@ class JsonWriter {
   // --- Value Writers (for arrays or raw values) ---
 
   void writeValue(std::string_view val) {
-    if (!first_) write(",");
+    beforeValue();
     write("\"");
     writeEscaped(val);
     write("\"");
@@ -106,8 +153,8 @@ class JsonWriter {
   template <typename T>
   std::enable_if_t<detail::has_to_json<T>::value, void> writeValue(
       const T& val) {
-    if (!first_) write(",");
-    first_ = true; // Inform child toJson that comma is already handled
+    beforeValue();
+    first_ = true;  // Inform child toJson that comma is already handled
     flush();
     val.toJson(*this);
     first_ = false;
@@ -116,7 +163,7 @@ class JsonWriter {
   template <typename T>
   std::enable_if_t<std::is_same_v<std::decay_t<T>, bool>, void> writeValue(
       T val) {
-    if (!first_) write(",");
+    beforeValue();
     write(val ? "true" : "false");
     first_ = false;
   }
@@ -126,7 +173,7 @@ class JsonWriter {
                        !std::is_same_v<std::decay_t<T>, bool>,
                    void>
   writeValue(T val) {
-    if (!first_) write(",");
+    beforeValue();
     char buf[24];
     auto [ptr, ec] = std::to_chars(buf, buf + sizeof(buf), val);
     if (ec == std::errc{}) {
@@ -136,7 +183,7 @@ class JsonWriter {
   }
 
   void writeValueFloat(float val, int precision = 2) {
-    if (!first_) write(",");
+    beforeValue();
     char buf[32];
     const char* end = ebus::formatFloat(
         val, precision, buf, sizeof(buf),
@@ -150,6 +197,8 @@ class JsonWriter {
   // --- Field Writers (for objects) ---
 
   void writeRaw(std::string_view s) {
+    if (pretty_ && !after_key_ && indent_level_ > 0) writeIndent();
+    after_key_ = false;
     write(s);
     first_ = false;
   }
@@ -166,7 +215,7 @@ class JsonWriter {
   std::enable_if_t<detail::has_to_json<T>::value, void> writeField(
       std::string_view key, const T& val) {
     appendKey(key);
-    first_ = true; // Inform child toJson that comma is already handled
+    first_ = true;  // Inform child toJson that comma is already handled
     flush();
     val.toJson(*this);
     first_ = false;
@@ -237,6 +286,21 @@ class JsonWriter {
   char buffer_[256];  // Optimized for ESP32-C3 stack usage
   size_t pos_ = 0;
   bool first_ = true;
+  bool pretty_ = false;
+  int indent_level_ = 0;
+  bool after_key_ = false;
+
+  void beforeValue() {
+    if (!first_) write(",");
+    if (pretty_ && !after_key_ && indent_level_ > 0) writeIndent();
+    after_key_ = false;
+  }
+
+  void writeIndent() {
+    if (!pretty_) return;
+    write("\n");
+    for (int i = 0; i < indent_level_; ++i) write("  ");
+  }
 };
 
 }  // namespace detail

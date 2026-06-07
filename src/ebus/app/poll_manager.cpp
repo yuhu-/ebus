@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <ebus/detail/protocol_limits.hpp>
+#include <ebus/detail/json_reader.hpp>
 #include <ebus/utils.hpp>
 
 namespace ebus::detail {
@@ -85,6 +86,49 @@ void PollManager::processDueItems(
     items_.push_back(std::move(item));
     std::push_heap(items_.begin(), items_.end(), Item::Greater());
   }
+}
+
+bool PollManager::mergeFromJson(const std::string& json) {
+  detail::JsonReader reader(json);
+  if (reader.next() != detail::JsonReader::Token::ArrayStart) return false;
+
+  while (true) {
+    auto t = reader.next();
+    if (t == detail::JsonReader::Token::ArrayEnd ||
+        t == detail::JsonReader::Token::End)
+      break;
+    if (t == detail::JsonReader::Token::Error) return false;
+
+    if (t == detail::JsonReader::Token::ObjectStart) {
+      uint8_t priority = 5;
+      std::string message_hex;
+      uint32_t interval = 1000;
+
+      reader.forEachField([&](std::string_view key, detail::JsonReader& inner) {
+        if (key == "priority") {
+          inner.next();
+          priority = static_cast<uint8_t>(inner.asNum<int>());
+          return true;
+        } else if (key == "message") {
+          inner.next();
+          message_hex = inner.value();
+          return true;
+        } else if (key == "interval_ms") {
+          inner.next();
+          interval = inner.asNum<uint32_t>();
+          return true;
+        }
+        return false;
+      });
+
+      if (!message_hex.empty()) {
+        addPollItem(priority, ebus::toVector(message_hex), interval);
+      }
+    } else {
+      reader.skipValue();
+    }
+  }
+  return true;
 }
 
 void PollManager::clear() {

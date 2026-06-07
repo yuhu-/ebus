@@ -4,7 +4,8 @@
  */
 
 #include <ebus/config.hpp>
-#include <ebus/detail/json_writer.hpp>  // For detail::JsonWriter
+#include <ebus/detail/json_reader.hpp>
+#include <ebus/detail/json_writer.hpp>
 #include <ebus/utils.hpp>
 #include <string_view>
 
@@ -13,155 +14,230 @@ namespace ebus {
 void RuntimeConfig::reset() { *this = RuntimeConfig{}; }
 
 void RuntimeConfig::toJson(detail::JsonWriter& writer) const {
-  writer.startObject();
+  detail::JsonWriter::Scope scope(writer, detail::JsonWriter::Scope::Object);
+
   writer.writeField("address", address);
   writer.writeField("lock_counter", lock_counter);
   writer.writeField("system_inquiry", system_inquiry);
   writer.writeField("system_response", system_response);
 
   writer.appendKey("bus");
-  writer.startObject();
-  writer.writeField("window_us", bus.window_us);
-  writer.writeField("offset_us", bus.offset_us);
-  writer.writeField("watchdog_timeout_ms", bus.watchdog_timeout_ms);
-  writer.writeField("syn_gen", bus.syn_gen);
-  writer.endObject();
+  {
+    detail::JsonWriter::Scope busScope(writer,
+                                       detail::JsonWriter::Scope::Object);
+    writer.writeField("window_us", bus.window_us);
+    writer.writeField("offset_us", bus.offset_us);
+    writer.writeField("watchdog_timeout_ms", bus.watchdog_timeout_ms);
+    writer.writeField("syn_gen", bus.syn_gen);
+  }
 
   writer.appendKey("diagnostics");
-  writer.startObject();
-  writer.writeField("level", toString(diagnostics.level));
-  writer.writeField("log_size", diagnostics.log_size);
-  writer.endObject();
+  {
+    detail::JsonWriter::Scope diagScope(writer,
+                                        detail::JsonWriter::Scope::Object);
+    writer.writeField("level", toString(diagnostics.level));
+    writer.writeField("log_size", diagnostics.log_size);
+  }
 
   writer.appendKey("network");
-  writer.startObject();
-  writer.writeField("session_timeout_ms", network.session_timeout_ms);
-  writer.writeField("transmit_timeout_ms", network.transmit_timeout_ms);
-  writer.writeField("outbound_buffer_size", network.outbound_buffer_size);
-  writer.endObject();
+  {
+    detail::JsonWriter::Scope netScope(writer,
+                                       detail::JsonWriter::Scope::Object);
+    writer.writeField("session_timeout_ms", network.session_timeout_ms);
+    writer.writeField("transmit_timeout_ms", network.transmit_timeout_ms);
+    writer.writeField("outbound_buffer_size", network.outbound_buffer_size);
+  }
 
   writer.appendKey("device");
-  writer.startObject();
-  writer.writeField("scan_on_startup", device.scan_on_startup);
-  writer.writeField("initial_delay_s", device.initial_delay_s);
-  writer.writeField("startup_interval_s", device.startup_interval_s);
-  writer.writeField("max_startup_scans", device.max_startup_scans);
-  writer.endObject();
+  {
+    detail::JsonWriter::Scope devScope(writer,
+                                       detail::JsonWriter::Scope::Object);
+    writer.writeField("scan_on_startup", device.scan_on_startup);
+    writer.writeField("initial_delay_s", device.initial_delay_s);
+    writer.writeField("startup_interval_s", device.startup_interval_s);
+    writer.writeField("max_startup_scans", device.max_startup_scans);
+  }
 
   writer.appendKey("scheduler");
-  writer.startObject();
-  writer.writeField("max_send_attempts", scheduler.max_send_attempts);
-  writer.writeField("base_backoff_ms", scheduler.base_backoff_ms);
-  writer.writeField("fsm_timeout_ms", scheduler.fsm_timeout_ms);
-  writer.writeField("total_timeout_ms", scheduler.total_timeout_ms);
-  writer.endObject();
-  writer.endObject();
+  {
+    detail::JsonWriter::Scope schedScope(writer,
+                                         detail::JsonWriter::Scope::Object);
+    writer.writeField("max_send_attempts", scheduler.max_send_attempts);
+    writer.writeField("base_backoff_ms", scheduler.base_backoff_ms);
+    writer.writeField("fsm_timeout_ms", scheduler.fsm_timeout_ms);
+    writer.writeField("total_timeout_ms", scheduler.total_timeout_ms);
+  }
 }
 
 RuntimeConfig RuntimeConfig::fromJson(const std::string& json) {
   RuntimeConfig cfg;
-  if (!isValidJson(json)) {
-    // Return a default-constructed config if the JSON is invalid
-    return RuntimeConfig{};
-  }
-  std::string_view j = json;
-  cfg.address = static_cast<uint8_t>(toNum<int>(extract(j, "address")));
-  cfg.lock_counter =
-      static_cast<uint8_t>(toNum<int>(extract(j, "lock_counter")));
-  cfg.system_inquiry = extract(j, "system_inquiry") == "true";
-  cfg.system_response = extract(j, "system_response") == "true";
-  auto bus_j = extractSub(j, "bus");
-  if (!bus_j.empty()) {
-    cfg.bus.window_us =
-        static_cast<uint16_t>(toNum<int>(extract(bus_j, "window_us")));
-    cfg.bus.offset_us =
-        static_cast<uint16_t>(toNum<int>(extract(bus_j, "offset_us")));
-    cfg.bus.watchdog_timeout_ms =
-        toNum<uint32_t>(extract(bus_j, "watchdog_timeout_ms"));
-    cfg.bus.syn_gen = extract(bus_j, "syn_gen") == "true";
-  }
-  auto diag_j = extractSub(j, "diagnostics");
-  if (!diag_j.empty()) {
-    cfg.diagnostics.level =
-        static_cast<LogLevel>(toNum<int>(extract(diag_j, "level")));
-    cfg.diagnostics.log_size = toNum<size_t>(extract(diag_j, "log_size"));
-  }
-  auto net_j = extractSub(j, "network");
-  if (!net_j.empty()) {
-    cfg.network.session_timeout_ms =
-        toNum<uint32_t>(extract(net_j, "session_timeout_ms"));
-    cfg.network.transmit_timeout_ms =
-        toNum<uint32_t>(extract(net_j, "transmit_timeout_ms"));
-    cfg.network.outbound_buffer_size =
-        toNum<size_t>(extract(net_j, "outbound_buffer_size"));
-  }
-  auto device_j = extractSub(j, "device");
-  if (!device_j.empty()) {
-    cfg.device.scan_on_startup = extract(device_j, "scan_on_startup") == "true";
-    cfg.device.initial_delay_s =
-        toNum<uint32_t>(extract(device_j, "initial_delay_s"));
-    cfg.device.startup_interval_s =
-        toNum<uint32_t>(extract(device_j, "startup_interval_s"));
-    cfg.device.max_startup_scans = static_cast<uint8_t>(
-        toNum<int>(extract(device_j, "max_startup_scans")));
-  }
-  auto sched_j = extractSub(j, "scheduler");
-  if (!sched_j.empty()) {
-    cfg.scheduler.max_send_attempts =
-        static_cast<uint8_t>(toNum<int>(extract(sched_j, "max_send_attempts")));
-    cfg.scheduler.base_backoff_ms =
-        toNum<uint32_t>(extract(sched_j, "base_backoff_ms"));
-    cfg.scheduler.fsm_timeout_ms =
-        toNum<uint32_t>(extract(sched_j, "fsm_timeout_ms"));
-    cfg.scheduler.total_timeout_ms =
-        toNum<uint32_t>(extract(sched_j, "total_timeout_ms"));
-  }
+  cfg.mergeFromJson(json);
   return cfg;
 }
 
-bool RuntimeConfig::isValidJson(const std::string& json) {
-  std::string_view sv = json;
-  if (sv.empty()) return false;
-  // Trim whitespace
-  size_t first = sv.find_first_not_of(" \t\n\r");
-  size_t last = sv.find_last_not_of(" \t\n\r");
-  if (first == std::string::npos || last == std::string::npos)
-    return false;  // All whitespace
+bool RuntimeConfig::mergeFromJson(const std::string& json) {
+  detail::JsonReader reader(json);
+  if (reader.next() != detail::JsonReader::Token::ObjectStart) return false;
 
-  std::string_view trimmed_json = sv.substr(first, last - first + 1);
-
-  if (trimmed_json.empty() || trimmed_json.front() != '{' ||
-      trimmed_json.back() != '}') {
-    return false;
-  }
-
-  // Basic check for balanced braces/brackets and string escaping
-  int brace_count = 0;
-  int bracket_count = 0;
-  bool in_string = false;
-  for (size_t i = 0; i < trimmed_json.length(); ++i) {
-    char c = trimmed_json[i];
-    if (c == '\\') {  // Skip escaped characters
-      i++;
-    } else if (c == '"') {
-      in_string = !in_string;
-    } else if (!in_string) {
-      if (c == '{')
-        brace_count++;
-      else if (c == '}')
-        brace_count--;
-      else if (c == '[')
-        bracket_count++;
-      else if (c == ']')
-        bracket_count--;
+  reader.forEachField([&](std::string_view key, detail::JsonReader& r) {
+    if (key == "address") {
+      r.next();
+      address = static_cast<uint8_t>(r.asNum<int>());
+      return true;
     }
-    if (brace_count < 0 || bracket_count < 0) return false;  // Unbalanced
-  }
-  return brace_count == 0 && bracket_count == 0 && !in_string;
+    if (key == "lock_counter") {
+      r.next();
+      lock_counter = static_cast<uint8_t>(r.asNum<int>());
+      return true;
+    }
+    if (key == "system_inquiry") {
+      r.next();
+      system_inquiry = r.asBool();
+      return true;
+    }
+    if (key == "system_response") {
+      r.next();
+      system_response = r.asBool();
+      return true;
+    }
+    if (key == "bus") {
+      if (r.next() == detail::JsonReader::Token::ObjectStart) {
+        r.forEachField([&](std::string_view k, detail::JsonReader& inner) {
+          if (k == "window_us") {
+            inner.next();
+            bus.window_us = inner.asNum<uint16_t>();
+            return true;
+          }
+          if (k == "offset_us") {
+            inner.next();
+            bus.offset_us = inner.asNum<uint16_t>();
+            return true;
+          }
+          if (k == "watchdog_timeout_ms") {
+            inner.next();
+            bus.watchdog_timeout_ms = inner.asNum<uint32_t>();
+            return true;
+          }
+          if (k == "syn_gen") {
+            inner.next();
+            bus.syn_gen = inner.asBool();
+            return true;
+          }
+          return false;
+        });
+      }
+      return true;
+    }
+    if (key == "diagnostics") {
+      if (r.next() == detail::JsonReader::Token::ObjectStart) {
+        r.forEachField([&](std::string_view k, detail::JsonReader& inner) {
+          if (k == "level") {
+            inner.next();
+            diagnostics.level = static_cast<LogLevel>(inner.asNum<int>());
+            return true;
+          }
+          if (k == "log_size") {
+            inner.next();
+            diagnostics.log_size = inner.asNum<size_t>();
+            return true;
+          }
+          return false;
+        });
+      }
+      return true;
+    }
+    if (key == "network") {
+      if (r.next() == detail::JsonReader::Token::ObjectStart) {
+        r.forEachField([&](std::string_view k, detail::JsonReader& inner) {
+          if (k == "session_timeout_ms") {
+            inner.next();
+            network.session_timeout_ms = inner.asNum<uint32_t>();
+            return true;
+          }
+          if (k == "transmit_timeout_ms") {
+            inner.next();
+            network.transmit_timeout_ms = inner.asNum<uint32_t>();
+            return true;
+          }
+          if (k == "outbound_buffer_size") {
+            inner.next();
+            network.outbound_buffer_size = inner.asNum<size_t>();
+            return true;
+          }
+          return false;
+        });
+      }
+      return true;
+    }
+    if (key == "device") {
+      if (r.next() == detail::JsonReader::Token::ObjectStart) {
+        r.forEachField([&](std::string_view k, detail::JsonReader& inner) {
+          if (k == "scan_on_startup") {
+            inner.next();
+            device.scan_on_startup = inner.asBool();
+            return true;
+          }
+          if (k == "initial_delay_s") {
+            inner.next();
+            device.initial_delay_s = inner.asNum<uint32_t>();
+            return true;
+          }
+          if (k == "startup_interval_s") {
+            inner.next();
+            device.startup_interval_s = inner.asNum<uint32_t>();
+            return true;
+          }
+          if (k == "max_startup_scans") {
+            inner.next();
+            device.max_startup_scans = static_cast<uint8_t>(inner.asNum<int>());
+            return true;
+          }
+          return false;
+        });
+      }
+      return true;
+    }
+    if (key == "scheduler") {
+      if (r.next() == detail::JsonReader::Token::ObjectStart) {
+        r.forEachField([&](std::string_view k, detail::JsonReader& inner) {
+          if (k == "max_send_attempts") {
+            inner.next();
+            scheduler.max_send_attempts =
+                static_cast<uint8_t>(inner.asNum<int>());
+            return true;
+          }
+          if (k == "base_backoff_ms") {
+            inner.next();
+            scheduler.base_backoff_ms = inner.asNum<uint32_t>();
+            return true;
+          }
+          if (k == "fsm_timeout_ms") {
+            inner.next();
+            scheduler.fsm_timeout_ms = inner.asNum<uint32_t>();
+            return true;
+          }
+          if (k == "total_timeout_ms") {
+            inner.next();
+            scheduler.total_timeout_ms = inner.asNum<uint32_t>();
+            return true;
+          }
+          return false;
+        });
+      }
+      return true;
+    }
+    return false;
+  });
+
+  return true;
+}
+
+bool RuntimeConfig::isValidJson(const std::string& json) {
+  return detail::JsonReader::validate(json);
 }
 
 void BusConfig::toJson(detail::JsonWriter& writer) const {
-  writer.startObject();
+  detail::JsonWriter::Scope scope(writer, detail::JsonWriter::Scope::Object);
 
 #if defined(ESP_PLATFORM) && !EBUS_SIMULATION
   writer.writeField("platform", "esp32");
@@ -174,14 +250,12 @@ void BusConfig::toJson(detail::JsonWriter& writer) const {
   writer.writeField("platform", "posix");
   writer.writeField("device", device);
 #endif
-  writer.endObject();
 }
 
 void EbusConfig::toJson(detail::JsonWriter& writer) const {
-  writer.startObject();
+  detail::JsonWriter::Scope scope(writer, detail::JsonWriter::Scope::Object);
   writer.writeField("runtime", runtime);
   writer.writeField("bus_hardware", bus);
-  writer.endObject();
 }
 
 }  // namespace ebus

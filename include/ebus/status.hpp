@@ -257,6 +257,7 @@ struct ServiceStatus {
 void serializeServiceStatus(const JsonChunkVisitor& visitor,
                             const ServiceStatus& status,
                             detail::BusMonitor* monitor = nullptr,
-                            bool reset_histories = false);
+                            bool reset_histories = false,
+                            bool pretty = false);
 
 }  // namespace ebus

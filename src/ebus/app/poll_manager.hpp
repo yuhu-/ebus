@@ -70,6 +70,14 @@ class PollManager {
   // timers. Using a callback avoids heap allocations from returning a vector.
   void processDueItems(const std::function<void(const Item&)>& callback,
                        bool* activity);
+
+  /**
+   * @brief Deserializes and adds poll items from a JSON array.
+   * Expected format: [{"priority": 10, "message": "aabbcc", "interval_ms": 1000}, ...]
+   * @return true if the JSON was partially or fully parsed.
+   */
+  bool mergeFromJson(const std::string& json);
+
   void clear();
 
   // Status/Telemetry

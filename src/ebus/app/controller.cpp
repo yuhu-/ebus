@@ -5,7 +5,7 @@
 
 #include <ebus/controller.hpp>
 #include <ebus/detail/config_validator.hpp>
-#include <ebus/detail/json_writer.hpp>  // For detail::JsonWriter
+#include <ebus/detail/json_writer.hpp>
 #include <ebus/detail/protocol_limits.hpp>
 #include <ebus/utils.hpp>
 #if EBUS_SIMULATION
@@ -536,14 +536,14 @@ void Controller::fetchSystemResources(
 }
 
 void Controller::fetchServiceStatus(const JsonChunkVisitor& visitor,
-                                    bool reset_histories) const {
+                                    bool reset_histories, bool pretty) const {
   ServiceStatus snapshot;
   {
     std::lock_guard<std::mutex> lock(impl_->status_mutex_);
     snapshot = impl_->status_cache_;
   }
   serializeServiceStatus(visitor, snapshot, impl_->bus_monitor_.get(),
-                         reset_histories);
+                         reset_histories, pretty);
 }
 
 void Controller::resetMetrics() {

@@ -49,7 +49,7 @@ cmake -DEBUS_MINIMAL_DIAGNOSTICS=ON ..
 ### Key Features
 *   **Data Decoding**: Native support for 30+ eBUS data types including BCD, fixed-point (DATA2B/C), and float.
 *   **Device Discovery**: Automatic identification of manufacturers and device roles. Includes specialized support for Vaillant service identification and serial number reconstruction.
-*   **Zero-Allocation Path**: Core protocol FSM and byte stuffing utilize Small Buffer Optimization (SBO) to eliminate heap allocations during active bus communication.
+*   **Zero-Allocation Path**: Core protocol FSM, byte stuffing, and JSON telemetry utilize Small Buffer Optimization (SBO) and streaming to eliminate heap allocations during active bus operation.
 
 ### Scheduling and Priorities
 

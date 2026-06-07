@@ -96,3 +96,67 @@ TEST_CASE("PollManager: Address Filtering", "[app][pollmanager]") {
 
   REQUIRE(count == 1);  // Only the external one should remain
 }
+
+TEST_CASE("PollManager: mergeFromJson", "[app][pollmanager]") {
+  PollManager pm;
+  // Set address to 0x31 (Slave 0x36) to test self-polling filter
+  pm.setOwnAddress(0x31);
+
+  SECTION("Valid array of multiple items") {
+    std::string json = R"([
+      {"priority": 10, "message": "15070400", "interval_ms": 5000},
+      {"priority": 2, "message": "05070400", "interval_ms": 1000}
+    ])";
+
+    REQUIRE(pm.mergeFromJson(json));
+    REQUIRE(pm.getStatus().item_count == 2);
+  }
+
+  SECTION("Root is not an array should return false") {
+    REQUIRE_FALSE(pm.mergeFromJson(R"({"priority": 10})"));
+    REQUIRE(pm.getStatus().item_count == 0);
+  }
+
+  SECTION("Optional fields use sensible defaults") {
+    // priority defaults to 5, interval_ms to 1000
+    std::string json = R"([{"message": "15070400"}])";
+
+    REQUIRE(pm.mergeFromJson(json));
+    REQUIRE(pm.getStatus().item_count == 1);
+  }
+
+  SECTION("Self-polling messages are strictly filtered") {
+    // Message starting with 0x36 (our slave address) should be rejected
+    std::string json = R"([{"message": "36070400"}])";
+
+    REQUIRE(pm.mergeFromJson(json));
+    REQUIRE(pm.getStatus().item_count == 0);
+  }
+
+  SECTION("Items missing the message key are ignored") {
+    std::string json = R"([
+      {"priority": 10, "interval_ms": 5000}
+    ])";
+
+    REQUIRE(pm.mergeFromJson(json));
+    REQUIRE(pm.getStatus().item_count == 0);
+  }
+
+  SECTION("Mixed valid and invalid types in array") {
+    std::string json = R"([
+      {"priority": 10, "message": "15070400"},
+      "this_is_not_an_object",
+      123,
+      {"message": "05070400", "extra_key": "ignore_me"}
+    ])";
+
+    REQUIRE(pm.mergeFromJson(json));
+    // Only the two valid objects should be added
+    REQUIRE(pm.getStatus().item_count == 2);
+  }
+
+  SECTION("Empty array is valid but adds nothing") {
+    REQUIRE(pm.mergeFromJson("[]"));
+    REQUIRE(pm.getStatus().item_count == 0);
+  }
+}

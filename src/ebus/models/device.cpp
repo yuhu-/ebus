@@ -135,7 +135,7 @@ bool Device::isVaillantValid() const {
 namespace ebus {
 
 void DeviceInfo::toJson(detail::JsonWriter& writer) const {
-  writer.startObject();
+  detail::JsonWriter::Scope scope(writer, detail::JsonWriter::Scope::Object);
   writer.writeHexField("slave_address", ByteView(&slave_address, 1));
   writer.writeHexField("manufacturer", ByteView(&manufacturer, 1));
   writer.writeField("manufacturer_name",
@@ -153,14 +153,15 @@ void DeviceInfo::toJson(detail::JsonWriter& writer) const {
 
   if (vaillant.serial_number.size() > 0) {
     writer.appendKey("vaillant");
-    writer.startObject();
-    writeAscii("serial_number", vaillant.serial_number);
-    writeAscii("product_code", vaillant.product_code);
-    writer.endObject();
+    {
+      detail::JsonWriter::Scope vScope(writer,
+                                       detail::JsonWriter::Scope::Object);
+      writeAscii("serial_number", vaillant.serial_number);
+      writeAscii("product_code", vaillant.product_code);
+    }
   }
 
   writer.writeField("frequency", frequency);
-  writer.endObject();
 }
 
 static constexpr const char* kManufacturerTable[256] = {

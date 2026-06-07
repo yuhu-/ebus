@@ -45,6 +45,7 @@ endif()
 # Utils
 set(UTILS_SOURCES
     utils/utils.cpp
+    utils/json_reader.cpp
     utils/json_writer.cpp
 )
 

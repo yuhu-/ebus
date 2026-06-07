@@ -8,7 +8,7 @@
 #include <cmath>
 #include <cstring>
 #include <ebus/data_types.hpp>
-#include <ebus/detail/json_writer.hpp>  // For detail::JsonWriter
+#include <ebus/detail/json_writer.hpp>
 #include <ebus/sequence.hpp>
 #include <ebus/utils.hpp>
 #include <limits>
@@ -617,7 +617,7 @@ DataType stringToDataType(const char* str) {
 }
 
 void DataTypeInfo::toJson(detail::JsonWriter& writer) const {
-  writer.startObject();
+  detail::JsonWriter::Scope scope(writer, detail::JsonWriter::Scope::Object);
   writer.writeField("type", static_cast<int32_t>(dt));
   writer.writeField("name", name);
   writer.writeField("size", size);
@@ -627,7 +627,6 @@ void DataTypeInfo::toJson(detail::JsonWriter& writer) const {
   writer.writeField("has_replacement", has_replacement);
   writer.writeField("replacement_value", replacement_value);
   writer.writeFieldFloat("factor", factor, 4);
-  writer.endObject();
 }
 
 void getSupportedDataTypesJson(const JsonChunkVisitor& visitor) {

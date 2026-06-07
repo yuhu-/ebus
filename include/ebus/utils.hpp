@@ -9,6 +9,7 @@
 #include <atomic>
 #include <charconv>
 #include <cmath>
+#include <cstdlib>
 #include <cstring>
 #include <initializer_list>
 #include <iterator>
@@ -43,10 +44,11 @@ inline void updateMaxAtomic(std::atomic<T>& atomic_max, T value) {
  */
 template <typename T,
           typename = std::enable_if_t<detail::has_to_json<T>::value>>
-std::string toJson(const T& obj, const size_t reserve) {
+std::string toJson(const T& obj, const size_t reserve, bool pretty = false) {
   std::string json;
   json.reserve(reserve);
-  detail::JsonWriter writer([&json](std::string_view s) { json.append(s); });
+  detail::JsonWriter writer([&json](std::string_view s) { json.append(s); },
+                            pretty);
   obj.toJson(writer);
   return json;
 }
@@ -97,7 +99,21 @@ template <typename T, typename = std::enable_if_t<std::is_arithmetic_v<T>>>
 inline T toNum(std::string_view s) {
   if (s.empty() || s == "null") return 0;
   T val = 0;
-  std::from_chars(s.data(), s.data() + s.size(), val);
+  if constexpr (std::is_floating_point_v<T>) {
+    // Fallback for environments (like ESP32-C3) missing floating-point
+    // std::from_chars.
+    char buf[64];
+    const size_t len = (s.size() < sizeof(buf)) ? s.size() : sizeof(buf) - 1;
+    std::memcpy(buf, s.data(), len);
+    buf[len] = '\0';
+    char* end;
+    if constexpr (std::is_same_v<T, float>)
+      val = std::strtof(buf, &end);
+    else
+      val = static_cast<T>(std::strtod(buf, &end));
+  } else {
+    std::from_chars(s.data(), s.data() + s.size(), val);
+  }
   return val;
 }
 

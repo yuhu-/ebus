@@ -30,7 +30,7 @@ To maintain consistency across the library, members in classes that implement lo
 
 ### Memory Management
 *   **Avoid Heap Allocation**: Do not allocate memory on the heap within the protocol processing loop (the "hot path"). Use pre-allocated buffers and reuse existing capacities.
-*   **Small Buffer Optimization**: Use `ebus::Sequence` for byte arrays. It utilizes an internal 64-byte stack buffer before falling back to the heap. Ensure new protocol sequences stay within this limit where possible.
+*   **Small Buffer Optimization**: Use `ebus::Sequence` for byte arrays (64-byte stack buffer). For telemetry and status reporting, use `ebus::detail::JsonWriter`, which utilizes a 256-byte stack buffer to prevent heap spikes during serialization.
 *   **Standard Library**: Be mindful of `std::vector` and `std::string` usage in performance-critical sections to avoid hidden allocations.
 
 ### Component Categorization
@@ -62,7 +62,8 @@ These components manage high-level tasks like discovery, scheduling, and network
 *   **Public API Stability**: Public headers for optional features should use `static_assert` or `#error` to provide a clear message if the feature is included but not enabled in the build.
 
 ### Telemetry and JSON
-*   **JSON Serialization**: We avoid large JSON libraries. If adding new metrics or info structs, implement a corresponding `toJson` overload in `src/ebus/utils/json_utils.cpp` using the `escapeJson` helper.
+*   **JSON Generation**: Use `ebus::detail::JsonWriter` for all serialization. It is a zero-allocation, streaming writer optimized for constrained stacks. New logic should be implemented in a `void toJson(detail::JsonWriter& writer) const` member function.
+*   **JSON Parsing**: Use `ebus::detail::JsonReader` for zero-allocation pull-parsing. It supports path-based extraction (e.g., `get("bus.window_us")`) and array indexing.
 
 ### Error Handling
 *   **Metrics Over Exceptions**: Use the internal `Metrics` system for protocol-level errors. Avoid using exceptions in the hot path.
@@ -94,6 +95,8 @@ To keep the library maintainable and portable, we follow these patterns:
 *   **PollManager**: Orchestrates recurring jobs and periodic slave polling.
 *   **DeviceManager**: Maintains the inventory of discovered devices and their properties.
 *   **DeviceScanner**: Implements the logic for identifying devices on the bus.
+*   **JsonWriter**: High-performance, streaming JSON generator for telemetry and status.
+*   **JsonReader**: Minimalist, zero-allocation JSON pull-parser with path-based navigation.
 *   **EnhancedProtocol**: Implements specialized ebusd-compatible communication modes.
 *   **BusSimulator**: Internal utility for the virtual bus that manages mock reactions and simulated bus behavior.
 *   **ClientManager**: Manages bridge connections for external clients (e.g., ebusd).
