@@ -104,16 +104,17 @@ SCENARIO("Handler processes eBUS messages correctly", "[core][handler]") {
               INFO("reactive: " << ebus::toString(info.master_view) << " "
                                 << ebus::toString(info.slave_response));
             });
-        handler.setTelegramCallback([&](const ebus::TelegramInfo& info) {
-          telegram_count++;
-          INFO("telegram: " << ebus::toString(info.master_view) << " "
-                            << ebus::toString(info.slave_view));
-        });
-        handler.setErrorCallback([&](const ebus::ErrorInfo& info) {
-          error_count++;  // error_count is still used
-          INFO("error: " << ebus::toString(info.protocol_error) << " master '"
-                         << ebus::toString(info.master_view) << "' slave '"
-                         << ebus::toString(info.slave_view) << "'");
+        handler.setProtocolCallback([&](const ebus::ProtocolInfo& info) {
+          if (info.is_error) {
+            error_count++;
+            INFO("error: " << ebus::toString(info.protocol_error) << " master '"
+                           << ebus::toString(info.master_view) << "' slave '"
+                           << ebus::toString(info.slave_view) << "'");
+          } else {
+            telegram_count++;
+            INFO("telegram: " << ebus::toString(info.master_view) << " "
+                              << ebus::toString(info.slave_view));
+          }
         });
 
         bus.addWriteListener([&](const uint8_t& byte) {

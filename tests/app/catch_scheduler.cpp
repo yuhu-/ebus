@@ -108,17 +108,16 @@ TEST_CASE("Scheduler: Simulation", "[app][scheduler]") {
     reactor_queue_.tryPush(std::move(oev));
   });
 
-  auto run_test = [&](const std::string& payload) {
-    auto promise = std::make_shared<std::promise<bool>>();
-    auto future = promise->get_future();
-    scheduler.enqueue(1, ebus::toVector(payload),
-                      [promise](const ebus::ResultInfo& info) {
-                        promise->set_value(info.success);
-                      });
-    return future.wait_for(std::chrono::seconds(2)) ==
-               std::future_status::ready &&
-           future.get();  // Ensure future is ready and value is true
-  };
+  std::atomic<uint32_t> last_success_session{0};
+  std::atomic<uint32_t> last_error_session{0};
+
+  scheduler.setProtocolCallback([&](const ebus::ProtocolInfo& info) {
+    if (info.is_error) {
+      last_error_session.store(info.session_id);
+    } else if (info.message_type == ebus::MessageType::active) {
+      last_success_session.store(info.session_id);
+    }
+  });
 
   // Simulate the Controller's reactor loop for the duration of the tests
   auto test_start_time = ebus::Clock::now();
@@ -130,16 +129,15 @@ TEST_CASE("Scheduler: Simulation", "[app][scheduler]") {
                                        "fe070400"};
 
   for (const auto& payload : payloads) {
-    auto promise = std::make_shared<std::promise<bool>>();
-    auto future = promise->get_future();
-    scheduler.enqueue(1, ebus::toVector(payload),
-                      [promise](const ebus::ResultInfo& info) {
-                        promise->set_value(info.success);
-                      });
+    last_success_session.store(0);
+    last_error_session.store(0);
+
+    uint32_t session_id = scheduler.enqueue(1, ebus::toVector(payload));
+    REQUIRE(session_id > 0);
 
     auto current_test_start = ebus::Clock::now();
-    while (future.wait_for(std::chrono::milliseconds(0)) !=
-               std::future_status::ready &&
+    while (last_success_session.load() != session_id &&
+           last_error_session.load() != session_id &&
            (ebus::Clock::now() - current_test_start) <
                std::chrono::seconds(3)) {  // Timeout per message
       scheduler.tick();
@@ -179,9 +177,7 @@ TEST_CASE("Scheduler: Simulation", "[app][scheduler]") {
         }
       }
     }
-    if (!(future.wait_for(std::chrono::milliseconds(0)) ==
-              std::future_status::ready &&
-          future.get())) {
+    if (last_success_session.load() != session_id) {
       all_tests_passed = false;
       WARN("Test failed for payload: " << payload);
     }

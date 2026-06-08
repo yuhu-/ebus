@@ -131,12 +131,8 @@ void Handler::setReactiveMasterSlaveCallback(
   reactive_master_slave_callback_ = std::move(callback);
 }
 
-void Handler::setTelegramCallback(TelegramCallback callback) {
-  telegram_callback_ = std::move(callback);
-}
-
-void Handler::setErrorCallback(ErrorCallback callback) {
-  error_callback_ = std::move(callback);
+void Handler::setProtocolCallback(ProtocolCallback callback) {
+  protocol_callback_ = std::move(callback);
 }
 
 bool Handler::sendActiveMessage(ByteView message) {
@@ -154,10 +150,7 @@ bool Handler::sendActiveMessage(ByteView message) {
     }
   } else {
     if (monitor_) monitor_->updateHandler([](auto& m) { m.error_active++; });
-    callOnError(LogLevel::error, ProtocolError::error_active_master,
-                active_telegram_.getMasterState(),
-                {active_master_.data(), active_master_.size()},
-                {active_slave_.data(), active_slave_.size()});
+    return false;
   }
 
   return active_message_;
@@ -224,6 +217,8 @@ ebus::SequenceState Handler::getActiveSequenceState() const {
 }
 
 bool Handler::isActiveMessagePending() const { return active_message_; }
+
+BusMonitor* Handler::getMonitor() const { return monitor_; }
 
 void Handler::passiveReceiveMaster(uint8_t byte) {
   if (byte != Symbols::syn) {
@@ -600,12 +595,12 @@ void Handler::activeSendMaster(uint8_t byte) {
   if (byte != active_master_[active_master_index_]) {
     if (monitor_) monitor_->updateHandler([](auto& m) { m.error_active++; });
     callOnError(LogLevel::error, ProtocolError::error_active_master_echo,
-                passive_telegram_.getMasterState(),
+                active_telegram_.getMasterState(),
                 {active_master_.data(), active_master_.size()},
                 {active_slave_.data(), active_slave_.size()});
     callActiveReset();
-    // Do not increment; abort and release bus or retry logic could trigger
-    // here
+    transitionTo(HandlerState::passive_receive_master);
+    return;
   }
 
   active_master_index_++;
@@ -652,7 +647,7 @@ void Handler::activeReceiveMasterAcknowledge(uint8_t byte) {
   } else {
     if (monitor_) monitor_->updateHandler([](auto& m) { m.error_active++; });
     callOnError(LogLevel::error, ProtocolError::error_active_master_ack,
-                passive_telegram_.getMasterState(),
+                active_telegram_.getMasterState(),
                 {active_master_.data(), active_master_.size()},
                 {active_slave_.data(), active_slave_.size()});
     callActiveReset();  // Reset active state
@@ -695,7 +690,7 @@ void Handler::activeReceiveSlave(uint8_t byte) {
     } else {
       if (monitor_) monitor_->updateHandler([](auto& m) { m.error_active++; });
       callOnError(LogLevel::error, ProtocolError::error_active_slave,
-                  passive_telegram_.getSlaveState(),
+                  active_telegram_.getSlaveState(),
                   {active_master_.data(), active_master_.size()},
                   {active_slave_.data(), active_slave_.size()});
       active_slave_.clear();  // Clear slave response
@@ -727,7 +722,7 @@ void Handler::activeSendSlaveNegativeAcknowledge(
   } else {
     if (monitor_) monitor_->updateHandler([](auto& m) { m.error_active++; });
     callOnError(LogLevel::error, ProtocolError::error_active_slave_ack,
-                passive_telegram_.getSlaveState(),
+                active_telegram_.getSlaveState(),
                 {active_master_.data(), active_master_.size()},
                 {active_slave_.data(), active_slave_.size()});
     callActiveReset();  // Reset active state
@@ -864,7 +859,7 @@ void Handler::callOnReactiveMasterSlave(ByteView master_view,
 void Handler::callOnTelegram(MessageType message_type,
                              TelegramType telegram_type, ByteView master_view,
                              ByteView slave_view) {
-  if (telegram_callback_) {
+  if (protocol_callback_) {
     if (monitor_) {
       uint32_t data_bytes = 0;
       // PB + SB + Master Data
@@ -883,21 +878,39 @@ void Handler::callOnTelegram(MessageType message_type,
         monitor_->recordHandlerSuccess(master_view[1]);
       }
     }
-    telegram_callback_({0, 0, 0, message_type, telegram_type, state_,
-                        request_->getState(), master_view, slave_view});
+
+    ProtocolInfo info;
+    info.is_error = false;
+    info.message_type = message_type;
+    info.telegram_type = telegram_type;
+    info.handler_state = state_;
+    info.request_state = request_->getState();
+    info.master_view = master_view;
+    info.slave_view = slave_view;
+    protocol_callback_(info);
   }
 }
 
 void Handler::callOnError(LogLevel level, ProtocolError protocol_error,
                           SequenceState sequence_state, ByteView master_view,
                           ByteView slave_view) {
-  if (error_callback_) {
+  if (protocol_callback_) {
     if (monitor_) {
       monitor_->recordBusError();
       monitor_->recordHandlerError(master_view.empty() ? 0xff : master_view[0]);
     }
-    error_callback_({0, 0, level, protocol_error, last_result_, sequence_state,
-                     state_, request_->getState(), master_view, slave_view});
+
+    ProtocolInfo info;
+    info.is_error = true;
+    info.level = level;
+    info.protocol_error = protocol_error;
+    info.result = last_result_;
+    info.sequence_state = sequence_state;
+    info.handler_state = state_;
+    info.request_state = request_->getState();
+    info.master_view = master_view;
+    info.slave_view = slave_view;
+    protocol_callback_(info);
   }
 }
 

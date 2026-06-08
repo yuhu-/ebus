@@ -39,7 +39,6 @@ class PollManager {
     Sequence message;
     std::chrono::milliseconds interval;
     Clock::time_point next_due;
-    ResultCallback callback;
 
     struct Greater {
       bool operator()(const Item& lhs, const Item& rhs) const {
@@ -62,8 +61,8 @@ class PollManager {
 
   // Working Methods
   // Register a new recurring command. Returns a unique ID.
-  uint32_t addPollItem(uint8_t priority, ByteView message, uint32_t interval_ms,
-                       ResultCallback callback = nullptr);
+  uint32_t addPollItem(uint8_t priority, ByteView message,
+                       uint32_t interval_ms);
   // Remove a recurring command by ID.
   void removePollItem(uint32_t id);
   // Processes commands that are currently due and updates their internal

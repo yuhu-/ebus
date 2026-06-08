@@ -26,60 +26,31 @@ template <std::size_t kInlineCapacity>
 class SequenceImpl;
 using Sequence = SequenceImpl<detail::SequenceLimits::default_capacity>;
 
-struct TelegramInfo {
-  TelegramInfo() = default;
-  TelegramInfo(uint32_t s_id, uint32_t p_id, uint32_t retry, MessageType mt,
-               TelegramType tt, HandlerState hs, RequestState rs,
-               ByteView master, ByteView slave)
-      : session_id(s_id),
-        poll_id(p_id),
-        retry_count(retry),
-        message_type(mt),
-        telegram_type(tt),
-        handler_state(hs),
-        request_state(rs),
-        master_view(master),
-        slave_view(slave) {}
+/**
+ * Unified carrier for protocol results (Success or Error).
+ * Delivered to the user via the decoupled ProtocolCallback.
+ */
+struct ProtocolInfo {
+  ProtocolInfo() = default;
 
+  bool is_error = false;
   uint32_t session_id = 0;
   uint32_t poll_id = 0;
-  uint32_t retry_count = 0;
-  MessageType message_type = MessageType::undefined;
-  TelegramType telegram_type = TelegramType::undefined;
   HandlerState handler_state = HandlerState::passive_receive_master;
   RequestState request_state = RequestState::observe;
+  uint32_t retry_count = 0;
   ByteView master_view;
   ByteView slave_view;
 
-  void toJson(detail::JsonWriter& writer) const;
-};
+  // Telegram-specific fields
+  MessageType message_type = MessageType::undefined;
+  TelegramType telegram_type = TelegramType::undefined;
 
-struct ErrorInfo {
-  ErrorInfo() = default;
-  ErrorInfo(uint32_t s_id, uint32_t p_id, LogLevel lvl, ProtocolError pe,
-            RequestResult res, SequenceState ss, HandlerState hs,
-            RequestState rs, ByteView master, ByteView slave)
-      : session_id(s_id),
-        poll_id(p_id),
-        level(lvl),
-        protocol_error(pe),
-        result(res),
-        sequence_state(ss),
-        handler_state(hs),
-        request_state(rs),
-        master_view(master),
-        slave_view(slave) {}
-
-  uint32_t session_id = 0;
-  uint32_t poll_id = 0;
-  LogLevel level = LogLevel::error;
+  // Error-specific fields
+  LogLevel level = LogLevel::none;
   ProtocolError protocol_error = ProtocolError::none;
   RequestResult result = RequestResult::observe_data;
   SequenceState sequence_state = SequenceState::seq_empty;
-  HandlerState handler_state = HandlerState::passive_receive_master;
-  RequestState request_state = RequestState::observe;
-  ByteView master_view;
-  ByteView slave_view;
 
   void toJson(detail::JsonWriter& writer) const;
 };
@@ -91,29 +62,6 @@ struct ReactiveInfo {
   uint32_t session_id = 0;
   ByteView master_view;
   Sequence& slave_response;
-
-  void toJson(detail::JsonWriter& writer) const;
-};
-
-struct ResultInfo {
-  ResultInfo() = default;
-  ResultInfo(uint32_t s_id, uint32_t p_id, bool succ, RequestResult res,
-             SequenceState ss, ByteView master, ByteView slave)
-      : session_id(s_id),
-        poll_id(p_id),
-        success(succ),
-        result(res),
-        sequence_state(ss),
-        master_view(master),
-        slave_view(slave) {}
-
-  uint32_t session_id = 0;
-  uint32_t poll_id = 0;
-  bool success = false;
-  RequestResult result = RequestResult::observe_data;
-  SequenceState sequence_state = SequenceState::seq_empty;
-  ByteView master_view;
-  ByteView slave_view;
 
   void toJson(detail::JsonWriter& writer) const;
 };
@@ -146,14 +94,10 @@ struct BusEventInfo {
 /**
  * Callback signatures
  */
-using TelegramCallback = std::function<void(const TelegramInfo& info)>;
-
-using ErrorCallback = std::function<void(const ErrorInfo& info)>;
+using ProtocolCallback = std::function<void(const ProtocolInfo& info)>;
 
 using ReactiveMasterSlaveCallback =
     std::function<void(const ReactiveInfo& info)>;
-
-using ResultCallback = std::function<void(const ResultInfo& info)>;
 
 using TraceCallback = std::function<void(const BusEventInfo& info)>;
 

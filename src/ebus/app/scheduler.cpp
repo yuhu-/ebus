@@ -10,6 +10,8 @@
 #include <ebus/utils.hpp>
 #include <memory>
 
+#include "core/bus_monitor.hpp"
+
 namespace ebus::detail {
 
 Scheduler::Scheduler(Handler* handler)
@@ -54,14 +56,9 @@ void Scheduler::setReactiveMasterSlaveCallback(
   extern_reactive_callback_ = std::move(callback);
 }
 
-void Scheduler::setTelegramCallback(TelegramCallback callback) {
+void Scheduler::setProtocolCallback(ProtocolCallback callback) {
   std::lock_guard<std::mutex> lock(callback_mutex_);
-  extern_telegram_callback_ = std::move(callback);
-}
-
-void Scheduler::setErrorCallback(ErrorCallback callback) {
-  std::lock_guard<std::mutex> lock(callback_mutex_);
-  extern_error_callback_ = std::move(callback);
+  extern_protocol_callback_ = std::move(callback);
 }
 
 void Scheduler::attachHandlerCallbacks() {
@@ -118,83 +115,53 @@ void Scheduler::attachHandlerCallbacks() {
     }
   });
 
-  handler_->setTelegramCallback([this](const TelegramInfo& info) {
+  handler_->setProtocolCallback([this](const ProtocolInfo& info) {
     uint32_t s_id = current_session_id_.load(std::memory_order_relaxed);
     uint32_t p_id = current_poll_id_.load(std::memory_order_relaxed);
+    uint32_t scheduler_retries = 0;
 
-    TelegramCallback user_callback;
+    {
+      std::lock_guard<std::mutex> lock(data_mutex_);
+      if (active_item_ && active_item_->session_id == s_id) {
+        scheduler_retries = active_item_->item.send_attempts;
+      }
+    }
+
+    ProtocolCallback user_callback;
     {
       std::lock_guard<std::mutex> lock(callback_mutex_);
-      user_callback = extern_telegram_callback_;
+      user_callback = extern_protocol_callback_;
     }
 
     if (user_callback) {
-      if (s_id != 0 && info.message_type == MessageType::active) {
-        auto correlated = info;
-        correlated.session_id = s_id;
-        correlated.poll_id = p_id;
-        user_callback(correlated);
-      } else {
-        user_callback(info);
-      }
+      auto pinfo = info;
+      pinfo.session_id = s_id;
+      pinfo.poll_id = p_id;
+      pinfo.retry_count = scheduler_retries;
+      user_callback(pinfo);
     }
 
     if (s_id == 0) return;
 
     ProtocolEvent ev;
-    ev.type = ProtocolEvent::Type::telegram;
+    ev.type = info.is_error ? ProtocolEvent::Type::error
+                            : ProtocolEvent::Type::telegram;
     ev.session_id = s_id;
     ev.poll_id = p_id;
-    ev.data.tel.message_type = info.message_type;
-    ev.data.tel.telegram_type = info.telegram_type;
+    ev.retry_count = scheduler_retries;
     ev.handler_state = info.handler_state;
     ev.request_state = info.request_state;
     ev.master.assign(info.master_view.data(), info.master_view.size());
     ev.slave.assign(info.slave_view.data(), info.slave_view.size());
-
-    if (event_sink_) {
-      OrchestrationEvent oev;
-      oev.type = OrchestrationEventType::protocol_result;
-      oev.data.protocol_data = ev;
-      event_sink_(std::move(oev));
+    if (info.is_error) {
+      ev.data.err.level = info.level;
+      ev.data.err.protocol_error = info.protocol_error;
+      ev.data.err.result = info.result;
+      ev.data.err.sequence_state = info.sequence_state;
+    } else {
+      ev.data.tel.message_type = info.message_type;
+      ev.data.tel.telegram_type = info.telegram_type;
     }
-  });
-
-  handler_->setErrorCallback([this](const ErrorInfo& info) {
-    // Reset on certain error conditions that indicate the bus is now free
-    // again
-    uint32_t s_id = current_session_id_.load(std::memory_order_relaxed);
-    uint32_t p_id = current_poll_id_.load(std::memory_order_relaxed);
-    if (extern_error_callback_) {
-      ErrorCallback user_callback;
-      {
-        std::lock_guard<std::mutex> lock(callback_mutex_);
-        user_callback = extern_error_callback_;
-      }
-
-      if (s_id != 0) {
-        auto correlated = info;
-        correlated.session_id = s_id;
-        correlated.poll_id = p_id;
-        user_callback(correlated);
-      } else {
-        user_callback(info);
-      }
-    }
-    if (s_id == 0) return;
-
-    ProtocolEvent ev;
-    ev.type = ProtocolEvent::Type::error;
-    ev.session_id = s_id;
-    ev.poll_id = p_id;
-    ev.data.err.level = info.level;
-    ev.data.err.result = info.result;
-    ev.data.err.sequence_state = info.sequence_state;
-    ev.data.err.protocol_error = info.protocol_error;
-    ev.handler_state = info.handler_state;
-    ev.request_state = info.request_state;
-    ev.master.assign(info.master_view.data(), info.master_view.size());
-    ev.slave.assign(info.slave_view.data(), info.slave_view.size());
 
     if (event_sink_) {
       OrchestrationEvent oev;
@@ -210,8 +177,7 @@ void Scheduler::detachHandlerCallbacks() {
   handler_->setBusRequestWonCallback(nullptr);
   handler_->setBusRequestLostCallback(nullptr);
   handler_->setReactiveMasterSlaveCallback(nullptr);
-  handler_->setTelegramCallback(nullptr);
-  handler_->setErrorCallback(nullptr);
+  handler_->setProtocolCallback(nullptr);
 }
 
 bool Scheduler::injectProtocolEvent(const ProtocolEvent& event) {
@@ -228,6 +194,7 @@ bool Scheduler::tick() {
   std::optional<Item> item_to_start;
   ProtocolEvent timeout_ev{};
   bool has_timeout = false;
+  uint32_t timeout_poll_id = 0;
 
   {
     std::lock_guard<std::mutex> lock(data_mutex_);
@@ -245,6 +212,7 @@ bool Scheduler::tick() {
         timeout_ev.request_state = RequestState::observe;
         timeout_ev.master.assign(active_item_->item.message.data(),
                                  active_item_->item.message.size());
+        timeout_poll_id = active_item_->item.poll_id;
         has_timeout = true;
       }
     } else if (!scheduled_items_.empty() &&
@@ -262,6 +230,28 @@ bool Scheduler::tick() {
 
   if (has_timeout) {
     handler_->reset();
+
+    // Notify decoupled ProtocolCallback for internal timeout
+    ProtocolCallback user_callback;
+    {
+      std::lock_guard<std::mutex> lock(callback_mutex_);
+      user_callback = extern_protocol_callback_;
+    }
+    if (user_callback) {
+      ProtocolInfo info;
+      info.is_error = true;
+      info.session_id = timeout_ev.session_id;
+      info.poll_id = timeout_poll_id;
+      info.level = timeout_ev.data.err.level;
+      info.protocol_error = timeout_ev.data.err.protocol_error;
+      info.result = timeout_ev.data.err.result;
+      info.sequence_state = timeout_ev.data.err.sequence_state;
+      info.handler_state = timeout_ev.handler_state;
+      info.request_state = timeout_ev.request_state;
+      info.master_view = timeout_ev.master;
+      user_callback(info);
+    }
+
     handleAttemptResult(timeout_ev);
     return true;
   }
@@ -285,6 +275,28 @@ bool Scheduler::tick() {
       fail_ev.data.err.level = LogLevel::error;
       fail_ev.handler_state = handler_->getState();
       fail_ev.request_state = RequestState::observe;
+
+      // Notify decoupled ProtocolCallback for rejected message
+      ProtocolCallback user_callback;
+      {
+        std::lock_guard<std::mutex> lock(callback_mutex_);
+        user_callback = extern_protocol_callback_;
+      }
+      if (user_callback) {
+        ProtocolInfo info;
+        info.is_error = true;
+        info.session_id = fail_ev.session_id;
+        info.poll_id = fail_ev.poll_id;
+        info.level = fail_ev.data.err.level;
+        info.protocol_error = fail_ev.data.err.protocol_error;
+        info.result = fail_ev.data.err.result;
+        info.sequence_state = fail_ev.data.err.sequence_state;
+        info.handler_state = fail_ev.handler_state;
+        info.request_state = fail_ev.request_state;
+        info.master_view = fail_ev.master;
+        user_callback(info);
+      }
+
       handleAttemptResult(fail_ev);
     }
     return true;
@@ -292,28 +304,28 @@ bool Scheduler::tick() {
   return false;
 }
 
-bool Scheduler::enqueue(uint8_t priority, ByteView message,
-                        ResultCallback callback, uint32_t poll_id) {
+uint32_t Scheduler::enqueue(uint8_t priority, ByteView message,
+                            uint32_t poll_id) {
   Item it;
   it.priority = priority;
   it.due = Clock::now();
   it.message.assign(message);
-  it.result_callback = std::move(callback);
   it.session_id = next_session_id_++;
   it.poll_id = poll_id;
-  return pushItem(std::move(it));
+  if (pushItem(std::move(it))) return it.session_id;
+  return 0;
 }
 
-bool Scheduler::enqueueAt(uint8_t priority, ByteView message, TimePoint when,
-                          ResultCallback callback, uint32_t poll_id) {
+uint32_t Scheduler::enqueueAt(uint8_t priority, ByteView message,
+                              TimePoint when, uint32_t poll_id) {
   Item it;
   it.priority = priority;
   it.due = when;
   it.message.assign(message);
-  it.result_callback = std::move(callback);
   it.session_id = next_session_id_++;
   it.poll_id = poll_id;
-  return pushItem(std::move(it));
+  if (pushItem(std::move(it))) return it.session_id;
+  return 0;
 }
 
 void Scheduler::clear() {
@@ -361,22 +373,13 @@ bool Scheduler::pushItem(Item&& it) {
 }
 
 bool Scheduler::handleAttemptResult(const ProtocolEvent& ev) {
-  ResultCallback result_callback = nullptr;
-  ErrorCallback error_callback = nullptr;
-  ResultInfo result_info{};
-  ErrorInfo error_info{};
-  Sequence slave_res;
-  bool has_result = false;
-  bool has_error = false;
+  // This function is called by injectProtocolEvent (for events from Handler)
+  // and by tick (for timeout_ev).
   {
     std::lock_guard<std::mutex> lock(data_mutex_);
     if (!active_item_) return false;
-    bool success = false;
-    if (ev.type == ProtocolEvent::Type::telegram) {
-      success = true;
-      slave_res.assign(ev.slave);
-    } else if (ev.type == ProtocolEvent::Type::lost ||
-               ev.type == ProtocolEvent::Type::error) {
+    if (ev.type == ProtocolEvent::Type::lost ||
+        ev.type == ProtocolEvent::Type::error) {
       // Structural protocol errors are not transient; do not retry.
       const bool is_fatal =
           (ev.type == ProtocolEvent::Type::error &&
@@ -384,6 +387,10 @@ bool Scheduler::handleAttemptResult(const ProtocolEvent& ev) {
 
       active_item_->item.send_attempts++;
       if (!is_fatal && active_item_->item.send_attempts < max_send_attempts_) {
+        if (handler_) {
+          handler_->getMonitor()->updateHandler(
+              [](auto& m) { m.total_retries++; });
+        }
         // Reschedule with backoff
         active_item_->item.due =
             Clock::now() + backoffDuration(active_item_->item.send_attempts);
@@ -394,8 +401,6 @@ bool Scheduler::handleAttemptResult(const ProtocolEvent& ev) {
         current_session_id_.store(0, std::memory_order_relaxed);
         current_poll_id_.store(0, std::memory_order_relaxed);
         return true;
-      } else {
-        // Final failure
       }
     }
 
@@ -403,45 +408,6 @@ bool Scheduler::handleAttemptResult(const ProtocolEvent& ev) {
     active_item_.reset();
     current_session_id_.store(0, std::memory_order_relaxed);
     current_poll_id_.store(0, std::memory_order_relaxed);
-
-    if (success) {
-      result_callback = std::move(terminal_item.result_callback);
-      result_info = ResultInfo{terminal_item.session_id,
-                               terminal_item.poll_id,
-                               true,
-                               RequestResult::first_won,
-                               SequenceState::seq_ok,
-                               terminal_item.message,
-                               slave_res};
-      has_result = true;
-    } else {
-      {
-        std::lock_guard<std::mutex> cb_lock(callback_mutex_);
-        error_callback = extern_error_callback_;
-      }
-      error_info =
-          ErrorInfo{terminal_item.session_id, terminal_item.poll_id,
-                    ev.data.err.level,        ev.data.err.protocol_error,
-                    ev.data.err.result,       ev.data.err.sequence_state,
-                    ev.handler_state,         ev.request_state,
-                    terminal_item.message,    {}};
-      has_error = true;
-      result_callback = std::move(terminal_item.result_callback);
-      result_info = ResultInfo{terminal_item.session_id,
-                               terminal_item.poll_id,
-                               false,
-                               ev.data.err.result,
-                               ev.data.err.sequence_state,
-                               terminal_item.message,
-                               {}};
-      has_result = true;
-    }
-  }
-  if (has_error && error_callback) {
-    error_callback(error_info);
-  }
-  if (has_result && result_callback) {
-    result_callback(result_info);
   }
   return true;
 }

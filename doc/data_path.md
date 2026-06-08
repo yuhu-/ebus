@@ -30,23 +30,23 @@ ensuring that user commands are prioritized over routine discovery tasks.
           |                               |                                |
           v                               v                                v
   [ PollManager ]                 [ DeviceScanner ]                [ ClientManager ]
-  (Recurring Jobs)                (Auto-Discovery)                 (Network Bridge)
+  (Recurring Jobs)                (Auto-Discovery)                  (Network Bridge)
           |                               |                                |
           +-------------------------------+--------------------------------+
                                           |
                                           v
-                                   [  Scheduler  ] <--- [ ResultCallback ]
+                                   [  Scheduler  ]
                                    (Priority Queue)
                                           |
                                           v
                                    [   Handler   ] <--- [ TelegramCallback ]
-                                   ( Protocol FSM )           (ErrorCallback)
+                                   ( Protocol FSM )          (ErrorCallback)
                                           |
           +-------------------------------+--------------------------------+
           |                               |                                |
           v                               v                                v
     [ Sequence ]                    [  Request  ]                  [ TimingStats ]
-    (CRC/Escaping)                  (Arbitration)                  (Metrics/Stats)
+   (CRC/Escaping)                   (Arbitration)                  (Metrics/Stats)
           |                               |                                ^
           +-------------------------------+--------------------------------+
                                           |

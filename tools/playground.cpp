@@ -38,7 +38,8 @@ int main() {
   vbus.addSlaveReaction(config.runtime.address, "15070400",
                         "0ab54d4f434b0001020304");
 
-  controller.setTelegramCallback([](const ebus::TelegramInfo& info) {
+  controller.setProtocolCallback([](const ebus::ProtocolInfo& info) {
+    if (info.is_error) return;
     std::cout << "[Telegram] " << ebus::toString(info.telegram_type)
               << " Master: " << ebus::toString(info.master_view)
               << " Slave: " << ebus::toString(info.slave_view) << std::endl;
@@ -47,17 +48,11 @@ int main() {
   controller.start();
 
   // Test Case: Identification Request
-  controller.enqueue(
-      10, ebus::toVector("15070400"), [](const ebus::ResultInfo& res) {
-        if (res.success) {
-          std::cout
-              << "[Result] Integration Test SUCCESS: Received MOCK response"
-              << std::endl;
-        } else {
-          std::cout << "[Result] Integration Test FAILED: "
-                    << ebus::toString(res.result) << std::endl;
-        }
-      });
+  controller.enqueue(10, ebus::toVector("15070400"));
+
+  // Note: Results for enqueued messages are now delivered via the global
+  // TelegramCallback and ErrorCallback. The ResultCallback has been removed
+  // for architectural simplification.
 
   std::this_thread::sleep_for(2s);
   controller.stop();

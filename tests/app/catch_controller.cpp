@@ -31,8 +31,14 @@ TEST_CASE("Controller: Lifecycle and API", "[app][controller]") {
 
   // Central dispatcher callback
   std::atomic<bool> telegramSeen{false};
-  controller.setTelegramCallback(
-      [&](const ebus::TelegramInfo& info) { telegramSeen = true; });
+  std::atomic<uint32_t> successSession{0};
+  controller.setProtocolCallback([&](const ebus::ProtocolInfo& info) {
+    if (info.is_error) return;
+    telegramSeen = true;
+    if (info.message_type == ebus::MessageType::active) {
+      successSession.store(info.session_id);
+    }
+  });
 
   // Start service
   REQUIRE(controller.start());
@@ -41,15 +47,12 @@ TEST_CASE("Controller: Lifecycle and API", "[app][controller]") {
 
   // Active messaging (enqueue)
   std::vector<uint8_t> msg = {0xfe, 0xb5, 0x05, 0x04, 0x27, 0x00, 0x2d, 0x00};
-  std::atomic<bool> resultCallbackFired{false};
-
-  controller.enqueue(1, msg, [&](const ebus::ResultInfo& info) {
-    REQUIRE(info.success);
-    resultCallbackFired = true;
-  });
+  uint32_t session_id = controller.enqueue(1, msg);
+  REQUIRE(session_id > 0);
 
   // Replace 1s sleep with deterministic wait
-  REQUIRE((waitCondition([&] { return resultCallbackFired.load(); }, 2000)));
+  REQUIRE((waitCondition([&] { return successSession.load() == session_id; },
+                         2000)));
   REQUIRE((waitCondition([&] { return telegramSeen.load(); }, 100)));
 
   // Metrics
@@ -75,7 +78,8 @@ TEST_CASE("Controller: System Discovery automated response",
 
   std::atomic<int> inquiryOfExistenceCount{0};
   std::atomic<int> signOfLifeCount{0};
-  controller.setTelegramCallback([&](const ebus::TelegramInfo& info) {
+  controller.setProtocolCallback([&](const ebus::ProtocolInfo& info) {
+    if (info.is_error) return;
     if (ebus::matches(info.master_view, ebus::Sequence::InquiryOfExistence(),
                       1)) {
       inquiryOfExistenceCount++;
@@ -131,24 +135,26 @@ TEST_CASE("Controller Reactor: Enqueue Synchronization",
 
   REQUIRE(controller.start());
 
-  std::atomic<bool> result_called{false};
-  std::atomic<bool> success{false};
+  std::atomic<uint32_t> success_session{0};
+  controller.setProtocolCallback([&](const ebus::ProtocolInfo& info) {
+    if (info.is_error) return;
+    if (info.message_type == ebus::MessageType::active) {
+      success_session.store(info.session_id);
+    }
+  });
 
   // Enqueue a simple Identification Request (07 04)
   std::vector<uint8_t> msg = {0x15, 0x07, 0x04, 0x00};
-  controller.enqueue(10, msg, [&](const ebus::ResultInfo& info) {
-    success = info.success;
-    result_called = true;
-  });
+  uint32_t session_id = controller.enqueue(10, msg);
+  REQUIRE(session_id > 0);
 
   // Inject a mock slave response
   vbus.addSlaveReaction(0x10, "15070400", "020102");
 
   // Wait for the result - ensures UserRequest -> Scheduler -> ProtocolResult
   // loop
-  REQUIRE(
-      ebus::detail::waitCondition([&] { return result_called.load(); }, 2000));
-  REQUIRE(success.load());
+  REQUIRE(ebus::detail::waitCondition(
+      [&] { return success_session.load() == session_id; }, 2000));
 
   controller.stop();
 }
@@ -165,7 +171,8 @@ TEST_CASE("Controller Reactor: Immediate Rejection",
   std::atomic<bool> error_called{false};
   ebus::ProtocolError last_err = ebus::ProtocolError::none;
 
-  controller.setErrorCallback([&](const ebus::ErrorInfo& info) {
+  controller.setProtocolCallback([&](const ebus::ProtocolInfo& info) {
+    if (!info.is_error) return;
     last_err = info.protocol_error;
     error_called = true;
   });
@@ -193,8 +200,9 @@ TEST_CASE("Controller Reactor: Drain Loop Burst",
   REQUIRE(controller.start());
 
   std::atomic<int> telegram_count{0};
-  controller.setTelegramCallback(
-      [&](const ebus::TelegramInfo&) { telegram_count++; });
+  controller.setProtocolCallback([&](const ebus::ProtocolInfo& info) {
+    if (!info.is_error) telegram_count++;
+  });
 
   // Rapid injection of 10 messages
   for (int i = 0; i < 10; ++i) {

@@ -79,30 +79,20 @@ int main() {
   // * Data: 9.25°C - DATA2B -> 0x40, 0x09
   std::vector<uint8_t> broadcastMsg = {0xfe, 0xb5, 0x16, 0x03,
                                        0x01, 0x40, 0x09};
-  deviceB.addPollItem(10, broadcastMsg, 5000, [](const ebus::ResultInfo& info) {
-    std::cout << "[Device B] Periodic broadcast sent." << std::endl;
-  });
+  deviceB.addPollItem(10, broadcastMsg, 5000);
 
   // Try to enqueue a faulty broadcast message after 3 seconds.
   // This library offers several helper functions, such as...ebus::to_vector("")
-  deviceB.enqueueAt(
-      10, ebus::toVector("feb5160301"), ebus::Clock::now() + 3s,
-      [](const ebus::ResultInfo& info) {
-        std::cout
-            << "[Device B] Faulty broadcast try to sent. Sequencer state: "
-            << ebus::toString(info.sequence_state) << std::endl;
-      });
+  deviceB.enqueueAt(10, ebus::toVector("feb5160301"), ebus::Clock::now() + 3s);
 
   // Send inquiry of existence after 8 seconds.
   deviceB.enqueueAt(20, ebus::Sequence::InquiryOfExistence(),
-                    ebus::Clock::now() + 8s, [](const ebus::ResultInfo& info) {
-                      std::cout << "[Device B] Inquiry of existence sent."
-                                << std::endl;
-                    });
+                    ebus::Clock::now() + 8s);
 
   // --- 5. Logic for Device A: Decoding of a received message ---
   // We set a callback to decode the received message from DeviceB.
-  deviceA.setTelegramCallback([](const ebus::TelegramInfo& info) {
+  deviceA.setProtocolCallback([](const ebus::ProtocolInfo& info) {
+    if (info.is_error) return;
     if (info.telegram_type == ebus::TelegramType::broadcast) {
       if (ebus::matches(info.master_view, {0xfe, 0xb5, 0x16, 0x03, 0x01}, 1))
         std::cout << "[Device A] Observed broadcast from "
@@ -116,7 +106,8 @@ int main() {
   });
 
   // --- 6. Add a error callback handler to Device B ---
-  deviceB.setErrorCallback([](const ebus::ErrorInfo& info) {
+  deviceB.setProtocolCallback([](const ebus::ProtocolInfo& info) {
+    if (!info.is_error) return;
     std::cout << "[Device B] Error message "
               << ebus::toString(info.protocol_error) << " master: '"
               << ebus::toString(info.master_view) << "' slave: '"

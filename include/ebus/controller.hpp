@@ -187,15 +187,10 @@ class Controller {
   void setReactiveMasterSlaveCallback(ReactiveMasterSlaveCallback callback);
 
   /**
-   * @brief Registers a callback to receive all validated bus telegrams.
+   * @brief Registers a unified callback for all protocol events (Telegrams or
+   * Errors).
    */
-  void setTelegramCallback(TelegramCallback callback);
-
-  /**
-   * @brief Registers a callback to receive protocol and hardware error
-   * notifications.
-   */
-  void setErrorCallback(ErrorCallback callback);
+  void setProtocolCallback(ProtocolCallback callback);
 
   /**
    * @brief Registers a callback for low-level byte-by-byte protocol tracing.
@@ -208,28 +203,25 @@ class Controller {
    * @brief Enqueues a message for transmission with a given priority.
    * @param priority Priority level (0-255, higher is more urgent).
    * @param message The raw message bytes.
-   * @param callback Optional result notification.
-   * @return true if the item was accepted into the queue.
+   * @return The session ID if accepted, 0 otherwise.
    */
-  bool enqueue(uint8_t priority, ByteView message,
-               ResultCallback callback = nullptr);
+  uint32_t enqueue(uint8_t priority, ByteView message);
 
   /**
    * @brief Enqueues a message to be sent at a specific time.
    */
-  bool enqueueAt(uint8_t priority, ByteView message, Clock::time_point when,
-                 ResultCallback callback = nullptr);
+  uint32_t enqueueAt(uint8_t priority, ByteView message,
+                     Clock::time_point when);
 
   /**
    * @brief Adds a recurring polling job.
    * @param priority Priority level.
    * @param message Message to send.
    * @param interval_ms Interval between polls.
-   * @param callback Optional result notification.
    * @return A unique ID for the poll item, or 0 if rejected.
    */
-  uint32_t addPollItem(uint8_t priority, ByteView message, uint32_t interval_ms,
-                       ResultCallback callback = nullptr);
+  uint32_t addPollItem(uint8_t priority, ByteView message,
+                       uint32_t interval_ms);
 
   /**
    * @brief Removes a recurring poll item by ID.

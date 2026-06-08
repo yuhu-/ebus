@@ -47,8 +47,7 @@ class Handler {
   void setBusRequestWonCallback(BusRequestWonCallback callback);
   void setBusRequestLostCallback(BusRequestLostCallback callback);
   void setReactiveMasterSlaveCallback(ReactiveMasterSlaveCallback callback);
-  void setTelegramCallback(TelegramCallback callback);
-  void setErrorCallback(ErrorCallback callback);
+  void setProtocolCallback(ProtocolCallback callback);
 
   // Working Methods
   bool sendActiveMessage(ByteView message);
@@ -58,6 +57,7 @@ class Handler {
   HandlerState getState() const;
   ebus::SequenceState getActiveSequenceState() const;
   bool isActiveMessagePending() const;
+  BusMonitor* getMonitor() const;
 
  private:
   platform::Bus* bus_ = nullptr;
@@ -70,11 +70,10 @@ class Handler {
   uint8_t source_address_ = 0;
   uint8_t target_address_ = 0;
 
-  BusRequestWonCallback bus_request_won_callback_ = nullptr;
-  BusRequestLostCallback bus_request_lost_callback_ = nullptr;
+  std::function<void()> bus_request_won_callback_ = nullptr;
+  std::function<void()> bus_request_lost_callback_ = nullptr;
   ReactiveMasterSlaveCallback reactive_master_slave_callback_ = nullptr;
-  TelegramCallback telegram_callback_ = nullptr;
-  ErrorCallback error_callback_ = nullptr;
+  ProtocolCallback protocol_callback_ = nullptr;
 
   Clock::time_point last_point_;
   bool measure_sync_ = false;

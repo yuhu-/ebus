@@ -46,21 +46,17 @@ struct Impl {
       trace_buffer_;
 
   ebus::ReactiveMasterSlaveCallback user_reactive_callback_;
-  ebus::TelegramCallback user_telegram_callback_;
-  ebus::ErrorCallback user_error_callback_;
+  ebus::ProtocolCallback user_protocol_callback_;
   ebus::TraceCallback user_trace_callback_;
 
   // Decoupled queues for user callbacks (Prioritized drainage)
-  detail::platform::Queue<ebus::ProtocolEvent> event_errors_{
-      detail::ControllerLimits::event_queue_size};
-  detail::platform::Queue<ebus::ProtocolEvent> event_telegrams_{
-      detail::ControllerLimits::event_queue_size};
+  detail::platform::Queue<ebus::ProtocolEvent> protocol_events_{
+      detail::ControllerLimits::event_queue_size * 2};
 
   detail::platform::Queue<ebus::OrchestrationEvent> reactor_queue_{
       detail::ControllerLimits::reactor_queue_size};
 
-  std::atomic<size_t> max_event_errors_{0};
-  std::atomic<size_t> max_event_telegrams_{0};
+  std::atomic<size_t> max_protocol_events_{0};
   std::atomic<size_t> max_reactor_queue_{0};
 
   std::unique_ptr<detail::Request> request_;
@@ -102,8 +98,7 @@ bool Controller::start() {
 
   // Reset internal queues to clear any previous shutdown state or stale events
   impl_->reactor_queue_.reset();
-  impl_->event_errors_.reset();
-  impl_->event_telegrams_.reset();
+  impl_->protocol_events_.reset();
 
   std::lock_guard<std::recursive_mutex> lock(config_mutex_);
   impl_->bus_->start();
@@ -339,14 +334,9 @@ void Controller::setReactiveMasterSlaveCallback(
         impl_->user_reactive_callback_);
 }
 
-void Controller::setTelegramCallback(TelegramCallback callback) {
+void Controller::setProtocolCallback(ProtocolCallback callback) {
   std::lock_guard<std::recursive_mutex> lock(config_mutex_);
-  impl_->user_telegram_callback_ = std::move(callback);
-}
-
-void Controller::setErrorCallback(ErrorCallback callback) {
-  std::lock_guard<std::recursive_mutex> lock(config_mutex_);
-  impl_->user_error_callback_ = std::move(callback);
+  impl_->user_protocol_callback_ = std::move(callback);
 }
 
 void Controller::setTraceCallback(TraceCallback callback) {
@@ -354,38 +344,34 @@ void Controller::setTraceCallback(TraceCallback callback) {
   impl_->user_trace_callback_ = std::move(callback);
 }
 
-bool Controller::enqueue(uint8_t priority, ByteView message,
-                         ResultCallback callback) {
-  if (!isConfigured()) return false;
-  bool ok = impl_->scheduler_->enqueue(priority, message, std::move(callback));
-  if (ok) {
+uint32_t Controller::enqueue(uint8_t priority, ByteView message) {
+  if (!isConfigured()) return 0;
+  uint32_t s_id = impl_->scheduler_->enqueue(priority, message);
+  if (s_id > 0) {
     OrchestrationEvent ev;
     ev.type = OrchestrationEventType::user_request;
     impl_->reactor_queue_.tryPush(std::move(ev));
   }
-  return ok;
+  return s_id;
 }
 
-bool Controller::enqueueAt(uint8_t priority, ByteView message,
-                           Clock::time_point when, ResultCallback callback) {
-  if (!isConfigured()) return false;
-  bool ok = impl_->scheduler_->enqueueAt(priority, message, when,
-                                         std::move(callback));
-  if (ok) {
+uint32_t Controller::enqueueAt(uint8_t priority, ByteView message,
+                               Clock::time_point when) {
+  if (!isConfigured()) return 0;
+  uint32_t s_id = impl_->scheduler_->enqueueAt(priority, message, when);
+  if (s_id > 0) {
     OrchestrationEvent ev;
     ev.type = OrchestrationEventType::user_request;
     impl_->reactor_queue_.tryPush(std::move(ev));
   }
-  return ok;
+  return s_id;
 }
 
 uint32_t Controller::addPollItem(uint8_t priority, ByteView message,
-                                 uint32_t interval_ms,
-                                 ResultCallback callback) {
-  uint32_t id = isConfigured()
-                    ? impl_->poll_manager_->addPollItem(
-                          priority, message, interval_ms, std::move(callback))
-                    : 0;
+                                 uint32_t interval_ms) {
+  uint32_t id = isConfigured() ? impl_->poll_manager_->addPollItem(
+                                     priority, message, interval_ms)
+                               : 0;
   if (id != 0) {
     OrchestrationEvent ev;
     ev.type = OrchestrationEventType::timer_wakeup;
@@ -520,12 +506,9 @@ void Controller::fetchSystemResources(
     }
   }
 
-  res.queues.push_back({"event_errors", impl_->event_errors_.size(),
-                        detail::ControllerLimits::event_queue_size,
-                        impl_->max_event_errors_.load()});
-  res.queues.push_back({"event_telegrams", impl_->event_telegrams_.size(),
-                        detail::ControllerLimits::event_queue_size,
-                        impl_->max_event_telegrams_.load()});
+  res.queues.push_back({"protocol_events", impl_->protocol_events_.size(),
+                        detail::ControllerLimits::event_queue_size * 2,
+                        impl_->max_protocol_events_.load()});
 
   res.queues.push_back({"reactor_queue", impl_->reactor_queue_.size(),
                         detail::ControllerLimits::reactor_queue_size,
@@ -606,60 +589,46 @@ void Controller::getServiceStatus(ServiceStatus& status) const {
 
 void Controller::processPublicEvents() {
   // Capture callbacks once to avoid mutex contention inside the drainage loops.
-  // std::function is safe to copy and call outside the lock.
-  ErrorCallback err_callback;
-  TelegramCallback tel_callback;
+  ProtocolCallback user_callback;
   {
     std::lock_guard<std::recursive_mutex> lock(config_mutex_);
-    err_callback = impl_->user_error_callback_;
-    tel_callback = impl_->user_telegram_callback_;
+    user_callback = impl_->user_protocol_callback_;
   }
 
   ProtocolEvent ev;
 #if defined(ESP_PLATFORM)
   uint8_t count = 0;
 #endif
-  // 1. Prioritize Errors: Drain all pending error events first
-  while (impl_->event_errors_.tryPop(ev)) {
-    const auto& callback = err_callback;
-    if (callback &&
-        detail::Logger::getInstance().isEnabled(ev.data.err.level)) {
-      ErrorInfo info{ev.session_id,      ev.poll_id,
-                     ev.data.err.level,  ev.data.err.protocol_error,
-                     ev.data.err.result, ev.data.err.sequence_state,
-                     ev.handler_state,   ev.request_state,
-                     ev.master,          ev.slave};
-      callback(info);
+
+  // Process unified event queue in chronological order
+  while (impl_->protocol_events_.tryPop(ev)) {
+    if (user_callback) {
+      ProtocolInfo info;
+      info.is_error = (ev.type == ProtocolEvent::Type::error);
+      info.session_id = ev.session_id;
+      info.poll_id = ev.poll_id;
+      info.retry_count = ev.retry_count;
+      info.handler_state = ev.handler_state;
+      info.request_state = ev.request_state;
+      info.master_view = ev.master;
+      info.slave_view = ev.slave;
+
+      if (info.is_error) {
+        info.level = ev.data.err.level;
+        info.protocol_error = ev.data.err.protocol_error;
+        info.result = ev.data.err.result;
+        info.sequence_state = ev.data.err.sequence_state;
+        // Filter by log level if applicable
+        if (!detail::Logger::getInstance().isEnabled(info.level)) continue;
+      } else {
+        info.message_type = ev.data.tel.message_type;
+        info.telegram_type = ev.data.tel.telegram_type;
+      }
+
+      user_callback(info);
     }
 
 #if defined(ESP_PLATFORM)
-    // Cooperative yielding during burst of callbacks to allow lower priority
-    // threads (like SYN generator) to run.
-    if (++count > 4) {
-      count = 0;
-      vTaskDelay(1);
-    }
-#endif
-  }
-
-  // 2. Process Telegrams
-  while (impl_->event_telegrams_.tryPop(ev)) {
-    const auto& callback = tel_callback;
-    if (callback) {
-      TelegramInfo info{ev.session_id,
-                        ev.poll_id,
-                        ev.data.tel.retry_count,
-                        ev.data.tel.message_type,
-                        ev.data.tel.telegram_type,
-                        ev.handler_state,
-                        ev.request_state,
-                        ev.master,
-                        ev.slave};
-      callback(info);
-    }
-
-#if defined(ESP_PLATFORM)
-    // Cooperative yielding during burst of callbacks
     if (++count > 4) {
       count = 0;
       vTaskDelay(1);
@@ -727,113 +696,75 @@ void Controller::constructMembers() {
     impl_->scheduler_->attachHandlerCallbacks();
 
     // Setup internal event dispatchers
-    impl_->scheduler_->setTelegramCallback([this](const TelegramInfo& info) {
+    impl_->scheduler_->setProtocolCallback([this](const ProtocolInfo& info) {
       // 1. Pack event into the decoupling queue
       ProtocolEvent ev;
-      ev.type = ProtocolEvent::Type::telegram;
+      ev.type = info.is_error ? ProtocolEvent::Type::error
+                              : ProtocolEvent::Type::telegram;
       ev.session_id = info.session_id;
       ev.poll_id = info.poll_id;
-      ev.data.tel.retry_count = info.retry_count;
-      ev.data.tel.message_type = info.message_type;
-      ev.data.tel.telegram_type = info.telegram_type;
+      ev.retry_count = info.retry_count;
       ev.handler_state = info.handler_state;
       ev.request_state = info.request_state;
       ev.master.assign(info.master_view.data(), info.master_view.size());
       ev.slave.assign(info.slave_view.data(), info.slave_view.size());
-      if (!impl_->event_telegrams_.tryPush(ev)) {
-        // DRAIN: Drop oldest telegram if public queue is full
+      if (info.is_error) {
+        ev.data.err.level = info.level;
+        ev.data.err.protocol_error = info.protocol_error;
+        ev.data.err.result = info.result;
+        ev.data.err.sequence_state = info.sequence_state;
+      } else {
+        ev.data.tel.message_type = info.message_type;
+        ev.data.tel.telegram_type = info.telegram_type;
+      }
+
+      if (!impl_->protocol_events_.tryPush(ev)) {
         ProtocolEvent dummy;
-        if (impl_->event_telegrams_.tryPop(dummy)) {
-          impl_->event_telegrams_.tryPush(std::move(ev));
+        if (impl_->protocol_events_.tryPop(dummy)) {
+          impl_->protocol_events_.tryPush(std::move(ev));
         }
         impl_->bus_monitor_->updateController(
             [](auto& m) { m.event_queue_dropped++; });
       } else {
-        // Update high watermark
-        updateMaxAtomic(impl_->max_event_telegrams_,
-                        impl_->event_telegrams_.size());
+        updateMaxAtomic(impl_->max_protocol_events_,
+                        impl_->protocol_events_.size());
 
         // Signal the reactor loop that a callback is ready for dispatch
         OrchestrationEvent callback_ev;
         callback_ev.type = OrchestrationEventType::callback_ready;
-        if (!impl_->reactor_queue_.tryPush(std::move(callback_ev))) {
-          impl_->bus_monitor_->updateController(
-              [](auto& m) { m.event_queue_dropped++; });
+
+        impl_->reactor_queue_.tryPush(std::move(callback_ev));
+      }
+
+      // 2. Internal Side Effects
+      if (!info.is_error) {
+        if (impl_->device_manager_)
+          impl_->device_manager_->update(info.master_view, info.slave_view);
+
+        bool response_enabled = false;
+        uint8_t own_address = 0xff;
+        {
+          std::lock_guard<std::recursive_mutex> lock(config_mutex_);
+          response_enabled = config_.runtime.system_response;
+          own_address = config_.runtime.address;
         }
-      }
 
-      // 2. Handle internal discovery logic immediately
-      bool response_enabled = false;
-      uint8_t own_address = 0xff;
-      {
-        std::lock_guard<std::recursive_mutex> lock(config_mutex_);
-        response_enabled = config_.runtime.system_response;
-        own_address = config_.runtime.address;
-      }
-
-      if (impl_->device_manager_) {
-        impl_->device_manager_->update(info.master_view, info.slave_view);
-      }
-
-      // Standard eBUS System Discovery reaction
-      if (response_enabled) {
-        // Inquiry of Existence (Service 07h FEh): PB=07, SB=FE, NN=00
-        // We match starting at index 1 to verify ZZ, PB, SB, and NN.
-        if (ebus::matches(info.master_view,
-                          ebus::Sequence::InquiryOfExistence(), 1)) {
-          const uint8_t source = info.master_view[0];
-
-          // Don't respond to our own inquiries.
-          if (source != own_address) {
-            impl_->scheduler_->enqueue(detail::DeviceLimits::scan_priority,
-                                       ebus::Sequence::SignOfLife());
+        if (response_enabled) {
+          // Inquiry of Existence (Service 07h FEh): PB=07, SB=FE, NN=00
+          if (ebus::matches(info.master_view,
+                            ebus::Sequence::InquiryOfExistence(), 1)) {
+            if (info.master_view[0] != own_address) {
+              enqueue(detail::DeviceLimits::scan_priority,
+                      ebus::Sequence::SignOfLife());
+            }
           }
         }
-      }
-    });
-
-    impl_->scheduler_->setErrorCallback([this](const ErrorInfo& info) {
-      // 1. Pack event into the decoupling queue
-      ProtocolEvent ev;
-      ev.type = ProtocolEvent::Type::error;
-      ev.session_id = info.session_id;
-      ev.poll_id = info.poll_id;
-      ev.data.err.level = info.level;
-      ev.data.err.protocol_error = info.protocol_error;
-      ev.data.err.result = info.result;
-      ev.data.err.sequence_state = info.sequence_state;
-      ev.handler_state = info.handler_state;
-      ev.request_state = info.request_state;
-      ev.master.assign(info.master_view.data(), info.master_view.size());
-      ev.slave.assign(info.slave_view.data(), info.slave_view.size());
-      if (!impl_->event_errors_.tryPush(ev)) {
-        // DRAIN: Drop oldest error if public queue is full
-        ProtocolEvent dummy;
-        if (impl_->event_errors_.tryPop(dummy)) {
-          impl_->event_errors_.tryPush(std::move(ev));
-        }
-        impl_->bus_monitor_->updateController(
-            [](auto& m) { m.event_queue_dropped++; });
       } else {
-        // Update high watermark
-        updateMaxAtomic(impl_->max_event_errors_, impl_->event_errors_.size());
-      }
-
-      // Signal the reactor loop that a callback is ready for dispatch
-      OrchestrationEvent callback_ev;
-      callback_ev.type = OrchestrationEventType::callback_ready;
-      if (!impl_->reactor_queue_.tryPush(std::move(callback_ev))) {
-        impl_->bus_monitor_->updateController(
-            [](auto& m) { m.event_queue_dropped++; });
-      }
-
-      // 2. Handle internal diagnostic logging. The ConfigValidator ensures
-      // log_size > 0.
-      {
+        // Diagnostic Logging
         ErrorEntry entry;
         entry.session_id = info.session_id;
         entry.poll_id = info.poll_id;
-        entry.level = info.level;  // LogLevel is still used for filtering
+        entry.level = info.level;
         entry.protocol_error = info.protocol_error;
         entry.result = info.result;
         entry.sequence_state = info.sequence_state;
@@ -841,10 +772,7 @@ void Controller::constructMembers() {
         entry.request_state = info.request_state;
         entry.setMaster(info.master_view.data(), info.master_view.size());
         entry.setSlave(info.slave_view.data(), info.slave_view.size());
-        entry.timestamp =
-            std::chrono::duration_cast<std::chrono::milliseconds>(
-                std::chrono::system_clock::now().time_since_epoch())
-                .count();
+        entry.timestamp = ebus::getWallTimeMs();
         impl_->error_buffer_.push_back(std::move(entry));
       }
     });
@@ -1000,7 +928,7 @@ void Controller::run() {
     impl_->poll_manager_->processDueItems(
         [this, &activity](const detail::PollManager::Item& item) {
           if (impl_->scheduler_->enqueue(item.priority, item.message,
-                                         item.callback, item.poll_id))
+                                         item.poll_id))
             activity = true;
         },
         &activity);
@@ -1008,25 +936,10 @@ void Controller::run() {
     if (impl_->scheduler_->queueSize() <
         detail::SchedulerLimits::scan_threshold) {
       auto scan_cmd = impl_->device_scanner_->nextCommand();
-      if (!scan_cmd.empty()) {
-        if (impl_->scheduler_->enqueue(
-                detail::DeviceLimits::scan_priority, scan_cmd,
-                [this](const ebus::ResultInfo& info) {
-                  if (!info.success &&
-                      (info.result == RequestResult::first_lost ||
-                       info.result == RequestResult::second_lost)) {
-                    // Re-enqueue address for scan if we lost arbitration.
-                    // Note: We whiltelist arbitration loss to avoid re-probing
-                    // on structural protocol errors (SequenceState) which would
-                    // be futile. Noise (first_error) is handled by the
-                    // Scheduler's own retry logic.
-                    if (info.master_view.size() > 1) {
-                      impl_->device_scanner_->scanAddress(info.master_view[1]);
-                    }
-                  }
-                })) {
-          activity = true;
-        }
+      if (!scan_cmd.empty() &&
+          impl_->scheduler_->enqueue(detail::DeviceLimits::scan_priority,
+                                     scan_cmd)) {
+        activity = true;
       }
     }
 

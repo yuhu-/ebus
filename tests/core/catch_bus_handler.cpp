@@ -36,10 +36,12 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
     std::atomic<int> telegram_count{0};
     std::atomic<int> error_count{0};
 
-    handler.setTelegramCallback(
-        [&](const ebus::TelegramInfo& info) { telegram_count++; });
-    handler.setErrorCallback(
-        [&](const ebus::ErrorInfo& info) { error_count++; });
+    handler.setProtocolCallback([&](const ebus::ProtocolInfo& info) {
+      if (info.is_error)
+        error_count++;
+      else
+        telegram_count++;
+    });
 
     // PUMP BRIDGE: Required because BusHandler is now a passive logic engine
     bus.addBusEventListener(
@@ -110,8 +112,9 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
     BusHandler busHandler(&request, &handler);
 
     std::atomic<int> telegram_count{0};
-    handler.setTelegramCallback(
-        [&](const ebus::TelegramInfo& info) { telegram_count++; });
+    handler.setProtocolCallback([&](const ebus::ProtocolInfo& info) {
+      if (!info.is_error) telegram_count++;
+    });
 
     // PUMP BRIDGE: Required because BusHandler is now a passive logic engine
     bus.addBusEventListener(
@@ -138,7 +141,7 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
       platform::sleepMilli(10);
 
     REQUIRE(telegram_count.load() == 1);
-    REQUIRE(request.getLockCounter() == 2);  // 2 because of release SYN
+    REQUIRE(request.getLockCounter() == 3);
 
     // send second message and step through SYNs to force arbitration
     telegram_count.store(0);
@@ -157,7 +160,7 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
       platform::sleepMilli(10);
 
     REQUIRE(telegram_count.load() == 1);
-    REQUIRE(request.getLockCounter() == 2);  // 2 because of release SYN
+    REQUIRE(request.getLockCounter() == 3);
 
     bus.stop();
   }
@@ -176,8 +179,9 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
     BusHandler busHandler(&request, &handler);
 
     std::atomic<int> telegram_count{0};
-    handler.setTelegramCallback(
-        [&](const ebus::TelegramInfo& info) { telegram_count++; });
+    handler.setProtocolCallback([&](const ebus::ProtocolInfo& info) {
+      if (!info.is_error) telegram_count++;
+    });
 
     // PUMP BRIDGE: Required because BusHandler is now a passive logic engine
     bus.addBusEventListener(

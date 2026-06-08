@@ -302,12 +302,12 @@ struct ProtocolEvent {
   // Shared metadata
   uint32_t session_id;
   uint32_t poll_id;
+  uint32_t retry_count;
   HandlerState handler_state;
   RequestState request_state;
 
   union {
     struct {
-      uint32_t retry_count;
       MessageType message_type;
       TelegramType telegram_type;
     } tel;

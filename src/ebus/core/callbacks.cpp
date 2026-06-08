@@ -10,31 +10,26 @@
 
 namespace ebus {
 
-void TelegramInfo::toJson(detail::JsonWriter& writer) const {
+void ProtocolInfo::toJson(detail::JsonWriter& writer) const {
   auto scope = writer.objectScope();
+  writer.writeField("is_error", is_error);
   writer.writeField("session_id", session_id);
   writer.writeField("poll_id", poll_id);
+  writer.writeField("handler_state", toString(handler_state));
+  writer.writeField("request_state", toString(request_state));
   writer.writeField("retry_count", retry_count);
-  writer.writeField("message_type", toString(message_type));
-  writer.writeField("telegram_type", toString(telegram_type));
-  writer.writeField("handler_state", toString(handler_state));
-  writer.writeField("request_state", toString(request_state));
   writer.writeHexField("master", master_view);
   writer.writeHexField("slave", slave_view);
-}
 
-void ErrorInfo::toJson(detail::JsonWriter& writer) const {
-  auto scope = writer.objectScope();
-  writer.writeField("session_id", session_id);
-  writer.writeField("poll_id", poll_id);
-  writer.writeField("level", toString(level));
-  writer.writeField("protocol_error", toString(protocol_error));
-  writer.writeField("result", toString(result));
-  writer.writeField("sequence_state", toString(sequence_state));
-  writer.writeField("handler_state", toString(handler_state));
-  writer.writeField("request_state", toString(request_state));
-  writer.writeHexField("master", master_view);
-  writer.writeHexField("slave", slave_view);
+  if (is_error) {
+    writer.writeField("level", toString(level));
+    writer.writeField("protocol_error", toString(protocol_error));
+    writer.writeField("result", toString(result));
+    writer.writeField("sequence_state", toString(sequence_state));
+  } else {
+    writer.writeField("message_type", toString(message_type));
+    writer.writeField("telegram_type", toString(telegram_type));
+  }
 }
 
 void ReactiveInfo::toJson(detail::JsonWriter& writer) const {
@@ -42,17 +37,6 @@ void ReactiveInfo::toJson(detail::JsonWriter& writer) const {
   writer.writeField("session_id", session_id);
   writer.writeHexField("master", master_view);
   writer.writeHexField("slave_response", slave_response);
-}
-
-void ResultInfo::toJson(detail::JsonWriter& writer) const {
-  auto scope = writer.objectScope();
-  writer.writeField("session_id", session_id);
-  writer.writeField("poll_id", poll_id);
-  writer.writeField("success", success);
-  writer.writeField("result", toString(result));
-  writer.writeField("sequence_state", toString(sequence_state));
-  writer.writeHexField("master", master_view);
-  writer.writeHexField("slave", slave_view);
 }
 
 void BusEventInfo::toJson(detail::JsonWriter& writer) const {

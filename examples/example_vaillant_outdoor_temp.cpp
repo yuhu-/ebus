@@ -30,7 +30,8 @@ int main() {
   // --- 2. Define Decoder Logic ---
   // The Vaillant outdoor temperature is typically broadcasted (FE)
   // via Service 0xB5 0x16 with a payload identifying the sensor.
-  controller.setTelegramCallback([](const ebus::TelegramInfo& info) {
+  controller.setProtocolCallback([](const ebus::ProtocolInfo& info) {
+    if (info.is_error) return;
     // master_view layout: [Source, Destination, PB, SB, NN, Data...]
     // We check for: Destination=FE, PB=B5, SB=16, NN=03, DB1=01
     if (info.telegram_type == ebus::TelegramType::broadcast) {

@@ -30,8 +30,7 @@ void PollManager::setOwnAddress(uint8_t address) {
 }
 
 uint32_t PollManager::addPollItem(uint8_t priority, ByteView message,
-                                  uint32_t interval_ms,
-                                  ResultCallback callback) {
+                                  uint32_t interval_ms) {
   std::lock_guard<std::mutex> lock(mutex_);
 
   // Proactively prevent self-polling
@@ -51,7 +50,6 @@ uint32_t PollManager::addPollItem(uint8_t priority, ByteView message,
   item.interval = std::chrono::milliseconds(interval_ms);
   // Schedule immediately to ensure data is available as soon as possible
   item.next_due = Clock::now();
-  item.callback = std::move(callback);
 
   items_.push_back(std::move(item));
   if (items_.size() > max_item_count_) {

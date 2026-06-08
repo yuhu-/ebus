@@ -64,6 +64,7 @@ struct HandlerMetrics {
   uint32_t error_active = 0;
   uint32_t resets_passive = 0;
   uint32_t resets_active = 0;
+  uint32_t total_retries = 0;
   uint64_t total_sent_data_bytes = 0;
   uint64_t total_sent_protocol_bytes = 0;
   uint64_t total_observed_data_bytes = 0;

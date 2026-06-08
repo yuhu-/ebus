@@ -52,7 +52,8 @@ int main() {
 
   // --- 4. Set up a Telegram Callback to Observe Traffic ---
   // This callback will be invoked for all successfully processed telegrams.
-  controller.setTelegramCallback([](const ebus::TelegramInfo& info) {
+  controller.setProtocolCallback([](const ebus::ProtocolInfo& info) {
+    if (info.is_error) return;
     std::cout << "[Controller] Telegram received: Type="
               << ebus::toString(info.telegram_type)
               << ", Master=" << ebus::toString(info.master_view)
@@ -68,17 +69,7 @@ int main() {
   // Enqueue a message from our controller (0x01) to the simulated slave (0x15).
   std::cout << "[Controller] Enqueuing ID request to simulated slave 0x15..."
             << std::endl;
-  controller.enqueue(
-      10, ebus::toVector("15070400"), [](const ebus::ResultInfo& info) {
-        if (info.success) {
-          std::cout
-              << "[Controller] ID request to 0x15 successful. Slave response: "
-              << ebus::toString(info.slave_view) << std::endl;
-        } else {
-          std::cout << "[Controller] ID request to 0x15 failed: "
-                    << ebus::toString(info.result) << std::endl;
-        }
-      });
+  controller.enqueue(10, ebus::toVector("15070400"));
 
   // --- 7. Inject an External Message (Simulating another Master) ---
   // Simulate a broadcast message coming from an external master (0x03)
@@ -99,18 +90,7 @@ int main() {
   std::cout << "[Controller] Enqueuing ID request to simulated slave 0x15 "
                "again (should fail)..."
             << std::endl;
-  controller.enqueue(10, ebus::toVector("15070400"),
-                     [](const ebus::ResultInfo& info) {
-                       if (info.success) {
-                         std::cout << "[Controller] ID request to 0x15 "
-                                      "successful (unexpected after clear)."
-                                   << std::endl;
-                       } else {
-                         std::cout << "[Controller] ID request to 0x15 failed "
-                                      "(expected after clear): "
-                                   << ebus::toString(info.result) << std::endl;
-                       }
-                     });
+  controller.enqueue(10, ebus::toVector("15070400"));
   std::this_thread::sleep_for(2s);
 
   // --- 11. Stop the Controller ---

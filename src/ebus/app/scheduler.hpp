@@ -61,8 +61,7 @@ class Scheduler {
   void setTotalTimeout(uint32_t timeout_ms);
 
   void setReactiveMasterSlaveCallback(ReactiveMasterSlaveCallback callback);
-  void setTelegramCallback(TelegramCallback callback);
-  void setErrorCallback(ErrorCallback callback);
+  void setProtocolCallback(ProtocolCallback callback);
 
   // Working Methods
   void attachHandlerCallbacks();
@@ -78,10 +77,9 @@ class Scheduler {
    * @brief Performs periodic maintenance. Returns true if work was done.
    */
   bool tick();
-  bool enqueue(uint8_t priority, ByteView message,
-               ResultCallback callback = nullptr, uint32_t poll_id = 0);
-  bool enqueueAt(uint8_t priority, ByteView message, TimePoint when,
-                 ResultCallback callback = nullptr, uint32_t poll_id = 0);
+  uint32_t enqueue(uint8_t priority, ByteView message, uint32_t poll_id = 0);
+  uint32_t enqueueAt(uint8_t priority, ByteView message, TimePoint when,
+                     uint32_t poll_id = 0);
   void clear();
 
   // Status/Telemetry
@@ -99,7 +97,6 @@ class Scheduler {
     uint32_t poll_id = 0;
     int send_attempts = 0;
     Sequence message;
-    ResultCallback result_callback = nullptr;
   };
 
   struct Compare {
@@ -163,8 +160,7 @@ class Scheduler {
 
   // Forwarded callbacks
   ReactiveMasterSlaveCallback extern_reactive_callback_ = nullptr;
-  TelegramCallback extern_telegram_callback_ = nullptr;
-  ErrorCallback extern_error_callback_ = nullptr;
+  ProtocolCallback extern_protocol_callback_ = nullptr;
 
   // Private Helper Methods
   bool pushItem(Item&& it);

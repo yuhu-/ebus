@@ -20,6 +20,7 @@ void BusMonitor::resetMetrics() {
   handler_acc_.reset();
   request_acc_.reset();
   bus_acc_.reset();
+  handler_acc_.total_retries = 0;
   controller_acc_.reset();
   device_acc_.reset();
 
@@ -341,8 +342,10 @@ void metrics::HandlerMetrics::reset() {
   error_passive = 0;
   error_reactive = 0;
   error_active = 0;
+  total_retries = 0;
   resets_passive = 0;
   resets_active = 0;
+  total_retries = 0;
   total_sent_data_bytes = 0;
   total_sent_protocol_bytes = 0;
   total_observed_data_bytes = 0;
@@ -395,6 +398,7 @@ void metrics::HandlerMetrics::toJson(detail::JsonWriter& writer) const {
   writer.writeField("error_passive", error_passive);
   writer.writeField("error_reactive", error_reactive);
   writer.writeField("error_active", error_active);
+  writer.writeField("total_retries", total_retries);
   writer.writeField("resets_passive", resets_passive);
   writer.writeField("resets_active", resets_active);
   writer.writeField("invalid_bytes", invalid_bytes);
