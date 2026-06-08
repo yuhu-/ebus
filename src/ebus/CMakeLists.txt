@@ -35,6 +35,7 @@ set(PLATFORM_SOURCES
 
 if(EBUS_SIMULATION)
     list(APPEND PLATFORM_SOURCES platform/simulation/bus_simulation.cpp)
+    list(APPEND PLATFORM_SOURCES platform/simulation/bus_simulator.cpp)
     list(APPEND PLATFORM_SOURCES platform/simulation/virtual_bus.cpp)
 elseif(DEFINED ESP_PLATFORM)
     list(APPEND PLATFORM_SOURCES platform/esp/bus_esp.cpp)
