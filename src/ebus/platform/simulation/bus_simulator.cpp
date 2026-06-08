@@ -49,9 +49,10 @@ void BusSimulator::clear() {
 
 uint32_t BusSimulator::addMockReaction(VirtualBus::MockReaction reaction) {
   std::lock_guard<std::mutex> lock(mtx_);
-  reaction.id = ++next_reaction_id_;
+  uint32_t new_id = ++next_reaction_id_;
+  reaction.id = new_id;
   reactions_.push_back(std::move(reaction));
-  return reaction.id;
+  return new_id;
 }
 
 void BusSimulator::removeMockReaction(uint32_t id) {
