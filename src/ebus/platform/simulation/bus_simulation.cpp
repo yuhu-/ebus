@@ -127,7 +127,17 @@ void BusSimulation::writeByte(const uint8_t byte) {
   }
   // 1. Simulate the time it takes for the UART to shift the bits out
   // 10 bits (Start + 8 Data + Stop) at 2400 baud
-  platform::sleepMicro(static_cast<uint32_t>(10 * Physical::bit_time_us));
+  uint32_t total_delay_us = static_cast<uint32_t>(10 * Physical::bit_time_us);
+
+#if defined(ESP_PLATFORM)
+  // Optimization: Split the delay into yielding milliseconds and a short
+  // busy-wait. This prevents CPU starvation on single-core ESP32-C3 while
+  // maintaining microsecond precision.
+  if (total_delay_us >= 1000) platform::sleepMilli(total_delay_us / 1000);
+  if (total_delay_us % 1000 > 0) platform::sleepMicro(total_delay_us % 1000);
+#else
+  platform::sleepMicro(total_delay_us);
+#endif
 
   // 2. Only now does the byte actually appear on the "Wire"
   VirtualLine::get().write(byte);
@@ -186,10 +196,17 @@ void BusSimulation::simulationReaderLoop() {
       // the state machine can pre-load the intent for the NEXT syn, while
       // hardware acts on the CURRENT syn.
       if (byte == Symbols::syn && request_->busRequestPending()) {
+        // Yield before busy-waiting to allow lower priority tasks to run
+        platform::sleepMilli(1);
         sleepMicro(BusLimits::platform::Posix::request_delay_us);
         writeByte(request_->busRequestAddress());
         bus_request_flag_.store(true, std::memory_order_release);
       }
+      // Add a small delay to yield CPU to other tasks, especially lower
+      // priority ones.
+      platform::sleepMilli(1);  // Yield to other tasks
+    } else {
+      platform::sleepMilli(1);  // Yield to other tasks if no data is available
     }
   }
 }
