@@ -186,7 +186,7 @@ inline constexpr size_t max_clients = EBUS_MAX_CLIENTS;
 // --- Application Layer ---
 namespace ControllerLimits {
 #ifndef EBUS_EVENT_QUEUE_SIZE
-inline constexpr size_t event_queue_size = 8;
+inline constexpr size_t event_queue_size = 16;
 #else
 inline constexpr size_t event_queue_size = EBUS_EVENT_QUEUE_SIZE;
 #endif

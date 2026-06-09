@@ -51,7 +51,7 @@ struct Impl {
 
   // Decoupled queues for user callbacks (Prioritized drainage)
   detail::platform::Queue<ebus::ProtocolEvent> protocol_events_{
-      detail::ControllerLimits::event_queue_size * 2};
+      detail::ControllerLimits::event_queue_size};
 
   detail::platform::Queue<ebus::OrchestrationEvent> reactor_queue_{
       detail::ControllerLimits::reactor_queue_size};
@@ -507,7 +507,7 @@ void Controller::fetchSystemResources(
   }
 
   res.queues.push_back({"protocol_events", impl_->protocol_events_.size(),
-                        detail::ControllerLimits::event_queue_size * 2,
+                        detail::ControllerLimits::event_queue_size,
                         impl_->max_protocol_events_.load()});
 
   res.queues.push_back({"reactor_queue", impl_->reactor_queue_.size(),
