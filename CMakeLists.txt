@@ -46,7 +46,7 @@ set(EBUS_TRACE_HISTORY_SIZE 100 CACHE STRING "Number of trace events to keep in 
 # Networking Layer
 set(EBUS_MAX_CLIENTS 4 CACHE STRING "Maximum number of network bridge clients")
 # Application Layer
-set(EBUS_EVENT_QUEUE_SIZE 8 CACHE STRING "Size of the public event queue")
+set(EBUS_EVENT_QUEUE_SIZE 16 CACHE STRING "Size of the public event queue")
 set(EBUS_REACTOR_QUEUE_SIZE 32 CACHE STRING "Size of the internal reactor queue")
 set(EBUS_MAX_DEVICES 32 CACHE STRING "Maximum number of devices to manage")
 set(EBUS_MAX_MANUAL_QUEUE 64 CACHE STRING "Maximum pending manual scan requests")
