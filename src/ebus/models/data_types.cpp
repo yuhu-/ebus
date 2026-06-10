@@ -492,54 +492,59 @@ std::string const& asString(const DataValue& value) noexcept {
 
 // New struct for the visitor
 struct ToStringValueVisitor {
-  std::string operator()(std::monostate) const { return "null"; }
-  std::string operator()(const std::string& s) const { return s; }
+  std::string& out;
 
-  std::string operator()(int64_t val) const {
+  void operator()(std::monostate) const { out += "null"; }
+  void operator()(const std::string& s) const { out += s; }
+
+  void operator()(int64_t val) const {
     char buffer[64];
     const char* end = formatFloat(
         static_cast<float>(val) / FIXED_POINT_SCALE, 2, buffer, sizeof(buffer),
         detail::FormattingLimits::float_lower_threshold,
         detail::FormattingLimits::float_upper_threshold);
-    return std::string(buffer, end - buffer);
+    out.append(buffer, static_cast<size_t>(end - buffer));
   }
 
-  std::string operator()(float val) const {
+  void operator()(float val) const {
     char buffer[64];
     const char* end =
         formatFloat(val, 2, buffer, sizeof(buffer),
                     detail::FormattingLimits::float_lower_threshold,
                     detail::FormattingLimits::float_upper_threshold);
-    return std::string(buffer, end - buffer);
+    out.append(buffer, static_cast<size_t>(end - buffer));
   }
 
   template <typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
-  std::string operator()(T val) const {
-    return std::to_string(val);
+  void operator()(T val) const {
+    char buf[24];
+    auto [ptr, ec] = std::to_chars(buf, buf + sizeof(buf), val);
+    if (ec == std::errc{}) {
+      out.append(buf, static_cast<size_t>(ptr - buf));
+    }
   }
 };
 
-std::string toString(const DataValue& value, std::string_view unit) {
-  std::string s = std::visit(ToStringValueVisitor{}, value);
-  if (!unit.empty() && s != "null" && !s.empty()) {
-    s += " ";
-    s += unit;
+void toString(std::string& out, const DataValue& value, std::string_view unit) {
+  size_t start_pos = out.size();
+  std::visit(ToStringValueVisitor{out}, value);
+  std::string_view appended = std::string_view(out).substr(start_pos);
+  if (!unit.empty() && appended != "null" && !appended.empty()) {
+    out += " ";
+    out += unit;
   }
-  return s;
 }
 
-std::string toHexString(const DataValue& value, char separator) {
+void toHexString(std::string& out, const DataValue& value, char separator) {
   if (const std::string* s = std::get_if<std::string>(&value)) {
-    if (s->empty()) return "";
-    std::string res;
-    res.reserve(s->size() + (separator ? s->size() / 2 : 0));
+    if (s->empty()) return;
     for (size_t i = 0; i < s->size(); ++i) {
-      if (i > 0 && i % 2 == 0 && separator != 0) res += separator;
-      res += (*s)[i];
+      if (i > 0 && i % 2 == 0 && separator != 0) out += separator;
+      out += (*s)[i];
     }
-    return res;
+    return;
   }
-  return toString(value);
+  toString(out, value);
 }
 
 /* --- Metadata & Type Discovery --- */

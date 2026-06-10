@@ -163,22 +163,27 @@ inline uint64_t getWallTimeMs() {
 }
 
 /**
- * @brief Fast ISO8601 formatter for embedded targets.
- * Converts milliseconds since epoch to "YYYY-MM-DDTHH:MM:SS.mmmZ".
- * Zero-allocation and avoids heavy printf/strftime.
+ * @brief Converts a byte to a 2-character hex string.
+ * Heap-free: returns a pointer to a static lookup table.
  */
-void formatIso8601Fast(uint64_t ms_since_epoch, char* out);
+const char* toString(uint8_t byte);
 
 /**
- * Formats a float to a buffer with scientific/fixed switching.
+ * @brief Appends the hex string representation of a byte to an existing
+ * std::string.
  */
-char* formatFloat(float value, int precision, char* buffer, size_t buffer_size,
-                  float lower_threshold, float upper_threshold);
-std::string toString(uint8_t byte);
+inline void toString(std::string& out, uint8_t byte) { out += toString(byte); }
 
-std::string byteToChar(ByteView data);
-
-std::string byteToHex(ByteView data);
+/**
+ * @brief Appends the hex string representation of a byte container to an
+ * existing std::string. Heap-free if 'out' has sufficient capacity.
+ */
+template <typename T,
+          typename = std::enable_if_t<detail::is_byte_range<T>::value>>
+void toString(std::string& out, const T& container) {
+  if (std::empty(container)) return;
+  appendHex(out, ByteView(std::data(container), std::size(container)));
+}
 
 /**
  * Converts any byte container to a hex string.
@@ -187,8 +192,35 @@ template <typename T,
           typename = std::enable_if_t<detail::is_byte_range<T>::value>>
 std::string toString(const T& container) {
   if (std::empty(container)) return {};
-  return byteToHex(ByteView(std::data(container), std::size(container)));
+  std::string res;
+  res.reserve(std::size(container) * 2);
+  toString(res, container);
+  return res;
 }
+
+/**
+ * @brief Appends the raw bytes as ASCII characters to an existing string.
+ */
+void byteToChar(std::string& out, ByteView data);
+
+/**
+ * @brief Converts raw bytes to ASCII characters.
+ */
+inline std::string byteToChar(ByteView data) {
+  std::string res;
+  byteToChar(res, data);
+  return res;
+}
+
+/**
+ * @brief Appends the hex representation of bytes to an existing string.
+ */
+inline void byteToHex(std::string& out, ByteView data) { toString(out, data); }
+
+/**
+ * @brief Converts raw bytes to a hex string.
+ */
+inline std::string byteToHex(ByteView data) { return toString(data); }
 
 std::vector<uint8_t> toVector(const std::string& str);
 
@@ -198,6 +230,19 @@ std::vector<uint8_t> toVector(const std::string& str);
 inline std::vector<uint8_t> toVector(ByteView data) {
   return {data.begin(), data.end()};
 }
+
+/**
+ * @brief Fast ISO8601 formatter for embedded targets.
+ * Converts milliseconds since epoch to "YYYY-MM-DDTHH:MM:SS.mmmZ".
+ * Zero-allocation and avoids heavy printf/strftime.
+ */
+void formatIso8601Fast(uint64_t ms_since_epoch, char* out);
+
+/**
+ * @brief Formats a float to a buffer with scientific/fixed switching.
+ */
+char* formatFloat(float value, int precision, char* buffer, size_t buffer_size,
+                  float lower_threshold, float upper_threshold);
 
 /**
  * Helper to frame a master telegram with CRC from a ByteView.

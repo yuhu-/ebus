@@ -88,7 +88,7 @@ TEST_CASE("Telegram: parsing", "[core][telegram]") {
     uint8_t expectedCrc = tmpSeq.crc();
 
     std::string wireStr =
-        "1008b50402a900a901" + ebus::toString(expectedCrc) + "00";
+        std::string("1008b50402a900a901") + ebus::toString(expectedCrc) + "00";
     seq.assign(ebus::toVector(wireStr), true);
     tel.parse(seq);
     REQUIRE(tel.getMasterState() == ebus::SequenceState::seq_ok);

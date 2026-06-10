@@ -277,54 +277,88 @@ class TelegramImpl {
     }
   }
 
-  std::string toString() const {
-    std::string res;
-    res.reserve(128);
-    res += toStringMaster();
+  /**
+   * @brief Appends a human-readable string representation of the telegram
+   * to an existing std::string. Heap-free if 'out' has sufficient capacity.
+   */
+  void toString(std::string& out) const {
+    toStringMaster(out);
 
     if (master_state_ == SequenceState::seq_ok &&
         telegram_type_ == TelegramType::master_slave) {
-      res += ' ';
-      res += toStringSlave();
+      out += ' ';
+      toStringSlave(out);
     }
+  }
 
+  /**
+   * @brief Returns a human-readable string representation of the entire
+   * telegram. Allocates a new std::string.
+   */
+  std::string toString() const {
+    std::string res;
+    res.reserve(128);
+    toString(res);
     return res;
+  }
+
+  /**
+   * @brief Appends a human-readable string representation of the master part
+   * to an existing std::string. Heap-free if 'out' has sufficient capacity.
+   */
+  void toStringMaster(std::string& out) const {
+    if (master_state_ != SequenceState::seq_ok) {
+      toStringMasterState(out);
+      return;
+    }
+    master_.toHexString(out);
   }
 
   std::string toStringMaster() const {
-    if (master_state_ != SequenceState::seq_ok) return toStringMasterState();
-    return master_.toString();
+    std::string res;
+    res.reserve(master_.size() * 2 + 32);  // Estimate
+    toStringMaster(res);
+    return res;
+  }
+
+  /**
+   * @brief Appends a human-readable string representation of the slave part
+   * to an existing std::string. Heap-free if 'out' has sufficient capacity.
+   */
+  void toStringSlave(std::string& out) const {
+    if (slave_state_ != SequenceState::seq_ok &&
+        telegram_type_ != TelegramType::broadcast) {
+      toStringSlaveState(out);
+      return;
+    }
+    slave_.toHexString(out);
   }
 
   std::string toStringSlave() const {
-    if (slave_state_ != SequenceState::seq_ok &&
-        telegram_type_ != TelegramType::broadcast)
-      return toStringSlaveState();
-    return slave_.toString();
+    std::string res;
+    res.reserve(slave_.size() * 2 + 32);  // Estimate
+    toStringSlave(res);
+    return res;
   }
 
-  std::string toStringMasterState() const {
-    std::string res;
+  void toStringMasterState(std::string& out) const {
     if (master_.size() > 0) {
-      res += '\'';
-      res += master_.toString();
-      res += "' ";
+      out += '\'';
+      master_.toHexString(out);
+      out += "' ";
     }
-    res += "master ";
-    res += ebus::toString(master_state_);
-    return res;
+    out += "master ";
+    out += ebus::toString(master_state_);
   }
 
-  std::string toStringSlaveState() const {
-    std::string res;
+  void toStringSlaveState(std::string& out) const {
     if (slave_.size() > 0) {
-      res += '\'';
-      res += slave_.toString();
-      res += "' ";
+      out += '\'';
+      slave_.toHexString(out);
+      out += "' ";
     }
-    res += "slave ";
-    res += ebus::toString(slave_state_);
-    return res;
+    out += "slave ";
+    out += ebus::toString(slave_state_);
   }
   static TelegramType typeOf(uint8_t byte) {
     if (byte == Symbols::broad)

@@ -16,7 +16,7 @@ namespace ebus::detail {
 BusMonitor::BusMonitor() = default;
 
 void BusMonitor::resetMetrics() {
-  std::lock_guard<std::mutex> lock(metrics_mutex_);
+  platform::LockGuard<platform::Mutex> lock(metrics_mutex_);
   handler_acc_.reset();
   request_acc_.reset();
   bus_acc_.reset();
@@ -47,7 +47,7 @@ void BusMonitor::resetMetrics() {
 }
 
 void BusMonitor::recordBusError() {
-  std::lock_guard<std::mutex> lock(metrics_mutex_);
+  platform::LockGuard<platform::Mutex> lock(metrics_mutex_);
   auto now = Clock::now();
   bus_acc_.last_error_us =
       std::chrono::duration_cast<std::chrono::microseconds>(now - uptime_start_)
@@ -55,12 +55,12 @@ void BusMonitor::recordBusError() {
 }
 
 void BusMonitor::recordLowBits(uint32_t bits) {
-  std::lock_guard<std::mutex> lock(metrics_mutex_);
+  platform::LockGuard<platform::Mutex> lock(metrics_mutex_);
   total_low_bits_ += bits;
 }
 
 void BusMonitor::recordHandlerError(uint8_t address) {
-  std::lock_guard<std::mutex> lock(metrics_mutex_);
+  platform::LockGuard<platform::Mutex> lock(metrics_mutex_);
   auto now_us = std::chrono::duration_cast<std::chrono::microseconds>(
                     Clock::now() - uptime_start_)
                     .count();
@@ -91,23 +91,23 @@ void BusMonitor::recordHandlerError(uint8_t address) {
 }
 
 void BusMonitor::recordHandlerSuccess(uint8_t address) {
-  std::lock_guard<std::mutex> lock(metrics_mutex_);
+  platform::LockGuard<platform::Mutex> lock(metrics_mutex_);
   handler_acc_.last_success_address = address;
 }
 
 void BusMonitor::recordIsrStartBitError() {
-  std::lock_guard<std::mutex> lock(metrics_mutex_);
+  platform::LockGuard<platform::Mutex> lock(metrics_mutex_);
   bus_acc_.start_bit_errors.fetch_add(1, std::memory_order_relaxed);
 }
 
 void BusMonitor::recordIsrSynPostponed(uint32_t count) {
-  std::lock_guard<std::mutex> lock(metrics_mutex_);
+  platform::LockGuard<platform::Mutex> lock(metrics_mutex_);
   bus_acc_.syn_postponed_count.fetch_add(count, std::memory_order_relaxed);
 }
 
 void BusMonitor::updateUtilizationHistory() {
 #ifndef EBUS_MINIMAL_DIAGNOSTICS
-  std::lock_guard<std::mutex> lock(metrics_mutex_);
+  platform::LockGuard<platform::Mutex> lock(metrics_mutex_);
   auto now = Clock::now();
   auto total_uptime_us =
       std::chrono::duration_cast<std::chrono::microseconds>(now - uptime_start_)
@@ -132,7 +132,7 @@ void BusMonitor::updateUtilizationHistory() {
 }
 
 void BusMonitor::logPassiveReset() {
-  std::lock_guard<std::mutex> lock(metrics_mutex_);
+  platform::LockGuard<platform::Mutex> lock(metrics_mutex_);
   handler_acc_.last_passive_reset_us =
       std::chrono::duration_cast<std::chrono::microseconds>(Clock::now() -
                                                             uptime_start_)
@@ -141,7 +141,7 @@ void BusMonitor::logPassiveReset() {
 }
 
 void BusMonitor::logActiveReset() {
-  std::lock_guard<std::mutex> lock(metrics_mutex_);
+  platform::LockGuard<platform::Mutex> lock(metrics_mutex_);
   handler_acc_.last_active_reset_us =
       std::chrono::duration_cast<std::chrono::microseconds>(Clock::now() -
                                                             uptime_start_)
@@ -151,7 +151,7 @@ void BusMonitor::logActiveReset() {
 
 void BusMonitor::clearHistory() {
 #ifndef EBUS_MINIMAL_DIAGNOSTICS
-  std::lock_guard<std::mutex> lock(metrics_mutex_);
+  platform::LockGuard<platform::Mutex> lock(metrics_mutex_);
   handler_history_.clear();
   request_history_.clear();
   utilization_history_.clear();
@@ -168,7 +168,7 @@ void BusMonitor::clearHistory() {
 void BusMonitor::logHandlerTransition([[maybe_unused]] HandlerState from,
                                       [[maybe_unused]] HandlerState to) {
 #ifndef EBUS_MINIMAL_DIAGNOSTICS
-  std::lock_guard<std::mutex> lock(metrics_mutex_);
+  platform::LockGuard<platform::Mutex> lock(metrics_mutex_);
   handler_history_.push_back({from, to, ebus::getWallTimeMs()});
 #endif
 }
@@ -176,13 +176,13 @@ void BusMonitor::logHandlerTransition([[maybe_unused]] HandlerState from,
 void BusMonitor::logRequestTransition([[maybe_unused]] RequestState from,
                                       [[maybe_unused]] RequestState to) {
 #ifndef EBUS_MINIMAL_DIAGNOSTICS
-  std::lock_guard<std::mutex> lock(metrics_mutex_);
+  platform::LockGuard<platform::Mutex> lock(metrics_mutex_);
   request_history_.push_back({from, to, ebus::getWallTimeMs()});
 #endif
 }
 
 float BusMonitor::getBusUtilization() const {
-  std::lock_guard<std::mutex> lock(metrics_mutex_);
+  platform::LockGuard<platform::Mutex> lock(metrics_mutex_);
   auto now = Clock::now();
   auto total_uptime_us =
       std::chrono::duration_cast<std::chrono::microseconds>(now - uptime_start_)
@@ -202,7 +202,7 @@ void BusMonitor::fetchMetrics(
     const std::function<void(const Metrics&)>& callback) const {
   metrics::SystemMetrics sm;
   {
-    std::lock_guard<std::mutex> lock(metrics_mutex_);
+    platform::LockGuard<platform::Mutex> lock(metrics_mutex_);
     // Populate snapshot while holding the lock
 
     // 1. Populate Handler Part
@@ -302,7 +302,7 @@ void BusMonitor::fetchMetrics(
 void BusMonitor::fetchUtilizationHistory(
     [[maybe_unused]] const std::function<void(float)>& callback) const {
 #ifndef EBUS_MINIMAL_DIAGNOSTICS
-  std::lock_guard<std::mutex> lock(metrics_mutex_);
+  platform::LockGuard<platform::Mutex> lock(metrics_mutex_);
   if (callback) {
     utilization_history_.forEach(callback);
   }
@@ -313,7 +313,7 @@ void BusMonitor::fetchUtilizationHistory(
 void BusMonitor::fetchHistory(
     const std::function<void(const HandlerHistory&, const RequestHistory&,
                              const UtilizationHistory&)>& callback) const {
-  std::lock_guard<std::mutex> lock(metrics_mutex_);
+  platform::LockGuard<platform::Mutex> lock(metrics_mutex_);
   if (callback) {
     callback(handler_history_, request_history_, utilization_history_);
   }

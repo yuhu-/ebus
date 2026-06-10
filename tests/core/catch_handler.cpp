@@ -88,38 +88,45 @@ SCENARIO("Handler processes eBUS messages correctly", "[core][handler]") {
         int telegram_count = 0;
         int error_count = 0;
 
-        handler.setBusRequestWonCallback([&]() { INFO("request: won"); });
-        handler.setBusRequestLostCallback([&]() { INFO("request: lost"); });
-        handler.setReactiveMasterSlaveCallback(
-            [&](const ebus::ReactiveInfo& info) {
-              std::vector<uint8_t> search;
-              search = {0x07, 0x04};
-              if (ebus::contains(info.master_view, search))
-                info.slave_response.assign(
-                    ebus::toVector("0ab5504d53303001074302"));
-              search = {0x07, 0x05};
-              if (ebus::contains(info.master_view, search))
-                info.slave_response.assign(
-                    ebus::toVector("0ab5504d533030010743"));  // defect
-              INFO("reactive: " << ebus::toString(info.master_view) << " "
-                                << ebus::toString(info.slave_response));
-            });
-        handler.setProtocolCallback([&](const ebus::ProtocolInfo& info) {
-          if (info.is_error) {
-            error_count++;
-            INFO("error: " << ebus::toString(info.protocol_error) << " master '"
-                           << ebus::toString(info.master_view) << "' slave '"
-                           << ebus::toString(info.slave_view) << "'");
-          } else {
-            telegram_count++;
-            INFO("telegram: " << ebus::toString(info.master_view) << " "
-                              << ebus::toString(info.slave_view));
+        struct TestCtx {
+          int& tc;
+          int& ec;
+          void onWon() { INFO("request: won"); }
+          void onLost() { INFO("request: lost"); }
+          void onReactive(const ebus::ReactiveInfo& info) {
+            if (ebus::contains(info.master_view, {0x07, 0x04}))
+              info.slave_response.assign(
+                  ebus::toVector("0ab5504d53303001074302"));
+            if (ebus::contains(info.master_view, {0x07, 0x05}))
+              info.slave_response.assign(
+                  ebus::toVector("0ab5504d533030010743"));
           }
-        });
+          void onProtocol(const ebus::ProtocolInfo& info) {
+            if (info.is_error) {
+              ec++;
+              INFO("error: " << ebus::toString(info.protocol_error));
+            } else {
+              tc++;
+              INFO("telegram received");
+            }
+          }
+          void onWrite(const uint8_t& b) {
+            INFO("<- write: " << ebus::toString(b));
+          }
+        } ctx{telegram_count, error_count};
 
-        bus.addWriteListener([&](const uint8_t& byte) {
-          INFO("<- write: " << ebus::toString(byte));
-        });
+        handler.setBusRequestWonCallback(
+            BusRequestWonCallback::bind<TestCtx, &TestCtx::onWon>(&ctx));
+        handler.setBusRequestLostCallback(
+            BusRequestLostCallback::bind<TestCtx, &TestCtx::onLost>(&ctx));
+        handler.setReactiveMasterSlaveCallback(
+            HandlerReactiveCallback::bind<TestCtx, &TestCtx::onReactive>(&ctx));
+        handler.setProtocolCallback(
+            HandlerProtocolCallback::bind<TestCtx, &TestCtx::onProtocol>(&ctx));
+
+        bus.addWriteListener(
+            platform::BusBase::WriteListener::bind<TestCtx, &TestCtx::onWrite>(
+                &ctx));
 
         handler.setSourceAddress(tc.address);
 

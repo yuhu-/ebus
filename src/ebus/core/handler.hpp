@@ -16,6 +16,7 @@
 
 #include "core/telegram.hpp"
 #include "platform/bus.hpp"
+#include "platform/delegate.hpp"
 #include "platform/queue.hpp"
 
 namespace ebus::detail {
@@ -23,8 +24,12 @@ namespace ebus::detail {
 class BusMonitor;
 class Request;
 
-using BusRequestWonCallback = std::function<void()>;
-using BusRequestLostCallback = std::function<void()>;
+using BusRequestWonCallback = platform::Delegate<void()>;
+using BusRequestLostCallback = platform::Delegate<void()>;
+using HandlerProtocolCallback =
+    platform::Delegate<void(const ProtocolInfo& info)>;
+using HandlerReactiveCallback =
+    platform::Delegate<void(const ReactiveInfo& info)>;
 
 /**
  * Handler class that implements the eBUS protocol logic as a finite state
@@ -46,8 +51,8 @@ class Handler {
   uint8_t getTargetAddress() const;
   void setBusRequestWonCallback(BusRequestWonCallback callback);
   void setBusRequestLostCallback(BusRequestLostCallback callback);
-  void setReactiveMasterSlaveCallback(ReactiveMasterSlaveCallback callback);
-  void setProtocolCallback(ProtocolCallback callback);
+  void setReactiveMasterSlaveCallback(HandlerReactiveCallback callback);
+  void setProtocolCallback(HandlerProtocolCallback callback);
 
   // Working Methods
   bool sendActiveMessage(ByteView message);
@@ -70,10 +75,10 @@ class Handler {
   uint8_t source_address_ = 0;
   uint8_t target_address_ = 0;
 
-  std::function<void()> bus_request_won_callback_ = nullptr;
-  std::function<void()> bus_request_lost_callback_ = nullptr;
-  ReactiveMasterSlaveCallback reactive_master_slave_callback_ = nullptr;
-  ProtocolCallback protocol_callback_ = nullptr;
+  BusRequestWonCallback bus_request_won_callback_ = nullptr;
+  BusRequestLostCallback bus_request_lost_callback_ = nullptr;
+  HandlerReactiveCallback reactive_master_slave_callback_ = nullptr;
+  HandlerProtocolCallback protocol_callback_ = nullptr;
 
   Clock::time_point last_point_;
   bool measure_sync_ = false;
@@ -160,6 +165,10 @@ class Handler {
 
   void callOnTelegram(MessageType message_type, TelegramType telegram_type,
                       ByteView master_view, ByteView slave_view);
+
+  // Request callback targets
+  void onBusRequested();
+  void onStartBit();
 
   void callOnError(LogLevel level, ProtocolError protocol_error,
                    SequenceState sequence_state, ByteView master_view,

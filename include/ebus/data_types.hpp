@@ -7,6 +7,7 @@
 
 #include <cmath>
 #include <cstdint>
+#include <functional>
 #include <limits>
 #include <optional>
 #include <string>
@@ -195,22 +196,34 @@ std::string const& asString(const DataValue& value) noexcept;
  *
  * @param value The DataValue to format.
  * @param unit An optional unit string to append to numeric values.
- * @return The human-readable string representation.
  */
-std::string toString(const DataValue& value, std::string_view unit = "");
+void toString(std::string& out, const DataValue& value,
+              std::string_view unit = "");
+
+/**
+ * Formats a DataValue into a human-readable string.
+ */
+inline std::string toString(const DataValue& value,
+                            std::string_view unit = "") {
+  std::string res;
+  toString(res, value, unit);
+  return res;
+}
 
 /**
  * Formats a DataValue as a hex string (e.g., "DE AD BE EF").
- * If the DataValue holds a string, it formats the string as hex.
- * Otherwise, it converts the DataValue to its string representation and then
- * formats it as hex.
- *
- * @param value The DataValue to format.
- * @param separator The character to use as a separator between hex bytes (e.g.,
- * ' ').
- * @return The hex string representation.
  */
-std::string toHexString(const DataValue& value, char separator = ' ');
+void toHexString(std::string& out, const DataValue& value,
+                 char separator = ' ');
+
+/**
+ * Formats a DataValue as a hex string.
+ */
+inline std::string toHexString(const DataValue& value, char separator = ' ') {
+  std::string res;
+  toHexString(res, value, separator);
+  return res;
+}
 
 /**
  * Safely casts a DataValue to a numeric type with range checking.

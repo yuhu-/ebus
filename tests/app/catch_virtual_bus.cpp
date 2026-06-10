@@ -6,12 +6,12 @@
 #include <catch2/catch_all.hpp>
 #include <ebus.hpp>
 #include <ebus/utils.hpp>
-#include <mutex>
 #include <vector>
 
 #include "core/bus_monitor.hpp"
 #include "core/request.hpp"
 #include "platform/bus.hpp"
+#include "platform/mutex.hpp"
 #include "platform/system.hpp"
 #include "test_utils.hpp"
 
@@ -30,11 +30,21 @@ TEST_CASE("VirtualBus: Reaction Logic", "[app][virtualbus]") {
   ebus::VirtualBus vb(bus);
 
   std::vector<uint8_t> bus_history;
-  std::mutex history_mutex;
-  bus.addReadListener([&](uint8_t b) {  // Changed to addReadListener
-    std::lock_guard<std::mutex> lock(history_mutex);
-    bus_history.push_back(b);
-  });
+  platform::Mutex history_mutex;  // Protects bus_history
+
+  struct VirtualBusTestCallbacks {
+    platform::Mutex& mutex;
+    std::vector<uint8_t>& history;
+    void onRead(const uint8_t& b) {
+      platform::LockGuard<platform::Mutex> lock(mutex);
+      history.push_back(b);
+    }
+  };
+  VirtualBusTestCallbacks callbacks{history_mutex, bus_history};
+  bus.addReadListener(
+      platform::Delegate<void(const uint8_t&)>::bind<
+          VirtualBusTestCallbacks, &VirtualBusTestCallbacks::onRead>(
+          &callbacks));
 
   bus.start();
 
@@ -58,12 +68,12 @@ TEST_CASE("VirtualBus: Reaction Logic", "[app][virtualbus]") {
     // Wait for the background simulator thread to process
     REQUIRE(waitCondition(
         [&] {
-          std::lock_guard<std::mutex> lock(history_mutex);
+          platform::LockGuard<platform::Mutex> lock(history_mutex);
           return bus_history.size() >= 5;
         },
         1000));
 
-    std::lock_guard<std::mutex> lock(history_mutex);
+    platform::LockGuard<platform::Mutex> lock(history_mutex);
     std::vector<uint8_t> expected = {0x11, 0x22, 0x11, 0x22, 0x11};
     REQUIRE(bus_history == expected);
   }
@@ -98,12 +108,12 @@ TEST_CASE("VirtualBus: Reaction Logic", "[app][virtualbus]") {
     // Expected history: 11, CC, 11, CC, 11, BB, 11
     REQUIRE(waitCondition(
         [&] {
-          std::lock_guard<std::mutex> lock(history_mutex);
+          platform::LockGuard<platform::Mutex> lock(history_mutex);
           return bus_history.size() >= 7;
         },
         1000));
 
-    std::lock_guard<std::mutex> lock(history_mutex);
+    platform::LockGuard<platform::Mutex> lock(history_mutex);
     std::vector<uint8_t> expected = {0x11, 0xcc, 0x11, 0xcc, 0x11, 0xbb, 0x11};
     REQUIRE(bus_history == expected);
   }
@@ -120,12 +130,12 @@ TEST_CASE("VirtualBus: Reaction Logic", "[app][virtualbus]") {
     // The simulator should inject ACK (00) AND SYN (AA)
     REQUIRE(waitCondition(
         [&] {
-          std::lock_guard<std::mutex> lock(history_mutex);
+          platform::LockGuard<platform::Mutex> lock(history_mutex);
           return bus_history.size() >= trigger.size() + 2;
         },
         1000));
 
-    std::lock_guard<std::mutex> lock(history_mutex);
+    platform::LockGuard<platform::Mutex> lock(history_mutex);
     // Final bytes must be ACK then SYN
     REQUIRE(bus_history[bus_history.size() - 2] == ebus::Symbols::ack);
     REQUIRE(bus_history[bus_history.size() - 1] == ebus::Symbols::syn);
@@ -144,7 +154,7 @@ TEST_CASE("VirtualBus: Reaction Logic", "[app][virtualbus]") {
     bus.writeByte(0x22);
     platform::sleepMilli(50);  // Allow time for a potential reaction
 
-    std::lock_guard<std::mutex> lock(history_mutex);
+    platform::LockGuard<platform::Mutex> lock(history_mutex);
     // History should only contain the trigger (0x22), no action (0x33)
     std::vector<uint8_t> expected = {0x22};
     REQUIRE(bus_history == expected);
@@ -162,7 +172,7 @@ TEST_CASE("VirtualBus: Reaction Logic", "[app][virtualbus]") {
     bus.writeByte(0x44);
     platform::sleepMilli(50);
 
-    std::lock_guard<std::mutex> lock(history_mutex);
+    platform::LockGuard<platform::Mutex> lock(history_mutex);
     // History should only contain the trigger (0x44), no action (0x55)
     std::vector<uint8_t> expected = {0x44};
     REQUIRE(bus_history == expected);

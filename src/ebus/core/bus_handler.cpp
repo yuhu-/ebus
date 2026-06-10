@@ -15,12 +15,12 @@ BusHandler::BusHandler(Request* request, Handler* handler)
 BusHandler::~BusHandler() = default;
 
 void BusHandler::setWatchdogTimeout(uint32_t timeout_ms) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  platform::LockGuard<platform::Mutex> lock(mutex_);
   watchdog_timeout_ms_ = std::chrono::milliseconds(timeout_ms);
 }
 
 uint32_t BusHandler::addByteListener(ByteListener listener) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  platform::LockGuard<platform::Mutex> lock(mutex_);
   uint32_t id = next_listener_id_++;
   listeners_.push_back({id, std::move(listener)});
   listeners_version_++;
@@ -28,7 +28,7 @@ uint32_t BusHandler::addByteListener(ByteListener listener) {
 }
 
 void BusHandler::removeByteListener(uint32_t id) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  platform::LockGuard<platform::Mutex> lock(mutex_);
   listeners_.erase(
       std::remove_if(listeners_.begin(), listeners_.end(),
                      [id](const std::pair<uint32_t, ByteListener>& p) {
@@ -60,7 +60,7 @@ void BusHandler::processEvent(const BusEvent& bus_event) {
   }
 
   {
-    std::lock_guard<std::mutex> lock(mutex_);
+    platform::LockGuard<platform::Mutex> lock(mutex_);
     if (listeners_version_ != last_cache_version_) {
       listeners_cache_.clear();
       for (const auto& item : listeners_)

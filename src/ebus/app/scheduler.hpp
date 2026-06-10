@@ -7,21 +7,16 @@
 
 #include <atomic>
 #include <chrono>
-#include <condition_variable>
 #include <ebus/config.hpp>
 #include <ebus/detail/protocol_limits.hpp>
 #include <ebus/metrics.hpp>
 #include <ebus/sequence.hpp>
 #include <ebus/status.hpp>
-#include <functional>
 #include <memory>
-#include <mutex>
 #include <optional>
-#include <queue>
-#include <string>
-#include <vector>
 
 #include "core/handler.hpp"
+#include "platform/mutex.hpp"
 #include "platform/queue.hpp"
 #include "utils/static_vector.hpp"
 
@@ -41,8 +36,8 @@ class Scheduler {
  public:
   // Public Types & Constants
   using TimePoint = Clock::time_point;
-  using Duration = Clock::duration;
-  using EventSink = std::function<void(OrchestrationEvent&&)>;
+  using Duration = Clock::duration; // Duration type for internal use
+  using EventSink = platform::Delegate<void(OrchestrationEvent&&)>;
 
   // Lifecycle
   explicit Scheduler(Handler* handler);
@@ -60,8 +55,8 @@ class Scheduler {
   void setFsmTimeout(uint32_t timeout_ms);
   void setTotalTimeout(uint32_t timeout_ms);
 
-  void setReactiveMasterSlaveCallback(ReactiveMasterSlaveCallback callback);
-  void setProtocolCallback(ProtocolCallback callback);
+  void setReactiveMasterSlaveCallback(ReactiveMasterSlaveCallback callback); // Public API uses std::function
+  void setProtocolCallback(ProtocolCallback callback); // Public API uses std::function
 
   // Working Methods
   void attachHandlerCallbacks();
@@ -84,9 +79,9 @@ class Scheduler {
 
   // Status/Telemetry
   Clock::time_point nextDueTime() const;
-  size_t queueSize();
+  size_t queueSize() const;
   size_t queueCapacity() const;
-  SchedulerStatus getStatus();
+  SchedulerStatus getStatus() const;
   void resetPeakMetrics();
 
  private:
@@ -128,8 +123,8 @@ class Scheduler {
 
   // Queue management
   StaticVector<Item, SchedulerLimits::max_items> scheduled_items_;
-  mutable std::mutex data_mutex_;
-  mutable std::mutex callback_mutex_;
+  mutable platform::Mutex data_mutex_;
+  mutable platform::Mutex callback_mutex_;
 
   size_t max_queue_size_ = 0;
 
@@ -166,6 +161,12 @@ class Scheduler {
   bool pushItem(Item&& it);
   bool handleAttemptResult(const ProtocolEvent& ev);
   Duration backoffDuration(int attempt) const;
+
+  // Handler callback targets
+  void onBusRequestWon();
+  void onBusRequestLost();
+  void onHandlerReactive(const ReactiveInfo& info);
+  void onHandlerProtocol(const ProtocolInfo& info);
 };
 
 }  // namespace ebus::detail

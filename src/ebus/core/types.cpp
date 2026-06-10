@@ -256,42 +256,38 @@ void RequestTransition::toJson(detail::JsonWriter& writer) const {
   writer.writeTimestampField("timestamp", timestamp);
 }
 
-std::string ErrorEntry::toString() const {
-  std::string res;
-  res.reserve(128);  // Pre-allocate to avoid reallocations
-  res += "[";
+void ErrorEntry::toString(std::string& out) const {
+  out += "[";
 
   char buf[12];
   if (poll_id > 0) {
-    res += "P:";
+    out += "P:";
     auto [ptr, ec] = std::to_chars(buf, buf + sizeof(buf), poll_id);
-    res.append(buf, static_cast<size_t>(ptr - buf));
-    res += "|";
+    out.append(buf, static_cast<size_t>(ptr - buf));
+    out += "|";
   }
 
-  res += "S:";
+  out += "S:";
   auto [ptr, ec] = std::to_chars(buf, buf + sizeof(buf), session_id);
-  res.append(buf, static_cast<size_t>(ptr - buf));
+  out.append(buf, static_cast<size_t>(ptr - buf));
 
-  res += "][";
-  res += ebus::toString(handler_state);
-  res += "][";
-  res += ebus::toString(request_state);
-  res += "] ";
-  res += ebus::toString(protocol_error);
+  out += "][";
+  out += ebus::toString(handler_state);
+  out += "][";
+  out += ebus::toString(request_state);
+  out += "] ";
+  out += ebus::toString(protocol_error);
 
   if (sequence_state != SequenceState::seq_ok &&
       sequence_state != SequenceState::seq_empty) {
-    res += " (";
-    res += ebus::toString(sequence_state);
-    res += ")";
+    out += " (";
+    out += ebus::toString(sequence_state);
+    out += ")";
   }
 
-  res += " (Result: ";
-  res += ebus::toString(result);
-  res += ")";
-
-  return res;
+  out += " (Result: ";
+  out += ebus::toString(result);
+  out += ")";
 }
 
 void ErrorEntry::toJson(detail::JsonWriter& writer) const {

@@ -7,19 +7,16 @@
 
 #include <atomic>
 #include <chrono>
-#include <condition_variable>
 #include <cstdint>
 #include <ebus/metrics.hpp>
 #include <ebus/status.hpp>
 #include <memory>
-#include <mutex>
-#include <vector>
 
 #include "app/client.hpp"
 #include "core/bus_handler.hpp"
 #include "core/request.hpp"
-#include "platform/bus.hpp"
-#include "platform/queue.hpp"
+#include "platform/delegate.hpp"
+#include "platform/mutex.hpp"
 #include "utils/static_vector.hpp"
 
 namespace ebus::detail {
@@ -48,6 +45,10 @@ class ClientManager {
   void setTransmitTimeout(uint32_t timeout_ms);
   void setOutboundBufferSize(size_t size);
 
+  // Sets a predicate to check if the system is too busy to start new bridge
+  // sessions.
+  void setBusyPredicate(platform::Delegate<bool()> pred);
+
   // Working Methods
   void addClient(int fd, ClientType type);
   void addClient(std::shared_ptr<AbstractClient> client);
@@ -57,7 +58,12 @@ class ClientManager {
 
   // Status/Telemetry
   Clock::time_point nextDueTime() const;
-  ClientManagerStatus getStatus();
+  ClientManagerStatus getStatus() const;
+
+  /**
+   * @brief Returns true if a bridge session is currently in progress.
+   */
+  bool isSessionActive() const;
 
  private:
   platform::Bus* bus_;
@@ -66,11 +72,12 @@ class ClientManager {
   BusMonitor* monitor_;
 
   std::atomic<bool> running_{false};
+  platform::Delegate<bool()> is_busy_;
 
   SessionState session_state_ = SessionState::idle;
   Clock::time_point last_state_change_;
 
-  mutable std::mutex mutex_;
+  mutable platform::Mutex mutex_;
   StaticVector<std::shared_ptr<AbstractClient>, NetworkLimits::max_clients>
       clients_;
   StaticVector<std::shared_ptr<AbstractClient>, NetworkLimits::max_clients>
@@ -98,6 +105,9 @@ class ClientManager {
 
   size_t outbound_buffer_size_ =
       ebus::RuntimeConfig{}.network.outbound_buffer_size;
+
+  // Request callback target
+  void onExternalBusRequested();
 
   void stopActiveSession();
 };

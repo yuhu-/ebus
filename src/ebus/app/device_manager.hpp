@@ -12,12 +12,10 @@
 #include <ebus/metrics.hpp>
 #include <ebus/sequence.hpp>
 #include <ebus/status.hpp>
-#include <map>
-#include <mutex>
-#include <set>
+#include <functional>
 
-#include "core/handler.hpp"
 #include "models/device.hpp"
+#include "platform/mutex.hpp"
 
 namespace ebus::detail {
 
@@ -57,7 +55,7 @@ class DeviceManager {
   BusMonitor* monitor_ = nullptr;
   size_t max_devices_ = DeviceLimits::max_devices;
 
-  mutable std::mutex mutex_;
+  mutable platform::Mutex mutex_;
 
   std::array<Device, DeviceLimits::max_devices> device_pool_;
   std::array<int16_t, 256>

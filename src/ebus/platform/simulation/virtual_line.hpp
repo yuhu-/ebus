@@ -7,11 +7,11 @@
 
 #if EBUS_SIMULATION
 #include <chrono>
-#include <condition_variable>
 #include <cstdint>
 #include <map>
-#include <mutex>
 #include <queue>
+
+#include "platform/mutex.hpp"
 
 namespace ebus::detail::platform {
 
@@ -30,18 +30,18 @@ class VirtualLine {
   // Working Methods
   // Participant registration
   inline void attach(void* bus_key) {
-    std::lock_guard<std::mutex> lock(mutex_);
+    LockGuard<Mutex> lock(mutex_);
     queues_[bus_key] = std::queue<uint8_t>();
   }
   inline void detach(void* bus_key) {
-    std::lock_guard<std::mutex> lock(mutex_);
+    LockGuard<Mutex> lock(mutex_);
     queues_.erase(bus_key);
   }
 
   // Wire Logic
   inline void write(uint8_t byte) {
     {
-      std::lock_guard<std::mutex> lock(mutex_);
+      LockGuard<Mutex> lock(mutex_);
       for (auto& pair : queues_) {
         pair.second.push(byte);
       }
@@ -56,7 +56,7 @@ class VirtualLine {
   }
 
   inline bool read(void* bus_key, uint8_t& out, int timeout_ms) {
-    std::unique_lock<std::mutex> lock(mutex_);
+    UniqueLock<Mutex> lock(mutex_);
     auto it = queues_.find(bus_key);
     if (it == queues_.end()) return false;
 
@@ -76,14 +76,14 @@ class VirtualLine {
 
   inline void shutdown() {
     {
-      std::lock_guard<std::mutex> lock(mutex_);
+      LockGuard<Mutex> lock(mutex_);
       shutdown_ = true;
     }
     cv_.notify_all();
   }
 
   inline void clear() {
-    std::lock_guard<std::mutex> lock(mutex_);
+    LockGuard<Mutex> lock(mutex_);
     for (auto& pair : queues_) {
       std::queue<uint8_t> empty;
       std::swap(pair.second, empty);
@@ -93,8 +93,8 @@ class VirtualLine {
  private:
   VirtualLine() = default;
   std::map<void*, std::queue<uint8_t>> queues_;
-  mutable std::mutex mutex_;
-  std::condition_variable cv_;
+  mutable Mutex mutex_;
+  ConditionVariable cv_;
   bool shutdown_ = false;
 };
 

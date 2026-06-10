@@ -13,14 +13,15 @@
 #include <ebus/detail/protocol_limits.hpp>
 #include <ebus/metrics.hpp>
 #include <ebus/types.hpp>
-#include <functional>
+
+#include "platform/delegate.hpp"
 
 namespace ebus::detail {
 
 class BusMonitor;
 
-using BusRequestedCallback = std::function<void()>;
-using StartBitCallback = std::function<void()>;
+using BusRequestedCallback = platform::Delegate<void()>;
+using StartBitCallback = platform::Delegate<void()>;
 
 /**
  * Implementation of the eBUS arbitration state machine.

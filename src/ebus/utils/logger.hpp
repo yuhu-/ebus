@@ -9,10 +9,11 @@
 #include <ebus/types.hpp>
 #include <functional>
 #include <memory>
-#include <mutex>
 #include <string>
 #include <string_view>
 #include <utility>
+
+#include "platform/mutex.hpp"
 
 namespace ebus::detail {
 
@@ -37,7 +38,7 @@ class Logger {
 
   void setSink(LogSink sink) {
     auto new_sink = std::make_shared<LogSink>(std::move(sink));
-    std::lock_guard<std::mutex> lock(mutex_);
+    platform::LockGuard<platform::Mutex> lock(mutex_);
     sink_ptr_ = std::move(new_sink);
   }
 
@@ -54,7 +55,7 @@ class Logger {
 
     std::shared_ptr<LogSink> current_sink;
     {
-      std::lock_guard<std::mutex> lock(mutex_);
+      platform::LockGuard<platform::Mutex> lock(mutex_);
       current_sink = sink_ptr_;
     }
 
@@ -72,7 +73,7 @@ class Logger {
   Logger() = default;
   std::atomic<LogLevel> level_{LogLevel::error};
   std::shared_ptr<LogSink> sink_ptr_;
-  std::mutex mutex_;
+  mutable platform::Mutex mutex_;
 };
 
 }  // namespace ebus::detail

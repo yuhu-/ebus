@@ -16,11 +16,11 @@
 #include <ebus/detail/protocol_limits.hpp>
 #include <ebus/metrics.hpp>
 #include <ebus/sequence.hpp>
-#include <mutex>
-#include <vector>
+#include <functional>
 
 #include "app/device_manager.hpp"
-#include "core/handler.hpp"
+#include "platform/delegate.hpp"
+#include "platform/mutex.hpp"
 #include "utils/static_vector.hpp"
 
 namespace ebus::detail {
@@ -46,6 +46,10 @@ class DeviceScanner {
   void setInitialScanDelay(uint32_t delay_s);
   void setStartupScanInterval(uint32_t interval_s);
 
+  // Sets a predicate to check if the system is too busy to perform background
+  // scans. Postpones discovery during high bus activity or bridge sessions.
+  void setBusyPredicate(platform::Delegate<bool()> pred);
+
   // Working Methods
   void initFullScan(bool enable);
   bool scanObservedDevices();
@@ -64,7 +68,9 @@ class DeviceScanner {
   uint8_t own_address_ = ebus::RuntimeConfig{}.address;
 
   // Protects all internal state across threads (Controller and Scheduler)
-  mutable std::mutex mutex_;
+  mutable platform::Mutex mutex_;
+
+  platform::Delegate<bool()> is_busy_;
 
   // Commands explicitly requested via scanAddress() or scanObservedDevices().
   // These are always returned first.

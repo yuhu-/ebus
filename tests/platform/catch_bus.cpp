@@ -14,6 +14,7 @@
 #include "core/bus_monitor.hpp"
 #include "core/request.hpp"
 #include "platform/bus.hpp"
+#include "platform/mutex.hpp"
 #include "platform/queue.hpp"
 #include "platform/system.hpp"
 
@@ -40,11 +41,20 @@ TEST_CASE("Bus: Basic Communication", "[platform][bus]") {
   platform::Bus bus(config, runtime, &req, &monitor);
 
   platform::Queue<BusEvent> queue;
-  std::mutex mtx;
-  bus.addBusEventListener([&](const BusEvent& ev) {
-    std::lock_guard<std::mutex> lock(mtx);
-    queue.push(ev);
-  });
+  platform::Mutex mutex;  // Protects the queue
+
+  struct BusTestCallbacks {
+    platform::Queue<BusEvent>& queue;
+    platform::Mutex& mutex;
+    void onBusEvent(const BusEvent& ev) {
+      platform::LockGuard<platform::Mutex> lock(mutex);
+      queue.push(ev);
+    }
+  };
+  BusTestCallbacks callbacks{queue, mutex};
+  bus.addBusEventListener(
+      platform::Delegate<void(const BusEvent&)>::bind<
+          BusTestCallbacks, &BusTestCallbacks::onBusEvent>(&callbacks));
 
   bus.start();
   force_request(req, 0x03);
@@ -88,11 +98,20 @@ TEST_CASE("Bus: SYN Timing", "[platform][bus]") {
   platform::Bus bus(config, runtime, &req, &monitor);
 
   platform::Queue<BusEvent> queue;
-  std::mutex mtx;
-  bus.addBusEventListener([&](const BusEvent& ev) {
-    std::lock_guard<std::mutex> lock(mtx);
-    queue.push(ev);
-  });
+  platform::Mutex mutex;  // Protects the queue
+
+  struct BusTestCallbacks {
+    platform::Queue<BusEvent>& queue;
+    platform::Mutex& mutex;
+    void onBusEvent(const BusEvent& ev) {
+      platform::LockGuard<platform::Mutex> lock(mutex);
+      queue.push(ev);
+    }
+  };
+  BusTestCallbacks callbacks{queue, mutex};
+  bus.addBusEventListener(
+      platform::Delegate<void(const BusEvent&)>::bind<
+          BusTestCallbacks, &BusTestCallbacks::onBusEvent>(&callbacks));
 
   auto start = ebus::Clock::now();
   bus.start();
@@ -142,11 +161,20 @@ TEST_CASE("Bus: Raw Reception (Broadcast Simulation)", "[platform][bus]") {
   platform::Bus bus(config, runtime, &req, &monitor);
 
   platform::Queue<BusEvent> queue;
-  std::mutex mtx;
-  bus.addBusEventListener([&](const BusEvent& ev) {
-    std::lock_guard<std::mutex> lock(mtx);
-    queue.push(ev);
-  });
+  platform::Mutex mutex;  // Protects the queue
+
+  struct BusTestCallbacks {
+    platform::Queue<BusEvent>& queue;
+    platform::Mutex& mutex;
+    void onBusEvent(const BusEvent& ev) {
+      platform::LockGuard<platform::Mutex> lock(mutex);
+      queue.push(ev);
+    }
+  };
+  BusTestCallbacks callbacks{queue, mutex};
+  bus.addBusEventListener(
+      platform::Delegate<void(const BusEvent&)>::bind<
+          BusTestCallbacks, &BusTestCallbacks::onBusEvent>(&callbacks));
 
   bus.start();
 

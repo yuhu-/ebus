@@ -13,10 +13,9 @@
 #include <ebus/metrics.hpp>
 #include <ebus/sequence.hpp>
 #include <ebus/status.hpp>
-#include <functional>
-#include <mutex>
-#include <vector>
 
+#include "platform/delegate.hpp"
+#include "platform/mutex.hpp"
 #include "utils/static_vector.hpp"
 
 namespace ebus::detail {
@@ -59,6 +58,10 @@ class PollManager {
   // Sets the current master address and purges items that would poll itself.
   void setOwnAddress(uint8_t address);
 
+  // Sets a predicate to check if the system is too busy to process polls.
+  // Prevents unnecessary scheduling attempts when the Scheduler is full.
+  void setBusyPredicate(platform::Delegate<bool()> pred);
+
   // Working Methods
   // Register a new recurring command. Returns a unique ID.
   uint32_t addPollItem(uint8_t priority, ByteView message,
@@ -87,9 +90,10 @@ class PollManager {
   PollManagerStatus getStatus() const;
 
  private:
-  mutable std::mutex mutex_;
+  mutable platform::Mutex mutex_;
   StaticVector<Item, PollLimits::max_items> items_;
   uint8_t own_address_ = 0xff;
+  platform::Delegate<bool()> is_busy_;
   size_t max_item_count_ = 0;
   uint32_t next_poll_id_;
 };

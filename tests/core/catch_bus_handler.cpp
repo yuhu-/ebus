@@ -36,16 +36,25 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
     std::atomic<int> telegram_count{0};
     std::atomic<int> error_count{0};
 
-    handler.setProtocolCallback([&](const ebus::ProtocolInfo& info) {
-      if (info.is_error)
-        error_count++;
-      else
-        telegram_count++;
-    });
+    struct Stats {
+      std::atomic<int>& tc;
+      std::atomic<int>& ec;
+      void onEvent(const ebus::ProtocolInfo& i) {
+        if (i.is_error)
+          ec++;
+        else
+          tc++;
+      }
+    } stats{telegram_count, error_count};
+
+    handler.setProtocolCallback(
+        HandlerProtocolCallback::bind<Stats, &Stats::onEvent>(&stats));
 
     // PUMP BRIDGE: Required because BusHandler is now a passive logic engine
     bus.addBusEventListener(
-        [&](const BusEvent& ev) { busHandler.processEvent(ev); });
+        platform::BusBase::BusEventListener::bind<BusHandler,
+                                                  &BusHandler::processEvent>(
+            &busHandler));
 
     bus.start();
 
@@ -112,13 +121,20 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
     BusHandler busHandler(&request, &handler);
 
     std::atomic<int> telegram_count{0};
-    handler.setProtocolCallback([&](const ebus::ProtocolInfo& info) {
-      if (!info.is_error) telegram_count++;
-    });
+    struct Stats {
+      std::atomic<int>& tc;
+      void onEvent(const ebus::ProtocolInfo& i) {
+        if (!i.is_error) tc++;
+      }
+    } stats{telegram_count};
+    handler.setProtocolCallback(
+        HandlerProtocolCallback::bind<Stats, &Stats::onEvent>(&stats));
 
     // PUMP BRIDGE: Required because BusHandler is now a passive logic engine
     bus.addBusEventListener(
-        [&](const BusEvent& ev) { busHandler.processEvent(ev); });
+        platform::BusBase::BusEventListener::bind<BusHandler,
+                                                  &BusHandler::processEvent>(
+            &busHandler));
 
     bus.start();
 
@@ -179,26 +195,41 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
     BusHandler busHandler(&request, &handler);
 
     std::atomic<int> telegram_count{0};
-    handler.setProtocolCallback([&](const ebus::ProtocolInfo& info) {
-      if (!info.is_error) telegram_count++;
-    });
+    struct Stats {
+      std::atomic<int>& tc;
+      void onEvent(const ebus::ProtocolInfo& i) {
+        if (!i.is_error) tc++;
+      }
+    } stats{telegram_count};
+    handler.setProtocolCallback(
+        HandlerProtocolCallback::bind<Stats, &Stats::onEvent>(&stats));
 
     // PUMP BRIDGE: Required because BusHandler is now a passive logic engine
     bus.addBusEventListener(
-        [&](const BusEvent& ev) { busHandler.processEvent(ev); });
+        platform::BusBase::BusEventListener::bind<BusHandler,
+                                                  &BusHandler::processEvent>(
+            &busHandler));
 
     bus.start();
 
     std::atomic<bool> callbackFired{false};
     std::vector<uint8_t> clientData = ebus::toVector("feb5050427002d002c");
 
-    request.setExternalBusRequestedCallback([&]() {
-      callbackFired.store(true);
-      for (uint8_t b : clientData) {
-        bus.writeByte(b);
-        platform::sleepMicro(500);
+    struct ExternalReq {
+      std::atomic<bool>& fired;
+      std::vector<uint8_t>& data;
+      platform::Bus& b;
+      void onReq() {
+        fired.store(true);
+        for (uint8_t val : data) {
+          b.writeByte(val);
+          platform::sleepMicro(500);
+        }
       }
-    });
+    } extReq{callbackFired, clientData, bus};
+
+    request.setExternalBusRequestedCallback(
+        BusRequestedCallback::bind<ExternalReq, &ExternalReq::onReq>(&extReq));
 
     // request repeatedly until served; wait for callback and telegram
     for (int i = 0;

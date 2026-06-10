@@ -24,8 +24,16 @@ TEST_CASE("Request: requestBus, completion and handler callback",
   r.reset();  // lockCounter == maxLockCounter (0)
   REQUIRE(r.busAvailable() == true);
 
-  bool cb_called = false;
-  r.setHandlerBusRequestedCallback([&] { cb_called = true; });
+  struct RequestTestCallbacks {
+    bool cb_called = false;
+    void onBusRequested() { cb_called = true; }
+  };
+  RequestTestCallbacks callbacks;
+
+  r.setHandlerBusRequestedCallback(
+      platform::Delegate<void()>::bind<RequestTestCallbacks,
+                                       &RequestTestCallbacks::onBusRequested>(
+          &callbacks));
 
   bool requested = r.requestBus(0x33);
   REQUIRE(requested == true);
@@ -34,7 +42,7 @@ TEST_CASE("Request: requestBus, completion and handler callback",
   r.busRequestCompleted();
   REQUIRE(r.busRequestPending() == false);
   REQUIRE(r.getState() == ebus::RequestState::first);
-  REQUIRE(cb_called == true);
+  REQUIRE(callbacks.cb_called == true);
 }
 
 TEST_CASE("Request: first -> firstWon flow", "[core][request]") {

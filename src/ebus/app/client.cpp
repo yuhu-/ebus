@@ -33,7 +33,7 @@ void AbstractClient::stop() {
 }
 
 bool AbstractClient::tryFlushOutboundBuffer() {
-  std::lock_guard<std::mutex> lock(buffer_mutex_);
+  platform::LockGuard<platform::Mutex> lock(buffer_mutex_);
   return flushLocked();
 }
 
@@ -80,7 +80,7 @@ bool ReadOnlyClient::recvFromClient(uint8_t& out) {
 void ReadOnlyClient::sendToClient(ByteView data) {
   if (fd_ < 0 || data.empty()) return;
   {
-    std::lock_guard<std::mutex> lock(buffer_mutex_);
+    platform::LockGuard<platform::Mutex> lock(buffer_mutex_);
     // DRAIN: Discard oldest data if buffer is full to prevent
     // backpressure/hangs.
     while (outbound_buffer_.size() + data.size() > max_buffer_size_) {
@@ -103,7 +103,7 @@ BridgeAction ReadOnlyClient::onBusByte(const BusEventInfo&) {
 }
 
 ClientInfo ReadOnlyClient::getClientInfo() const {
-  std::lock_guard<std::mutex> lock(buffer_mutex_);
+  platform::LockGuard<platform::Mutex> lock(buffer_mutex_);
   return ClientInfo{fd_, "read_only", isConnected(), write_capable_,
                     outbound_buffer_.size()};
 }
@@ -125,7 +125,7 @@ bool RegularClient::recvFromClient(uint8_t& out) {
 void RegularClient::sendToClient(ByteView data) {
   if (fd_ < 0 || data.empty()) return;
   {
-    std::lock_guard<std::mutex> lock(buffer_mutex_);
+    platform::LockGuard<platform::Mutex> lock(buffer_mutex_);
     // DRAIN: Discard oldest data if buffer is full to prevent
     // backpressure/hangs.
     while (outbound_buffer_.size() + data.size() > max_buffer_size_) {
@@ -173,7 +173,7 @@ BridgeAction RegularClient::onBusByte(const BusEventInfo& info) {
 }
 
 ClientInfo RegularClient::getClientInfo() const {
-  std::lock_guard<std::mutex> lock(buffer_mutex_);
+  platform::LockGuard<platform::Mutex> lock(buffer_mutex_);
   return ClientInfo{fd_, "regular", isConnected(), write_capable_,
                     outbound_buffer_.size()};
 }
@@ -272,7 +272,7 @@ void EnhancedClient::sendToClient(ByteView data) {
   }
 
   {
-    std::lock_guard<std::mutex> lock(buffer_mutex_);
+    platform::LockGuard<platform::Mutex> lock(buffer_mutex_);
     // DRAIN: Discard oldest data if buffer is full to prevent
     // backpressure/hangs.
     while (outbound_buffer_.size() + 2 > max_buffer_size_) {
@@ -334,7 +334,7 @@ BridgeAction EnhancedClient::onBusByte(const BusEventInfo& info) {
 }
 
 ClientInfo EnhancedClient::getClientInfo() const {
-  std::lock_guard<std::mutex> lock(buffer_mutex_);
+  platform::LockGuard<platform::Mutex> lock(buffer_mutex_);
   return ClientInfo{fd_, "enhanced", isConnected(), write_capable_,
                     outbound_buffer_.size()};
 }

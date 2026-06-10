@@ -14,8 +14,6 @@
 
 #include <atomic>
 #include <chrono>
-#include <condition_variable>
-#include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <ebus/callbacks.hpp>
@@ -25,11 +23,10 @@
 #include <ebus/types.hpp>
 #include <functional>
 #include <memory>
-#include <mutex>
-#include <stdexcept>
 
 #include "core/bus_events.hpp"
 #include "platform/bus_base.hpp"
+#include "platform/mutex.hpp"
 #include "platform/queue.hpp"
 #include "platform/service_thread.hpp"
 
@@ -90,8 +87,8 @@ class BusPosix : public BusBase {
   // SYN generator members
   std::unique_ptr<ServiceThread> syn_worker_;
   std::atomic<bool> syn_running_{false};
-  std::mutex syn_mutex_;
-  std::condition_variable syn_cv_;
+  platform::Mutex syn_mutex_;
+  platform::ConditionVariable syn_cv_;
 
   std::chrono::milliseconds syn_base_ms_dur_;
   std::chrono::milliseconds syn_tolerance_ms_dur_;

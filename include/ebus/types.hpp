@@ -478,8 +478,20 @@ struct ErrorEntry {
 
   void toJson(detail::JsonWriter& writer) const;
 
-  // Custom stringifier for human-readable logs
-  std::string toString() const;
+  /**
+   * @brief Appends a human-readable representation to an existing string.
+   */
+  void toString(std::string& out) const;
+
+  /**
+   * @brief Returns a human-readable string representation.
+   */
+  inline std::string toString() const {
+    std::string res;
+    res.reserve(128);
+    toString(res);
+    return res;
+  }
 
   void setMaster(const uint8_t* data, size_t len) { master.assign(data, len); }
 

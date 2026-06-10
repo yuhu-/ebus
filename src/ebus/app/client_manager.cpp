@@ -33,12 +33,14 @@ ClientManager::ClientManager(platform::Bus* bus, BusHandler* bus_handler,
           ebus::RuntimeConfig{}.network.outbound_buffer_size) {
   if (bus_handler_) {
     bus_listener_id_ = bus_handler_->addByteListener(
-        [this](const BusEventInfo& info) { handleBusEvent(info); });
+        platform::Delegate<void(const BusEventInfo&)>::bind<
+            ClientManager, &ClientManager::handleBusEvent>(this));
   }
 
   if (request_) {
     request_->setExternalBusRequestedCallback(
-        [this]() { bus_requested_.store(true, std::memory_order_release); });
+        platform::Delegate<void()>::bind<
+            ClientManager, &ClientManager::onExternalBusRequested>(this));
   }
 }
 
@@ -58,25 +60,30 @@ void ClientManager::start() {
 void ClientManager::stop() { running_.store(false, std::memory_order_release); }
 
 void ClientManager::setSessionTimeout(uint32_t timeout_ms) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  platform::LockGuard<platform::Mutex> lock(mutex_);
   session_timeout_ = std::chrono::milliseconds(timeout_ms);
 }
 
 void ClientManager::setTransmitTimeout(uint32_t timeout_ms) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  platform::LockGuard<platform::Mutex> lock(mutex_);
   transmit_timeout_ = std::chrono::milliseconds(timeout_ms);
 }
 
 void ClientManager::setOutboundBufferSize(size_t size) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  platform::LockGuard<platform::Mutex> lock(mutex_);
   outbound_buffer_size_ = size;
+}
+
+void ClientManager::setBusyPredicate(platform::Delegate<bool()> pred) {
+  platform::LockGuard<platform::Mutex> lock(mutex_);
+  is_busy_ = std::move(pred);
 }
 
 void ClientManager::addClient(int fd, ClientType type) {
   auto client = createClient(fd, request_, type, outbound_buffer_size_);
   if (!client) return;
   {
-    std::lock_guard<std::mutex> lock(mutex_);
+    platform::LockGuard<platform::Mutex> lock(mutex_);
     if (clients_.size() >= NetworkLimits::max_clients) {
       client->stop();
       return;
@@ -89,7 +96,7 @@ void ClientManager::addClient(int fd, ClientType type) {
 void ClientManager::addClient(std::shared_ptr<AbstractClient> client) {
   if (!client) return;
   {
-    std::lock_guard<std::mutex> lock(mutex_);
+    platform::LockGuard<platform::Mutex> lock(mutex_);
     clients_.push_back(std::move(client));
     ++clients_version_;
   }
@@ -97,7 +104,7 @@ void ClientManager::addClient(std::shared_ptr<AbstractClient> client) {
 
 void ClientManager::removeClient(int fd) {
   {
-    std::lock_guard<std::mutex> lock(mutex_);
+    platform::LockGuard<platform::Mutex> lock(mutex_);
     clients_.erase(
         std::remove_if(clients_.begin(), clients_.end(),
                        [fd](const std::shared_ptr<AbstractClient>& c) {
@@ -116,7 +123,7 @@ bool ClientManager::tick() {
   StaticVector<std::shared_ptr<AbstractClient>, NetworkLimits::max_clients>
       active_clients;
   {
-    std::lock_guard<std::mutex> lock(mutex_);
+    platform::LockGuard<platform::Mutex> lock(mutex_);
     if (clients_version_ != last_snapshot_version_) {
       clients_cache_.clear();
       std::copy(clients_.begin(), clients_.end(),
@@ -129,7 +136,7 @@ bool ClientManager::tick() {
 
   // 2. Housekeeping & select active sender
   {
-    std::unique_lock<std::mutex> lock(mutex_);
+    platform::UniqueLock<platform::Mutex> lock(mutex_);
     if (current_active_sender_ && !current_active_sender_->isConnected()) {
       auto old = current_active_sender_;
       current_active_sender_.reset();
@@ -143,7 +150,8 @@ bool ClientManager::tick() {
       work_done = true;
     }
 
-    if (!current_active_sender_ && session_state_ == SessionState::idle) {
+    if (!current_active_sender_ && session_state_ == SessionState::idle &&
+        (!is_busy_ || !is_busy_())) {
       for (auto& client : active_clients) {
         if (client->isConnected() && client->isWriteCapable() &&
             client->wantsToSend()) {
@@ -162,7 +170,7 @@ bool ClientManager::tick() {
   // 3. Outbound logic
   std::shared_ptr<AbstractClient> active_sender;
   {
-    std::lock_guard<std::mutex> lock(mutex_);
+    platform::LockGuard<platform::Mutex> lock(mutex_);
     active_sender = current_active_sender_;
   }
 
@@ -182,7 +190,7 @@ bool ClientManager::tick() {
       if (request_->busAvailable()) {
         uint8_t first_byte = 0;
         if (active_sender->recvFromClient(first_byte)) {
-          std::lock_guard<std::mutex> lock(mutex_);
+          platform::LockGuard<platform::Mutex> lock(mutex_);
           request_->requestBus(first_byte, true);
           last_sent_byte_ = first_byte;
           session_state_ = SessionState::response;
@@ -199,7 +207,7 @@ bool ClientManager::tick() {
       if (active_sender->recvFromClient(send_byte)) {
         bus_->writeByte(send_byte);
         last_sent_byte_ = send_byte;
-        std::lock_guard<std::mutex> lock(mutex_);
+        platform::LockGuard<platform::Mutex> lock(mutex_);
         session_state_ = SessionState::response;
         last_state_change_ = Clock::now();
         work_done = true;
@@ -215,7 +223,7 @@ bool ClientManager::tick() {
 }
 
 void ClientManager::handleBusEvent(const BusEventInfo& info) {
-  std::unique_lock<std::mutex> lock(mutex_);
+  platform::UniqueLock<platform::Mutex> lock(mutex_);
   if (!running_.load(std::memory_order_acquire)) return;
 
   if (current_active_sender_) {
@@ -243,7 +251,7 @@ void ClientManager::handleBusEvent(const BusEventInfo& info) {
 }
 
 Clock::time_point ClientManager::nextDueTime() const {
-  std::lock_guard<std::mutex> lock(mutex_);
+  platform::LockGuard<platform::Mutex> lock(mutex_);
   if (!running_.load(std::memory_order_acquire))
     return Clock::time_point::max();
 
@@ -254,12 +262,18 @@ Clock::time_point ClientManager::nextDueTime() const {
     return last_state_change_ + current_timeout;
   }
 
+  // Starvation Fix: If the system is busy, the ClientManager should not
+  // request a wakeup "now", as it would lead to a tight spin loop.
+  if (is_busy_ && is_busy_()) {
+    return Clock::time_point::max();
+  }
+
   return Clock::now() +
          std::chrono::milliseconds(NetworkLimits::wake_interval_ms);
 }
 
-ClientManagerStatus ClientManager::getStatus() {
-  std::lock_guard<std::mutex> lock(mutex_);
+ClientManagerStatus ClientManager::getStatus() const {
+  platform::LockGuard<platform::Mutex> lock(mutex_);
   ClientManagerStatus s{current_active_sender_ != nullptr,
                         ebus::toString(session_state_), last_error_message_};
 
@@ -271,10 +285,19 @@ ClientManagerStatus ClientManager::getStatus() {
   return s;
 }
 
+bool ClientManager::isSessionActive() const {
+  platform::LockGuard<platform::Mutex> lock(mutex_);
+  return session_state_ != SessionState::idle;
+}
+
+void ClientManager::onExternalBusRequested() {
+  bus_requested_.store(true, std::memory_order_release);
+}
+
 void ClientManager::stopActiveSession() {
   std::shared_ptr<AbstractClient> old_sender;
   {
-    std::lock_guard<std::mutex> lock(mutex_);
+    platform::LockGuard<platform::Mutex> lock(mutex_);
     if (!current_active_sender_) return;
     old_sender = current_active_sender_;
     current_active_sender_.reset();

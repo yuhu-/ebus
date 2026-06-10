@@ -8,7 +8,6 @@
 #if EBUS_SIMULATION
 #include <atomic>
 #include <chrono>
-#include <condition_variable>
 #include <cstdint>
 #include <ebus/config.hpp>
 #include <ebus/detail/protocol_limits.hpp>
@@ -18,6 +17,7 @@
 
 #include "core/bus_events.hpp"
 #include "platform/bus_base.hpp"
+#include "platform/mutex.hpp"
 #include "platform/queue.hpp"
 #include "platform/service_thread.hpp"
 
@@ -72,8 +72,8 @@ class BusSimulation : public BusBase {
   std::atomic<bool> syn_running_{false};
 
   // Simulation SYN generator state
-  std::mutex syn_mutex_;
-  std::condition_variable syn_cv_;
+  platform::Mutex syn_mutex_;
+  platform::ConditionVariable syn_cv_;
   Clock::time_point last_activity_time_;
   Clock::time_point next_syn_expiry_;
   Clock::time_point syn_intent_time_sim_;

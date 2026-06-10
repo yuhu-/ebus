@@ -81,16 +81,11 @@ Handler::Handler(uint8_t source_address, platform::Bus* bus, Request* request,
     : bus_(bus), request_(request), monitor_(monitor) {
   setSourceAddress(source_address);
 
-  request_->setHandlerBusRequestedCallback([this]() {
-    if (active_message_ && state_ != HandlerState::request_bus)
-      transitionTo(HandlerState::request_bus);
-  });
+  request_->setHandlerBusRequestedCallback(
+      platform::Delegate<void()>::bind<Handler, &Handler::onBusRequested>(this));
 
-  request_->setStartBitCallback([this]() {
-    // A spurious start bit invalidates both active and passive FSM states
-    callActiveReset();
-    callPassiveReset();
-  });
+  request_->setStartBitCallback(
+      platform::Delegate<void()>::bind<Handler, &Handler::onStartBit>(this));
 
   // Pre-allocate core buffers to avoid heap allocations in the hot path
   passive_master_.reserve(SequenceLimits::default_capacity);
@@ -126,12 +121,11 @@ void Handler::setBusRequestLostCallback(BusRequestLostCallback callback) {
   bus_request_lost_callback_ = std::move(callback);
 }
 
-void Handler::setReactiveMasterSlaveCallback(
-    ReactiveMasterSlaveCallback callback) {
+void Handler::setReactiveMasterSlaveCallback(HandlerReactiveCallback callback) {
   reactive_master_slave_callback_ = std::move(callback);
 }
 
-void Handler::setProtocolCallback(ProtocolCallback callback) {
+void Handler::setProtocolCallback(HandlerProtocolCallback callback) {
   protocol_callback_ = std::move(callback);
 }
 
@@ -836,6 +830,17 @@ void Handler::callActiveReset() {
 }
 
 void Handler::callWrite(uint8_t byte) { pending_write_ = byte; }
+
+void Handler::onBusRequested() {
+  if (active_message_ && state_ != HandlerState::request_bus)
+    transitionTo(HandlerState::request_bus);
+}
+
+void Handler::onStartBit() {
+  // A spurious start bit invalidates both active and passive FSM states
+  callActiveReset();
+  callPassiveReset();
+}
 
 void Handler::callOnBusRequestWon() {
   if (bus_request_won_callback_) {

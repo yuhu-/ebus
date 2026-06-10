@@ -11,12 +11,12 @@
 #include <ebus/status.hpp>
 #include <ebus/types.hpp>
 #include <memory>
-#include <mutex>
 #include <string>
 #include <vector>
 
 #include "app/enhanced_protocol.hpp"
 #include "core/request.hpp"
+#include "platform/mutex.hpp"
 
 namespace ebus::detail {
 
@@ -71,7 +71,7 @@ class AbstractClient {
  protected:
   int fd_;
   std::vector<uint8_t> outbound_buffer_;  // Per-client outbound buffer
-  mutable std::mutex buffer_mutex_;       // Protects outboundBuffer_
+  mutable platform::Mutex buffer_mutex_;  // Protects outboundBuffer_
   Request* request_;
   size_t max_buffer_size_;
   bool write_capable_;

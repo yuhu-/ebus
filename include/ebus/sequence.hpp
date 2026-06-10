@@ -19,6 +19,7 @@
 #include "ebus/detail/protocol_limits.hpp"
 #include "ebus/protocol_math.hpp"
 #include "ebus/types.hpp"
+#include "ebus/utils.hpp"
 
 namespace ebus::detail {
 
@@ -434,14 +435,18 @@ class SequenceImpl {
     return ByteView(data() + index, count);
   }
 
+  /**
+   * @brief Appends the hex string representation of the sequence to an existing
+   * std::string. Heap-free if 'out' has sufficient capacity.
+   */
+  void toHexString(std::string& out) const {
+    ebus::toString(out, ByteView(data(), size()));
+  }
+
   std::string toString() const {
-    static constexpr char hex_chars[] = "0123456789abcdef";
     std::string res;
     res.reserve(size() * 2);
-    for (auto b : sequence_) {
-      res.push_back(hex_chars[b >> 4]);
-      res.push_back(hex_chars[b & 0xf]);
-    }
+    toHexString(res);
     return res;
   }
 

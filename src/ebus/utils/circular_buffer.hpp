@@ -6,8 +6,9 @@
 #pragma once
 
 #include <cstddef>
-#include <mutex>
 #include <utility>
+
+#include "platform/mutex.hpp"
 
 namespace ebus::detail {
 
@@ -25,12 +26,12 @@ class CircularBuffer {
   // Pushes an item into the buffer. Returns true if an old element was
   // overwritten.
   bool push_back(const T& item) {
-    std::lock_guard<std::mutex> lock(mutex_);
+    platform::LockGuard<platform::Mutex> lock(mutex_);
     return push_impl(item);
   }
 
   bool push_back(T&& item) {
-    std::lock_guard<std::mutex> lock(mutex_);
+    platform::LockGuard<platform::Mutex> lock(mutex_);
     return push_impl(std::move(item));
   }
 
@@ -40,7 +41,7 @@ class CircularBuffer {
    * @return true if an item was popped, false if empty.
    */
   bool tryPop(T& out) {
-    std::lock_guard<std::mutex> lock(mutex_);
+    platform::LockGuard<platform::Mutex> lock(mutex_);
     if (size_ == 0) return false;
     out = std::move(buffer_[head_]);
     head_ = (head_ + 1) % Cap;
@@ -49,7 +50,7 @@ class CircularBuffer {
   }
 
   void clear() {
-    std::lock_guard<std::mutex> lock(mutex_);
+    platform::LockGuard<platform::Mutex> lock(mutex_);
     size_ = 0;
     head_ = 0;
   }
@@ -60,7 +61,7 @@ class CircularBuffer {
    */
   template <typename Func>
   void forEach(Func&& callback) const {
-    std::lock_guard<std::mutex> lock(mutex_);
+    platform::LockGuard<platform::Mutex> lock(mutex_);
     for (size_t i = 0; i < size_; ++i) {
       callback(buffer_[(head_ + i) % Cap]);
     }
@@ -68,23 +69,23 @@ class CircularBuffer {
 
   // Status/Telemetry
   size_t size() const {
-    std::lock_guard<std::mutex> lock(mutex_);
+    platform::LockGuard<platform::Mutex> lock(mutex_);
     return size_;
   }
   constexpr size_t capacity() const { return Cap; }
   bool empty() const {
-    std::lock_guard<std::mutex> lock(mutex_);
+    platform::LockGuard<platform::Mutex> lock(mutex_);
     return size_ == 0;
   }
 
   T operator[](size_t index) const {
-    std::lock_guard<std::mutex> lock(mutex_);
+    platform::LockGuard<platform::Mutex> lock(mutex_);
     if (index >= size_) return T();
     return buffer_[(head_ + index) % Cap];
   }
 
  private:
-  mutable std::mutex mutex_;
+  mutable platform::Mutex mutex_;
   T buffer_[Cap];
   size_t head_ = 0;
   size_t size_ = 0;

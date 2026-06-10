@@ -42,8 +42,8 @@ TEST_CASE("Utils: Addressing logic", "[utils][utils]") {
 }
 
 TEST_CASE("Utils: Conversions", "[utils][utils]") {
-  REQUIRE(ebus::toString(0x0a) == "0a");
-  REQUIRE(ebus::toString(0xff) == "ff");
+  REQUIRE(std::string_view(ebus::toString(0x0a)) == "0a");
+  REQUIRE(std::string_view(ebus::toString(0xff)) == "ff");
 
   std::vector<uint8_t> vec = {0x01, 0x02, 0xff};
   REQUIRE(ebus::toString(vec) == "0102ff");

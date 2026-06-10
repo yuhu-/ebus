@@ -20,7 +20,6 @@
 #include <functional>
 #include <iomanip>
 #include <iostream>
-#include <mutex>
 #include <queue>
 #include <sstream>
 #include <string>
@@ -28,6 +27,7 @@
 
 #include "core/handler.hpp"
 #include "platform/bus.hpp"
+#include "platform/mutex.hpp"
 #include "platform/service_thread.hpp"
 #include "platform/socket.hpp"
 #include "platform/system.hpp"
@@ -143,12 +143,13 @@ class TestReactor {
         busHandler_(busHandler),
         manager_(manager),
         scheduler_(scheduler) {
-    // Capture bus events via listener to populate local queue for deterministic
-    // pumping
-    bus_.addBusEventListener([this](const BusEvent& ev) {
-      std::lock_guard<std::mutex> lock(mtx_);
-      events_.push(ev);
-    });
+    bus_.addBusEventListener(platform::Delegate<void(const BusEvent&)>::bind<
+                             TestReactor, &TestReactor::onBusEvent>(this));
+  }
+
+  void onBusEvent(const BusEvent& ev) {
+    platform::LockGuard<platform::Mutex> lock(mutex_);
+    events_.push(ev);
   }
 
   /**
@@ -159,7 +160,7 @@ class TestReactor {
     if (scheduler_) scheduler_->tick();
     if (manager_) manager_->tick();
 
-    std::unique_lock<std::mutex> lock(mtx_);
+    platform::UniqueLock<platform::Mutex> lock(mutex_);
     while (!events_.empty()) {
       BusEvent ev = events_.front();
       events_.pop();
@@ -219,7 +220,7 @@ class TestReactor {
   BusHandler& busHandler_;
   ClientManager* manager_;
   Scheduler* scheduler_;
-  std::mutex mtx_;
+  platform::Mutex mutex_;
   std::queue<BusEvent> events_;
 };
 

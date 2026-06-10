@@ -7,11 +7,9 @@
 
 #include <atomic>
 #include <chrono>
-#include <condition_variable>
 #include <cstdint>
 #include <functional>
 #include <memory>
-#include <mutex>
 #include <string>
 #include <vector>
 
@@ -342,24 +340,7 @@ class Controller {
   EbusConfig config_;
   std::unique_ptr<Impl> impl_;
 
-  std::atomic<bool> configured_{false};
-  std::atomic<bool> running_{false};
-
-  mutable std::recursive_mutex config_mutex_;
-
-  /**
-   * @brief Internal helper to capture a snapshot of all service states.
-   */
-  void getServiceStatus(ServiceStatus& status) const;
-
-  void processPublicEvents();
-
-  void constructMembers();
-  void run();
-
-  void logError(const std::string& msg) const;
-  void logInfo(const std::string& msg) const;
-  void logDebug(const std::string& msg) const;
+  friend struct Impl;
 };
 
 }  // namespace ebus

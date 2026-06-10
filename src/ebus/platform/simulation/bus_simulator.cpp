@@ -12,7 +12,6 @@
 #include <ebus/protocol_math.hpp>
 #include <ebus/utils.hpp>
 #include <memory>
-#include <mutex>
 #include <vector>
 
 #include "platform/service_thread.hpp"
@@ -25,7 +24,8 @@ namespace ebus::detail {
 
 BusSimulator::BusSimulator(platform::BusSimulation& bus)
     : bus_(bus), outbound_queue_(16) {
-  bus_.addReadListener([this](uint8_t b) { this->onRead(b); });
+  bus_.addReadListener(
+      platform::Delegate<void(const uint8_t&)>::bind<BusSimulator, &BusSimulator::onRead>(this));
   worker_ = std::make_unique<platform::ServiceThread>(
       "ebus_sim_worker", [this] { processResponses(); },
       OrchestrationLimits::default_stack_size,
@@ -41,14 +41,14 @@ void BusSimulator::stop() {
 }
 
 void BusSimulator::clear() {
-  std::lock_guard<std::mutex> lock(mtx_);
+  platform::LockGuard<platform::Mutex> lock(mutex_);
   reactions_.clear();
   write_history_.clear();
   outbound_queue_.clear();
 }
 
 uint32_t BusSimulator::addMockReaction(VirtualBus::MockReaction reaction) {
-  std::lock_guard<std::mutex> lock(mtx_);
+  platform::LockGuard<platform::Mutex> lock(mutex_);
   uint32_t new_id = ++next_reaction_id_;
   reaction.id = new_id;
   reactions_.push_back(std::move(reaction));
@@ -56,14 +56,14 @@ uint32_t BusSimulator::addMockReaction(VirtualBus::MockReaction reaction) {
 }
 
 void BusSimulator::removeMockReaction(uint32_t id) {
-  std::lock_guard<std::mutex> lock(mtx_);
+  platform::LockGuard<platform::Mutex> lock(mutex_);
   reactions_.erase(std::remove_if(reactions_.begin(), reactions_.end(),
                                   [id](const auto& r) { return r.id == id; }),
                    reactions_.end());
 }
 
 void BusSimulator::removeMockReaction(const ebus::Sequence& trigger) {
-  std::lock_guard<std::mutex> lock(mtx_);
+  platform::LockGuard<platform::Mutex> lock(mutex_);
   reactions_.erase(std::remove_if(reactions_.begin(), reactions_.end(),
                                   [&](const auto& r) {
                                     return r.trigger.logicallyEquals(trigger);
@@ -97,8 +97,8 @@ void BusSimulator::injectMasterSlaveMessage(uint8_t source,
   bus_.writeByte(ebus::Symbols::syn);
 }
 
-void BusSimulator::onRead(uint8_t b) {
-  std::lock_guard<std::mutex> lock(mtx_);
+void BusSimulator::onRead(const uint8_t& b) {
+  platform::LockGuard<platform::Mutex> lock(mutex_);
   write_history_.push_back(b);
   for (auto& reaction : reactions_) {
     if (reaction.repeat_count == -1) continue;

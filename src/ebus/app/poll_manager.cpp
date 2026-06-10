@@ -15,7 +15,7 @@ namespace ebus::detail {
 PollManager::PollManager() : next_poll_id_(1) {}
 
 void PollManager::setOwnAddress(uint8_t address) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  platform::LockGuard<platform::Mutex> lock(mutex_);
   own_address_ = address;
   const uint8_t own_slave = ebus::slaveOf(address);
 
@@ -29,9 +29,17 @@ void PollManager::setOwnAddress(uint8_t address) {
   }
 }
 
+void PollManager::setBusyPredicate(platform::Delegate<bool()> pred) {
+  platform::LockGuard<platform::Mutex> lock(mutex_);
+  is_busy_ = std::move(pred);
+}
+
 uint32_t PollManager::addPollItem(uint8_t priority, ByteView message,
                                   uint32_t interval_ms) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  platform::LockGuard<platform::Mutex> lock(mutex_);
+
+  // Safety: Prevent infinite loops with 0ms intervals
+  if (interval_ms == 0) interval_ms = 1;
 
   // Proactively prevent self-polling
   if (!message.empty() && message[0] == ebus::slaveOf(own_address_)) {
@@ -60,7 +68,7 @@ uint32_t PollManager::addPollItem(uint8_t priority, ByteView message,
 }
 
 void PollManager::removePollItem(uint32_t id) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  platform::LockGuard<platform::Mutex> lock(mutex_);
   auto it = std::find_if(items_.begin(), items_.end(),
                          [id](const Item& i) { return i.poll_id == id; });
   if (it != items_.end()) items_.erase(it);
@@ -68,10 +76,15 @@ void PollManager::removePollItem(uint32_t id) {
 
 void PollManager::processDueItems(
     const std::function<void(const Item&)>& callback, bool* activity) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  platform::LockGuard<platform::Mutex> lock(mutex_);
   auto now = Clock::now();
 
-  while (!items_.empty() && items_.front().next_due <= now) {
+  // Safety: If the system is busy (e.g. Scheduler full), do not process
+  // items. This prevents "skipping" polls when the scheduler is momentarily
+  // unable to accept new messages. The items will remain in the heap and
+  // nextDueTime() will continue to indicate that work is pending.
+  while (!items_.empty() && items_.front().next_due <= now &&
+         (!is_busy_ || !is_busy_())) {
     std::pop_heap(items_.begin(), items_.end(), Item::Greater());
     Item item = std::move(items_.back());
     items_.pop_back();
@@ -81,6 +94,9 @@ void PollManager::processDueItems(
 
     // Reschedule
     item.next_due = now + item.interval;
+    // Safety check for clock jitter or 0 intervals
+    if (item.next_due <= now) item.next_due = now + std::chrono::milliseconds(1);
+
     items_.push_back(std::move(item));
     std::push_heap(items_.begin(), items_.end(), Item::Greater());
   }
@@ -139,23 +155,31 @@ bool PollManager::mergeFromJson(const std::string& json) {
 }
 
 void PollManager::clear() {
-  std::lock_guard<std::mutex> lock(mutex_);
+  platform::LockGuard<platform::Mutex> lock(mutex_);
   items_.clear();
 }
 
 Clock::time_point PollManager::nextDueTime() const {
-  std::lock_guard<std::mutex> lock(mutex_);
+  platform::LockGuard<platform::Mutex> lock(mutex_);
+
+  // Starvation Fix: If the system is busy, the PollManager should not
+  // request a wakeup "now", as it would lead to a tight spin loop in the
+  // controller.
+  if (is_busy_ && is_busy_()) {
+    return Clock::time_point::max();
+  }
+
   if (items_.empty()) return Clock::time_point::max();
   return items_.front().next_due;
 }
 
 void PollManager::resetPeakMetrics() {
-  std::lock_guard<std::mutex> lock(mutex_);
+  platform::LockGuard<platform::Mutex> lock(mutex_);
   max_item_count_ = items_.size();
 }
 
 PollManagerStatus PollManager::getStatus() const {
-  std::lock_guard<std::mutex> lock(mutex_);
+  platform::LockGuard<platform::Mutex> lock(mutex_);
   return PollManagerStatus{items_.size(), max_item_count_,
                            detail::PollLimits::max_items};
 }

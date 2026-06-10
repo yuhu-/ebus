@@ -5,8 +5,6 @@
 
 #include "app/device_manager.hpp"
 
-#include <set>
-
 #include "core/bus_monitor.hpp"
 
 namespace ebus::detail {
@@ -18,7 +16,7 @@ DeviceManager::DeviceManager(BusMonitor* monitor) : monitor_(monitor) {
 void DeviceManager::setOwnAddress(uint8_t address) { own_address_ = address; }
 
 void DeviceManager::update(ByteView master_view, ByteView slave_view) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  platform::LockGuard<platform::Mutex> lock(mutex_);
   uint8_t m_addr = master_view[0];
   uint8_t s_addr = master_view[1];
 
@@ -82,7 +80,7 @@ void DeviceManager::update(ByteView master_view, ByteView slave_view) {
 
 void DeviceManager::vendorScanCommands(
     const std::function<void(const Sequence&)>& callback) const {
-  std::lock_guard<std::mutex> lock(mutex_);
+  platform::LockGuard<platform::Mutex> lock(mutex_);
   for (size_t i = 0; i < 256; ++i) {
     int16_t idx = address_map_[i];
     if (idx != -1) {
@@ -113,7 +111,7 @@ void DeviceManager::createScanCommands(
 
 void DeviceManager::fetchDeviceInfo(
     const std::function<void(const DeviceInfo&)>& callback) const {
-  std::lock_guard<std::mutex> lock(mutex_);
+  platform::LockGuard<platform::Mutex> lock(mutex_);
   if (callback) {
     for (size_t i = 0; i < 256; ++i) {
       int16_t idx = address_map_[i];
@@ -135,7 +133,7 @@ void DeviceManager::getObservedSlaves(std::bitset<256>& observed) const {
 }
 
 DeviceManagerStatus DeviceManager::getStatus() const {
-  std::lock_guard<std::mutex> lock(mutex_);
+  platform::LockGuard<platform::Mutex> lock(mutex_);
   DeviceManagerStatus s;
   s.identified_count = identified_devices_.count();
   s.device_capacity = max_devices_;

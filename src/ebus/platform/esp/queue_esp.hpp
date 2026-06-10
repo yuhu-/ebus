@@ -8,6 +8,7 @@
 #if defined(ESP_PLATFORM)
 #include <freertos/FreeRTOS.h>
 #include <freertos/queue.h>
+#include <freertos/task.h>
 
 #include <atomic>
 #include <chrono>
@@ -24,6 +25,30 @@ class QueueEsp {
 
   ~QueueEsp() {
     if (queue_) vQueueDelete(queue_);
+  }
+
+  // Explicitly delete copy operations
+  QueueEsp(const QueueEsp&) = delete;
+  QueueEsp& operator=(const QueueEsp&) = delete;
+
+  // Move constructor
+  QueueEsp(QueueEsp&& other) noexcept
+      : queue_(other.queue_),
+        capacity_(other.capacity_),
+        shutdown_(other.shutdown_.load()) {
+    other.queue_ = nullptr;
+  }
+
+  // Move assignment
+  QueueEsp& operator=(QueueEsp&& other) noexcept {
+    if (this != &other) {
+      if (queue_) vQueueDelete(queue_);
+      queue_ = other.queue_;
+      capacity_ = other.capacity_;
+      shutdown_.store(other.shutdown_.load());
+      other.queue_ = nullptr;
+    }
+    return *this;
   }
 
   // Blocking push with duration (Standard C++ naming alias)
@@ -137,6 +162,16 @@ class QueueEsp {
     return xQueueReceiveFromISR(queue_, &out, &xTaskWoken) == pdTRUE;
   }
 
+  void shutdown() {
+    shutdown_.store(true);
+    // xQueueAbortWait unblocks any tasks currently waiting on the queue.
+    // Note: Requires CONFIG_FREERTOS_QUEUE_ABORT_WAIT=y in sdkconfig.
+#if defined(INCLUDE_xQueueAbortWait) && (INCLUDE_xQueueAbortWait == 1)
+    if (queue_) xQueueAbortWait(queue_);
+#endif
+  }
+  bool isShutdown() const { return shutdown_.load(); }
+
   // Clears all items from the queue
   void clear() { xQueueReset(queue_); }
 
@@ -145,10 +180,8 @@ class QueueEsp {
     shutdown_.store(false);
   }
 
-  void shutdown() { shutdown_.store(true); }
-  bool isShutdown() const { return shutdown_.load(); }
-
   size_t size() const { return uxQueueMessagesWaiting(queue_); }
+  bool empty() const { return size() == 0; }
 
  private:
   QueueHandle_t queue_;

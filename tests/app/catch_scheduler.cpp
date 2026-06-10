@@ -87,10 +87,26 @@ TEST_CASE("Scheduler: Simulation", "[app][scheduler]") {
   simulator.addMockReaction(
       {retry_trigger, std::move(retry_success_action), 1, 0});
 
+  struct TestHarness {
+    platform::Queue<ebus::OrchestrationEvent>& q;
+    void onEventSink(ebus::OrchestrationEvent&& ev) {
+      q.tryPush(std::move(ev));
+    }
+    void onBusEvent(const BusEvent& bus_ev) {
+      ebus::OrchestrationEvent oev;
+      oev.type = ebus::OrchestrationEventType::bus_byte;
+      oev.data.byte_data.val = bus_ev.byte;
+      oev.data.byte_data.bus_request = bus_ev.bus_request;
+      oev.data.byte_data.start_bit = bus_ev.start_bit;
+      oev.data.byte_data.timestamp = bus_ev.timestamp;
+      q.tryPush(std::move(oev));
+    }
+  } harness{reactor_queue_};
+
   Scheduler scheduler(&handler);
-  scheduler.setEventSink([&](ebus::OrchestrationEvent&& ev) {
-    reactor_queue_.tryPush(std::move(ev));
-  });
+  scheduler.setEventSink(
+      platform::Delegate<void(ebus::OrchestrationEvent&&)>::bind<
+          TestHarness, &TestHarness::onEventSink>(&harness));
   scheduler.attachHandlerCallbacks();
   scheduler.setMaxSendAttempts(3);
   scheduler.setBaseBackoff(50);
@@ -98,15 +114,8 @@ TEST_CASE("Scheduler: Simulation", "[app][scheduler]") {
   bus.start();
 
   // Bridge Physical Bus Events -> Unified Reactor Queue
-  bus.addBusEventListener([&](const BusEvent& bus_ev) {
-    ebus::OrchestrationEvent oev;
-    oev.type = ebus::OrchestrationEventType::bus_byte;
-    oev.data.byte_data.val = bus_ev.byte;
-    oev.data.byte_data.bus_request = bus_ev.bus_request;
-    oev.data.byte_data.start_bit = bus_ev.start_bit;
-    oev.data.byte_data.timestamp = bus_ev.timestamp;
-    reactor_queue_.tryPush(std::move(oev));
-  });
+  bus.addBusEventListener(platform::Delegate<void(const BusEvent&)>::bind<
+                          TestHarness, &TestHarness::onBusEvent>(&harness));
 
   std::atomic<uint32_t> last_success_session{0};
   std::atomic<uint32_t> last_error_session{0};

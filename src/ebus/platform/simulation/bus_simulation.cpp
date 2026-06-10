@@ -56,7 +56,7 @@ void BusSimulation::stop() {
 
   VirtualLine::get().detach(this);
   {
-    std::unique_lock<std::mutex> lock(syn_mutex_);
+    platform::UniqueLock<platform::Mutex> lock(syn_mutex_);
     syn_cv_.notify_all();
   }
 
@@ -79,7 +79,7 @@ void BusSimulation::setRuntimeConfig(const RuntimeConfig& runtime) {
   bool should_stop_syn = false;
 
   {
-    std::lock_guard<std::mutex> lock(syn_mutex_);
+    platform::LockGuard<platform::Mutex> lock(syn_mutex_);
     bool was_syn_gen_enabled = runtime_.bus.syn_gen;
     runtime_ = runtime;  // Update runtime config
 
@@ -122,7 +122,7 @@ void BusSimulation::writeByte(const uint8_t byte) {
   if (monitor_) monitor_->transmit.markBegin();
 
   if (byte != Symbols::syn) {
-    std::lock_guard<std::mutex> lock(syn_mutex_);
+    platform::LockGuard<platform::Mutex> lock(syn_mutex_);
     syn_active_ = false;
   }
   // 1. Simulate the time it takes for the UART to shift the bits out
@@ -212,7 +212,7 @@ void BusSimulation::simulationReaderLoop() {
 }
 
 void BusSimulation::resetSynTimerSim(uint8_t byte) {
-  std::lock_guard<std::mutex> lock(syn_mutex_);
+  platform::LockGuard<platform::Mutex> lock(syn_mutex_);
   resetSynTimerSimInternal(byte);
 }
 
@@ -236,7 +236,7 @@ void BusSimulation::resetSynTimerSimInternal(uint8_t byte) {
 
 void BusSimulation::simulationSynLoop() {
   while (syn_running_.load()) {
-    std::unique_lock<std::mutex> lock(syn_mutex_);
+    platform::UniqueLock<platform::Mutex> lock(syn_mutex_);
     auto now = Clock::now();
 
     auto current_t_unique =

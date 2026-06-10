@@ -9,8 +9,8 @@
 #include <ebus/detail/protocol_limits.hpp>
 #include <ebus/metrics.hpp>
 #include <functional>
-#include <mutex>
 
+#include "platform/mutex.hpp"
 #include "utils/circular_buffer.hpp"
 #include "utils/timing_stats.hpp"
 
@@ -43,31 +43,31 @@ class BusMonitor {
   // Thread-safe update helpers
   template <typename F>
   void updateHandler(F&& updater) {
-    std::lock_guard<std::mutex> lock(metrics_mutex_);
+    platform::LockGuard<platform::Mutex> lock(metrics_mutex_);
     updater(handler_acc_);
   }
 
   template <typename F>
   void updateRequest(F&& updater) {
-    std::lock_guard<std::mutex> lock(metrics_mutex_);
+    platform::LockGuard<platform::Mutex> lock(metrics_mutex_);
     updater(request_acc_);
   }
 
   template <typename F>
   void updateBus(F&& updater) {
-    std::lock_guard<std::mutex> lock(metrics_mutex_);
+    platform::LockGuard<platform::Mutex> lock(metrics_mutex_);
     updater(bus_acc_);
   }
 
   template <typename F>
   void updateDevice(F&& updater) {
-    std::lock_guard<std::mutex> lock(metrics_mutex_);
+    platform::LockGuard<platform::Mutex> lock(metrics_mutex_);
     updater(device_acc_);
   }
 
   template <typename F>
   void updateController(F&& updater) {
-    std::lock_guard<std::mutex> lock(metrics_mutex_);
+    platform::LockGuard<platform::Mutex> lock(metrics_mutex_);
     updater(controller_acc_);
   }
 
@@ -75,7 +75,7 @@ class BusMonitor {
    * @brief Resets the interval-based loop timing peak.
    */
   void resetLoopCycle() {
-    std::lock_guard<std::mutex> lock(metrics_mutex_);
+    platform::LockGuard<platform::Mutex> lock(metrics_mutex_);
     controller_acc_.max_loop_cycle_us = 0;
   }
 
@@ -83,7 +83,7 @@ class BusMonitor {
    * @brief Resets the interval-based max reactor queue size.
    */
   void resetMaxReactorQueueSize(size_t current) {
-    std::lock_guard<std::mutex> lock(metrics_mutex_);
+    platform::LockGuard<platform::Mutex> lock(metrics_mutex_);
     controller_acc_.max_reactor_queue_size = static_cast<uint32_t>(current);
   }
 
@@ -129,7 +129,7 @@ class BusMonitor {
   TimingStats syn_postpone;
 
  private:
-  mutable std::mutex metrics_mutex_;
+  mutable platform::Mutex metrics_mutex_;
 
   mutable Clock::time_point congestion_start_point_{};
   mutable bool congestion_active_ = false;

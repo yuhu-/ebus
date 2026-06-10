@@ -7,12 +7,12 @@
 
 #if defined(POSIX)
 #include <chrono>
-#include <condition_variable>
 #include <cstddef>
-#include <mutex>
 #include <stdexcept>
 #include <utility>
 #include <vector>
+
+#include "platform/mutex.hpp"
 
 namespace ebus::detail::platform {
 
@@ -28,6 +28,38 @@ class QueuePosix {
         shutdown_(false) {
     if (capacity == 0)
       throw std::invalid_argument("Queue capacity must be > 0");
+  }
+
+  // Explicitly delete copy operations
+  QueuePosix(const QueuePosix&) = delete;
+  QueuePosix& operator=(const QueuePosix&) = delete;
+
+  // Move constructor
+  QueuePosix(QueuePosix&& other) noexcept {
+    platform::LockGuard<platform::Mutex> lock(other.mutex_);
+    buffer_ = std::move(other.buffer_);
+    capacity_ = other.capacity_;
+    head_ = other.head_;
+    tail_ = other.tail_;
+    size_ = other.size_;
+    shutdown_ = other.shutdown_;
+  }
+
+  // Move assignment
+  QueuePosix& operator=(QueuePosix&& other) noexcept {
+    if (this != &other) {
+      platform::UniqueLock<platform::Mutex> lock_this(mutex_, std::defer_lock);
+      platform::UniqueLock<platform::Mutex> lock_other(other.mutex_,
+                                                       std::defer_lock);
+      std::lock(lock_this, lock_other);
+      buffer_ = std::move(other.buffer_);
+      capacity_ = other.capacity_;
+      head_ = other.head_;
+      tail_ = other.tail_;
+      size_ = other.size_;
+      shutdown_ = other.shutdown_;
+    }
+    return *this;
   }
 
   // Blocking push with duration (Standard C++ naming alias)
@@ -59,7 +91,7 @@ class QueuePosix {
         timeout = std::chrono::milliseconds(timeout_ms);
       }
 
-      std::unique_lock<std::mutex> lock(mutex_);
+      platform::UniqueLock<platform::Mutex> lock(mutex_);
       if (shutdown_) return false;
       if (capacity_ > 0) {
         if (timeout == std::chrono::milliseconds::max()) {
@@ -91,7 +123,7 @@ class QueuePosix {
         timeout = std::chrono::milliseconds(timeout_ms);
       }
 
-      std::unique_lock<std::mutex> lock(mutex_);
+      platform::UniqueLock<platform::Mutex> lock(mutex_);
       if (shutdown_) return false;
       if (capacity_ > 0) {
         if (timeout == std::chrono::milliseconds::max()) {
@@ -125,7 +157,7 @@ class QueuePosix {
       } else {
         timeout_val = dur_ms;
       }
-      std::unique_lock<std::mutex> lock(mutex_);
+      platform::UniqueLock<platform::Mutex> lock(mutex_);
       if (shutdown_) return false;
       if (capacity_ > 0) {
         if (!not_full_.wait_for(lock, timeout_val, [this] {
@@ -145,7 +177,7 @@ class QueuePosix {
   // Non-blocking push (returns false if full)
   bool tryPush(const T& item) {
     {
-      std::lock_guard<std::mutex> lock(mutex_);
+      platform::LockGuard<platform::Mutex> lock(mutex_);
       if (shutdown_ || (capacity_ > 0 && size_ >= capacity_)) return false;
       buffer_[tail_] = item;
       tail_ = (tail_ + 1) % capacity_;
@@ -158,7 +190,7 @@ class QueuePosix {
   // Non-blocking push (move semantics)
   bool tryPush(T&& item) {
     {
-      std::lock_guard<std::mutex> lock(mutex_);
+      platform::LockGuard<platform::Mutex> lock(mutex_);
       if (shutdown_ || (capacity_ > 0 && size_ >= capacity_)) return false;
       buffer_[tail_] = std::move(item);
       tail_ = (tail_ + 1) % capacity_;
@@ -187,7 +219,7 @@ class QueuePosix {
       std::chrono::milliseconds timeout =
           (timeout_ms == 0xffffffff) ? std::chrono::milliseconds::max()
                                      : std::chrono::milliseconds(timeout_ms);
-      std::unique_lock<std::mutex> lock(mutex_);
+      platform::UniqueLock<platform::Mutex> lock(mutex_);
       if (shutdown_ && size_ == 0) return false;
       if (timeout == std::chrono::milliseconds::max()) {
         not_empty_.wait(lock, [this] { return size_ > 0 || shutdown_; });
@@ -208,7 +240,7 @@ class QueuePosix {
   // Non-blocking pop (returns false if empty)
   bool tryPop(T& out) {
     {
-      std::lock_guard<std::mutex> lock(mutex_);
+      platform::LockGuard<platform::Mutex> lock(mutex_);
       if (size_ == 0 || shutdown_) return false;
       out = std::move(buffer_[head_]);
       head_ = (head_ + 1) % capacity_;
@@ -218,14 +250,9 @@ class QueuePosix {
     return true;
   }
 
-  size_t size() const {
-    std::lock_guard<std::mutex> lock(mutex_);
-    return size_;
-  }
-
   void shutdown() {
     {
-      std::lock_guard<std::mutex> lock(mutex_);
+      platform::LockGuard<platform::Mutex> lock(mutex_);
       shutdown_ = true;
     }
     not_empty_.notify_all();
@@ -233,12 +260,12 @@ class QueuePosix {
   }
 
   bool isShutdown() const {
-    std::lock_guard<std::mutex> lock(mutex_);
+    platform::LockGuard<platform::Mutex> lock(mutex_);
     return shutdown_;
   }
 
   void clear() {
-    std::lock_guard<std::mutex> lock(mutex_);
+    platform::LockGuard<platform::Mutex> lock(mutex_);
     head_ = 0;
     tail_ = 0;
     size_ = 0;
@@ -246,7 +273,7 @@ class QueuePosix {
   }
 
   void reset() {
-    std::lock_guard<std::mutex> lock(mutex_);
+    platform::LockGuard<platform::Mutex> lock(mutex_);
     head_ = 0;
     tail_ = 0;
     size_ = 0;
@@ -254,11 +281,17 @@ class QueuePosix {
     not_full_.notify_all();
   }
 
+  size_t size() const {
+    platform::LockGuard<platform::Mutex> lock(mutex_);
+    return size_;
+  }
+  bool empty() const { return size_ == 0; }
+
  private:
   std::vector<T> buffer_;
-  mutable std::mutex mutex_;
-  std::condition_variable not_empty_;
-  std::condition_variable not_full_;
+  mutable platform::Mutex mutex_;
+  platform::ConditionVariable not_empty_;
+  platform::ConditionVariable not_full_;
   size_t capacity_;
   size_t head_;
   size_t tail_;

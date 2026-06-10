@@ -8,9 +8,10 @@
 #include <cstdint>
 #include <ebus/detail/protocol_limits.hpp>
 #include <functional>
-#include <mutex>
 
 #include "core/bus_events.hpp"
+#include "platform/delegate.hpp"
+#include "platform/mutex.hpp"
 #include "utils/static_vector.hpp"
 
 namespace ebus::detail::platform {
@@ -22,38 +23,38 @@ namespace ebus::detail::platform {
 class BusBase {
  public:
   // Public Types & Constants
-  using ReadListener = std::function<void(const uint8_t& byte)>;
-  using WriteListener = std::function<void(const uint8_t& byte)>;
-  using SynListener = std::function<void()>;
-  using BusEventListener = std::function<void(const BusEvent& event)>;
+  using ReadListener = Delegate<void(const uint8_t& byte)>;
+  using WriteListener = Delegate<void(const uint8_t& byte)>;
+  using SynListener = Delegate<void()>;
+  using BusEventListener = Delegate<void(const BusEvent& event)>;
 
   // Lifecycle
   virtual ~BusBase() = default;
 
   // Working Methods
   void addReadListener(ReadListener listener) {
-    std::lock_guard<std::mutex> lock(listeners_mutex_);
+    platform::LockGuard<platform::Mutex> lock(listeners_mutex_);
     read_listeners_.push_back(std::move(listener));
   }
 
   void addWriteListener(WriteListener listener) {
-    std::lock_guard<std::mutex> lock(listeners_mutex_);
+    platform::LockGuard<platform::Mutex> lock(listeners_mutex_);
     write_listeners_.push_back(std::move(listener));
   }
 
   void addSynListener(SynListener listener) {
-    std::lock_guard<std::mutex> lock(listeners_mutex_);
+    platform::LockGuard<platform::Mutex> lock(listeners_mutex_);
     syn_listeners_.push_back(std::move(listener));
   }
 
   void addBusEventListener(BusEventListener listener) {
-    std::lock_guard<std::mutex> lock(listeners_mutex_);
+    platform::LockGuard<platform::Mutex> lock(listeners_mutex_);
     bus_event_listeners_.push_back(std::move(listener));
   }
 
   // Status/Telemetry
  protected:
-  mutable std::mutex listeners_mutex_;
+  mutable platform::Mutex listeners_mutex_;
 
   const StaticVector<ReadListener, BusLimits::max_listeners>& getReadListeners()
       const {
@@ -88,7 +89,7 @@ class BusBase {
     ListenerType cache[BusLimits::max_listeners];
     size_t n = 0;
     {
-      std::lock_guard<Lockable> lock(m);
+      platform::LockGuard<Lockable> lock(m);
       n = copyToCache(listeners, cache);
     }
     for (size_t i = 0; i < n; ++i) cache[i](std::forward<Args>(args)...);
@@ -96,7 +97,8 @@ class BusBase {
 
   /**
    * @brief Low-level helper to copy listeners to a stack array.
-   * Useful for ESP32 critical sections where std::lock_guard is not applicable.
+   * Useful for ESP32 critical sections where platform::LockGuard is not
+   * applicable.
    */
   template <typename ListenerType>
   size_t copyToCache(

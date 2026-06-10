@@ -58,6 +58,7 @@ add_catch2_test_executable(catch_data_types models/catch_data_types.cpp)
 
 # Platform Abstraction Layer
 add_catch2_test_executable(catch_bus platform/catch_bus.cpp)
+add_catch2_test_executable(catch_delegate platform/catch_delegate.cpp)
 add_catch2_test_executable(catch_queue platform/catch_queue.cpp)
 add_catch2_test_executable(catch_service_thread platform/catch_service_thread.cpp)
 

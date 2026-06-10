@@ -14,9 +14,9 @@
 #include <ebus/types.hpp>
 #include <ebus/virtual_bus.hpp>
 #include <memory>
-#include <mutex>
 #include <vector>
 
+#include "platform/mutex.hpp"
 #include "platform/queue.hpp"
 #include "utils/circular_buffer.hpp"
 
@@ -63,7 +63,7 @@ class BusSimulator {
 
  private:
   platform::BusSimulation& bus_;
-  std::mutex mtx_;
+  platform::Mutex mutex_;
   uint32_t next_reaction_id_ = 0;
 
   struct ResponseItem {
@@ -77,7 +77,7 @@ class BusSimulator {
   platform::Queue<ResponseItem> outbound_queue_;
   std::unique_ptr<detail::platform::ServiceThread> worker_;
 
-  void onRead(uint8_t b);
+  void onRead(const uint8_t& b);
   void processResponses();
 };
 

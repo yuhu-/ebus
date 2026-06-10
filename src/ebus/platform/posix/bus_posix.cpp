@@ -90,7 +90,7 @@ void BusPosix::stop() {
   syn_running_.store(false);
 
   {
-    std::unique_lock<std::mutex> lock(syn_mutex_);
+    platform::UniqueLock<platform::Mutex> lock(syn_mutex_);
     syn_cv_.notify_all();
   }
 
@@ -128,7 +128,7 @@ void BusPosix::setRuntimeConfig(const RuntimeConfig& runtime) {
   bool should_stop = false;
 
   {
-    std::lock_guard<std::mutex> lock(syn_mutex_);
+    platform::LockGuard<platform::Mutex> lock(syn_mutex_);
     bool was_enabled = runtime_.bus.syn_gen;
     runtime_ = runtime;
 
@@ -186,7 +186,7 @@ void BusPosix::setRuntimeConfig(const RuntimeConfig& runtime) {
 
 void BusPosix::writeByte(const uint8_t byte) {
   {
-    std::lock_guard<std::mutex> lock(syn_mutex_);
+    platform::LockGuard<platform::Mutex> lock(syn_mutex_);
     auto now = Clock::now();
     last_activity_time_ = now;
     // Postpone automated SYN generation. Add 4ms to account for serialization.
@@ -294,7 +294,7 @@ void BusPosix::readerThread() {
 }
 
 void BusPosix::resetSynTimer(uint8_t byte) {
-  std::lock_guard<std::mutex> lock(syn_mutex_);
+  platform::LockGuard<platform::Mutex> lock(syn_mutex_);
   resetSynTimerInternal(byte);
 }
 
@@ -318,7 +318,7 @@ void BusPosix::resetSynTimerInternal(uint8_t byte) {
 
 void BusPosix::synThread() {
   while (syn_running_.load()) {
-    std::unique_lock<std::mutex> lock(syn_mutex_);
+    platform::UniqueLock<platform::Mutex> lock(syn_mutex_);
 
     auto now = Clock::now();
     if (next_syn_expiry_ > now) {
