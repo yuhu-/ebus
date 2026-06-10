@@ -5,6 +5,10 @@
 
 #pragma once
 
+#if defined(ESP_PLATFORM)
+#include <esp_timer.h>  // For esp_timer_get_time()
+#endif
+
 #include <algorithm>
 #include <chrono>
 #include <cstddef>
@@ -23,11 +27,32 @@
 namespace ebus {
 
 /**
- * The source of truth for monotonic time within the library.
- * Using an alias allows for platform-specific overrides or
- * clock injection during unit testing.
+ * @brief Custom monotonic clock for ESP-IDF that uses esp_timer_get_time().
+ * This avoids potential issues with std::chrono::steady_clock's underlying
+ * implementation on ESP-IDF, especially when converting to absolute times
+ * for condition variables, which can sometimes lead to EINVAL if the system
+ * clock is not stable or has rollover issues.
+ *
+ * It meets the requirements of a C++17 `std::chrono::Clock`.
  */
-using Clock = std::chrono::steady_clock;
+struct EbusSteadyClock {
+  using rep = long long;
+  using period = std::micro;
+  using duration = std::chrono::duration<rep, period>;
+  using time_point = std::chrono::time_point<EbusSteadyClock>;
+  static constexpr bool is_steady = true;
+
+  static time_point now() noexcept {
+#if defined(ESP_PLATFORM)
+    return time_point(duration(esp_timer_get_time()));
+#else
+    return time_point(std::chrono::duration_cast<duration>(
+        std::chrono::steady_clock::now().time_since_epoch()));
+#endif
+  }
+};
+
+using Clock = EbusSteadyClock;
 
 /**
  * @brief Callback for streaming JSON chunks.
@@ -319,8 +344,9 @@ struct ProtocolEvent {
     } err;
   } data;
 
-  // Optimization for ESP32-C3: Reduced buffer size for internal event passing.
-  // Logical eBUS telegrams are max 21 bytes (master) / 17 bytes (slave).
+  // Optimization for ESP32-C3: Reduced buffer size for internal event
+  // passing. Logical eBUS telegrams are max 21 bytes (master) / 17 bytes
+  // (slave).
   StaticSequence<detail::SequenceLimits::model_capacity> master;
   StaticSequence<detail::SequenceLimits::model_capacity> slave;
 };
