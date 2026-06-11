@@ -69,13 +69,18 @@ class BusSimulator {
   struct ResponseItem {
     uint8_t data[SequenceLimits::default_capacity];
     uint8_t len = 0;
-    uint32_t delay_ms = 0;  // Added delay
+    uint32_t delay_ms = 0;
+    uint32_t delay_us = 0;
+    bool wait_for_syn = false;
   };
 
   CircularBuffer<uint8_t, SequenceLimits::default_capacity> write_history_;
   std::vector<VirtualBus::MockReaction> reactions_;
   platform::Queue<ResponseItem> outbound_queue_;
   std::unique_ptr<detail::platform::ServiceThread> worker_;
+
+  platform::ConditionVariable syn_cv_;
+  bool syn_received_ = false;
 
   void onRead(const uint8_t& b);
   void processResponses();

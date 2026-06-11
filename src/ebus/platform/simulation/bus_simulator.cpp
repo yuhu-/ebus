@@ -71,7 +71,12 @@ void BusSimulator::removeMockReaction(const ebus::Sequence& trigger) {
                    reactions_.end());
 }
 
-void BusSimulator::injectRawByte(uint8_t byte) { bus_.writeByte(byte); }
+void BusSimulator::injectRawByte(uint8_t byte) {
+  ResponseItem item;
+  item.data[0] = byte;
+  item.len = 1;
+  outbound_queue_.push(item);
+}
 
 void BusSimulator::injectCollision(uint8_t byte1, uint8_t byte2) {
   platform::VirtualLine::get().writeCollision(byte1, byte2);
@@ -79,26 +84,38 @@ void BusSimulator::injectCollision(uint8_t byte1, uint8_t byte2) {
 
 void BusSimulator::injectMasterMessage(uint8_t source, ebus::ByteView payload) {
   auto msg = ebus::frameMaster(source, payload);
-  for (uint8_t b : msg) {
-    bus_.writeByte(b);
-  }
+  ResponseItem item;
+  item.len = static_cast<uint8_t>(std::min(msg.size(), sizeof(item.data)));
+  std::memcpy(item.data, msg.data(), item.len);
+  item.wait_for_syn = true;
+  item.delay_us = BusLimits::platform::Posix::request_delay_us;
+  outbound_queue_.push(item);
 }
 
 void BusSimulator::injectMasterSlaveMessage(uint8_t source,
                                             ebus::ByteView master_payload,
                                             ebus::ByteView slave_payload) {
-  auto master_msg = ebus::frameMaster(source, master_payload);
-  for (uint8_t b : master_msg) bus_.writeByte(b);
-  bus_.writeByte(ebus::Symbols::ack);
+  ebus::Sequence full;
+  full.append(ebus::frameMaster(source, master_payload));
+  full.pushBack(ebus::Symbols::ack, false);
+  full.append(ebus::frameSlave(slave_payload));
+  full.pushBack(ebus::Symbols::ack, false);
+  full.pushBack(ebus::Symbols::syn, false);
 
-  auto slave_msg = ebus::frameSlave(slave_payload);
-  for (uint8_t b : slave_msg) bus_.writeByte(b);
-  bus_.writeByte(ebus::Symbols::ack);
-  bus_.writeByte(ebus::Symbols::syn);
+  ResponseItem item;
+  item.len = static_cast<uint8_t>(std::min(full.size(), sizeof(item.data)));
+  std::memcpy(item.data, full.data(), item.len);
+  item.wait_for_syn = true;
+  item.delay_us = BusLimits::platform::Posix::request_delay_us;
+  outbound_queue_.push(item);
 }
 
 void BusSimulator::onRead(const uint8_t& b) {
   platform::LockGuard<platform::Mutex> lock(mutex_);
+  if (b == ebus::Symbols::syn) {
+    syn_received_ = true;
+    syn_cv_.notify_all();
+  }
   write_history_.push_back(b);
   for (auto& reaction : reactions_) {
     if (reaction.repeat_count == -1) continue;
@@ -129,8 +146,18 @@ void BusSimulator::onRead(const uint8_t& b) {
 void BusSimulator::processResponses() {
   ResponseItem item;
   while (outbound_queue_.pop(item)) {
+    if (item.wait_for_syn) {
+      platform::UniqueLock<platform::Mutex> lock(mutex_);
+      syn_received_ = false;
+      syn_cv_.wait(lock, [this] { return syn_received_ || outbound_queue_.isShutdown(); });
+      if (outbound_queue_.isShutdown()) return;
+    }
+
     if (item.delay_ms > 0) {
       platform::sleepMilli(item.delay_ms);
+    }
+    if (item.delay_us > 0) {
+      platform::sleepMicro(item.delay_us);
     }
     for (size_t i = 0; i < item.len; ++i) {
       bus_.writeByte(item.data[i]);
