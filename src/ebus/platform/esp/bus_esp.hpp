@@ -15,14 +15,12 @@
 #include <ebus/status.hpp>
 #include <functional>
 #include <memory>
-#include <vector>
 
 #include "core/bus_events.hpp"
 #include "driver/gptimer.h"
 #include "driver/uart.h"
 #include "esp_timer.h"
 #include "platform/bus_base.hpp"
-#include "platform/queue.hpp"
 #include "platform/service_thread.hpp"
 
 namespace ebus::detail {

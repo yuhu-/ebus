@@ -11,7 +11,7 @@
 #include <type_traits>
 #include <utility>
 
-namespace ebus::detail {
+namespace ebus {
 
 /**
  * @brief A fixed-capacity vector that avoids heap allocations.
@@ -151,4 +151,4 @@ class StaticVector {
   std::size_t size_ = 0;
 };
 
-}  // namespace ebus::detail
+}  // namespace ebus

@@ -115,7 +115,7 @@ class Controller {
   /**
    * @brief Sets a callback for internal library log messages.
    */
-  static void setLogSink(std::function<void(LogLevel, std::string_view)> sink);
+  static void setLogSink(LogCallback sink);
 
   /**
    * @brief Sets the maximum number of errors to keep in the diagnostic log.
@@ -182,7 +182,7 @@ class Controller {
    * @brief Registers a callback for when this controller is addressed as a
    * slave.
    */
-  void setReactiveMasterSlaveCallback(ReactiveMasterSlaveCallback callback);
+  void setReactiveMasterSlaveCallback(ReactiveCallback callback);
 
   /**
    * @brief Registers a unified callback for all protocol events (Telegrams or

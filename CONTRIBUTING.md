@@ -79,6 +79,7 @@ To keep the library maintainable and portable, we follow these patterns:
 
 *   **PIMPL Idiom**: Used in `ebus::Controller` to provide a stable ABI and hide internal orchestration details.
 *   **Finite State Machine (FSM)**: The `Core::Handler` uses an FSM to manage synchronization, arbitration, and data phases.
+*   **Reactor Pattern**: The `Controller` implements a unified event loop (the Reactor) that processes bus events, network bridge data, and application requests from a single thread. This ensures that the underlying FSMs are accessed in a thread-safe manner without requiring heavy locking on every byte.
 *   **Hardware Abstraction Layer (HAL)**: All hardware interaction is abstracted through the `Platform::Bus`. **Do not** use direct POSIX or FreeRTOS calls outside of the `src/ebus/platform/` directory.
 
 ## Key Components

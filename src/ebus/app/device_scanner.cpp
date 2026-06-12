@@ -72,7 +72,7 @@ void DeviceScanner::setStartupScanInterval(uint32_t interval_s) {
   startup_scan_interval_ = std::chrono::seconds(interval_s);
 }
 
-void DeviceScanner::setBusyPredicate(platform::Delegate<bool()> pred) {
+void DeviceScanner::setBusyPredicate(Delegate<bool()> pred) {
   platform::LockGuard<platform::Mutex> lock(mutex_);
   is_busy_ = std::move(pred);
 }

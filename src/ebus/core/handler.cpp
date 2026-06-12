@@ -5,7 +5,6 @@
 
 #include "core/handler.hpp"
 
-#include <algorithm>
 #include <ebus/detail/protocol_limits.hpp>
 #include <ebus/utils.hpp>
 #include <utility>
@@ -82,10 +81,10 @@ Handler::Handler(uint8_t source_address, platform::Bus* bus, Request* request,
   setSourceAddress(source_address);
 
   request_->setHandlerBusRequestedCallback(
-      platform::Delegate<void()>::bind<Handler, &Handler::onBusRequested>(this));
+      Delegate<void()>::bind<Handler, &Handler::onBusRequested>(this));
 
   request_->setStartBitCallback(
-      platform::Delegate<void()>::bind<Handler, &Handler::onStartBit>(this));
+      Delegate<void()>::bind<Handler, &Handler::onStartBit>(this));
 
   // Pre-allocate core buffers to avoid heap allocations in the hot path
   passive_master_.reserve(SequenceLimits::default_capacity);
@@ -114,15 +113,15 @@ uint8_t Handler::getSourceAddress() const { return source_address_; }
 uint8_t Handler::getTargetAddress() const { return target_address_; }
 
 void Handler::setBusRequestWonCallback(BusRequestWonCallback callback) {
-  bus_request_won_callback_ = std::move(callback);
+  won_callback_ = std::move(callback);
 }
 
 void Handler::setBusRequestLostCallback(BusRequestLostCallback callback) {
-  bus_request_lost_callback_ = std::move(callback);
+  lost_callback_ = std::move(callback);
 }
 
 void Handler::setReactiveMasterSlaveCallback(HandlerReactiveCallback callback) {
-  reactive_master_slave_callback_ = std::move(callback);
+  reactive_callback_ = std::move(callback);
 }
 
 void Handler::setProtocolCallback(HandlerProtocolCallback callback) {
@@ -843,22 +842,16 @@ void Handler::onStartBit() {
 }
 
 void Handler::callOnBusRequestWon() {
-  if (bus_request_won_callback_) {
-    bus_request_won_callback_();
-  }
+  if (won_callback_) won_callback_();
 }
 
 void Handler::callOnBusRequestLost() {
-  if (bus_request_lost_callback_) {
-    bus_request_lost_callback_();
-  }
+  if (lost_callback_) lost_callback_();
 }
 
 void Handler::callOnReactiveMasterSlave(ByteView master_view,
                                         Sequence& slave_response) {
-  if (reactive_master_slave_callback_) {
-    reactive_master_slave_callback_({0, master_view, slave_response});
-  }
+  if (reactive_callback_) reactive_callback_({0, master_view, slave_response});
 }
 
 void Handler::callOnTelegram(MessageType message_type,

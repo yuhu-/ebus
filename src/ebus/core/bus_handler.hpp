@@ -5,22 +5,17 @@
 
 #pragma once
 
-#include <atomic>
 #include <chrono>
 #include <ebus/config.hpp>
+#include <ebus/detail/delegate.hpp>
 #include <ebus/detail/protocol_limits.hpp>
-#include <ebus/metrics.hpp>
+#include <ebus/static_vector.hpp>
 #include <ebus/status.hpp>
-#include <memory>
 
 #include "core/bus_events.hpp"
 #include "core/handler.hpp"
 #include "core/request.hpp"
-#include "platform/bus.hpp"
-#include "platform/delegate.hpp"
 #include "platform/mutex.hpp"
-#include "platform/queue.hpp"
-#include "utils/static_vector.hpp"
 
 namespace ebus::detail {
 
@@ -32,7 +27,7 @@ namespace ebus::detail {
 class BusHandler {
  public:
   // Public Types & Constants
-  using ByteListener = platform::Delegate<void(const BusEventInfo& info)>;
+  using ByteListener = Delegate<void(const BusEventInfo& info)>;
 
   // Lifecycle
   BusHandler(Request* request, Handler* handler);

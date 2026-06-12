@@ -9,6 +9,7 @@
 #include <array>
 #include <cstring>
 #include <ebus/data_types.hpp>
+#include <ebus/detail/delegate.hpp>
 #include <ebus/detail/json_writer.hpp>
 #include <ebus/device.hpp>
 #include <ebus/utils.hpp>
@@ -53,7 +54,7 @@ void Device::update(uint8_t slave_addr, ByteView master_view,
 }
 
 void Device::createVendorScanCommands(
-    const std::function<void(const Sequence&)>& callback) const {
+    Delegate<void(const Sequence&)> callback) const {
   if (!callback) return;
 
   if (isVaillant()) {

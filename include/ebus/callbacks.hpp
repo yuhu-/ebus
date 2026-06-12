@@ -10,6 +10,7 @@
 #include <string_view>
 #include <vector>
 
+#include "ebus/detail/delegate.hpp"
 #include "ebus/detail/protocol_limits.hpp"
 #include "ebus/types.hpp"
 
@@ -94,11 +95,13 @@ struct BusEventInfo {
 /**
  * Callback signatures
  */
-using ProtocolCallback = std::function<void(const ProtocolInfo& info)>;
+using ProtocolCallback = detail::Delegate<void(const ProtocolInfo& info)>;
 
-using ReactiveMasterSlaveCallback =
-    std::function<void(const ReactiveInfo& info)>;
+using ReactiveCallback = detail::Delegate<void(const ReactiveInfo& info)>;
 
-using TraceCallback = std::function<void(const BusEventInfo& info)>;
+using TraceCallback = detail::Delegate<void(const BusEventInfo& info)>;
+
+using LogCallback =
+    detail::Delegate<void(LogLevel level, std::string_view msg)>;
 
 }  // namespace ebus

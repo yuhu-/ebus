@@ -79,7 +79,7 @@ void DeviceManager::update(ByteView master_view, ByteView slave_view) {
 }
 
 void DeviceManager::vendorScanCommands(
-    const std::function<void(const Sequence&)>& callback) const {
+    Delegate<void(const Sequence&)> callback) const {
   platform::LockGuard<platform::Mutex> lock(mutex_);
   for (size_t i = 0; i < 256; ++i) {
     int16_t idx = address_map_[i];
@@ -91,7 +91,7 @@ void DeviceManager::vendorScanCommands(
 
 void DeviceManager::createScanCommands(
     const std::vector<std::string>& addresses,
-    const std::function<void(const Sequence&)>& callback) const {
+    Delegate<void(const Sequence&)> callback) const {
   std::bitset<256> scan_slaves;  // Use bitset for presence tracking
   for (const std::string& address : addresses) {
     const std::vector<uint8_t> bytes = ebus::toVector(address);

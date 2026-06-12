@@ -8,6 +8,8 @@
 // as reading from files or a TCP socket. The data is checked for correctness
 // and output to standard output. Various formatting options are available for
 // attractive output. Dumping of binary values ​​is also supported.
+// It automatically detects and supports the ebusd Enhanced Protocol.
+// attractive output. Dumping of binary values ​​is also supported.
 
 #include <arpa/inet.h>
 #include <fcntl.h>
@@ -179,8 +181,8 @@ void collect(uint8_t byte) {
       if (json_output) {  // JsonWriter already streams to visitor
         // The JsonWriter is designed to stream directly to a visitor.
         // We can make it write directly to std::cout.
-        ebus::detail::JsonWriter writer([&](std::string_view s) { std::cout << s; },
-                                        pretty);
+        ebus::detail::JsonWriter writer(
+            [&](std::string_view s) { std::cout << s; }, pretty);
         tel.toJson(writer);
         std::cout << std::endl;
       } else {
@@ -458,6 +460,9 @@ void usage() {
   std::cout << "Usage: ebusread [options] <stdin|device|file|host:port>";
   std::cout << std::endl;
   std::cout << "eBUS binary data reader" << std::endl;
+  std::cout << "Supports automatic detection of the Enhanced Protocol when "
+               "connecting to ebusd"
+            << std::endl;
   std::cout << "  -b, --bold       bold data bytes" << std::endl;
   std::cout << "  -c, --color      colorized output" << std::endl;
   std::cout << "  -d, --dump       dump binary values to stdout" << std::endl;

@@ -7,11 +7,10 @@
 
 #include <bitset>
 #include <cstddef>
-#include <functional>
 #include <string>
 
+#include "ebus/static_vector.hpp"
 #include "ebus/types.hpp"
-#include "utils/static_vector.hpp"
 
 namespace ebus::detail {
 class BusMonitor;
@@ -159,7 +158,7 @@ struct ClientManagerStatus {
   bool session_active = false;
   FixedString<12> session_state;
   FixedString<48> last_error;
-  detail::StaticVector<ClientInfo, detail::NetworkLimits::max_clients> clients;
+  StaticVector<ClientInfo, detail::NetworkLimits::max_clients> clients;
 
   void toJson(detail::JsonWriter& writer) const;
 };
@@ -213,8 +212,8 @@ struct SystemResources {
   uint64_t last_update_timestamp_ms = 0;
   bool is_configured = false;
   bool is_running = false;
-  detail::StaticVector<ThreadStatus, 8> threads;
-  detail::StaticVector<QueueStatus, 16> queues;
+  StaticVector<ThreadStatus, 8> threads;
+  StaticVector<QueueStatus, 16> queues;
   MemoryStatus memory;
 
   void toJson(detail::JsonWriter& writer) const;

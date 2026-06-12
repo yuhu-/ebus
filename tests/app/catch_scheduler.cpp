@@ -104,9 +104,8 @@ TEST_CASE("Scheduler: Simulation", "[app][scheduler]") {
   } harness{reactor_queue_};
 
   Scheduler scheduler(&handler);
-  scheduler.setEventSink(
-      platform::Delegate<void(ebus::OrchestrationEvent&&)>::bind<
-          TestHarness, &TestHarness::onEventSink>(&harness));
+  scheduler.setEventSink(Delegate<void(ebus::OrchestrationEvent&&)>::bind<
+                         TestHarness, &TestHarness::onEventSink>(&harness));
   scheduler.attachHandlerCallbacks();
   scheduler.setMaxSendAttempts(3);
   scheduler.setBaseBackoff(50);
@@ -114,7 +113,7 @@ TEST_CASE("Scheduler: Simulation", "[app][scheduler]") {
   bus.start();
 
   // Bridge Physical Bus Events -> Unified Reactor Queue
-  bus.addBusEventListener(platform::Delegate<void(const BusEvent&)>::bind<
+  bus.addBusEventListener(Delegate<void(const BusEvent&)>::bind<
                           TestHarness, &TestHarness::onBusEvent>(&harness));
 
   std::atomic<uint32_t> last_success_session{0};

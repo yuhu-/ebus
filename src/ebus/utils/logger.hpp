@@ -6,8 +6,9 @@
 #pragma once
 
 #include <atomic>
+#include <ebus/callbacks.hpp>
+#include <ebus/detail/delegate.hpp>
 #include <ebus/types.hpp>
-#include <functional>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -22,7 +23,7 @@ namespace ebus::detail {
  */
 class Logger {
  public:
-  using LogSink = std::function<void(LogLevel level, std::string_view msg)>;
+  using LogSink = ebus::LogCallback;
 
   static Logger& getInstance() {
     static Logger instance;
@@ -37,9 +38,8 @@ class Logger {
   LogLevel getLevel() const { return level_.load(std::memory_order_relaxed); }
 
   void setSink(LogSink sink) {
-    auto new_sink = std::make_shared<LogSink>(std::move(sink));
     platform::LockGuard<platform::Mutex> lock(mutex_);
-    sink_ptr_ = std::move(new_sink);
+    sink_ = std::move(sink);
   }
 
   /**
@@ -53,14 +53,14 @@ class Logger {
   void log(LogLevel level, std::string_view msg) {
     if (!isEnabled(level)) return;
 
-    std::shared_ptr<LogSink> current_sink;
+    LogSink current_sink;
     {
       platform::LockGuard<platform::Mutex> lock(mutex_);
-      current_sink = sink_ptr_;
+      current_sink = sink_;
     }
 
-    if (current_sink && *current_sink) {
-      (*current_sink)(level, msg);
+    if (current_sink) {
+      current_sink(level, msg);
     }
   }
 
@@ -72,7 +72,7 @@ class Logger {
  private:
   Logger() = default;
   std::atomic<LogLevel> level_{LogLevel::error};
-  std::shared_ptr<LogSink> sink_ptr_;
+  LogSink sink_;
   mutable platform::Mutex mutex_;
 };
 
@@ -83,26 +83,20 @@ class Logger {
  * prevent string construction overhead when the level is disabled.
  */
 #ifndef EBUS_DISABLE_LOGGING
-#define EBUS_LOG_ERROR(msg)                                              \
-  do {                                                                   \
-    if (::ebus::detail::Logger::getInstance().isEnabled(                 \
-            ::ebus::LogLevel::error))                                    \
-      ::ebus::detail::Logger::getInstance().log(::ebus::LogLevel::error, \
-                                                (msg));                  \
+#define EBUS_LOG_ERROR(msg)                                       \
+  do {                                                            \
+    if (Logger::getInstance().isEnabled(::ebus::LogLevel::error)) \
+      Logger::getInstance().log(::ebus::LogLevel::error, (msg));  \
   } while (0)
-#define EBUS_LOG_INFO(msg)                                              \
-  do {                                                                  \
-    if (::ebus::detail::Logger::getInstance().isEnabled(                \
-            ::ebus::LogLevel::info))                                    \
-      ::ebus::detail::Logger::getInstance().log(::ebus::LogLevel::info, \
-                                                (msg));                 \
+#define EBUS_LOG_INFO(msg)                                       \
+  do {                                                           \
+    if (Logger::getInstance().isEnabled(::ebus::LogLevel::info)) \
+      Logger::getInstance().log(::ebus::LogLevel::info, (msg));  \
   } while (0)
-#define EBUS_LOG_DEBUG(msg)                                              \
-  do {                                                                   \
-    if (::ebus::detail::Logger::getInstance().isEnabled(                 \
-            ::ebus::LogLevel::debug))                                    \
-      ::ebus::detail::Logger::getInstance().log(::ebus::LogLevel::debug, \
-                                                (msg));                  \
+#define EBUS_LOG_DEBUG(msg)                                       \
+  do {                                                            \
+    if (Logger::getInstance().isEnabled(::ebus::LogLevel::debug)) \
+      Logger::getInstance().log(::ebus::LogLevel::debug, (msg));  \
   } while (0)
 #else
 #define EBUS_LOG_ERROR(msg) ((void)0)

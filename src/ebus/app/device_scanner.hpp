@@ -13,15 +13,15 @@
 #include <chrono>
 #include <cstdint>
 #include <ebus/config.hpp>
+#include <ebus/detail/delegate.hpp>
 #include <ebus/detail/protocol_limits.hpp>
 #include <ebus/metrics.hpp>
 #include <ebus/sequence.hpp>
+#include <ebus/static_vector.hpp>
 #include <functional>
 
 #include "app/device_manager.hpp"
-#include "platform/delegate.hpp"
 #include "platform/mutex.hpp"
-#include "utils/static_vector.hpp"
 
 namespace ebus::detail {
 
@@ -48,7 +48,7 @@ class DeviceScanner {
 
   // Sets a predicate to check if the system is too busy to perform background
   // scans. Postpones discovery during high bus activity or bridge sessions.
-  void setBusyPredicate(platform::Delegate<bool()> pred);
+  void setBusyPredicate(Delegate<bool()> pred);
 
   // Working Methods
   void initFullScan(bool enable);
@@ -70,7 +70,7 @@ class DeviceScanner {
   // Protects all internal state across threads (Controller and Scheduler)
   mutable platform::Mutex mutex_;
 
-  platform::Delegate<bool()> is_busy_;
+  Delegate<bool()> is_busy_;
 
   // Commands explicitly requested via scanAddress() or scanObservedDevices().
   // These are always returned first.

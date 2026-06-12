@@ -42,8 +42,8 @@ TEST_CASE("VirtualBus: Reaction Logic", "[app][virtualbus]") {
   };
   VirtualBusTestCallbacks callbacks{history_mutex, bus_history};
   bus.addReadListener(
-      platform::Delegate<void(const uint8_t&)>::bind<
-          VirtualBusTestCallbacks, &VirtualBusTestCallbacks::onRead>(
+      Delegate<void(const uint8_t&)>::bind<VirtualBusTestCallbacks,
+                                           &VirtualBusTestCallbacks::onRead>(
           &callbacks));
 
   bus.start();

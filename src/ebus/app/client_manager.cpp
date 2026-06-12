@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <ebus/detail/protocol_limits.hpp>
+#include <ebus/static_vector.hpp>
 #include <ebus/utils.hpp>
 #include <iterator>
 
@@ -33,14 +34,14 @@ ClientManager::ClientManager(platform::Bus* bus, BusHandler* bus_handler,
           ebus::RuntimeConfig{}.network.outbound_buffer_size) {
   if (bus_handler_) {
     bus_listener_id_ = bus_handler_->addByteListener(
-        platform::Delegate<void(const BusEventInfo&)>::bind<
+        Delegate<void(const BusEventInfo&)>::bind<
             ClientManager, &ClientManager::handleBusEvent>(this));
   }
 
   if (request_) {
     request_->setExternalBusRequestedCallback(
-        platform::Delegate<void()>::bind<
-            ClientManager, &ClientManager::onExternalBusRequested>(this));
+        Delegate<void()>::bind<ClientManager,
+                               &ClientManager::onExternalBusRequested>(this));
   }
 }
 
@@ -74,7 +75,7 @@ void ClientManager::setOutboundBufferSize(size_t size) {
   outbound_buffer_size_ = size;
 }
 
-void ClientManager::setBusyPredicate(platform::Delegate<bool()> pred) {
+void ClientManager::setBusyPredicate(Delegate<bool()> pred) {
   platform::LockGuard<platform::Mutex> lock(mutex_);
   is_busy_ = std::move(pred);
 }
@@ -120,7 +121,8 @@ bool ClientManager::tick() {
   bool work_done = false;
 
   // 1. Snapshot clients only if changed
-  StaticVector<std::shared_ptr<AbstractClient>, NetworkLimits::max_clients>
+  ebus::StaticVector<std::shared_ptr<AbstractClient>,
+                     NetworkLimits::max_clients>
       active_clients;
   {
     platform::LockGuard<platform::Mutex> lock(mutex_);

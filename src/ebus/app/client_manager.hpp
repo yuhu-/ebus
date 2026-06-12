@@ -8,16 +8,17 @@
 #include <atomic>
 #include <chrono>
 #include <cstdint>
-#include <ebus/metrics.hpp>
+#include <ebus/detail/delegate.hpp>
+#include <ebus/static_vector.hpp>
 #include <ebus/status.hpp>
 #include <memory>
+#include <string>
 
 #include "app/client.hpp"
 #include "core/bus_handler.hpp"
 #include "core/request.hpp"
-#include "platform/delegate.hpp"
+#include "platform/bus.hpp"
 #include "platform/mutex.hpp"
-#include "utils/static_vector.hpp"
 
 namespace ebus::detail {
 
@@ -47,7 +48,7 @@ class ClientManager {
 
   // Sets a predicate to check if the system is too busy to start new bridge
   // sessions.
-  void setBusyPredicate(platform::Delegate<bool()> pred);
+  void setBusyPredicate(Delegate<bool()> pred);
 
   // Working Methods
   void addClient(int fd, ClientType type);
@@ -72,7 +73,7 @@ class ClientManager {
   BusMonitor* monitor_;
 
   std::atomic<bool> running_{false};
-  platform::Delegate<bool()> is_busy_;
+  Delegate<bool()> is_busy_;
 
   SessionState session_state_ = SessionState::idle;
   Clock::time_point last_state_change_;

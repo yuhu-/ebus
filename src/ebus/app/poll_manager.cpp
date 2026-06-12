@@ -29,7 +29,7 @@ void PollManager::setOwnAddress(uint8_t address) {
   }
 }
 
-void PollManager::setBusyPredicate(platform::Delegate<bool()> pred) {
+void PollManager::setBusyPredicate(Delegate<bool()> pred) {
   platform::LockGuard<platform::Mutex> lock(mutex_);
   is_busy_ = std::move(pred);
 }
@@ -74,8 +74,7 @@ void PollManager::removePollItem(uint32_t id) {
   if (it != items_.end()) items_.erase(it);
 }
 
-void PollManager::processDueItems(
-    const std::function<void(const Item&)>& callback, bool* activity) {
+void PollManager::processDueItems(PollVisitor callback, bool* activity) {
   platform::LockGuard<platform::Mutex> lock(mutex_);
   auto now = Clock::now();
 
@@ -95,7 +94,8 @@ void PollManager::processDueItems(
     // Reschedule
     item.next_due = now + item.interval;
     // Safety check for clock jitter or 0 intervals
-    if (item.next_due <= now) item.next_due = now + std::chrono::milliseconds(1);
+    if (item.next_due <= now)
+      item.next_due = now + std::chrono::milliseconds(1);
 
     items_.push_back(std::move(item));
     std::push_heap(items_.begin(), items_.end(), Item::Greater());

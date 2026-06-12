@@ -5,31 +5,24 @@
 
 #pragma once
 
-#include <array>
 #include <chrono>
 #include <ebus/callbacks.hpp>
-#include <ebus/metrics.hpp>
+#include <ebus/detail/delegate.hpp>
 #include <ebus/types.hpp>
-#include <functional>
 #include <optional>
-#include <vector>
 
 #include "core/telegram.hpp"
 #include "platform/bus.hpp"
-#include "platform/delegate.hpp"
-#include "platform/queue.hpp"
 
 namespace ebus::detail {
 
 class BusMonitor;
 class Request;
 
-using BusRequestWonCallback = platform::Delegate<void()>;
-using BusRequestLostCallback = platform::Delegate<void()>;
-using HandlerProtocolCallback =
-    platform::Delegate<void(const ProtocolInfo& info)>;
-using HandlerReactiveCallback =
-    platform::Delegate<void(const ReactiveInfo& info)>;
+using BusRequestWonCallback = Delegate<void()>;
+using BusRequestLostCallback = Delegate<void()>;
+using HandlerProtocolCallback = Delegate<void(const ProtocolInfo& info)>;
+using HandlerReactiveCallback = Delegate<void(const ReactiveInfo& info)>;
 
 /**
  * Handler class that implements the eBUS protocol logic as a finite state
@@ -75,9 +68,9 @@ class Handler {
   uint8_t source_address_ = 0;
   uint8_t target_address_ = 0;
 
-  BusRequestWonCallback bus_request_won_callback_ = nullptr;
-  BusRequestLostCallback bus_request_lost_callback_ = nullptr;
-  HandlerReactiveCallback reactive_master_slave_callback_ = nullptr;
+  BusRequestWonCallback won_callback_ = nullptr;
+  BusRequestLostCallback lost_callback_ = nullptr;
+  HandlerReactiveCallback reactive_callback_ = nullptr;
   HandlerProtocolCallback protocol_callback_ = nullptr;
 
   Clock::time_point last_point_;

@@ -31,8 +31,8 @@ TEST_CASE("Request: requestBus, completion and handler callback",
   RequestTestCallbacks callbacks;
 
   r.setHandlerBusRequestedCallback(
-      platform::Delegate<void()>::bind<RequestTestCallbacks,
-                                       &RequestTestCallbacks::onBusRequested>(
+      Delegate<void()>::bind<RequestTestCallbacks,
+                             &RequestTestCallbacks::onBusRequested>(
           &callbacks));
 
   bool requested = r.requestBus(0x33);

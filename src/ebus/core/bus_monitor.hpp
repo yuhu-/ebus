@@ -6,12 +6,12 @@
 #pragma once
 
 #include <array>
+#include <ebus/detail/circular_buffer.hpp>
 #include <ebus/detail/protocol_limits.hpp>
 #include <ebus/metrics.hpp>
 #include <functional>
 
 #include "platform/mutex.hpp"
-#include "utils/circular_buffer.hpp"
 #include "utils/timing_stats.hpp"
 
 namespace ebus::detail {

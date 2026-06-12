@@ -4,7 +4,9 @@
  */
 
 #include <ebus/controller.hpp>
+#include <ebus/detail/circular_buffer.hpp>
 #include <ebus/detail/config_validator.hpp>
+#include <ebus/detail/delegate.hpp>
 #include <ebus/detail/json_writer.hpp>
 #include <ebus/detail/protocol_limits.hpp>
 #include <ebus/utils.hpp>
@@ -25,10 +27,9 @@
 #include "core/handler.hpp"
 #include "core/request.hpp"
 #include "platform/bus.hpp"
-#include "platform/delegate.hpp"
 #include "platform/mutex.hpp"
+#include "platform/queue.hpp"
 #include "platform/service_thread.hpp"
-#include "utils/circular_buffer.hpp"
 #include "utils/logger.hpp"
 
 #if defined(ESP_PLATFORM)
@@ -46,7 +47,7 @@ struct Impl {
                          detail::DiagnosticsLimits::trace_history_size>
       trace_buffer_;
 
-  ebus::ReactiveMasterSlaveCallback user_reactive_callback_;
+  ebus::ReactiveCallback user_reactive_callback_;
   ebus::ProtocolCallback user_protocol_callback_;
   ebus::TraceCallback user_trace_callback_;
 
@@ -101,9 +102,9 @@ struct Impl {
   bool isHandlerBusy() const;
   bool isSystemBusy() const;
 
-  void logError(const std::string& msg) const;
-  void logInfo(const std::string& msg) const;
-  void logDebug(const std::string& msg) const;
+  void logError(std::string_view msg) const;
+  void logInfo(std::string_view msg) const;
+  void logDebug(std::string_view msg) const;
 };
 
 Controller::Controller() : impl_(new Impl()) {}
@@ -275,8 +276,7 @@ void Controller::setLogLevel(LogLevel level) {
   }
 }
 
-void Controller::setLogSink(
-    std::function<void(LogLevel, std::string_view)> sink) {
+void Controller::setLogSink(LogCallback sink) {
   detail::Logger::getInstance().setSink(std::move(sink));
 }
 
@@ -381,8 +381,7 @@ void Controller::setTotalTimeout(uint32_t timeout_ms) {
   if (impl_->configured_.load()) impl_->scheduler_->setTotalTimeout(timeout_ms);
 }
 
-void Controller::setReactiveMasterSlaveCallback(
-    ReactiveMasterSlaveCallback callback) {
+void Controller::setReactiveMasterSlaveCallback(ReactiveCallback callback) {
   detail::platform::LockGuard<detail::platform::RecursiveMutex> lock(
       impl_->config_mutex_);
   impl_->user_reactive_callback_ = std::move(callback);
@@ -653,7 +652,8 @@ void Impl::getServiceStatus(ServiceStatus& status) const {
 }
 
 void Impl::processPublicEvents() {
-  // Capture callbacks once to avoid mutex contention inside the drainage loops.
+  // Capture callbacks once to avoid mutex contention inside the drainage
+  // loops.
   ProtocolCallback
       user_callback;  // This is a local copy, no mutex needed for it
   {
@@ -742,9 +742,8 @@ void Impl::constructMembers(Controller* owner) {
     scheduler_ = std::make_unique<detail::Scheduler>(handler_.get());
 
     // Bind the scheduler's event sink to a member function of Impl
-    scheduler_->setEventSink(
-        detail::platform::Delegate<void(
-            OrchestrationEvent&&)>::bind<Impl, &Impl::onSchedulerEvent>(this));
+    scheduler_->setEventSink(detail::Delegate<void(OrchestrationEvent&&)>::bind<
+                             Impl, &Impl::onSchedulerEvent>(this));
     scheduler_->attachHandlerCallbacks();
 
     // Setup internal event dispatchers
@@ -844,8 +843,7 @@ void Impl::constructMembers(Controller* owner) {
   if (!poll_manager_) {
     poll_manager_ = std::make_unique<detail::PollManager>();
     poll_manager_->setBusyPredicate(
-        detail::platform::Delegate<bool()>::bind<Impl, &Impl::isSchedulerFull>(
-            this));
+        detail::Delegate<bool()>::bind<Impl, &Impl::isSchedulerFull>(this));
   }
 
   // -- 6. Plumbing --
@@ -855,10 +853,10 @@ void Impl::constructMembers(Controller* owner) {
 
     // Bridge Physical Bus Events -> Unified Reactor Queue
     bus_->addBusEventListener(
-        detail::platform::Delegate<void(
+        detail::Delegate<void(
             const detail::BusEvent&)>::bind<Impl, &Impl::onBusEvent>(this));
     bus_handler_->addByteListener(
-        detail::platform::Delegate<void(
+        detail::Delegate<void(
             const BusEventInfo&)>::bind<Impl, &Impl::onBusEventInfo>(this));
   }
 
@@ -866,8 +864,7 @@ void Impl::constructMembers(Controller* owner) {
     client_manager_ = std::make_unique<detail::ClientManager>(
         bus_.get(), bus_handler_.get(), request_.get(), bus_monitor_.get());
     client_manager_->setBusyPredicate(
-        detail::platform::Delegate<bool()>::bind<Impl, &Impl::isHandlerBusy>(
-            this));
+        detail::Delegate<bool()>::bind<Impl, &Impl::isHandlerBusy>(this));
   }
 
   // Centralized synchronization using setters. Recursive mutex allows this
@@ -897,8 +894,7 @@ void Impl::constructMembers(Controller* owner) {
 
   if (device_scanner_) {
     device_scanner_->setBusyPredicate(
-        detail::platform::Delegate<bool()>::bind<Impl, &Impl::isSystemBusy>(
-            this));
+        detail::Delegate<bool()>::bind<Impl, &Impl::isSystemBusy>(this));
   }
 }
 
@@ -934,7 +930,8 @@ void Impl::run(Controller* owner) {
       case OrchestrationEventType::user_request:  // Fallthrough
       case OrchestrationEventType::timer_wakeup:  // Fallthrough
       case OrchestrationEventType::callback_ready:
-        return true;  // These events are primarily used to wake the pop() block
+        return true;  // These events are primarily used to wake the pop()
+                      // block
       default:
         logError("Unknown orchestration event type received in Reactor Loop: " +
                  std::to_string(static_cast<uint8_t>(event.type)));
@@ -955,9 +952,10 @@ void Impl::run(Controller* owner) {
     processPublicEvents();
 
     poll_manager_->processDueItems(
-        [this, owner, &activity](const detail::PollManager::Item& item) {
+        [this, owner,
+         activity_ptr = &activity](const detail::PollManager::Item& item) {
           if (scheduler_->enqueue(item.priority, item.message, item.poll_id))
-            activity = true;
+            *activity_ptr = true;
         },
         &activity);
 
@@ -992,10 +990,10 @@ void Impl::run(Controller* owner) {
     if (reactor_queue_.pop(ev, timeout_ms)) {
       if (processEvent(ev)) activity = true;
 
-      // DRAIN loop: process all pending events before doing housekeeping again.
-      // This ensures that even if a burst of bytes arrives, we catch up with
-      // the protocol state immediately, prioritizing the "Hot Path" over
-      // background tasks.
+      // DRAIN loop: process all pending events before doing housekeeping
+      // again. This ensures that even if a burst of bytes arrives, we catch
+      // up with the protocol state immediately, prioritizing the "Hot Path"
+      // over background tasks.
       while (reactor_queue_.tryPop(ev)) {
         if (processEvent(ev)) activity = true;
         if (!running_.load()) return;
@@ -1048,7 +1046,8 @@ void Impl::run(Controller* owner) {
     auto time_since_update = Clock::now() - last_status_update;
     if ((!activity && time_since_update > std::chrono::milliseconds(100)) ||
         (time_since_update > std::chrono::milliseconds(500))) {
-      // Populate the utilization history time-series before taking the snapshot
+      // Populate the utilization history time-series before taking the
+      // snapshot
       bus_monitor_->updateUtilizationHistory();
 
       detail::platform::LockGuard<detail::platform::Mutex> lock(status_mutex_);
@@ -1104,11 +1103,15 @@ void Impl::onBusEvent(const detail::BusEvent& bus_ev) {
   ev.data.byte_data.bus_request = bus_ev.bus_request;
   ev.data.byte_data.start_bit = bus_ev.start_bit;
   ev.data.byte_data.timestamp = bus_ev.timestamp;
-  if (bus_ev.byte != Symbols::syn) {
-    detail::Logger::getInstance().log(
-        LogLevel::debug,
-        std::string("HAL Bridge: tryPush 0x") + ebus::toString(bus_ev.byte));
+
+  if (bus_ev.byte != Symbols::syn &&
+      detail::Logger::getInstance().isEnabled(LogLevel::debug)) {
+    char dbg_buf[48];
+    std::snprintf(dbg_buf, sizeof(dbg_buf), "HAL Bridge: tryPush 0x%s",
+                  ebus::toString(bus_ev.byte));
+    logDebug(dbg_buf);
   }
+
   if (!reactor_queue_.tryPush(ev)) {
     detail::Logger::getInstance().log(
         LogLevel::error, "[Controller] Reactor queue FULL! Dropping event.");
@@ -1141,23 +1144,40 @@ bool Impl::isSystemBusy() const {
          (client_manager_ && client_manager_->isSessionActive());
 }
 
-void Impl::logError(const std::string& msg) const {
+void Impl::logError(std::string_view msg) const {
+  auto& logger = detail::Logger::getInstance();
+  if (!logger.isEnabled(LogLevel::error)) return;
   uint8_t addr = address_.load(std::memory_order_relaxed);
-  detail::Logger::getInstance().log(
-      LogLevel::error, std::string("[0x") + ebus::toString(addr) + "] " + msg);
+  char buf[256];
+  int n = std::snprintf(buf, sizeof(buf), "[0x%02x] %.*s", addr,
+                        (int)msg.size(), msg.data());
+  if (n > 0)
+    logger.log(LogLevel::error,
+               std::string_view(buf, std::min((size_t)n, sizeof(buf) - 1)));
 }
 
-void Impl::logInfo(const std::string& msg) const {
+void Impl::logInfo(std::string_view msg) const {
+  auto& logger = detail::Logger::getInstance();
+  if (!logger.isEnabled(LogLevel::info)) return;
   uint8_t addr = address_.load(std::memory_order_relaxed);
-  detail::Logger::getInstance().log(
-      LogLevel::info, std::string("[0x") + ebus::toString(addr) + "] " + msg);
+  char buf[256];
+  int n = std::snprintf(buf, sizeof(buf), "[0x%02x] %.*s", addr,
+                        (int)msg.size(), msg.data());
+  if (n > 0)
+    logger.log(LogLevel::info,
+               std::string_view(buf, std::min((size_t)n, sizeof(buf) - 1)));
 }
 
-void Impl::logDebug(const std::string& msg) const {
-  if (log_level_.load(std::memory_order_relaxed) < LogLevel::debug) return;
+void Impl::logDebug(std::string_view msg) const {
+  auto& logger = detail::Logger::getInstance();
+  if (!logger.isEnabled(LogLevel::debug)) return;
   uint8_t addr = address_.load(std::memory_order_relaxed);
-  detail::Logger::getInstance().log(
-      LogLevel::debug, std::string("[0x") + ebus::toString(addr) + "] " + msg);
+  char buf[256];
+  int n = std::snprintf(buf, sizeof(buf), "[0x%02x] %.*s", addr,
+                        (int)msg.size(), msg.data());
+  if (n > 0)
+    logger.log(LogLevel::debug,
+               std::string_view(buf, std::min((size_t)n, sizeof(buf) - 1)));
 }
 
 }  // namespace ebus

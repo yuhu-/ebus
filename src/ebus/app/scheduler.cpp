@@ -27,8 +27,7 @@ void Scheduler::stop() {
   clear();
 }
 
-void Scheduler::setEventSink(
-    platform::Delegate<void(OrchestrationEvent&&)> sink) {
+void Scheduler::setEventSink(Delegate<void(OrchestrationEvent&&)> sink) {
   event_sink_ = std::move(sink);
 }
 
@@ -54,8 +53,7 @@ void Scheduler::setTotalTimeout(uint32_t timeout_ms) {
   total_timeout_ = std::chrono::milliseconds(timeout_ms);
 }
 
-void Scheduler::setReactiveMasterSlaveCallback(
-    ReactiveMasterSlaveCallback callback) {
+void Scheduler::setReactiveMasterSlaveCallback(ReactiveCallback callback) {
   platform::LockGuard<platform::Mutex> lock(callback_mutex_);
   extern_reactive_callback_ = std::move(callback);
 }
@@ -69,17 +67,17 @@ void Scheduler::attachHandlerCallbacks() {
   if (!handler_) return;
 
   handler_->setBusRequestWonCallback(
-      platform::Delegate<void()>::bind<Scheduler, &Scheduler::onBusRequestWon>(
-          this));
+      Delegate<void()>::bind<Scheduler, &Scheduler::onBusRequestWon>(this));
   handler_->setBusRequestLostCallback(
-      platform::Delegate<void()>::bind<Scheduler, &Scheduler::onBusRequestLost>(
-          this));
+      Delegate<void()>::bind<Scheduler, &Scheduler::onBusRequestLost>(this));
   handler_->setReactiveMasterSlaveCallback(
-      platform::Delegate<void(const ReactiveInfo&)>::bind<
-          Scheduler, &Scheduler::onHandlerReactive>(this));
+      Delegate<void(const ReactiveInfo&)>::bind<Scheduler,
+                                                &Scheduler::onHandlerReactive>(
+          this));
   handler_->setProtocolCallback(
-      platform::Delegate<void(const ProtocolInfo&)>::bind<
-          Scheduler, &Scheduler::onHandlerProtocol>(this));
+      Delegate<void(const ProtocolInfo&)>::bind<Scheduler,
+                                                &Scheduler::onHandlerProtocol>(
+          this));
 }
 
 void Scheduler::detachHandlerCallbacks() {
@@ -131,7 +129,7 @@ void Scheduler::onBusRequestLost() {
 }
 
 void Scheduler::onHandlerReactive(const ReactiveInfo& info) {
-  ReactiveMasterSlaveCallback user_callback;
+  ReactiveCallback user_callback;
   {
     platform::LockGuard<platform::Mutex> lock(callback_mutex_);
     user_callback = extern_reactive_callback_;

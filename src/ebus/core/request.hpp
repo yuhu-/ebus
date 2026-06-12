@@ -10,18 +10,17 @@
 #include <chrono>
 #include <cstdint>
 #include <ebus/config.hpp>
+#include <ebus/detail/delegate.hpp>
 #include <ebus/detail/protocol_limits.hpp>
 #include <ebus/metrics.hpp>
 #include <ebus/types.hpp>
-
-#include "platform/delegate.hpp"
 
 namespace ebus::detail {
 
 class BusMonitor;
 
-using BusRequestedCallback = platform::Delegate<void()>;
-using StartBitCallback = platform::Delegate<void()>;
+using BusRequestedCallback = Delegate<void()>;
+using StartBitCallback = Delegate<void()>;
 
 /**
  * Implementation of the eBUS arbitration state machine.

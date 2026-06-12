@@ -7,6 +7,7 @@
 #include <cmath>
 #include <cstring>
 #include <ctime>
+#include <ebus/detail/json_reader.hpp>
 #include <ebus/detail/json_writer.hpp>
 #include <ebus/sequence.hpp>
 #include <ebus/types.hpp>
@@ -267,61 +268,34 @@ float roundDigits(float value, uint8_t digits) noexcept {
 }
 
 /**
- * Finds a key safely by ensuring it is wrapped in quotes and followed by a
- * colon.
+ * Finds a key safely using the token-based JsonReader.
+ * Note: This implementation follows the object structure correctly.
  */
 size_t findKey(std::string_view json, std::string_view key) {
-  size_t pos = 0;
-  while ((pos = json.find('"', pos)) != std::string_view::npos) {
-    std::string_view sub = json.substr(pos + 1);
-    if (sub.size() > key.size() && sub.compare(0, key.size(), key) == 0 &&
-        sub[key.size()] == '"') {
-      size_t colon = json.find(':', pos + key.size() + 2);
-      if (colon != std::string_view::npos) return colon + 1;
-    }
-    pos++;
+  detail::JsonReader reader(json);
+  if (reader.next() != detail::JsonReader::Token::ObjectStart)
+    return std::string_view::npos;
+  if (reader.findKey(key)) {
+    // We return the offset of the value start by finding the colon relative to
+    // the key.
+    size_t key_pos = json.find(key);
+    size_t colon = json.find(':', key_pos + key.size());
+    return (colon == std::string_view::npos) ? std::string_view::npos
+                                             : colon + 1;
   }
   return std::string_view::npos;
 }
 
 std::string_view extract(std::string_view json, std::string_view key) {
-  size_t pos = findKey(json, key);
-  if (pos == std::string_view::npos) return {};
-
-  size_t start = json.find_first_not_of(" \t\n\r", pos);
-  if (start == std::string_view::npos) return {};
-
-  size_t end;
-  if (json[start] == '"') {
-    start++;
-    // Basic robustness: handle escaped quotes \" by looking ahead
-    end = start;
-    while ((end = json.find('"', end)) != std::string_view::npos) {
-      if (json[end - 1] != '\\') break;
-      end++;
-    }
-  } else {
-    end = json.find_first_of(", \t\n\r}", start);
-  }
-  return (end == std::string_view::npos) ? json.substr(start)
-                                         : json.substr(start, end - start);
+  detail::JsonReader reader(json);
+  return (reader.get(key) != detail::JsonReader::Token::Error) ? reader.value()
+                                                               : "";
 }
 
 std::string_view extractSub(std::string_view json, std::string_view key) {
-  size_t pos = findKey(json, key);
-  if (pos == std::string_view::npos) return {};
-
-  size_t start = json.find('{', pos);
-  if (start == std::string_view::npos) return {};
-  int depth = 0;
-  for (size_t i = start; i < json.size(); ++i) {
-    if (json[i] == '{')
-      depth++;
-    else if (json[i] == '}')
-      depth--;
-    if (depth == 0) return json.substr(start, i - start + 1);
-  }
-  return "";
+  detail::JsonReader reader(json);
+  if (reader.next() != detail::JsonReader::Token::ObjectStart) return "";
+  return reader.findKey(key) ? reader.rawValue() : "";
 }
 
 }  // namespace ebus

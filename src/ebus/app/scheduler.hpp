@@ -9,16 +9,13 @@
 #include <chrono>
 #include <ebus/config.hpp>
 #include <ebus/detail/protocol_limits.hpp>
-#include <ebus/metrics.hpp>
 #include <ebus/sequence.hpp>
+#include <ebus/static_vector.hpp>
 #include <ebus/status.hpp>
-#include <memory>
 #include <optional>
 
 #include "core/handler.hpp"
 #include "platform/mutex.hpp"
-#include "platform/queue.hpp"
-#include "utils/static_vector.hpp"
 
 namespace ebus::detail {
 
@@ -36,8 +33,8 @@ class Scheduler {
  public:
   // Public Types & Constants
   using TimePoint = Clock::time_point;
-  using Duration = Clock::duration; // Duration type for internal use
-  using EventSink = platform::Delegate<void(OrchestrationEvent&&)>;
+  using Duration = Clock::duration;  // Duration type for internal use
+  using EventSink = Delegate<void(OrchestrationEvent&&)>;
 
   // Lifecycle
   explicit Scheduler(Handler* handler);
@@ -55,8 +52,10 @@ class Scheduler {
   void setFsmTimeout(uint32_t timeout_ms);
   void setTotalTimeout(uint32_t timeout_ms);
 
-  void setReactiveMasterSlaveCallback(ReactiveMasterSlaveCallback callback); // Public API uses std::function
-  void setProtocolCallback(ProtocolCallback callback); // Public API uses std::function
+  void setReactiveMasterSlaveCallback(
+      ReactiveCallback callback);  // Public API uses std::function
+  void setProtocolCallback(
+      ProtocolCallback callback);  // Public API uses std::function
 
   // Working Methods
   void attachHandlerCallbacks();
@@ -154,7 +153,7 @@ class Scheduler {
       ebus::RuntimeConfig{}.scheduler.total_timeout_ms);
 
   // Forwarded callbacks
-  ReactiveMasterSlaveCallback extern_reactive_callback_ = nullptr;
+  ReactiveCallback extern_reactive_callback_ = nullptr;
   ProtocolCallback extern_protocol_callback_ = nullptr;
 
   // Private Helper Methods

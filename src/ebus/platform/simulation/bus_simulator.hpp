@@ -10,6 +10,7 @@
 #include <atomic>
 #include <cstdint>
 #include <cstring>
+#include <ebus/detail/circular_buffer.hpp>
 #include <ebus/sequence.hpp>
 #include <ebus/types.hpp>
 #include <ebus/virtual_bus.hpp>
@@ -18,7 +19,6 @@
 
 #include "platform/mutex.hpp"
 #include "platform/queue.hpp"
-#include "utils/circular_buffer.hpp"
 
 // Forward declarations for types used in private members
 namespace ebus::detail::platform {

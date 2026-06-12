@@ -4,8 +4,8 @@
  */
 
 #include <catch2/catch_all.hpp>
+#include <ebus/detail/circular_buffer.hpp>
 #include <vector>
-#include "utils/circular_buffer.hpp"
 
 using namespace ebus::detail;
 
@@ -24,11 +24,11 @@ TEST_CASE("CircularBuffer: Behavior", "[utils][circularbuffer]") {
     buffer.push_back(1);
     buffer.push_back(2);
     buffer.push_back(3);
-    bool overwritten = buffer.push_back(4); // Should overwrite 1
+    bool overwritten = buffer.push_back(4);  // Should overwrite 1
 
     REQUIRE(overwritten == true);
     REQUIRE(buffer.size() == 3);
-    
+
     // Chronological order check
     REQUIRE(buffer[0] == 2);
     REQUIRE(buffer[1] == 3);
@@ -39,7 +39,7 @@ TEST_CASE("CircularBuffer: Behavior", "[utils][circularbuffer]") {
     buffer.push_back(10);
     buffer.push_back(20);
     buffer.push_back(30);
-    buffer.push_back(40); // buffer is now {20, 30, 40}
+    buffer.push_back(40);  // buffer is now {20, 30, 40}
 
     std::vector<int> result;
     buffer.forEach([&](int val) { result.push_back(val); });

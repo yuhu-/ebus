@@ -16,7 +16,6 @@
 
 #include "platform/service_thread.hpp"
 #include "platform/simulation/bus_simulation.hpp"
-#include "platform/simulation/bus_simulator.hpp"
 #include "platform/simulation/virtual_line.hpp"
 #include "platform/system.hpp"
 
@@ -25,7 +24,8 @@ namespace ebus::detail {
 BusSimulator::BusSimulator(platform::BusSimulation& bus)
     : bus_(bus), outbound_queue_(16) {
   bus_.addReadListener(
-      platform::Delegate<void(const uint8_t&)>::bind<BusSimulator, &BusSimulator::onRead>(this));
+      Delegate<void(const uint8_t&)>::bind<BusSimulator, &BusSimulator::onRead>(
+          this));
   worker_ = std::make_unique<platform::ServiceThread>(
       "ebus_sim_worker", [this] { processResponses(); },
       OrchestrationLimits::default_stack_size,
@@ -149,7 +149,9 @@ void BusSimulator::processResponses() {
     if (item.wait_for_syn) {
       platform::UniqueLock<platform::Mutex> lock(mutex_);
       syn_received_ = false;
-      syn_cv_.wait(lock, [this] { return syn_received_ || outbound_queue_.isShutdown(); });
+      syn_cv_.wait(lock, [this] {
+        return syn_received_ || outbound_queue_.isShutdown();
+      });
       if (outbound_queue_.isShutdown()) return;
     }
 

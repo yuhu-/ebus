@@ -38,11 +38,9 @@ class DeviceManager {
 
   // Working Methods
   void update(ByteView master_view, ByteView slave_view);
-  void vendorScanCommands(
-      const std::function<void(const Sequence&)>& callback) const;
-  void createScanCommands(
-      const std::vector<std::string>& addresses,
-      const std::function<void(const Sequence&)>& callback) const;
+  void vendorScanCommands(Delegate<void(const Sequence&)> callback) const;
+  void createScanCommands(const std::vector<std::string>& addresses,
+                          Delegate<void(const Sequence&)> callback) const;
 
   // Status/Telemetry
   void fetchDeviceInfo(

@@ -12,13 +12,11 @@
 #include <ebus/config.hpp>
 #include <ebus/detail/protocol_limits.hpp>
 #include <ebus/status.hpp>
-#include <functional>
 #include <memory>
 
 #include "core/bus_events.hpp"
 #include "platform/bus_base.hpp"
 #include "platform/mutex.hpp"
-#include "platform/queue.hpp"
 #include "platform/service_thread.hpp"
 
 namespace ebus::detail {

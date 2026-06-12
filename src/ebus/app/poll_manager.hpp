@@ -9,14 +9,12 @@
 
 #include <chrono>
 #include <cstdint>
-#include <ebus/callbacks.hpp>
-#include <ebus/metrics.hpp>
+#include <ebus/detail/delegate.hpp>
 #include <ebus/sequence.hpp>
+#include <ebus/static_vector.hpp>
 #include <ebus/status.hpp>
 
-#include "platform/delegate.hpp"
 #include "platform/mutex.hpp"
-#include "utils/static_vector.hpp"
 
 namespace ebus::detail {
 
@@ -60,7 +58,7 @@ class PollManager {
 
   // Sets a predicate to check if the system is too busy to process polls.
   // Prevents unnecessary scheduling attempts when the Scheduler is full.
-  void setBusyPredicate(platform::Delegate<bool()> pred);
+  void setBusyPredicate(Delegate<bool()> pred);
 
   // Working Methods
   // Register a new recurring command. Returns a unique ID.
@@ -68,10 +66,12 @@ class PollManager {
                        uint32_t interval_ms);
   // Remove a recurring command by ID.
   void removePollItem(uint32_t id);
+
+  using PollVisitor = Delegate<void(const Item&)>;
+
   // Processes commands that are currently due and updates their internal
   // timers. Using a callback avoids heap allocations from returning a vector.
-  void processDueItems(const std::function<void(const Item&)>& callback,
-                       bool* activity);
+  void processDueItems(PollVisitor callback, bool* activity);
 
   /**
    * @brief Deserializes and adds poll items from a JSON array.
@@ -93,7 +93,7 @@ class PollManager {
   mutable platform::Mutex mutex_;
   StaticVector<Item, PollLimits::max_items> items_;
   uint8_t own_address_ = 0xff;
-  platform::Delegate<bool()> is_busy_;
+  Delegate<bool()> is_busy_;
   size_t max_item_count_ = 0;
   uint32_t next_poll_id_;
 };

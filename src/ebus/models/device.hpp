@@ -6,6 +6,7 @@
 #pragma once
 
 #include <cstdint>
+#include <ebus/detail/delegate.hpp>
 #include <ebus/device.hpp>
 #include <ebus/sequence.hpp>
 #include <functional>
@@ -27,8 +28,7 @@ class Device {
 
   // Working Methods
   void update(uint8_t slave_addr, ByteView master_view, ByteView slave_view);
-  void createVendorScanCommands(
-      const std::function<void(const Sequence&)>& callback) const;
+  void createVendorScanCommands(Delegate<void(const Sequence&)> callback) const;
 
   // Status/Telemetry
   uint8_t getSlave() const;

@@ -53,8 +53,9 @@ TEST_CASE("Bus: Basic Communication", "[platform][bus]") {
   };
   BusTestCallbacks callbacks{queue, mutex};
   bus.addBusEventListener(
-      platform::Delegate<void(const BusEvent&)>::bind<
-          BusTestCallbacks, &BusTestCallbacks::onBusEvent>(&callbacks));
+      Delegate<void(const BusEvent&)>::bind<BusTestCallbacks,
+                                            &BusTestCallbacks::onBusEvent>(
+          &callbacks));
 
   bus.start();
   force_request(req, 0x03);
@@ -110,8 +111,9 @@ TEST_CASE("Bus: SYN Timing", "[platform][bus]") {
   };
   BusTestCallbacks callbacks{queue, mutex};
   bus.addBusEventListener(
-      platform::Delegate<void(const BusEvent&)>::bind<
-          BusTestCallbacks, &BusTestCallbacks::onBusEvent>(&callbacks));
+      Delegate<void(const BusEvent&)>::bind<BusTestCallbacks,
+                                            &BusTestCallbacks::onBusEvent>(
+          &callbacks));
 
   auto start = ebus::Clock::now();
   bus.start();
@@ -173,8 +175,9 @@ TEST_CASE("Bus: Raw Reception (Broadcast Simulation)", "[platform][bus]") {
   };
   BusTestCallbacks callbacks{queue, mutex};
   bus.addBusEventListener(
-      platform::Delegate<void(const BusEvent&)>::bind<
-          BusTestCallbacks, &BusTestCallbacks::onBusEvent>(&callbacks));
+      Delegate<void(const BusEvent&)>::bind<BusTestCallbacks,
+                                            &BusTestCallbacks::onBusEvent>(
+          &callbacks));
 
   bus.start();
 

@@ -143,8 +143,9 @@ class TestReactor {
         busHandler_(busHandler),
         manager_(manager),
         scheduler_(scheduler) {
-    bus_.addBusEventListener(platform::Delegate<void(const BusEvent&)>::bind<
-                             TestReactor, &TestReactor::onBusEvent>(this));
+    bus_.addBusEventListener(
+        Delegate<void(const BusEvent&)>::bind<TestReactor,
+                                              &TestReactor::onBusEvent>(this));
   }
 
   void onBusEvent(const BusEvent& ev) {

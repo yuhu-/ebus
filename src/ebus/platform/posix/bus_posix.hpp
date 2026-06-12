@@ -7,8 +7,6 @@
 
 #if defined(POSIX) && !EBUS_SIMULATION
 #include <fcntl.h>
-#include <poll.h>
-#include <sys/ioctl.h>
 #include <termios.h>
 #include <unistd.h>
 
@@ -16,9 +14,7 @@
 #include <chrono>
 #include <cstdint>
 #include <cstring>
-#include <ebus/callbacks.hpp>
 #include <ebus/config.hpp>
-#include <ebus/metrics.hpp>
 #include <ebus/status.hpp>
 #include <ebus/types.hpp>
 #include <functional>
@@ -27,7 +23,6 @@
 #include "core/bus_events.hpp"
 #include "platform/bus_base.hpp"
 #include "platform/mutex.hpp"
-#include "platform/queue.hpp"
 #include "platform/service_thread.hpp"
 
 namespace ebus::detail {

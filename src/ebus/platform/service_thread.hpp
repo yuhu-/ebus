@@ -6,8 +6,8 @@
 #pragma once
 
 #include <cstdint>
+#include <ebus/detail/delegate.hpp>
 #include <ebus/detail/protocol_limits.hpp>
-#include <functional>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -39,7 +39,7 @@ class ServiceThread {
   };
 
   // Lifecycle
-  ServiceThread(std::string name, std::function<void()> func,
+  ServiceThread(std::string name, Delegate<void()> func,
                 uint32_t stack_size = OrchestrationLimits::default_stack_size,
                 uint8_t priority = OrchestrationLimits::default_priority,
                 int core = -1);
@@ -105,7 +105,7 @@ class ServiceThread {
 
  private:
   std::string name_;
-  std::function<void()> func_;
+  Delegate<void()> func_;
   uint32_t stack_size_;
   uint8_t priority_;
   int core_;
@@ -118,8 +118,7 @@ class ServiceThread {
 #endif
 };
 
-inline ServiceThread::ServiceThread(std::string name,
-                                    std::function<void()> func,
+inline ServiceThread::ServiceThread(std::string name, Delegate<void()> func,
                                     uint32_t stack_size, uint8_t priority,
                                     int core)
     : name_(std::move(name)),

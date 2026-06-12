@@ -6,13 +6,12 @@
 #pragma once
 
 #include <cstdint>
+#include <ebus/detail/delegate.hpp>
 #include <ebus/detail/protocol_limits.hpp>
-#include <functional>
+#include <ebus/static_vector.hpp>
 
 #include "core/bus_events.hpp"
-#include "platform/delegate.hpp"
 #include "platform/mutex.hpp"
-#include "utils/static_vector.hpp"
 
 namespace ebus::detail::platform {
 
@@ -33,22 +32,22 @@ class BusBase {
 
   // Working Methods
   void addReadListener(ReadListener listener) {
-    platform::LockGuard<platform::Mutex> lock(listeners_mutex_);
+    LockGuard<Mutex> lock(listeners_mutex_);
     read_listeners_.push_back(std::move(listener));
   }
 
   void addWriteListener(WriteListener listener) {
-    platform::LockGuard<platform::Mutex> lock(listeners_mutex_);
+    LockGuard<Mutex> lock(listeners_mutex_);
     write_listeners_.push_back(std::move(listener));
   }
 
   void addSynListener(SynListener listener) {
-    platform::LockGuard<platform::Mutex> lock(listeners_mutex_);
+    LockGuard<Mutex> lock(listeners_mutex_);
     syn_listeners_.push_back(std::move(listener));
   }
 
   void addBusEventListener(BusEventListener listener) {
-    platform::LockGuard<platform::Mutex> lock(listeners_mutex_);
+    LockGuard<Mutex> lock(listeners_mutex_);
     bus_event_listeners_.push_back(std::move(listener));
   }
 
