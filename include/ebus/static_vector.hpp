@@ -5,6 +5,7 @@
 
 #pragma once
 
+#include <algorithm>
 #include <cstddef>
 #include <iterator>
 #include <new>
@@ -30,26 +31,33 @@ class StaticVector {
   using const_iterator = const T*;
 
   // Lifecycle
-  StaticVector() = default;
+  // Explicitly initialize storage_ to prevent uninitialized member warnings.
+  // Elements are constructed in-place later, so zero-initialization of raw
+  // storage is sufficient.
+  StaticVector() : storage_{}, size_(0) {}
   ~StaticVector() { clear(); }
 
   // Special Members & Operators
-  StaticVector(const StaticVector& other) {
+  StaticVector(const StaticVector& other) : storage_{}, size_(0) {
     for (const auto& item : other) {
       push_back(item);
     }
   }
 
+  // cppcheck-suppress operatorEqVarError
   StaticVector& operator=(const StaticVector& other) {
     if (this != &other) {
+      // Clear existing elements before copying new ones
       clear();
       for (const auto& item : other) push_back(item);
     }
     return *this;
   }
 
+  // cppcheck-suppress operatorEqVarError
   StaticVector& operator=(StaticVector&& other) noexcept {
     if (this != &other) {
+      // Clear existing elements before moving new ones
       clear();
       for (std::size_t i = 0; i < other.size_; ++i) {
         emplace_back(std::move(other[i]));
@@ -59,7 +67,8 @@ class StaticVector {
     return *this;
   }
 
-  StaticVector(StaticVector&& other) noexcept {
+  StaticVector(StaticVector&& other) noexcept : storage_{}, size_(0) {
+    // Initialize size_ and storage_ before moving elements
     for (std::size_t i = 0; i < other.size_; ++i) {
       emplace_back(std::move(other[i]));
     }
@@ -132,7 +141,7 @@ class StaticVector {
 
   // Status/Telemetry
   std::size_t size() const noexcept { return size_; }
-  constexpr std::size_t capacity() const noexcept { return Cap; }
+  static constexpr std::size_t capacity() noexcept { return Cap; }
   bool empty() const noexcept { return size_ == 0; }
   bool full() const noexcept { return size_ == Cap; }
 
@@ -146,8 +155,8 @@ class StaticVector {
   struct alignas(T) ElementStorage {
     unsigned char data[sizeof(T)];
   };
-  ElementStorage storage_[Cap];
 
+  ElementStorage storage_[Cap];
   std::size_t size_ = 0;
 };
 

@@ -72,7 +72,7 @@ class CircularBuffer {
     platform::LockGuard<platform::Mutex> lock(mutex_);
     return size_;
   }
-  constexpr size_t capacity() const { return Cap; }
+  static constexpr size_t capacity() noexcept { return Cap; }
   bool empty() const {
     platform::LockGuard<platform::Mutex> lock(mutex_);
     return size_ == 0;

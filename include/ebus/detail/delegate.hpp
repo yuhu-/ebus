@@ -33,7 +33,7 @@ class Delegate<R(Args...)> {
   static constexpr std::size_t BufferSize = 24;
 
   template <typename F>
-  static R IRAM_ATTR invoke_stub(const char* buf, Args... args) {
+  static R invoke_stub(const char* buf, Args... args) {
     return (*reinterpret_cast<const F*>(buf))(std::forward<Args>(args)...);
   }
 
@@ -78,6 +78,7 @@ class Delegate<R(Args...)> {
             typename = std::enable_if_t<
                 !std::is_same_v<std::decay_t<Functor>, Delegate> &&
                 std::is_invocable_r_v<R, Functor, Args...>>>
+  // cppcheck-suppress noExplicitConstructor
   Delegate(Functor&& f) {
     using F = std::decay_t<Functor>;
     static_assert(sizeof(F) <= BufferSize,

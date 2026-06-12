@@ -212,6 +212,7 @@ struct ByteView {
   constexpr ByteView(const uint8_t* data, size_t size)
       : data_(data), size_(size) {}
 
+  // cppcheck-suppress noExplicitConstructor
   ByteView(const std::vector<uint8_t>& v) : data_(v.data()), size_(v.size()) {}
 
   constexpr const uint8_t* begin() const noexcept { return data_; }

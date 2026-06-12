@@ -162,6 +162,7 @@ char* formatFloat(float value, int precision, char* buffer, size_t buffer_size,
   }
 #endif
 
+  // cppcheck-suppress knownConditionTrueFalse
   if (!success) {
     // Fallback for ESP32 or if to_chars failed: use snprintf.
     // Use literals directly to avoid "format-nonliteral" warnings.
