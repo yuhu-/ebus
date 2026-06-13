@@ -103,9 +103,8 @@ class BusBase {
   size_t copyToCache(
       const StaticVector<ListenerType, BusLimits::max_listeners>& src,
       ListenerType* dst) {
-    size_t n = 0;
-    for (const auto& l : src) dst[n++] = l;
-    return n;
+    std::copy(src.begin(), src.end(), dst);
+    return src.size();
   }
 
  private:

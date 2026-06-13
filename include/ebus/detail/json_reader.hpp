@@ -19,17 +19,17 @@ namespace ebus::detail {
 class JsonReader {
  public:
   enum class Token {
-    End,
-    ObjectStart,
-    ObjectEnd,
-    ArrayStart,
-    ArrayEnd,
-    Key,
-    String,
-    Number,
-    Boolean,
-    Null,
-    Error
+    end,
+    object_start,
+    object_end,
+    array_start,
+    array_end,
+    key,
+    string,
+    number,
+    boolean,
+    null,
+    error
   };
 
   explicit JsonReader(std::string_view json) : json_(json) { skipWhitespace(); }
@@ -73,7 +73,7 @@ class JsonReader {
     while (true) {
       size_t element_start = pos_;
       Token t = next();
-      if (t == Token::ArrayEnd || t == Token::End || t == Token::Error) {
+      if (t == Token::array_end || t == Token::end || t == Token::error) {
         return false;
       }
 
@@ -97,10 +97,10 @@ class JsonReader {
   void forEachField(Func func) {
     while (true) {
       Token t = next();
-      if (t == Token::ObjectEnd || t == Token::End || t == Token::Error) {
+      if (t == Token::object_end || t == Token::end || t == Token::error) {
         break;
       }
-      if (t == Token::Key) {
+      if (t == Token::key) {
         if (!func(value(), *this)) skipValue();
       }
     }

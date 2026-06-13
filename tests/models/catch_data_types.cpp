@@ -433,15 +433,18 @@ TEST_CASE("Datatypes: Fixed-point int64_t conversions", "[models][datatypes]") {
 
   // Test encoding fixed-point back to bytes
   // Encode 12.5 (as fixed-point int64_t) to DATA2B
-  Sequence encoded_fixed = ebus::encode(
-      DataType::data2b, static_cast<int64_t>(12.5f * FIXED_POINT_SCALE));
+  Sequence encoded_fixed =
+      ebus::encode(DataType::data2b,
+                   static_cast<int64_t>(
+                       12.5f * detail::FixedPointLimits::fixed_point_scale));
   REQUIRE(encoded_fixed.size() == 2);
   REQUIRE(encoded_fixed[0] == 0x80);
   REQUIRE(encoded_fixed[1] == 0x0C);
 
   // Encode 1.5 (as fixed-point int64_t) to DATA1C
   Sequence encoded_fixed_1c = ebus::encode(
-      DataType::data1c, static_cast<int64_t>(1.5f * FIXED_POINT_SCALE));
+      DataType::data1c,
+      static_cast<int64_t>(1.5f * detail::FixedPointLimits::fixed_point_scale));
   REQUIRE(encoded_fixed_1c.size() == 1);
   REQUIRE(encoded_fixed_1c[0] == 0x03);
 

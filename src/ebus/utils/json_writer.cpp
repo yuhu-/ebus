@@ -61,7 +61,7 @@ void writeEscapedJson(std::string_view s, const JsonChunkVisitor& visitor) {
 
 void appendHexFieldToWriter(JsonWriter& writer, ByteView data) {
   static constexpr char hex_chars[] = "0123456789abcdef";
-  char buf[64];
+  char buf[JsonLimits::formatting_buffer_size];
   size_t buf_pos = 0;
 
   for (uint8_t b : data) {
@@ -79,7 +79,7 @@ void appendHexFieldToWriter(JsonWriter& writer, ByteView data) {
 
 void JsonWriter::writeTimestampField(std::string_view key, uint64_t ms) {
   appendKey(key);
-  char iso_buffer[26];
+  char iso_buffer[FormattingLimits::iso8601_buffer_size];
   ebus::formatIso8601Fast(ms, iso_buffer);
   write("\"");
   write(std::string_view(iso_buffer));

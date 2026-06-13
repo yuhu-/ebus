@@ -22,7 +22,7 @@
 namespace ebus::detail {
 
 BusSimulator::BusSimulator(platform::BusSimulation& bus)
-    : bus_(bus), outbound_queue_(16) {
+    : bus_(bus), outbound_queue_(SimulationLimits::outbound_queue_capacity) {
   bus_.addReadListener(
       Delegate<void(const uint8_t&)>::bind<BusSimulator, &BusSimulator::onRead>(
           this));
@@ -97,10 +97,10 @@ void BusSimulator::injectMasterSlaveMessage(uint8_t source,
                                             ebus::ByteView slave_payload) {
   ebus::Sequence full;
   full.append(ebus::frameMaster(source, master_payload));
-  full.pushBack(ebus::Symbols::ack, false);
+  full.push_back(ebus::Symbols::ack, false);
   full.append(ebus::frameSlave(slave_payload));
-  full.pushBack(ebus::Symbols::ack, false);
-  full.pushBack(ebus::Symbols::syn, false);
+  full.push_back(ebus::Symbols::ack, false);
+  full.push_back(ebus::Symbols::syn, false);
 
   ResponseItem item;
   item.len = static_cast<uint8_t>(std::min(full.size(), sizeof(item.data)));

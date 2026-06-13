@@ -127,7 +127,8 @@ void BusSimulation::writeByte(const uint8_t byte) {
   }
   // 1. Simulate the time it takes for the UART to shift the bits out
   // 10 bits (Start + 8 Data + Stop) at 2400 baud
-  uint32_t total_delay_us = static_cast<uint32_t>(10 * Physical::bit_time_us);
+  uint32_t total_delay_us =
+      static_cast<uint32_t>(Physical::bits_per_byte * Physical::bit_time_us);
 
 #if defined(ESP_PLATFORM)
   // Optimization: Split the delay into yielding milliseconds and a short
@@ -173,7 +174,7 @@ ebus::BusStatus BusSimulation::getStatus() const {
 }
 
 void BusSimulation::simulationReaderLoop() {
-  uint8_t byte;
+  uint8_t byte = 0;
   while (running_.load()) {
     if (VirtualLine::get().read(
             this, byte, BusLimits::platform::Posix::virtual_read_timeout_ms)) {

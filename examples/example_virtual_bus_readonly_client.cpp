@@ -86,7 +86,7 @@ int main() {
   deviceB.enqueueAt(10, ebus::toVector("feb5160301"), ebus::Clock::now() + 3s);
 
   // Send inquiry of existence after 8 seconds.
-  deviceB.enqueueAt(20, ebus::Sequence::InquiryOfExistence(),
+  deviceB.enqueueAt(20, ebus::Sequence::inquiryOfExistence(),
                     ebus::Clock::now() + 8s);
 
   // --- 5. Logic for Device A: Decoding of a received message ---

@@ -14,12 +14,6 @@
 
 namespace ebus::detail {
 
-// Protocol header sizes excluding data and CRC
-inline constexpr size_t kMasterHeaderSize = 5;  // QQ ZZ PB SB NN
-inline constexpr size_t kSlaveHeaderSize = 1;   // NN
-inline constexpr size_t kCrcSize = 1;
-inline constexpr size_t kAckSize = 1;
-
 /**
  * Based on the eBUS specification, the Telegram class can parse, create, and
  * evaluate sequences of bytes that represent Master-Slave, Master-Master, and
@@ -53,6 +47,21 @@ inline constexpr size_t kAckSize = 1;
 template <size_t kInlineCapacity = SequenceLimits::default_capacity>
 class TelegramImpl {
  public:
+  // --- Public Types & Constants ---
+  static constexpr size_t master_header_size = 5;  // QQ ZZ PB SB NN
+  static constexpr size_t slave_header_size = 1;   // NN
+
+  static constexpr size_t crc_size = 1;
+  static constexpr size_t ack_size = 1;
+
+  static constexpr size_t master_source_idx = 0;
+  static constexpr size_t master_target_idx = 1;
+  static constexpr size_t master_pb_idx = 2;
+  static constexpr size_t master_sb_idx = 3;
+  static constexpr size_t master_nn_idx = 4;
+
+  static constexpr size_t slave_nn_idx = 0;
+
   TelegramImpl() = default;
 
   template <size_t C>
@@ -94,8 +103,8 @@ class TelegramImpl {
 
   void createMaster(uint8_t source_address, ByteView data) {
     SequenceImpl<kInlineCapacity> sequence;
-    sequence.pushBack(source_address, false);
-    for (uint8_t b : data) sequence.pushBack(b, false);
+    sequence.push_back(source_address, false);
+    for (uint8_t b : data) sequence.push_back(b, false);
     createMaster(sequence);
   }
 
@@ -103,47 +112,50 @@ class TelegramImpl {
   void createMaster(SequenceImpl<C>& sequence) {
     master_state_ = SequenceState::seq_ok;
     sequence.reduce();
-    if (sequence.size() < kMasterHeaderSize) {
+    if (sequence.size() < master_header_size) {
       master_state_ = SequenceState::err_seq_too_short;
       return;
     }
-    if (!isMaster(sequence[0])) {
+    if (!isMaster(sequence[master_source_idx])) {
       master_state_ = SequenceState::err_source_address;
       return;
     }
-    if (!isTarget(sequence[1])) {
+    if (!isTarget(sequence[master_target_idx])) {
       master_state_ = SequenceState::err_target_address;
       return;
     }
-    if (uint8_t(sequence[4]) > SequenceLimits::max_data_bytes) {
+    if (uint8_t(sequence[master_nn_idx]) > SequenceLimits::max_data_bytes) {
       master_state_ = SequenceState::err_data_byte;
       return;
     }
 
     /* Spec 5.4 & 5.5: Primary and Secondary commands cannot be 0xAA or 0xA9 */
-    if (sequence[2] == Symbols::syn || sequence[2] == Symbols::ext ||
-        sequence[3] == Symbols::syn || sequence[3] == Symbols::ext) {
+    if (sequence[master_pb_idx] == Symbols::syn ||
+        sequence[master_pb_idx] == Symbols::ext ||
+        sequence[master_sb_idx] == Symbols::syn ||
+        sequence[master_sb_idx] == Symbols::ext) {
       master_state_ = SequenceState::err_data_byte;
       return;
     }
 
     if (sequence.size() <
-        static_cast<size_t>(kMasterHeaderSize + uint8_t(sequence[4]))) {
+        static_cast<size_t>(master_header_size +
+                            uint8_t(sequence[master_nn_idx]))) {
       master_state_ = SequenceState::err_seq_too_short;
       return;
     }
 
-    telegram_type_ = typeOf(sequence[1]);
-    master_nn_ = static_cast<size_t>(uint8_t(sequence[4]));
+    telegram_type_ = typeOf(sequence[master_target_idx]);
+    master_nn_ = static_cast<size_t>(uint8_t(sequence[master_nn_idx]));
 
     if (sequence.size() ==
-        static_cast<size_t>(kMasterHeaderSize + master_nn_)) {
+        static_cast<size_t>(master_header_size + master_nn_)) {
       master_.assignSlice(sequence, 0);
       master_crc_ = sequence.crc();
-    } else if (sequence.size() ==
-               static_cast<size_t>(kMasterHeaderSize + master_nn_ + kCrcSize)) {
-      master_.assignSlice(sequence, 0, kMasterHeaderSize + master_nn_);
-      master_crc_ = sequence[kMasterHeaderSize + master_nn_];
+    } else if (sequence.size() == static_cast<size_t>(master_header_size +
+                                                      master_nn_ + crc_size)) {
+      master_.assignSlice(sequence, 0, master_header_size + master_nn_);
+      master_crc_ = sequence[master_header_size + master_nn_];
       if (master_.crc() != master_crc_)
         master_state_ = SequenceState::err_crc_invalid;
     } else {
@@ -154,7 +166,7 @@ class TelegramImpl {
 
   void createSlave(ByteView data) {
     SequenceImpl<kInlineCapacity> sequence;
-    for (uint8_t b : data) sequence.pushBack(b, false);
+    for (uint8_t b : data) sequence.push_back(b, false);
     createSlave(sequence);
   }
 
@@ -166,17 +178,19 @@ class TelegramImpl {
       slave_state_ = SequenceState::err_seq_too_short;
       return;
     }
-    if (uint8_t(sequence[0]) > SequenceLimits::max_data_bytes) {
+    if (uint8_t(sequence[slave_nn_idx]) > SequenceLimits::max_data_bytes) {
       slave_state_ = SequenceState::err_data_byte;
       return;
     }
 
-    if (sequence.size() < static_cast<size_t>(1 + uint8_t(sequence[0]))) {
+    if (sequence.size() <
+        static_cast<size_t>(slave_header_size +
+                            uint8_t(sequence[slave_nn_idx]))) {
       slave_state_ = SequenceState::err_seq_too_short;
       return;
     }
 
-    slave_nn_ = static_cast<size_t>(uint8_t(sequence[0]));
+    slave_nn_ = static_cast<size_t>(uint8_t(sequence[slave_nn_idx]));
     if (sequence.size() == (1 + slave_nn_)) {
       slave_.assignSlice(sequence, 0);
       slave_crc_ = sequence.crc();
@@ -208,15 +222,16 @@ class TelegramImpl {
   // returns the master sequence [QQ ZZ PB SB NN DBx] without CRC byte
   const SequenceImpl<kInlineCapacity>& getMaster() const { return master_; }
 
-  uint8_t getSourceAddress() const { return master_[0]; }
-  uint8_t getTargetAddress() const { return master_[1]; }
+  uint8_t getSourceAddress() const { return master_[master_source_idx]; }
+  uint8_t getTargetAddress() const { return master_[master_target_idx]; }
 
-  uint8_t getPrimaryCommand() const { return master_[2]; }
-  uint8_t getSecondaryCommand() const { return master_[3]; }
+  uint8_t getPrimaryCommand() const { return master_[master_pb_idx]; }
+  uint8_t getSecondaryCommand() const { return master_[master_sb_idx]; }
 
-  uint8_t getMasterNumberBytes() const { return master_[4]; }
+  uint8_t getMasterNumberBytes() const { return master_[master_nn_idx]; }
   ByteView getMasterDataBytes() const {
-    return master_.range(5, master_.size() - 5);
+    return master_.range(master_header_size,
+                         master_.size() - master_header_size);
   }
 
   uint8_t getMasterCRC() const { return master_crc_; }
@@ -228,9 +243,9 @@ class TelegramImpl {
   // returns the slave sequence [NN DBx] without CRC byte
   const SequenceImpl<kInlineCapacity>& getSlave() const { return slave_; }
 
-  uint8_t getSlaveNumberBytes() const { return slave_[0]; }
+  uint8_t getSlaveNumberBytes() const { return slave_[slave_nn_idx]; }
   ByteView getSlaveDataBytes() const {
-    return slave_.range(1, slave_.size() - 1);
+    return slave_.range(slave_header_size, slave_.size() - slave_header_size);
   }
 
   uint8_t getSlaveCRC() const { return slave_crc_; }
@@ -250,17 +265,17 @@ class TelegramImpl {
   }
 
   void toJson(detail::JsonWriter& writer) const {
-    detail::JsonWriter::Scope scope(writer, detail::JsonWriter::Scope::Object);
+    detail::JsonWriter::Scope scope(writer, detail::JsonWriter::Scope::object);
     writer.writeField("type", ebus::toString(telegram_type_));
     writer.writeField("valid", isValid());
 
     {
       auto masterScope = writer.objectScope("master");
-      writer.writeHexField("source", ByteView(&master_[0], 1));
-      writer.writeHexField("target", ByteView(&master_[1], 1));
-      writer.writeHexField("pb", ByteView(&master_[2], 1));
-      writer.writeHexField("sb", ByteView(&master_[3], 1));
-      writer.writeField("nn", static_cast<uint32_t>(master_[4]));
+      writer.writeHexField("source", ByteView(&master_[master_source_idx], 1));
+      writer.writeHexField("target", ByteView(&master_[master_target_idx], 1));
+      writer.writeHexField("pb", ByteView(&master_[master_pb_idx], 1));
+      writer.writeHexField("sb", ByteView(&master_[master_sb_idx], 1));
+      writer.writeField("nn", static_cast<uint32_t>(master_[master_nn_idx]));
       writer.writeHexField("data", getMasterDataBytes());
       writer.writeHexField("crc", ByteView(&master_crc_, 1));
       writer.writeHexField("ack", ByteView(&master_ack_, 1));
@@ -269,7 +284,7 @@ class TelegramImpl {
 
     if (telegram_type_ == TelegramType::master_slave) {
       auto slaveScope = writer.objectScope("slave");
-      writer.writeField("nn", static_cast<uint32_t>(slave_[0]));
+      writer.writeField("nn", static_cast<uint32_t>(slave_[slave_nn_idx]));
       writer.writeHexField("data", getSlaveDataBytes());
       writer.writeHexField("crc", ByteView(&slave_crc_, 1));
       writer.writeHexField("ack", ByteView(&slave_ack_, 1));
@@ -373,23 +388,27 @@ class TelegramImpl {
   static ebus::SequenceState checkMasterSequence(
       const SequenceImpl<C>& sequence, size_t offset = 0) {
     // sequence is too short
-    if (sequence.size() < offset + 5) return SequenceState::err_seq_too_short;
+    if (sequence.size() < offset + master_header_size)
+      return SequenceState::err_seq_too_short;
 
     // source address is invalid
-    if (!isMaster(sequence[offset + 0]))
+    if (!isMaster(sequence[offset + master_source_idx]))
       return SequenceState::err_source_address;
 
     // target address is invalid
-    if (!isTarget(sequence[offset + 1]))
+    if (!isTarget(sequence[offset + master_target_idx]))
       return SequenceState::err_target_address;
 
     // data byte is invalid
-    if (uint8_t(sequence[offset + 4]) > SequenceLimits::max_data_bytes)
+    if (uint8_t(sequence[offset + master_nn_idx]) >
+        SequenceLimits::max_data_bytes)
       return SequenceState::err_data_byte;
 
     // sequence is too short (incl. CRC)
     if (sequence.size() <
-        static_cast<size_t>(5 + uint8_t(sequence[offset + 4]) + 1))
+        static_cast<size_t>(master_header_size +
+                            uint8_t(sequence[offset + master_nn_idx]) +
+                            crc_size))
       return SequenceState::err_seq_too_short;
 
     return SequenceState::seq_ok;
@@ -399,15 +418,19 @@ class TelegramImpl {
   static ebus::SequenceState checkSlaveSequence(const SequenceImpl<C>& sequence,
                                                 size_t offset = 0) {
     // sequence is too short
-    if (sequence.size() < offset + 1) return SequenceState::err_seq_too_short;
+    if (sequence.size() < offset + slave_header_size)
+      return SequenceState::err_seq_too_short;
 
     // data byte is invalid
-    if (uint8_t(sequence[offset + 0]) > SequenceLimits::max_data_bytes)
+    if (uint8_t(sequence[offset + slave_nn_idx]) >
+        SequenceLimits::max_data_bytes)
       return SequenceState::err_data_byte;
 
     // sequence is too short (incl. CRC)
     if (sequence.size() <
-        static_cast<size_t>(offset + 1 + uint8_t(sequence[offset + 0]) + 1))
+        static_cast<size_t>(offset + slave_header_size +
+                            uint8_t(sequence[offset + slave_nn_idx]) +
+                            crc_size))
       return SequenceState::err_seq_too_short;
 
     return SequenceState::seq_ok;
@@ -435,7 +458,9 @@ class TelegramImpl {
       master_state_ = checkMasterSequence(sequence, offset);
       if (master_state_ != SequenceState::seq_ok) return false;
 
-      size_t len = 5 + static_cast<size_t>(sequence[offset + 4]) + 1;
+      size_t len = master_header_size +
+                   static_cast<size_t>(sequence[offset + master_nn_idx]) +
+                   crc_size;
       master_.assignSlice(sequence, offset, len);
       createMaster(master_);
       offset += len;
@@ -457,7 +482,9 @@ class TelegramImpl {
       slave_state_ = checkSlaveSequence(sequence, offset);
       if (slave_state_ != SequenceState::seq_ok) return false;
 
-      size_t len = 1 + static_cast<size_t>(sequence[offset + 0]) + 1;
+      size_t len = slave_header_size +
+                   static_cast<size_t>(sequence[offset + slave_nn_idx]) +
+                   crc_size;
       slave_.assignSlice(sequence, offset, len);
       createSlave(slave_);
       offset += len;

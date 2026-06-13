@@ -243,7 +243,7 @@ void BusPosix::ensureOpen() const {
 
 void BusPosix::readerThread() {
   while (running_.load()) {
-    uint8_t byte;
+    uint8_t byte = 0;
     ssize_t n = 0;
 
     n = ::read(fd_, &byte, 1);

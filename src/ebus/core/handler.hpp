@@ -44,7 +44,7 @@ class Handler {
   uint8_t getTargetAddress() const;
   void setBusRequestWonCallback(BusRequestWonCallback callback);
   void setBusRequestLostCallback(BusRequestLostCallback callback);
-  void setReactiveMasterSlaveCallback(HandlerReactiveCallback callback);
+  void setReactiveCallback(HandlerReactiveCallback callback);
   void setProtocolCallback(HandlerProtocolCallback callback);
 
   // Working Methods
@@ -117,7 +117,7 @@ class Handler {
   void releaseBus(uint8_t byte);
 
   using StateHandler = void (Handler::*)(uint8_t);
-  static inline constexpr StateHandler kStateHandlers[] = {
+  static inline constexpr StateHandler state_handlers[] = {
       &Handler::passiveReceiveMaster,
       &Handler::passiveReceiveMasterAcknowledge,
       &Handler::passiveReceiveSlave,
@@ -134,9 +134,9 @@ class Handler {
       &Handler::activeSendSlaveNegativeAcknowledge,
       &Handler::releaseBus};
 
-  static_assert(sizeof(kStateHandlers) / sizeof(kStateHandlers[0]) ==
+  static_assert(sizeof(state_handlers) / sizeof(state_handlers[0]) ==
                     FsmLimits::num_handler_states,
-                "kStateHandlers table size does not match NUM_HANDLER_STATES");
+                "state_handlers table size does not match NUM_HANDLER_STATES");
 
   HandlerState state_ = HandlerState::passive_receive_master;
 
@@ -153,8 +153,7 @@ class Handler {
   void callOnBusRequestWon();
   void callOnBusRequestLost();
 
-  void callOnReactiveMasterSlave(ByteView master_view,
-                                 Sequence& slave_response);
+  void callOnReactive(ByteView master_view, Sequence& slave_response);
 
   void callOnTelegram(MessageType message_type, TelegramType telegram_type,
                       ByteView master_view, ByteView slave_view);

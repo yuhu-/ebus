@@ -87,12 +87,12 @@ class Request {
   void second(uint8_t byte);
 
   using StateHandler = void (Request::*)(uint8_t);
-  static inline constexpr StateHandler kStateRequests[] = {
+  static inline constexpr StateHandler state_requests[] = {
       &Request::observe, &Request::first, &Request::retry, &Request::second};
 
-  static_assert(sizeof(kStateRequests) / sizeof(kStateRequests[0]) ==
+  static_assert(sizeof(state_requests) / sizeof(state_requests[0]) ==
                     FsmLimits::num_request_states,
-                "kStateRequests table size does not match NUM_REQUEST_STATES");
+                "state_requests table size does not match NUM_REQUEST_STATES");
 
   RequestState state_ = RequestState::observe;
   RequestResult result_ = RequestResult::observe_syn;

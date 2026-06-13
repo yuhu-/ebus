@@ -63,8 +63,10 @@ void BusHandler::processEvent(const BusEvent& bus_event) {
     platform::LockGuard<platform::Mutex> lock(mutex_);
     if (listeners_version_ != last_cache_version_) {
       listeners_cache_.clear();
-      for (const auto& item : listeners_)
-        listeners_cache_.push_back(item.second);
+      std::for_each(listeners_.begin(), listeners_.end(),
+                    [this](const auto& item) {
+                      listeners_cache_.push_back(item.second);
+                    });
       last_cache_version_ = listeners_version_;
     }
   }

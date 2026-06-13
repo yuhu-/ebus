@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <chrono>
 #include <ebus/detail/json_writer.hpp>
+#include <ebus/detail/protocol_limits.hpp>
 #include <ebus/status.hpp>
 #include <ebus/utils.hpp>
 
@@ -70,7 +71,9 @@ void BusMonitor::recordHandlerError(uint8_t address) {
 
   int min_idx = 0;
   bool found = false;
-  for (int i = 0; i < 3; ++i) {
+  for (int i = 0;
+       i < static_cast<int>(SystemMetricsLimits::top_error_addresses_count);
+       ++i) {
     if (top[i].address == address) {
       top[i].count++;
       top[i].last_seen_us = now_us;
@@ -258,9 +261,10 @@ void BusMonitor::fetchMetrics(
       // at least 10s (samples are in microseconds), treat high utilization
       // as sustained congestion immediately. Otherwise fall back to the
       // time-point based detection across successive calls.
-      constexpr uint64_t kTenSecondsUs = 10000000;
-      if (utilization > 70.0f) {
-        if (uptime_us >= kTenSecondsUs) {
+      constexpr uint64_t ten_seconds_us =
+          SystemMetricsLimits::bus_congestion_detection_time_us;
+      if (utilization > SystemMetricsLimits::bus_congestion_threshold_percent) {
+        if (uptime_us >= ten_seconds_us) {
           congestion_active_ = true;
         } else {
           if (congestion_start_point_ == Clock::time_point{}) {
@@ -269,7 +273,9 @@ void BusMonitor::fetchMetrics(
             auto duration = std::chrono::duration_cast<std::chrono::seconds>(
                                 now - congestion_start_point_)
                                 .count();
-            if (duration >= 10) {
+            if (duration >=
+                static_cast<long long>(
+                    SystemMetricsLimits::bus_congestion_detection_time_s)) {
               congestion_active_ = true;
             }
           }
@@ -282,7 +288,8 @@ void BusMonitor::fetchMetrics(
     bm.congestion = congestion_active_;
 
     // High Jitter Logic: If a SYN took > 10ms longer than expected
-    bm.high_jitter = bm.syn_postpone.max_us > 10000;
+    bm.high_jitter = bm.syn_postpone.max_us >
+                     SystemMetricsLimits::bus_high_jitter_threshold_us;
 
     // 4. Populate Device Part
     metrics::DeviceMetrics& dm = sm.devices;
@@ -557,15 +564,23 @@ void metrics::SystemMetrics::toJson(detail::JsonWriter& writer) const {
 
   // Quality Score: Protocol health * Arbitration success * Reactor integrity
   // We penalize the quality if the reactor loop has dropped events.
-  float drop_penalty = (controller.event_queue_dropped > 0) ? 0.7f : 1.0f;
-  float jitter_penalty = bus.high_jitter ? 0.8f : 1.0f;
+  float drop_penalty =
+      (controller.event_queue_dropped > 0)
+          ? detail::SystemMetricsLimits::quality_score_drop_penalty
+          : 1.0f;
+  float jitter_penalty =
+      bus.high_jitter
+          ? detail::SystemMetricsLimits::quality_score_jitter_penalty
+          : 1.0f;
   float postpone_penalty =
       (bus.syn_postponed_count.load(std::memory_order_relaxed) > m_total &&
        m_total > 0)
-          ? 0.9f
+          ? detail::SystemMetricsLimits::quality_score_postpone_penalty
           : 1.0f;
   float start_bit_error_penalty =
-      (bus.start_bit_errors.load(std::memory_order_relaxed) > 0) ? 0.9f : 1.0f;
+      (bus.start_bit_errors.load(std::memory_order_relaxed) > 0)
+          ? detail::SystemMetricsLimits::quality_score_start_bit_error_penalty
+          : 1.0f;
 
   float quality = (100.0f - e_rate) * (1.0f - (cont_rate / 100.0f)) *
                   drop_penalty * jitter_penalty * postpone_penalty *

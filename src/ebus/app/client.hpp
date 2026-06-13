@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <ebus/callbacks.hpp>
 #include <ebus/config.hpp>
+#include <ebus/detail/protocol_limits.hpp>
 #include <ebus/status.hpp>
 #include <ebus/types.hpp>
 #include <memory>
@@ -140,7 +141,7 @@ class EnhancedClient : public AbstractClient {
  private:
   // The Enhanced protocol accumulation buffer (max 2 bytes for escaped
   // sequences)
-  uint8_t inbound_buf_[2];
+  uint8_t inbound_buf_[detail::EnhancedProtocolLimits::max_sequence_len];
   size_t inbound_len_ = 0;
 
   void sendEnhancedResponse(enhanced::Response res, uint8_t val);

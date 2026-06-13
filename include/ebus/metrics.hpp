@@ -74,7 +74,9 @@ struct HandlerMetrics {
   uint8_t last_success_address = 0xff;
   uint64_t last_passive_reset_us = 0;
   uint64_t last_active_reset_us = 0;
-  std::array<ErrorAddressStats, 3> top_errors{};
+  std::array<ErrorAddressStats,
+             detail::SystemMetricsLimits::top_error_addresses_count>
+      top_errors{};
 
   // Explicit phase timings
   MetricValues sync;

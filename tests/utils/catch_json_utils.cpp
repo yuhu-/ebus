@@ -140,17 +140,17 @@ TEST_CASE("JSON Utils: Pull-Parser Extraction", "[utils][json]") {
   SECTION("Path-based extraction with get()") {
     ebus::detail::JsonReader reader(json);
     REQUIRE(reader.get("bus.window_us") ==
-            ebus::detail::JsonReader::Token::Number);
+            ebus::detail::JsonReader::Token::number);
     REQUIRE(reader.asNum<int>() == 4500);
 
     // Reset reader and search another path
     ebus::detail::JsonReader reader2(json);
     REQUIRE(reader2.get("bus.active") ==
-            ebus::detail::JsonReader::Token::Boolean);
+            ebus::detail::JsonReader::Token::boolean);
     REQUIRE(reader2.asBool() == true);
 
     ebus::detail::JsonReader reader3(json);
-    REQUIRE(reader3.get("meta") == ebus::detail::JsonReader::Token::String);
+    REQUIRE(reader3.get("meta") == ebus::detail::JsonReader::Token::string);
     REQUIRE(reader3.value() == "none");
   }
 
@@ -165,7 +165,7 @@ TEST_CASE("JSON Utils: Pull-Parser Extraction", "[utils][json]") {
 
     ebus::detail::JsonReader reader(array_json);
     REQUIRE(reader.get("data_points.0.value") ==
-            ebus::detail::JsonReader::Token::Number);
+            ebus::detail::JsonReader::Token::number);
     REQUIRE(reader.asNum<int>() == 100);
   }
 
@@ -200,31 +200,31 @@ TEST_CASE("JSON Reader: Find and Reset", "[utils][json]") {
   JsonReader reader(json);
 
   SECTION("reset() returns to the beginning") {
-    REQUIRE(reader.next() == JsonReader::Token::ArrayStart);
-    REQUIRE(reader.next() == JsonReader::Token::Number);
+    REQUIRE(reader.next() == JsonReader::Token::array_start);
+    REQUIRE(reader.next() == JsonReader::Token::number);
     REQUIRE(reader.asNum<int>() == 10);
 
     reader.reset();
-    REQUIRE(reader.next() == JsonReader::Token::ArrayStart);
-    REQUIRE(reader.next() == JsonReader::Token::Number);
+    REQUIRE(reader.next() == JsonReader::Token::array_start);
+    REQUIRE(reader.next() == JsonReader::Token::number);
     REQUIRE(reader.asNum<int>() == 10);
   }
 
   SECTION("find() searches elements in an array") {
-    REQUIRE(reader.next() == JsonReader::Token::ArrayStart);
+    REQUIRE(reader.next() == JsonReader::Token::array_start);
 
     // Search for 30
     bool found = reader.find([](JsonReader& r) {
       // Each iteration of find rewinds to the start of the element.
       // So next() here gets the current element's token type.
-      return r.next() == JsonReader::Token::Number && r.asNum<int>() == 30;
+      return r.next() == JsonReader::Token::number && r.asNum<int>() == 30;
     });
     REQUIRE(found);
     REQUIRE(reader.asNum<int>() == 30);
 
     // Search for next element (40)
     bool found_next = reader.find([](JsonReader& r) {
-      return r.next() == JsonReader::Token::Number && r.asNum<int>() == 40;
+      return r.next() == JsonReader::Token::number && r.asNum<int>() == 40;
     });
     REQUIRE(found_next);
     REQUIRE(reader.asNum<int>() == 40);
@@ -236,10 +236,10 @@ TEST_CASE("JSON Reader: Find and Reset", "[utils][json]") {
   SECTION("find() with nested objects in array") {
     std::string_view obj_array = R"([{"id":1}, {"id":2}, {"id":3}])";
     JsonReader r(obj_array);
-    REQUIRE(r.next() == JsonReader::Token::ArrayStart);
+    REQUIRE(r.next() == JsonReader::Token::array_start);
 
     bool found = r.find([](JsonReader& inner) {
-      if (inner.next() != JsonReader::Token::ObjectStart) return false;
+      if (inner.next() != JsonReader::Token::object_start) return false;
       if (inner.findKey("id")) {
         inner.next();
         return inner.asNum<int>() == 2;
@@ -250,7 +250,7 @@ TEST_CASE("JSON Reader: Find and Reset", "[utils][json]") {
     REQUIRE(found);
     // Reader should be positioned where the predicate left it (at the number 2)
     REQUIRE(r.asNum<int>() == 2);
-    REQUIRE(r.next() == JsonReader::Token::ObjectEnd);
+    REQUIRE(r.next() == JsonReader::Token::object_end);
   }
 }
 
@@ -258,25 +258,25 @@ TEST_CASE("JSON Reader: forEachField", "[utils][json]") {
   std::string_view json =
       R"({"a": 1, "b": [1, 2], "c": {"inner": true}, "d": 4})";
   JsonReader reader(json);
-  REQUIRE(reader.next() == JsonReader::Token::ObjectStart);
+  REQUIRE(reader.next() == JsonReader::Token::object_start);
 
   int count = 0;
   reader.forEachField([&](std::string_view key, JsonReader& r) {
     count++;
     if (key == "a") {
-      REQUIRE(r.next() == JsonReader::Token::Number);
+      REQUIRE(r.next() == JsonReader::Token::number);
       REQUIRE(r.asNum<int>() == 1);
       return true;
     }
     if (key == "d") {
-      REQUIRE(r.next() == JsonReader::Token::Number);
+      REQUIRE(r.next() == JsonReader::Token::number);
       REQUIRE(r.asNum<int>() == 4);
       return true;
     }
     return false;  // auto-skip b and c
   });
   REQUIRE(count == 4);
-  REQUIRE(reader.next() == JsonReader::Token::End);
+  REQUIRE(reader.next() == JsonReader::Token::end);
 }
 
 TEST_CASE("JSON Utils: Pretty Printing", "[utils][json]") {

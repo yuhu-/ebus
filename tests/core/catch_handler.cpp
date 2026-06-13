@@ -119,7 +119,7 @@ SCENARIO("Handler processes eBUS messages correctly", "[core][handler]") {
             BusRequestWonCallback::bind<TestCtx, &TestCtx::onWon>(&ctx));
         handler.setBusRequestLostCallback(
             BusRequestLostCallback::bind<TestCtx, &TestCtx::onLost>(&ctx));
-        handler.setReactiveMasterSlaveCallback(
+        handler.setReactiveCallback(
             HandlerReactiveCallback::bind<TestCtx, &TestCtx::onReactive>(&ctx));
         handler.setProtocolCallback(
             HandlerProtocolCallback::bind<TestCtx, &TestCtx::onProtocol>(&ctx));

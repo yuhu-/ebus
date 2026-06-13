@@ -23,7 +23,7 @@ constexpr uint8_t mask(Args... states) {
 }
 
 // FSM Transition Matrix (Arbitration)
-static constexpr uint8_t kTransitionMasks[] = {
+static constexpr uint8_t transition_masks[] = {
     // 0: observe
     mask(RequestState::observe, RequestState::first),
     // 1: first
@@ -100,8 +100,8 @@ void Request::startBit() {
 
 ebus::RequestResult Request::run(uint8_t byte) {
   size_t idx = static_cast<size_t>(state_);
-  if (idx < FsmLimits::num_request_states && kStateRequests[idx])
-    (this->*kStateRequests[idx])(byte);
+  if (idx < FsmLimits::num_request_states && state_requests[idx])
+    (this->*state_requests[idx])(byte);
 
   return result_;
 }
@@ -120,7 +120,7 @@ void Request::observe(uint8_t byte) {
     // Spec 6.4: Decrement unless the SYN follows an arbitration without a clear
     // winner. An arbitration collision results in exactly one byte (the
     // address) between SYNs.
-    if (bytes_since_syn_ != 1) {
+    if (bytes_since_syn_ != RequestLimits::collision_byte_count) {
       if (lock_counter_ > 0) lock_counter_--;
     }
     result_ = RequestResult::observe_syn;
@@ -160,19 +160,19 @@ void Request::first(uint8_t byte) {
       // will have already passed the write window for that SYN.
       bus_request_.store(true, std::memory_order_release);
       result_ = RequestResult::first_retry;
-      bytes_since_syn_ = 1;
+      bytes_since_syn_ = RequestLimits::collision_byte_count;
     } else {
       if (monitor_) monitor_->updateRequest([](auto& m) { m.lost_total++; });
       transitionTo(RequestState::observe);
       result_ = RequestResult::first_lost;
-      bytes_since_syn_ = 1;
+      bytes_since_syn_ = RequestLimits::collision_byte_count;
     }
   } else {
     if (monitor_)
       monitor_->updateRequest([](auto& m) { m.arbitration_errors++; });
     transitionTo(RequestState::observe);
     result_ = RequestResult::first_error;
-    bytes_since_syn_ = 1;
+    bytes_since_syn_ = RequestLimits::collision_byte_count;
   }
 }
 
@@ -186,7 +186,7 @@ void Request::retry(uint8_t byte) {
       monitor_->updateRequest([](auto& m) { m.arbitration_errors++; });
     transitionTo(RequestState::observe);
     result_ = RequestResult::retry_error;
-    bytes_since_syn_ = 1;
+    bytes_since_syn_ = RequestLimits::collision_byte_count;
   }
 }
 
@@ -201,13 +201,13 @@ void Request::second(uint8_t byte) {
     if (monitor_) monitor_->updateRequest([](auto& m) { m.lost_total++; });
     transitionTo(RequestState::observe);
     result_ = RequestResult::second_lost;
-    bytes_since_syn_ = 1;
+    bytes_since_syn_ = RequestLimits::collision_byte_count;
   } else {
     if (monitor_)
       monitor_->updateRequest([](auto& m) { m.arbitration_errors++; });
     transitionTo(RequestState::observe);
     result_ = RequestResult::second_error;
-    bytes_since_syn_ = 1;
+    bytes_since_syn_ = RequestLimits::collision_byte_count;
   }
 }
 
@@ -216,7 +216,7 @@ void Request::transitionTo(RequestState next) {
 
   const RequestState old_state = state_;
   const uint8_t next_bit = 1 << static_cast<int>(next);
-  const uint8_t valid_mask = kTransitionMasks[static_cast<size_t>(state_)];
+  const uint8_t valid_mask = transition_masks[static_cast<size_t>(state_)];
 
   if (!(next_bit & valid_mask)) {
     // Safe recovery: return to observe state.

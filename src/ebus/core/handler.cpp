@@ -24,55 +24,56 @@ constexpr uint16_t mask(Args... states) {
   }
 }
 
-#define RESET_TRANS HandlerState::passive_receive_master
-#define ARB_TRANS HandlerState::request_bus
+static constexpr HandlerState reset_trans =
+    HandlerState::passive_receive_master;
+static constexpr HandlerState arb_trans = HandlerState::request_bus;
 
 // FSM Transition Matrix (Spec 4 & 6)
 
-static constexpr uint16_t kTransitionMasks[] = {
+static constexpr uint16_t transition_masks[] = {
     // 0: passive_receive_master
-    mask(RESET_TRANS, ARB_TRANS,
+    mask(reset_trans, arb_trans,
          HandlerState::passive_receive_master_acknowledge,
          HandlerState::reactive_send_master_positive_acknowledge,
          HandlerState::reactive_send_master_negative_acknowledge,
          HandlerState::release_bus),
     // 1: passive_receive_master_acknowledge
-    mask(RESET_TRANS, ARB_TRANS, HandlerState::passive_receive_slave),
+    mask(reset_trans, arb_trans, HandlerState::passive_receive_slave),
     // 2: passive_receive_slave
-    mask(RESET_TRANS, ARB_TRANS,
+    mask(reset_trans, arb_trans,
          HandlerState::passive_receive_slave_acknowledge),
     // 3: passive_receive_slave_acknowledge
-    mask(RESET_TRANS, ARB_TRANS, HandlerState::passive_receive_slave),
+    mask(reset_trans, arb_trans, HandlerState::passive_receive_slave),
     // 4: reactive_send_master_positive_acknowledge
-    mask(RESET_TRANS, ARB_TRANS, HandlerState::reactive_send_slave),
+    mask(reset_trans, arb_trans, HandlerState::reactive_send_slave),
     // 5: reactive_send_master_negative_acknowledge
-    mask(RESET_TRANS, ARB_TRANS),
+    mask(reset_trans, arb_trans),
     // 6: reactive_send_slave
-    mask(RESET_TRANS, ARB_TRANS,
+    mask(reset_trans, arb_trans,
          HandlerState::reactive_receive_slave_acknowledge),
     // 7: reactive_receive_slave_acknowledge
-    mask(RESET_TRANS, ARB_TRANS, HandlerState::reactive_send_slave),
+    mask(reset_trans, arb_trans, HandlerState::reactive_send_slave),
     // 8: request_bus
-    mask(RESET_TRANS, ARB_TRANS, HandlerState::active_send_master,
+    mask(reset_trans, arb_trans, HandlerState::active_send_master,
          HandlerState::release_bus),
     // 9: active_send_master
-    mask(RESET_TRANS, ARB_TRANS,
+    mask(reset_trans, arb_trans,
          HandlerState::active_receive_master_acknowledge,
          HandlerState::release_bus),
     // 10: active_receive_master_acknowledge
-    mask(RESET_TRANS, ARB_TRANS, HandlerState::active_send_master,
+    mask(reset_trans, arb_trans, HandlerState::active_send_master,
          HandlerState::active_receive_slave, HandlerState::release_bus),
     // 11: active_receive_slave
-    mask(RESET_TRANS, ARB_TRANS,
+    mask(reset_trans, arb_trans,
          HandlerState::active_send_slave_positive_acknowledge,
          HandlerState::active_send_slave_negative_acknowledge),
     // 12: active_send_slave_positive_acknowledge
-    mask(RESET_TRANS, ARB_TRANS, HandlerState::release_bus),
+    mask(reset_trans, arb_trans, HandlerState::release_bus),
     // 13: active_send_slave_negative_acknowledge
-    mask(RESET_TRANS, ARB_TRANS, HandlerState::active_receive_slave,
+    mask(reset_trans, arb_trans, HandlerState::active_receive_slave,
          HandlerState::release_bus),
     // 14: release_bus
-    mask(RESET_TRANS, ARB_TRANS)};
+    mask(reset_trans, arb_trans)};
 }  // namespace
 
 Handler::Handler(uint8_t source_address, platform::Bus* bus, Request* request,
@@ -120,7 +121,7 @@ void Handler::setBusRequestLostCallback(BusRequestLostCallback callback) {
   lost_callback_ = std::move(callback);
 }
 
-void Handler::setReactiveMasterSlaveCallback(HandlerReactiveCallback callback) {
+void Handler::setReactiveCallback(HandlerReactiveCallback callback) {
   reactive_callback_ = std::move(callback);
 }
 
@@ -191,8 +192,8 @@ void Handler::run(const BusEventInfo& info) {
   pending_write_.reset();
 
   size_t idx = static_cast<size_t>(state_);
-  if (idx < FsmLimits::num_handler_states && kStateHandlers[idx]) {
-    (this->*kStateHandlers[idx])(info.byte);
+  if (idx < FsmLimits::num_handler_states && state_handlers[idx]) {
+    (this->*state_handlers[idx])(info.byte);
   }
 
   // Defer actual bus I/O until after the logic step
@@ -251,7 +252,7 @@ void Handler::passiveReceiveMaster(uint8_t byte) {
       }
     }
 
-    passive_master_.pushBack(byte);
+    passive_master_.push_back(byte);
 
     if (passive_master_.size() == 5) passive_master_dbx_ = passive_master_[4];
 
@@ -277,15 +278,14 @@ void Handler::passiveReceiveMaster(uint8_t byte) {
           transitionTo(HandlerState::reactive_send_master_positive_acknowledge);
         } else if (passive_master_[1] == target_address_) {
           passive_slave_.clear();
-          callOnReactiveMasterSlave(
-              passive_telegram_.getMaster(),
-              passive_slave_);  // slave_response is modified here
+          callOnReactive(passive_telegram_.getMaster(),
+                         passive_slave_);  // slave_response is modified here
 
           passive_telegram_.createSlave(passive_slave_);
           if (passive_telegram_.getSlaveState() == SequenceState::seq_ok) {
             passive_slave_ =
                 passive_telegram_.getSlave();  // Copy the slave response
-            passive_slave_.pushBack(passive_telegram_.getSlaveCRC(), false);
+            passive_slave_.push_back(passive_telegram_.getSlaveCRC(), false);
             passive_slave_.extend();
             callWrite(Symbols::ack);
             transitionTo(
@@ -383,7 +383,7 @@ void Handler::passiveReceiveSlave(uint8_t byte) {
     }
   }
 
-  passive_slave_.pushBack(byte);
+  passive_slave_.push_back(byte);
 
   if (passive_slave_.size() == 1) passive_slave_dbx_ = byte;
 
@@ -506,7 +506,7 @@ void Handler::reactiveReceiveSlaveAcknowledge(uint8_t byte) {
 void Handler::requestBus(uint8_t byte) {
   auto won = [&]() {
     active_master_ = active_telegram_.getMaster();
-    active_master_.pushBack(active_telegram_.getMasterCRC(), false);
+    active_master_.push_back(active_telegram_.getMasterCRC(), false);
     active_master_.extend();
     if (active_master_.size() > 1) {
       callOnBusRequestWon();
@@ -525,7 +525,7 @@ void Handler::requestBus(uint8_t byte) {
 
   auto lost = [&]() {
     callOnBusRequestLost();
-    passive_master_.pushBack(byte);
+    passive_master_.push_back(byte);
     active_message_ = false;
     active_telegram_.clear();  // Clear active message state
     active_master_.clear();
@@ -666,7 +666,7 @@ void Handler::activeReceiveSlave(uint8_t byte) {
     }
   }
 
-  active_slave_.pushBack(byte);
+  active_slave_.push_back(byte);
 
   if (active_slave_.size() == 1) active_slave_dbx_ = byte;
 
@@ -736,7 +736,7 @@ void Handler::transitionTo(HandlerState next) {
 
   const HandlerState old_state = state_;
   const uint16_t next_bit = 1 << static_cast<int>(next);
-  const uint16_t valid_mask = kTransitionMasks[static_cast<size_t>(state_)];
+  const uint16_t valid_mask = transition_masks[static_cast<size_t>(state_)];
 
   if (!(next_bit & valid_mask)) {
     callOnError(LogLevel::error, ProtocolError::illegal_fsm_transition,
@@ -849,8 +849,7 @@ void Handler::callOnBusRequestLost() {
   if (lost_callback_) lost_callback_();
 }
 
-void Handler::callOnReactiveMasterSlave(ByteView master_view,
-                                        Sequence& slave_response) {
+void Handler::callOnReactive(ByteView master_view, Sequence& slave_response) {
   if (reactive_callback_) reactive_callback_({0, master_view, slave_response});
 }
 

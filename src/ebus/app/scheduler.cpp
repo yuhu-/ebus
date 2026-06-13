@@ -53,7 +53,7 @@ void Scheduler::setTotalTimeout(uint32_t timeout_ms) {
   total_timeout_ = std::chrono::milliseconds(timeout_ms);
 }
 
-void Scheduler::setReactiveMasterSlaveCallback(ReactiveCallback callback) {
+void Scheduler::setReactiveCallback(ReactiveCallback callback) {
   platform::LockGuard<platform::Mutex> lock(callback_mutex_);
   extern_reactive_callback_ = std::move(callback);
 }
@@ -70,7 +70,7 @@ void Scheduler::attachHandlerCallbacks() {
       Delegate<void()>::bind<Scheduler, &Scheduler::onBusRequestWon>(this));
   handler_->setBusRequestLostCallback(
       Delegate<void()>::bind<Scheduler, &Scheduler::onBusRequestLost>(this));
-  handler_->setReactiveMasterSlaveCallback(
+  handler_->setReactiveCallback(
       Delegate<void(const ReactiveInfo&)>::bind<Scheduler,
                                                 &Scheduler::onHandlerReactive>(
           this));
@@ -84,7 +84,7 @@ void Scheduler::detachHandlerCallbacks() {
   if (!handler_) return;
   handler_->setBusRequestWonCallback(nullptr);
   handler_->setBusRequestLostCallback(nullptr);
-  handler_->setReactiveMasterSlaveCallback(nullptr);
+  handler_->setReactiveCallback(nullptr);
   handler_->setProtocolCallback(nullptr);
 }
 
@@ -440,13 +440,13 @@ bool Scheduler::handleAttemptResult(const ProtocolEvent& ev) {
 Scheduler::Duration Scheduler::backoffDuration(int attempt) const {
   // Pre-calculated multipliers for 2^(attempt-1) to avoid runtime bit-shifts.
   using Rep = typename Duration::rep;
-  static constexpr Rep kMultipliers[] = {1, 2, 4, 8, 16, 32, 64, 128, 256, 512};
-  constexpr int kMaxAttempt = sizeof(kMultipliers) / sizeof(kMultipliers[0]);
+  static constexpr Rep multipliers[] = {1, 2, 4, 8, 16, 32, 64, 128, 256, 512};
+  constexpr int max_attempt = sizeof(multipliers) / sizeof(multipliers[0]);
 
   if (attempt <= 0) return Duration::zero();
-  if (attempt > kMaxAttempt) return Duration::max();
+  if (attempt > max_attempt) return Duration::max();
 
-  Rep factor = kMultipliers[attempt - 1];
+  Rep factor = multipliers[attempt - 1];
   return Duration(static_cast<Rep>(base_backoff_.count() * factor));
 }
 

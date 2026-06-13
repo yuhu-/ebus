@@ -63,11 +63,11 @@ void byteToChar(std::string& out, ByteView data) {
 }
 
 void appendHex(std::string& out, ByteView data) {
-  for (auto b : data) {
+  std::for_each(data.begin(), data.end(), [&out](uint8_t b) {
     const char* hex = hex_lookup_table[b];
     out.push_back(hex[0]);
     out.push_back(hex[1]);
-  }
+  });
 }
 
 std::vector<uint8_t> toVector(const std::string& str) {
@@ -86,7 +86,7 @@ std::vector<uint8_t> toVector(const std::string& str) {
 void formatIso8601Fast(uint64_t ms_since_epoch, char* out) {
   time_t seconds = static_cast<time_t>(ms_since_epoch / 1000);
   int ms = static_cast<int>(ms_since_epoch % 1000);
-  struct tm tm_info;
+  struct tm tm_info{};
   gmtime_r(&seconds, &tm_info);
 
   auto write_2d = [](int val, char* p) {
@@ -166,7 +166,7 @@ char* formatFloat(float value, int precision, char* buffer, size_t buffer_size,
   if (!success) {
     // Fallback for ESP32 or if to_chars failed: use snprintf.
     // Use literals directly to avoid "format-nonliteral" warnings.
-    int n;
+    int n = 0;
     if (((std::abs(value) > 0 && std::abs(value) < lower_threshold) ||
          std::abs(value) >= upper_threshold)) {
       n = std::snprintf(buffer, buffer_size, "%.*e", precision, value);
@@ -188,26 +188,16 @@ char* formatFloat(float value, int precision, char* buffer, size_t buffer_size,
 
     // Post-processing: remove trailing zeros and decimal point if no fractional
     // part
-    bool is_scientific = false;
-    for (size_t i = 0; i < current_len; ++i) {
-      if (buffer[i] == 'e' || buffer[i] == 'E') {
-        is_scientific = true;
-        break;
-      }
-    }
+    bool is_scientific = std::any_of(buffer, buffer + current_len, [](char c) {
+      return c == 'e' || c == 'E';
+    });
 
     if (!is_scientific) {
-      size_t decimal_pos = current_len;
-      bool has_decimal = false;
-      for (size_t i = 0; i < current_len; ++i) {
-        if (buffer[i] == '.') {
-          has_decimal = true;
-          decimal_pos = i;
-          break;
-        }
-      }
+      const char* dot_ptr = std::find(buffer, buffer + current_len, '.');
+      bool has_decimal = (dot_ptr != buffer + current_len);
 
       if (has_decimal) {
+        size_t decimal_pos = dot_ptr - buffer;
         // Remove trailing zeros
         while (current_len > decimal_pos + 1 &&
                buffer[current_len - 1] == '0') {
@@ -232,9 +222,9 @@ char* formatFloat(float value, int precision, char* buffer, size_t buffer_size,
 
 Sequence frameMaster(uint8_t source, ByteView payload) {
   Sequence msg;
-  msg.pushBack(source, false);
+  msg.push_back(source, false);
   msg.append(makeSequence(payload));
-  msg.pushBack(msg.crc(), false);
+  msg.push_back(msg.crc(), false);
   msg.extend();
   return msg;
 }
@@ -250,7 +240,7 @@ std::string frameMasterHex(uint8_t source, const std::string& payload) {
 Sequence frameSlave(ByteView payload) {
   Sequence msg;
   msg.append(makeSequence(payload));
-  msg.pushBack(msg.crc(), false);
+  msg.push_back(msg.crc(), false);
   msg.extend();
   return msg;
 }
@@ -274,7 +264,7 @@ float roundDigits(float value, uint8_t digits) noexcept {
  */
 size_t findKey(std::string_view json, std::string_view key) {
   detail::JsonReader reader(json);
-  if (reader.next() != detail::JsonReader::Token::ObjectStart)
+  if (reader.next() != detail::JsonReader::Token::object_start)
     return std::string_view::npos;
   if (reader.findKey(key)) {
     // We return the offset of the value start by finding the colon relative to
@@ -289,13 +279,13 @@ size_t findKey(std::string_view json, std::string_view key) {
 
 std::string_view extract(std::string_view json, std::string_view key) {
   detail::JsonReader reader(json);
-  return (reader.get(key) != detail::JsonReader::Token::Error) ? reader.value()
+  return (reader.get(key) != detail::JsonReader::Token::error) ? reader.value()
                                                                : "";
 }
 
 std::string_view extractSub(std::string_view json, std::string_view key) {
   detail::JsonReader reader(json);
-  if (reader.next() != detail::JsonReader::Token::ObjectStart) return "";
+  if (reader.next() != detail::JsonReader::Token::object_start) return "";
   return reader.findKey(key) ? reader.rawValue() : "";
 }
 

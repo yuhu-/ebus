@@ -79,9 +79,9 @@ template <typename T, typename = void>
 struct is_byte_range : std::false_type {};
 
 template <typename T>
-struct is_byte_range<T, std::void_t<decltype(std::data(std::declval<T>())),
-                                    decltype(std::size(std::declval<T>()))>>
-    : std::is_same<std::decay_t<decltype(*std::data(std::declval<T>()))>,
+struct is_byte_range<T, std::void_t<decltype(std::data(std::declval<T&>())),
+                                    decltype(std::size(std::declval<T&>()))>>
+    : std::is_same<std::decay_t<decltype(*std::data(std::declval<T&>()))>,
                    uint8_t> {};
 
 /**
@@ -92,8 +92,9 @@ template <typename T, typename = void>
 struct is_byte_indexable : std::false_type {};
 
 template <typename T>
-struct is_byte_indexable<T, std::void_t<decltype(std::declval<T>()[0]),
-                                        decltype(std::size(std::declval<T>()))>>
+struct is_byte_indexable<T,
+                         std::void_t<decltype(std::declval<T>()[0]),
+                                     decltype(std::size(std::declval<T&>()))>>
     : std::is_same<std::decay_t<decltype(std::declval<T>()[0])>, uint8_t> {};
 }  // namespace detail
 

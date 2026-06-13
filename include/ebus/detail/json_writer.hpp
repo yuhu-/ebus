@@ -40,10 +40,10 @@ class JsonWriter {
    */
   class Scope {
    public:
-    enum Type { Object, Array };
+    enum Type { object, array };
 
     Scope(JsonWriter& writer, Type type) : writer_(writer), type_(type) {
-      if (type_ == Object) {
+      if (type_ == object) {
         writer_.startObject();
       } else {
         writer_.startArray();
@@ -51,7 +51,7 @@ class JsonWriter {
     }
 
     ~Scope() {
-      if (type_ == Object) {
+      if (type_ == object) {
         writer_.endObject();
       } else {
         writer_.endArray();
@@ -73,19 +73,19 @@ class JsonWriter {
   /**
    * @brief Returns a RAII scope for an object.
    */
-  Scope objectScope() { return Scope(*this, Scope::Object); }
+  Scope objectScope() { return Scope(*this, Scope::object); }
 
   /**
    * @brief Returns a RAII scope for an array.
    */
-  Scope arrayScope() { return Scope(*this, Scope::Array); }
+  Scope arrayScope() { return Scope(*this, Scope::array); }
 
   /**
    * @brief Writes a key and returns a RAII scope for a nested object.
    */
   Scope objectScope(std::string_view key) {
     appendKey(key);
-    return Scope(*this, Scope::Object);
+    return Scope(*this, Scope::object);
   }
 
   /**
@@ -93,7 +93,7 @@ class JsonWriter {
    */
   Scope arrayScope(std::string_view key) {
     appendKey(key);
-    return Scope(*this, Scope::Array);
+    return Scope(*this, Scope::array);
   }
 
   void write(std::string_view s) {
@@ -236,7 +236,7 @@ class JsonWriter {
 
   void writeValueFloat(float val, int precision = 2) {
     beforeValue();
-    char buf[32];
+    char buf[detail::JsonLimits::formatting_buffer_size]{};
     const char* end = ebus::formatFloat(
         val, precision, buf, sizeof(buf),
         ebus::detail::FormattingLimits::float_lower_threshold,
@@ -335,7 +335,7 @@ class JsonWriter {
 
   void writeFieldFloat(std::string_view key, float val, int precision = 2) {
     appendKey(key);
-    char buf[32];
+    char buf[detail::JsonLimits::formatting_buffer_size]{};
     // Pass thresholds explicitly to match the forward declaration without
     // defaults
     const char* end = ebus::formatFloat(
@@ -368,7 +368,8 @@ class JsonWriter {
 
  private:
   JsonChunkVisitor visitor_;
-  char buffer_[256];  // Optimized for ESP32-C3 stack usage
+  char buffer_[detail::JsonLimits::writer_buffer_size];  // Optimized for
+                                                         // ESP32-C3 stack usage
   size_t pos_ = 0;
   bool first_ = true;
   bool pretty_ = false;
@@ -384,7 +385,8 @@ class JsonWriter {
   void writeIndent() {
     if (!pretty_) return;
     write("\n");
-    for (int i = 0; i < indent_level_; ++i) write("  ");
+    for (int i = 0; i < indent_level_ * detail::JsonLimits::indent_spaces; ++i)
+      write(" ");
   }
 };
 

@@ -19,6 +19,7 @@ namespace ebus::detail {
 // --- Physical Layer ---
 namespace Physical {
 inline constexpr uint32_t baud_rate = 2400;
+inline constexpr uint8_t bits_per_byte = 10;  // 1 start + 8 data + 1 stop
 inline constexpr uint64_t bit_time_num = 1250;
 inline constexpr uint64_t bit_time_den = 3;
 inline constexpr float bit_time_us = 1000000.0f / 2400.0f;  // ~416.67 us
@@ -89,6 +90,7 @@ inline constexpr uint32_t termination_timeout_ms = 2000;
 // --- Internal Engine Limits ---
 namespace RequestLimits {
 inline constexpr uint8_t lock_counter_max = 25;
+inline constexpr uint32_t collision_byte_count = 1;
 }  // namespace RequestLimits
 
 // --- Container Limits ---
@@ -144,7 +146,10 @@ inline constexpr uint32_t serialization_delay_ms = 4;
 
 namespace platform::Esp {
 inline constexpr uint32_t event_timeout_ms = 10;
-inline constexpr uint8_t falling_edge_history = 5;
+inline constexpr int uart_install_retries = 3;
+inline constexpr uint32_t uart_install_retry_delay_ms = 100;
+inline constexpr uint32_t timer_resolution_hz = 1000000;  // 1us
+inline constexpr uint32_t timer_intr_priority = 3;
 }  // namespace platform::Esp
 
 namespace platform::Posix {
@@ -181,6 +186,11 @@ inline constexpr size_t max_clients = 4;
 #else
 inline constexpr size_t max_clients = EBUS_MAX_CLIENTS;
 #endif
+
+/**
+ * Factor used to drop data when a client buffer is full (e.g. 8 = drop 1/8th).
+ */
+inline constexpr size_t outbound_buffer_drop_factor = 8;
 }  // namespace NetworkLimits
 
 // --- Application Layer ---
@@ -196,6 +206,10 @@ inline constexpr size_t reactor_queue_size = 32;
 #else
 inline constexpr size_t reactor_queue_size = EBUS_REACTOR_QUEUE_SIZE;
 #endif
+inline constexpr uint32_t reactor_yield_burst_limit = 10;  // every 10th events
+inline constexpr uint32_t latency_warning_threshold_us = 100000;
+inline constexpr uint32_t status_update_interval_ms_fast = 100;
+inline constexpr uint32_t status_update_interval_ms_slow = 500;
 static_assert(reactor_queue_size >= 1, "Reactor queue size must be at least 1");
 }  // namespace ControllerLimits
 
@@ -222,8 +236,6 @@ inline constexpr size_t max_startup_queue = EBUS_MAX_STARTUP_QUEUE;
 }  // namespace DeviceLimits
 
 namespace SchedulerLimits {
-inline constexpr size_t queue_reserve = 32;
-
 #ifndef EBUS_SCHEDULER_MAX_ITEMS
 inline constexpr size_t max_items = 32;
 #else
@@ -247,6 +259,73 @@ inline constexpr size_t max_items = EBUS_POLL_MAX_ITEMS;
 namespace FormattingLimits {
 inline constexpr float float_lower_threshold = 1e-6f;
 inline constexpr float float_upper_threshold = 1e10f;
+inline constexpr size_t iso8601_buffer_size = 26;
+inline constexpr int default_precision = 2;
+inline constexpr int detailed_precision = 4;
 }  // namespace FormattingLimits
+
+// --- JSON Processing Limits ---
+namespace JsonLimits {
+inline constexpr size_t max_recursion_depth = 32;
+inline constexpr int indent_spaces = 2;
+inline constexpr size_t writer_buffer_size = 256;
+inline constexpr size_t formatting_buffer_size = 64;
+}  // namespace JsonLimits
+
+// --- Logger Limits ---
+namespace LoggerLimits {
+inline constexpr size_t log_buffer_size = 256;
+}  // namespace LoggerLimits
+
+// --- System Metrics Limits ---
+namespace SystemMetricsLimits {
+inline constexpr size_t top_error_addresses_count = 3;
+inline constexpr float bus_congestion_threshold_percent = 70.0f;
+inline constexpr uint64_t bus_congestion_detection_time_us = 10000000;
+inline constexpr uint32_t bus_congestion_detection_time_s = 10;
+inline constexpr uint32_t bus_high_jitter_threshold_us = 10000;
+
+// Quality Score Factors
+inline constexpr float quality_score_drop_penalty = 0.7f;
+inline constexpr float quality_score_jitter_penalty = 0.8f;
+inline constexpr float quality_score_postpone_penalty = 0.9f;
+inline constexpr float quality_score_start_bit_error_penalty = 0.9f;
+}  // namespace SystemMetricsLimits
+
+// --- Simulation Limits ---
+namespace SimulationLimits {
+inline constexpr size_t outbound_queue_capacity = 16;
+}  // namespace SimulationLimits
+
+namespace EnhancedProtocolLimits {
+inline constexpr size_t max_sequence_len = 2;
+inline constexpr uint8_t data_threshold = 0x80;
+}  // namespace EnhancedProtocolLimits
+
+// --- BCD Limits ---
+namespace BcdLimits {
+inline constexpr uint8_t nibble_mask = 0x0f;
+inline constexpr uint8_t nibble_shift = 4;
+inline constexpr uint8_t max_digit = 9;
+inline constexpr uint8_t decimal_base = 10;
+inline constexpr int64_t max_value = 99;
+inline constexpr uint8_t null_sentinel = 0xff;
+}  // namespace BcdLimits
+
+// --- Data Type Sentinels (Replacement Values) ---
+namespace DataTypeLimits {
+inline constexpr uint8_t sentinel_8 = 0xff;
+inline constexpr uint8_t sentinel_s8 = 0x80;  // -128
+inline constexpr uint16_t sentinel_16 = 0xffff;
+inline constexpr uint16_t sentinel_s16 = 0x8000;  // -32768
+inline constexpr uint32_t sentinel_32 = 0xffffffff;
+inline constexpr uint32_t sentinel_s32 = 0x80000000;  // -2147483648
+}  // namespace DataTypeLimits
+
+// --- Fixed-Point Scaling ---
+namespace FixedPointLimits {
+inline constexpr int64_t fixed_point_scale = 1000000LL;
+inline constexpr uint8_t float_size = 4;
+}  // namespace FixedPointLimits
 
 }  // namespace ebus::detail

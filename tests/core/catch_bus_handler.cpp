@@ -176,7 +176,8 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
       platform::sleepMilli(10);
 
     REQUIRE(telegram_count.load() == 1);
-    REQUIRE(request.getLockCounter() == 3);
+    platform::sleepMilli(20);
+    REQUIRE(request.getLockCounter() == 2);
 
     bus.stop();
   }

@@ -189,7 +189,7 @@ bool Controller::configure(std::string_view json) {
       impl_->config_mutex_);
   EbusConfig new_cfg = config_;
   // mergeFromJson safely ignores unknown keys.
-  if (!new_cfg.runtime.mergeFromJson(std::string(json))) return false;
+  if (!new_cfg.runtime.mergeFromJson(json)) return false;
 
   return configure(new_cfg);
 }
@@ -381,12 +381,12 @@ void Controller::setTotalTimeout(uint32_t timeout_ms) {
   if (impl_->configured_.load()) impl_->scheduler_->setTotalTimeout(timeout_ms);
 }
 
-void Controller::setReactiveMasterSlaveCallback(ReactiveCallback callback) {
+void Controller::setReactiveCallback(ReactiveCallback callback) {
   detail::platform::LockGuard<detail::platform::RecursiveMutex> lock(
       impl_->config_mutex_);
   impl_->user_reactive_callback_ = std::move(callback);
   if (impl_->configured_.load())
-    impl_->scheduler_->setReactiveMasterSlaveCallback(
+    impl_->scheduler_->setReactiveCallback(
         impl_->user_reactive_callback_);
 }
 
@@ -448,7 +448,7 @@ void Controller::clearPollItems() {
 
 void Controller::triggerInquiryOfExistence() {
   enqueue(detail::DeviceLimits::scan_priority,
-          ebus::Sequence::InquiryOfExistence());
+          ebus::Sequence::inquiryOfExistence());
 }
 
 void Controller::initFullScan(bool enable) {
@@ -803,10 +803,10 @@ void Impl::constructMembers(Controller* owner) {
         if (response_enabled) {
           // Inquiry of Existence (Service 07h FEh): PB=07, SB=FE, NN=00
           if (ebus::matches(info.master_view,
-                            ebus::Sequence::InquiryOfExistence(), 1)) {
+                            ebus::Sequence::inquiryOfExistence(), 1)) {
             if (info.master_view[0] != own_address) {
               owner->enqueue(detail::DeviceLimits::scan_priority,
-                             ebus::Sequence::SignOfLife());
+                             ebus::Sequence::signOfLife());
             }
           }
         }
@@ -889,7 +889,7 @@ void Impl::constructMembers(Controller* owner) {
   owner->setFsmTimeout(owner->config_.runtime.scheduler.fsm_timeout_ms);
   owner->setTotalTimeout(owner->config_.runtime.scheduler.total_timeout_ms);
   if (user_reactive_callback_) {
-    owner->setReactiveMasterSlaveCallback(user_reactive_callback_);
+    owner->setReactiveCallback(user_reactive_callback_);
   }
 
   if (device_scanner_) {
@@ -1001,7 +1001,8 @@ void Impl::run(Controller* owner) {
         // CPU Starvation Fix: If processing a large burst, force a yield to
         // allow the IDLE task, watchdog, and lower priority threads (SYN gen)
         // to breathe.
-        if (++burst_count > 10) {
+        if (++burst_count >
+            detail::ControllerLimits::reactor_yield_burst_limit) {
           burst_count = 0;
 #if defined(ESP_PLATFORM)
           vTaskDelay(1);
@@ -1031,7 +1032,8 @@ void Impl::run(Controller* owner) {
     auto loop_duration = std::chrono::duration_cast<std::chrono::microseconds>(
                              Clock::now() - loop_start)
                              .count();
-    if (loop_duration > 100000) {  // 100ms warning
+    if (loop_duration >
+        detail::ControllerLimits::latency_warning_threshold_us) {
       logInfo("Loop iteration latency warning: " +
               std::to_string(loop_duration) + " us. Possible starvation?");
     }
@@ -1044,8 +1046,13 @@ void Impl::run(Controller* owner) {
     // Throttle status updates (e.g., max once per 100ms) to save CPU/Stack
     // Fixed: Update status even during activity if too much time has passed
     auto time_since_update = Clock::now() - last_status_update;
-    if ((!activity && time_since_update > std::chrono::milliseconds(100)) ||
-        (time_since_update > std::chrono::milliseconds(500))) {
+    if ((!activity &&
+         time_since_update >
+             std::chrono::milliseconds(
+                 detail::ControllerLimits::status_update_interval_ms_fast)) ||
+        (time_since_update >
+         std::chrono::milliseconds(
+             detail::ControllerLimits::status_update_interval_ms_slow))) {
       // Populate the utilization history time-series before taking the
       // snapshot
       bus_monitor_->updateUtilizationHistory();
@@ -1148,7 +1155,7 @@ void Impl::logError(std::string_view msg) const {
   auto& logger = detail::Logger::getInstance();
   if (!logger.isEnabled(LogLevel::error)) return;
   uint8_t addr = address_.load(std::memory_order_relaxed);
-  char buf[256];
+  char buf[detail::LoggerLimits::log_buffer_size];
   int n = std::snprintf(buf, sizeof(buf), "[0x%02x] %.*s", addr,
                         (int)msg.size(), msg.data());
   if (n > 0)

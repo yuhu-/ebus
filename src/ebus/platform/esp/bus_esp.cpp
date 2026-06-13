@@ -217,7 +217,7 @@ void BusEsp::configureUart() {
   // Install UART driver with synchronized event queue sizes
   uart_driver_delete(uart_port_num_);  // Ensure port is clean
   esp_err_t err = ESP_FAIL;
-  int retry_count = 3;
+  int retry_count = BusLimits::platform::Esp::uart_install_retries;
   while (retry_count-- > 0) {
     err = uart_driver_install(uart_port_num_, BusLimits::queue_size,
                               BusLimits::queue_size, 1, &uart_event_queue_, 0);
@@ -225,7 +225,9 @@ void BusEsp::configureUart() {
 
     EBUS_LOG_ERROR("uart_driver_install attempt failed: " +
                    std::string(esp_err_to_name(err)) + ". Retrying...");
-    if (retry_count > 0) vTaskDelay(pdMS_TO_TICKS(100));
+    if (retry_count > 0)
+      vTaskDelay(
+          pdMS_TO_TICKS(BusLimits::platform::Esp::uart_install_retry_delay_ms));
   }
 
   // Setup UART configuration AFTER driver is installed (recommended)
@@ -277,8 +279,8 @@ void BusEsp::configureTimer() {
   gptimer_config_t gpt_config_arb = {};
   gpt_config_arb.clk_src = GPTIMER_CLK_SRC_DEFAULT;
   gpt_config_arb.direction = GPTIMER_COUNT_UP;
-  gpt_config_arb.resolution_hz = 1000000;
-  gpt_config_arb.intr_priority = 3;
+  gpt_config_arb.resolution_hz = BusLimits::platform::Esp::timer_resolution_hz;
+  gpt_config_arb.intr_priority = BusLimits::platform::Esp::timer_intr_priority;
   gpt_config_arb.flags.intr_shared = false;
   gpt_config_arb.flags.allow_pd = false;
   gpt_config_arb.flags.backup_before_sleep = false;
@@ -288,8 +290,8 @@ void BusEsp::configureTimer() {
   gptimer_config_t gpt_config_syn = {};
   gpt_config_syn.clk_src = GPTIMER_CLK_SRC_DEFAULT;
   gpt_config_syn.direction = GPTIMER_COUNT_UP;
-  gpt_config_syn.resolution_hz = 1000000;
-  gpt_config_syn.intr_priority = 3;
+  gpt_config_syn.resolution_hz = BusLimits::platform::Esp::timer_resolution_hz;
+  gpt_config_syn.intr_priority = BusLimits::platform::Esp::timer_intr_priority;
   gpt_config_syn.flags.intr_shared = false;
   gpt_config_syn.flags.allow_pd = false;
   gpt_config_syn.flags.backup_before_sleep = false;
@@ -358,7 +360,7 @@ void BusEsp::ebusUartEventRunner() {
             // bufferIndex + 2. This is the index of the last start bit.
             portENTER_CRITICAL(&timer_mux_);
             micros_start_bit_ = micros_edge_buffer_[(buffer_index_ + 2) %
-                                                    FALLING_EDGE_BUFFER_SIZE];
+                                                    falling_edge_buffer_size];
             const uint16_t window = runtime_.bus.window_us;
             const uint16_t offset = runtime_.bus.offset_us;
             portEXIT_CRITICAL(&timer_mux_);

@@ -3,11 +3,10 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "ebus/detail/json_reader.hpp"
-
 #include <cctype>
 #include <charconv>
 #include <cstring>
+#include <ebus/detail/json_reader.hpp>
 
 namespace ebus::detail {
 
@@ -19,7 +18,7 @@ void JsonReader::reset() {
 
 JsonReader::Token JsonReader::next() {
   skipWhitespace();
-  if (pos_ >= json_.size()) return Token::End;
+  if (pos_ >= json_.size()) return Token::end;
 
   char c = json_[pos_];
 
@@ -27,23 +26,23 @@ JsonReader::Token JsonReader::next() {
   if (c == ':' || c == ',') {
     pos_++;
     skipWhitespace();
-    if (pos_ >= json_.size()) return Token::Error;
+    if (pos_ >= json_.size()) return Token::error;
     c = json_[pos_];
   }
 
   switch (c) {
     case '{':
       pos_++;
-      return Token::ObjectStart;
+      return Token::object_start;
     case '}':
       pos_++;
-      return Token::ObjectEnd;
+      return Token::object_end;
     case '[':
       pos_++;
-      return Token::ArrayStart;
+      return Token::array_start;
     case ']':
       pos_++;
-      return Token::ArrayEnd;
+      return Token::array_end;
     case '"': {
       value_ = readString();
       // Peek ahead to see if this string is followed by a colon, marking it as
@@ -51,33 +50,33 @@ JsonReader::Token JsonReader::next() {
       size_t saved_pos = pos_;
       skipWhitespace();
       if (pos_ < json_.size() && json_[pos_] == ':') {
-        return Token::Key;
+        return Token::key;
       }
       pos_ = saved_pos;  // Restore pos for next() to see the colon and skip it
                          // correctly
-      return Token::String;
+      return Token::string;
     }
     case 't':
       if (json_.substr(pos_, 4) == "true") {
         value_ = json_.substr(pos_, 4);
         pos_ += 4;
-        return Token::Boolean;
+        return Token::boolean;
       }
-      return Token::Error;
+      return Token::error;
     case 'f':
       if (json_.substr(pos_, 5) == "false") {
         value_ = json_.substr(pos_, 5);
         pos_ += 5;
-        return Token::Boolean;
+        return Token::boolean;
       }
-      return Token::Error;
+      return Token::error;
     case 'n':
       if (json_.substr(pos_, 4) == "null") {
         value_ = json_.substr(pos_, 4);
         pos_ += 4;
-        return Token::Null;
+        return Token::null;
       }
-      return Token::Error;
+      return Token::error;
     default:
       if (std::isdigit(static_cast<unsigned char>(c)) || c == '-') {
         size_t start = pos_;
@@ -90,9 +89,9 @@ JsonReader::Token JsonReader::next() {
           pos_++;
         }
         value_ = json_.substr(start, pos_ - start);
-        return Token::Number;
+        return Token::number;
       }
-      return Token::Error;
+      return Token::error;
   }
 }
 
@@ -100,14 +99,14 @@ bool JsonReader::findKey(std::string_view target_key) {
   int depth = 0;
   while (true) {
     Token t = next();
-    if (t == Token::End || t == Token::Error) return false;
+    if (t == Token::end || t == Token::error) return false;
 
-    if (t == Token::ObjectStart || t == Token::ArrayStart) {
+    if (t == Token::object_start || t == Token::array_start) {
       depth++;
-    } else if (t == Token::ObjectEnd || t == Token::ArrayEnd) {
+    } else if (t == Token::object_end || t == Token::array_end) {
       depth--;
       if (depth < 0) return false;
-    } else if (t == Token::Key && depth == 0 && value_ == target_key) {
+    } else if (t == Token::key && depth == 0 && value_ == target_key) {
       return true;
     }
   }
@@ -115,13 +114,13 @@ bool JsonReader::findKey(std::string_view target_key) {
 
 void JsonReader::skipValue() {
   Token t = next();
-  if (t == Token::ObjectStart || t == Token::ArrayStart) {
+  if (t == Token::object_start || t == Token::array_start) {
     skipToClosing();
   }
 }
 
 void JsonReader::skipComposite(Token start_token) {
-  if (start_token == Token::ObjectStart || start_token == Token::ArrayStart) {
+  if (start_token == Token::object_start || start_token == Token::array_start) {
     skipToClosing();
   }
 }
@@ -135,10 +134,10 @@ std::string_view JsonReader::rawValue() {
 
   size_t start = pos_;
   Token t = next();
-  if (t == Token::ObjectStart || t == Token::ArrayStart) {
+  if (t == Token::object_start || t == Token::array_start) {
     skipToClosing();
   }
-  if (t == Token::End || t == Token::Error) {
+  if (t == Token::end || t == Token::error) {
     return {};
   }
   return json_.substr(start, pos_ - start);
@@ -147,7 +146,7 @@ std::string_view JsonReader::rawValue() {
 bool JsonReader::validate(std::string_view json) {
   if (json.empty()) return false;
 
-  char stack[32];
+  char stack[JsonLimits::max_recursion_depth];
   int depth = -1;
 
   enum State {
@@ -171,7 +170,8 @@ bool JsonReader::validate(std::string_view json) {
     switch (state) {
       case ExpectValue:
         if (c == '{') {
-          if (++depth >= 32) return false;
+          if (++depth >= static_cast<int>(JsonLimits::max_recursion_depth))
+            return false;
           stack[depth] = '{';
           p++;
           skipWs();
@@ -180,7 +180,8 @@ bool JsonReader::validate(std::string_view json) {
           } else
             state = ExpectKeyOrEnd;
         } else if (c == '[') {
-          if (++depth >= 32) return false;
+          if (++depth >= static_cast<int>(JsonLimits::max_recursion_depth))
+            return false;
           stack[depth] = '[';
           p++;
           skipWs();
@@ -280,9 +281,9 @@ JsonReader::Token JsonReader::get(std::string_view path) {
   reset();
 
   Token current_token = next();  // Get the root container token
-  if (current_token != Token::ObjectStart &&
-      current_token != Token::ArrayStart) {
-    return Token::Error;  // JSON must start with an object or array
+  if (current_token != Token::object_start &&
+      current_token != Token::array_start) {
+    return Token::error;  // JSON must start with an object or array
   }
   Token current_container_type = current_token;
 
@@ -293,10 +294,10 @@ JsonReader::Token JsonReader::get(std::string_view path) {
                                    ? path.substr(start)
                                    : path.substr(start, end - start);
 
-    if (current_container_type == Token::ObjectStart) {
+    if (current_container_type == Token::object_start) {
       // In an object, expect a key
       if (!findKey(segment)) {
-        return Token::Error;  // Key not found
+        return Token::error;  // Key not found
       }
       // After findKey, the reader is positioned before the value. Get the
       // value's token.
@@ -305,16 +306,16 @@ JsonReader::Token JsonReader::get(std::string_view path) {
         return value_token;  // This is the final value
       }
       // Path continues, so the value must be a container
-      if (value_token != Token::ObjectStart &&
-          value_token != Token::ArrayStart) {
-        return Token::Error;  // Expected object or array, got primitive
+      if (value_token != Token::object_start &&
+          value_token != Token::array_start) {
+        return Token::error;  // Expected object or array, got primitive
       }
       current_container_type = value_token;  // Update current container type
-    } else if (current_container_type == Token::ArrayStart) {
+    } else if (current_container_type == Token::array_start) {
       // In an array, expect a numeric index
       std::optional<size_t> index_opt = parseIndex(segment);
       if (!index_opt) {
-        return Token::Error;  // Invalid array index in path segment
+        return Token::error;  // Invalid array index in path segment
       }
 
       size_t target_index = *index_opt;
@@ -325,24 +326,24 @@ JsonReader::Token JsonReader::get(std::string_view path) {
       }
 
       Token element_token = next();
-      if (element_token == Token::ArrayEnd || element_token == Token::End ||
-          element_token == Token::Error) {
-        return Token::Error;
+      if (element_token == Token::array_end || element_token == Token::end ||
+          element_token == Token::error) {
+        return Token::error;
       }
 
       if (end == std::string_view::npos) {
         return element_token;
       }
 
-      if (element_token != Token::ObjectStart &&
-          element_token != Token::ArrayStart) {
-        return Token::Error;
+      if (element_token != Token::object_start &&
+          element_token != Token::array_start) {
+        return Token::error;
       }
       current_container_type = element_token;
     }
 
     else {
-      return Token::Error;
+      return Token::error;
     }
 
     if (end == std::string_view::npos) {
@@ -355,7 +356,7 @@ JsonReader::Token JsonReader::get(std::string_view path) {
   // token was returned. This return is effectively unreachable if the path is
   // valid and ends with a value. The last `return value_token` or `return
   // element_token` handles the final value.
-  return Token::Error;  // Should not reach here
+  return Token::error;  // Should not reach here
 }
 
 void JsonReader::skipWhitespace() {

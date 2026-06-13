@@ -52,10 +52,8 @@ class Scheduler {
   void setFsmTimeout(uint32_t timeout_ms);
   void setTotalTimeout(uint32_t timeout_ms);
 
-  void setReactiveMasterSlaveCallback(
-      ReactiveCallback callback);  // Public API uses std::function
-  void setProtocolCallback(
-      ProtocolCallback callback);  // Public API uses std::function
+  void setReactiveCallback(ReactiveCallback callback);
+  void setProtocolCallback(ProtocolCallback callback);
 
   // Working Methods
   void attachHandlerCallbacks();
@@ -95,13 +93,13 @@ class Scheduler {
 
   struct Compare {
     bool operator()(Item const& lhs, Item const& rhs) const {
-      static constexpr Duration kJitter =
+      static constexpr Duration jitter_threshold =
           std::chrono::milliseconds(SchedulerLimits::jitter_threshold_ms);
 
-      // Group due times into buckets of kJitter size to guarantee a strict weak
-      // ordering
-      const auto lhs_bucket = lhs.due.time_since_epoch() / kJitter;
-      const auto rhs_bucket = rhs.due.time_since_epoch() / kJitter;
+      // Group due times into buckets of jitter_threshold size to guarantee a
+      // strict weak ordering
+      const auto lhs_bucket = lhs.due.time_since_epoch() / jitter_threshold;
+      const auto rhs_bucket = rhs.due.time_since_epoch() / jitter_threshold;
 
       if (lhs_bucket != rhs_bucket) {
         return lhs_bucket > rhs_bucket;  // Earlier bucket wins (Min-Heap

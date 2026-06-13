@@ -28,13 +28,13 @@ namespace ebus::detail {
  * (SBO). Avoids heap allocations for sequences up to 64 bytes.
  */
 template <typename T = uint8_t,
-          size_t kInlineCapacity = detail::SequenceLimits::default_capacity>
+          size_t inline_capacity = detail::SequenceLimits::default_capacity>
 class SmallByteVector {
  public:
   static_assert(std::is_trivially_copyable_v<T>,
                 "SmallByteVector requires trivially copyable type");
 
-  SmallByteVector() : size_(0), capacity_(kInlineCapacity) {}
+  SmallByteVector() : size_(0), capacity_(inline_capacity) {}
 
   ~SmallByteVector() {
     if (data_) std::free(data_);
@@ -61,20 +61,21 @@ class SmallByteVector {
     return size_ == 0 || std::memcmp(data(), other.data(), size_) == 0;
   }
 
-  bool operator!=(const SmallByteVector<T, kInlineCapacity>& other) const {
+  bool operator!=(const SmallByteVector<T, inline_capacity>& other) const {
     return !(*this == other);
   }
 
   void push_back(T b) {
     if (size_ >= capacity_) {
       grow(size_ + 1);
-      if (size_ >= capacity_) return;  // Drop byte if grow failed
+      if (size_ >= capacity_) return;
     }
     data()[size_++] = b;
   }
   void clear() { size_ = 0; }
   size_t size() const { return size_; }
   bool empty() const { return size_ == 0; }
+
   T& operator[](size_t i) { return data()[i]; }
   const T& operator[](size_t i) const { return data()[i]; }
 
@@ -120,8 +121,8 @@ class SmallByteVector {
  private:
   T* data_ = nullptr;
   size_t size_ = 0;
-  size_t capacity_ = kInlineCapacity;
-  T stack_buffer_[kInlineCapacity]{};
+  size_t capacity_ = inline_capacity;
+  T stack_buffer_[inline_capacity]{};
 
   void grow(size_t min_cap) {
     const size_t new_cap = std::max(min_cap, capacity_ * 2);
@@ -141,17 +142,17 @@ class SmallByteVector {
     }
   }
 
-  void moveFrom(SmallByteVector<T, kInlineCapacity>&& other) {
+  void moveFrom(SmallByteVector<T, inline_capacity>&& other) {
     if (data_) std::free(data_);
     if (other.data_ == nullptr) {
       std::memcpy(stack_buffer_, other.stack_buffer_, other.size_ * sizeof(T));
       data_ = nullptr;
-      capacity_ = kInlineCapacity;
+      capacity_ = inline_capacity;
     } else {
       data_ = other.data_;
       capacity_ = other.capacity_;
       other.data_ = nullptr;
-      other.capacity_ = kInlineCapacity;
+      other.capacity_ = inline_capacity;
     }
     size_ = other.size_;
     other.size_ = 0;
@@ -172,11 +173,11 @@ namespace ebus {
  * (reduced) 0xAA <-> 0xA9 0x01 (extended)
  * (reduced) 0xA9 <-> 0xA9 0x00 (extended)
  */
-template <size_t kInlineCapacity = detail::SequenceLimits::default_capacity>
+template <size_t inline_capacity = detail::SequenceLimits::default_capacity>
 class SequenceImpl {
  public:
   // Lifecycle & Static Factories
-  static_assert(kInlineCapacity >= detail::SequenceLimits::max_data_bytes,
+  static_assert(inline_capacity >= detail::SequenceLimits::max_data_bytes,
                 "Sequence capacity too small");
 
   SequenceImpl() = default;
@@ -185,7 +186,7 @@ class SequenceImpl {
    * @brief Creates a logical eBUS Inquiry of Existence broadcast sequence.
    * ZZ=FE, PB=07, SB=FE, NN=00.
    */
-  static SequenceImpl InquiryOfExistence() {
+  static SequenceImpl inquiryOfExistence() {
     return {Symbols::broad, 0x07, 0xfe, 0x00};
   }
 
@@ -193,7 +194,7 @@ class SequenceImpl {
    * @brief Creates a logical eBUS Sign of Life broadcast sequence.
    * ZZ=FE, PB=07, SB=FF, NN=00.
    */
-  static SequenceImpl SignOfLife() {
+  static SequenceImpl signOfLife() {
     return {Symbols::broad, 0x07, 0xff, 0x00};
   }
 
@@ -283,14 +284,14 @@ class SequenceImpl {
    * same protocol data, even if one is extended (wire format) and the other
    * is reduced (logical format).
    */
-  template <size_t OtherCap>
-  bool logicallyEquals(const SequenceImpl<OtherCap>& other) const {
+  template <size_t other_cap>
+  bool logicallyEquals(const SequenceImpl<other_cap>& other) const {
     if (extended_ == other.isExtended()) {
       return sequence_ == other.sequence_;
     }
     // Normalize both to reduced format for comparison
-    SequenceImpl<kInlineCapacity> a = *this;
-    SequenceImpl<OtherCap> b = other;
+    SequenceImpl<inline_capacity> a = *this;
+    SequenceImpl<other_cap> b = other;
     a.reduce();
     b.reduce();
     return a.sequence_ == b.sequence_;
@@ -299,8 +300,8 @@ class SequenceImpl {
   /**
    * Appends data while normalizing to the target extension state.
    */
-  template <size_t OtherCap>
-  void append(const SequenceImpl<OtherCap>& other) {
+  template <size_t other_cap>
+  void append(const SequenceImpl<other_cap>& other) {
     SequenceImpl temp = other;
     if (extended_)
       temp.extend();
@@ -309,7 +310,7 @@ class SequenceImpl {
     sequence_.insert(sequence_.end(), temp.begin(), temp.end());
   }
 
-  void pushBack(const uint8_t byte, const bool extended = true) {
+  void push_back(const uint8_t byte, const bool extended = true) {
     sequence_.push_back(byte);
     extended_ = extended;
   }
@@ -460,7 +461,7 @@ class SequenceImpl {
   operator ByteView() const { return ByteView(data(), size()); }
 
  private:
-  detail::SmallByteVector<uint8_t, kInlineCapacity> sequence_;
+  detail::SmallByteVector<uint8_t, inline_capacity> sequence_;
   bool extended_ = false;
 };
 

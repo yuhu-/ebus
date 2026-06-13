@@ -85,7 +85,9 @@ void ReadOnlyClient::sendToClient(ByteView data) {
     // backpressure/hangs.
     while (outbound_buffer_.size() + data.size() > max_buffer_size_) {
       // Drop a substantial chunk (approx 12.5%) to amortize erase costs.
-      size_t to_drop = std::max(data.size(), max_buffer_size_ / 8);
+      size_t to_drop =
+          std::max(data.size(), max_buffer_size_ /
+                                    NetworkLimits::outbound_buffer_drop_factor);
       if (to_drop > outbound_buffer_.size()) to_drop = outbound_buffer_.size();
       outbound_buffer_.erase(outbound_buffer_.begin(),
                              outbound_buffer_.begin() + to_drop);
@@ -130,7 +132,9 @@ void RegularClient::sendToClient(ByteView data) {
     // backpressure/hangs.
     while (outbound_buffer_.size() + data.size() > max_buffer_size_) {
       // Drop a substantial chunk (approx 12.5%) to amortize erase costs.
-      size_t to_drop = std::max(data.size(), max_buffer_size_ / 8);
+      size_t to_drop =
+          std::max(data.size(), max_buffer_size_ /
+                                    NetworkLimits::outbound_buffer_drop_factor);
       if (to_drop > outbound_buffer_.size()) to_drop = outbound_buffer_.size();
       outbound_buffer_.erase(outbound_buffer_.begin(),
                              outbound_buffer_.begin() + to_drop);
@@ -204,14 +208,14 @@ bool EnhancedClient::recvFromClient(uint8_t& out) {
   uint8_t b1 = inbound_buf_[0];
 
   // Short form (< 0x80) is a single byte
-  if (b1 < 0x80) {
+  if (b1 < detail::EnhancedProtocolLimits::data_threshold) {
     out = b1;
     inbound_len_ = 0;
     return true;
   }
 
   // Enhanced sequences are always 2 bytes
-  if (inbound_len_ < 2) {
+  if (inbound_len_ < detail::EnhancedProtocolLimits::max_sequence_len) {
     uint8_t b2;
     if (platform::recv(fd_, &b2, 1, platform::Flags::dont_wait) != 1)
       return false;
@@ -275,9 +279,13 @@ void EnhancedClient::sendToClient(ByteView data) {
     platform::LockGuard<platform::Mutex> lock(buffer_mutex_);
     // DRAIN: Discard oldest data if buffer is full to prevent
     // backpressure/hangs.
-    while (outbound_buffer_.size() + 2 > max_buffer_size_) {
+    while (outbound_buffer_.size() +
+               detail::EnhancedProtocolLimits::max_sequence_len >
+           max_buffer_size_) {
       // Drop a substantial chunk (approx 12.5%) to amortize erase costs.
-      size_t to_drop = std::max(static_cast<size_t>(2), max_buffer_size_ / 8);
+      size_t to_drop = std::max(
+          EnhancedProtocolLimits::max_sequence_len,
+          max_buffer_size_ / NetworkLimits::outbound_buffer_drop_factor);
       if (to_drop > outbound_buffer_.size()) to_drop = outbound_buffer_.size();
       outbound_buffer_.erase(outbound_buffer_.begin(),
                              outbound_buffer_.begin() + to_drop);
@@ -285,12 +293,14 @@ void EnhancedClient::sendToClient(ByteView data) {
 
     // Short form is allowed for RECEIVED notifications where value < 0x80
     if (cmd == static_cast<uint8_t>(enhanced::Response::received) &&
-        val < 0x80) {
+        val < detail::EnhancedProtocolLimits::data_threshold) {
       outbound_buffer_.push_back(val);
     } else {
-      uint8_t out[2];
+      uint8_t out[detail::EnhancedProtocolLimits::max_sequence_len];
       enhanced::Protocol::encode(cmd, val, out);
-      outbound_buffer_.insert(outbound_buffer_.end(), out, out + 2);
+      outbound_buffer_.insert(
+          outbound_buffer_.end(), out,
+          out + detail::EnhancedProtocolLimits::max_sequence_len);
     }
     flushLocked();
   }

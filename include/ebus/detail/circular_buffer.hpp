@@ -27,12 +27,12 @@ class CircularBuffer {
   // overwritten.
   bool push_back(const T& item) {
     platform::LockGuard<platform::Mutex> lock(mutex_);
-    return push_impl(item);
+    return pushImpl(item);
   }
 
   bool push_back(T&& item) {
     platform::LockGuard<platform::Mutex> lock(mutex_);
-    return push_impl(std::move(item));
+    return pushImpl(std::move(item));
   }
 
   /**
@@ -91,7 +91,7 @@ class CircularBuffer {
   size_t size_ = 0;
 
   template <typename U>
-  bool push_impl(U&& item) {
+  bool pushImpl(U&& item) {
     bool overwritten = false;
     if (size_ == Cap) {
       buffer_[head_] = std::forward<U>(item);

@@ -104,16 +104,16 @@ void PollManager::processDueItems(PollVisitor callback, bool* activity) {
 
 bool PollManager::mergeFromJson(const std::string& json) {
   detail::JsonReader reader(json);
-  if (reader.next() != detail::JsonReader::Token::ArrayStart) return false;
+  if (reader.next() != detail::JsonReader::Token::array_start) return false;
 
   while (true) {
     auto t = reader.next();
-    if (t == detail::JsonReader::Token::ArrayEnd ||
-        t == detail::JsonReader::Token::End)
+    if (t == detail::JsonReader::Token::array_end ||
+        t == detail::JsonReader::Token::end)
       break;
-    if (t == detail::JsonReader::Token::Error) return false;
+    if (t == detail::JsonReader::Token::error) return false;
 
-    if (t == detail::JsonReader::Token::ObjectStart) {
+    if (t == detail::JsonReader::Token::object_start) {
       uint8_t priority = 5;
       std::string message_hex;
       uint32_t interval = 1000;

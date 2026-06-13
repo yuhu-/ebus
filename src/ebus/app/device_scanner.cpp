@@ -33,11 +33,13 @@ void DeviceScanner::setOwnAddress(uint8_t address) {
   // to prevent self-probing after an address change.
   StaticVector<Sequence, DeviceLimits::max_manual_queue> filtered;
   const uint8_t own_slave = ebus::slaveOf(address);
-  while (!manual_queue_.empty()) {
-    auto cmd = std::move(manual_queue_[0]);
-    if (!cmd.empty() && cmd[0] != own_slave) filtered.push_back(std::move(cmd));
-    manual_queue_.erase(manual_queue_.begin());
+
+  for (auto& cmd : manual_queue_) {
+    if (!cmd.empty() && cmd[0] != own_slave) {
+      filtered.push_back(std::move(cmd));
+    }
   }
+  manual_queue_.clear();
   manual_queue_ = std::move(filtered);
 }
 
@@ -83,25 +85,22 @@ void DeviceScanner::initFullScan(bool enable) {
   if (enable) {
     // Start full-scan from beginning without touching startup timing/state.
     full_scan_address_ = 0;
-  } else {
-    // Stop full scan; leave startup scans untouched.
-    full_scan_ = false;
   }
+  // Note: full_scan_ is already set above; else block is redundant.
 }
 
 bool DeviceScanner::scanObservedDevices() {
-  bool queued_any = false;
-  // device_manager is thread-safe, so we can query it outside our lock
-  // to reduce contention, although getObservedSlaves copies the set anyway.
-  std::bitset<256> observed;
-  std::vector<Sequence> vendor_cmds_buffer;
-
-  if (device_manager_) {
-    device_manager_->getObservedSlaves(observed);
-    device_manager_->vendorScanCommands(
-        [&](const Sequence& cmd) { vendor_cmds_buffer.push_back(cmd); });
+  if (!device_manager_) {
+    return false;
   }
 
+  std::bitset<256> observed;
+  std::vector<Sequence> vendor_cmds_buffer;
+  device_manager_->getObservedSlaves(observed);
+  device_manager_->vendorScanCommands(
+      [&](const Sequence& cmd) { vendor_cmds_buffer.push_back(cmd); });
+
+  bool queued_any = false;
   platform::LockGuard<platform::Mutex> lock(mutex_);
   for (size_t i = 0; i < 256; ++i) {
     if (observed.test(i)) {
@@ -138,7 +137,6 @@ bool DeviceScanner::scanAddresses(const std::vector<uint8_t>& addresses) {
 }
 
 ebus::Sequence DeviceScanner::nextCommand() {
-  const auto now = Clock::now();
   platform::UniqueLock<platform::Mutex> lock(mutex_);
 
   // Priority 1: Manual Scan (Triggered by user, bypass busy check)
@@ -171,6 +169,7 @@ ebus::Sequence DeviceScanner::nextCommand() {
   // Priority 3: Startup Scan (Discovery of observed devices)
   if (!scan_on_startup_) return {};
 
+  const auto now = Clock::now();
   if (now < next_startup_scan_time_) {
     // If we are still in initial delay, but there might be leftover
     // startup_queue_

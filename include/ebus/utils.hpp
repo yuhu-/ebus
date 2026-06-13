@@ -281,9 +281,10 @@ float roundDigits(float value, uint8_t digits) noexcept;
 template <typename T,
           typename = std::enable_if_t<detail::is_byte_range<T>::value>>
 inline ByteView range(const T& container, size_t index, size_t len) {
-  if (index >= container.size()) return {};
-  size_t count = std::min(len, container.size() - index);
-  return ByteView(container.data() + index, count);
+  const size_t cont_size = std::size(container);
+  if (index >= cont_size) return {};
+  size_t count = std::min(len, cont_size - index);
+  return ByteView(std::data(container) + index, count);
 }
 
 /**

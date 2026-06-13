@@ -96,8 +96,6 @@ struct DataTypeInfo : DataTypeInfoBase {
   void toJson(detail::JsonWriter& writer) const;
 };
 
-inline constexpr int64_t FIXED_POINT_SCALE = 1000000LL;  // 1,000,000
-
 /**
  * A variant containing any possible decoded eBUS value.
  */

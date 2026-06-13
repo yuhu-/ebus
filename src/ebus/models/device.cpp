@@ -16,21 +16,22 @@
 
 namespace ebus::detail {
 
-static constexpr uint8_t VENDOR_VAILLANT = 0xb5;
+static constexpr uint8_t vendor_vaillant = 0xb5;
 
 // Identification (Service 07h 04h)
-static constexpr std::array<uint8_t, 3> VEC_070400 = {0x07, 0x04, 0x00};
+static constexpr std::array<uint8_t, 3> vec_070400 = {0x07, 0x04, 0x00};
 
 // Vaillant identification (Service B5h 09h 24h-27h)
-static constexpr std::array<uint8_t, 4> VEC_b5090124 = {0xb5, 0x09, 0x01, 0x24};
-static constexpr std::array<uint8_t, 4> VEC_b5090125 = {0xb5, 0x09, 0x01, 0x25};
-static constexpr std::array<uint8_t, 4> VEC_b5090126 = {0xb5, 0x09, 0x01, 0x26};
-static constexpr std::array<uint8_t, 4> VEC_b5090127 = {0xb5, 0x09, 0x01, 0x27};
+static constexpr std::array<uint8_t, 4> vec_b5090124 = {0xb5, 0x09, 0x01, 0x24};
+static constexpr std::array<uint8_t, 4> vec_b5090125 = {0xb5, 0x09, 0x01, 0x25};
+static constexpr std::array<uint8_t, 4> vec_b5090126 = {0xb5, 0x09, 0x01, 0x26};
+static constexpr std::array<uint8_t, 4> vec_b5090127 = {0xb5, 0x09, 0x01, 0x27};
 
 ebus::Sequence Device::createScanCommand(uint8_t slave) {
   Sequence sequence;
-  sequence.pushBack(slave, false);
-  for (uint8_t b : VEC_070400) sequence.pushBack(b, false);
+  sequence.push_back(slave, false);
+  std::for_each(vec_070400.begin(), vec_070400.end(),
+                [&sequence](uint8_t b) { sequence.push_back(b, false); });
   return sequence;
 }
 
@@ -41,15 +42,15 @@ void Device::update(uint8_t slave_addr, ByteView master_view,
 
   if (slave_view.empty()) return;
 
-  if (ebus::matches(master_view, VEC_070400, 2))
+  if (ebus::matches(master_view, vec_070400, 2))
     vec_070400_.assign(slave_view);
-  else if (ebus::matches(master_view, VEC_b5090124, 2))
+  else if (ebus::matches(master_view, vec_b5090124, 2))
     vec_b5090124_.assign(slave_view);
-  else if (ebus::matches(master_view, VEC_b5090125, 2))
+  else if (ebus::matches(master_view, vec_b5090125, 2))
     vec_b5090125_.assign(slave_view);
-  else if (ebus::matches(master_view, VEC_b5090126, 2))
+  else if (ebus::matches(master_view, vec_b5090126, 2))
     vec_b5090126_.assign(slave_view);
-  else if (ebus::matches(master_view, VEC_b5090127, 2))
+  else if (ebus::matches(master_view, vec_b5090127, 2))
     vec_b5090127_.assign(slave_view);
 }
 
@@ -61,13 +62,14 @@ void Device::createVendorScanCommands(
     const ModelSequence* storage_fields[] = {&vec_b5090124_, &vec_b5090125_,
                                              &vec_b5090126_, &vec_b5090127_};
     const std::array<uint8_t, 4>* command_prefixes[] = {
-        &VEC_b5090124, &VEC_b5090125, &VEC_b5090126, &VEC_b5090127};
+        &vec_b5090124, &vec_b5090125, &vec_b5090126, &vec_b5090127};
 
     for (size_t i = 0; i < 4; ++i) {
       if (storage_fields[i]->empty()) {
         Sequence command;
-        command.pushBack(slave_, false);
-        for (uint8_t b : *command_prefixes[i]) command.pushBack(b, false);
+        command.push_back(slave_, false);
+        std::for_each(command_prefixes[i]->begin(), command_prefixes[i]->end(),
+                      [&command](uint8_t b) { command.push_back(b, false); });
         callback(command);
       }
     }
@@ -127,7 +129,7 @@ ebus::DeviceInfo Device::getDeviceInfo() const {
 }
 
 bool Device::isVaillant() const {
-  return (vec_070400_.size() > 1 && vec_070400_[1] == VENDOR_VAILLANT);
+  return (vec_070400_.size() > 1 && vec_070400_[1] == vendor_vaillant);
 }
 
 bool Device::isVaillantValid() const {
@@ -167,7 +169,7 @@ void DeviceInfo::toJson(detail::JsonWriter& writer) const {
   writer.writeField("frequency", frequency);
 }
 
-static constexpr const char* kManufacturerTable[256] = {
+static constexpr const char* manufacturer_table[256] = {
     nullptr,         nullptr,         nullptr,      "Junkers",   "Bosch",
     "Buderus",       "Dungs",         nullptr,      "Siemens",   nullptr,
     nullptr,         "Danfoss",       nullptr,      nullptr,     nullptr,
@@ -218,7 +220,7 @@ static constexpr const char* kManufacturerTable[256] = {
     nullptr,         "ebusd.eu",      nullptr,      nullptr};
 
 const char* manufacturerName(uint8_t id) {
-  const char* name = kManufacturerTable[id];
+  const char* name = manufacturer_table[id];
   return name ? name : "Unknown";
 }
 

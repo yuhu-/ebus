@@ -58,10 +58,10 @@ TEST_CASE("Scheduler: Simulation", "[app][scheduler]") {
   // CRC).
   ebus::Sequence slavePart = ebus::frameSlave(ebus::toVector("013f"));
   ebus::Sequence fullSlaveResponse;
-  fullSlaveResponse.pushBack(ebus::Symbols::ack, false);
+  fullSlaveResponse.push_back(ebus::Symbols::ack, false);
   fullSlaveResponse.append(slavePart);
-  fullSlaveResponse.pushBack(ebus::Symbols::syn,
-                             false);  // Master sends SYN after ACK
+  fullSlaveResponse.push_back(ebus::Symbols::syn,
+                              false);  // Master sends SYN after ACK
 
   // Simulator needs to know about the full expected sequence including the
   // final SYN
@@ -80,9 +80,9 @@ TEST_CASE("Scheduler: Simulation", "[app][scheduler]") {
       {retry_trigger, ebus::Sequence({ebus::Symbols::nak}), 2, 0});
 
   ebus::Sequence retry_success_action;
-  retry_success_action.pushBack(ebus::Symbols::ack, false);
+  retry_success_action.push_back(ebus::Symbols::ack, false);
   retry_success_action.append(ebus::frameSlave(ebus::toVector("013f")));
-  retry_success_action.pushBack(ebus::Symbols::syn, false);
+  retry_success_action.push_back(ebus::Symbols::syn, false);
 
   simulator.addMockReaction(
       {retry_trigger, std::move(retry_success_action), 1, 0});

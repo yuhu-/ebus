@@ -59,15 +59,15 @@ void RuntimeConfig::toJson(detail::JsonWriter& writer) const {
   }
 }
 
-RuntimeConfig RuntimeConfig::fromJson(const std::string& json) {
+RuntimeConfig RuntimeConfig::fromJson(std::string_view json) {
   RuntimeConfig cfg;
   cfg.mergeFromJson(json);
   return cfg;
 }
 
-bool RuntimeConfig::mergeFromJson(const std::string& json) {
+bool RuntimeConfig::mergeFromJson(std::string_view json) {
   detail::JsonReader reader(json);
-  if (reader.next() != detail::JsonReader::Token::ObjectStart) return false;
+  if (reader.next() != detail::JsonReader::Token::object_start) return false;
 
   reader.forEachField([&](std::string_view key, detail::JsonReader& r) {
     if (key == "address") {
@@ -93,7 +93,7 @@ bool RuntimeConfig::mergeFromJson(const std::string& json) {
       return true;
     }
     if (key == "bus") {
-      if (r.next() == detail::JsonReader::Token::ObjectStart) {
+      if (r.next() == detail::JsonReader::Token::object_start) {
         r.forEachField([&](std::string_view k, detail::JsonReader& inner) {
           if (k == "window_us") {
             inner.next();
@@ -124,13 +124,29 @@ bool RuntimeConfig::mergeFromJson(const std::string& json) {
       return true;
     }
     if (key == "diagnostics") {
-      if (r.next() == detail::JsonReader::Token::ObjectStart) {
+      if (r.next() == detail::JsonReader::Token::object_start) {
         r.forEachField([&](std::string_view k, detail::JsonReader& inner) {
           if (k == "level") {
-            inner.next();
-            auto val = inner.asNumStrict<int>();
-            if (val) diagnostics.level = static_cast<LogLevel>(*val);
-            return val.has_value();
+            auto token = inner.next();
+            if (token == detail::JsonReader::Token::number) {
+              auto val = inner.asNumStrict<int>();
+              if (val) diagnostics.level = static_cast<LogLevel>(*val);
+              return val.has_value();
+            } else if (token == detail::JsonReader::Token::string) {
+              std::string_view lv = inner.value();
+              if (lv == "none")
+                diagnostics.level = LogLevel::none;
+              else if (lv == "error")
+                diagnostics.level = LogLevel::error;
+              else if (lv == "info")
+                diagnostics.level = LogLevel::info;
+              else if (lv == "debug")
+                diagnostics.level = LogLevel::debug;
+              else
+                return false;
+              return true;
+            }
+            return false;
           }
           if (k == "log_size") {
             inner.next();
@@ -144,7 +160,7 @@ bool RuntimeConfig::mergeFromJson(const std::string& json) {
       return true;
     }
     if (key == "network") {
-      if (r.next() == detail::JsonReader::Token::ObjectStart) {
+      if (r.next() == detail::JsonReader::Token::object_start) {
         r.forEachField([&](std::string_view k, detail::JsonReader& inner) {
           if (k == "session_timeout_ms") {
             inner.next();
@@ -170,7 +186,7 @@ bool RuntimeConfig::mergeFromJson(const std::string& json) {
       return true;
     }
     if (key == "device") {
-      if (r.next() == detail::JsonReader::Token::ObjectStart) {
+      if (r.next() == detail::JsonReader::Token::object_start) {
         r.forEachField([&](std::string_view k, detail::JsonReader& inner) {
           if (k == "scan_on_startup") {
             inner.next();
@@ -201,7 +217,7 @@ bool RuntimeConfig::mergeFromJson(const std::string& json) {
       return true;
     }
     if (key == "scheduler") {
-      if (r.next() == detail::JsonReader::Token::ObjectStart) {
+      if (r.next() == detail::JsonReader::Token::object_start) {
         r.forEachField([&](std::string_view k, detail::JsonReader& inner) {
           if (k == "max_send_attempts") {
             inner.next();
@@ -238,7 +254,7 @@ bool RuntimeConfig::mergeFromJson(const std::string& json) {
   return true;
 }
 
-bool RuntimeConfig::isValidJson(const std::string& json) {
+bool RuntimeConfig::isValidJson(std::string_view json) {
   return detail::JsonReader::validate(json);
 }
 

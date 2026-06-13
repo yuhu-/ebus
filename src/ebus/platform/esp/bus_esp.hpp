@@ -96,7 +96,7 @@ class BusEsp : public BusBase {
   std::atomic<bool> running_{false};
 
   // ISR/state
-  static constexpr uint8_t FALLING_EDGE_BUFFER_SIZE = 5;
+  static constexpr uint8_t falling_edge_buffer_size = 5;
 
   // The byte time at 2400 baud for 10 bits with a 0.5-bit offset is
   // approximately 9.5 * bit_time_us = 9.5 * 416.67 us = 3958.33 us
@@ -104,7 +104,7 @@ class BusEsp : public BusBase {
       static_cast<int64_t>(Physical::byte_center_bits * Physical::bit_time_us);
 
   uint8_t buffer_index_ = 0;  // Index for falling edge buffer
-  int64_t micros_edge_buffer_[FALLING_EDGE_BUFFER_SIZE] = {0};
+  int64_t micros_edge_buffer_[falling_edge_buffer_size] = {0};
   int64_t micros_start_bit_ = 0;  // Estimated start bit time
 
   bool bus_request_flag_ = false;

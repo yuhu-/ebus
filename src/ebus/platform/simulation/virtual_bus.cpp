@@ -67,7 +67,7 @@ void VirtualBus::addSlaveReaction(uint8_t source,
                                   int repeat_count, uint32_t delay_ms) {
   ebus::Sequence slavePart = ebus::frameSlave(ebus::toVector(reaction_hex));
   ebus::Sequence action;
-  action.pushBack(ebus::Symbols::ack, false);
+  action.push_back(ebus::Symbols::ack, false);
   action.append(slavePart);
 
   MockReaction mock = {ebus::frameMaster(source, ebus::toVector(trigger_hex)),
@@ -78,7 +78,7 @@ void VirtualBus::addSlaveReaction(uint8_t source,
 void VirtualBus::addAckReaction(uint8_t source, const std::string& trigger_hex,
                                 int repeat_count, uint32_t delay_ms) {
   ebus::Sequence ack;
-  ack.pushBack(ebus::Symbols::ack, false);
+  ack.push_back(ebus::Symbols::ack, false);
   MockReaction mock = {ebus::frameMaster(source, ebus::toVector(trigger_hex)),
                        ack, repeat_count, delay_ms};
   addMockReaction(mock);
@@ -87,7 +87,7 @@ void VirtualBus::addAckReaction(uint8_t source, const std::string& trigger_hex,
 void VirtualBus::addNakReaction(uint8_t source, const std::string& trigger_hex,
                                 int repeat_count, uint32_t delay_ms) {
   ebus::Sequence nak;
-  nak.pushBack(ebus::Symbols::nak, false);
+  nak.push_back(ebus::Symbols::nak, false);
   MockReaction mock = {ebus::frameMaster(source, ebus::toVector(trigger_hex)),
                        nak, repeat_count, delay_ms};
   addMockReaction(mock);
@@ -96,8 +96,8 @@ void VirtualBus::addNakReaction(uint8_t source, const std::string& trigger_hex,
 void VirtualBus::addMasterAckReaction(const std::string& trigger_hex,
                                       int repeat_count, uint32_t delay_ms) {
   ebus::Sequence ack;
-  ack.pushBack(ebus::Symbols::ack, false);
-  ack.pushBack(ebus::Symbols::syn, false);  // Master must send SYN after ACK
+  ack.push_back(ebus::Symbols::ack, false);
+  ack.push_back(ebus::Symbols::syn, false);  // Master must send SYN after ACK
   // The trigger is the full framed slave part (NN DBx CRC)
   MockReaction mock = {ebus::frameSlave(ebus::toVector(trigger_hex)), ack,
                        repeat_count, delay_ms};
@@ -107,7 +107,7 @@ void VirtualBus::addMasterAckReaction(const std::string& trigger_hex,
 void VirtualBus::addMasterNakReaction(const std::string& trigger_hex,
                                       int repeat_count, uint32_t delay_ms) {
   ebus::Sequence nak;
-  nak.pushBack(ebus::Symbols::nak, false);
+  nak.push_back(ebus::Symbols::nak, false);
   // The trigger is the full framed slave part (NN DBx CRC)
   MockReaction mock = {ebus::frameSlave(ebus::toVector(trigger_hex)), nak,
                        repeat_count, delay_ms};
@@ -124,17 +124,17 @@ void VirtualBus::addFullTelegramReaction(uint8_t source,
   ebus::Sequence slavePart = ebus::frameSlave(ebus::toVector(slave_hex));
 
   ebus::Sequence trigger = masterPart;
-  trigger.pushBack(ebus::Symbols::ack, false);
+  trigger.push_back(ebus::Symbols::ack, false);
   trigger.append(slavePart);
   trigger.extend();
 
   ebus::Sequence action;
-  action.pushBack(action_byte, false);
+  action.push_back(action_byte, false);
 
   // If the simulated master is sending an ACK to conclude the telegram,
   // it must release the bus with a SYN symbol.
   if (action_byte == ebus::Symbols::ack) {
-    action.pushBack(ebus::Symbols::syn, false);
+    action.push_back(ebus::Symbols::syn, false);
   }
 
   MockReaction mock = {trigger, action, repeat_count, delay_ms};

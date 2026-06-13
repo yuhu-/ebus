@@ -69,7 +69,7 @@ struct RuntimeConfig {
    * @return A populated RuntimeConfig object. Defaults are used for missing
    * keys.
    */
-  static RuntimeConfig fromJson(const std::string& json);
+  static RuntimeConfig fromJson(std::string_view json);
 
   /**
    * @brief Merges a partial JSON string into the current configuration.
@@ -77,7 +77,7 @@ struct RuntimeConfig {
    * Unknown keys are safely ignored.
    * @return true if the JSON was partially or fully parsed, false on error.
    */
-  bool mergeFromJson(const std::string& json);
+  bool mergeFromJson(std::string_view json);
 
   /**
    * @brief Performs a basic structural validation of a JSON string.
@@ -86,7 +86,7 @@ struct RuntimeConfig {
    * @param json The JSON string to validate.
    * @return true if the string appears to be valid JSON, false otherwise.
    */
-  static bool isValidJson(const std::string& json);
+  static bool isValidJson(std::string_view json);
 };
 
 /**

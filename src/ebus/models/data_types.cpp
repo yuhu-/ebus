@@ -9,6 +9,7 @@
 #include <cstring>
 #include <ebus/data_types.hpp>
 #include <ebus/detail/json_writer.hpp>
+#include <ebus/detail/protocol_limits.hpp>
 #include <ebus/sequence.hpp>
 #include <ebus/utils.hpp>
 #include <limits>
@@ -31,47 +32,47 @@ struct Meta : DataTypeInfoBase {
 // Table MUST be sorted alphabetically by 'name' for binary search in
 // stringToDataType
 // clang-format off
-constexpr Meta kMetaTable[] = {
-  {{DataType::bcd, "BCD", 1, true, false, false, true, 0xff}, false, {1, 1}},
-  {{DataType::char1, "CHAR1", 1, false, false, false, true, 0xff}, false, {1, 1}},
-  {{DataType::char2, "CHAR2", 2, false, false, false, true, 0xffff}, false, {1, 1}},
+constexpr Meta meta_table[] = {
+  {{DataType::bcd, "BCD", 1, true, false, false, true, detail::BcdLimits::null_sentinel}, false, {1, 1}},
+  {{DataType::char1, "CHAR1", 1, false, false, false, true, detail::DataTypeLimits::sentinel_8}, false, {1, 1}},
+  {{DataType::char2, "CHAR2", 2, false, false, false, true, detail::DataTypeLimits::sentinel_16}, false, {1, 1}},
   {{DataType::char3, "CHAR3", 3, false, false, false, false, 0}, false, {1, 1}},
   {{DataType::char4, "CHAR4", 4, false, false, false, false, 0}, false, {1, 1}},
   {{DataType::char5, "CHAR5", 5, false, false, false, false, 0}, false, {1, 1}},
   {{DataType::char6, "CHAR6", 6, false, false, false, false, 0}, false, {1, 1}},
   {{DataType::char7, "CHAR7", 7, false, false, false, false, 0}, false, {1, 1}},
   {{DataType::char8, "CHAR8", 8, false, false, false, false, 0}, false, {1, 1}},
-  {{DataType::data1b, "DATA1B", 1, true, true, false, true, 0x80}, false, {1, 1}},
-  {{DataType::data1c, "DATA1C", 1, true, false, false, true, 0xff}, false, {1, 2}},
-  {{DataType::data2b, "DATA2B", 2, true, true, false, true, 0x8000}, false, {1, 256}},
-  {{DataType::data2br, "DATA2BR", 2, true, true, false, true, 0x8000}, true, {1, 256}},
-  {{DataType::data2c, "DATA2C", 2, true, true, false, true, 0x8000}, false, {1, 16}},
-  {{DataType::data2cr, "DATA2CR", 2, true, true, false, true, 0x8000}, true, {1, 16}},
+  {{DataType::data1b, "DATA1B", 1, true, true, false, true, detail::DataTypeLimits::sentinel_s8}, false, {1, 1}},
+  {{DataType::data1c, "DATA1C", 1, true, false, false, true, detail::DataTypeLimits::sentinel_8}, false, {1, 2}},
+  {{DataType::data2b, "DATA2B", 2, true, true, false, true, detail::DataTypeLimits::sentinel_s16}, false, {1, 256}},
+  {{DataType::data2br, "DATA2BR", 2, true, true, false, true, detail::DataTypeLimits::sentinel_s16}, true, {1, 256}},
+  {{DataType::data2c, "DATA2C", 2, true, true, false, true, detail::DataTypeLimits::sentinel_s16}, false, {1, 16}},
+  {{DataType::data2cr, "DATA2CR", 2, true, true, false, true, detail::DataTypeLimits::sentinel_s16}, true, {1, 16}},
   {{DataType::float4, "FLOAT4", 4, true, false, true, false, 0}, false, {1, 1}},
   {{DataType::float4r, "FLOAT4R", 4, true, false, true, false, 0}, true, {1, 1}},
-  {{DataType::hex1, "HEX1", 1, false, false, false, true, 0xff}, false, {1, 1}},
-  {{DataType::hex2, "HEX2", 2, false, false, false, true, 0xffff}, false, {1, 1}},
+  {{DataType::hex1, "HEX1", 1, false, false, false, true, detail::DataTypeLimits::sentinel_8}, false, {1, 1}},
+  {{DataType::hex2, "HEX2", 2, false, false, false, true, detail::DataTypeLimits::sentinel_16}, false, {1, 1}},
   {{DataType::hex3, "HEX3", 3, false, false, false, false, 0}, false, {1, 1}},
   {{DataType::hex4, "HEX4", 4, false, false, false, false, 0}, false, {1, 1}},
   {{DataType::hex5, "HEX5", 5, false, false, false, false, 0}, false, {1, 1}},
   {{DataType::hex6, "HEX6", 6, false, false, false, false, 0}, false, {1, 1}},
   {{DataType::hex7, "HEX7", 7, false, false, false, false, 0}, false, {1, 1}},
   {{DataType::hex8, "HEX8", 8, false, false, false, false, 0}, false, {1, 1}},
-  {{DataType::int16, "INT16", 2, true, true, false, true, 0x8000}, false, {1, 1}},
-  {{DataType::int16r, "INT16R", 2, true, true, false, true, 0x8000}, true, {1, 1}},
-  {{DataType::int32, "INT32", 4, true, true, false, true, 0x80000000}, false, {1, 1}},
-  {{DataType::int32r, "INT32R", 4, true, true, false, true, 0x80000000}, true, {1, 1}},
-  {{DataType::int8, "INT8", 1, true, true, false, true, 0x80}, false, {1, 1}},
-  {{DataType::uint16, "UINT16", 2, true, false, false, true, 0xffff}, false, {1, 1}},
-  {{DataType::uint16r, "UINT16R", 2, true, false, false, true, 0xffff}, true, {1, 1}},
-  {{DataType::uint32, "UINT32", 4, true, false, false, true, 0xffffffff}, false, {1, 1}},
-  {{DataType::uint32r, "UINT32R", 4, true, false, false, true, 0xffffffff}, true, {1, 1}},
-  {{DataType::uint8, "UINT8", 1, true, false, false, true, 0xff}, false, {1, 1}},
+  {{DataType::int16, "INT16", 2, true, true, false, true, detail::DataTypeLimits::sentinel_s16}, false, {1, 1}},
+  {{DataType::int16r, "INT16R", 2, true, true, false, true, detail::DataTypeLimits::sentinel_s16}, true, {1, 1}},
+  {{DataType::int32, "INT32", 4, true, true, false, true, detail::DataTypeLimits::sentinel_s32}, false, {1, 1}},
+  {{DataType::int32r, "INT32R", 4, true, true, false, true, detail::DataTypeLimits::sentinel_s32}, true, {1, 1}},
+  {{DataType::int8, "INT8", 1, true, true, false, true, detail::DataTypeLimits::sentinel_s8}, false, {1, 1}},
+  {{DataType::uint16, "UINT16", 2, true, false, false, true, detail::DataTypeLimits::sentinel_16}, false, {1, 1}},
+  {{DataType::uint16r, "UINT16R", 2, true, false, false, true, detail::DataTypeLimits::sentinel_16}, true, {1, 1}},
+  {{DataType::uint32, "UINT32", 4, true, false, false, true, detail::DataTypeLimits::sentinel_32}, false, {1, 1}},
+  {{DataType::uint32r, "UINT32R", 4, true, false, false, true, detail::DataTypeLimits::sentinel_32}, true, {1, 1}},
+  {{DataType::uint8, "UINT8", 1, true, false, false, true, detail::DataTypeLimits::sentinel_8}, false, {1, 1}},
 };
 // clang-format on
 
 /**
- * Maps a DataType enum value to the kMetaLookup table index.
+ * Maps a DataType enum value to the meta table index.
  */
 constexpr int getDataTypeIndex(DataType dt) {
   const uint32_t val = static_cast<uint32_t>(dt);
@@ -83,20 +84,20 @@ constexpr int getDataTypeIndex(DataType dt) {
  */
 constexpr std::array<const Meta*, 144> generateMetaLookup() {
   std::array<const Meta*, 144> arr{};
-  for (const auto& m : kMetaTable) {
+  for (const auto& m : meta_table) {
     arr[getDataTypeIndex(m.dt)] = &m;
   }
   return arr;
 }
 
-static constexpr auto kMetaLookup = generateMetaLookup();
+static constexpr auto meta_lookup = generateMetaLookup();
 
 const Meta* metaFor(DataType dt) {
   if (dt == DataType::error || dt == DataType::auto_detect) return nullptr;
 
   const int idx = getDataTypeIndex(dt);
-  if (idx < 0 || static_cast<size_t>(idx) >= kMetaLookup.size()) return nullptr;
-  return kMetaLookup[idx];
+  if (idx < 0 || static_cast<size_t>(idx) >= meta_lookup.size()) return nullptr;
+  return meta_lookup[idx];
 }
 
 /**
@@ -118,20 +119,22 @@ struct JsonValueVisitor {
   void operator()(int64_t val) const {
     // This handles the generic int64_t in the variant, which represents
     // fixed-point scaled values in our protocol.
-    char buffer[64];
+    char buffer[detail::FormattingLimits::iso8601_buffer_size +
+                10];  // Sized for float expansion
     const char* end_ptr = formatFloat(
-        static_cast<float>(val) / FIXED_POINT_SCALE, 4, buffer, sizeof(buffer),
+        static_cast<float>(val) / detail::FixedPointLimits::fixed_point_scale,
+        detail::FormattingLimits::detailed_precision, buffer, sizeof(buffer),
         detail::FormattingLimits::float_lower_threshold,
         detail::FormattingLimits::float_upper_threshold);
     writer.write(std::string_view(buffer, end_ptr - buffer));
   }
 
   void operator()(float val) const {
-    char buffer[64];
-    const char* end_ptr =
-        formatFloat(val, 4, buffer, sizeof(buffer),
-                    detail::FormattingLimits::float_lower_threshold,
-                    detail::FormattingLimits::float_upper_threshold);
+    char buffer[detail::FormattingLimits::iso8601_buffer_size + 10];
+    const char* end_ptr = formatFloat(
+        val, detail::FormattingLimits::detailed_precision, buffer,
+        sizeof(buffer), detail::FormattingLimits::float_lower_threshold,
+        detail::FormattingLimits::float_upper_threshold);
     writer.write(std::string_view(buffer, end_ptr - buffer));
   }
 
@@ -177,7 +180,7 @@ void writeInt(ebus::Sequence& s, IntType val, bool flip) {
   const IntType to_write = flip ? swapEndian(val) : val;
   // Spec 2.4.3: Low-byte first.
   for (size_t i = 0; i < sizeof(IntType); ++i)
-    s.pushBack(static_cast<uint8_t>((to_write >> (8 * i)) & 0xff), false);
+    s.push_back(static_cast<uint8_t>((to_write >> (8 * i)) & 0xff), false);
 }
 
 /**
@@ -269,8 +272,13 @@ std::optional<DataValue> decode(DataType dt, ByteView data, Endian e) {
 
   if (dt == DataType::bcd) {
     uint8_t val = data[0];
-    if ((val & 0x0f) > 9 || ((val >> 4) & 0x0f) > 9) return std::nullopt;
-    return static_cast<uint8_t>((val >> 4) * 10 + (val & 0x0f));
+    if ((val & detail::BcdLimits::nibble_mask) > detail::BcdLimits::max_digit ||
+        ((val >> detail::BcdLimits::nibble_shift) &
+         detail::BcdLimits::nibble_mask) > detail::BcdLimits::max_digit)
+      return std::nullopt;
+    return static_cast<uint8_t>((val >> detail::BcdLimits::nibble_shift) *
+                                    detail::BcdLimits::decimal_base +
+                                (val & detail::BcdLimits::nibble_mask));
   }
 
   // Read the raw integer value from bytes
@@ -289,16 +297,16 @@ std::optional<DataValue> decode(DataType dt, ByteView data, Endian e) {
   if (m->is_float) {
     uint32_t raw = readInt<uint32_t>(data, flip);
     float f;
-    std::memcpy(&f, &raw, 4);
+    std::memcpy(&f, &raw, detail::FixedPointLimits::float_size);
     return f;
   }
 
   // Handle scaled integer types (DATA1C, DATA2B, etc.)
   if (m->scale.num != 1 || m->scale.den != 1) {
     // Store as int64_t fixed-point: value * FIXED_POINT_SCALE
-    return static_cast<int64_t>(
-        (static_cast<int64_t>(raw_val) * m->scale.num * FIXED_POINT_SCALE) /
-        m->scale.den);
+    return static_cast<int64_t>((static_cast<int64_t>(raw_val) * m->scale.num *
+                                 detail::FixedPointLimits::fixed_point_scale) /
+                                m->scale.den);
   }
 
   // Handle unscaled integer types
@@ -319,8 +327,11 @@ bool isValid(DataType dt, ByteView data) noexcept {
   if (dt == DataType::bcd) {
     uint8_t val = data[0];
     // Sentinel 0xFF is valid as a "null" result, not a protocol error.
-    if (val == 0xff) return true;
-    return (val & 0x0f) <= 9 && ((val >> 4) & 0x0f) <= 9;
+    if (val == detail::BcdLimits::null_sentinel) return true;
+    return (val & detail::BcdLimits::nibble_mask) <=
+               detail::BcdLimits::max_digit &&
+           ((val >> detail::BcdLimits::nibble_shift) &
+            detail::BcdLimits::nibble_mask) <= detail::BcdLimits::max_digit;
   }
   return true;
 }
@@ -341,7 +352,7 @@ Sequence encode(DataType dt, const DataValue& value, Endian e) {
   if (m->is_numeric && isNull(value)) {
     if (!m->has_replacement) return Sequence{};  // no sentinel defined
     if (m->size == 1) {
-      s.pushBack(static_cast<uint8_t>(m->replacement_value), false);
+      s.push_back(static_cast<uint8_t>(m->replacement_value), false);
     } else if (m->size == 2) {
       writeInt<uint16_t>(s, static_cast<uint16_t>(m->replacement_value), flip);
     } else if (m->size == 4) {
@@ -349,7 +360,7 @@ Sequence encode(DataType dt, const DataValue& value, Endian e) {
     } else {
       // Generic: write low bytes of replacement_value in little-first order
       for (uint8_t i = 0; i < m->size; ++i)
-        s.pushBack(
+        s.push_back(
             static_cast<uint8_t>((m->replacement_value >> (8 * i)) & 0xff),
             false);
     }
@@ -362,7 +373,7 @@ Sequence encode(DataType dt, const DataValue& value, Endian e) {
       s.assign(ByteView(reinterpret_cast<const uint8_t*>(str->data()),
                         std::min(str->size(), static_cast<size_t>(m->size))),
                false);
-      while (s.size() < m->size) s.pushBack(0, false);
+      while (s.size() < m->size) s.push_back(0, false);
     }
     return s;
   }
@@ -370,11 +381,13 @@ Sequence encode(DataType dt, const DataValue& value, Endian e) {
   // Handle BCD
   if (dt == DataType::bcd) {
     int64_t v = asInt64(value);
-    if (v < 0 || v > 99) return s;  // Returns empty sequence to indicate error
+    if (v < 0 || v > detail::BcdLimits::max_value)
+      return s;  // Returns empty sequence to indicate error
 
-    s.pushBack(
-        ((static_cast<uint8_t>(v) / 10) << 4) | (static_cast<uint8_t>(v) % 10),
-        false);
+    s.push_back(((static_cast<uint8_t>(v) / detail::BcdLimits::decimal_base)
+                 << detail::BcdLimits::nibble_shift) |
+                    (static_cast<uint8_t>(v) % detail::BcdLimits::decimal_base),
+                false);
     return s;
   }
 
@@ -382,7 +395,7 @@ Sequence encode(DataType dt, const DataValue& value, Endian e) {
   if (m->is_float) {
     float f = asFloat(value);
     uint32_t raw;
-    std::memcpy(&raw, &f, 4);
+    std::memcpy(&raw, &f, detail::FixedPointLimits::float_size);
     writeInt<uint32_t>(s, raw, flip);
     return s;
   }
@@ -395,9 +408,10 @@ Sequence encode(DataType dt, const DataValue& value, Endian e) {
   } else if (std::holds_alternative<int64_t>(value)) {  // Fixed-point int64_t
     // Convert from fixed-point to float, then unscale.
     // Direct integer math for unscaling can overflow int64_t for large values.
-    raw_int = static_cast<int64_t>(std::round(
-        (static_cast<float>(std::get<int64_t>(value)) / FIXED_POINT_SCALE) *
-        m->scale.den / m->scale.num));
+    raw_int = static_cast<int64_t>(
+        std::round((static_cast<float>(std::get<int64_t>(value)) /
+                    detail::FixedPointLimits::fixed_point_scale) *
+                   m->scale.den / m->scale.num));
   } else {
     raw_int = integerScale(asInt64(value), m->scale.den, m->scale.num);
   }
@@ -406,7 +420,7 @@ Sequence encode(DataType dt, const DataValue& value, Endian e) {
   if (!validateRange(raw_int, m->size, m->is_signed)) return s;
 
   if (m->size == 1)
-    s.pushBack(static_cast<uint8_t>(raw_int), false);
+    s.push_back(static_cast<uint8_t>(raw_int), false);
   else if (m->size == 2)
     writeInt<uint16_t>(s, static_cast<uint16_t>(raw_int), flip);
   else if (m->size == 4)
@@ -439,7 +453,8 @@ float asFloat(const DataValue& value) noexcept {
       [](auto&& arg) -> float {
         using T = std::decay_t<decltype(arg)>;
         if constexpr (std::is_same_v<T, int64_t>) {  // Fixed-point int64_t
-          return static_cast<float>(arg) / FIXED_POINT_SCALE;
+          return static_cast<float>(arg) /
+                 detail::FixedPointLimits::fixed_point_scale;
         }
         if constexpr (std::is_arithmetic_v<T>) return static_cast<float>(arg);
         return 0.0f;
@@ -453,7 +468,8 @@ int64_t asInt64(const DataValue& value) noexcept {
         using T = std::decay_t<decltype(arg)>;
         if constexpr (std::is_same_v<T, int64_t>) {  // Fixed-point int64_t
           // Convert from fixed-point to integer with rounding (FPU-free)
-          return (arg + FIXED_POINT_SCALE / 2) / FIXED_POINT_SCALE;
+          return (arg + detail::FixedPointLimits::fixed_point_scale / 2) /
+                 detail::FixedPointLimits::fixed_point_scale;
         }
         if constexpr (std::is_integral_v<T>) return static_cast<int64_t>(arg);
         if constexpr (std::is_floating_point_v<T>)
@@ -500,7 +516,8 @@ struct ToStringValueVisitor {
   void operator()(int64_t val) const {
     char buffer[64];
     const char* end = formatFloat(
-        static_cast<float>(val) / FIXED_POINT_SCALE, 2, buffer, sizeof(buffer),
+        static_cast<float>(val) / detail::FixedPointLimits::fixed_point_scale,
+        detail::FormattingLimits::default_precision, buffer, sizeof(buffer),
         detail::FormattingLimits::float_lower_threshold,
         detail::FormattingLimits::float_upper_threshold);
     out.append(buffer, static_cast<size_t>(end - buffer));
@@ -508,10 +525,10 @@ struct ToStringValueVisitor {
 
   void operator()(float val) const {
     char buffer[64];
-    const char* end =
-        formatFloat(val, 2, buffer, sizeof(buffer),
-                    detail::FormattingLimits::float_lower_threshold,
-                    detail::FormattingLimits::float_upper_threshold);
+    const char* end = formatFloat(
+        val, detail::FormattingLimits::default_precision, buffer,
+        sizeof(buffer), detail::FormattingLimits::float_lower_threshold,
+        detail::FormattingLimits::float_upper_threshold);
     out.append(buffer, static_cast<size_t>(end - buffer));
   }
 
@@ -586,25 +603,27 @@ DataType getDataType(const DataValue& value) noexcept {
 
 std::vector<DataTypeInfo> getSupportedDataTypes() {
   std::vector<DataTypeInfo> types;
-  types.reserve(sizeof(kMetaTable) / sizeof(kMetaTable[0]));
-  for (const auto& m : kMetaTable) {
-    DataTypeInfo info;
-    static_cast<DataTypeInfoBase&>(info) = m;
-    info.factor = static_cast<float>(m.scale.num) / m.scale.den;
-    types.push_back(info);
-  }
+  types.reserve(sizeof(meta_table) / sizeof(meta_table[0]));
+  std::for_each(std::begin(meta_table), std::end(meta_table),
+                [&](const auto& m) {
+                  DataTypeInfo info;
+                  static_cast<DataTypeInfoBase&>(info) = m;
+                  info.factor = static_cast<float>(m.scale.num) / m.scale.den;
+                  types.push_back(info);
+                });
   return types;
 }
 
 void fetchSupportedDataTypes(
     std::function<void(const DataTypeInfo&)> callback) {
   if (!callback) return;
-  for (const auto& m : kMetaTable) {
-    DataTypeInfo info;
-    static_cast<DataTypeInfoBase&>(info) = m;
-    info.factor = static_cast<float>(m.scale.num) / m.scale.den;
-    callback(info);
-  }
+  std::for_each(std::begin(meta_table), std::end(meta_table),
+                [&](const auto& m) {
+                  DataTypeInfo info;
+                  static_cast<DataTypeInfoBase&>(info) = m;
+                  info.factor = static_cast<float>(m.scale.num) / m.scale.den;
+                  callback(info);
+                });
 }
 
 const char* dataTypeToString(DataType data_type) noexcept {
@@ -614,9 +633,9 @@ const char* dataTypeToString(DataType data_type) noexcept {
 
 DataType stringToDataType(const char* str) {
   auto it = std::lower_bound(
-      std::begin(kMetaTable), std::end(kMetaTable), str,
+      std::begin(meta_table), std::end(meta_table), str,
       [](const Meta& m, const char* s) { return std::strcmp(m.name, s) < 0; });
-  if (it != std::end(kMetaTable) && std::strcmp(it->name, str) == 0)
+  if (it != std::end(meta_table) && std::strcmp(it->name, str) == 0)
     return it->dt;
   return DataType::error;
 }
@@ -631,7 +650,8 @@ void DataTypeInfo::toJson(detail::JsonWriter& writer) const {
   writer.writeField("is_float", is_float);
   writer.writeField("has_replacement", has_replacement);
   writer.writeField("replacement_value", replacement_value);
-  writer.writeFieldFloat("factor", factor, 4);
+  writer.writeFieldFloat("factor", factor,
+                         detail::FormattingLimits::detailed_precision);
 }
 
 void getSupportedDataTypesJson(const JsonChunkVisitor& visitor) {

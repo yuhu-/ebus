@@ -38,18 +38,18 @@
 
 #include "core/telegram.hpp"
 
-constexpr const char* RESET = "\033[0m";
-constexpr const char* BOLD = "\033[1m";
+constexpr const char* ansi_reset = "\033[0m";
+constexpr const char* ansi_bold = "\033[1m";
 
-constexpr const char* RED = "\033[31m";
-constexpr const char* GREEN = "\033[32m";
-constexpr const char* YELLOW = "\033[33m";
-constexpr const char* BLUE = "\033[34m";
-constexpr const char* MAGENTA = "\033[35m";
-constexpr const char* CYAN = "\033[36m";
+constexpr const char* ansi_red = "\033[31m";
+constexpr const char* ansi_green = "\033[32m";
+constexpr const char* ansi_yellow = "\033[33m";
+constexpr const char* ansi_blue = "\033[34m";
+constexpr const char* ansi_magenta = "\033[35m";
+constexpr const char* ansi_cyan = "\033[36m";
 
-constexpr uint8_t ENHANCED_SYM = 0xc6;
-constexpr int ENHANCED_THRESHOLD = 2;
+constexpr uint8_t enhanced_symbol = 0xc6;
+constexpr int enhanced_threshold = 2;
 
 bool bold = false;
 bool color = false;
@@ -194,58 +194,58 @@ void collect(uint8_t byte) {
             ostr << " ";
           }
           if (type) {
-            if (color) ostr << CYAN;
+            if (color) ostr << ansi_cyan;
             if (tel.getType() == ebus::TelegramType::master_slave)
               output_buffer += "MS";
             else if (tel.getType() == ebus::TelegramType::master_master)
               output_buffer += "MM";
             else
               output_buffer += "BC";
-            if (color) output_buffer += RESET;
+            if (color) output_buffer += ansi_reset;
             output_buffer += " ";
           }
-          if (color) output_buffer += GREEN;
+          if (color) output_buffer += ansi_green;
           output_buffer += ebus::toString(tel.getSourceAddress());
           output_buffer += ebus::toString(tel.getTargetAddress());
-          if (color) output_buffer += RESET;
+          if (color) output_buffer += ansi_reset;
           if (split) output_buffer += " ";
-          if (color) output_buffer += BLUE;
+          if (color) output_buffer += ansi_blue;
           output_buffer += ebus::toString(tel.getPrimaryCommand());
           output_buffer += ebus::toString(tel.getSecondaryCommand());
-          if (color) output_buffer += RESET;
+          if (color) output_buffer += ansi_reset;
           if (split) output_buffer += " ";
-          if (color) output_buffer += YELLOW;
+          if (color) output_buffer += ansi_yellow;
           output_buffer += ebus::toString(tel.getMasterNumberBytes());
-          if (color) output_buffer += RESET;
+          if (color) output_buffer += ansi_reset;
           if (tel.getMasterNumberBytes() > 0) {
             if (split) output_buffer += " ";
 
-            if (bold) output_buffer += BOLD;
+            if (bold) output_buffer += ansi_bold;
             ebus::toString(output_buffer, tel.getMasterDataBytes());
-            if (bold) output_buffer += RESET;
+            if (bold) output_buffer += ansi_reset;
           }
           if (split) output_buffer += " ";
-          if (color) output_buffer += MAGENTA;
+          if (color) output_buffer += ansi_magenta;
           output_buffer += ebus::toString(tel.getMasterCRC());
-          if (color) output_buffer += RESET;
+          if (color) output_buffer += ansi_reset;
           if (tel.getType() != ebus::TelegramType::broadcast) {
             if (split) output_buffer += " ";
             output_buffer += ebus::toString(tel.getSlaveACK());
             if (tel.getType() == ebus::TelegramType::master_slave) {
               if (split) output_buffer += " ";
-              if (color) output_buffer += YELLOW;
+              if (color) output_buffer += ansi_yellow;
               output_buffer += ebus::toString(tel.getSlaveNumberBytes());
-              if (color) output_buffer += RESET;
+              if (color) output_buffer += ansi_reset;
               if (tel.getSlaveNumberBytes() > 0) {
                 if (split) output_buffer += " ";
-                if (bold) output_buffer += BOLD;
+                if (bold) output_buffer += ansi_bold;
                 ebus::toString(output_buffer, tel.getSlaveDataBytes());
-                if (bold) output_buffer += RESET;
+                if (bold) output_buffer += ansi_reset;
               }
               if (split) output_buffer += " ";
-              if (color) output_buffer += MAGENTA;
+              if (color) output_buffer += ansi_magenta;
               output_buffer += ebus::toString(tel.getSlaveCRC());
-              if (color) output_buffer += RESET;
+              if (color) output_buffer += ansi_reset;
               if (split) output_buffer += " ";
               output_buffer += ebus::toString(tel.getMasterACK());
             }
@@ -256,13 +256,13 @@ void collect(uint8_t byte) {
                      tel.getSlave().toVector());
             if (!service_str.empty()) {
               output_buffer += "\n";
-              if (color) output_buffer += CYAN;
+              if (color) output_buffer += ansi_cyan;
               if (!notime) {
                 output_buffer += "---SERVICE-DETECTED---> ";
                 if (type) output_buffer += "   ";
               }
               output_buffer += service_str;
-              if (color) output_buffer += RESET;
+              if (color) output_buffer += ansi_reset;
             }
           }
         } else if (!noerror) {
@@ -273,13 +273,13 @@ void collect(uint8_t byte) {
           if (type) output_buffer += "   ";
           ebus::toString(output_buffer, sequence);
           output_buffer += "\n";
-          if (color) output_buffer += RED;
+          if (color) output_buffer += ansi_red;
           if (!notime) {
             output_buffer += "----ERROR-DETECTED----> ";
             if (type) output_buffer += "   ";
           }
           tel.toString(output_buffer);
-          if (color) output_buffer += RESET;
+          if (color) output_buffer += ansi_reset;
         }
         std::cout << output_buffer << std::endl;  // Print the collected string
       }
@@ -287,7 +287,7 @@ void collect(uint8_t byte) {
     }
     running = true;
   } else {
-    sequence.pushBack(byte);
+    sequence.push_back(byte);
   }
 }
 
@@ -347,7 +347,7 @@ void run(const char* hostname, const char* port, int max_retries = 5) {
     }
     std::cerr << "Connected to " << hostname << ":" << port << std::endl;
 
-    char data[2];
+    char data[2]{};
     bool connection_ok = true;
     bool mode_enhanced = false;
     int enhanced_seq_count = 0;
@@ -382,7 +382,7 @@ void run(const char* hostname, const char* port, int max_retries = 5) {
           } else {
             uint8_t byte = static_cast<uint8_t>(data[0]);
             if (waiting_for_c6) {
-              if (byte == ENHANCED_SYM) {
+              if (byte == enhanced_symbol) {
                 waiting_for_c6 = false;  // now expect 0xaa
               } else {
                 enhanced_seq_count = 0;
@@ -391,7 +391,7 @@ void run(const char* hostname, const char* port, int max_retries = 5) {
             } else {  // waiting for 0xAA
               if (byte == ebus::Symbols::syn) {
                 enhanced_seq_count++;
-                if (enhanced_seq_count >= ENHANCED_THRESHOLD) {
+                if (enhanced_seq_count >= enhanced_threshold) {
                   mode_enhanced = true;
                   std::cerr << "*** Switching to ENHANCED mode! ***"
                             << std::endl;

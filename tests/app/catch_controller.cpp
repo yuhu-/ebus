@@ -80,12 +80,12 @@ TEST_CASE("Controller: System Discovery automated response",
   std::atomic<int> signOfLifeCount{0};
   controller.setProtocolCallback([&](const ebus::ProtocolInfo& info) {
     if (info.is_error) return;
-    if (ebus::matches(info.master_view, ebus::Sequence::InquiryOfExistence(),
+    if (ebus::matches(info.master_view, ebus::Sequence::inquiryOfExistence(),
                       1)) {
       inquiryOfExistenceCount++;
     }
 
-    if (ebus::matches(info.master_view, ebus::Sequence::SignOfLife(), 1)) {
+    if (ebus::matches(info.master_view, ebus::Sequence::signOfLife(), 1)) {
       signOfLifeCount++;
     }
   });
@@ -111,7 +111,7 @@ TEST_CASE("Controller: System Discovery automated response",
   // We explicitly write the SYN to start the arbitration window.
   peerBus.writeByte(ebus::Symbols::syn);
   platform::sleepMicro(200);
-  peerSim.injectMasterMessage(0x10, ebus::Sequence::InquiryOfExistence());
+  peerSim.injectMasterMessage(0x10, ebus::Sequence::inquiryOfExistence());
 
   // 2. The controller should see its own broadcast (echo), trigger the
   // discovery logic, and enqueue a Sign of Life (07 FF) response.

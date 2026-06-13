@@ -182,7 +182,7 @@ class Controller {
    * @brief Registers a callback for when this controller is addressed as a
    * slave.
    */
-  void setReactiveMasterSlaveCallback(ReactiveCallback callback);
+  void setReactiveCallback(ReactiveCallback callback);
 
   /**
    * @brief Registers a unified callback for all protocol events (Telegrams or

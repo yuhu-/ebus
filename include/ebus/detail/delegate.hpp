@@ -30,7 +30,7 @@ class Delegate;
 template <typename R, typename... Args>
 class Delegate<R(Args...)> {
   using Invoker = R (*)(const char*, Args...);
-  static constexpr std::size_t BufferSize = 24;
+  static constexpr std::size_t buffer_size = 24;
 
   template <typename F>
   static R invoke_stub(const char* buf, Args... args) {
@@ -81,7 +81,7 @@ class Delegate<R(Args...)> {
   // cppcheck-suppress noExplicitConstructor
   Delegate(Functor&& f) {
     using F = std::decay_t<Functor>;
-    static_assert(sizeof(F) <= BufferSize,
+    static_assert(sizeof(F) <= buffer_size,
                   "Functor too large for Delegate buffer");
     static_assert(std::is_trivially_copyable_v<F>,
                   "Functor must be trivially copyable to be stored in the "
@@ -100,7 +100,7 @@ class Delegate<R(Args...)> {
   bool operator==(const Delegate& other) const noexcept {
     if (invoker_ != other.invoker_) return false;
     if (invoker_ == nullptr) return true;
-    return std::memcmp(buffer_, other.buffer_, BufferSize) == 0;
+    return std::memcmp(buffer_, other.buffer_, buffer_size) == 0;
   }
 
   bool operator!=(const Delegate& other) const noexcept {
@@ -108,7 +108,7 @@ class Delegate<R(Args...)> {
   }
 
  private:
-  alignas(std::max_align_t) char buffer_[BufferSize]{};
+  alignas(std::max_align_t) char buffer_[buffer_size]{};
   Invoker invoker_ = nullptr;
 };
 

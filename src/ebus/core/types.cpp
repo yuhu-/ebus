@@ -303,7 +303,7 @@ void ErrorEntry::toJson(detail::JsonWriter& writer) const {
   writer.writeHexField("master", master);
   writer.writeHexField("slave", slave);
 
-  char iso_buffer[26];
+  char iso_buffer[detail::FormattingLimits::iso8601_buffer_size];
   ebus::formatIso8601Fast(timestamp, iso_buffer);
   writer.writeField("timestamp", std::string_view(iso_buffer));
 }
