@@ -178,7 +178,7 @@ void PollManager::resetPeakMetrics() {
   max_item_count_ = items_.size();
 }
 
-PollManagerStatus PollManager::getStatus() const {
+PollManagerStatus PollManager::fetchStatus() const {
   platform::LockGuard<platform::Mutex> lock(mutex_);
   return PollManagerStatus{items_.size(), max_item_count_,
                            detail::PollLimits::max_items};

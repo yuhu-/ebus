@@ -78,7 +78,7 @@ void BusHandler::processEvent(const BusEvent& bus_event) {
   }
 }
 
-BusHandlerStatus BusHandler::getStatus() const {
+BusHandlerStatus BusHandler::fetchStatus() const {
   return BusHandlerStatus{
       handler_ ? handler_->getState() : HandlerState::passive_receive_master,
       request_ ? request_->getState() : RequestState::observe};

@@ -132,7 +132,7 @@ void DeviceManager::getObservedSlaves(std::bitset<256>& observed) const {
   }
 }
 
-DeviceManagerStatus DeviceManager::getStatus() const {
+DeviceManagerStatus DeviceManager::fetchStatus() const {
   platform::LockGuard<platform::Mutex> lock(mutex_);
   DeviceManagerStatus s;
   s.identified_count = identified_devices_.count();

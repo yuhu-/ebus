@@ -59,7 +59,7 @@ class ClientManager {
 
   // Status/Telemetry
   Clock::time_point nextDueTime() const;
-  ClientManagerStatus getStatus() const;
+  ClientManagerStatus fetchStatus() const;
 
   /**
    * @brief Returns true if a bridge session is currently in progress.

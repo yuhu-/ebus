@@ -252,7 +252,7 @@ bool DeviceScanner::isScanning() const {
          !startup_queue_.empty();
 }
 
-DeviceScannerStatus DeviceScanner::getStatus() const {
+DeviceScannerStatus DeviceScanner::fetchStatus() const {
   platform::LockGuard<platform::Mutex> lock(mutex_);
   DeviceScannerStatus s;
   s.is_scanning = full_scan_ || scan_on_startup_ || !manual_queue_.empty() ||

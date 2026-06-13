@@ -46,7 +46,7 @@ class BusHandler {
   void processEvent(const BusEvent& bus_event);
 
   // Status/Telemetry
-  BusHandlerStatus getStatus() const;
+  BusHandlerStatus fetchStatus() const;
 
  private:
   Request* request_;

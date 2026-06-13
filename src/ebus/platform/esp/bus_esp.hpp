@@ -73,7 +73,7 @@ class BusEsp : public BusBase {
   // Status/Telemetry
   platform::ServiceThread::Status getThreadStatus() const;
   platform::ServiceThread::Status getSynThreadStatus() const;
-  ebus::BusStatus getStatus() const;
+  ebus::BusStatus fetchStatus() const;
 
  private:
   BusConfig config_;

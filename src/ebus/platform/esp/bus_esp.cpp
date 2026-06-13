@@ -194,7 +194,7 @@ ServiceThread::Status BusEsp::getSynThreadStatus() const {
   return ServiceThread::Status{"ebus_bus_syn", -1, -1};
 }
 
-ebus::BusStatus BusEsp::getStatus() const {
+ebus::BusStatus BusEsp::fetchStatus() const {
   auto map =
       [](const platform::ServiceThread::Status& s) -> ebus::ThreadStatus {
     return {s.name, s.task_stack_bytes, s.task_stack_free_bytes};

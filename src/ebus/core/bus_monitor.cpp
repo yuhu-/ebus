@@ -637,6 +637,8 @@ void ControllerStatus::toJson(detail::JsonWriter& writer) const {
   writer.writeField("thread", thread);
   writer.writeField("reactor_queue_size", reactor_queue_size);
   writer.writeField("max_reactor_queue_size", max_reactor_queue_size);
+  writer.writeField("protocol_queue_size", protocol_queue_size);
+  writer.writeField("max_protocol_queue_size", max_protocol_queue_size);
   writer.writeField("event_queue_dropped", event_queue_dropped);
   writer.writeField("max_loop_cycle_us", max_loop_cycle_us);
 }

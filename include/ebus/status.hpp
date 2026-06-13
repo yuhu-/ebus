@@ -74,17 +74,21 @@ struct QueueStatus {
  */
 struct ControllerStatus {
   ControllerStatus() = default;
-  ControllerStatus(ThreadStatus t, size_t q_size, size_t q_max,
-                   uint32_t dropped, uint32_t loop_us)
+  ControllerStatus(ThreadStatus t, size_t q_size, size_t q_max, size_t pq_size,
+                   size_t pq_max, uint32_t dropped, uint32_t loop_us)
       : thread(std::move(t)),
         reactor_queue_size(q_size),
         max_reactor_queue_size(q_max),
+        protocol_queue_size(pq_size),
+        max_protocol_queue_size(pq_max),
         event_queue_dropped(dropped),
         max_loop_cycle_us(loop_us) {}
   ThreadStatus thread;
 
   size_t reactor_queue_size = 0;
   size_t max_reactor_queue_size = 0;
+  size_t protocol_queue_size = 0;
+  size_t max_protocol_queue_size = 0;
   uint32_t event_queue_dropped = 0;
   uint32_t max_loop_cycle_us = 0;
 

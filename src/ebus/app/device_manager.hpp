@@ -46,7 +46,7 @@ class DeviceManager {
   void fetchDeviceInfo(
       const std::function<void(const DeviceInfo&)>& callback) const;
   void getObservedSlaves(std::bitset<256>& observed) const;
-  DeviceManagerStatus getStatus() const;
+  DeviceManagerStatus fetchStatus() const;
 
  private:
   uint8_t own_address_ = 0xff;

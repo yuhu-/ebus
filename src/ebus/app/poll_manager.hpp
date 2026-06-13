@@ -87,7 +87,7 @@ class PollManager {
   // Returns the time point when the next item is due, or max if empty.
   Clock::time_point nextDueTime() const;
   void resetPeakMetrics();
-  PollManagerStatus getStatus() const;
+  PollManagerStatus fetchStatus() const;
 
  private:
   mutable platform::Mutex mutex_;

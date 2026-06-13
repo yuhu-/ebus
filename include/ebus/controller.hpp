@@ -287,6 +287,12 @@ class Controller {
   void fetchUtilizationHistory(std::function<void(float)> callback) const;
 
   /**
+   * @brief Returns the raw event trace of the last processed bytes.
+   */
+  void fetchTraceHistory(
+      std::function<void(const BusEventInfo&)> callback) const;
+
+  /**
    * @brief Returns a snapshot of the diagnostic error log.
    */
   void fetchErrors(std::function<void(const ErrorEntry&)> callback) const;
@@ -299,8 +305,13 @@ class Controller {
   /**
    * @brief Invokes a visitor callback with a snapshot of system resource usage.
    */
-  void fetchSystemResources(
-      std::function<void(const SystemResources&)> callback) const;
+  void fetchStatus(std::function<void(const SystemResources&)> callback) const;
+
+  /**
+   * @brief Streams the service status JSON in chunks to the provided visitor.
+   */
+  void fetchStatus(const JsonChunkVisitor& visitor,
+                   bool reset_histories = false, bool pretty = false) const;
 
   /**
    * @brief Resets all hardware and protocol counters.
@@ -308,22 +319,9 @@ class Controller {
   void resetMetrics();
 
   /**
-   * @brief Returns the raw event trace of the last processed bytes.
-   */
-  void fetchTraceHistory(
-      std::function<void(const BusEventInfo&)> callback) const;
-
-  /**
    * @brief Clears the diagnostic error log.
    */
   void clearErrors();
-
-  /**
-   * @brief Streams the service status JSON in chunks to the provided visitor.
-   */
-  void fetchServiceStatus(const JsonChunkVisitor& visitor,
-                          bool reset_histories = false,
-                          bool pretty = false) const;
 
 #if EBUS_SIMULATION
   /**

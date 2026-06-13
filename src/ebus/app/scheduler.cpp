@@ -368,16 +368,16 @@ Clock::time_point Scheduler::nextDueTime() const {
   return scheduled_items_.front().due;
 }
 
-size_t Scheduler::queueSize() const {
+size_t Scheduler::size() const {
   platform::LockGuard<platform::Mutex> lock(data_mutex_);
   return scheduled_items_.size();
 }
 
-size_t Scheduler::queueCapacity() const { return SchedulerLimits::max_items; }
+size_t Scheduler::capacity() const { return SchedulerLimits::max_items; }
 
-SchedulerStatus Scheduler::getStatus() const {
+SchedulerStatus Scheduler::fetchStatus() const {
   return SchedulerStatus{
-      QueueStatus("scheduler", queueSize(), queueCapacity(), max_queue_size_)};
+      QueueStatus("scheduler", size(), capacity(), max_queue_size_)};
 }
 
 void Scheduler::resetPeakMetrics() {

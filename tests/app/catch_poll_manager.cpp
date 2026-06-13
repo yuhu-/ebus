@@ -109,12 +109,12 @@ TEST_CASE("PollManager: mergeFromJson", "[app][pollmanager]") {
     ])";
 
     REQUIRE(pm.mergeFromJson(json));
-    REQUIRE(pm.getStatus().item_count == 2);
+    REQUIRE(pm.fetchStatus().item_count == 2);
   }
 
   SECTION("Root is not an array should return false") {
     REQUIRE_FALSE(pm.mergeFromJson(R"({"priority": 10})"));
-    REQUIRE(pm.getStatus().item_count == 0);
+    REQUIRE(pm.fetchStatus().item_count == 0);
   }
 
   SECTION("Optional fields use sensible defaults") {
@@ -122,7 +122,7 @@ TEST_CASE("PollManager: mergeFromJson", "[app][pollmanager]") {
     std::string json = R"([{"message": "15070400"}])";
 
     REQUIRE(pm.mergeFromJson(json));
-    REQUIRE(pm.getStatus().item_count == 1);
+    REQUIRE(pm.fetchStatus().item_count == 1);
   }
 
   SECTION("Self-polling messages are strictly filtered") {
@@ -130,7 +130,7 @@ TEST_CASE("PollManager: mergeFromJson", "[app][pollmanager]") {
     std::string json = R"([{"message": "36070400"}])";
 
     REQUIRE(pm.mergeFromJson(json));
-    REQUIRE(pm.getStatus().item_count == 0);
+    REQUIRE(pm.fetchStatus().item_count == 0);
   }
 
   SECTION("Items missing the message key are ignored") {
@@ -139,7 +139,7 @@ TEST_CASE("PollManager: mergeFromJson", "[app][pollmanager]") {
     ])";
 
     REQUIRE(pm.mergeFromJson(json));
-    REQUIRE(pm.getStatus().item_count == 0);
+    REQUIRE(pm.fetchStatus().item_count == 0);
   }
 
   SECTION("Mixed valid and invalid types in array") {
@@ -152,12 +152,12 @@ TEST_CASE("PollManager: mergeFromJson", "[app][pollmanager]") {
 
     REQUIRE(pm.mergeFromJson(json));
     // Only the two valid objects should be added
-    REQUIRE(pm.getStatus().item_count == 2);
+    REQUIRE(pm.fetchStatus().item_count == 2);
   }
 
   SECTION("Empty array is valid but adds nothing") {
     REQUIRE(pm.mergeFromJson("[]"));
-    REQUIRE(pm.getStatus().item_count == 0);
+    REQUIRE(pm.fetchStatus().item_count == 0);
   }
 
   SECTION("Items with malformed numeric fields are rejected") {
@@ -172,6 +172,6 @@ TEST_CASE("PollManager: mergeFromJson", "[app][pollmanager]") {
 
     REQUIRE(pm.mergeFromJson(json));
     // Only the last valid item should be added
-    REQUIRE(pm.getStatus().item_count == 1);
+    REQUIRE(pm.fetchStatus().item_count == 1);
   }
 }

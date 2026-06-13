@@ -87,7 +87,7 @@ struct Impl {
   mutable detail::platform::RecursiveMutex
       config_mutex_;  // Protects config_ and related members
 
-  void getServiceStatus(ServiceStatus& status) const;
+  void fetchServiceStatus(ServiceStatus& status) const;
   void processPublicEvents();
 
   void constructMembers(Controller* owner);
@@ -386,8 +386,7 @@ void Controller::setReactiveCallback(ReactiveCallback callback) {
       impl_->config_mutex_);
   impl_->user_reactive_callback_ = std::move(callback);
   if (impl_->configured_.load())
-    impl_->scheduler_->setReactiveCallback(
-        impl_->user_reactive_callback_);
+    impl_->scheduler_->setReactiveCallback(impl_->user_reactive_callback_);
 }
 
 void Controller::setProtocolCallback(ProtocolCallback callback) {
@@ -543,32 +542,34 @@ size_t Controller::getErrorLogCapacity() const {
   return impl_->error_buffer_.capacity();
 }
 
-void Controller::fetchSystemResources(
+void Controller::fetchStatus(
     std::function<void(const SystemResources&)> callback) const {
   if (!callback) return;
-  SystemResources res;
 
-  res.last_update_timestamp_ms = ebus::getWallTimeMs();  // Current wall time
+  SystemResources res;
   res.is_configured = impl_->configured_.load();
   res.is_running = impl_->running_.load();
 
-  auto mapThreadStatus =
-      [](const detail::platform::ServiceThread::Status& s) -> ThreadStatus {
-    return {s.name, s.task_stack_bytes, s.task_stack_free_bytes};
-  };
+  {
+    detail::platform::LockGuard<detail::platform::Mutex> lock(
+        impl_->status_mutex_);
+    const auto& snap = impl_->status_cache_;
 
-  if (impl_->worker_) {
-    res.threads.push_back(mapThreadStatus(impl_->worker_->status()));
+    res.last_update_timestamp_ms = snap.last_update_timestamp_ms;
+    res.memory = snap.memory;
+
+    if (!snap.controller.thread.name.empty())
+      res.threads.push_back(snap.controller.thread);
+    if (!snap.bus.bus_thread.name.empty())
+      res.threads.push_back(snap.bus.bus_thread);
+    if (!snap.bus.syn_thread.name.empty())
+      res.threads.push_back(snap.bus.syn_thread);
+
+    if (snap.scheduler.queue.capacity > 0)
+      res.queues.push_back(snap.scheduler.queue);
   }
 
-  if (impl_->bus_) {
-    auto b_stat = impl_->bus_->getStatus();
-    res.threads.push_back(b_stat.bus_thread);
-    if (!b_stat.syn_thread.name.empty()) {
-      res.threads.push_back(b_stat.syn_thread);
-    }
-  }
-
+  // Internal orchestration queues: use immediate values for high accuracy
   res.queues.push_back({"protocol_events", impl_->protocol_events_.size(),
                         detail::ControllerLimits::event_queue_size,
                         impl_->max_protocol_events_.load()});
@@ -577,21 +578,11 @@ void Controller::fetchSystemResources(
                         detail::ControllerLimits::reactor_queue_size,
                         impl_->max_reactor_queue_.load()});
 
-  if (impl_->scheduler_) {
-    res.queues.push_back(impl_->scheduler_->getStatus().queue);
-  }
-
-#if defined(ESP_PLATFORM)
-  res.memory =
-      MemoryStatus(heap_caps_get_total_size(MALLOC_CAP_DEFAULT),
-                   esp_get_free_heap_size(), esp_get_minimum_free_heap_size());
-#endif
-
   callback(res);
 }
 
-void Controller::fetchServiceStatus(const JsonChunkVisitor& visitor,
-                                    bool reset_histories, bool pretty) const {
+void Controller::fetchStatus(const JsonChunkVisitor& visitor,
+                             bool reset_histories, bool pretty) const {
   ServiceStatus snapshot;  // This is a local copy, no mutex needed for it
   {
     detail::platform::LockGuard<detail::platform::Mutex> lock(
@@ -612,7 +603,7 @@ void Controller::clearErrors() { impl_->error_buffer_.clear(); }
 VirtualBus& Controller::getVirtualBus() { return *impl_->virtual_bus_; }
 #endif
 
-void Impl::getServiceStatus(ServiceStatus& status) const {
+void Impl::fetchServiceStatus(ServiceStatus& status) const {
   status.last_update_timestamp_ms = ebus::getWallTimeMs();
 
   auto mapThreadStatus =
@@ -627,6 +618,8 @@ void Impl::getServiceStatus(ServiceStatus& status) const {
 
   if (bus_monitor_) {
     status.controller.reactor_queue_size = reactor_queue_.size();
+    status.controller.protocol_queue_size = protocol_events_.size();
+    status.controller.max_protocol_queue_size = max_protocol_events_.load();
     bus_monitor_->fetchMetrics([&](const Metrics& m) {
       status.controller.max_reactor_queue_size =
           m.controller.max_reactor_queue_size;
@@ -636,13 +629,13 @@ void Impl::getServiceStatus(ServiceStatus& status) const {
   }
 
   if (configured_.load()) {
-    status.bus = bus_->getStatus();
-    status.bus_handler = bus_handler_->getStatus();
-    status.scheduler = scheduler_->getStatus();
-    status.client_manager = client_manager_->getStatus();
-    status.device_manager = device_manager_->getStatus();
-    status.device_scanner = device_scanner_->getStatus();
-    status.poll_manager = poll_manager_->getStatus();
+    status.bus = bus_->fetchStatus();
+    status.bus_handler = bus_handler_->fetchStatus();
+    status.scheduler = scheduler_->fetchStatus();
+    status.client_manager = client_manager_->fetchStatus();
+    status.device_manager = device_manager_->fetchStatus();
+    status.device_scanner = device_scanner_->fetchStatus();
+    status.poll_manager = poll_manager_->fetchStatus();
 #if defined(ESP_PLATFORM)
     status.memory = MemoryStatus(heap_caps_get_total_size(MALLOC_CAP_DEFAULT),
                                  esp_get_free_heap_size(),
@@ -959,7 +952,7 @@ void Impl::run(Controller* owner) {
         },
         &activity);
 
-    if (scheduler_->queueSize() < detail::SchedulerLimits::scan_threshold) {
+    if (scheduler_->size() < detail::SchedulerLimits::scan_threshold) {
       auto scan_cmd = device_scanner_->nextCommand();
       if (!scan_cmd.empty() &&
           scheduler_->enqueue(detail::DeviceLimits::scan_priority, scan_cmd)) {
@@ -1058,7 +1051,7 @@ void Impl::run(Controller* owner) {
       bus_monitor_->updateUtilizationHistory();
 
       detail::platform::LockGuard<detail::platform::Mutex> lock(status_mutex_);
-      getServiceStatus(status_cache_);
+      fetchServiceStatus(status_cache_);
       last_status_update = Clock::now();
 
       // Reset the windowed loop peak metrics so the next snapshot shows the
@@ -1139,7 +1132,7 @@ void Impl::onBusEvent(const detail::BusEvent& bus_ev) {
 }
 
 bool Impl::isSchedulerFull() const {
-  return scheduler_ && scheduler_->queueSize() >= scheduler_->queueCapacity();
+  return scheduler_ && scheduler_->size() >= scheduler_->capacity();
 }
 
 bool Impl::isHandlerBusy() const {

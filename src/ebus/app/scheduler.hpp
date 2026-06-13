@@ -76,9 +76,9 @@ class Scheduler {
 
   // Status/Telemetry
   Clock::time_point nextDueTime() const;
-  size_t queueSize() const;
-  size_t queueCapacity() const;
-  SchedulerStatus getStatus() const;
+  size_t size() const;
+  size_t capacity() const;
+  SchedulerStatus fetchStatus() const;
   void resetPeakMetrics();
 
  private:

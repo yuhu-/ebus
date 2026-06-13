@@ -61,7 +61,7 @@ class DeviceScanner {
   // Status/Telemetry
   bool isFullScan() const;
   bool isScanning() const;
-  DeviceScannerStatus getStatus() const;
+  DeviceScannerStatus fetchStatus() const;
 
  private:
   DeviceManager* device_manager_ = nullptr;

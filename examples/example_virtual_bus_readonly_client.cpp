@@ -124,7 +124,7 @@ int main() {
   deviceA.start();
   deviceB.start();
 
-  deviceA.fetchSystemResources([](const ebus::SystemResources& res) {
+  deviceA.fetchStatus([](const ebus::SystemResources& res) {
     std::cout << "[Device A] System resources: " << ebus::toJson(res, 256)
               << std::endl;
   });
@@ -153,8 +153,7 @@ int main() {
 
   std::string json;
   json.reserve(8192);
-  deviceB.fetchServiceStatus([&json](std::string_view s) { json.append(s); },
-                             true);
+  deviceB.fetchStatus([&json](std::string_view s) { json.append(s); }, true);
   std::cout << "[Device B] Status: " << json << std::endl;
 
   // --- 9. Stop the simulation ---

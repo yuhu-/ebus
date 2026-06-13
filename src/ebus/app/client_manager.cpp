@@ -274,7 +274,7 @@ Clock::time_point ClientManager::nextDueTime() const {
          std::chrono::milliseconds(NetworkLimits::wake_interval_ms);
 }
 
-ClientManagerStatus ClientManager::getStatus() const {
+ClientManagerStatus ClientManager::fetchStatus() const {
   platform::LockGuard<platform::Mutex> lock(mutex_);
   ClientManagerStatus s{current_active_sender_ != nullptr,
                         ebus::toString(session_state_), last_error_message_};
