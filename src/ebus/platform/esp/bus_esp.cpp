@@ -502,8 +502,7 @@ void IRAM_ATTR BusEsp::s_onFallingEdge(void* arg) {
 void IRAM_ATTR BusEsp::onFallingEdge() {
   int64_t now = esp_timer_get_time();
   portENTER_CRITICAL_ISR(&timer_mux_);
-  buffer_index_ =
-      (buffer_index_ + 1) % BusLimits::platform::Esp::falling_edge_history;
+  buffer_index_ = (buffer_index_ + 1) % falling_edge_buffer_size;
   last_activity_micros_ = now;
   micros_edge_buffer_[buffer_index_] = now;
   portEXIT_CRITICAL_ISR(&timer_mux_);
