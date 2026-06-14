@@ -66,12 +66,14 @@ class AbstractClient {
 
   // Status/Telemetry
   bool isConnected() const { return fd_ >= 0; }
-  bool hasPendingData() const { return !outbound_buffer_.empty(); }
+  bool hasPendingData() const { return count_ > 0; }
   virtual ClientInfo getClientInfo() const = 0;
 
  protected:
   int fd_;
-  std::vector<uint8_t> outbound_buffer_;  // Per-client outbound buffer
+  std::unique_ptr<uint8_t[]> buffer_storage_;  // Fixed-size circular storage
+  size_t head_ = 0;                            // Index of the oldest byte
+  size_t count_ = 0;                           // Current number of bytes stored
   mutable platform::Mutex buffer_mutex_;  // Protects outboundBuffer_
   Request* request_;
   size_t max_buffer_size_;

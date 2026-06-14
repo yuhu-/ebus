@@ -14,6 +14,7 @@ namespace ebus::detail {
 AbstractClient::AbstractClient(int fd, Request* request, bool write_capable,
                                size_t max_buffer)
     : fd_(fd),
+      buffer_storage_(new uint8_t[max_buffer]),
       request_(request),
       max_buffer_size_(max_buffer),
       write_capable_(write_capable) {
@@ -39,31 +40,32 @@ bool AbstractClient::tryFlushOutboundBuffer() {
 
 bool AbstractClient::flushLocked() {
   if (fd_ < 0) return false;
-  if (outbound_buffer_.empty()) return true;
+  if (count_ == 0) return true;
 
-  size_t total_sent = 0;
-  const size_t to_send = outbound_buffer_.size();
-  while (total_sent < to_send) {
+  while (count_ > 0) {
+    // Send in one or two parts depending on circular wrap
+    size_t part_len = std::min(count_, max_buffer_size_ - head_);
     ssize_t n =
-        platform::send(fd_, outbound_buffer_.data() + total_sent,
-                       to_send - total_sent, platform::Flags::dont_wait);
+        platform::send(fd_, &buffer_storage_[head_],
+                       part_len, platform::Flags::dont_wait);
+
     if (n > 0) {
-      total_sent += static_cast<size_t>(n);
+      head_ = (head_ + n) % max_buffer_size_;
+      count_ -= n;
+      // If we didn't send the full part, the socket buffer is likely full
+      if (static_cast<size_t>(n) < part_len) break;
     } else if (n < 0) {
       if (platform::isInterrupted()) continue;
       if (platform::isWouldBlock()) break;
       stop();
       return false;
     } else {
+      // Socket closed
       stop();
       return false;
     }
   }
 
-  if (total_sent > 0) {
-    outbound_buffer_.erase(outbound_buffer_.begin(),
-                           outbound_buffer_.begin() + total_sent);
-  }
   return true;
 }
 
@@ -81,19 +83,18 @@ void ReadOnlyClient::sendToClient(ByteView data) {
   if (fd_ < 0 || data.empty()) return;
   {
     platform::LockGuard<platform::Mutex> lock(buffer_mutex_);
-    // DRAIN: Discard oldest data if buffer is full to prevent
-    // backpressure/hangs.
-    while (outbound_buffer_.size() + data.size() > max_buffer_size_) {
-      // Drop a substantial chunk (approx 12.5%) to amortize erase costs.
-      size_t to_drop =
-          std::max(data.size(), max_buffer_size_ /
-                                    NetworkLimits::outbound_buffer_drop_factor);
-      if (to_drop > outbound_buffer_.size()) to_drop = outbound_buffer_.size();
-      outbound_buffer_.erase(outbound_buffer_.begin(),
-                             outbound_buffer_.begin() + to_drop);
+    
+    // Drop oldest data if we would exceed capacity (O(1) in circular buffer)
+    if (count_ + data.size() > max_buffer_size_) {
+      size_t to_drop = (count_ + data.size()) - max_buffer_size_;
+      head_ = (head_ + to_drop) % max_buffer_size_;
+      count_ -= to_drop;
     }
 
-    outbound_buffer_.insert(outbound_buffer_.end(), data.begin(), data.end());
+    for (uint8_t b : data) {
+      buffer_storage_[(head_ + count_) % max_buffer_size_] = b;
+      count_++;
+    }
     flushLocked();
   }
 }
@@ -107,7 +108,7 @@ BridgeAction ReadOnlyClient::onBusByte(const BusEventInfo&) {
 ClientInfo ReadOnlyClient::getClientInfo() const {
   platform::LockGuard<platform::Mutex> lock(buffer_mutex_);
   return ClientInfo{fd_, "read_only", isConnected(), write_capable_,
-                    outbound_buffer_.size()};
+                    count_};
 }
 
 RegularClient::RegularClient(int fd, Request* request, size_t max_buffer)
@@ -128,19 +129,17 @@ void RegularClient::sendToClient(ByteView data) {
   if (fd_ < 0 || data.empty()) return;
   {
     platform::LockGuard<platform::Mutex> lock(buffer_mutex_);
-    // DRAIN: Discard oldest data if buffer is full to prevent
-    // backpressure/hangs.
-    while (outbound_buffer_.size() + data.size() > max_buffer_size_) {
-      // Drop a substantial chunk (approx 12.5%) to amortize erase costs.
-      size_t to_drop =
-          std::max(data.size(), max_buffer_size_ /
-                                    NetworkLimits::outbound_buffer_drop_factor);
-      if (to_drop > outbound_buffer_.size()) to_drop = outbound_buffer_.size();
-      outbound_buffer_.erase(outbound_buffer_.begin(),
-                             outbound_buffer_.begin() + to_drop);
+
+    if (count_ + data.size() > max_buffer_size_) {
+      size_t to_drop = (count_ + data.size()) - max_buffer_size_;
+      head_ = (head_ + to_drop) % max_buffer_size_;
+      count_ -= to_drop;
     }
 
-    outbound_buffer_.insert(outbound_buffer_.end(), data.begin(), data.end());
+    for (uint8_t b : data) {
+      buffer_storage_[(head_ + count_) % max_buffer_size_] = b;
+      count_++;
+    }
     flushLocked();
   }
 }
@@ -179,7 +178,7 @@ BridgeAction RegularClient::onBusByte(const BusEventInfo& info) {
 ClientInfo RegularClient::getClientInfo() const {
   platform::LockGuard<platform::Mutex> lock(buffer_mutex_);
   return ClientInfo{fd_, "regular", isConnected(), write_capable_,
-                    outbound_buffer_.size()};
+                    count_};
 }
 
 EnhancedClient::EnhancedClient(int fd, Request* request, size_t max_buffer)
@@ -277,30 +276,31 @@ void EnhancedClient::sendToClient(ByteView data) {
 
   {
     platform::LockGuard<platform::Mutex> lock(buffer_mutex_);
-    // DRAIN: Discard oldest data if buffer is full to prevent
-    // backpressure/hangs.
-    while (outbound_buffer_.size() +
-               detail::EnhancedProtocolLimits::max_sequence_len >
-           max_buffer_size_) {
-      // Drop a substantial chunk (approx 12.5%) to amortize erase costs.
-      size_t to_drop = std::max(
-          EnhancedProtocolLimits::max_sequence_len,
-          max_buffer_size_ / NetworkLimits::outbound_buffer_drop_factor);
-      if (to_drop > outbound_buffer_.size()) to_drop = outbound_buffer_.size();
-      outbound_buffer_.erase(outbound_buffer_.begin(),
-                             outbound_buffer_.begin() + to_drop);
+
+    constexpr size_t seq_len = detail::EnhancedProtocolLimits::max_sequence_len;
+    auto pushByte = [this](uint8_t b) {
+      if (count_ >= max_buffer_size_) {
+        head_ = (head_ + 1) % max_buffer_size_;
+        count_--;
+      }
+      buffer_storage_[(head_ + count_) % max_buffer_size_] = b;
+      count_++;
+    };
+
+    // Ensure room for potential 2-byte sequence
+    while (count_ + seq_len > max_buffer_size_) {
+        head_ = (head_ + 1) % max_buffer_size_;
+        count_--;
     }
 
-    // Short form is allowed for RECEIVED notifications where value < 0x80
     if (cmd == static_cast<uint8_t>(enhanced::Response::received) &&
         val < detail::EnhancedProtocolLimits::data_threshold) {
-      outbound_buffer_.push_back(val);
+      pushByte(val);
     } else {
-      uint8_t out[detail::EnhancedProtocolLimits::max_sequence_len];
+      uint8_t out[seq_len];
       enhanced::Protocol::encode(cmd, val, out);
-      outbound_buffer_.insert(
-          outbound_buffer_.end(), out,
-          out + detail::EnhancedProtocolLimits::max_sequence_len);
+      pushByte(out[0]);
+      pushByte(out[1]);
     }
     flushLocked();
   }
@@ -346,7 +346,7 @@ BridgeAction EnhancedClient::onBusByte(const BusEventInfo& info) {
 ClientInfo EnhancedClient::getClientInfo() const {
   platform::LockGuard<platform::Mutex> lock(buffer_mutex_);
   return ClientInfo{fd_, "enhanced", isConnected(), write_capable_,
-                    outbound_buffer_.size()};
+                    count_};
 }
 
 void EnhancedClient::sendEnhancedResponse(enhanced::Response res, uint8_t val) {
