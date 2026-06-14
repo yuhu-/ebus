@@ -43,7 +43,7 @@ class DeviceManager {
                           Delegate<void(const Sequence&)> callback) const;
 
   // Status/Telemetry
-  void fetchDeviceInfo(
+  void fetchDevice(
       const std::function<void(const DeviceInfo&)>& callback) const;
   void getObservedSlaves(std::bitset<256>& observed) const;
   DeviceManagerStatus fetchStatus() const;

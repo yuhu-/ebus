@@ -34,7 +34,7 @@ class Device {
   uint8_t getSlave() const;
   std::vector<uint8_t> getIdentificationData() const;
   std::vector<uint8_t> getVendorData(uint8_t sub) const;
-  DeviceInfo getDeviceInfo() const;
+  DeviceInfo getDevice() const;
 
  private:
   // Internal types

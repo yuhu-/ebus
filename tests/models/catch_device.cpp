@@ -30,7 +30,7 @@ TEST_CASE("Device: update parsing", "[models][device]") {
 
   dev.update(0x15, master, slave);
 
-  auto info = dev.getDeviceInfo();
+  auto info = dev.getDevice();
   REQUIRE(info.manufacturer == 0xda);
 
   std::string unitIdStr(info.unit_id.begin(), info.unit_id.end());

@@ -504,10 +504,20 @@ bool Controller::isScanning() const {
                                    : false;
 }
 
-void Controller::fetchDeviceInfo(
+void Controller::fetchDevice(
     std::function<void(const DeviceInfo&)> callback) const {
   if (impl_->configured_.load() && callback) {
-    impl_->device_manager_->fetchDeviceInfo(callback);
+    impl_->device_manager_->fetchDevice(callback);
+  }
+}
+
+void Controller::fetchDevice(const JsonChunkVisitor& visitor,
+                             bool pretty) const {
+  if (impl_->configured_.load() && visitor) {
+    impl_->device_manager_->fetchDevice([&](const DeviceInfo& d) {
+      detail::JsonWriter writer(visitor, pretty);
+      d.toJson(writer);
+    });
   }
 }
 

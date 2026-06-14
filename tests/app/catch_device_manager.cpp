@@ -58,7 +58,7 @@ TEST_CASE("DeviceManager: Device Update", "[app][devicemanager]") {
   dm.update(master, slave);
 
   std::vector<ebus::DeviceInfo> devices;
-  dm.fetchDeviceInfo(
+  dm.fetchDevice(
       [&](const ebus::DeviceInfo& info) { devices.push_back(info); });
 
   REQUIRE(devices.size() == 2);

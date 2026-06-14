@@ -109,13 +109,13 @@ void DeviceManager::createScanCommands(
   }
 }
 
-void DeviceManager::fetchDeviceInfo(
+void DeviceManager::fetchDevice(
     const std::function<void(const DeviceInfo&)>& callback) const {
   platform::LockGuard<platform::Mutex> lock(mutex_);
   if (callback) {
     for (size_t i = 0; i < 256; ++i) {
       int16_t idx = address_map_[i];
-      if (idx != -1) callback(device_pool_[idx].getDeviceInfo());
+      if (idx != -1) callback(device_pool_[idx].getDevice());
     }
   }
 }

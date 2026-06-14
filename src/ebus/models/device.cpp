@@ -92,7 +92,7 @@ std::vector<uint8_t> Device::getVendorData(uint8_t sub) const {
   return {};
 }
 
-ebus::DeviceInfo Device::getDeviceInfo() const {
+ebus::DeviceInfo Device::getDevice() const {
   DeviceInfo info;
   info.slave_address = slave_;
   info.frequency = message_count_;
