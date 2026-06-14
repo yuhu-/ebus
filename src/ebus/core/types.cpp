@@ -272,6 +272,14 @@ void ErrorEntry::toString(std::string& out) const {
   out.append(buf, static_cast<size_t>(ptr - buf));
 
   out += "][";
+  if (retry_count > 0) {
+    out += "R:";
+    auto [rptr, rec] = std::to_chars(buf, buf + sizeof(buf), retry_count);
+    out.append(buf, static_cast<size_t>(rptr - buf));
+    out += "][";
+  }
+  out += ebus::toString(handler_state);
+  out += "][";
   out += ebus::toString(handler_state);
   out += "][";
   out += ebus::toString(request_state);
@@ -300,6 +308,7 @@ void ErrorEntry::toJson(detail::JsonWriter& writer) const {
   writer.writeField("sequence_state", ebus::toString(sequence_state));
   writer.writeField("handler_state", ebus::toString(handler_state));
   writer.writeField("request_state", ebus::toString(request_state));
+  writer.writeField("retry_count", retry_count);
   writer.writeHexField("master", master);
   writer.writeHexField("slave", slave);
 

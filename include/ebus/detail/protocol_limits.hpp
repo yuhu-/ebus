@@ -123,28 +123,33 @@ inline constexpr uint16_t window_min_us = 4000;
 inline constexpr uint16_t window_max_us = 5000;
 inline constexpr uint16_t offset_max_us = 500;
 
-#ifndef EBUS_BUS_QUEUE_SIZE
-inline constexpr size_t queue_size = 256;
-#else
-inline constexpr size_t queue_size = EBUS_BUS_QUEUE_SIZE;
-#endif
-
 #ifndef EBUS_MAX_LISTENERS
-inline constexpr size_t max_listeners = 4;
+/**
+ * Maximum number of concurrent listeners per event category.
+ * Accommodates internal "clients" (Controller, ClientManager, BusSimulator)
+ * while providing headroom for user-defined callbacks.
+ */
+inline constexpr size_t max_listeners = 8;
 #else
 inline constexpr size_t max_listeners = EBUS_MAX_LISTENERS;
 #endif
 
 namespace Syn {
-inline constexpr uint32_t base_ms = 50;
-inline constexpr uint32_t tolerance_ms = 5;
-inline constexpr uint32_t address_factor_ms = 10;
-inline constexpr uint32_t postpone_ms = 2;
-inline constexpr uint32_t carrier_sense_ms = 5;
+inline constexpr uint32_t base_ms = 50;            // move to config
+inline constexpr uint32_t tolerance_ms = 5;        // move to config
+inline constexpr uint32_t address_factor_ms = 10;  // move to config
+inline constexpr uint32_t postpone_ms = 2;         // move to config
+inline constexpr uint32_t carrier_sense_ms = 5;    // move to config
 inline constexpr uint32_t serialization_delay_ms = 4;
 }  // namespace Syn
 
 namespace platform::Esp {
+#ifndef EBUS_BUFFER_SIZE
+inline constexpr size_t buffer_size = 256;
+#else
+inline constexpr size_t buffer_size = EBUS_BUFFER_SIZE;
+#endif
+
 inline constexpr uint32_t event_timeout_ms = 10;
 inline constexpr int uart_install_retries = 3;
 inline constexpr uint32_t uart_install_retry_delay_ms = 100;
@@ -236,24 +241,10 @@ inline constexpr size_t max_startup_queue = EBUS_MAX_STARTUP_QUEUE;
 }  // namespace DeviceLimits
 
 namespace SchedulerLimits {
-#ifndef EBUS_SCHEDULER_MAX_ITEMS
-inline constexpr size_t max_items = 32;
-#else
-inline constexpr size_t max_items = EBUS_SCHEDULER_MAX_ITEMS;
-#endif
-
 inline constexpr size_t scan_threshold = 5;
 inline constexpr uint32_t jitter_threshold_ms = 2;
 inline constexpr uint32_t controller_tick_ms = 20;
 }  // namespace SchedulerLimits
-
-namespace PollLimits {
-#ifndef EBUS_POLL_MAX_ITEMS
-inline constexpr size_t max_items = 128;
-#else
-inline constexpr size_t max_items = EBUS_POLL_MAX_ITEMS;
-#endif
-}  // namespace PollLimits
 
 // --- Formatting Limits ---
 namespace FormattingLimits {
@@ -302,18 +293,9 @@ inline constexpr size_t max_sequence_len = 2;
 inline constexpr uint8_t data_threshold = 0x80;
 }  // namespace EnhancedProtocolLimits
 
-// --- BCD Limits ---
-namespace BcdLimits {
-inline constexpr uint8_t nibble_mask = 0x0f;
-inline constexpr uint8_t nibble_shift = 4;
-inline constexpr uint8_t max_digit = 9;
-inline constexpr uint8_t decimal_base = 10;
-inline constexpr int64_t max_value = 99;
-inline constexpr uint8_t null_sentinel = 0xff;
-}  // namespace BcdLimits
-
 // --- Data Type Sentinels (Replacement Values) ---
 namespace DataTypeLimits {
+inline constexpr uint8_t null_sentinel = 0xff;
 inline constexpr uint8_t sentinel_8 = 0xff;
 inline constexpr uint8_t sentinel_s8 = 0x80;  // -128
 inline constexpr uint16_t sentinel_16 = 0xffff;

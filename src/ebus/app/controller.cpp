@@ -102,9 +102,10 @@ struct Impl {
   bool isHandlerBusy() const;
   bool isSystemBusy() const;
 
-  void logError(std::string_view msg) const;
-  void logInfo(std::string_view msg) const;
-  void logDebug(std::string_view msg) const;
+  void log(LogLevel level, std::string_view msg) const;
+  void logError(std::string_view msg) const { log(LogLevel::error, msg); }
+  void logInfo(std::string_view msg) const { log(LogLevel::info, msg); }
+  void logDebug(std::string_view msg) const { log(LogLevel::debug, msg); }
 };
 
 Controller::Controller() : impl_(new Impl()) {}
@@ -517,10 +518,30 @@ void Controller::fetchMetrics(
   }
 }
 
+void Controller::fetchMetrics(const JsonChunkVisitor& visitor,
+                              bool pretty) const {
+  if (impl_->configured_.load() && visitor) {
+    impl_->bus_monitor_->fetchMetrics([&](const Metrics& m) {
+      detail::JsonWriter writer(visitor, pretty);
+      m.toJson(writer);
+    });
+  }
+}
+
 void Controller::fetchUtilizationHistory(
     std::function<void(float)> callback) const {
   if (impl_->configured_.load() && callback) {
     impl_->bus_monitor_->fetchUtilizationHistory(callback);
+  }
+}
+
+void Controller::fetchUtilizationHistory(const JsonChunkVisitor& visitor,
+                                         bool pretty) const {
+  if (impl_->configured_.load() && visitor) {
+    detail::JsonWriter writer(visitor, pretty);
+    auto scope = writer.arrayScope();
+    impl_->bus_monitor_->fetchUtilizationHistory(
+        [&](float val) { writer.writeValueFloat(val); });
   }
 }
 
@@ -531,10 +552,30 @@ void Controller::fetchTraceHistory(
   }
 }
 
+void Controller::fetchTraceHistory(const JsonChunkVisitor& visitor,
+                                   bool pretty) const {
+  if (visitor) {
+    detail::JsonWriter writer(visitor, pretty);
+    auto scope = writer.arrayScope();
+    impl_->trace_buffer_.forEach(
+        [&](const BusEventInfo& info) { writer.writeValue(info); });
+  }
+}
+
 void Controller::fetchErrors(
     std::function<void(const ErrorEntry&)> callback) const {
   if (callback) {
     impl_->error_buffer_.forEach(callback);
+  }
+}
+
+void Controller::fetchErrors(const JsonChunkVisitor& visitor,
+                             bool pretty) const {
+  if (visitor) {
+    detail::JsonWriter writer(visitor, pretty);
+    auto scope = writer.arrayScope();
+    impl_->error_buffer_.forEach(
+        [&](const ErrorEntry& entry) { writer.writeValue(entry); });
   }
 }
 
@@ -582,15 +623,18 @@ void Controller::fetchStatus(
 }
 
 void Controller::fetchStatus(const JsonChunkVisitor& visitor,
-                             bool reset_histories, bool pretty) const {
+                             bool pretty) const {
   ServiceStatus snapshot;  // This is a local copy, no mutex needed for it
   {
     detail::platform::LockGuard<detail::platform::Mutex> lock(
         impl_->status_mutex_);
     snapshot = impl_->status_cache_;
   }
-  serializeServiceStatus(visitor, snapshot, impl_->bus_monitor_.get(),
-                         reset_histories, pretty);
+  serializeServiceStatus(visitor, snapshot, impl_->bus_monitor_.get(), pretty);
+}
+
+void Controller::clearHistories() {
+  if (impl_->configured_.load()) impl_->bus_monitor_->clearHistory();
 }
 
 void Controller::resetMetrics() {
@@ -814,6 +858,7 @@ void Impl::constructMembers(Controller* owner) {
         entry.sequence_state = info.sequence_state;
         entry.handler_state = info.handler_state;
         entry.request_state = info.request_state;
+        entry.retry_count = info.retry_count;
         entry.setMaster(info.master_view.data(), info.master_view.size());
         entry.setSlave(info.slave_view.data(), info.slave_view.size());
         entry.timestamp = ebus::getWallTimeMs();
@@ -1144,40 +1189,16 @@ bool Impl::isSystemBusy() const {
          (client_manager_ && client_manager_->isSessionActive());
 }
 
-void Impl::logError(std::string_view msg) const {
+void Impl::log(LogLevel level, std::string_view msg) const {
   auto& logger = detail::Logger::getInstance();
-  if (!logger.isEnabled(LogLevel::error)) return;
+  if (!logger.isEnabled(level)) return;
+
   uint8_t addr = address_.load(std::memory_order_relaxed);
   char buf[detail::LoggerLimits::log_buffer_size];
   int n = std::snprintf(buf, sizeof(buf), "[0x%02x] %.*s", addr,
                         (int)msg.size(), msg.data());
   if (n > 0)
-    logger.log(LogLevel::error,
+    logger.log(level,
                std::string_view(buf, std::min((size_t)n, sizeof(buf) - 1)));
 }
-
-void Impl::logInfo(std::string_view msg) const {
-  auto& logger = detail::Logger::getInstance();
-  if (!logger.isEnabled(LogLevel::info)) return;
-  uint8_t addr = address_.load(std::memory_order_relaxed);
-  char buf[256];
-  int n = std::snprintf(buf, sizeof(buf), "[0x%02x] %.*s", addr,
-                        (int)msg.size(), msg.data());
-  if (n > 0)
-    logger.log(LogLevel::info,
-               std::string_view(buf, std::min((size_t)n, sizeof(buf) - 1)));
-}
-
-void Impl::logDebug(std::string_view msg) const {
-  auto& logger = detail::Logger::getInstance();
-  if (!logger.isEnabled(LogLevel::debug)) return;
-  uint8_t addr = address_.load(std::memory_order_relaxed);
-  char buf[256];
-  int n = std::snprintf(buf, sizeof(buf), "[0x%02x] %.*s", addr,
-                        (int)msg.size(), msg.data());
-  if (n > 0)
-    logger.log(LogLevel::debug,
-               std::string_view(buf, std::min((size_t)n, sizeof(buf) - 1)));
-}
-
 }  // namespace ebus

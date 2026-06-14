@@ -39,6 +39,8 @@ bool ConfigValidator::validate(const EbusConfig& config) {
   if (r.network.outbound_buffer_size == 0) return false;
   if (r.network.session_timeout_ms == 0) return false;
   if (r.network.transmit_timeout_ms == 0) return false;
+  if (r.scheduler.max_items == 0) return false;
+  if (r.poll.max_items == 0) return false;
   if (r.diagnostics.log_size > DiagnosticsLimits::log_history_size)
     return false;  // Sanity check
 

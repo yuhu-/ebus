@@ -744,8 +744,7 @@ void ServiceStatus::toJson(detail::JsonWriter& writer) const {
 
 void serializeServiceStatus(const JsonChunkVisitor& visitor,
                             const ServiceStatus& status,
-                            detail::BusMonitor* monitor, bool reset_histories,
-                            bool pretty) {
+                            detail::BusMonitor* monitor, bool pretty) {
   if (!visitor) return;
 
   detail::JsonWriter writer(visitor, pretty);
@@ -783,10 +782,6 @@ void serializeServiceStatus(const JsonChunkVisitor& visitor,
             u_hist.forEach([&](float util) { writer.writeValueFloat(util); });
           }
         });
-
-    if (reset_histories) {
-      monitor->clearHistory();
-    }
 #endif
   }
 }

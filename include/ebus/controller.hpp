@@ -282,9 +282,21 @@ class Controller {
   void fetchMetrics(std::function<void(const Metrics&)> callback) const;
 
   /**
+   * @brief Streams the system metrics JSON in chunks to the provided visitor.
+   */
+  void fetchMetrics(const JsonChunkVisitor& visitor, bool pretty = false) const;
+
+  /**
    * @brief Returns the recent history of bus utilization percentages.
    */
   void fetchUtilizationHistory(std::function<void(float)> callback) const;
+
+  /**
+   * @brief Streams the bus utilization history JSON in chunks to the provided
+   * visitor.
+   */
+  void fetchUtilizationHistory(const JsonChunkVisitor& visitor,
+                               bool pretty = false) const;
 
   /**
    * @brief Returns the raw event trace of the last processed bytes.
@@ -293,9 +305,21 @@ class Controller {
       std::function<void(const BusEventInfo&)> callback) const;
 
   /**
+   * @brief Streams the trace history JSON in chunks to the provided visitor.
+   */
+  void fetchTraceHistory(const JsonChunkVisitor& visitor,
+                         bool pretty = false) const;
+
+  /**
    * @brief Returns a snapshot of the diagnostic error log.
    */
   void fetchErrors(std::function<void(const ErrorEntry&)> callback) const;
+
+  /**
+   * @brief Streams the diagnostic error log JSON in chunks to the provided
+   * visitor.
+   */
+  void fetchErrors(const JsonChunkVisitor& visitor, bool pretty = false) const;
 
   /**
    * @brief Returns the current capacity of the diagnostic error log.
@@ -310,8 +334,13 @@ class Controller {
   /**
    * @brief Streams the service status JSON in chunks to the provided visitor.
    */
-  void fetchStatus(const JsonChunkVisitor& visitor,
-                   bool reset_histories = false, bool pretty = false) const;
+  void fetchStatus(const JsonChunkVisitor& visitor, bool pretty = false) const;
+
+  /**
+   * @brief Clears all historical data from the bus monitor (transitions,
+   * utilization).
+   */
+  void clearHistories();
 
   /**
    * @brief Resets all hardware and protocol counters.

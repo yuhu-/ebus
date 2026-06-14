@@ -119,7 +119,8 @@ class Scheduler {
   Handler* handler_ = nullptr;
 
   // Queue management
-  StaticVector<Item, SchedulerLimits::max_items> scheduled_items_;
+  StaticVector<Item, ebus::RuntimeConfig{}.scheduler.max_items>
+      scheduled_items_;
   mutable platform::Mutex data_mutex_;
   mutable platform::Mutex callback_mutex_;
 

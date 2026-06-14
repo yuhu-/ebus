@@ -219,8 +219,9 @@ void BusEsp::configureUart() {
   esp_err_t err = ESP_FAIL;
   int retry_count = BusLimits::platform::Esp::uart_install_retries;
   while (retry_count-- > 0) {
-    err = uart_driver_install(uart_port_num_, BusLimits::queue_size,
-                              BusLimits::queue_size, 1, &uart_event_queue_, 0);
+    err = uart_driver_install(
+        uart_port_num_, BusLimits::platform::Esp::buffer_size,
+        BusLimits::platform::Esp::buffer_size, 1, &uart_event_queue_, 0);
     if (err == ESP_OK) break;
 
     EBUS_LOG_ERROR("uart_driver_install attempt failed: " +

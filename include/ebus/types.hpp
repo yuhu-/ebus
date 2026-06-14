@@ -452,7 +452,7 @@ struct ErrorEntry {
   ErrorEntry() = default;
   ErrorEntry(uint32_t s_id, uint32_t p_id, LogLevel lvl, ProtocolError pe,
              RequestResult res, SequenceState ss, HandlerState hs,
-             RequestState rs, ByteView m_view, ByteView s_view, uint64_t ts)
+             RequestState rs, uint32_t retries, ByteView m_view, ByteView s_view, uint64_t ts)
       : session_id(s_id),
         poll_id(p_id),
         level(lvl),
@@ -461,6 +461,7 @@ struct ErrorEntry {
         sequence_state(ss),
         handler_state(hs),
         request_state(rs),
+        retry_count(retries),
         timestamp(ts) {
     master.assign(m_view.data(), m_view.size());
     slave.assign(s_view.data(), s_view.size());
@@ -474,6 +475,7 @@ struct ErrorEntry {
   SequenceState sequence_state = SequenceState::seq_empty;
   HandlerState handler_state = HandlerState::passive_receive_master;
   RequestState request_state = RequestState::observe;
+  uint32_t retry_count = 0;
   StaticSequence<detail::SequenceLimits::model_capacity> master;
   StaticSequence<detail::SequenceLimits::model_capacity> slave;
   uint64_t timestamp = 0;  // ms since epoch

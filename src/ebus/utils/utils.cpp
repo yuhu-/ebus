@@ -193,11 +193,9 @@ char* formatFloat(float value, int precision, char* buffer, size_t buffer_size,
     });
 
     if (!is_scientific) {
-      const char* dot_ptr = std::find(buffer, buffer + current_len, '.');
-      bool has_decimal = (dot_ptr != buffer + current_len);
-
-      if (has_decimal) {
-        size_t decimal_pos = dot_ptr - buffer;
+      if (const char* dot_ptr = std::find(buffer, buffer + current_len, '.');
+          dot_ptr != buffer + current_len) {
+        const size_t decimal_pos = static_cast<size_t>(dot_ptr - buffer);
         // Remove trailing zeros
         while (current_len > decimal_pos + 1 &&
                buffer[current_len - 1] == '0') {

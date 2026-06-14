@@ -33,7 +33,7 @@ struct Meta : DataTypeInfoBase {
 // stringToDataType
 // clang-format off
 constexpr Meta meta_table[] = {
-  {{DataType::bcd, "BCD", 1, true, false, false, true, detail::BcdLimits::null_sentinel}, false, {1, 1}},
+  {{DataType::bcd, "BCD", 1, true, false, false, true, detail::DataTypeLimits::null_sentinel}, false, {1, 1}},
   {{DataType::char1, "CHAR1", 1, false, false, false, true, detail::DataTypeLimits::sentinel_8}, false, {1, 1}},
   {{DataType::char2, "CHAR2", 2, false, false, false, true, detail::DataTypeLimits::sentinel_16}, false, {1, 1}},
   {{DataType::char3, "CHAR3", 3, false, false, false, false, 0}, false, {1, 1}},
@@ -272,13 +272,8 @@ std::optional<DataValue> decode(DataType dt, ByteView data, Endian e) {
 
   if (dt == DataType::bcd) {
     uint8_t val = data[0];
-    if ((val & detail::BcdLimits::nibble_mask) > detail::BcdLimits::max_digit ||
-        ((val >> detail::BcdLimits::nibble_shift) &
-         detail::BcdLimits::nibble_mask) > detail::BcdLimits::max_digit)
-      return std::nullopt;
-    return static_cast<uint8_t>((val >> detail::BcdLimits::nibble_shift) *
-                                    detail::BcdLimits::decimal_base +
-                                (val & detail::BcdLimits::nibble_mask));
+    if ((val & 0x0f) > 9 || ((val >> 4) & 0x0f) > 9) return std::nullopt;
+    return static_cast<uint8_t>((val >> 4) * 10 + (val & 0x0f));
   }
 
   // Read the raw integer value from bytes
@@ -327,11 +322,8 @@ bool isValid(DataType dt, ByteView data) noexcept {
   if (dt == DataType::bcd) {
     uint8_t val = data[0];
     // Sentinel 0xFF is valid as a "null" result, not a protocol error.
-    if (val == detail::BcdLimits::null_sentinel) return true;
-    return (val & detail::BcdLimits::nibble_mask) <=
-               detail::BcdLimits::max_digit &&
-           ((val >> detail::BcdLimits::nibble_shift) &
-            detail::BcdLimits::nibble_mask) <= detail::BcdLimits::max_digit;
+    if (val == detail::DataTypeLimits::null_sentinel) return true;
+    return (val & 0x0f) <= 9 && ((val >> 4) & 0x0f) <= 9;
   }
   return true;
 }
@@ -381,13 +373,11 @@ Sequence encode(DataType dt, const DataValue& value, Endian e) {
   // Handle BCD
   if (dt == DataType::bcd) {
     int64_t v = asInt64(value);
-    if (v < 0 || v > detail::BcdLimits::max_value)
-      return s;  // Returns empty sequence to indicate error
+    if (v < 0 || v > 99) return s;  // Returns empty sequence to indicate error
 
-    s.push_back(((static_cast<uint8_t>(v) / detail::BcdLimits::decimal_base)
-                 << detail::BcdLimits::nibble_shift) |
-                    (static_cast<uint8_t>(v) % detail::BcdLimits::decimal_base),
-                false);
+    s.push_back(
+        ((static_cast<uint8_t>(v) / 10) << 4) | (static_cast<uint8_t>(v) % 10),
+        false);
     return s;
   }
 

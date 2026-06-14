@@ -38,8 +38,8 @@ set(EBUS_BUS_PRIORITY 15 CACHE STRING "Priority for Bus thread")
 set(EBUS_BUS_SYN_STACK_SIZE 2048 CACHE STRING "Stack size for Bus SYN thread")
 set(EBUS_BUS_SYN_PRIORITY 5 CACHE STRING "Priority for Bus SYN thread")
 # Bus Layer
-set(EBUS_BUS_QUEUE_SIZE 256 CACHE STRING "Size of the physical bus event queue")
-set(EBUS_MAX_LISTENERS 4 CACHE STRING "Maximum number of internal bus listeners")
+set(EBUS_MAX_LISTENERS 8 CACHE STRING "Maximum number of internal bus listeners")
+set(EBUS_BUFFER_SIZE 256 CACHE STRING "Size of the uart ring buffer")
 # Diagnostics Layer
 set(EBUS_LOG_HISTORY_SIZE 60 CACHE STRING "Number of error entries to keep in memory")
 set(EBUS_TRACE_HISTORY_SIZE 100 CACHE STRING "Number of trace events to keep in memory")
@@ -51,8 +51,6 @@ set(EBUS_REACTOR_QUEUE_SIZE 32 CACHE STRING "Size of the internal reactor queue"
 set(EBUS_MAX_DEVICES 32 CACHE STRING "Maximum number of devices to manage")
 set(EBUS_MAX_MANUAL_QUEUE 64 CACHE STRING "Maximum pending manual scan requests")
 set(EBUS_MAX_STARTUP_QUEUE 64 CACHE STRING "Maximum pending startup requests")
-set(EBUS_SCHEDULER_MAX_ITEMS 32 CACHE STRING "Maximum items in the priority scheduler")
-set(EBUS_POLL_MAX_ITEMS 128 CACHE STRING "Maximum items in the poll manager")
 
 set(EBUS_SIMULATION_VAL 0)
 if(EBUS_SIMULATION)
