@@ -272,12 +272,12 @@ class Controller {
   /**
    * @brief Returns information about all discovered devices.
    */
-  void fetchDevice(std::function<void(const DeviceInfo&)> callback) const;
+  void fetchDevices(std::function<void(const DeviceInfo&)> callback) const;
 
   /**
    * @brief Streams the device JSON in chunks to the provided visitor.
    */
-  void fetchDevice(const JsonChunkVisitor& visitor, bool pretty = false) const;
+  void fetchDevices(const JsonChunkVisitor& visitor, bool pretty = false) const;
 
   /**
    * @brief Invokes a visitor callback with a snapshot of system performance

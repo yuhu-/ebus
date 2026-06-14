@@ -109,7 +109,7 @@ void DeviceManager::createScanCommands(
   }
 }
 
-void DeviceManager::fetchDevice(
+void DeviceManager::fetchDevices(
     const std::function<void(const DeviceInfo&)>& callback) const {
   platform::LockGuard<platform::Mutex> lock(mutex_);
   if (callback) {

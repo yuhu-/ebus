@@ -252,8 +252,7 @@ void collect(uint8_t byte) {
           }
           if (parse) {
             std::string service_str;
-            services(service_str, tel.getMaster().toVector(),
-                     tel.getSlave().toVector());
+            services(service_str, tel.getMaster(), tel.getSlave());
             if (!service_str.empty()) {
               output_buffer += "\n";
               if (color) output_buffer += ansi_cyan;

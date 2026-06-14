@@ -644,17 +644,16 @@ void DataTypeInfo::toJson(detail::JsonWriter& writer) const {
                          detail::FormattingLimits::detailed_precision);
 }
 
-void getSupportedDataTypesJson(const JsonChunkVisitor& visitor) {
-  detail::JsonWriter writer(visitor);
+void fetchSupportedDataTypes(const JsonChunkVisitor& visitor, bool pretty) {
+  detail::JsonWriter writer(visitor, pretty);
   auto scope = writer.arrayScope();
-  const auto types = getSupportedDataTypes();
-  for (const auto& t : types) {
-    writer.writeValue(t);
-  }
+  fetchSupportedDataTypes(
+      [&](const DataTypeInfo& info) { writer.writeValue(info); });
 }
 
-void decodeToJson(const JsonChunkVisitor& visitor, DataType dt, ByteView data) {
-  detail::JsonWriter writer(visitor);
+void decodeToJson(const JsonChunkVisitor& visitor, DataType dt, ByteView data,
+                  bool pretty) {
+  detail::JsonWriter writer(visitor, pretty);
   auto scope = writer.objectScope();
 
   auto meta_opt = getMeta(dt);

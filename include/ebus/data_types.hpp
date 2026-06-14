@@ -289,7 +289,8 @@ DataType getDataType(const DataValue& value) noexcept;
 /**
  * Returns a list of all eBUS data types supported by the internal engine.
  *
- * @return A vector of supported DataType enums.
+ * @return A vector of supported DataType metadata structures.
+ * @note Prefer fetchSupportedDataTypes() to avoid heap allocations.
  */
 std::vector<DataTypeInfo> getSupportedDataTypes();
 
@@ -302,7 +303,8 @@ void fetchSupportedDataTypes(std::function<void(const DataTypeInfo&)> callback);
 /**
  * @brief Streams a JSON array of all supported eBUS data types to the visitor.
  */
-void getSupportedDataTypesJson(const JsonChunkVisitor& visitor);
+void fetchSupportedDataTypes(const JsonChunkVisitor& visitor,
+                             bool pretty = false);
 
 /**
  * Returns the protocol-level byte size of an eBUS DataType.
@@ -335,8 +337,9 @@ DataType stringToDataType(const char* str);
  * @brief Decodes raw eBUS bytes and streams it as a JSON object to the visitor.
  * @param dt The expected eBUS data type.
  * @param data The raw bytes from the bus.
- * @return A JSON string representing the decoded value and its metadata.
+ * @param pretty Whether to pretty-print the JSON output.
  */
-void decodeToJson(const JsonChunkVisitor& visitor, DataType dt, ByteView data);
+void decodeToJson(const JsonChunkVisitor& visitor, DataType dt, ByteView data,
+                  bool pretty = false);
 
 }  // namespace ebus
