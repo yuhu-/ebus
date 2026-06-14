@@ -699,10 +699,10 @@ void DeviceScannerStatus::toJson(detail::JsonWriter& writer) const {
   writer.writeField("full_scan_address", full_scan_address);
   writer.writeField("scan_on_startup_enabled", scan_on_startup_enabled);
   writer.writeField("startup_scan_count", startup_scan_count);
-  writer.writeField("manual_queue_size", manual_queue_size);
-  writer.writeField("max_manual_queue_size", max_manual_queue_size);
-  writer.writeField("startup_queue_size", startup_queue_size);
-  writer.writeField("max_startup_queue_size", max_startup_queue_size);
+  writer.writeField("pending_deep_scans", pending_deep_scans);
+  writer.writeField("failed_scans", failed_scans);
+  writer.writeField("quarantined_scans", quarantined_scans);
+  writer.writeField("failure_resets", failure_resets);
 }
 
 void PollManagerStatus::toJson(detail::JsonWriter& writer) const {

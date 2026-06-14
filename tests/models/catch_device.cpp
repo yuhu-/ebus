@@ -45,15 +45,21 @@ TEST_CASE("Device: Vaillant vendor scan commands", "[models][device]") {
 
   dev.update(0x15, master, slave);
 
-  std::vector<ebus::Sequence> vendor_cmds;
-  dev.createVendorScanCommands(
-      [&](const ebus::Sequence& cmd) { vendor_cmds.push_back(cmd); });
+  REQUIRE(dev.isIdentified());
 
-  REQUIRE(vendor_cmds.size() == 4);
+  ebus::Sequence out_cmd;
+  uint16_t cursor = 0;
 
-  REQUIRE(vendor_cmds[0][0] == 0x15);
-  REQUIRE(vendor_cmds[0][1] == 0xb5);
-  REQUIRE(vendor_cmds[0][4] == 0x24);
+  // Verify that we can fetch vendor-specific identification commands one by one
+  REQUIRE(dev.getNextPendingVendorCommand(cursor, out_cmd));
+  REQUIRE(out_cmd[0] == 0x15);
+  REQUIRE(out_cmd[1] == 0xb5);
+  REQUIRE(out_cmd[4] == 0x24);
+  REQUIRE(cursor == 1);
+
+  REQUIRE(dev.getNextPendingVendorCommand(cursor, out_cmd));
+  REQUIRE(out_cmd[4] == 0x25);
+  REQUIRE(cursor == 2);
 }
 
 TEST_CASE("Device: Vaillant full identification", "[models][device]") {

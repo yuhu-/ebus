@@ -16,31 +16,31 @@ namespace ebus::detail {
 DeviceScanner::DeviceScanner(uint8_t address, DeviceManager* device_manager)
     : device_manager_(device_manager),
       own_address_(address),
-      next_startup_scan_time_(Clock::time_point::max()) {}
+      next_startup_scan_time_(Clock::time_point::min()),
+      startup_observed_cursor_(0),
+      startup_current_device_addr_(256),
+      startup_current_device_id_scan_issued_(false),
+      startup_current_device_vendor_cursor_(0) {
+  // Note: current_deep_scan_address_ and other members are initialized
+  // via default member initializers in the header.
+  scan_attempt_counters_.fill(0);
+}
 
 void DeviceScanner::stop() {
   platform::LockGuard<platform::Mutex> lock(mutex_);
-  // Stop manual scanning and any active full scan, but preserve startup scans.
   full_scan_ = false;
-  manual_queue_.clear();
+  pending_deep_scans_.reset();
+  failed_scans_.reset();
+  quarantined_scans_.reset();
+  last_failure_reset_time_ = Clock::time_point::min();
+  scan_attempt_counters_.fill(0);
+  current_deep_scan_address_ = 256;
+  startup_iteration_active_ = false;
 }
 
 void DeviceScanner::setOwnAddress(uint8_t address) {
   platform::LockGuard<platform::Mutex> lock(mutex_);
   own_address_ = address;
-
-  // Purge any pending manual retries that now target our own slave address
-  // to prevent self-probing after an address change.
-  StaticVector<Sequence, DeviceLimits::max_manual_queue> filtered;
-  const uint8_t own_slave = ebus::slaveOf(address);
-
-  for (auto& cmd : manual_queue_) {
-    if (!cmd.empty() && cmd[0] != own_slave) {
-      filtered.push_back(std::move(cmd));
-    }
-  }
-  manual_queue_.clear();
-  manual_queue_ = std::move(filtered);
 }
 
 void DeviceScanner::setScanOnStartup(bool enable) {
@@ -49,7 +49,11 @@ void DeviceScanner::setScanOnStartup(bool enable) {
   if (enable) {
     // Reset state and arm the timer for the first scan
     startup_scan_count_ = 0;
-    startup_queue_.clear();
+    startup_iteration_active_ = true;  // Start immediately if delay is 0
+    startup_observed_cursor_ = 0;
+    startup_current_device_addr_ = 256;
+    startup_current_device_id_scan_issued_ = false;
+    startup_current_device_vendor_cursor_ = 0;
     next_startup_scan_time_ = Clock::now() + initial_scan_delay_;
   }
 }
@@ -86,7 +90,6 @@ void DeviceScanner::initFullScan(bool enable) {
     // Start full-scan from beginning without touching startup timing/state.
     full_scan_address_ = 0;
   }
-  // Note: full_scan_ is already set above; else block is redundant.
 }
 
 bool DeviceScanner::scanObservedDevices() {
@@ -95,41 +98,25 @@ bool DeviceScanner::scanObservedDevices() {
   }
 
   std::bitset<256> observed;
-  std::vector<Sequence> vendor_cmds_buffer;
   device_manager_->getObservedSlaves(observed);
-  device_manager_->vendorScanCommands(
-      [&](const Sequence& cmd) { vendor_cmds_buffer.push_back(cmd); });
 
-  bool queued_any = false;
-  platform::LockGuard<platform::Mutex> lock(mutex_);
+  bool any_added = false;
   for (size_t i = 0; i < 256; ++i) {
     if (observed.test(i)) {
-      if (scanAddressLocked(static_cast<uint8_t>(i))) queued_any = true;
+      if (scanAddressInternal(static_cast<uint8_t>(i))) any_added = true;
     }
   }
-  // Also queue vendor-specific scans for a complete refresh
-  for (const auto& cmd : vendor_cmds_buffer) {
-    if (cmd.empty()) continue;
-    if (manual_queue_.push_back(cmd)) {
-      queued_any = true;
-      if (manual_queue_.size() > max_manual_queue_size_) {
-        max_manual_queue_size_ = manual_queue_.size();
-      }
-    }
-  }
-  return queued_any;
+  return any_added;
 }
 
 bool DeviceScanner::scanAddress(uint8_t address) {
-  platform::LockGuard<platform::Mutex> lock(mutex_);
-  return scanAddressLocked(address);
+  return scanAddressInternal(address);
 }
 
 bool DeviceScanner::scanAddresses(const std::vector<uint8_t>& addresses) {
-  platform::LockGuard<platform::Mutex> lock(mutex_);
   bool all_success = true;
   for (uint8_t addr : addresses) {
-    if (!scanAddressLocked(addr)) {
+    if (!scanAddressInternal(addr)) {
       all_success = false;
     }
   }
@@ -139,107 +126,148 @@ bool DeviceScanner::scanAddresses(const std::vector<uint8_t>& addresses) {
 ebus::Sequence DeviceScanner::nextCommand() {
   platform::UniqueLock<platform::Mutex> lock(mutex_);
 
-  // Priority 1: Manual Scan (Triggered by user, bypass busy check)
-  if (!manual_queue_.empty()) {
-    auto cmd = std::move(manual_queue_[0]);
-    manual_queue_.erase(manual_queue_.begin());
-    if (!cmd.empty()) return cmd;
-  }
-
-  // Starvation/Resource Fairness: Postpone background discovery (Full/Startup)
-  // if the system is busy with higher priority tasks or bridge activity.
-  if (is_busy_ && is_busy_()) return {};
-
-  // Priority 2: Full Scan (independent from startup timing)
-  if (full_scan_) {
-    while (full_scan_address_ < 256) {
-      uint8_t addr = static_cast<uint8_t>(full_scan_address_++);
-      // Note: we increment the cursor once per attempt; adjust to ensure
-      // progress even if createScanCommand returns empty.
-      if (ebus::isSlave(addr) && (addr != ebus::slaveOf(own_address_))) {
-        auto cmd = Device::createScanCommand(addr);
-        if (!cmd.empty()) return cmd;
-        // If createScanCommand returned empty, continue the loop.
-      }
-    }
-    // Finished full scan
-    full_scan_ = false;
-  }
-
-  // Priority 3: Startup Scan (Discovery of observed devices)
-  if (!scan_on_startup_) return {};
-
-  const auto now = Clock::now();
-  if (now < next_startup_scan_time_) {
-    // If we are still in initial delay, but there might be leftover
-    // startup_queue_
-    if (!startup_queue_.empty()) {
-      auto cmd = std::move(startup_queue_[0]);
-      startup_queue_.erase(startup_queue_.begin());
-      if (!cmd.empty()) return cmd;
-      return {};
-    }
+  if (!device_manager_) {
     return {};
   }
 
-  if (startup_queue_.empty()) {
-    // Stop if we have completed all scan iterations.
-    if (startup_scan_count_ >= max_startup_scans_) {
-      scan_on_startup_ = false;
-      return {};
+  while (true) {
+    const auto now = Clock::now();
+
+    // 1. Batch Reset: Clear short-term failure cooldowns every 60 seconds.
+    if (failed_scans_.any() &&
+        (now - last_failure_reset_time_ > scan_cooldown_duration_)) {
+      failed_scans_.reset();
+      last_failure_reset_time_ = now;
     }
 
-    // Trigger iteration: drop lock to query thread-safe DeviceManager
-    lock.unlock();
-    std::bitset<256> observed;
-    std::vector<Sequence> vendor_cmds_buffer;
-    if (device_manager_) {
-      device_manager_->getObservedSlaves(observed);
-      device_manager_->vendorScanCommands(
-          [&](const Sequence& cmd) { vendor_cmds_buffer.push_back(cmd); });
+    // 2. Epoch Reset: Heavy cleanup of counters/metrics every 30 minutes of
+    // activity.
+    if (now - last_scan_attempt_ > std::chrono::minutes(30)) {
+      failed_scans_.reset();
+      quarantined_scans_.reset();
+      scan_attempt_counters_.fill(0);
+      failure_resets_++;
     }
 
-    // Populate iteration queue outside the lock
-    std::vector<Sequence> temp_q;
-    for (size_t i = 0; i < 256; ++i) {
-      if (observed.test(i)) {
-        auto cmd = Device::createScanCommand(static_cast<uint8_t>(i));
-        if (!cmd.empty()) temp_q.push_back(std::move(cmd));
+    // Priority Logic: Background discovery (Full/Startup) is postponed if busy.
+    const bool system_busy = is_busy_ && is_busy_();
+
+    // Priority 1: Deep Scan (Manual, Observed, Startup)
+    // Iterates through addresses requiring full identification.
+    while (current_deep_scan_address_ < 256 || pending_deep_scans_.any()) {
+      if (current_deep_scan_address_ == 256) {
+        for (uint16_t i = 0; i < 256; ++i) {
+          if (pending_deep_scans_.test(i)) {
+            current_deep_scan_address_ = i;
+            current_deep_scan_vendor_cursor_ = 0;
+            pending_deep_scans_.reset(i);
+            break;
+          }
+        }
+      }
+
+      if (current_deep_scan_address_ == 256) break;
+
+      uint8_t addr = static_cast<uint8_t>(current_deep_scan_address_);
+      if (failed_scans_.test(addr) || quarantined_scans_.test(addr)) {
+        current_deep_scan_address_ = 256;
+        continue;
+      }
+
+      Sequence cmd;
+      if (!device_manager_->isIdentified(addr)) {
+        cmd = Device::createScanCommand(addr);
+        if (!cmd.empty()) {
+          last_scan_attempt_ = now;
+          current_deep_scan_address_ = 256;  // Reset to move to next task
+          return cmd;
+        }
+      } else if (device_manager_->getNextPendingVendorCommandForDevice(
+                     addr, current_deep_scan_vendor_cursor_, cmd)) {
+        last_scan_attempt_ = now;
+        return cmd;
+      }
+
+      // Device fully scanned or unreachable
+      current_deep_scan_address_ = 256;
+    }
+
+    if (system_busy) return {};
+
+    // Priority 2: Full Scan (Surface mapping of the whole bus)
+    if (full_scan_) {
+      while (full_scan_address_ < 256) {
+        uint8_t addr = static_cast<uint8_t>(full_scan_address_++);
+
+        // Full scan only probes slaves and skips our own address
+        if (!ebus::isSlave(addr) || addr == ebus::slaveOf(own_address_))
+          continue;
+
+        if (failed_scans_.test(addr) || quarantined_scans_.test(addr)) continue;
+
+        if (device_manager_ && !device_manager_->isIdentified(addr)) {
+          auto cmd = Device::createScanCommand(addr);
+          if (!cmd.empty()) {
+            last_scan_attempt_ = now;
+            return cmd;
+          }
+        }
+      }
+      full_scan_ = false;
+    }
+
+    // Priority 3: Startup Scan (Pass over all observed devices)
+    if (scan_on_startup_ && now >= next_startup_scan_time_) {
+      if (startup_scan_count_ >= max_startup_scans_) {
+        scan_on_startup_ = false;
+      } else {
+        lock.unlock();
+        bool added = scanObservedDevices();
+        lock.lock();
+
+        startup_scan_count_++;
+        next_startup_scan_time_ = now + startup_scan_interval_;
+        if (added) continue;  // Loop back to pick up the newly set bits
       }
     }
-    std::copy_if(vendor_cmds_buffer.begin(), vendor_cmds_buffer.end(),
-                 std::back_inserter(temp_q),
-                 [](const Sequence& cmd) { return !cmd.empty(); });
 
-    lock.lock();
-    // Verify state hasn't changed (e.g. stop() called) while we were unlocked
-    if (scan_on_startup_ && startup_queue_.empty() &&
-        startup_scan_count_ < max_startup_scans_) {
-      for (auto& cmd : temp_q) {
-        if (!startup_queue_.push_back(std::move(cmd))) break;
-      }
-      if (startup_queue_.size() > max_startup_queue_size_) {
-        max_startup_queue_size_ = startup_queue_.size();
-      }
-      startup_scan_count_++;
-      next_startup_scan_time_ = now + startup_scan_interval_;
-    }
-  }
-
-  if (!startup_queue_.empty()) {
-    auto cmd = std::move(startup_queue_[0]);
-    startup_queue_.erase(startup_queue_.begin());
-    if (!cmd.empty()) return cmd;
+    break;
   }
 
   return {};
 }
 
-void DeviceScanner::resetPeakMetrics() {
+void DeviceScanner::onScanResult(uint8_t address, bool success) {
   platform::LockGuard<platform::Mutex> lock(mutex_);
-  max_manual_queue_size_ = manual_queue_.size();
-  max_startup_queue_size_ = startup_queue_.size();
+  if (!success) {
+    failed_scans_.set(address);
+    // If the device fails repeatedly even after short cooldowns, quarantine it
+    if (++scan_attempt_counters_[address] >= 10) {
+      quarantined_scans_.set(address);
+      scan_attempt_counters_[address] = 0;
+    }
+  } else {
+    failed_scans_.reset(address);
+
+    // Chaining logic: if a scan succeeded, check if we need to immediately
+    // move to the next phase of identification (e.g. vendor commands).
+    if (device_manager_ && device_manager_->needsDeepScan(address)) {
+      // Safety limit: if we've tried identifying this device too many times
+      // without it becoming fully profiled, stop re-enqueuing to prevent loops.
+      if (++scan_attempt_counters_[address] < 10) {
+        pending_deep_scans_.set(address);
+      } else {
+        // Faulty or non-compliant device: quarantine until major reset.
+        quarantined_scans_.set(address);
+        scan_attempt_counters_[address] = 0;
+      }
+    } else {
+      scan_attempt_counters_[address] = 0;  // Reset counter on full success
+    }
+  }
 }
+
+void DeviceScanner::resetPeakMetrics() {}
 
 bool DeviceScanner::isFullScan() const {
   platform::LockGuard<platform::Mutex> lock(mutex_);
@@ -248,37 +276,36 @@ bool DeviceScanner::isFullScan() const {
 
 bool DeviceScanner::isScanning() const {
   platform::LockGuard<platform::Mutex> lock(mutex_);
-  return full_scan_ || scan_on_startup_ || !manual_queue_.empty() ||
-         !startup_queue_.empty();
+  return full_scan_ || scan_on_startup_ || pending_deep_scans_.any();
 }
 
 DeviceScannerStatus DeviceScanner::fetchStatus() const {
   platform::LockGuard<platform::Mutex> lock(mutex_);
   DeviceScannerStatus s;
-  s.is_scanning = full_scan_ || scan_on_startup_ || !manual_queue_.empty() ||
-                  !startup_queue_.empty();
+  s.is_scanning = full_scan_ || scan_on_startup_ || pending_deep_scans_.any();
   s.full_scan_active = full_scan_;
   s.full_scan_address = full_scan_address_;
   s.scan_on_startup_enabled = scan_on_startup_;
   s.startup_scan_count = startup_scan_count_;
-  s.manual_queue_size = manual_queue_.size();
-  s.max_manual_queue_size = max_manual_queue_size_;
-  s.startup_queue_size = startup_queue_.size();
-  s.max_startup_queue_size = max_startup_queue_size_;
+  s.startup_iteration_active = startup_iteration_active_;
+  s.startup_current_device_addr = startup_current_device_addr_;
+  s.pending_deep_scans = pending_deep_scans_.count();
+  s.failed_scans = failed_scans_.count();
+  s.quarantined_scans = quarantined_scans_.count();
+  s.failure_resets = failure_resets_;
   return s;
 }
 
-bool DeviceScanner::scanAddressLocked(uint8_t address) {
-  if (ebus::isSlave(address) && (address != ebus::slaveOf(own_address_))) {
-    auto cmd = Device::createScanCommand(address);
-    if (cmd.empty()) return false;
-    bool pushed = manual_queue_.push_back(std::move(cmd));
-    if (pushed && manual_queue_.size() > max_manual_queue_size_) {
-      max_manual_queue_size_ = manual_queue_.size();
-    }
-    return pushed;
-  }
-  return false;
+bool DeviceScanner::scanAddressInternal(uint8_t address) {
+  platform::LockGuard<platform::Mutex> lock(mutex_);
+  if (address == ebus::slaveOf(own_address_)) return false;
+  if (pending_deep_scans_.test(address)) return true;  // Already pending
+
+  pending_deep_scans_.set(address);
+  // Reset cooldown for manually requested scans
+  failed_scans_.reset(address);
+  quarantined_scans_.reset(address);
+  return true;
 }
 
 }  // namespace ebus::detail

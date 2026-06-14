@@ -226,18 +226,6 @@ inline constexpr size_t max_devices = EBUS_MAX_DEVICES;
 #endif
 
 inline constexpr uint8_t scan_priority = 5;
-
-#ifndef EBUS_MAX_MANUAL_QUEUE
-inline constexpr size_t max_manual_queue = 64;
-#else
-inline constexpr size_t max_manual_queue = EBUS_MAX_MANUAL_QUEUE;
-#endif
-
-#ifndef EBUS_MAX_STARTUP_QUEUE
-inline constexpr size_t max_startup_queue = 64;
-#else
-inline constexpr size_t max_startup_queue = EBUS_MAX_STARTUP_QUEUE;
-#endif
 }  // namespace DeviceLimits
 
 namespace SchedulerLimits {

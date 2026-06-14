@@ -28,6 +28,7 @@ bool ConfigValidator::validate(const EbusConfig& config) {
   if (r.scheduler.max_send_attempts < 1) return false;
   if (r.scheduler.base_backoff_ms == 0) return false;
   if (r.scheduler.fsm_timeout_ms == 0) return false;
+  if (r.scheduler.max_items == 0) return false;
 
   // Ensure total timeout allows for at least one full FSM cycle plus overhead
   if (r.scheduler.total_timeout_ms <= r.scheduler.fsm_timeout_ms) return false;
@@ -39,7 +40,6 @@ bool ConfigValidator::validate(const EbusConfig& config) {
   if (r.network.outbound_buffer_size == 0) return false;
   if (r.network.session_timeout_ms == 0) return false;
   if (r.network.transmit_timeout_ms == 0) return false;
-  if (r.scheduler.max_items == 0) return false;
   if (r.poll.max_items == 0) return false;
   if (r.diagnostics.log_size > DiagnosticsLimits::log_history_size)
     return false;  // Sanity check
@@ -80,12 +80,14 @@ bool ConfigValidator::validateJson(std::string_view json) {
         *val > BusLimits::window_max_us)
       return false;
   }
+
   auto offset_token = reader.get("bus.offset_us");
   if (offset_token == JsonReader::Token::number ||
       offset_token == JsonReader::Token::string) {
     auto val = reader.asNumStrict<int>();
     if (!val || *val > BusLimits::offset_max_us) return false;
   }
+
   if (reader.get("bus.watchdog_timeout_ms") == JsonReader::Token::number) {
     if (reader.asNum<int>() == 0) return false;
   }
@@ -108,6 +110,11 @@ bool ConfigValidator::validateJson(std::string_view json) {
     if (fsm_timeout == 0) return false;
   }
 
+  if (reader.get("scheduler.max_items") == JsonReader::Token::number) {
+    auto val = reader.asNumStrict<size_t>();
+    if (!val || *val == 0) return false;
+  }
+
   if (reader.get("scheduler.total_timeout_ms") == JsonReader::Token::number) {
     uint32_t total_timeout = reader.asNum<uint32_t>();
     // Ensure total timeout allows for at least one full cycle + backoff
@@ -119,11 +126,22 @@ bool ConfigValidator::validateJson(std::string_view json) {
   if (reader.get("network.outbound_buffer_size") == JsonReader::Token::number) {
     if (reader.asNum<size_t>() == 0) return false;
   }
+
   if (reader.get("network.session_timeout_ms") == JsonReader::Token::number) {
     if (reader.asNum<uint32_t>() == 0) return false;
   }
+
   if (reader.get("network.transmit_timeout_ms") == JsonReader::Token::number) {
     if (reader.asNum<uint32_t>() == 0) return false;
+  }
+
+  if (reader.get("poll.max_items") == JsonReader::Token::number) {
+    if (reader.asNum<size_t>() == 0) return false;
+  }
+
+  if (reader.get("diagnostics.log_size") == JsonReader::Token::number) {
+    auto val = reader.asNumStrict<size_t>();
+    if (!val || *val > DiagnosticsLimits::log_history_size) return false;
   }
 
   return true;

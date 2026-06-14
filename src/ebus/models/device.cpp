@@ -40,7 +40,10 @@ void Device::update(uint8_t slave_addr, ByteView master_view,
   slave_ = slave_addr;
   message_count_++;
 
-  if (slave_view.empty()) return;
+  if (slave_view.empty()) {
+    // If no slave view, we can't identify the device further.
+    return;
+  }
 
   if (ebus::matches(master_view, vec_070400, 2))
     vec_070400_.assign(slave_view);
@@ -52,12 +55,35 @@ void Device::update(uint8_t slave_addr, ByteView master_view,
     vec_b5090126_.assign(slave_view);
   else if (ebus::matches(master_view, vec_b5090127, 2))
     vec_b5090127_.assign(slave_view);
+
+  // Mark as identified if 07 04 data is present.
+  if (!vec_070400_.empty()) identified_ = true;
 }
 
-void Device::createVendorScanCommands(
-    Delegate<void(const Sequence&)> callback) const {
-  if (!callback) return;
+bool Device::getNextPendingVendorCommand(uint16_t& cursor,
+                                         Sequence& out_cmd) const {
+  if (isVaillant()) {
+    const ModelSequence* storage_fields[] = {&vec_b5090124_, &vec_b5090125_,
+                                             &vec_b5090126_, &vec_b5090127_};
+    const std::array<uint8_t, 4>* command_prefixes[] = {
+        &vec_b5090124, &vec_b5090125, &vec_b5090126, &vec_b5090127};
 
+    for (uint16_t i = cursor; i < 4; ++i) {
+      if (storage_fields[i]->empty()) {
+        out_cmd.clear();
+        out_cmd.push_back(slave_, false);
+        std::for_each(command_prefixes[i]->begin(), command_prefixes[i]->end(),
+                      [&out_cmd](uint8_t b) { out_cmd.push_back(b, false); });
+        cursor = i + 1;  // Advance cursor for next call
+        return true;
+      }
+    }
+  }
+  cursor = 4;  // Mark as exhausted
+  return false;
+}
+
+bool Device::getFirstPendingVendorCommand(Sequence& out_cmd) const {
   if (isVaillant()) {
     const ModelSequence* storage_fields[] = {&vec_b5090124_, &vec_b5090125_,
                                              &vec_b5090126_, &vec_b5090127_};
@@ -66,30 +92,15 @@ void Device::createVendorScanCommands(
 
     for (size_t i = 0; i < 4; ++i) {
       if (storage_fields[i]->empty()) {
-        Sequence command;
-        command.push_back(slave_, false);
+        out_cmd.clear();
+        out_cmd.push_back(slave_, false);
         std::for_each(command_prefixes[i]->begin(), command_prefixes[i]->end(),
-                      [&command](uint8_t b) { command.push_back(b, false); });
-        callback(command);
+                      [&out_cmd](uint8_t b) { out_cmd.push_back(b, false); });
+        return true;
       }
     }
   }
-  // To support a new vendor, add a similar block here or use a manufacturer
-  // lookup table.
-}
-
-uint8_t Device::getSlave() const { return slave_; }
-
-std::vector<uint8_t> Device::getIdentificationData() const {
-  return vec_070400_.toVector();
-}
-
-std::vector<uint8_t> Device::getVendorData(uint8_t sub) const {
-  if (sub == 0x24) return vec_b5090124_.toVector();
-  if (sub == 0x25) return vec_b5090125_.toVector();
-  if (sub == 0x26) return vec_b5090126_.toVector();
-  if (sub == 0x27) return vec_b5090127_.toVector();
-  return {};
+  return false;
 }
 
 ebus::DeviceInfo Device::getDevice() const {
@@ -127,6 +138,20 @@ ebus::DeviceInfo Device::getDevice() const {
 
   return info;
 }
+
+std::vector<uint8_t> Device::getIdentificationData() const {
+  return vec_070400_.toVector();
+}
+
+std::vector<uint8_t> Device::getVendorData(uint8_t sub) const {
+  if (sub == 0x24) return vec_b5090124_.toVector();
+  if (sub == 0x25) return vec_b5090125_.toVector();
+  if (sub == 0x26) return vec_b5090126_.toVector();
+  if (sub == 0x27) return vec_b5090127_.toVector();
+  return {};
+}
+
+uint8_t Device::getSlave() const { return slave_; }
 
 bool Device::isVaillant() const {
   return (vec_070400_.size() > 1 && vec_070400_[1] == vendor_vaillant);

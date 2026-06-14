@@ -261,7 +261,7 @@ class Controller {
   /**
    * @brief Adds a network client bridge via an existing file descriptor.
    */
-  void addClient(int fd, ClientType type);
+  bool addClient(int fd, ClientType type);
   void removeClient(int fd);
 
   // Status/Telemetry

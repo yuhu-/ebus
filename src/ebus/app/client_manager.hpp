@@ -51,8 +51,8 @@ class ClientManager {
   void setBusyPredicate(Delegate<bool()> pred);
 
   // Working Methods
-  void addClient(int fd, ClientType type);
-  void addClient(std::shared_ptr<AbstractClient> client);
+  bool addClient(int fd, ClientType type);
+  bool addClient(std::shared_ptr<AbstractClient> client);
   void removeClient(int fd);
   bool tick();
   void handleBusEvent(const BusEventInfo& info);

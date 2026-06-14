@@ -64,11 +64,10 @@ TEST_CASE("DeviceManager: Device Update", "[app][devicemanager]") {
   REQUIRE(devices.size() == 2);
   REQUIRE(devices[0].slave_address == 0x08);
 
-  std::vector<ebus::Sequence> vendor_cmds;
-  dm.vendorScanCommands(
-      [&](const ebus::Sequence& cmd) { vendor_cmds.push_back(cmd); });
-  REQUIRE(vendor_cmds.size() == 4);
-  REQUIRE(vendor_cmds[0][0] == 0x08);
+  ebus::Sequence out_cmd;
+  REQUIRE(dm.needsDeepScan(0x08));
+  REQUIRE(dm.findNextPendingVendorCommand(0x08, out_cmd) == 0x08);
+  REQUIRE(out_cmd[0] == 0x08);
 }
 
 TEST_CASE("DeviceManager: Manufacturer Filtering", "[app][devicemanager]") {
@@ -88,31 +87,7 @@ TEST_CASE("DeviceManager: Manufacturer Filtering", "[app][devicemanager]") {
 
   dm.update(master, slave);
 
-  std::vector<ebus::Sequence> vendor_cmds;
-  dm.vendorScanCommands(
-      [&](const ebus::Sequence& cmd) { vendor_cmds.push_back(cmd); });
-
-  // Bosch devices do not currently have vendor-specific scan commands defined.
-  REQUIRE(vendor_cmds.empty());
-}
-
-TEST_CASE("DeviceManager: Create Scan Commands", "[app][devicemanager]") {
-  ebus::BusConfig config;
-  ebus::RuntimeConfig runtime = {.address = 0xff};
-  Request request;
-  BusMonitor monitor;
-  DeviceManager dm(&monitor);
-  platform::Bus bus(config, runtime, &request, &monitor);
-  Handler handler(runtime.address, &bus, &request, &monitor);
-
-  std::vector<std::string> inputs = {"08", "15", "50"};
-  std::vector<ebus::Sequence> cmds;
-  dm.createScanCommands(
-      inputs, [&](const ebus::Sequence& cmd) { cmds.push_back(cmd); });
-
-  REQUIRE(cmds.size() == 3);
-  REQUIRE(cmds[0][0] == 0x08);
-  REQUIRE(cmds[0][1] == 0x07);
-  REQUIRE(cmds[1][0] == 0x15);
-  REQUIRE(cmds[2][0] == 0x50);
+  REQUIRE(!dm.needsDeepScan(0x08));
+  ebus::Sequence out_cmd;
+  REQUIRE(dm.findNextPendingVendorCommand(0x08, out_cmd) == 256);
 }

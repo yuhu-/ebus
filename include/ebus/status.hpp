@@ -184,13 +184,15 @@ struct DeviceManagerStatus {
 struct DeviceScannerStatus {
   bool is_scanning = false;
   bool full_scan_active = false;
-  uint8_t full_scan_address = 0;
+  uint16_t full_scan_address = 0;
   bool scan_on_startup_enabled = false;
+  bool startup_iteration_active = false;
+  uint16_t startup_current_device_addr = 256;
   uint8_t startup_scan_count = 0;
-  size_t manual_queue_size = 0;
-  size_t max_manual_queue_size = 0;
-  size_t startup_queue_size = 0;
-  size_t max_startup_queue_size = 0;
+  size_t pending_deep_scans = 0;
+  size_t failed_scans = 0;
+  size_t quarantined_scans = 0;
+  uint32_t failure_resets = 0;
 
   void toJson(detail::JsonWriter& writer) const;
 };

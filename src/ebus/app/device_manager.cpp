@@ -78,33 +78,69 @@ void DeviceManager::update(ByteView master_view, ByteView slave_view) {
     updateEntry(target, master_view, slave_view);
 }
 
-void DeviceManager::vendorScanCommands(
-    Delegate<void(const Sequence&)> callback) const {
+uint16_t DeviceManager::findNextObservedSlave(uint8_t start) const {
   platform::LockGuard<platform::Mutex> lock(mutex_);
-  for (size_t i = 0; i < 256; ++i) {
-    int16_t idx = address_map_[i];
-    if (idx != -1) {
-      device_pool_[idx].createVendorScanCommands(callback);
-    }
+  const uint8_t own_slave = ebus::slaveOf(own_address_);
+
+  for (uint16_t s = start; s < 256; ++s) {
+    const uint8_t addr = static_cast<uint8_t>(s);
+    if (addr == own_slave) continue;
+
+    // Check if 'addr' is an observed slave address
+    if (slaves_.test(addr)) return s;
+
+    // Check if 'addr' is a master address whose slave counterpart is observed
+    // This ensures we scan the slave side of any observed master.
+    if (ebus::isMaster(addr) && masters_.test(addr)) return ebus::slaveOf(addr);
   }
+  return 256;
 }
 
-void DeviceManager::createScanCommands(
-    const std::vector<std::string>& addresses,
-    Delegate<void(const Sequence&)> callback) const {
-  std::bitset<256> scan_slaves;  // Use bitset for presence tracking
-  for (const std::string& address : addresses) {
-    const std::vector<uint8_t> bytes = ebus::toVector(address);
-    if (bytes.empty()) continue;
-    uint8_t first_byte = bytes[0];
-    if (ebus::isSlave(first_byte) &&
-        (first_byte != ebus::slaveOf(own_address_))) {
-      scan_slaves.set(first_byte);
+bool DeviceManager::getNextPendingVendorCommandForDevice(
+    uint8_t device_addr, uint16_t& cursor, Sequence& out_cmd) const {
+  platform::LockGuard<platform::Mutex> lock(mutex_);
+  const int16_t idx = address_map_[device_addr];
+  if (idx != -1) {
+    // Ensure the cursor is within valid bounds for the device's vendor commands
+    if (cursor < 4) {  // Assuming max 4 vendor commands for now (Vaillant)
+      return device_pool_[idx].getNextPendingVendorCommand(cursor, out_cmd);
     }
   }
-  for (size_t slave = 0; slave < 256; ++slave) {
-    if (scan_slaves.test(slave)) {
-      callback(Device::createScanCommand(static_cast<uint8_t>(slave)));
+  cursor = 4;    // Mark as exhausted
+  return false;  // No more commands
+}
+
+uint16_t DeviceManager::findNextPendingVendorCommand(uint16_t start_addr,
+                                                     Sequence& out_cmd) const {
+  platform::LockGuard<platform::Mutex> lock(mutex_);
+  for (uint16_t addr = start_addr; addr < 256; ++addr) {
+    int16_t idx = address_map_[addr];
+    if (idx != -1 && device_pool_[idx].getFirstPendingVendorCommand(out_cmd)) {
+      return addr;
+    }
+  }
+  return 256;
+}
+
+bool DeviceManager::isIdentified(uint8_t addr) const {
+  platform::LockGuard<platform::Mutex> lock(mutex_);
+  int16_t idx = address_map_[addr];
+  return idx != -1 && device_pool_[idx].isIdentified();
+}
+
+bool DeviceManager::needsDeepScan(uint8_t addr) const {
+  Sequence dummy;
+  return isIdentified(addr) && findNextPendingVendorCommand(addr, dummy) < 256;
+}
+
+void DeviceManager::getObservedSlaves(std::bitset<256>& observed) const {
+  observed.reset();  // Clear any previous state
+  for (size_t i = 0; i < 256; ++i) {
+    if (masters_.test(i) && i != own_address_) {
+      observed.set(ebus::slaveOf(static_cast<uint8_t>(i)));
+    }
+    if (slaves_.test(i) && i != ebus::slaveOf(own_address_)) {
+      observed.set(static_cast<uint8_t>(i));
     }
   }
 }
@@ -116,18 +152,6 @@ void DeviceManager::fetchDevices(
     for (size_t i = 0; i < 256; ++i) {
       int16_t idx = address_map_[i];
       if (idx != -1) callback(device_pool_[idx].getDevice());
-    }
-  }
-}
-
-void DeviceManager::getObservedSlaves(std::bitset<256>& observed) const {
-  observed.reset();  // Clear any previous state
-  for (size_t i = 0; i < 256; ++i) {
-    if (masters_.test(i) && i != own_address_) {
-      observed.set(ebus::slaveOf(static_cast<uint8_t>(i)));
-    }
-    if (slaves_.test(i) && i != ebus::slaveOf(own_address_)) {
-      observed.set(static_cast<uint8_t>(i));
     }
   }
 }

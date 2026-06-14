@@ -80,27 +80,29 @@ void ClientManager::setBusyPredicate(Delegate<bool()> pred) {
   is_busy_ = std::move(pred);
 }
 
-void ClientManager::addClient(int fd, ClientType type) {
+bool ClientManager::addClient(int fd, ClientType type) {
   auto client = createClient(fd, request_, type, outbound_buffer_size_);
-  if (!client) return;
+  if (!client) return false;
   {
     platform::LockGuard<platform::Mutex> lock(mutex_);
     if (clients_.size() >= NetworkLimits::max_clients) {
       client->stop();
-      return;
+      return false;
     }
     clients_.push_back(std::move(client));
     ++clients_version_;
   }
+  return true;
 }
 
-void ClientManager::addClient(std::shared_ptr<AbstractClient> client) {
-  if (!client) return;
+bool ClientManager::addClient(std::shared_ptr<AbstractClient> client) {
+  if (!client) return false;
   {
     platform::LockGuard<platform::Mutex> lock(mutex_);
     clients_.push_back(std::move(client));
     ++clients_version_;
   }
+  return true;
 }
 
 void ClientManager::removeClient(int fd) {

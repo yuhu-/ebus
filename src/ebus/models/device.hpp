@@ -28,9 +28,11 @@ class Device {
 
   // Working Methods
   void update(uint8_t slave_addr, ByteView master_view, ByteView slave_view);
-  void createVendorScanCommands(Delegate<void(const Sequence&)> callback) const;
+  bool getNextPendingVendorCommand(uint16_t& cursor, Sequence& out_cmd) const;
+  bool getFirstPendingVendorCommand(Sequence& out_cmd) const;
 
   // Status/Telemetry
+  bool isIdentified() const { return identified_; }
   uint8_t getSlave() const;
   std::vector<uint8_t> getIdentificationData() const;
   std::vector<uint8_t> getVendorData(uint8_t sub) const;
@@ -41,6 +43,7 @@ class Device {
   using ModelSequence = SequenceImpl<detail::SequenceLimits::model_capacity>;
 
   uint8_t slave_ = 0;
+  bool identified_ = false;  // True if 07 04 has been successfully received
   uint32_t message_count_ = 0;
 
   ModelSequence vec_070400_;

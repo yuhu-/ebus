@@ -485,8 +485,9 @@ bool Controller::scanObservedDevices() {
              : false;
 }
 
-void Controller::addClient(int fd, ClientType type) {
-  if (impl_->configured_.load()) impl_->client_manager_->addClient(fd, type);
+bool Controller::addClient(int fd, ClientType type) {
+  return impl_->configured_.load() ? impl_->client_manager_->addClient(fd, type)
+                                   : false;
 }
 
 void Controller::removeClient(int fd) {
@@ -838,6 +839,10 @@ void Impl::constructMembers(Controller* owner) {
         if (device_manager_)
           device_manager_->update(info.master_view, info.slave_view);
 
+        // Inform the device scanner about the result of a scan command.
+        if (info.telegram_type != TelegramType::broadcast)
+          device_scanner_->onScanResult(info.master_view[1], true);
+
         bool response_enabled = false;
         uint8_t own_address = 0xff;
         {
@@ -872,6 +877,10 @@ void Impl::constructMembers(Controller* owner) {
         entry.setMaster(info.master_view.data(), info.master_view.size());
         entry.setSlave(info.slave_view.data(), info.slave_view.size());
         entry.timestamp = ebus::getWallTimeMs();
+
+        // Inform the device scanner about the failure of a scan command.
+        if (info.telegram_type != TelegramType::broadcast)
+          device_scanner_->onScanResult(info.master_view[1], false);
         error_buffer_.push_back(std::move(entry));
       }
     });
