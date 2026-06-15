@@ -118,9 +118,22 @@ void ClientManager::removeClient(int fd) {
   }
 }
 
+void ClientManager::removeDisconnectedClients() {
+  platform::LockGuard<platform::Mutex> lock(mutex_);
+  clients_.erase(std::remove_if(clients_.begin(), clients_.end(),
+                                [](const std::shared_ptr<AbstractClient>& c) {
+                                  return !c->isConnected();
+                                }),
+                 clients_.end());
+  ++clients_version_;  // Indicate that the list has changed
+}
+
 bool ClientManager::tick() {
   if (!running_.load(std::memory_order_acquire)) return false;
   bool work_done = false;
+
+  // Proactively remove disconnected clients from the master list
+  removeDisconnectedClients();
 
   // 1. Snapshot clients only if changed
   ebus::StaticVector<std::shared_ptr<AbstractClient>,

@@ -54,6 +54,8 @@ class ClientManager {
   bool addClient(int fd, ClientType type);
   bool addClient(std::shared_ptr<AbstractClient> client);
   void removeClient(int fd);
+  void removeDisconnectedClients();
+
   bool tick();
   void handleBusEvent(const BusEventInfo& info);
 
