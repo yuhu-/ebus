@@ -70,7 +70,7 @@ void appendHex(std::string& out, ByteView data) {
   });
 }
 
-std::vector<uint8_t> toVector(const std::string& str) {
+std::vector<uint8_t> toVector(std::string_view str) {
   if (str.empty()) return {};
   std::vector<uint8_t> result;
   result.reserve(str.size() / 2);

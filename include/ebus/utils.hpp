@@ -222,7 +222,10 @@ inline void byteToHex(std::string& out, ByteView data) { toString(out, data); }
  */
 inline std::string byteToHex(ByteView data) { return toString(data); }
 
-std::vector<uint8_t> toVector(const std::string& str);
+/**
+ * @brief Parses a string (optionally hex-encoded) into a byte vector.
+ */
+std::vector<uint8_t> toVector(std::string_view str);
 
 /**
  * Converts a non-owning ByteView to an owning std::vector.

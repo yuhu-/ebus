@@ -260,7 +260,7 @@ inline constexpr int detailed_precision = 4;
 namespace JsonLimits {
 inline constexpr size_t max_recursion_depth = 32;
 inline constexpr int indent_spaces = 2;
-inline constexpr size_t writer_buffer_size = 256;
+inline constexpr size_t writer_buffer_size = 128;
 inline constexpr size_t formatting_buffer_size = 64;
 }  // namespace JsonLimits
 
