@@ -130,7 +130,7 @@ bool Controller::start() {
   detail::platform::LockGuard<detail::platform::RecursiveMutex> lock(
       impl_->config_mutex_);
   impl_->bus_->start();
-  impl_->client_manager_->start();
+  impl_->client_manager_->start(config_.runtime);
 
   // Trigger initial system discovery if enabled
   if (config_.runtime.system_inquiry) triggerInquiryOfExistence();
@@ -608,7 +608,6 @@ void Controller::fetchStatus(
     const auto& snap = impl_->status_cache_;
 
     res.last_update_timestamp_ms = snap.last_update_timestamp_ms;
-    res.memory = snap.memory;
 
     if (!snap.controller.thread.name.empty())
       res.threads.push_back(snap.controller.thread);
@@ -616,6 +615,8 @@ void Controller::fetchStatus(
       res.threads.push_back(snap.bus.bus_thread);
     if (!snap.bus.syn_thread.name.empty())
       res.threads.push_back(snap.bus.syn_thread);
+    if (!snap.client_manager.thread.name.empty())
+      res.threads.push_back(snap.client_manager.thread);
 
     if (snap.scheduler.queue.capacity > 0)
       res.queues.push_back(snap.scheduler.queue);
@@ -691,11 +692,6 @@ void Impl::fetchServiceStatus(ServiceStatus& status) const {
     status.device_manager = device_manager_->fetchStatus();
     status.device_scanner = device_scanner_->fetchStatus();
     status.poll_manager = poll_manager_->fetchStatus();
-#if defined(ESP_PLATFORM)
-    status.memory = MemoryStatus(heap_caps_get_total_size(MALLOC_CAP_DEFAULT),
-                                 esp_get_free_heap_size(),
-                                 esp_get_minimum_free_heap_size());
-#endif
   }
 }
 
@@ -919,7 +915,8 @@ void Impl::constructMembers(Controller* owner) {
 
   if (!client_manager_) {
     client_manager_ = std::make_unique<detail::ClientManager>(
-        bus_.get(), bus_handler_.get(), request_.get(), bus_monitor_.get());
+        bus_.get(), bus_handler_.get(), request_.get(), bus_monitor_.get(),
+        &reactor_queue_);
     client_manager_->setBusyPredicate(
         detail::Delegate<bool()>::bind<Impl, &Impl::isHandlerBusy>(this));
   }
@@ -979,13 +976,23 @@ void Impl::run(Controller* owner) {
       case OrchestrationEventType::network_byte: {
         // Handle external bridge data directly via ClientManager
         client_manager_->handleBusEvent(BusEventInfo{
+            // This event type is now deprecated with client_io_ready
+            // If it's still being used, it implies a generic network byte
+            // without specific client context.
+            // For now, just call tick to re-evaluate all clients.
             event.data.byte_data.val, HandlerState::passive_receive_master,
             RequestState::observe, RequestResult::observe_data, 0,
             event.data.byte_data.timestamp});
         return true;
       }
-      case OrchestrationEventType::user_request:  // Fallthrough
-      case OrchestrationEventType::timer_wakeup:  // Fallthrough
+      case OrchestrationEventType::user_request:       // Fallthrough
+      case OrchestrationEventType::timer_wakeup:       // Fallthrough
+      case OrchestrationEventType::client_io_ready: {  // Fallthrough
+        client_manager_->processClientIoEvent(
+            event.data.client_io_data.client_fd,
+            event.data.client_io_data.events);
+        return true;
+      }
       case OrchestrationEventType::callback_ready:
         return true;  // These events are primarily used to wake the pop()
                       // block

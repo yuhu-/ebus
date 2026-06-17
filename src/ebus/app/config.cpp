@@ -40,6 +40,10 @@ void RuntimeConfig::toJson(detail::JsonWriter& writer) const {
     writer.writeField("session_timeout_ms", network.session_timeout_ms);
     writer.writeField("transmit_timeout_ms", network.transmit_timeout_ms);
     writer.writeField("outbound_buffer_size", network.outbound_buffer_size);
+    writer.writeField("enable_server", network.enable_server);
+    writer.writeField("port_regular", network.port_regular);
+    writer.writeField("port_readonly", network.port_readonly);
+    writer.writeField("port_enhanced", network.port_enhanced);
   }
 
   {
@@ -184,6 +188,29 @@ bool RuntimeConfig::mergeFromJson(std::string_view json) {
             inner.next();
             auto val = inner.asNumStrict<size_t>();
             if (val) network.outbound_buffer_size = *val;
+            return val.has_value();
+          }
+          if (k == "enable_server") {
+            inner.next();
+            network.enable_server = inner.asBool();
+            return true;
+          }
+          if (k == "port_regular") {
+            inner.next();
+            auto val = inner.asNumStrict<uint16_t>();
+            if (val) network.port_regular = *val;
+            return val.has_value();
+          }
+          if (k == "port_readonly") {
+            inner.next();
+            auto val = inner.asNumStrict<uint16_t>();
+            if (val) network.port_readonly = *val;
+            return val.has_value();
+          }
+          if (k == "port_enhanced") {
+            inner.next();
+            auto val = inner.asNumStrict<uint16_t>();
+            if (val) network.port_enhanced = *val;
             return val.has_value();
           }
           return false;

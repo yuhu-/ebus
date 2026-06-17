@@ -6,6 +6,7 @@
 #pragma once
 
 #include <unistd.h>
+#include <fcntl.h>
 
 #include <app/client.hpp>
 #include <app/client_manager.hpp>
@@ -70,9 +71,9 @@ class MockClient : public detail::AbstractClient {
  public:
   explicit MockClient(Request* req, bool write_capable = true,
                       size_t max_buffer = 1024)
-      : AbstractClient(999, req, write_capable, max_buffer) {}
+      : AbstractClient(::open("/dev/null", O_RDWR), req, write_capable, max_buffer) {}
 
-  ~MockClient() override { fd_ = -1; }
+  ~MockClient() override = default;
 
   void onSessionStart(uint32_t session_id) override { (void)session_id; }
 
@@ -137,12 +138,27 @@ class MockClient : public detail::AbstractClient {
  */
 class TestReactor {
  public:
+  TestReactor(platform::Bus& bus, BusHandler& busHandler, ClientManager* manager,
+              Scheduler* scheduler,
+              platform::Queue<ebus::OrchestrationEvent>* reactor_queue)
+      : bus_(bus),
+        busHandler_(busHandler),
+        manager_(manager),
+        scheduler_(scheduler),
+        reactor_queue_(reactor_queue) {
+    bus_.addBusEventListener(
+        Delegate<void(const BusEvent&)>::bind<TestReactor,
+                                              &TestReactor::onBusEvent>(this));
+  }
+
+  // Overload for tests that don't use the new ClientManager IO thread
   TestReactor(platform::Bus& bus, BusHandler& busHandler,
               ClientManager* manager = nullptr, Scheduler* scheduler = nullptr)
       : bus_(bus),
         busHandler_(busHandler),
         manager_(manager),
-        scheduler_(scheduler) {
+        scheduler_(scheduler),
+        reactor_queue_(nullptr) { // Initialize to nullptr if not provided
     bus_.addBusEventListener(
         Delegate<void(const BusEvent&)>::bind<TestReactor,
                                               &TestReactor::onBusEvent>(this));
@@ -160,6 +176,31 @@ class TestReactor {
   void pump() {
     if (scheduler_) scheduler_->tick();
     if (manager_) manager_->tick();
+
+    // Process events from the reactor_queue_
+    if (reactor_queue_) {
+      ebus::OrchestrationEvent ev;
+      while (reactor_queue_->tryPop(ev)) {
+        switch (ev.type) {
+          case OrchestrationEventType::bus_byte: {
+            BusEvent bus_ev{ev.data.byte_data.val, ev.data.byte_data.bus_request,
+                            ev.data.byte_data.start_bit, ev.data.byte_data.timestamp};
+            busHandler_.processEvent(bus_ev);
+            break;
+          }
+          case OrchestrationEventType::protocol_result: {
+            if (scheduler_) scheduler_->injectProtocolEvent(ev.data.protocol_data);
+            break;
+          }
+          case OrchestrationEventType::client_io_ready: {
+            if (manager_) manager_->processClientIoEvent(ev.data.client_io_data.client_fd,
+                                                         ev.data.client_io_data.events);
+            break;
+          }
+          default: break; // Ignore other event types for now in TestReactor
+        }
+      }
+    }
 
     platform::UniqueLock<platform::Mutex> lock(mutex_);
     while (!events_.empty()) {
@@ -221,6 +262,7 @@ class TestReactor {
   BusHandler& busHandler_;
   ClientManager* manager_;
   Scheduler* scheduler_;
+  platform::Queue<ebus::OrchestrationEvent>* reactor_queue_;
   platform::Mutex mutex_;
   std::queue<BusEvent> events_;
 };

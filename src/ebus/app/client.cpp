@@ -45,9 +45,8 @@ bool AbstractClient::flushLocked() {
   while (count_ > 0) {
     // Send in one or two parts depending on circular wrap
     size_t part_len = std::min(count_, max_buffer_size_ - head_);
-    ssize_t n =
-        platform::send(fd_, &buffer_storage_[head_],
-                       part_len, platform::Flags::dont_wait);
+    ssize_t n = platform::send(fd_, &buffer_storage_[head_], part_len,
+                               platform::Flags::dont_wait);
 
     if (n > 0) {
       head_ = (head_ + n) % max_buffer_size_;
@@ -57,10 +56,6 @@ bool AbstractClient::flushLocked() {
     } else if (n < 0) {
       if (platform::isInterrupted()) continue;
       if (platform::isWouldBlock()) break;
-      stop();
-      return false;
-    } else {
-      // Socket closed
       stop();
       return false;
     }
@@ -83,7 +78,7 @@ void ReadOnlyClient::sendToClient(ByteView data) {
   if (fd_ < 0 || data.empty()) return;
   {
     platform::LockGuard<platform::Mutex> lock(buffer_mutex_);
-    
+
     // Drop oldest data if we would exceed capacity (O(1) in circular buffer)
     if (count_ + data.size() > max_buffer_size_) {
       size_t to_drop = (count_ + data.size()) - max_buffer_size_;
@@ -107,16 +102,16 @@ BridgeAction ReadOnlyClient::onBusByte(const BusEventInfo&) {
 
 ClientInfo ReadOnlyClient::getClientInfo() const {
   platform::LockGuard<platform::Mutex> lock(buffer_mutex_);
-  return ClientInfo{fd_, "read_only", isConnected(), write_capable_,
-                    count_};
+  return ClientInfo{fd_, "read_only", isConnected(), write_capable_, count_};
 }
 
 RegularClient::RegularClient(int fd, Request* request, size_t max_buffer)
     : AbstractClient(fd, request, true, max_buffer) {}
 
 bool RegularClient::wantsToSend() {
-  uint8_t dummy;
-  return platform::recv(fd_, &dummy, 1, platform::Flags::peek) > 0;
+  return platform::hasDataAvailable(fd_);
+  // uint8_t dummy;
+  // return platform::recv(fd_, &dummy, 1, platform::Flags::peek) > 0;
 }
 
 bool RegularClient::recvFromClient(uint8_t& out) {
@@ -177,8 +172,7 @@ BridgeAction RegularClient::onBusByte(const BusEventInfo& info) {
 
 ClientInfo RegularClient::getClientInfo() const {
   platform::LockGuard<platform::Mutex> lock(buffer_mutex_);
-  return ClientInfo{fd_, "regular", isConnected(), write_capable_,
-                    count_};
+  return ClientInfo{fd_, "regular", isConnected(), write_capable_, count_};
 }
 
 EnhancedClient::EnhancedClient(int fd, Request* request, size_t max_buffer)
@@ -191,8 +185,9 @@ void EnhancedClient::onSessionStart(uint32_t session_id) {
 
 bool EnhancedClient::wantsToSend() {
   if (inbound_len_ > 0) return true;
-  uint8_t dummy;
-  return platform::recv(fd_, &dummy, 1, platform::Flags::peek) > 0;
+  return platform::hasDataAvailable(fd_);
+  // uint8_t dummy;
+  // return platform::recv(fd_, &dummy, 1, platform::Flags::peek) > 0;
 }
 
 bool EnhancedClient::recvFromClient(uint8_t& out) {
@@ -289,8 +284,8 @@ void EnhancedClient::sendToClient(ByteView data) {
 
     // Ensure room for potential 2-byte sequence
     while (count_ + seq_len > max_buffer_size_) {
-        head_ = (head_ + 1) % max_buffer_size_;
-        count_--;
+      head_ = (head_ + 1) % max_buffer_size_;
+      count_--;
     }
 
     if (cmd == static_cast<uint8_t>(enhanced::Response::received) &&
@@ -345,8 +340,7 @@ BridgeAction EnhancedClient::onBusByte(const BusEventInfo& info) {
 
 ClientInfo EnhancedClient::getClientInfo() const {
   platform::LockGuard<platform::Mutex> lock(buffer_mutex_);
-  return ClientInfo{fd_, "enhanced", isConnected(), write_capable_,
-                    count_};
+  return ClientInfo{fd_, "enhanced", isConnected(), write_capable_, count_};
 }
 
 void EnhancedClient::sendEnhancedResponse(enhanced::Response res, uint8_t val) {

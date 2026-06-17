@@ -83,6 +83,19 @@ inline constexpr uint8_t bus_syn_priority = 5;
 inline constexpr uint8_t bus_syn_priority = EBUS_BUS_SYN_PRIORITY;
 #endif
 
+#ifndef EBUS_CLIENT_MANAGER_STACK_SIZE
+inline constexpr size_t client_manager_stack_size = 4096;
+#else
+inline constexpr size_t client_manager_stack_size =
+    EBUS_CLIENT_MANAGER_STACK_SIZE;
+#endif
+
+#ifndef EBUS_CLIENT_MANAGER_PRIORITY
+inline constexpr uint8_t client_manager_priority = 5;
+#else
+inline constexpr uint8_t client_manager_priority = EBUS_CLIENT_MANAGER_PRIORITY;
+#endif
+
 // ESP Service Threads
 inline constexpr uint32_t termination_timeout_ms = 2000;
 }  // namespace OrchestrationLimits

@@ -39,4 +39,21 @@ TEST_CASE("ConfigValidator: Validation Logic", "[detail][config]") {
     config.runtime.scheduler.total_timeout_ms = 500;  // Total must be > FSM
     REQUIRE(ConfigValidator::validate(config) == false);
   }
+
+  SECTION("Network server validation") {
+    config.runtime.network.enable_server = true;
+    config.runtime.network.port_regular = 3333;
+    config.runtime.network.port_readonly = 3334;
+    config.runtime.network.port_enhanced = 3335;
+    REQUIRE(ConfigValidator::validate(config) == true);
+
+    // Invalid port 0
+    config.runtime.network.port_regular = 0;
+    REQUIRE(ConfigValidator::validate(config) == false);
+    config.runtime.network.port_regular = 3333;
+
+    // Duplicate ports
+    config.runtime.network.port_readonly = 3333;
+    REQUIRE(ConfigValidator::validate(config) == false);
+  }
 }

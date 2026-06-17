@@ -370,7 +370,9 @@ enum class OrchestrationEventType : uint8_t {
   protocol_result,  // Signal from Handler (Won/Lost/Telegram/Error)
   timer_wakeup,     // Triggered when a Poll or Scheduler retry is due
   callback_ready,   // Signal that a user callback is pending dispatch
-  shutdown          // Signal to terminate the worker thread
+  client_io_ready,  // A client has I/O readiness (read or write)
+
+  shutdown  // Signal to terminate the worker thread
 };
 
 /**
@@ -410,6 +412,11 @@ struct OrchestrationEvent {
       uint32_t poll_id;
       StaticSequence<detail::SequenceLimits::model_capacity> payload;
     } request_data;
+    struct {
+      int client_fd;
+      uint16_t events;
+    } client_io_data;
+
     ProtocolEvent protocol_data;
   } data;
 };
@@ -452,7 +459,8 @@ struct ErrorEntry {
   ErrorEntry() = default;
   ErrorEntry(uint32_t s_id, uint32_t p_id, LogLevel lvl, ProtocolError pe,
              RequestResult res, SequenceState ss, HandlerState hs,
-             RequestState rs, uint32_t retries, ByteView m_view, ByteView s_view, uint64_t ts)
+             RequestState rs, uint32_t retries, ByteView m_view,
+             ByteView s_view, uint64_t ts)
       : session_id(s_id),
         poll_id(p_id),
         level(lvl),

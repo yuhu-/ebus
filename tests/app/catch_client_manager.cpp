@@ -43,7 +43,8 @@ TEST_CASE("ClientManager Orchestration (Regular + ReadOnly)") {
   platform::Bus bus(config, runtime, &req, &monitor);
   Handler handler(runtime.address, &bus, &req, &monitor);
   BusHandler busHandler(&req, &handler);
-  ClientManager manager(&bus, &busHandler, &req, &monitor);
+  platform::Queue<ebus::OrchestrationEvent> reactor_queue(32);
+  ClientManager manager(&bus, &busHandler, &req, &monitor, &reactor_queue);
 
   int svReg[2];
   socketpair(AF_UNIX, SOCK_STREAM, 0, svReg);
@@ -56,7 +57,7 @@ TEST_CASE("ClientManager Orchestration (Regular + ReadOnly)") {
   bus.start();
   manager.start();
 
-  TestReactor reactor(bus, busHandler, &manager);
+  TestReactor reactor(bus, busHandler, &manager, nullptr, &reactor_queue);
 
   std::vector<uint8_t> telegram = {0x33, 0xfe, 0xb5, 0x05, 0x04,
                                    0x27, 0x00, 0x2d, 0x00, 0x2c};
@@ -117,7 +118,8 @@ TEST_CASE("ClientManager Enhanced Active Sending") {
   platform::Bus bus(config, runtime, &req, &monitor);
   Handler handler(runtime.address, &bus, &req, &monitor);
   BusHandler busHandler(&req, &handler);
-  ClientManager manager(&bus, &busHandler, &req, &monitor);
+  platform::Queue<ebus::OrchestrationEvent> reactor_queue(32);
+  ClientManager manager(&bus, &busHandler, &req, &monitor, &reactor_queue);
 
   int svEnh[2], svRO[2];
   socketpair(AF_UNIX, SOCK_STREAM, 0, svEnh);
@@ -129,7 +131,7 @@ TEST_CASE("ClientManager Enhanced Active Sending") {
   bus.start();
   manager.start();
 
-  TestReactor reactor(bus, busHandler, &manager);
+  TestReactor reactor(bus, busHandler, &manager, nullptr, &reactor_queue);
 
   bus.writeByte(ebus::Symbols::syn);
 
@@ -186,7 +188,8 @@ TEST_CASE("ClientManager Watchdog Timeout") {
   BusMonitor monitor;
   platform::Bus bus(config, runtime, &req, &monitor);
   BusHandler busHandler(&req, nullptr);
-  ClientManager manager(&bus, &busHandler, &req, &monitor);
+  platform::Queue<ebus::OrchestrationEvent> reactor_queue(32);
+  ClientManager manager(&bus, &busHandler, &req, &monitor, &reactor_queue);
 
   int sv[2];
   socketpair(AF_UNIX, SOCK_STREAM, 0, sv);
@@ -195,7 +198,7 @@ TEST_CASE("ClientManager Watchdog Timeout") {
   bus.start();
   manager.start();
 
-  TestReactor reactor(bus, busHandler, &manager);
+  TestReactor reactor(bus, busHandler, &manager, nullptr, &reactor_queue);
 
   uint8_t addr = 0x33;
   send(sv[1], &addr, 1, 0);
@@ -220,7 +223,8 @@ TEST_CASE("ClientManager Client Removal") {
   BusMonitor monitor;
   platform::Bus bus(config, runtime, &req, &monitor);
   BusHandler busHandler(&req, nullptr);
-  ClientManager manager(&bus, &busHandler, &req, &monitor);
+  platform::Queue<ebus::OrchestrationEvent> reactor_queue(32);
+  ClientManager manager(&bus, &busHandler, &req, &monitor, &reactor_queue);
 
   int sv[2];
   socketpair(AF_UNIX, SOCK_STREAM, 0, sv);

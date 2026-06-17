@@ -617,13 +617,6 @@ void ThreadStatus::toJson(detail::JsonWriter& writer) const {
   }
 }
 
-void MemoryStatus::toJson(detail::JsonWriter& writer) const {
-  auto scope = writer.objectScope();
-  writer.writeField("total_heap_bytes", total_heap_bytes);
-  writer.writeField("free_heap_bytes", free_heap_bytes);
-  writer.writeField("min_free_heap_bytes", min_free_heap_bytes);
-}
-
 void QueueStatus::toJson(detail::JsonWriter& writer) const {
   auto scope = writer.objectScope();
   writer.writeField("name", name);
@@ -673,6 +666,7 @@ void ClientInfo::toJson(detail::JsonWriter& writer) const {
 
 void ClientManagerStatus::toJson(detail::JsonWriter& writer) const {
   auto scope = writer.objectScope();
+  writer.writeField("thread", thread);
   writer.writeField("session_active", session_active);
   writer.writeField("session_state", session_state);
   writer.writeField("last_error", last_error);
@@ -725,7 +719,6 @@ void SystemResources::toJson(detail::JsonWriter& writer) const {
     auto arrayScope = writer.arrayScope("queues");
     for (const auto& q : queues) writer.writeValue(q);
   }
-  writer.writeField("memory", memory);
 }
 
 void ServiceStatus::toJson(detail::JsonWriter& writer) const {
@@ -739,7 +732,6 @@ void ServiceStatus::toJson(detail::JsonWriter& writer) const {
   writer.writeField("device_manager", device_manager);
   writer.writeField("device_scanner", device_scanner);
   writer.writeField("poll_manager", poll_manager);
-  writer.writeField("memory", memory);
 }
 
 void serializeServiceStatus(const JsonChunkVisitor& visitor,
@@ -759,7 +751,6 @@ void serializeServiceStatus(const JsonChunkVisitor& visitor,
   writer.writeField("device_manager", status.device_manager);
   writer.writeField("device_scanner", status.device_scanner);
   writer.writeField("poll_manager", status.poll_manager);
-  writer.writeField("memory", status.memory);
 
   if (monitor) {
 #ifndef EBUS_MINIMAL_DIAGNOSTICS

@@ -38,22 +38,6 @@ struct ThreadStatus {
 };
 
 /**
- * Snapshot of system-wide memory usage.
- */
-struct MemoryStatus {
-  MemoryStatus() = default;
-  MemoryStatus(size_t total, size_t free, size_t min_free)
-      : total_heap_bytes(total),
-        free_heap_bytes(free),
-        min_free_heap_bytes(min_free) {}
-  size_t total_heap_bytes = 0;
-  size_t free_heap_bytes = 0;
-  size_t min_free_heap_bytes = 0;
-
-  void toJson(detail::JsonWriter& writer) const;
-};
-
-/**
  * Snapshot of a system queue's health.
  */
 struct QueueStatus {
@@ -157,8 +141,13 @@ struct ClientInfo {
  */
 struct ClientManagerStatus {
   ClientManagerStatus() = default;
-  ClientManagerStatus(bool active, std::string_view state, std::string_view err)
-      : session_active(active), session_state(state), last_error(err) {}
+  ClientManagerStatus(ThreadStatus t, bool active, std::string_view state,
+                      std::string_view err)
+      : thread(std::move(t)),
+        session_active(active),
+        session_state(state),
+        last_error(err) {}
+  ThreadStatus thread;
   bool session_active = false;
   FixedString<12> session_state;
   FixedString<48> last_error;
@@ -220,7 +209,6 @@ struct SystemResources {
   bool is_running = false;
   StaticVector<ThreadStatus, 8> threads;
   StaticVector<QueueStatus, 16> queues;
-  MemoryStatus memory;
 
   void toJson(detail::JsonWriter& writer) const;
 };
@@ -238,7 +226,6 @@ struct ServiceStatus {
   DeviceManagerStatus device_manager;
   DeviceScannerStatus device_scanner;
   PollManagerStatus poll_manager;
-  MemoryStatus memory;
 
   void toJson(detail::JsonWriter& writer) const;
 };

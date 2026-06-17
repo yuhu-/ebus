@@ -40,6 +40,15 @@ bool ConfigValidator::validate(const EbusConfig& config) {
   if (r.network.outbound_buffer_size == 0) return false;
   if (r.network.session_timeout_ms == 0) return false;
   if (r.network.transmit_timeout_ms == 0) return false;
+  if (r.network.enable_server) {
+    if (r.network.port_regular == 0 || r.network.port_readonly == 0 ||
+        r.network.port_enhanced == 0)
+      return false;
+    if (r.network.port_regular == r.network.port_readonly ||
+        r.network.port_regular == r.network.port_enhanced ||
+        r.network.port_readonly == r.network.port_enhanced)
+      return false;
+  }
   if (r.poll.max_items == 0) return false;
   if (r.diagnostics.log_size > DiagnosticsLimits::log_history_size)
     return false;  // Sanity check
@@ -133,6 +142,21 @@ bool ConfigValidator::validateJson(std::string_view json) {
 
   if (reader.get("network.transmit_timeout_ms") == JsonReader::Token::number) {
     if (reader.asNum<uint32_t>() == 0) return false;
+  }
+
+  if (reader.get("network.port_regular") == JsonReader::Token::number) {
+    auto val = reader.asNumStrict<uint16_t>();
+    if (!val || *val == 0) return false;
+  }
+
+  if (reader.get("network.port_readonly") == JsonReader::Token::number) {
+    auto val = reader.asNumStrict<uint16_t>();
+    if (!val || *val == 0) return false;
+  }
+
+  if (reader.get("network.port_enhanced") == JsonReader::Token::number) {
+    auto val = reader.asNumStrict<uint16_t>();
+    if (!val || *val == 0) return false;
   }
 
   if (reader.get("poll.max_items") == JsonReader::Token::number) {

@@ -394,4 +394,9 @@ TEST_CASE("ConfigValidator: validateJson hex strings", "[app][config][json]") {
     std::string_view json = R"({"address": "0x"})";
     REQUIRE_FALSE(ConfigValidator::validateJson(json));
   }
+  SECTION("Valid/Invalid network ports in JSON") {
+    REQUIRE(ConfigValidator::validateJson(R"({"network": {"port_regular": 3333}})"));
+    REQUIRE(ConfigValidator::validateJson(R"({"network": {"port_regular": "0x0d05"}})")); // 3333
+    REQUIRE_FALSE(ConfigValidator::validateJson(R"({"network": {"port_regular": 0}})"));
+  }
 }

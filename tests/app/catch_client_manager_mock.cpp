@@ -31,15 +31,16 @@ TEST_CASE("ClientManager: Mock Orchestration", "[app][clientmanager][mock]") {
   platform::Bus bus(config, runtime, &req, &monitor);
   Handler handler(runtime.address, &bus, &req, &monitor);
   BusHandler busHandler(&req, &handler);
-  ClientManager manager(&bus, &busHandler, &req, &monitor);
+  platform::Queue<ebus::OrchestrationEvent> reactor_queue(32);
+  ClientManager manager(&bus, &busHandler, &req, &monitor, &reactor_queue);
 
   auto mockClient = std::make_shared<MockClient>(&req);
   manager.addClient(mockClient);
 
   bus.start();
-  manager.start(); // CRITICAL: Manager must be running to process ticks
+  manager.start();
 
-  TestReactor reactor(bus, busHandler, &manager);
+  TestReactor reactor(bus, busHandler, &manager, nullptr, &reactor_queue);
 
   SECTION("Full bridge cycle: Request -> Arbitration -> Transmit") {
     // 1. Client wants to send an address (0x33)
@@ -68,7 +69,8 @@ TEST_CASE("ClientManager: Mock Orchestration", "[app][clientmanager][mock]") {
       mockClient->pushInput(b);
     }
 
-    REQUIRE(reactor.waitFor([&] { return mockClient->getOutput().size() >= 7; }));
+    REQUIRE(
+        reactor.waitFor([&] { return mockClient->getOutput().size() >= 7; }));
     REQUIRE(mockClient->getOutput().back() == 0xec);
   }
 
@@ -80,12 +82,14 @@ TEST_CASE("ClientManager: Mock Orchestration", "[app][clientmanager][mock]") {
 
     // 2. Send bytes from bus. 1st byte (SYN) -> ok (buffer size 1)
     bus.writeByte(ebus::Symbols::syn);
-    REQUIRE(reactor.waitFor([&] { return smallClient->getOutput().size() == 1; }));
+    REQUIRE(
+        reactor.waitFor([&] { return smallClient->getOutput().size() == 1; }));
     REQUIRE(smallClient->isConnected());
 
     // 3. 2nd byte -> ok (buffer size 2)
     bus.writeByte(0x11);
-    REQUIRE(reactor.waitFor([&] { return smallClient->getOutput().size() == 2; }));
+    REQUIRE(
+        reactor.waitFor([&] { return smallClient->getOutput().size() == 2; }));
     REQUIRE(smallClient->isConnected());
 
     // 4. 3rd byte -> overflow -> stop() called
