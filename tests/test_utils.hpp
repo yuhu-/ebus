@@ -5,8 +5,8 @@
 
 #pragma once
 
-#include <unistd.h>
 #include <fcntl.h>
+#include <unistd.h>
 
 #include <app/client.hpp>
 #include <app/client_manager.hpp>
@@ -71,9 +71,24 @@ class MockClient : public detail::AbstractClient {
  public:
   explicit MockClient(Request* req, bool write_capable = true,
                       size_t max_buffer = 1024)
-      : AbstractClient(::open("/dev/null", O_RDWR), req, write_capable, max_buffer) {}
+      : AbstractClient(-1, req, write_capable, max_buffer) {
+    int pipefd[2];
+    if (::pipe(pipefd) != 0) {
+      throw std::runtime_error("Failed to create mock client pipe");
+    }
+    platform::setNonBlocking(pipefd[0]);
+    platform::setNonBlocking(pipefd[1]);
 
-  ~MockClient() override = default;
+    fd_ = pipefd[0];
+    write_fd_ = pipefd[1];
+  }
+
+  ~MockClient() override {
+    if (write_fd_ >= 0) {
+      platform::close(write_fd_);
+      write_fd_ = -1;
+    }
+  }
 
   void onSessionStart(uint32_t session_id) override { (void)session_id; }
 
@@ -127,6 +142,7 @@ class MockClient : public detail::AbstractClient {
   const std::vector<uint8_t>& getOutput() const { return outbound_; }
 
  private:
+  int write_fd_ = -1;
   std::queue<uint8_t> inbound_;
   std::vector<uint8_t> outbound_;
 };
@@ -138,8 +154,8 @@ class MockClient : public detail::AbstractClient {
  */
 class TestReactor {
  public:
-  TestReactor(platform::Bus& bus, BusHandler& busHandler, ClientManager* manager,
-              Scheduler* scheduler,
+  TestReactor(platform::Bus& bus, BusHandler& busHandler,
+              ClientManager* manager, Scheduler* scheduler,
               platform::Queue<ebus::OrchestrationEvent>* reactor_queue)
       : bus_(bus),
         busHandler_(busHandler),
@@ -158,7 +174,7 @@ class TestReactor {
         busHandler_(busHandler),
         manager_(manager),
         scheduler_(scheduler),
-        reactor_queue_(nullptr) { // Initialize to nullptr if not provided
+        reactor_queue_(nullptr) {  // Initialize to nullptr if not provided
     bus_.addBusEventListener(
         Delegate<void(const BusEvent&)>::bind<TestReactor,
                                               &TestReactor::onBusEvent>(this));
@@ -183,21 +199,25 @@ class TestReactor {
       while (reactor_queue_->tryPop(ev)) {
         switch (ev.type) {
           case OrchestrationEventType::bus_byte: {
-            BusEvent bus_ev{ev.data.byte_data.val, ev.data.byte_data.bus_request,
-                            ev.data.byte_data.start_bit, ev.data.byte_data.timestamp};
+            BusEvent bus_ev{
+                ev.data.byte_data.val, ev.data.byte_data.bus_request,
+                ev.data.byte_data.start_bit, ev.data.byte_data.timestamp};
             busHandler_.processEvent(bus_ev);
             break;
           }
           case OrchestrationEventType::protocol_result: {
-            if (scheduler_) scheduler_->injectProtocolEvent(ev.data.protocol_data);
+            if (scheduler_)
+              scheduler_->injectProtocolEvent(ev.data.protocol_data);
             break;
           }
           case OrchestrationEventType::client_io_ready: {
-            if (manager_) manager_->processClientIoEvent(ev.data.client_io_data.client_fd,
-                                                         ev.data.client_io_data.events);
+            if (manager_)
+              manager_->processClientIoEvent(ev.data.client_io_data.client_fd,
+                                             ev.data.client_io_data.events);
             break;
           }
-          default: break; // Ignore other event types for now in TestReactor
+          default:
+            break;  // Ignore other event types for now in TestReactor
         }
       }
     }

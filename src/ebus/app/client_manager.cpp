@@ -183,11 +183,13 @@ bool ClientManager::addClient(int fd, ClientType type) {
     clients_.push_back(std::move(client));
     platform::LockGuard<platform::Mutex> io_lock(client_io_mutex_);
     // Add to client_io_map_
-    if (client_io_map_.full()) {
-      // This should ideally not happen if max_clients is respected
-      assert(false && "client_io_map_ is full");
+    if (fd >= 0) {
+      if (client_io_map_.full()) {
+        // This should ideally not happen if max_clients is respected
+        assert(false && "client_io_map_ is full");
+      }
+      client_io_map_.emplace_back(fd, clients_.back());
     }
-    client_io_map_.emplace_back(fd, clients_.back());
     ++clients_version_;
   }
   return true;
@@ -205,11 +207,13 @@ bool ClientManager::addClient(std::shared_ptr<AbstractClient> client) {
     clients_.push_back(std::move(client));
     // Add to client_io_map_
     platform::LockGuard<platform::Mutex> io_lock(client_io_mutex_);
-    if (client_io_map_.full()) {
-      // This should ideally not happen if max_clients is respected
-      assert(false && "client_io_map_ is full");
+    if (fd >= 0) {
+      if (client_io_map_.full()) {
+        // This should ideally not happen if max_clients is respected
+        assert(false && "client_io_map_ is full");
+      }
+      client_io_map_.emplace_back(fd, clients_.back());
     }
-    client_io_map_.emplace_back(fd, clients_.back());
     ++clients_version_;
   }
   return true;
@@ -236,26 +240,31 @@ void ClientManager::removeClient(int fd) {
 }
 
 void ClientManager::removeDisconnectedClients() {
-  platform::LockGuard<platform::Mutex> lock(mutex_);
-  auto old_size = clients_.size();
-  clients_.erase(std::remove_if(clients_.begin(), clients_.end(),
-                                [](const std::shared_ptr<AbstractClient>& c) {
-                                  return !c->isConnected();
-                                }),
-                 clients_.end());
-  if (clients_.size() !=
-      old_size) {  // Only indicate change if a client was actually removed
-    ++clients_version_;
-    platform::LockGuard<platform::Mutex> io_lock(client_io_mutex_);
-    // Rebuild client_io_map_ from scratch to ensure consistency
-    client_io_map_.clear();
-    // Note: clients_ is a StaticVector, so iterating it is safe.
-    // The clients_cache_ is a copy, so it's also safe.
-    for (const auto& client : clients_) {  // Rebuild client_io_map_ from
-                                           // scratch to ensure consistency
-      client_io_map_.emplace_back(client->getFd(), client);
+  bool clients_removed = false;
+  {
+    platform::LockGuard<platform::Mutex> lock(mutex_);
+    auto it = std::remove_if(clients_.begin(), clients_.end(),
+                             [](const std::shared_ptr<AbstractClient>& c) {
+                               return !c->isConnected();
+                             });
+    if (it != clients_.end()) {
+      clients_.erase(it, clients_.end());
+      clients_removed = true;
+      ++clients_version_;
     }
-    signalClientIoThread();  // Signal IO thread to update its pollfd list
+  }
+
+  if (clients_removed) {
+    // Rebuild client_io_map_ efficiently
+    platform::LockGuard<platform::Mutex> io_lock(client_io_mutex_);
+    client_io_map_.clear();
+    for (const auto& client : clients_) {
+      int fd = client->getFd();
+      if (fd >= 0) {
+        client_io_map_.emplace_back(fd, client);
+      }
+    }
+    signalClientIoThread();
   }
 }
 
@@ -388,10 +397,21 @@ void ClientManager::processClientIoEvent(int client_fd, uint16_t events) {
   }
 
   if (events & io_in) {
-    // Data is ready to be read from the client.
-    // The client manager's tick loop will pick this up when it processes
-    // client->wantsToSend() for the active sender.
-    // For passive clients, data is read when bus events are handled.
+    // Attempt to peek 1 byte to detect EOF (graceful disconnection) without
+    // consuming data
+    char dummy_buf[1];
+    ssize_t n = platform::recv(client_fd, dummy_buf, 1, platform::Flags::peek);
+    if (n == 0) {  // EOF detected, client disconnected gracefully
+      client->stop();
+      signalClientIoThread();
+      return;
+    } else if (n < 0 && !platform::isWouldBlock() &&
+               !platform::isInterrupted()) {
+      // An actual read error (not just would block or interrupted)
+      client->stop();
+      signalClientIoThread();
+      return;
+    }
   }
 
   if (events & io_out) {
