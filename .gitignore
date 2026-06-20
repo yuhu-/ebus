@@ -1,5 +1,6 @@
 /build
 .wiki/
+.vscode/
 /doc/private
 launch.json
 tasks.json
