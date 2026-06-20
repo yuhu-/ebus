@@ -41,9 +41,9 @@ struct Protocol {
     encode(static_cast<uint8_t>(res), val, out);
   }
 
-  static inline void encode(uint8_t code, uint8_t val, uint8_t out[2]) {
-    out[0] = 0xc0 | (code << 2) | (val >> 6);  // First byte: 11cc ccdd
-    out[1] = 0x80 | (val & 0x3f);              // Second byte: 10dd dddd
+  static inline void encode(uint8_t cmd, uint8_t val, uint8_t out[2]) {
+    out[0] = 0xc0 | (cmd << 2) | (val >> 6);  // First byte: 11cc ccdd
+    out[1] = 0x80 | (val & 0x3f);             // Second byte: 10dd dddd
   }
 
   template <typename T>
