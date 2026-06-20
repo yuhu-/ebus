@@ -150,8 +150,7 @@ void services(std::string& out, ebus::ByteView master, ebus::ByteView slave) {
 void printStatus() {
   if (!status_report) return;
   std::cerr << std::endl << "--- Reader Status ---" << std::endl;
-  ebus::detail::JsonWriter writer([](std::string_view s) { std::cerr << s; },
-                                  pretty);
+  JsonWriter writer([](std::string_view s) { std::cerr << s; }, pretty);
   writer.startObject();
   writer.writeField("tool", "ebusread");
   writer.writeField("total_telegrams", stats.total);
@@ -175,7 +174,7 @@ void collect(uint8_t byte) {
     static bool running = false;
     if (sequence.size() > 0 && running) {
       stats.total++;
-      ebus::detail::Telegram tel(sequence);
+      Telegram tel(sequence);
       if (tel.isValid())
         stats.valid++;
       else
@@ -184,8 +183,7 @@ void collect(uint8_t byte) {
       if (json_output) {  // JsonWriter already streams to visitor
         // The JsonWriter is designed to stream directly to a visitor.
         // We can make it write directly to std::cout.
-        ebus::detail::JsonWriter writer(
-            [&](std::string_view s) { std::cout << s; }, pretty);
+        JsonWriter writer([&](std::string_view s) { std::cout << s; }, pretty);
         tel.toJson(writer);
         std::cout << std::endl;
       } else {
