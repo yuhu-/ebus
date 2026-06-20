@@ -36,7 +36,10 @@
 #include <string>
 #include <vector>
 
+#include "app/enhanced_protocol.hpp"
 #include "core/telegram.hpp"
+
+using namespace ebus::detail;
 
 constexpr const char* ansi_reset = "\033[0m";
 constexpr const char* ansi_bold = "\033[1m";
@@ -346,7 +349,7 @@ void run(const char* hostname, const char* port, int max_retries = 5) {
     }
     std::cerr << "Connected to " << hostname << ":" << port << std::endl;
 
-    char data[2]{};
+    uint8_t data[2]{};
     bool connection_ok = true;
     bool mode_enhanced = false;
     int enhanced_seq_count = 0;
@@ -416,13 +419,12 @@ void run(const char* hostname, const char* port, int max_retries = 5) {
             // Not enough data, treat as disconnect or wait for more
             connection_ok = true;
           } else {
-            int b1 = static_cast<uint8_t>(data[0]);
-            int b2 = static_cast<uint8_t>(data[1]);
-            if ((b1 & 0xc0) == 0xc0 && (b2 & 0xc0) == 0x80) {
+            if (enhanced::Protocol::isValidSequence(data[0], data[1])) {
               // Valid enhanced protocol
               recv(sfd, data, 2, 0);  // consume bytes
-              uint8_t cmd = (b1 >> 2) & 0x0f;
-              uint8_t val = ((b1 & 0x03) << 6) | (b2 & 0x3f);
+              uint8_t cmd;
+              uint8_t val;
+              enhanced::Protocol::decode(data, cmd, val);
               enhanced_byte = val;
               if (dump) {
                 std::cout << enhanced_byte;
@@ -430,10 +432,10 @@ void run(const char* hostname, const char* port, int max_retries = 5) {
                 collect(enhanced_byte);
               }
               std::fflush(stdout);
-            } else if (b1 < 0x80) {
+            } else if (data[0] < 0x80) {
               // Short form: just a data byte, no prefix
               recv(sfd, data, 1, 0);  // consume one byte
-              enhanced_byte = static_cast<uint8_t>(data[0]);
+              enhanced_byte = data[0];
               if (dump) {
                 std::cout << enhanced_byte;
               } else {

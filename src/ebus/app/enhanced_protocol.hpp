@@ -46,11 +46,10 @@ struct Protocol {
     out[1] = 0x80 | (val & 0x3f);              // Second byte: 10dd dddd
   }
 
-  static inline void decode(const uint8_t buf[2], Command& cmd, uint8_t& val) {
-    cmd = static_cast<Command>((buf[0] >> 2) &
-                               0x0f);  // Extract command from first byte
-    val = ((buf[0] & 0x03) << 6) |
-          (buf[1] & 0x3f);  // Reconstruct value from both bytes
+  template <typename T>
+  static inline void decode(const uint8_t buf[2], T& cmd, uint8_t& val) {
+    cmd = static_cast<T>((buf[0] >> 2) & 0x0f);      // Command in first byte
+    val = ((buf[0] & 0x03) << 6) | (buf[1] & 0x3f);  // Value from both bytes
   }
 
   static inline bool isValidSequence(uint8_t b1, uint8_t b2) {
