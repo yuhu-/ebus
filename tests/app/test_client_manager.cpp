@@ -21,7 +21,7 @@
 #include "platform/bus.hpp"
 #include "platform/socket.hpp"
 #include "platform/system.hpp"
-#include "test_utils.hpp"
+#include "test_helpers.hpp"
 
 using namespace ebus::detail;
 

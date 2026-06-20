@@ -16,7 +16,7 @@
 #include "core/request.hpp"
 #include "platform/bus.hpp"
 #include "platform/system.hpp"
-#include "test_utils.hpp"
+#include "test_helpers.hpp"
 
 using namespace ebus::detail;
 

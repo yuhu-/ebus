@@ -19,7 +19,7 @@
 #include "core/request.hpp"
 #include "core/telegram.hpp"
 #include "platform/bus.hpp"
-#include "test_utils.hpp"
+#include "test_helpers.hpp"
 
 using namespace ebus::detail;
 

@@ -15,7 +15,7 @@
 #include "app/client.hpp"
 #include "app/enhanced_protocol.hpp"
 #include "core/request.hpp"
-#include "test_utils.hpp"
+#include "test_helpers.hpp"
 
 using namespace ebus::detail;
 
