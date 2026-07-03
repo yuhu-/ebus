@@ -157,7 +157,7 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
       platform::sleepMilli(10);
 
     REQUIRE(telegram_count.load() == 1);
-    REQUIRE(request.getLockCounter() == 3);
+    REQUIRE(request.getLockCounter() == 2); 
 
     // send second message and step through SYNs to force arbitration
     telegram_count.store(0);

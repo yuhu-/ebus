@@ -96,7 +96,7 @@ class ServiceThread {
       // task not created yet; report full configured stack as free
       s.task_stack_free_bytes = s.task_stack_bytes;
     }
-#else
+#elif defined(POSIX)
     s.task_stack_bytes = -1;
     s.task_stack_free_bytes = -1;
 #endif

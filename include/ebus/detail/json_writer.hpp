@@ -5,6 +5,7 @@
 
 #pragma once
 
+#include <cassert>
 #include <charconv>
 #include <cstring>
 #include <functional>
@@ -68,6 +69,7 @@ class JsonWriter {
 
   explicit JsonWriter(JsonChunkVisitor v, bool pretty = false)
       : visitor_(std::move(v)), buffer_{}, pretty_(pretty) {}
+
   ~JsonWriter() { flush(); }
 
   /**
@@ -152,6 +154,7 @@ class JsonWriter {
   }
 
   void appendKey(std::string_view key) {
+    assert(!after_key_ && "afterValue() missing before next appendKey()");
     if (!first_) write(",");
     if (pretty_) writeIndent();
     write("\"");
@@ -178,7 +181,7 @@ class JsonWriter {
   void writeValue(std::monostate) {
     beforeValue();
     write("null");
-    first_ = false;
+    afterValue();
   }
 
   /**
@@ -194,7 +197,7 @@ class JsonWriter {
     write("\"");
     writeEscaped(val);
     write("\"");
-    first_ = false;
+    afterValue();
   }
 
   template <typename T>
@@ -204,7 +207,7 @@ class JsonWriter {
     first_ = true;  // Inform child toJson that comma is already handled
     flush();
     val.toJson(*this);
-    first_ = false;
+    afterValue();
   }
 
   template <typename T>
@@ -212,7 +215,7 @@ class JsonWriter {
       T val) {
     beforeValue();
     write(val ? "true" : "false");
-    first_ = false;
+    afterValue();
   }
 
   /**
@@ -231,7 +234,7 @@ class JsonWriter {
     if (ec == std::errc{}) {
       write(std::string_view(buf, ptr - buf));
     }
-    first_ = false;
+    afterValue();
   }
 
   void writeValueFloat(float val, int precision = 2) {
@@ -241,9 +244,8 @@ class JsonWriter {
         val, precision, buf, sizeof(buf),
         ebus::detail::FormattingLimits::float_lower_threshold,
         ebus::detail::FormattingLimits::float_upper_threshold);
-
     write(std::string_view(buf, end - buf));
-    first_ = false;
+    afterValue();
   }
 
   void writeHexValue(ByteView data) {
@@ -251,7 +253,7 @@ class JsonWriter {
     write("\"");
     ebus::detail::appendHexFieldToWriter(*this, data);
     write("\"");
-    first_ = false;
+    afterValue();
   }
 
   // --- Field Writers (for objects) ---
@@ -260,7 +262,7 @@ class JsonWriter {
     if (pretty_ && !after_key_ && indent_level_ > 0) writeIndent();
     after_key_ = false;
     write(s);
-    first_ = false;
+    afterValue();
   }
 
   void writeField(std::string_view key, std::string_view val) {
@@ -268,7 +270,7 @@ class JsonWriter {
     write("\"");
     writeEscaped(val);
     write("\"");
-    first_ = false;
+    afterValue();
   }
 
   /**
@@ -280,6 +282,7 @@ class JsonWriter {
     appendKey(key);
     // Pass directly to variant writeValue to reuse dispatch logic
     writeValue(val);
+    afterValue();
   }
 
   template <typename T>
@@ -289,7 +292,7 @@ class JsonWriter {
     first_ = true;  // Inform child toJson that comma is already handled
     flush();
     val.toJson(*this);
-    first_ = false;
+    afterValue();
   }
 
   void writeField(std::string_view key, const char* val) {
@@ -301,7 +304,7 @@ class JsonWriter {
     } else {
       write("null");
     }
-    first_ = false;
+    afterValue();
   }
 
   template <typename T>
@@ -309,7 +312,7 @@ class JsonWriter {
       std::string_view key, T val) {
     appendKey(key);
     write(val ? "true" : "false");
-    first_ = false;
+    afterValue();
   }
 
   template <typename T>
@@ -323,7 +326,7 @@ class JsonWriter {
     if (ec == std::errc{}) {
       write(std::string_view(buf, ptr - buf));
     }
-    first_ = false;
+    afterValue();
   }
 
   /**
@@ -342,9 +345,8 @@ class JsonWriter {
         val, precision, buf, sizeof(buf),
         ebus::detail::FormattingLimits::float_lower_threshold,
         ebus::detail::FormattingLimits::float_upper_threshold);
-
     write(std::string_view(buf, end - buf));
-    first_ = false;
+    afterValue();
   }
 
   void writeHexField(std::string_view key, ByteView data) {
@@ -352,7 +354,7 @@ class JsonWriter {
     write("\"");
     ebus::detail::appendHexFieldToWriter(*this, data);
     write("\"");
-    first_ = false;
+    afterValue();
   }
 
   /**
@@ -379,6 +381,11 @@ class JsonWriter {
   void beforeValue() {
     if (!first_) write(",");
     if (pretty_ && !after_key_ && indent_level_ > 0) writeIndent();
+    after_key_ = false;
+  }
+
+  void afterValue() {
+    first_ = false;
     after_key_ = false;
   }
 

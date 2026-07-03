@@ -9,9 +9,9 @@
 #include <chrono>
 #include <cstdint>
 #include <map>
-#include <queue>
 
 #include "platform/mutex.hpp"
+#include "platform/queue.hpp"
 
 namespace ebus::detail::platform {
 
@@ -31,8 +31,9 @@ class VirtualLine {
   // Participant registration
   inline void attach(void* bus_key) {
     LockGuard<Mutex> lock(mutex_);
-    queues_[bus_key] = std::queue<uint8_t>();
+    queues_[bus_key] = platform::Queue<uint8_t>();
   }
+
   inline void detach(void* bus_key) {
     LockGuard<Mutex> lock(mutex_);
     queues_.erase(bus_key);
@@ -69,8 +70,7 @@ class VirtualLine {
     }
 
     if (shutdown_ || q.empty()) return false;
-    out = q.front();
-    q.pop();
+    q.pop(out);
     return true;
   }
 
@@ -85,14 +85,14 @@ class VirtualLine {
   inline void clear() {
     LockGuard<Mutex> lock(mutex_);
     for (auto& pair : queues_) {
-      std::queue<uint8_t> empty;
+      platform::Queue<uint8_t> empty;
       std::swap(pair.second, empty);
     }
   }
 
  private:
   VirtualLine() = default;
-  std::map<void*, std::queue<uint8_t>> queues_;
+  std::map<void*, platform::Queue<uint8_t>> queues_;
   mutable Mutex mutex_;
   ConditionVariable cv_;
   bool shutdown_ = false;

@@ -14,6 +14,7 @@
 #include <ebus/status.hpp>
 #include <optional>
 
+#include "app/bus_access_permit.hpp"
 #include "core/handler.hpp"
 #include "platform/mutex.hpp"
 
@@ -37,7 +38,7 @@ class Scheduler {
   using EventSink = Delegate<void(OrchestrationEvent&&)>;
 
   // Lifecycle
-  explicit Scheduler(Handler* handler);
+  explicit Scheduler(Handler* handler, BusAccessPermit* permit = nullptr);
   ~Scheduler();
   void stop();
 
@@ -117,6 +118,7 @@ class Scheduler {
   };
 
   Handler* handler_ = nullptr;
+  BusAccessPermit* permit_ = nullptr;
 
   // Queue management
   StaticVector<Item, ebus::RuntimeConfig{}.scheduler.max_items>

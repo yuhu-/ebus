@@ -5,6 +5,7 @@
 
 #pragma once
 
+#include <array>
 #include <atomic>
 #include <chrono>
 #include <cstdint>
@@ -20,6 +21,7 @@
 #include <ebus/static_vector.hpp>
 #include <ebus/status.hpp>
 
+#include "app/bus_access_permit.hpp"
 #include "app/client.hpp"
 #include "core/bus_handler.hpp"
 #include "core/request.hpp"
@@ -46,7 +48,8 @@ class ClientManager {
   // Lifecycle
   ClientManager(platform::Bus* bus, BusHandler* bus_handler, Request* request,
                 BusMonitor* monitor,
-                platform::Queue<OrchestrationEvent>* reactor_queue);
+                platform::Queue<OrchestrationEvent>* reactor_queue,
+                BusAccessPermit* permit = nullptr);
   ~ClientManager();
   void start(const RuntimeConfig& config = RuntimeConfig{});
   void stop();
@@ -66,16 +69,14 @@ class ClientManager {
 
   // Working Methods
   bool addClient(int fd, ClientType type);
+  bool addClient(std::unique_ptr<platform::Socket> socket, ClientType type);
   bool addClient(std::shared_ptr<AbstractClient> client);
   void removeClient(int fd);
-  void removeDisconnectedClients();
 
-  void processClientIoEvent(int client_fd, uint16_t events);
   bool tick();
-  void handleBusEvent(const BusEventInfo& info);
+  void processClientIoEvent(int client_fd, uint16_t events);
 
   // Status/Telemetry
-  Clock::time_point nextDueTime() const;
   platform::ServiceThread::Status getThreadStatus() const;
   ClientManagerStatus fetchStatus() const;
 
@@ -90,6 +91,7 @@ class ClientManager {
   Request* request_;
   BusMonitor* monitor_;
   platform::Queue<OrchestrationEvent>* reactor_queue_;
+  BusAccessPermit* permit_ = nullptr;
 
   std::atomic<bool> running_{false};
   Delegate<bool()> is_busy_;
@@ -97,14 +99,14 @@ class ClientManager {
   SessionState session_state_ = SessionState::idle;
   Clock::time_point last_state_change_;
   mutable platform::Mutex mutex_;
-  StaticVector<std::shared_ptr<AbstractClient>, NetworkLimits::max_clients>
-      clients_;
-  StaticVector<std::shared_ptr<AbstractClient>, NetworkLimits::max_clients>
-      clients_cache_;
 
-  // Versioning to avoid copying clients_ every loop iteration unless changed.
-  std::atomic<uint64_t> clients_version_{0};
-  uint64_t last_snapshot_version_{0};
+  // Fixed-size arrays for each client type
+  std::array<std::shared_ptr<AbstractClient>, NetworkLimits::max_clients>
+      regular_clients_;
+  std::array<std::shared_ptr<AbstractClient>, NetworkLimits::max_clients>
+      readonly_clients_;
+  std::array<std::shared_ptr<AbstractClient>, NetworkLimits::max_clients>
+      enhanced_clients_;
 
   uint32_t session_counter_ = 0;
   std::shared_ptr<AbstractClient> current_active_sender_ = nullptr;
@@ -128,20 +130,30 @@ class ClientManager {
   // Request callback target
   void onExternalBusRequested();
 
+  void onBusEvent(const BusEventInfo& info);
+
   void stopActiveSession();
+
+  // Helper to find client by fd across all client arrays
+  // mutex_ MUST be locked
+  std::shared_ptr<AbstractClient> findClientByFdLocked(int fd);
+
+  // Helper to find client by fd
+  std::shared_ptr<AbstractClient> findClientByFd(int fd);
+
+  // Helper to remove client by fd
+  void removeClientByFd(int fd);
+
+  void removeDisconnectedClients();
 
   // Members for the dedicated IO thread
   std::unique_ptr<platform::ServiceThread> client_io_worker_;
   std::atomic<bool> client_io_running_{false};
-  mutable platform::Mutex
-      client_io_mutex_;  // Protects client_io_map_ and listen sockets
-  StaticVector<std::pair<int, std::shared_ptr<AbstractClient>>,
-               NetworkLimits::max_clients>
-      client_io_map_;  // Map FD to client for IO thread
   platform::WakeupSignal wakeup_signal_;
-  int listen_fd_regular_ = -1;
-  int listen_fd_readonly_ = -1;
-  int listen_fd_enhanced_ = -1;
+
+  std::unique_ptr<platform::Socket> listen_socket_regular_;
+  std::unique_ptr<platform::Socket> listen_socket_readonly_;
+  std::unique_ptr<platform::Socket> listen_socket_enhanced_;
 
   void clientIoLoop();
   void signalClientIoThread();  // Helper to trigger wakeup_signal_

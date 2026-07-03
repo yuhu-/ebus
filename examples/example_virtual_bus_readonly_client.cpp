@@ -79,7 +79,7 @@ int main() {
   // * Data: 9.25°C - DATA2B -> 0x40, 0x09
   std::vector<uint8_t> broadcastMsg = {0xfe, 0xb5, 0x16, 0x03,
                                        0x01, 0x40, 0x09};
-  deviceB.addPollItem(10, broadcastMsg, 5000);
+  uint32_t pollItem = deviceB.addPollItem(10, broadcastMsg, 5000);
 
   // Try to enqueue a faulty broadcast message after 3 seconds.
   // This library offers several helper functions, such as...ebus::to_vector("")
@@ -158,6 +158,9 @@ int main() {
 
   // --- 9. Stop the simulation ---
   std::cout << "Stopping simulation on virtual bus..." << std::endl;
+
+  deviceA.removeClient(sv[0]);
+  deviceB.removePollItem(pollItem);
 
   deviceA.stop();
   deviceB.stop();

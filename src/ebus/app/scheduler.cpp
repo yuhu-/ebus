@@ -8,14 +8,15 @@
 #include <algorithm>
 #include <ebus/types.hpp>
 #include <ebus/utils.hpp>
+#include <iostream>
 #include <memory>
 
 #include "core/bus_monitor.hpp"
 
 namespace ebus::detail {
 
-Scheduler::Scheduler(Handler* handler)
-    : handler_(handler), next_session_id_(1) {}
+Scheduler::Scheduler(Handler* handler, BusAccessPermit* permit)
+    : handler_(handler), permit_(permit), next_session_id_(1) {}
 
 Scheduler::~Scheduler() { detachHandlerCallbacks(); }
 
@@ -233,6 +234,14 @@ bool Scheduler::tick() {
     } else if (!scheduled_items_.empty() &&
                scheduled_items_.front().due <= Clock::now()) {
       if (handler_->isActiveMessagePending()) return false;
+      if (permit_ && !permit_->tryAcquire(BusAccessPermit::scheduler)) {
+        std::cout << "permit_->tryAcquire(BusAccessPermit::scheduler) lost"
+                  << std::endl;
+        return false;
+      } else {
+        std::cout << "permit_->tryAcquire(BusAccessPermit::scheduler) won"
+                  << std::endl;
+      }
       std::pop_heap(scheduled_items_.begin(), scheduled_items_.end(),
                     Compare());
       item_to_start = std::move(scheduled_items_.back());
@@ -349,6 +358,11 @@ void Scheduler::clear() {
   platform::LockGuard<platform::Mutex> lock(data_mutex_);
   scheduled_items_.clear();
   std::make_heap(scheduled_items_.begin(), scheduled_items_.end(), Compare());
+  active_item_.reset();
+  if (permit_) {
+    permit_->release(BusAccessPermit::scheduler);
+    std::cout << "permit_->release(BusAccessPermit::scheduler)" << std::endl;
+  }
 }
 
 Clock::time_point Scheduler::nextDueTime() const {
@@ -427,6 +441,11 @@ bool Scheduler::handleAttemptResult(const ProtocolEvent& ev) {
         active_item_.reset();
         current_session_id_.store(0, std::memory_order_relaxed);
         current_poll_id_.store(0, std::memory_order_relaxed);
+        if (permit_) {
+          permit_->release(BusAccessPermit::scheduler);
+          std::cout << "permit_->release(BusAccessPermit::scheduler)"
+                    << std::endl;
+        }
         return true;
       }
     }
@@ -435,6 +454,10 @@ bool Scheduler::handleAttemptResult(const ProtocolEvent& ev) {
     active_item_.reset();
     current_session_id_.store(0, std::memory_order_relaxed);
     current_poll_id_.store(0, std::memory_order_relaxed);
+    if (permit_) {
+      permit_->release(BusAccessPermit::scheduler);
+      std::cout << "permit_->release(BusAccessPermit::scheduler)" << std::endl;
+    }
   }
   return true;
 }

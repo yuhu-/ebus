@@ -24,11 +24,11 @@ TEST_CASE("ReadOnlyClient: capability checks", "[app][client][readonly]") {
   REQUIRE(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
 
   Request req;
-  ReadOnlyClient client(sv[0], &req,
+  ReadOnlyClient client(std::make_unique<platform::Socket>(sv[0]), &req,
                         ebus::RuntimeConfig{}.network.outbound_buffer_size);
 
   REQUIRE(!client.isWriteCapable());
-  REQUIRE(!client.wantsToSend());
+  REQUIRE(!client.hasPendingBusRequest());
 
   close(sv[0]);
   close(sv[1]);
@@ -39,31 +39,48 @@ TEST_CASE("EnhancedClient: Protocol basics", "[app][client][enhanced]") {
   REQUIRE(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
 
   Request req;
-  EnhancedClient client(sv[0], &req,
+  EnhancedClient client(std::make_unique<platform::Socket>(sv[0]), &req,
                         ebus::RuntimeConfig{}.network.outbound_buffer_size);
 
   // Simple data byte (< 0x80)
   uint8_t out;
   uint8_t data = 0x15;
   send(sv[1], &data, 1, 0);
-  REQUIRE(client.recvFromClient(out));
-  REQUIRE(out == 0x15);
+  {
+    uint8_t buf;
+    ssize_t nr = ::recv(client.getFd(), &buf, 1, 0);
+    REQUIRE(nr == 1);
+    client.processIncomingData(&buf, 1);
+    REQUIRE(client.popPendingBusRequest(out));
+    REQUIRE(out == 0x15);
+  }
 
   // Enhanced escape sequence (CMD_SEND 0x01, value 0xaa)
   uint8_t escaped[2];
   ebus::detail::enhanced::Protocol::encode(0x01, 0xaa, escaped);
   send(sv[1], escaped, 2, 0);
-  REQUIRE(client.recvFromClient(out));
-  REQUIRE(out == 0xaa);
+  {
+    uint8_t buf[2];
+    ssize_t nr = ::recv(client.getFd(), buf, 2, 0);
+    REQUIRE(nr == 2);
+    client.processIncomingData(buf, 2);
+    REQUIRE(client.popPendingBusRequest(out));
+    REQUIRE(out == 0xaa);
+  }
 
   // CMD_INIT should cause recvFromClient to return false and client to send
   // RESP_RESETTED
   uint8_t init_cmd[2];
   ebus::detail::enhanced::Protocol::encode(0x00, 0x00, init_cmd);
   send(sv[1], init_cmd, 2, 0);
-  REQUIRE(!client.recvFromClient(out));
-
   uint8_t init_resp[2];
+  {
+    uint8_t buf[2];
+    ssize_t nr = ::recv(client.getFd(), buf, 2, 0);
+    REQUIRE(nr == 2);
+    client.processIncomingData(buf, 2);
+  }
+  REQUIRE(!client.hasPendingBusRequest());
   REQUIRE(readExact(sv[1], init_resp, 2));
   REQUIRE(init_resp[0] == 0xc0);
   REQUIRE(init_resp[1] == 0x80);
@@ -79,7 +96,7 @@ TEST_CASE("EnhancedClient: Encoded responses mapping",
 
   Request req;
   req.setLockCounter(0);
-  EnhancedClient client(sv[0], &req,
+  EnhancedClient client(std::make_unique<platform::Socket>(sv[0]), &req,
                         ebus::RuntimeConfig{}.network.outbound_buffer_size);
 
   // 1. Test: Arbitration Win
@@ -137,7 +154,7 @@ TEST_CASE("EnhancedClient: Invalid protocol handling",
   REQUIRE(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
 
   Request req;
-  EnhancedClient client(sv[0], &req,
+  EnhancedClient client(std::make_unique<platform::Socket>(sv[0]), &req,
                         ebus::RuntimeConfig{}.network.outbound_buffer_size);
 
   uint8_t out;
@@ -146,7 +163,13 @@ TEST_CASE("EnhancedClient: Invalid protocol handling",
   // Invalid first-byte prefix
   uint8_t invalid_b1_prefix[] = {0x80, 0xaa};
   send(sv[1], invalid_b1_prefix, 2, 0);
-  REQUIRE(!client.recvFromClient(out));
+  {
+    uint8_t buf[2];
+    ssize_t nr = ::recv(client.getFd(), buf, 2, 0);
+    REQUIRE(nr == 2);
+    client.processIncomingData(buf, 2);
+  }
+  REQUIRE(!client.hasPendingBusRequest());
   REQUIRE(!client.isConnected());
   REQUIRE(readExact(sv[1], err_resp, 2));
   REQUIRE(err_resp[0] == 0xf0);
@@ -157,12 +180,18 @@ TEST_CASE("EnhancedClient: Invalid protocol handling",
 
   // Re-establish and test invalid second-byte prefix
   REQUIRE(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
-  EnhancedClient client2(sv[0], &req,
+  EnhancedClient client2(std::make_unique<platform::Socket>(sv[0]), &req,
                          ebus::RuntimeConfig{}.network.outbound_buffer_size);
 
   uint8_t invalid_b2_prefix[] = {0xc6, 0x00};
   send(sv[1], invalid_b2_prefix, 2, 0);
-  REQUIRE(!client2.recvFromClient(out));
+  {
+    uint8_t buf[2];
+    ssize_t nr = ::recv(client2.getFd(), buf, 2, 0);
+    REQUIRE(nr == 2);
+    client2.processIncomingData(buf, 2);
+  }
+  REQUIRE(!client2.hasPendingBusRequest());
   REQUIRE(!client2.isConnected());
   REQUIRE(readExact(sv[1], err_resp, 2));
   REQUIRE(err_resp[0] == 0xf0);

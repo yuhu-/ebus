@@ -60,8 +60,14 @@ void BusSimulation::stop() {
     syn_cv_.notify_all();
   }
 
-  if (syn_worker_) syn_worker_->join();
-  if (worker_) worker_->join();
+  if (syn_worker_) {
+    syn_worker_->join();
+    syn_worker_.reset();
+  }
+  if (worker_) {
+    worker_->join();
+    worker_.reset();
+  }
 }
 
 void BusSimulation::setWindow(const uint16_t window_us) {
@@ -111,8 +117,10 @@ void BusSimulation::setRuntimeConfig(const RuntimeConfig& runtime) {
   } else if (should_stop_syn) {
     syn_running_.store(false);
     syn_cv_.notify_all();
-    if (syn_worker_) syn_worker_->join();
-    syn_worker_.reset();
+    if (syn_worker_) {
+      syn_worker_->join();
+      syn_worker_.reset();
+    }
   }
 }
 
@@ -198,16 +206,17 @@ void BusSimulation::simulationReaderLoop() {
       // hardware acts on the CURRENT syn.
       if (byte == Symbols::syn && request_->busRequestPending()) {
         // Yield before busy-waiting to allow lower priority tasks to run
-        platform::sleepMilli(1);
+        // platform::sleepMilli(1);
         sleepMicro(BusLimits::platform::Posix::request_delay_us);
         writeByte(request_->busRequestAddress());
         bus_request_flag_.store(true, std::memory_order_release);
       }
       // Add a small delay to yield CPU to other tasks, especially lower
       // priority ones.
-      platform::sleepMilli(1);  // Yield to other tasks
+      // platform::sleepMilli(1);  // Yield to other tasks
     } else {
-      platform::sleepMilli(1);  // Yield to other tasks if no data is available
+      // platform::sleepMilli(1);  // Yield to other tasks if no data is
+      // available
     }
   }
 }

@@ -68,20 +68,30 @@ inline bool waitCondition(Predicate&& pred, int timeout_ms = 1000) {
  * In-memory client for testing ClientManager without real sockets.
  */
 class MockClient : public detail::AbstractClient {
+ private:
+  struct Pipe {
+    int read_fd;
+    int write_fd;
+    static Pipe create() {
+      int pipefd[2];
+      if (::pipe(pipefd) != 0) {
+        throw std::runtime_error("Failed to create mock client pipe");
+      }
+      platform::setNonBlocking(pipefd[0]);
+      platform::setNonBlocking(pipefd[1]);
+      return {pipefd[0], pipefd[1]};
+    }
+  };
+
+  MockClient(Request* req, bool write_capable, size_t max_buffer, Pipe p)
+      : AbstractClient(std::make_unique<platform::Socket>(p.read_fd), req,
+                       write_capable, max_buffer),
+        write_fd_(p.write_fd) {}
+
  public:
   explicit MockClient(Request* req, bool write_capable = true,
                       size_t max_buffer = 1024)
-      : AbstractClient(-1, req, write_capable, max_buffer) {
-    int pipefd[2];
-    if (::pipe(pipefd) != 0) {
-      throw std::runtime_error("Failed to create mock client pipe");
-    }
-    platform::setNonBlocking(pipefd[0]);
-    platform::setNonBlocking(pipefd[1]);
-
-    fd_ = pipefd[0];
-    write_fd_ = pipefd[1];
-  }
+      : MockClient(req, write_capable, max_buffer, Pipe::create()) {}
 
   ~MockClient() override {
     if (write_fd_ >= 0) {
@@ -94,18 +104,41 @@ class MockClient : public detail::AbstractClient {
 
   ClientInfo getClientInfo() const override {
     // Mock implementation for testing purposes
-    return ClientInfo{fd_, "mock", isConnected(), write_capable_,
+    return ClientInfo{getFd(), "mock", isConnected(), write_capable_,
                       outbound_.size()};
   }
 
-  bool wantsToSend() override { return !inbound_.empty(); }
+  void processIncomingData(const uint8_t* data, size_t len) override {
+    if (!isConnected() || len == 0) return;
+    for (size_t i = 0; i < len; ++i) {
+      inbound_.push(data[i]);
+    }
+    // Ensure a pending bus request is available from the queue
+    if (!has_pending_request_ && !inbound_.empty()) {
+      pending_bus_request_ = inbound_.front();
+      inbound_.pop();
+      has_pending_request_ = true;
+    }
+  }
 
-  bool recvFromClient(uint8_t& out) override {
-    if (inbound_.empty()) return false;
-    out = inbound_.front();
-    last_sent_byte_ = out;
-    inbound_.pop();
-    return true;
+  bool hasPendingBusRequest() const override {
+    return has_pending_request_ || !inbound_.empty();
+  }
+
+  bool popPendingBusRequest(uint8_t& out) override {
+    if (has_pending_request_) {
+      out = pending_bus_request_;
+      last_sent_byte_ = out;
+      has_pending_request_ = false;
+      return true;
+    }
+    if (!inbound_.empty()) {
+      out = inbound_.front();
+      inbound_.pop();
+      last_sent_byte_ = out;
+      return true;
+    }
+    return false;
   }
 
   void sendToClient(ByteView data) override {
@@ -145,6 +178,8 @@ class MockClient : public detail::AbstractClient {
   int write_fd_ = -1;
   std::queue<uint8_t> inbound_;
   std::vector<uint8_t> outbound_;
+  uint8_t pending_bus_request_ = 0;
+  bool has_pending_request_ = false;
 };
 
 /**

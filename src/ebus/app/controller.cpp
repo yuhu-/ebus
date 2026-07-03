@@ -17,6 +17,7 @@
 #include <chrono>
 #include <memory>
 
+#include "app/bus_access_permit.hpp"
 #include "app/client_manager.hpp"
 #include "app/device_manager.hpp"
 #include "app/device_scanner.hpp"
@@ -77,6 +78,7 @@ struct Impl {
   std::unique_ptr<ebus::VirtualBus> virtual_bus_;
 #endif
   std::unique_ptr<detail::ClientManager> client_manager_;
+  detail::BusAccessPermit bus_access_permit_;
   std::unique_ptr<detail::platform::ServiceThread> worker_;
 
   mutable detail::platform::Mutex status_mutex_;
@@ -695,6 +697,7 @@ void Impl::fetchServiceStatus(ServiceStatus& status) const {
   }
 }
 
+// TODO: Is called twice in reactor to prevent starvation - eliminate
 void Impl::processPublicEvents() {
   // Capture callbacks once to avoid mutex contention inside the drainage
   // loops.
@@ -783,7 +786,8 @@ void Impl::constructMembers(Controller* owner) {
 
   // -- 4. Scheduler --
   if (!scheduler_) {
-    scheduler_ = std::make_unique<detail::Scheduler>(handler_.get());
+    scheduler_ = std::make_unique<detail::Scheduler>(handler_.get(),
+                                                     &bus_access_permit_);
 
     // Bind the scheduler's event sink to a member function of Impl
     scheduler_->setEventSink(detail::Delegate<void(OrchestrationEvent&&)>::bind<
@@ -916,7 +920,7 @@ void Impl::constructMembers(Controller* owner) {
   if (!client_manager_) {
     client_manager_ = std::make_unique<detail::ClientManager>(
         bus_.get(), bus_handler_.get(), request_.get(), bus_monitor_.get(),
-        &reactor_queue_);
+        &reactor_queue_, &bus_access_permit_);
     client_manager_->setBusyPredicate(
         detail::Delegate<bool()>::bind<Impl, &Impl::isHandlerBusy>(this));
   }
@@ -973,21 +977,10 @@ void Impl::run(Controller* owner) {
       case OrchestrationEventType::protocol_result: {
         return scheduler_->injectProtocolEvent(event.data.protocol_data);
       }
-      case OrchestrationEventType::network_byte: {
-        // Handle external bridge data directly via ClientManager
-        client_manager_->handleBusEvent(BusEventInfo{
-            // This event type is now deprecated with client_io_ready
-            // If it's still being used, it implies a generic network byte
-            // without specific client context.
-            // For now, just call tick to re-evaluate all clients.
-            event.data.byte_data.val, HandlerState::passive_receive_master,
-            RequestState::observe, RequestResult::observe_data, 0,
-            event.data.byte_data.timestamp});
-        return true;
-      }
-      case OrchestrationEventType::user_request:       // Fallthrough
-      case OrchestrationEventType::timer_wakeup:       // Fallthrough
-      case OrchestrationEventType::client_io_ready: {  // Fallthrough
+      case OrchestrationEventType::user_request:  // Fallthrough
+      case OrchestrationEventType::timer_wakeup:  // Fallthrough
+        return true;  // wake-up only — tick() handles the work
+      case OrchestrationEventType::client_io_ready: {
         client_manager_->processClientIoEvent(
             event.data.client_io_data.client_fd,
             event.data.client_io_data.events);
@@ -1032,13 +1025,11 @@ void Impl::run(Controller* owner) {
     }
 
     const auto next_sched = scheduler_->nextDueTime();
-    const auto next_client = client_manager_->nextDueTime();
     const auto next_poll = poll_manager_->nextDueTime();
     const auto tick_limit =
         Clock::now() +
         std::chrono::milliseconds(detail::SchedulerLimits::controller_tick_ms);
-    const auto next_wakeup =
-        std::min({next_sched, next_client, next_poll, tick_limit});
+    const auto next_wakeup = std::min({next_sched, next_poll, tick_limit});
 
     const auto now = Clock::now();
     uint32_t timeout_ms = 0;

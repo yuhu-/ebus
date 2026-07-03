@@ -43,8 +43,13 @@ TEST_CASE("ClientManager: Mock Orchestration", "[app][clientmanager][mock]") {
   TestReactor reactor(bus, busHandler, &manager, nullptr, &reactor_queue);
 
   SECTION("Full bridge cycle: Request -> Arbitration -> Transmit") {
-    // 1. Client wants to send an address (0x33)
+    // 1. Client wants to send an address (0x33) and the rest of the telegram
+    // Push all bytes before session starts
     mockClient->pushInput(0x33);
+    std::vector<uint8_t> body = {0xfe, 0xb5, 0x05, 0x01, 0xec};
+    for (auto b : body) {
+      mockClient->pushInput(b);
+    }
 
     // Wait for Manager to see data and request bus
     REQUIRE(reactor.waitFor([&] { return req.busRequestPending(); }));
@@ -63,12 +68,7 @@ TEST_CASE("ClientManager: Mock Orchestration", "[app][clientmanager][mock]") {
 
     REQUIRE(req.getState() == ebus::RequestState::observe);
 
-    // 4. Continue sending the rest of the telegram (Broadcast to fe)
-    std::vector<uint8_t> body = {0xfe, 0xb5, 0x05, 0x01, 0xec};
-    for (auto b : body) {
-      mockClient->pushInput(b);
-    }
-
+    // 4. Wait for the rest of the telegram to be echoed back
     REQUIRE(
         reactor.waitFor([&] { return mockClient->getOutput().size() >= 7; }));
     REQUIRE(mockClient->getOutput().back() == 0xec);

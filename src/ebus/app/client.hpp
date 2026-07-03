@@ -18,6 +18,8 @@
 #include "app/enhanced_protocol.hpp"
 #include "core/request.hpp"
 #include "platform/mutex.hpp"
+#include "platform/queue.hpp"
+#include "platform/socket.hpp"
 
 namespace ebus::detail {
 
@@ -36,8 +38,8 @@ enum class BridgeAction {
 class AbstractClient {
  public:
   // Lifecycle
-  AbstractClient(int fd, Request* request, bool write_capable,
-                 size_t max_buffer);
+  AbstractClient(std::unique_ptr<platform::Socket> socket, Request* request,
+                 bool write_capable, size_t max_buffer);
   virtual ~AbstractClient();
   void stop();
 
@@ -46,7 +48,7 @@ class AbstractClient {
   AbstractClient& operator=(const AbstractClient&) = delete;
 
   // Configuration
-  int getFd() const { return fd_; }
+  int getFd() const { return socket_->getFd(); }
   bool isWriteCapable() const { return write_capable_; }
 
   // Working Methods
@@ -57,28 +59,33 @@ class AbstractClient {
    */
   bool tryFlushOutboundBuffer();
   virtual void onSessionStart(uint32_t session_id) { (void)session_id; }
-  virtual bool wantsToSend() = 0;
-  virtual bool recvFromClient(uint8_t& out) = 0;
+  virtual void processIncomingData(const uint8_t* data, size_t len) = 0;
+  virtual bool hasPendingBusRequest() const = 0;
+  virtual bool popPendingBusRequest(uint8_t& out) = 0;
   virtual void sendToClient(ByteView data) = 0;
 
   // Logic to determine if the client wants to continue sending after a byte
   virtual BridgeAction onBusByte(const BusEventInfo& info) = 0;
 
   // Status/Telemetry
-  bool isConnected() const { return fd_ >= 0; }
+  bool isConnected() const;
   bool hasPendingData() const { return count_ > 0; }
   virtual ClientInfo getClientInfo() const = 0;
 
+  // ONE-SHOT SYN filter control
+  void armSynFilter() { filter_next_syn_ = true; }
+
  protected:
-  int fd_;
+  std::unique_ptr<platform::Socket> socket_;
   std::unique_ptr<uint8_t[]> buffer_storage_;  // Fixed-size circular storage
   size_t head_ = 0;                            // Index of the oldest byte
   size_t count_ = 0;                           // Current number of bytes stored
-  mutable platform::Mutex buffer_mutex_;  // Protects outboundBuffer_
+  mutable platform::Mutex buffer_mutex_;       // Protects outboundBuffer_
   Request* request_;
   size_t max_buffer_size_;
   bool write_capable_;
   uint8_t last_sent_byte_ = 0;
+  bool filter_next_syn_ = false;  // ONE-SHOT: Filter next SYN (0xAA) only
 
   bool flushLocked();  // Internal flush logic; returns false if connection lost
 };
@@ -90,12 +97,15 @@ class AbstractClient {
 class ReadOnlyClient : public AbstractClient {
  public:
   // Lifecycle
-  ReadOnlyClient(int fd, Request* request, size_t max_buffer);
+  ReadOnlyClient(std::unique_ptr<platform::Socket> socket, Request* request,
+                 size_t max_buffer);
 
   // Working Methods
-  bool wantsToSend() override;
-  bool recvFromClient(uint8_t& out) override;
+  void processIncomingData(const uint8_t* data, size_t len) override;
+  bool hasPendingBusRequest() const override;
+  bool popPendingBusRequest(uint8_t& out) override;
   void sendToClient(ByteView data) override;
+
   BridgeAction onBusByte(const BusEventInfo& info) override;
 
   // Status/Telemetry
@@ -109,16 +119,22 @@ class ReadOnlyClient : public AbstractClient {
 class RegularClient : public AbstractClient {
  public:
   // Lifecycle
-  RegularClient(int fd, Request* request, size_t max_buffer);
+  RegularClient(std::unique_ptr<platform::Socket> socket, Request* request,
+                size_t max_buffer);
 
   // Working Methods
-  bool wantsToSend() override;
-  bool recvFromClient(uint8_t& out) override;
+  void processIncomingData(const uint8_t* data, size_t len) override;
+  bool hasPendingBusRequest() const override;
+  bool popPendingBusRequest(uint8_t& out) override;
   void sendToClient(ByteView data) override;
+
   BridgeAction onBusByte(const BusEventInfo& info) override;
 
   // Status/Telemetry
   ClientInfo getClientInfo() const override;
+
+ private:
+  platform::Queue<uint8_t> pending_bus_requests_;
 };
 
 /**
@@ -128,13 +144,16 @@ class RegularClient : public AbstractClient {
 class EnhancedClient : public AbstractClient {
  public:
   // Lifecycle
-  EnhancedClient(int fd, Request* request, size_t max_buffer);
+  EnhancedClient(std::unique_ptr<platform::Socket> socket, Request* request,
+                 size_t max_buffer);
   void onSessionStart(uint32_t session_id) override;
 
   // Working Methods
-  bool wantsToSend() override;
-  bool recvFromClient(uint8_t& out) override;
+  void processIncomingData(const uint8_t* data, size_t len) override;
+  bool hasPendingBusRequest() const override;
+  bool popPendingBusRequest(uint8_t& out) override;
   void sendToClient(ByteView data) override;
+
   BridgeAction onBusByte(const BusEventInfo& info) override;
 
   // Status/Telemetry
@@ -146,11 +165,13 @@ class EnhancedClient : public AbstractClient {
   uint8_t inbound_buf_[detail::EnhancedProtocolLimits::max_sequence_len];
   size_t inbound_len_ = 0;
 
+  platform::Queue<uint8_t> pending_bus_requests_;
+
   void sendEnhancedResponse(enhanced::Response res, uint8_t val);
 };
 
-std::unique_ptr<AbstractClient> createClient(int fd, Request* req,
-                                             ClientType type,
-                                             size_t max_buffer);
+std::unique_ptr<AbstractClient> createClient(
+    std::unique_ptr<platform::Socket> socket, Request* req, ClientType type,
+    size_t max_buffer);
 
 }  // namespace ebus::detail
