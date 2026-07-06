@@ -342,13 +342,12 @@ void BusEsp::ebusUartEventRunner() {
           recordUtilization(byte);
 
           if (byte == Symbols::syn && request_->busRequestPending()) {
-            const int64_t now =
-                esp_timer_get_time();  // Current time in microseconds
+            const int64_t now = esp_timer_get_time();  // Current time in us
 
-            /* Calculation of the expected start bit time based on the current
-               time and the bit time with a 0.5-bit offset. The expected start
-               bit time is calculated as follows:
-               now - (10 * 416.67) + (0.5 * 416.67) or: now - 9.5 * 416.67 */
+            // Calculation of the expected start bit time based on the current
+            // time and the bit time with a 0.5-bit offset. The expected
+            // start bit time is calculated as follows: now - (10 * 416.67) +
+            // (0.5 * 416.67) or: now - 9.5 * 416.67
             const int64_t expected_start_bit_time = now - byte_time_center_us_;
 
             // Retrieving the start time of the last sync byte. Due to the
@@ -541,8 +540,8 @@ bool IRAM_ATTR BusEsp::onSynGenTimer() {
   portENTER_CRITICAL_ISR(&timer_mux_);
   int64_t last_activity = last_activity_micros_;
 
-  /* Carrier Sense: yield and postpone if bus was active within the last 5ms
-     (Duration of a byte at 2400 baud + safety margin) */
+  // Carrier Sense: yield and postpone if bus was active within the last 5ms
+  // (Duration of a byte at 2400 baud + safety margin)
   if (now - last_activity < (BusLimits::Syn::carrier_sense_ms * 1000)) {
     if (syn_intent_time_ == 0) syn_intent_time_ = now;
     syn_postponed_count_++;
