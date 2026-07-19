@@ -20,30 +20,30 @@
 namespace ebus::detail {
 
 /**
- * Background worker that processes raw bytes from the Bus queue and feeds
- * them into the Request and Handler state machines. It also manages a
- * registry of byte listeners.
+ * The BusHandler (along with Request and Handler) is a passive FSM
+ * (Finite State Machine). It contains state variables, transition tables, and
+ * protocol logic, but it does not have an execution loop or run-time thread
+ * context of its own.
  */
 class BusHandler {
  public:
-  // Public Types & Constants
-  using ByteListener = Delegate<void(const BusEventInfo& info)>;
-
   // Lifecycle
   BusHandler(Request* request, Handler* handler);
   ~BusHandler();
 
   // Configuration
   void setWatchdogTimeout(uint32_t timeout_ms);
-  uint32_t addByteListener(ByteListener listener);
-  void removeByteListener(uint32_t id);
+  void setClientManagerBusEventInfoCallback(
+      Delegate<void(const BusEventInfo& info)> callback);
+  void setControllerBusEventInfoCallback(
+      Delegate<void(const BusEventInfo& info)> callback);
 
   // Working Methods
   /**
    * @brief Processes a single bus event.
    * This logic is now called directly from the Controller's Reactor loop.
    */
-  void processEvent(const BusEvent& bus_event);
+  void onBusEvent(const BusEvent& bus_event);
 
   // Status/Telemetry
   BusHandlerStatus fetchStatus() const;
@@ -54,14 +54,10 @@ class BusHandler {
   std::chrono::milliseconds watchdog_timeout_ms_{
       ebus::RuntimeConfig{}.bus.watchdog_timeout_ms};
 
-  uint32_t next_listener_id_ = 0;
-  mutable platform::Mutex mutex_;
-  uint32_t listeners_version_ = 0;
-  uint32_t last_cache_version_ = 0xffffffff;
+  Delegate<void(const BusEventInfo& info)> client_manager_callback_ = nullptr;
+  Delegate<void(const BusEventInfo& info)> controller_callback_ = nullptr;
 
-  StaticVector<std::pair<uint32_t, ByteListener>, BusLimits::max_listeners>
-      listeners_;
-  StaticVector<ByteListener, BusLimits::max_listeners> listeners_cache_;
+  mutable platform::Mutex mutex_;
 };
 
 }  // namespace ebus::detail

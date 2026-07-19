@@ -17,7 +17,6 @@
 #include <chrono>
 #include <memory>
 
-#include "app/bus_access_permit.hpp"
 #include "app/client_manager.hpp"
 #include "app/device_manager.hpp"
 #include "app/device_scanner.hpp"
@@ -78,7 +77,6 @@ struct Impl {
   std::unique_ptr<ebus::VirtualBus> virtual_bus_;
 #endif
   std::unique_ptr<detail::ClientManager> client_manager_;
-  detail::BusAccessPermit bus_access_permit_;
   std::unique_ptr<detail::platform::ServiceThread> worker_;
 
   mutable detail::platform::Mutex status_mutex_;
@@ -96,8 +94,9 @@ struct Impl {
   void run(Controller* owner);
 
   void onSchedulerEvent(OrchestrationEvent&& oev);
+
   void onBusEventInfo(const BusEventInfo& info);
-  void onBusEvent(const detail::BusEvent& bus_ev);
+  void processByteEventInfo(const OrchestrationEvent& event);
 
   // Predicates for resource fairness
   bool isSchedulerFull() const;
@@ -307,12 +306,12 @@ void Controller::setTransmitTimeout(uint32_t timeout_ms) {
     impl_->client_manager_->setTransmitTimeout(timeout_ms);
 }
 
-void Controller::setOutboundBufferSize(size_t size) {
+void Controller::setOutgoingBufferSize(size_t size) {
   detail::platform::LockGuard<detail::platform::RecursiveMutex> lock(
       impl_->config_mutex_);
   config_.runtime.network.outbound_buffer_size = size;
   if (impl_->configured_.load()) {
-    impl_->client_manager_->setOutboundBufferSize(size);
+    impl_->client_manager_->setOutgoingBufferSize(size);
   }
 }
 
@@ -786,8 +785,7 @@ void Impl::constructMembers(Controller* owner) {
 
   // -- 4. Scheduler --
   if (!scheduler_) {
-    scheduler_ = std::make_unique<detail::Scheduler>(handler_.get(),
-                                                     &bus_access_permit_);
+    scheduler_ = std::make_unique<detail::Scheduler>(handler_.get());
 
     // Bind the scheduler's event sink to a member function of Impl
     scheduler_->setEventSink(detail::Delegate<void(OrchestrationEvent&&)>::bind<
@@ -908,21 +906,20 @@ void Impl::constructMembers(Controller* owner) {
     bus_handler_ =
         std::make_unique<detail::BusHandler>(request_.get(), handler_.get());
 
-    // Bridge Physical Bus Events -> Unified Reactor Queue
+    // Bridge Physical Bus Events -> BusHandler
     bus_->addBusEventListener(
-        detail::Delegate<void(
-            const detail::BusEvent&)>::bind<Impl, &Impl::onBusEvent>(this));
-    bus_handler_->addByteListener(
+        detail::Delegate<void(const detail::BusEvent& event)>::bind<
+            detail::BusHandler, &detail::BusHandler::onBusEvent>(
+            bus_handler_.get()));
+
+    bus_handler_->setControllerBusEventInfoCallback(
         detail::Delegate<void(
             const BusEventInfo&)>::bind<Impl, &Impl::onBusEventInfo>(this));
   }
 
   if (!client_manager_) {
     client_manager_ = std::make_unique<detail::ClientManager>(
-        bus_.get(), bus_handler_.get(), request_.get(), bus_monitor_.get(),
-        &reactor_queue_, &bus_access_permit_);
-    client_manager_->setBusyPredicate(
-        detail::Delegate<bool()>::bind<Impl, &Impl::isHandlerBusy>(this));
+        bus_.get(), bus_handler_.get(), request_.get(), bus_monitor_.get());
   }
 
   // Centralized synchronization using setters. Recursive mutex allows this
@@ -935,7 +932,7 @@ void Impl::constructMembers(Controller* owner) {
   owner->setWatchdogTimeout(owner->config_.runtime.bus.watchdog_timeout_ms);
   owner->setSessionTimeout(owner->config_.runtime.network.session_timeout_ms);
   owner->setTransmitTimeout(owner->config_.runtime.network.transmit_timeout_ms);
-  owner->setOutboundBufferSize(
+  owner->setOutgoingBufferSize(
       owner->config_.runtime.network.outbound_buffer_size);
   owner->setScanOnStartup(owner->config_.runtime.device.scan_on_startup);
   owner->setMaxStartupScans(owner->config_.runtime.device.max_startup_scans);
@@ -967,10 +964,7 @@ void Impl::run(Controller* owner) {
         return true;
 
       case OrchestrationEventType::bus_byte: {
-        detail::BusEvent bus_ev{
-            event.data.byte_data.val, event.data.byte_data.bus_request,
-            event.data.byte_data.start_bit, event.data.byte_data.timestamp};
-        bus_handler_->processEvent(bus_ev);
+        processByteEventInfo(event);
         return true;
       }
 
@@ -980,12 +974,6 @@ void Impl::run(Controller* owner) {
       case OrchestrationEventType::user_request:  // Fallthrough
       case OrchestrationEventType::timer_wakeup:  // Fallthrough
         return true;  // wake-up only — tick() handles the work
-      case OrchestrationEventType::client_io_ready: {
-        client_manager_->processClientIoEvent(
-            event.data.client_io_data.client_fd,
-            event.data.client_io_data.events);
-        return true;
-      }
       case OrchestrationEventType::callback_ready:
         return true;  // These events are primarily used to wake the pop()
                       // block
@@ -1004,7 +992,6 @@ void Impl::run(Controller* owner) {
     bool activity = false;
 
     if (scheduler_->tick()) activity = true;
-    if (client_manager_->tick()) activity = true;
 
     processPublicEvents();
 
@@ -1059,11 +1046,11 @@ void Impl::run(Controller* owner) {
         if (++burst_count >
             detail::ControllerLimits::reactor_yield_burst_limit) {
           burst_count = 0;
-#if defined(ESP_PLATFORM)
-          vTaskDelay(1);
-          // Mark activity as handled so we don't double-yield at the loop end
-          activity = false;
-#endif
+          // #if defined(ESP_PLATFORM)
+          //           vTaskDelay(1);
+          //           // Mark activity as handled so we don't double-yield at
+          //           the loop end activity = false;
+          // #endif
           break;
         }
       }
@@ -1076,11 +1063,12 @@ void Impl::run(Controller* owner) {
     // callbacks during high bus activity.
     if (activity || timeout_ms == 0) {
       processPublicEvents();
-#if defined(ESP_PLATFORM)
-      // Mandatory yield if we didn't block in pop() (timeout_ms == 0) or if
-      // activity happened, ensuring the IDLE task and watchdog can run.
-      vTaskDelay(1);
-#endif
+      // #if defined(ESP_PLATFORM)
+      //       // Mandatory yield if we didn't block in pop() (timeout_ms == 0)
+      //       or if
+      //       // activity happened, ensuring the IDLE task and watchdog can
+      //       run. vTaskDelay(1);
+      // #endif
     }
 
     // Update loop performance metrics
@@ -1144,35 +1132,15 @@ void Impl::onSchedulerEvent(OrchestrationEvent&& oev) {
   });
 }
 
-void Impl::onBusEventInfo(const BusEventInfo& info) {
-  // Store in internal history
-  trace_buffer_.push_back(BusEventInfo(info));
-
-  // Invoke user callback if registered
-  TraceCallback user_callback;
-  {
-    detail::platform::LockGuard<detail::platform::RecursiveMutex> lock(
-        config_mutex_);
-    user_callback = user_trace_callback_;
-  }
-  if (user_callback) user_callback(info);
-}
-
-void Impl::onBusEvent(const detail::BusEvent& bus_ev) {
-  OrchestrationEvent ev;
+void Impl::onBusEventInfo(const BusEventInfo& bus_ev) {
+  OrchestrationEvent ev{};
   ev.type = OrchestrationEventType::bus_byte;
   ev.data.byte_data.val = bus_ev.byte;
-  ev.data.byte_data.bus_request = bus_ev.bus_request;
-  ev.data.byte_data.start_bit = bus_ev.start_bit;
-  ev.data.byte_data.timestamp = bus_ev.timestamp;
-
-  if (bus_ev.byte != Symbols::syn &&
-      detail::Logger::getInstance().isEnabled(LogLevel::debug)) {
-    char dbg_buf[48];
-    std::snprintf(dbg_buf, sizeof(dbg_buf), "HAL Bridge: tryPush 0x%s",
-                  ebus::toString(bus_ev.byte));
-    logDebug(dbg_buf);
-  }
+  ev.data.byte_data.hs = bus_ev.handler_state;
+  ev.data.byte_data.rs = bus_ev.request_state;
+  ev.data.byte_data.res = bus_ev.result;
+  ev.data.byte_data.lc = bus_ev.lock_counter;
+  ev.timestamp = bus_ev.timestamp;
 
   if (!reactor_queue_.tryPush(ev)) {
     detail::Logger::getInstance().log(
@@ -1191,6 +1159,24 @@ void Impl::onBusEvent(const detail::BusEvent& bus_ev) {
     if (current_size > m.max_reactor_queue_size)
       m.max_reactor_queue_size = static_cast<uint32_t>(current_size);
   });
+}
+
+void Impl::processByteEventInfo(const OrchestrationEvent& event) {
+  BusEventInfo bus_ev{event.data.byte_data.val, event.data.byte_data.hs,
+                      event.data.byte_data.rs,  event.data.byte_data.res,
+                      event.data.byte_data.lc,  event.timestamp};
+
+  // Store in internal history
+  trace_buffer_.push_back(BusEventInfo(bus_ev));
+
+  // Invoke user callback if registered
+  TraceCallback user_callback;
+  {
+    detail::platform::LockGuard<detail::platform::RecursiveMutex> lock(
+        config_mutex_);
+    user_callback = user_trace_callback_;
+  }
+  if (user_callback) user_callback(bus_ev);
 }
 
 bool Impl::isSchedulerFull() const {

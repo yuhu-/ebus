@@ -19,9 +19,6 @@ namespace ebus::detail {
 
 class BusMonitor;
 
-using BusRequestedCallback = Delegate<void()>;
-using StartBitCallback = Delegate<void()>;
-
 /**
  * Implementation of the eBUS arbitration state machine.
  * Handles "Wire-AND" collision detection, Priority Class checks, and the
@@ -35,9 +32,9 @@ class Request {
   // Configuration
   void setLockCounter(uint8_t lock_counter);
   uint8_t getLockCounter() const;
-  void setHandlerBusRequestedCallback(BusRequestedCallback callback);
-  void setExternalBusRequestedCallback(BusRequestedCallback callback);
-  void setStartBitCallback(StartBitCallback callback);
+  void setHandlerBusRequestedCallback(Delegate<void()> callback);
+  void setExternalBusRequestedCallback(Delegate<void()> callback);
+  void setStartBitCallback(Delegate<void()> callback);
 
   // Working Methods
   bool requestBus(uint8_t address, bool external = false);
@@ -55,6 +52,9 @@ class Request {
   inline bool busRequestPending() const {
     return bus_request_.load(std::memory_order_acquire);
   }
+  inline bool busRequestIsExternal() const {
+    return external_bus_request_.load(std::memory_order_acquire);
+  }
 
  private:
   BusMonitor* monitor_ = nullptr;
@@ -71,15 +71,15 @@ class Request {
   std::atomic<bool> bus_request_ = {false};
 
   // Indicates whether the bus request is internal or external
-  bool external_bus_request_ = false;
+  std::atomic<bool> external_bus_request_ = {false};
 
-  BusRequestedCallback handler_bus_requested_callback_ = nullptr;
-  BusRequestedCallback external_bus_requested_callback_ = nullptr;
+  Delegate<void()> handler_bus_requested_callback_ = nullptr;
+  Delegate<void()> external_bus_requested_callback_ = nullptr;
 
   // Fired when the physical layer detects a bus anomaly (e.g. noise or framing
   // error) that invalidates the current byte alignment. This allows the Handler
   // to reset its buffers immediately.
-  StartBitCallback start_bit_callback_ = nullptr;
+  Delegate<void()> start_bit_callback_ = nullptr;
 
   void observe(uint8_t byte);
   void first(uint8_t byte);

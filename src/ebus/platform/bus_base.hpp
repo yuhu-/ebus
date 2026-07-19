@@ -21,32 +21,26 @@ namespace ebus::detail::platform {
  */
 class BusBase {
  public:
-  // Public Types & Constants
-  using ReadListener = Delegate<void(const uint8_t& byte)>;
-  using WriteListener = Delegate<void(const uint8_t& byte)>;
-  using SynListener = Delegate<void()>;
-  using BusEventListener = Delegate<void(const BusEvent& event)>;
-
   // Lifecycle
   virtual ~BusBase() = default;
 
   // Working Methods
-  void addReadListener(ReadListener listener) {
+  void addReadListener(Delegate<void(const uint8_t& byte)> listener) {
     LockGuard<Mutex> lock(listeners_mutex_);
     read_listeners_.push_back(std::move(listener));
   }
 
-  void addWriteListener(WriteListener listener) {
+  void addWriteListener(Delegate<void(const uint8_t& byte)> listener) {
     LockGuard<Mutex> lock(listeners_mutex_);
     write_listeners_.push_back(std::move(listener));
   }
 
-  void addSynListener(SynListener listener) {
+  void addSynListener(Delegate<void()> listener) {
     LockGuard<Mutex> lock(listeners_mutex_);
     syn_listeners_.push_back(std::move(listener));
   }
 
-  void addBusEventListener(BusEventListener listener) {
+  void addBusEventListener(Delegate<void(const BusEvent& event)> listener) {
     LockGuard<Mutex> lock(listeners_mutex_);
     bus_event_listeners_.push_back(std::move(listener));
   }
@@ -55,22 +49,25 @@ class BusBase {
  protected:
   mutable platform::Mutex listeners_mutex_;
 
-  const StaticVector<ReadListener, BusLimits::max_listeners>& getReadListeners()
-      const {
+  const StaticVector<Delegate<void(const uint8_t& byte)>,
+                     BusLimits::max_listeners>&
+  getReadListeners() const {
     return read_listeners_;
   }
 
-  const StaticVector<WriteListener, BusLimits::max_listeners>&
+  const StaticVector<Delegate<void(const uint8_t& byte)>,
+                     BusLimits::max_listeners>&
   getWriteListeners() const {
     return write_listeners_;
   }
 
-  const StaticVector<SynListener, BusLimits::max_listeners>& getSynListeners()
-      const {
+  const StaticVector<Delegate<void()>, BusLimits::max_listeners>&
+  getSynListeners() const {
     return syn_listeners_;
   }
 
-  const StaticVector<BusEventListener, BusLimits::max_listeners>&
+  const StaticVector<Delegate<void(const BusEvent& event)>,
+                     BusLimits::max_listeners>&
   getBusEventListeners() const {
     return bus_event_listeners_;
   }
@@ -112,10 +109,13 @@ class BusBase {
    * Common storage for listeners using StaticVector to avoid heap
    * fragmentation. Capacity is enforced by BusLimits::max_listeners.
    */
-  StaticVector<ReadListener, BusLimits::max_listeners> read_listeners_;
-  StaticVector<WriteListener, BusLimits::max_listeners> write_listeners_;
-  StaticVector<SynListener, BusLimits::max_listeners> syn_listeners_;
-  StaticVector<BusEventListener, BusLimits::max_listeners> bus_event_listeners_;
+  StaticVector<Delegate<void(const uint8_t& byte)>, BusLimits::max_listeners>
+      read_listeners_;
+  StaticVector<Delegate<void(const uint8_t& byte)>, BusLimits::max_listeners>
+      write_listeners_;
+  StaticVector<Delegate<void()>, BusLimits::max_listeners> syn_listeners_;
+  StaticVector<Delegate<void(const BusEvent& event)>, BusLimits::max_listeners>
+      bus_event_listeners_;
 };
 
 }  // namespace ebus::detail::platform

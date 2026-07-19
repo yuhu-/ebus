@@ -21,7 +21,6 @@
 #include <ebus/static_vector.hpp>
 #include <ebus/status.hpp>
 
-#include "app/bus_access_permit.hpp"
 #include "app/client.hpp"
 #include "core/bus_handler.hpp"
 #include "core/request.hpp"
@@ -41,15 +40,9 @@ class BusMonitor;
  */
 class ClientManager {
  public:
-  // Internal IO events to replace poll.h macros
-  enum IoEvent : uint16_t { io_in = 0x01, io_out = 0x02, io_err = 0x04 };
-
- public:
   // Lifecycle
   ClientManager(platform::Bus* bus, BusHandler* bus_handler, Request* request,
-                BusMonitor* monitor,
-                platform::Queue<OrchestrationEvent>* reactor_queue,
-                BusAccessPermit* permit = nullptr);
+                BusMonitor* monitor);
   ~ClientManager();
   void start(const RuntimeConfig& config = RuntimeConfig{});
   void stop();
@@ -61,20 +54,13 @@ class ClientManager {
   // Configuration
   void setSessionTimeout(uint32_t timeout_ms);
   void setTransmitTimeout(uint32_t timeout_ms);
-  void setOutboundBufferSize(size_t size);
-
-  // Sets a predicate to check if the system is too busy to start new bridge
-  // sessions.
-  void setBusyPredicate(Delegate<bool()> pred);
+  void setOutgoingBufferSize(size_t size);
 
   // Working Methods
   bool addClient(int fd, ClientType type);
   bool addClient(std::unique_ptr<platform::Socket> socket, ClientType type);
   bool addClient(std::shared_ptr<AbstractClient> client);
   void removeClient(int fd);
-
-  bool tick();
-  void processClientIoEvent(int client_fd, uint16_t events);
 
   // Status/Telemetry
   platform::ServiceThread::Status getThreadStatus() const;
@@ -90,15 +76,15 @@ class ClientManager {
   BusHandler* bus_handler_;
   Request* request_;
   BusMonitor* monitor_;
-  platform::Queue<OrchestrationEvent>* reactor_queue_;
-  BusAccessPermit* permit_ = nullptr;
 
   std::atomic<bool> running_{false};
-  Delegate<bool()> is_busy_;
 
   SessionState session_state_ = SessionState::idle;
   Clock::time_point last_state_change_;
   mutable platform::Mutex mutex_;
+
+  // Internal IO events to replace poll.h macros
+  enum IoEvent : uint16_t { io_in = 0x01, io_out = 0x02, io_err = 0x04 };
 
   // Fixed-size arrays for each client type
   std::array<std::shared_ptr<AbstractClient>, NetworkLimits::max_clients>
@@ -110,13 +96,9 @@ class ClientManager {
 
   uint32_t session_counter_ = 0;
   std::shared_ptr<AbstractClient> current_active_sender_ = nullptr;
-  std::atomic<bool> bus_requested_{false};
   uint8_t last_sent_byte_ = 0;
 
   std::string last_error_message_;
-
-  // Listener id from BusHandler so we can remove the listener safely.
-  uint32_t bus_listener_id_{0};
 
   // Configurable timeout for active session
   std::chrono::milliseconds session_timeout_{
@@ -127,15 +109,34 @@ class ClientManager {
   size_t outbound_buffer_size_ =
       ebus::RuntimeConfig{}.network.outbound_buffer_size;
 
+  // Members for the dedicated IO thread
+  std::unique_ptr<platform::ServiceThread> client_io_worker_;
+  std::atomic<bool> client_io_running_{false};
+  platform::WakeupSignal wakeup_signal_;
+
+  // Listening sockets (must be unique pointers)
+  std::unique_ptr<platform::Socket> listen_socket_regular_{nullptr};
+  std::unique_ptr<platform::Socket> listen_socket_readonly_{nullptr};
+  std::unique_ptr<platform::Socket> listen_socket_enhanced_{nullptr};
+
+  using ClientArray =
+      std::array<std::shared_ptr<AbstractClient>, NetworkLimits::max_clients>;
+
   // Request callback target
-  void onExternalBusRequested();
+  void onBusRequested();
 
-  void onBusEvent(const BusEventInfo& info);
+  void onBusEventInfo(const BusEventInfo& info);
 
+  // Session management helpers (event-driven in new 3-thread architecture)
+  void transitSessionState(const SessionState& state);
+  void handleBusAvailableForSession();
+  void tryStartSessionForClient(std::shared_ptr<AbstractClient>& client);
+  void trySendNextByte(std::shared_ptr<AbstractClient>& client);
   void stopActiveSession();
+  void checkSessionTimeout();
+  void handleActiveSenderDisconnected();
 
-  // Helper to find client by fd across all client arrays
-  // mutex_ MUST be locked
+  // Helper to find client by fd across all client arrays mutex_ MUST be locked
   std::shared_ptr<AbstractClient> findClientByFdLocked(int fd);
 
   // Helper to find client by fd
@@ -144,19 +145,42 @@ class ClientManager {
   // Helper to remove client by fd
   void removeClientByFd(int fd);
 
+  std::shared_ptr<AbstractClient> removeClientByFdLocked(int fd);
+
   void removeDisconnectedClients();
 
-  // Members for the dedicated IO thread
-  std::unique_ptr<platform::ServiceThread> client_io_worker_;
-  std::atomic<bool> client_io_running_{false};
-  platform::WakeupSignal wakeup_signal_;
+  void addListenerFds(fd_set& readfds, int& max_fd);
 
-  std::unique_ptr<platform::Socket> listen_socket_regular_;
-  std::unique_ptr<platform::Socket> listen_socket_readonly_;
-  std::unique_ptr<platform::Socket> listen_socket_enhanced_;
+  void addClientFdsToSet(const ClientArray& clients, fd_set& readfds,
+                         fd_set& writefds, fd_set& exceptfds, int& max_fd);
+
+  int prepareFileDescriptors(fd_set& readfds, fd_set& writefds,
+                             fd_set& exceptfds);
+
+  void drainWakeupSignal(fd_set& readfds);
+
+  void acceptNewConnections(fd_set& readfds);
+
+  void handleClientIO(fd_set& readfds, fd_set& writefds, fd_set& exceptfds);
+
+  void handleClientActivity(
+      ClientArray& clients, fd_set& readfds, fd_set& writefds,
+      fd_set& exceptfds,
+      ebus::StaticVector<std::shared_ptr<AbstractClient>,
+                         NetworkLimits::max_clients * 3>& to_stop);
+
+  void handleSocketInput(
+      int fd, std::shared_ptr<AbstractClient>& client,
+      ebus::StaticVector<std::shared_ptr<AbstractClient>,
+                         NetworkLimits::max_clients * 3>& to_stop);
+
+  void handleSocketOutput(
+      int fd, std::shared_ptr<AbstractClient>& client,
+      ebus::StaticVector<std::shared_ptr<AbstractClient>,
+                         NetworkLimits::max_clients * 3>& to_stop);
 
   void clientIoLoop();
-  void signalClientIoThread();  // Helper to trigger wakeup_signal_
+  void signalClientIoThread();
 };
 
 }  // namespace ebus::detail

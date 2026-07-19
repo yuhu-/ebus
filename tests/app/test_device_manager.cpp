@@ -13,7 +13,6 @@
 #include "core/handler.hpp"
 #include "core/request.hpp"
 #include "platform/bus.hpp"
-#include "test_helpers.hpp"
 
 using namespace ebus::detail;
 

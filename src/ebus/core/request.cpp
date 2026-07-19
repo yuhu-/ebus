@@ -52,22 +52,22 @@ void Request::setLockCounter(uint8_t lock_counter) {
 
 uint8_t Request::getLockCounter() const { return lock_counter_; }
 
-void Request::setHandlerBusRequestedCallback(BusRequestedCallback callback) {
+void Request::setHandlerBusRequestedCallback(Delegate<void()> callback) {
   handler_bus_requested_callback_ = std::move(callback);
 }
 
-void Request::setExternalBusRequestedCallback(BusRequestedCallback callback) {
+void Request::setExternalBusRequestedCallback(Delegate<void()> callback) {
   external_bus_requested_callback_ = std::move(callback);
 }
 
-void Request::setStartBitCallback(StartBitCallback callback) {
+void Request::setStartBitCallback(Delegate<void()> callback) {
   start_bit_callback_ = std::move(callback);
 }
 
 bool Request::requestBus(uint8_t address, bool external) {
   if (busAvailable()) {
     request_address_ = address;
-    external_bus_request_ = external;
+    external_bus_request_.store(external, std::memory_order_release);
     // Set flag after data is ready (Release semantics)
     bus_request_.store(true, std::memory_order_release);
   } else if (monitor_) {
@@ -80,7 +80,7 @@ void Request::busRequestCompleted() {
   bus_request_.store(false, std::memory_order_release);
   if (state_ == RequestState::observe) transitionTo(RequestState::first);
 
-  if (external_bus_request_) {
+  if (external_bus_request_.load(std::memory_order_acquire)) {
     if (external_bus_requested_callback_) external_bus_requested_callback_();
   } else {
     if (handler_bus_requested_callback_) handler_bus_requested_callback_();

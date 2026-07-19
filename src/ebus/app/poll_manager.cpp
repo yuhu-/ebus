@@ -74,7 +74,8 @@ void PollManager::removePollItem(uint32_t id) {
   if (it != items_.end()) items_.erase(it);
 }
 
-void PollManager::processDueItems(PollVisitor callback, bool* activity) {
+void PollManager::processDueItems(Delegate<void(const Item&)> callback,
+                                  bool* activity) {
   platform::LockGuard<platform::Mutex> lock(mutex_);
   auto now = Clock::now();
 

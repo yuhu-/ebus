@@ -181,6 +181,15 @@ ebus::BusStatus BusSimulation::fetchStatus() const {
   return {map(getThreadStatus()), map(getSynThreadStatus())};
 }
 
+void BusSimulation::armRequestTimer(uint64_t delay) {
+  [[maybe_unused]] auto future =
+      std::async(std::launch::async, [this, delay]() {
+        std::this_thread::sleep_for(std::chrono::microseconds(delay));
+        writeByte(request_->busRequestAddress());
+        bus_request_flag_.store(true, std::memory_order_release);
+      });
+}
+
 void BusSimulation::simulationReaderLoop() {
   uint8_t byte = 0;
   while (running_.load()) {
@@ -192,31 +201,26 @@ void BusSimulation::simulationReaderLoop() {
       recordUtilization(byte);
       resetSynTimerSim(byte);
 
-      BusEvent event;
-      event.byte = byte;
-      event.timestamp = arrival_time;
-      event.bus_request =
-          bus_request_flag_.exchange(false, std::memory_order_acq_rel);
-      event.start_bit = false;  // Not applicable in simulation
-      lockAndInvoke(listeners_mutex_, getBusEventListeners(), event);
-
       // --- CRITICAL POINT: Spec 6.3 Immediate Bus Access ---
       // We check for arbitration intent AFTER notifying software to ensure
       // the state machine can pre-load the intent for the NEXT syn, while
       // hardware acts on the CURRENT syn.
+      bool suppress_syn_bus_event = false;
       if (byte == Symbols::syn && request_->busRequestPending()) {
-        // Yield before busy-waiting to allow lower priority tasks to run
-        // platform::sleepMilli(1);
-        sleepMicro(BusLimits::platform::Posix::request_delay_us);
-        writeByte(request_->busRequestAddress());
-        bus_request_flag_.store(true, std::memory_order_release);
+        armRequestTimer(BusLimits::platform::Posix::request_delay_us);
+        if (request_->busRequestIsExternal())
+          suppress_syn_bus_event = true;  // Suppress the SYN byte event
       }
-      // Add a small delay to yield CPU to other tasks, especially lower
-      // priority ones.
-      // platform::sleepMilli(1);  // Yield to other tasks
-    } else {
-      // platform::sleepMilli(1);  // Yield to other tasks if no data is
-      // available
+
+      if (!suppress_syn_bus_event) {
+        BusEvent event;
+        event.byte = byte;
+        event.timestamp = arrival_time;
+        event.bus_request =
+            bus_request_flag_.exchange(false, std::memory_order_acq_rel);
+        event.start_bit = false;  // Not applicable in simulation
+        lockAndInvoke(listeners_mutex_, getBusEventListeners(), event);
+      }
     }
   }
 }

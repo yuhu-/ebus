@@ -54,7 +54,7 @@ inline constexpr size_t controller_stack_size = EBUS_CONTROLLER_STACK_SIZE;
 #endif
 
 #ifndef EBUS_CONTROLLER_PRIORITY
-inline constexpr uint8_t controller_priority = 10;
+inline constexpr uint8_t controller_priority = 5;
 #else
 inline constexpr uint8_t controller_priority = EBUS_CONTROLLER_PRIORITY;
 #endif
@@ -78,7 +78,7 @@ inline constexpr size_t bus_syn_stack_size = EBUS_BUS_SYN_STACK_SIZE;
 #endif
 
 #ifndef EBUS_BUS_SYN_PRIORITY
-inline constexpr uint8_t bus_syn_priority = 5;
+inline constexpr uint8_t bus_syn_priority = 3;
 #else
 inline constexpr uint8_t bus_syn_priority = EBUS_BUS_SYN_PRIORITY;
 #endif
@@ -91,7 +91,7 @@ inline constexpr size_t client_manager_stack_size =
 #endif
 
 #ifndef EBUS_CLIENT_MANAGER_PRIORITY
-inline constexpr uint8_t client_manager_priority = 5;
+inline constexpr uint8_t client_manager_priority = 12;
 #else
 inline constexpr uint8_t client_manager_priority = EBUS_CLIENT_MANAGER_PRIORITY;
 #endif
@@ -136,16 +136,10 @@ inline constexpr uint16_t window_min_us = 4000;
 inline constexpr uint16_t window_max_us = 5000;
 inline constexpr uint16_t offset_max_us = 500;
 
-#ifndef EBUS_MAX_LISTENERS
 /**
- * Maximum number of concurrent listeners per event category.
- * Accommodates internal "clients" (Controller, ClientManager, BusSimulator)
- * while providing headroom for user-defined callbacks.
+ * Maximum number of concurrent bus listeners per event category.
  */
-inline constexpr size_t max_listeners = 8;
-#else
-inline constexpr size_t max_listeners = EBUS_MAX_LISTENERS;
-#endif
+inline constexpr size_t max_listeners = 2;
 
 namespace Syn {
 inline constexpr uint32_t base_ms = 50;            // move to config
@@ -157,12 +151,7 @@ inline constexpr uint32_t serialization_delay_ms = 4;
 }  // namespace Syn
 
 namespace platform::Esp {
-#ifndef EBUS_BUFFER_SIZE
 inline constexpr size_t buffer_size = 256;
-#else
-inline constexpr size_t buffer_size = EBUS_BUFFER_SIZE;
-#endif
-
 inline constexpr uint32_t event_timeout_ms = 10;
 inline constexpr int uart_install_retries = 3;
 inline constexpr uint32_t uart_install_retry_delay_ms = 100;

@@ -68,11 +68,9 @@ class PollManager {
   // Remove a recurring command by ID.
   void removePollItem(uint32_t id);
 
-  using PollVisitor = Delegate<void(const Item&)>;
-
   // Processes commands that are currently due and updates their internal
   // timers. Using a callback avoids heap allocations from returning a vector.
-  void processDueItems(PollVisitor callback, bool* activity);
+  void processDueItems(Delegate<void(const Item&)> callback, bool* activity);
 
   /**
    * @brief Deserializes and adds poll items from a JSON array.

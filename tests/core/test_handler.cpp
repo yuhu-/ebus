@@ -19,7 +19,6 @@
 #include "core/request.hpp"
 #include "core/telegram.hpp"
 #include "platform/bus.hpp"
-#include "test_helpers.hpp"
 
 using namespace ebus::detail;
 
@@ -116,17 +115,19 @@ SCENARIO("Handler processes eBUS messages correctly", "[core][handler]") {
         } ctx{telegram_count, error_count};
 
         handler.setBusRequestWonCallback(
-            BusRequestWonCallback::bind<TestCtx, &TestCtx::onWon>(&ctx));
+            Delegate<void()>::bind<TestCtx, &TestCtx::onWon>(&ctx));
         handler.setBusRequestLostCallback(
-            BusRequestLostCallback::bind<TestCtx, &TestCtx::onLost>(&ctx));
+            Delegate<void()>::bind<TestCtx, &TestCtx::onLost>(&ctx));
         handler.setReactiveCallback(
-            HandlerReactiveCallback::bind<TestCtx, &TestCtx::onReactive>(&ctx));
+            Delegate<void(const ebus::ReactiveInfo& info)>::bind<
+                TestCtx, &TestCtx::onReactive>(&ctx));
         handler.setProtocolCallback(
-            HandlerProtocolCallback::bind<TestCtx, &TestCtx::onProtocol>(&ctx));
+            Delegate<void(const ebus::ProtocolInfo& info)>::bind<
+                TestCtx, &TestCtx::onProtocol>(&ctx));
 
         bus.addWriteListener(
-            platform::BusBase::WriteListener::bind<TestCtx, &TestCtx::onWrite>(
-                &ctx));
+            Delegate<void(const uint8_t& byte)>::bind<TestCtx,
+                                                      &TestCtx::onWrite>(&ctx));
 
         handler.setSourceAddress(tc.address);
 

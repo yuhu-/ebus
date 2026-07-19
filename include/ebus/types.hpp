@@ -365,14 +365,11 @@ static_assert(
  */
 enum class OrchestrationEventType : uint8_t {
   bus_byte,         // Byte received from the physical bus (ISR/Low-level task)
-  network_byte,     // Byte received from an external client (ebusd bridge)
   user_request,     // New message enqueued by the application
   protocol_result,  // Signal from Handler (Won/Lost/Telegram/Error)
   timer_wakeup,     // Triggered when a Poll or Scheduler retry is due
   callback_ready,   // Signal that a user callback is pending dispatch
-  client_io_ready,  // A client has I/O readiness (read or write)
-
-  shutdown  // Signal to terminate the worker thread
+  shutdown          // Signal to terminate the worker thread
 };
 
 /**
@@ -381,9 +378,7 @@ enum class OrchestrationEventType : uint8_t {
  */
 struct OrchestrationEvent {
   OrchestrationEvent()
-      : type(OrchestrationEventType::shutdown),
-        timestamp(Clock::now()),
-        session_id(0) {
+      : type(OrchestrationEventType::shutdown), timestamp(Clock::now()) {
     std::memset(static_cast<void*>(&data), 0, sizeof(data));
   }
 
@@ -391,31 +386,21 @@ struct OrchestrationEvent {
 
   // Shared metadata
   Clock::time_point timestamp;
-  uint32_t session_id = 0;
 
   union Data {
     /**
      * Explicitly define default constructor to do nothing.
-     * Required because request_data contains StaticSequence, which has
-     * default member initializers making it non-trivial for unions.
+     * Required because non-trivial unions with StaticSequence
      */
     Data() {}
 
     struct {
       uint8_t val;
-      bool bus_request;
-      bool start_bit;
-      Clock::time_point timestamp;
+      HandlerState hs;
+      RequestState rs;
+      RequestResult res;
+      uint8_t lc;
     } byte_data;
-    struct {
-      uint8_t priority;
-      uint32_t poll_id;
-      StaticSequence<detail::SequenceLimits::model_capacity> payload;
-    } request_data;
-    struct {
-      int client_fd;
-      uint16_t events;
-    } client_io_data;
 
     ProtocolEvent protocol_data;
   } data;

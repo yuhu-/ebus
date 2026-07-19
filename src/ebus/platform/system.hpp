@@ -17,6 +17,7 @@
 #endif
 #elif defined(POSIX)
 #include <chrono>
+#include <future>
 #include <thread>
 #endif
 
@@ -43,5 +44,27 @@ inline void sleepMicro(uint32_t us) {
   std::this_thread::sleep_for(std::chrono::microseconds(us));
 #endif
 }
+
+#if defined(POSIX)
+class AsyncOneShotTimer {
+ public:
+  AsyncOneShotTimer(std::chrono::microseconds delay,
+                    std::vector<std::function<void()>> callbacks)
+      : delay_(delay), callbacks_(std::move(callbacks)) {}
+
+  void arm() {
+    [[maybe_unused]] auto future = std::async(std::launch::async, [this]() {
+      std::this_thread::sleep_for(delay_);
+      for (const auto& callback : callbacks_) {
+        callback();
+      }
+    });
+  }
+
+ private:
+  std::chrono::microseconds delay_;
+  std::vector<std::function<void()>> callbacks_;
+};
+#endif
 
 }  // namespace ebus::detail::platform

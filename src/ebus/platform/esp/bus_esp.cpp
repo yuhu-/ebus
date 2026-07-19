@@ -341,6 +341,7 @@ void BusEsp::ebusUartEventRunner() {
 
           recordUtilization(byte);
 
+          bool suppress_syn_bus_event = false;
           if (byte == Symbols::syn && request_->busRequestPending()) {
             const int64_t now = esp_timer_get_time();  // Current time in us
 
@@ -397,6 +398,9 @@ void BusEsp::ebusUartEventRunner() {
               micros_last_delay_ = delay;
               micros_delay_flag_ = true;
               portEXIT_CRITICAL(&timer_mux_);
+              
+              if (request_->busRequestIsExternal())
+                suppress_syn_bus_event = true;  // Suppress the SYN byte event
             } else {
               portENTER_CRITICAL(&timer_mux_);
               start_bit_flag_ = true;
@@ -452,7 +456,9 @@ void BusEsp::ebusUartEventRunner() {
           bus_event.timestamp = arrival_time;
 
           CriticalSection ev_lock{&listener_mux_};
-          lockAndInvoke(ev_lock, getBusEventListeners(), bus_event);
+          if (!suppress_syn_bus_event) {
+            lockAndInvoke(ev_lock, getBusEventListeners(), bus_event);
+          }
 
           // Reset SYN Timer (Arbitration Logic)
           portENTER_CRITICAL(&timer_mux_);

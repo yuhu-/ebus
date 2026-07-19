@@ -65,261 +65,34 @@ inline bool waitCondition(Predicate&& pred, int timeout_ms = 1000) {
 }
 
 /**
- * In-memory client for testing ClientManager without real sockets.
+ * @brief Blocks until the predicate is true, pumping the reactor in a loop.
  */
-class MockClient : public detail::AbstractClient {
- private:
-  struct Pipe {
-    int read_fd;
-    int write_fd;
-    static Pipe create() {
-      int pipefd[2];
-      if (::pipe(pipefd) != 0) {
-        throw std::runtime_error("Failed to create mock client pipe");
-      }
-      platform::setNonBlocking(pipefd[0]);
-      platform::setNonBlocking(pipefd[1]);
-      return {pipefd[0], pipefd[1]};
-    }
-  };
-
-  MockClient(Request* req, bool write_capable, size_t max_buffer, Pipe p)
-      : AbstractClient(std::make_unique<platform::Socket>(p.read_fd), req,
-                       write_capable, max_buffer),
-        write_fd_(p.write_fd) {}
-
- public:
-  explicit MockClient(Request* req, bool write_capable = true,
-                      size_t max_buffer = 1024)
-      : MockClient(req, write_capable, max_buffer, Pipe::create()) {}
-
-  ~MockClient() override {
-    if (write_fd_ >= 0) {
-      platform::close(write_fd_);
-      write_fd_ = -1;
-    }
+template <typename Predicate>
+bool waitFor(Predicate&& pred,
+             std::chrono::milliseconds timeout = std::chrono::seconds(2)) {
+  auto start = Clock::now();
+  while (!pred() && (Clock::now() - start < timeout)) {
+    platform::sleepMilli(1);
   }
-
-  void onSessionStart(uint32_t session_id) override { (void)session_id; }
-
-  ClientInfo getClientInfo() const override {
-    // Mock implementation for testing purposes
-    return ClientInfo{getFd(), "mock", isConnected(), write_capable_,
-                      outbound_.size()};
-  }
-
-  void processIncomingData(const uint8_t* data, size_t len) override {
-    if (!isConnected() || len == 0) return;
-    for (size_t i = 0; i < len; ++i) {
-      inbound_.push(data[i]);
-    }
-    // Ensure a pending bus request is available from the queue
-    if (!has_pending_request_ && !inbound_.empty()) {
-      pending_bus_request_ = inbound_.front();
-      inbound_.pop();
-      has_pending_request_ = true;
-    }
-  }
-
-  bool hasPendingBusRequest() const override {
-    return has_pending_request_ || !inbound_.empty();
-  }
-
-  bool popPendingBusRequest(uint8_t& out) override {
-    if (has_pending_request_) {
-      out = pending_bus_request_;
-      last_sent_byte_ = out;
-      has_pending_request_ = false;
-      return true;
-    }
-    if (!inbound_.empty()) {
-      out = inbound_.front();
-      inbound_.pop();
-      last_sent_byte_ = out;
-      return true;
-    }
-    return false;
-  }
-
-  void sendToClient(ByteView data) override {
-    if (outbound_.size() + data.size() > max_buffer_size_) {
-      this->stop();  // Simulate socket closing on overflow
-      return;
-    }
-    outbound_.insert(outbound_.end(), data.begin(), data.end());
-  }
-
-  BridgeAction onBusByte(const BusEventInfo& info) override {
-    if (!this->isConnected()) return BridgeAction::stop_session;
-
-    bool proceed = false;
-    switch (info.result) {
-      case RequestResult::first_won:
-      case RequestResult::second_won:
-        proceed = true;
-        break;
-      case RequestResult::observe_data:
-        if (info.byte == last_sent_byte_) {
-          proceed = true;
-        }
-        break;
-      default:
-        break;
-    }
-
-    sendToClient(ByteView(&info.byte, 1));
-    return proceed ? BridgeAction::bypass_wait : BridgeAction::keep_active;
-  }
-
-  void pushInput(uint8_t b) { inbound_.push(b); }
-  const std::vector<uint8_t>& getOutput() const { return outbound_; }
-
- private:
-  int write_fd_ = -1;
-  std::queue<uint8_t> inbound_;
-  std::vector<uint8_t> outbound_;
-  uint8_t pending_bus_request_ = 0;
-  bool has_pending_request_ = false;
-};
+  return pred();
+}
 
 /**
- * Pumper to drive the state machines of passive components during tests.
- * Replaces background threads with explicit orchestration in the Reactor
- * model.
+ * @brief Reads from a socket while pumping the reactor to avoid deadlocks.
+ * Replaces blocking readExact for network bridge tests.
  */
-class TestReactor {
- public:
-  TestReactor(platform::Bus& bus, BusHandler& busHandler,
-              ClientManager* manager, Scheduler* scheduler,
-              platform::Queue<ebus::OrchestrationEvent>* reactor_queue)
-      : bus_(bus),
-        busHandler_(busHandler),
-        manager_(manager),
-        scheduler_(scheduler),
-        reactor_queue_(reactor_queue) {
-    bus_.addBusEventListener(
-        Delegate<void(const BusEvent&)>::bind<TestReactor,
-                                              &TestReactor::onBusEvent>(this));
-  }
-
-  // Overload for tests that don't use the new ClientManager IO thread
-  TestReactor(platform::Bus& bus, BusHandler& busHandler,
-              ClientManager* manager = nullptr, Scheduler* scheduler = nullptr)
-      : bus_(bus),
-        busHandler_(busHandler),
-        manager_(manager),
-        scheduler_(scheduler),
-        reactor_queue_(nullptr) {  // Initialize to nullptr if not provided
-    bus_.addBusEventListener(
-        Delegate<void(const BusEvent&)>::bind<TestReactor,
-                                              &TestReactor::onBusEvent>(this));
-  }
-
-  void onBusEvent(const BusEvent& ev) {
-    platform::LockGuard<platform::Mutex> lock(mutex_);
-    events_.push(ev);
-  }
-
-  /**
-   * @brief Performs a single cycle of the orchestration loop.
-   * Pulsates all managers and drains the physical bus event queue.
-   */
-  void pump() {
-    if (scheduler_) scheduler_->tick();
-    if (manager_) manager_->tick();
-
-    // Process events from the reactor_queue_
-    if (reactor_queue_) {
-      ebus::OrchestrationEvent ev;
-      while (reactor_queue_->tryPop(ev)) {
-        switch (ev.type) {
-          case OrchestrationEventType::bus_byte: {
-            BusEvent bus_ev{
-                ev.data.byte_data.val, ev.data.byte_data.bus_request,
-                ev.data.byte_data.start_bit, ev.data.byte_data.timestamp};
-            busHandler_.processEvent(bus_ev);
-            break;
-          }
-          case OrchestrationEventType::protocol_result: {
-            if (scheduler_)
-              scheduler_->injectProtocolEvent(ev.data.protocol_data);
-            break;
-          }
-          case OrchestrationEventType::client_io_ready: {
-            if (manager_)
-              manager_->processClientIoEvent(ev.data.client_io_data.client_fd,
-                                             ev.data.client_io_data.events);
-            break;
-          }
-          default:
-            break;  // Ignore other event types for now in TestReactor
-        }
-      }
-    }
-
-    platform::UniqueLock<platform::Mutex> lock(mutex_);
-    while (!events_.empty()) {
-      BusEvent ev = events_.front();
-      events_.pop();
-      lock.unlock();
-      busHandler_.processEvent(ev);
-      lock.lock();
-    }
-  }
-
-  /**
-   * @brief Blocks until the predicate is true, pumping the reactor in a loop.
-   */
-  template <typename Predicate>
-  bool waitFor(Predicate&& pred,
-               std::chrono::milliseconds timeout = std::chrono::seconds(2)) {
-    // Always pump at least once to ensure progress even if pred is already true
-    pump();
-    auto start = Clock::now();
-    while (!pred() && (Clock::now() - start < timeout)) {
-      pump();
-      platform::sleepMilli(1);
-    }
-    return pred();
-  }
-
-  /**
-   * @brief Reads from a socket while pumping the reactor to avoid deadlocks.
-   * Replaces blocking readExact for network bridge tests.
-   */
-  bool readFromSocket(
-      int fd, uint8_t* buf, size_t len,
-      std::chrono::milliseconds timeout = std::chrono::seconds(1)) {
-    size_t received = 0;
-    return waitFor(
-        [&]() {
-          ssize_t n = platform::recv(fd, buf + received, len - received,
-                                     platform::Flags::dont_wait);
-          if (n > 0) received += static_cast<size_t>(n);
-          return received == len;
-        },
-        timeout);
-  }
-
-  /**
-   * auto cmds = reactor.collect(dm, &DeviceManager::vendorScanCommands);
-   */
-  template <typename T, typename Func>
-  auto collect(T& obj, Func member_func) {
-    std::vector<ebus::Sequence> captured;
-    (obj.*
-     member_func)([&](const ebus::Sequence& cmd) { captured.push_back(cmd); });
-    return captured;
-  }
-
- private:
-  platform::Bus& bus_;
-  BusHandler& busHandler_;
-  ClientManager* manager_;
-  Scheduler* scheduler_;
-  platform::Queue<ebus::OrchestrationEvent>* reactor_queue_;
-  platform::Mutex mutex_;
-  std::queue<BusEvent> events_;
-};
+bool readFromSocket(
+    int fd, uint8_t* buf, size_t len,
+    std::chrono::milliseconds timeout = std::chrono::seconds(1)) {
+  size_t received = 0;
+  return waitFor(
+      [&]() {
+        ssize_t n = platform::recv(fd, buf + received, len - received,
+                                   platform::Flags::dont_wait);
+        if (n > 0) received += static_cast<size_t>(n);
+        return received == len;
+      },
+      timeout);
+}
 
 }  // namespace ebus::detail

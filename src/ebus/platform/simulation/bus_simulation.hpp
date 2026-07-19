@@ -85,6 +85,8 @@ class BusSimulation : public BusBase {
   bool syn_active_{
       false};  // True if this instance is currently generating SYNs
 
+  void armRequestTimer(uint64_t delay);
+
   void simulationReaderLoop();
   void simulationSynLoop();
   void resetSynTimerSim(uint8_t byte);

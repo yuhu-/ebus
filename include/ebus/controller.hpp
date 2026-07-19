@@ -136,7 +136,7 @@ class Controller {
   /**
    * @brief Sets the size of the outbound buffer for network clients.
    */
-  void setOutboundBufferSize(size_t size);
+  void setOutgoingBufferSize(size_t size);
 
   /**
    * @brief Enables or disables the automatic device scan on startup.

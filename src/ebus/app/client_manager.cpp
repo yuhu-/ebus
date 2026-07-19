@@ -17,20 +17,16 @@
 #include "core/bus_monitor.hpp"
 #include "platform/socket.hpp"
 #include "platform/system.hpp"
+#include "utils/logger.hpp"
 
 namespace ebus::detail {
 
-ClientManager::ClientManager(
-    platform::Bus* bus, BusHandler* bus_handler, Request* request,
-    BusMonitor* monitor,
-    detail::platform::Queue<OrchestrationEvent>* reactor_queue,
-    BusAccessPermit* permit)
+ClientManager::ClientManager(platform::Bus* bus, BusHandler* bus_handler,
+                             Request* request, BusMonitor* monitor)
     : bus_(bus),
       bus_handler_(bus_handler),
       request_(request),
       monitor_(monitor),
-      reactor_queue_(reactor_queue),
-      permit_(permit),
       running_(false),
       session_state_(SessionState::idle),
       last_state_change_(Clock::now()),
@@ -42,7 +38,6 @@ ClientManager::ClientManager(
           ebus::RuntimeConfig{}.network.outbound_buffer_size) {
   assert(bus_ != nullptr && "Bus pointer cannot be null");
   assert(request_ != nullptr && "Request pointer cannot be null");
-  assert(reactor_queue_ != nullptr && "Reactor queue pointer cannot be null");
 
   // Initialize client arrays
   regular_clients_.fill(nullptr);
@@ -54,26 +49,21 @@ ClientManager::ClientManager(
   }
 
   if (bus_handler_) {
-    bus_listener_id_ = bus_handler_->addByteListener(
-        Delegate<void(const BusEventInfo&)>::bind<ClientManager,
-                                                  &ClientManager::onBusEvent>(
-            this));
+    bus_handler_->setClientManagerBusEventInfoCallback(
+        Delegate<void(const BusEventInfo&)>::bind<
+            ClientManager, &ClientManager::onBusEventInfo>(this));
   }
 
   if (request_) {
     request_->setExternalBusRequestedCallback(
-        Delegate<void()>::bind<ClientManager,
-                               &ClientManager::onExternalBusRequested>(this));
+        Delegate<void()>::bind<ClientManager, &ClientManager::onBusRequested>(
+            this));
   }
 }
 
 ClientManager::~ClientManager() {
   std::cout << "[ClientManager] Destroying ClientManager..." << std::endl;
   stop();
-  if (bus_handler_ && bus_listener_id_ != 0) {
-    bus_handler_->removeByteListener(bus_listener_id_);
-    bus_listener_id_ = 0;
-  }
   wakeup_signal_.close();
 }
 
@@ -119,10 +109,12 @@ void ClientManager::start(const RuntimeConfig& config) {
   }
 
   client_io_running_.store(true);
+
+  // Start the client I/O thread
   client_io_worker_ = std::make_unique<platform::ServiceThread>(
-      "ebus_client_manager", [this] { clientIoLoop(); },
-      OrchestrationLimits::client_manager_stack_size,
-      OrchestrationLimits::client_manager_priority);
+      "ebus_client_io",
+      Delegate<void()>::bind<ClientManager, &ClientManager::clientIoLoop>(
+          this));
   client_io_worker_->start();
 
   running_.store(true, std::memory_order_release);
@@ -158,14 +150,9 @@ void ClientManager::setTransmitTimeout(uint32_t timeout_ms) {
   transmit_timeout_ = std::chrono::milliseconds(timeout_ms);
 }
 
-void ClientManager::setOutboundBufferSize(size_t size) {
+void ClientManager::setOutgoingBufferSize(size_t size) {
   platform::LockGuard<platform::Mutex> lock(mutex_);
   outbound_buffer_size_ = size;
-}
-
-void ClientManager::setBusyPredicate(Delegate<bool()> pred) {
-  platform::LockGuard<platform::Mutex> lock(mutex_);
-  is_busy_ = std::move(pred);
 }
 
 bool ClientManager::addClient(int fd, ClientType type) {
@@ -181,15 +168,13 @@ bool ClientManager::addClient(int fd, ClientType type) {
 
 bool ClientManager::addClient(std::unique_ptr<platform::Socket> socket,
                               ClientType type) {
+  // Thread 2 only (called from acceptNewConnections) — no mutex needed
   auto client =
       createClient(std::move(socket), request_, type, outbound_buffer_size_);
   if (!client) return false;
 
   int new_fd = client->getFd();
 
-  platform::LockGuard<platform::Mutex> lock(mutex_);
-
-  // Select the appropriate array based on type
   auto& clients = [&]() -> auto& {
     switch (type) {
       case ClientType::regular:
@@ -203,12 +188,11 @@ bool ClientManager::addClient(std::unique_ptr<platform::Socket> socket,
     }
   }();
 
-  // Proactively clean up stale disconnected entries to free slots
+  // Evict any stale disconnected entries to free slots
   for (size_t i = 0; i < NetworkLimits::max_clients; ++i) {
     if (clients[i] && !clients[i]->isConnected()) {
       std::cout << "[ClientManager] Evicting stale disconnected client fd="
-                << clients[i]->getFd() << " at slot " << i << " to make room"
-                << std::endl;
+                << clients[i]->getFd() << " at slot " << i << std::endl;
       clients[i]->stop();
       clients[i].reset();
     }
@@ -225,7 +209,6 @@ bool ClientManager::addClient(std::unique_ptr<platform::Socket> socket,
     }
   }
 
-  // No empty slot
   std::cout << "[ClientManager] ERROR: No free slot for client fd=" << new_fd
             << " type=" << static_cast<int>(type) << std::endl;
   client->stop();
@@ -285,206 +268,6 @@ bool ClientManager::addClient(std::shared_ptr<AbstractClient> client) {
 
 void ClientManager::removeClient(int fd) { removeClientByFd(fd); }
 
-bool ClientManager::tick() {
-  if (!running_.load(std::memory_order_acquire)) return false;
-  bool work_done = false;
-
-  // Remove disconnected clients
-  removeDisconnectedClients();
-
-  // Collect all active clients
-  ebus::StaticVector<std::shared_ptr<AbstractClient>,
-                     NetworkLimits::max_clients * 3>
-      active_clients;
-  {
-    platform::LockGuard<platform::Mutex> lock(mutex_);
-    for (auto& c : regular_clients_)
-      if (c && c->isConnected()) active_clients.push_back(c);
-    for (auto& c : readonly_clients_)
-      if (c && c->isConnected()) active_clients.push_back(c);
-    for (auto& c : enhanced_clients_)
-      if (c && c->isConnected()) active_clients.push_back(c);
-  }
-
-  // Housekeeping: handle disconnected active sender
-  {
-    platform::UniqueLock<platform::Mutex> lock(mutex_);
-    if (current_active_sender_ && !current_active_sender_->isConnected()) {
-      int lost_fd = current_active_sender_->getFd();
-      auto old = current_active_sender_;
-      current_active_sender_.reset();
-      session_state_ = SessionState::idle;
-      bus_requested_.store(false, std::memory_order_release);
-      last_error_message_ = "Client disconnected.";
-      std::cout << "[ClientManager] Active sender fd=" << lost_fd
-                << " disconnected, aborting session" << std::endl;
-      lock.unlock();
-      old->stop();
-      request_->reset();
-      work_done = true;
-    }
-  }
-
-  // Select new active sender based on pending bus requests
-  std::shared_ptr<AbstractClient> selected_client;
-  uint32_t selected_sid = 0;
-  {
-    platform::UniqueLock<platform::Mutex> lock(mutex_);
-    if (!current_active_sender_ && session_state_ == SessionState::idle &&
-        (!is_busy_ || !is_busy_())) {
-      for (auto& client : active_clients) {
-        if (client->isConnected() && client->isWriteCapable() &&
-            client->hasPendingBusRequest()) {
-          if (permit_ && !permit_->tryAcquire(BusAccessPermit::external)) {
-            // Bus access denied (arbitration lost) - will retry next tick
-            break;
-          }
-          current_active_sender_ = client;
-          selected_sid = ++session_counter_;
-          session_state_ = SessionState::request;
-          last_state_change_ = Clock::now();
-          bus_requested_.store(false, std::memory_order_release);
-          work_done = true;
-          selected_client = client;
-          std::cout << "[ClientManager] Session started for client fd="
-                    << client->getFd() << " sid=" << selected_sid << std::endl;
-          break;
-        }
-      }
-    }
-  }
-  if (selected_client) {
-    selected_client->onSessionStart(selected_sid);
-  }
-
-  // Handle active session state machine
-  std::shared_ptr<AbstractClient> active_sender;
-  {
-    platform::LockGuard<platform::Mutex> lock(mutex_);
-    active_sender = current_active_sender_;
-  }
-
-  if (active_sender) {
-    auto now = Clock::now();
-    auto elapsed = now - last_state_change_;
-    auto current_timeout = (session_state_ == SessionState::transmit)
-                               ? transmit_timeout_
-                               : session_timeout_;
-    if (elapsed > current_timeout) {
-      std::cout << "[ClientManager] Session timeout in state "
-                << ebus::toString(session_state_)
-                << " for client fd=" << active_sender->getFd() << std::endl;
-      last_error_message_ = "Session timed out.";
-      stopActiveSession();
-      work_done = true;
-      if (monitor_)
-        monitor_->updateRequest([](auto& m) { m.session_timeouts++; });
-    } else if (session_state_ == SessionState::request) {
-      if (request_->busAvailable()) {
-        uint8_t first_byte = 0;
-        if (active_sender->popPendingBusRequest(first_byte)) {
-          platform::LockGuard<platform::Mutex> lock(mutex_);
-          active_sender->armSynFilter();
-          request_->requestBus(first_byte, true);
-          last_sent_byte_ = first_byte;
-          session_state_ = SessionState::response;
-          last_state_change_ = Clock::now();
-          work_done = true;
-        } else {
-          last_error_message_ = "Client sent no data for bus request.";
-          std::cout << "[ClientManager] Client fd=" << active_sender->getFd()
-                    << " sent no data for bus request" << std::endl;
-          stopActiveSession();
-          work_done = true;
-        }
-      }
-    } else if (session_state_ == SessionState::transmit) {
-      uint8_t send_byte = 0;
-      if (active_sender->popPendingBusRequest(send_byte)) {
-        bus_->writeByte(send_byte);
-        last_sent_byte_ = send_byte;
-        platform::LockGuard<platform::Mutex> lock(mutex_);
-        session_state_ = SessionState::response;
-        last_state_change_ = Clock::now();
-        work_done = true;
-      } else {
-        stopActiveSession();
-        work_done = true;
-      }
-    }
-  }
-
-  return work_done;
-}
-
-void ClientManager::processClientIoEvent(int client_fd, uint16_t events) {
-  auto client = findClientByFd(client_fd);
-  if (!client) {
-    // Already removed by another path (e.g. removeDisconnectedClients)
-    return;
-  }
-
-  // Handle error/disconnect
-  if (events & io_err) {
-    std::cout << "[ClientManager] Socket error on client fd=" << client_fd
-              << std::endl;
-    removeClientByFd(client_fd);
-    return;
-  }
-
-  // Handle input
-  if (events & io_in) {
-    // Peek to detect EOF
-    char dummy_buf[1];
-    ssize_t n = platform::recv(client_fd, dummy_buf, 1, platform::Flags::peek);
-    if (n == 0) {
-      std::cout << "[ClientManager] Client fd=" << client_fd
-                << " disconnected (EOF)" << std::endl;
-      removeClientByFd(client_fd);
-      return;
-    } else if (n < 0 && !platform::isWouldBlock() &&
-               !platform::isInterrupted()) {
-      std::cout << "[ClientManager] Client fd=" << client_fd
-                << " recv error errno=" << errno << std::endl;
-      removeClientByFd(client_fd);
-      return;
-    }
-
-    // Read available data
-    uint8_t buffer[256];
-    while (true) {
-      ssize_t bytes_read = platform::recv(client_fd, buffer, sizeof(buffer),
-                                          platform::Flags::dont_wait);
-      if (bytes_read > 0) {
-        client->processIncomingData(buffer, static_cast<size_t>(bytes_read));
-      } else if (bytes_read == 0) {
-        std::cout << "[ClientManager] Client fd=" << client_fd
-                  << " closed by peer" << std::endl;
-        removeClientByFd(client_fd);
-        return;
-      } else {
-        if (platform::isWouldBlock() || platform::isInterrupted()) {
-          break;
-        } else {
-          std::cout << "[ClientManager] Client fd=" << client_fd
-                    << " read error errno=" << errno << std::endl;
-          removeClientByFd(client_fd);
-          return;
-        }
-      }
-    }
-  }
-
-  // Handle output
-  if (events & io_out) {
-    if (!client->isConnected()) {
-      removeClientByFd(client_fd);
-      return;
-    }
-    client->tryFlushOutboundBuffer();
-  }
-}
-
 platform::ServiceThread::Status ClientManager::getThreadStatus() const {
   if (client_io_worker_) {
     return client_io_worker_->status();
@@ -510,12 +293,12 @@ ClientManagerStatus ClientManager::fetchStatus() const {
     last_err = last_error_message_;
 
     // Collect all clients
-    for (auto& c : regular_clients_)
-      if (c) snapshot.push_back(c->getClientInfo());
-    for (auto& c : readonly_clients_)
-      if (c) snapshot.push_back(c->getClientInfo());
-    for (auto& c : enhanced_clients_)
-      if (c) snapshot.push_back(c->getClientInfo());
+    for (auto& client : regular_clients_)
+      if (client) snapshot.push_back(client->getClientInfo());
+    for (auto& client : readonly_clients_)
+      if (client) snapshot.push_back(client->getClientInfo());
+    for (auto& client : enhanced_clients_)
+      if (client) snapshot.push_back(client->getClientInfo());
   }
 
   ClientManagerStatus s{map(getThreadStatus()), active, session_str, last_err};
@@ -530,57 +313,160 @@ bool ClientManager::isSessionActive() const {
   return session_state_ != SessionState::idle;
 }
 
-void ClientManager::onExternalBusRequested() {
-  bus_requested_.store(true, std::memory_order_release);
+void ClientManager::onBusRequested() {
+  platform::LockGuard<platform::Mutex> lock(mutex_);
+  if (session_state_ == SessionState::request && current_active_sender_) {
+    transitSessionState(SessionState::response);  // Waiting for echo evaluation
+  }
 }
 
-void ClientManager::onBusEvent(const BusEventInfo& info) {
+void ClientManager::onBusEventInfo(const BusEventInfo& info) {
   // Collect all connected clients
   ebus::StaticVector<std::shared_ptr<AbstractClient>,
                      NetworkLimits::max_clients * 3>
       all_clients;
   std::shared_ptr<AbstractClient> active_sender;
+  bool has_active_session = false;
 
   {
     platform::LockGuard<platform::Mutex> lock(mutex_);
     if (!running_.load(std::memory_order_acquire)) return;
     active_sender = current_active_sender_;
+    has_active_session = (session_state_ != SessionState::idle);
 
     // Snapshot all connected clients
-    for (auto& c : regular_clients_)
-      if (c && c->isConnected()) all_clients.push_back(c);
-    for (auto& c : readonly_clients_)
-      if (c && c->isConnected()) all_clients.push_back(c);
-    for (auto& c : enhanced_clients_)
-      if (c && c->isConnected()) all_clients.push_back(c);
+    for (auto& client : regular_clients_)
+      if (client && client->isConnected()) all_clients.push_back(client);
+    for (auto& client : readonly_clients_)
+      if (client && client->isConnected()) all_clients.push_back(client);
+    for (auto& client : enhanced_clients_)
+      if (client && client->isConnected()) all_clients.push_back(client);
+
+    // Reset session timeout if we have an active session
+    if (has_active_session) {
+      last_state_change_ = Clock::now();
+    }
   }
 
-  // Handle active sender's onBusByte
+  // Handle active sender's onBusByte and session state transitions
   if (active_sender && active_sender->isConnected()) {
     BridgeAction action = BridgeAction::keep_active;
     action = active_sender->onBusByte(info);
 
     if (action != BridgeAction::keep_active) {
-      platform::UniqueLock<platform::Mutex> lock(mutex_);
       if (action == BridgeAction::stop_session) {
         if (monitor_)
           monitor_->updateRequest([](auto& m) { m.bus_request_blocked++; });
-        lock.unlock();
         stopActiveSession();
       } else if (action == BridgeAction::bypass_wait) {
-        session_state_ = SessionState::transmit;
-        last_state_change_ = Clock::now();
-        bus_requested_.store(false, std::memory_order_release);
+        // Arbitration won - transition to transmit state and send next byte
+        {
+          platform::LockGuard<platform::Mutex> lock(mutex_);
+          transitSessionState(SessionState::transmit);
+        }
+        // Send the next byte (this will acquire the mutex internally)
+        trySendNextByte(active_sender);
+      }
+    }
+
+    // Session state machine: handle state transitions based on bus events
+    // Check current session state under mutex to avoid race conditions
+    {
+      platform::UniqueLock<platform::Mutex> lock(mutex_);
+      if (session_state_ == SessionState::request) {
+        lock.unlock();
+        handleBusAvailableForSession();
       }
     }
   }
 
-  // Forward byte to all clients except active sender
+  // Forward byte to all connected clients (excluding active sender)
   for (auto& client : all_clients) {
-    if (client && client->isConnected() && client != active_sender) {
-      client->sendToClient(ByteView(&info.byte, 1));
+    if (client == active_sender) continue;  // Skip active sender
+    if (client && client->isConnected()) {
+      client->enqueueOutgoingData(ByteView(&info.byte, 1));
     }
   }
+
+  // Signal the I/O thread that data has been written and needs flushing
+  signalClientIoThread();
+}
+
+void ClientManager::transitSessionState(const SessionState& state) {
+  session_state_ = state;
+  last_state_change_ = Clock::now();
+}
+
+void ClientManager::handleBusAvailableForSession() {
+  std::shared_ptr<AbstractClient> active_sender;
+  bool is_request_state = false;
+  {
+    platform::LockGuard<platform::Mutex> lock(mutex_);
+    active_sender = current_active_sender_;
+    is_request_state = (session_state_ == SessionState::request);
+  }
+
+  if (!is_request_state || !active_sender || !active_sender->isConnected())
+    return;
+
+  if (request_->busAvailable()) {
+    uint8_t first_byte = 0;
+    if (active_sender->popPendingIncomingData(first_byte)) {
+      platform::LockGuard<platform::Mutex> lock(mutex_);
+      // Verify session is still in request state
+      if (session_state_ != SessionState::request ||
+          current_active_sender_ != active_sender) {
+        return;  // Session state changed, abort
+      }
+      // active_sender->armSynFilter();
+      // bus_handler_->armSynFilter();
+
+      request_->requestBus(first_byte, true);
+      last_sent_byte_ = first_byte;
+      transitSessionState(SessionState::response);
+    } else {
+      last_error_message_ = "Client sent no data for bus request.";
+      std::cout << "[ClientManager] Client fd=" << active_sender->getFd()
+                << " sent no data for bus request" << std::endl;
+      stopActiveSession();
+    }
+  }
+}
+
+void ClientManager::tryStartSessionForClient(
+    std::shared_ptr<AbstractClient>& client) {
+  if (!client || !client->isConnected() || !client->isWriteCapable() ||
+      !client->hasPendingIncomingData()) {
+    return;
+  }
+
+  // mutex_ MUST be locked by caller
+  // Can only start if no active session and not busy
+  if (current_active_sender_ || session_state_ != SessionState::idle) {
+    return;
+  }
+
+  current_active_sender_ = client;
+  uint32_t sid = ++session_counter_;
+  transitSessionState(SessionState::request);
+  std::cout << "[ClientManager] Session started for client fd="
+            << client->getFd() << " sid=" << sid << std::endl;
+  client->onSessionStart(sid);
+}
+
+void ClientManager::trySendNextByte(std::shared_ptr<AbstractClient>& client) {
+  if (!client || !client->isConnected()) return;
+
+  uint8_t send_byte = 0;
+  if (client->popPendingIncomingData(send_byte)) {
+    platform::LockGuard<platform::Mutex> lock(mutex_);
+    bus_->writeByte(send_byte);
+    last_sent_byte_ = send_byte;
+    transitSessionState(SessionState::response);
+  }
+  //   else {
+  //     stopActiveSession();
+  //   }
 }
 
 void ClientManager::stopActiveSession() {
@@ -591,35 +477,122 @@ void ClientManager::stopActiveSession() {
     old_sender = current_active_sender_;
     current_active_sender_.reset();
     session_state_ = SessionState::idle;
-    bus_requested_.store(false, std::memory_order_release);
     last_error_message_ = "Session stopped by ClientManager.";
     std::cout << "[ClientManager] Stopping session for client fd="
               << old_sender->getFd() << std::endl;
-    if (permit_) {
-      permit_->release(BusAccessPermit::external);
-      std::cout << "[ClientManager] Bus permit released" << std::endl;
-    }
   }
   if (old_sender) old_sender->stop();
   if (request_) request_->reset();
 }
 
+void ClientManager::checkSessionTimeout() {
+  std::shared_ptr<AbstractClient> active_sender;
+  SessionState current_state;
+  Clock::time_point last_change;
+
+  {
+    platform::LockGuard<platform::Mutex> lock(mutex_);
+    active_sender = current_active_sender_;
+    current_state = session_state_;
+    last_change = last_state_change_;
+  }
+
+  if (!active_sender) return;
+
+  auto now = Clock::now();
+  auto elapsed = now - last_change;
+  auto current_timeout = (current_state == SessionState::transmit)
+                             ? transmit_timeout_
+                             : session_timeout_;
+
+  // Convert timeout to Clock::duration for comparison
+  auto timeout_duration =
+      std::chrono::duration_cast<Clock::duration>(current_timeout);
+
+  if (elapsed > timeout_duration) {
+    std::cout << "[ClientManager] Session timeout in state "
+              << ebus::toString(current_state)
+              << " for client fd=" << active_sender->getFd() << std::endl;
+    last_error_message_ = "Session timed out.";
+    stopActiveSession();
+    if (monitor_)
+      monitor_->updateRequest([](auto& m) { m.session_timeouts++; });
+  }
+}
+
+void ClientManager::handleActiveSenderDisconnected() {
+  std::shared_ptr<AbstractClient> old_sender;
+  {
+    platform::UniqueLock<platform::Mutex> lock(mutex_);
+    if (current_active_sender_ && !current_active_sender_->isConnected()) {
+      int lost_fd = current_active_sender_->getFd();
+      old_sender = current_active_sender_;
+      current_active_sender_.reset();
+      session_state_ = SessionState::idle;
+      last_error_message_ = "Client disconnected.";
+      std::cout << "[ClientManager] Active sender fd=" << lost_fd
+                << " disconnected, aborting session" << std::endl;
+      lock.unlock();
+      old_sender->stop();
+      request_->reset();
+    }
+  }
+}
+
+void ClientManager::removeDisconnectedClients() {
+  // Thread 2 only — client arrays not shared, no mutex needed
+  ebus::StaticVector<std::shared_ptr<AbstractClient>,
+                     NetworkLimits::max_clients * 3>
+      to_stop;
+
+  auto collect = [&](ClientArray& arr, const char* type_name) {
+    for (size_t i = 0; i < NetworkLimits::max_clients; ++i) {
+      if (arr[i] && !arr[i]->isConnected()) {
+        std::cout << "[ClientManager] Removing disconnected " << type_name
+                  << " client fd=" << arr[i]->getFd() << " slot=" << i
+                  << std::endl;
+        to_stop.push_back(arr[i]);
+        arr[i].reset();
+      }
+    }
+  };
+
+  collect(regular_clients_, "regular");
+  collect(readonly_clients_, "readonly");
+  collect(enhanced_clients_, "enhanced");
+
+  for (auto& client : to_stop) {
+    client->stop();
+  }
+}
+
 std::shared_ptr<AbstractClient> ClientManager::findClientByFdLocked(int fd) {
-  for (auto& client : regular_clients_) {
+  for (auto& client : regular_clients_)
     if (client && client->getFd() == fd) return client;
-  }
-  for (auto& client : readonly_clients_) {
+  for (auto& client : readonly_clients_)
     if (client && client->getFd() == fd) return client;
-  }
-  for (auto& client : enhanced_clients_) {
+  for (auto& client : enhanced_clients_)
     if (client && client->getFd() == fd) return client;
-  }
+
   return nullptr;
 }
 
 std::shared_ptr<AbstractClient> ClientManager::findClientByFd(int fd) {
   platform::LockGuard<platform::Mutex> lock(mutex_);
   return findClientByFdLocked(fd);
+}
+
+template <typename ClientArrayType>
+bool removeFromArrayLocked(const std::shared_ptr<AbstractClient>& client,
+                           ClientArrayType& client_array) {
+  // mutex_ MUST be locked by caller
+  for (size_t i = 0; i < NetworkLimits::max_clients; ++i) {
+    if (client_array[i] == client) {
+      client_array[i].reset();
+      return true;
+    }
+  }
+  return false;
 }
 
 void ClientManager::removeClientByFd(int fd) {
@@ -629,221 +602,278 @@ void ClientManager::removeClientByFd(int fd) {
     client = findClientByFdLocked(fd);
     if (!client) return;
 
-    // Find and remove from the appropriate array
-    for (size_t i = 0; i < NetworkLimits::max_clients; ++i) {
-      if (regular_clients_[i] == client) {
-        regular_clients_[i].reset();
-        break;
-      }
-    }
-    for (size_t i = 0; i < NetworkLimits::max_clients; ++i) {
-      if (readonly_clients_[i] == client) {
-        readonly_clients_[i].reset();
-        break;
-      }
-    }
-    for (size_t i = 0; i < NetworkLimits::max_clients; ++i) {
-      if (enhanced_clients_[i] == client) {
-        enhanced_clients_[i].reset();
-        break;
-      }
-    }
-  }
+    // Remove from all client arrays (only one will match)
+    removeFromArrayLocked(client, regular_clients_);
+    removeFromArrayLocked(client, readonly_clients_);
+    removeFromArrayLocked(client, enhanced_clients_);
+  }  // Lock released before stopping client
 
-  // Stop client outside lock to avoid holding mutex_ during close() block/delay
   if (client) {
     std::cout << "[ClientManager] Removing client fd=" << fd << std::endl;
     client->stop();
   }
 }
 
-void ClientManager::removeDisconnectedClients() {
-  // Collect disconnected clients under the lock, then stop them outside
+std::shared_ptr<AbstractClient> ClientManager::removeClientByFdLocked(int fd) {
+  // mutex_ MUST be locked by caller
+  auto client = findClientByFdLocked(fd);
+  if (!client) return nullptr;
+
+  removeFromArrayLocked(client, regular_clients_);
+  removeFromArrayLocked(client, readonly_clients_);
+  removeFromArrayLocked(client, enhanced_clients_);
+
+  return client;
+}
+
+void ClientManager::addListenerFds(fd_set& readfds, int& max_fd) {
+  // Thread 2 only — no mutex needed
+  auto add_listener = [&](const std::unique_ptr<platform::Socket>& listener) {
+    if (!listener || !listener->isValid()) return;
+    int fd = listener->getFd();
+    FD_SET(fd, &readfds);
+    if (fd > max_fd) max_fd = fd;
+  };
+
+  add_listener(listen_socket_regular_);
+  add_listener(listen_socket_readonly_);
+  add_listener(listen_socket_enhanced_);
+}
+
+void ClientManager::addClientFdsToSet(const ClientArray& clients,
+                                      fd_set& readfds, fd_set& writefds,
+                                      fd_set& exceptfds, int& max_fd) {
+  // Thread 2 only — no mutex needed
+  for (size_t i = 0; i < NetworkLimits::max_clients; ++i) {
+    const auto& client = clients[i];
+    if (!client || !client->isConnected()) continue;
+
+    int fd = client->getFd();
+    FD_SET(fd, &readfds);    // Always monitor for read
+    FD_SET(fd, &exceptfds);  // Monitor for errors
+    if (client->hasPendingOutgoingData()) {
+      FD_SET(fd, &writefds);  // Monitor for write if buffer has data
+    }
+    if (fd > max_fd) max_fd = fd;
+  }
+}
+
+int ClientManager::prepareFileDescriptors(fd_set& readfds, fd_set& writefds,
+                                          fd_set& exceptfds) {
+  FD_ZERO(&readfds);
+  FD_ZERO(&writefds);
+  FD_ZERO(&exceptfds);
+
+  int max_fd = -1;
+
+  // Add wakeup signal file descriptor
+  int wakeup_fd = wakeup_signal_.getReadFd();
+  if (wakeup_fd >= 0) {
+    FD_SET(wakeup_fd, &readfds);
+    max_fd = wakeup_fd;
+  }
+
+  // Thread 2 only — client arrays and listen sockets are not touched by other
+  // threads here, no mutex needed
+  addListenerFds(readfds, max_fd);
+  addClientFdsToSet(regular_clients_, readfds, writefds, exceptfds, max_fd);
+  addClientFdsToSet(readonly_clients_, readfds, writefds, exceptfds, max_fd);
+  addClientFdsToSet(enhanced_clients_, readfds, writefds, exceptfds, max_fd);
+
+  return max_fd;
+}
+
+void ClientManager::drainWakeupSignal(fd_set& readfds) {
+  int wakeup_fd = wakeup_signal_.getReadFd();
+  if (wakeup_fd < 0) return;
+
+  if (FD_ISSET(wakeup_fd, &readfds)) {
+    wakeup_signal_.drain();
+    // std::cout << "[ClientManager] Wakeup signal drained" << std::endl;
+  }
+}
+
+void ClientManager::acceptNewConnections(fd_set& readfds) {
+  // Thread 2 only — listen sockets and client arrays not shared here
+  auto try_accept = [&](std::unique_ptr<platform::Socket>& listener,
+                        ClientType type) {
+    if (!listener || !listener->isValid()) return;
+
+    int listen_fd = listener->getFd();
+    if (!FD_ISSET(listen_fd, &readfds)) return;
+
+    int client_fd = listener->accept();
+    if (client_fd >= 0) {
+      std::cout << "[ClientManager] Connection accepted on listener fd "
+                << listen_fd << "-> client fd " << client_fd << " (type "
+                << static_cast<int>(type) << ")" << std::endl;
+      if (!addClient(client_fd, type)) {
+        std::cout << "[ClientManager] Failed to register client fd "
+                  << client_fd << std::endl;
+        platform::close(client_fd);
+      }
+    } else {
+      std::cout << "[ClientManager] accept() failed on listener fd "
+                << listen_fd << ", errno: " << errno << std::endl;
+    }
+  };
+
+  try_accept(listen_socket_regular_, ClientType::regular);
+  try_accept(listen_socket_readonly_, ClientType::read_only);
+  try_accept(listen_socket_enhanced_, ClientType::enhanced);
+}
+
+void ClientManager::handleClientIO(fd_set& readfds, fd_set& writefds,
+                                   fd_set& exceptfds) {
+  // Thread 2 only — client arrays not shared, no mutex needed here
   ebus::StaticVector<std::shared_ptr<AbstractClient>,
                      NetworkLimits::max_clients * 3>
       to_stop;
 
-  {
-    platform::LockGuard<platform::Mutex> lock(mutex_);
-    bool removed = false;
+  handleClientActivity(regular_clients_, readfds, writefds, exceptfds, to_stop);
+  handleClientActivity(readonly_clients_, readfds, writefds, exceptfds,
+                       to_stop);
+  handleClientActivity(enhanced_clients_, readfds, writefds, exceptfds,
+                       to_stop);
 
-    auto cleanup = [&](auto& arr, const char* type_name) {
-      for (size_t i = 0; i < NetworkLimits::max_clients; ++i) {
-        if (arr[i] && !arr[i]->isConnected()) {
-          std::cout << "[ClientManager] Removing disconnected " << type_name
-                    << " client fd=" << arr[i]->getFd() << " slot=" << i
-                    << std::endl;
-          to_stop.push_back(arr[i]);
-          arr[i].reset();
-          removed = true;
-        }
-      }
-    };
+  for (auto& client : to_stop) {
+    client->stop();
+  }
+}
 
-    cleanup(regular_clients_, "regular");
-    cleanup(readonly_clients_, "readonly");
-    cleanup(enhanced_clients_, "enhanced");
+void ClientManager::handleClientActivity(
+    ClientArray& clients, fd_set& readfds, fd_set& writefds, fd_set& exceptfds,
+    ebus::StaticVector<std::shared_ptr<AbstractClient>,
+                       NetworkLimits::max_clients * 3>& to_stop) {
+  // Thread 2 only — no mutex needed for client array iteration
+  for (size_t i = 0; i < NetworkLimits::max_clients; ++i) {
+    auto& client = clients[i];
+    if (!client || !client->isConnected()) continue;
 
-    if (removed) {
-      signalClientIoThread();
+    int fd = client->getFd();
+
+    if (FD_ISSET(fd, &exceptfds)) {
+      std::cout << "[ClientManager] Exception on client fd=" << fd << std::endl;
+      to_stop.push_back(client);
+      client.reset();
+      continue;
+    }
+
+    if (FD_ISSET(fd, &readfds)) {
+      handleSocketInput(fd, client, to_stop);
+    }
+
+    if (FD_ISSET(fd, &writefds)) {
+      handleSocketOutput(fd, client, to_stop);
     }
   }
+}
 
-  // Stop sockets outside the lock
-  for (auto& c : to_stop) {
-    c->stop();
+void ClientManager::handleSocketInput(
+    int fd, std::shared_ptr<AbstractClient>& client,
+    ebus::StaticVector<std::shared_ptr<AbstractClient>,
+                       NetworkLimits::max_clients * 3>& to_stop) {
+  // Thread 2 only — no mutex needed for client array or socket ops
+  uint8_t buffer[256];
+
+  while (true) {
+    ssize_t bytes_read =
+        platform::recv(fd, buffer, sizeof(buffer), platform::Flags::dont_wait);
+
+    if (bytes_read > 0) {
+      client->handleIncomingStream(buffer, static_cast<size_t>(bytes_read));
+      // tryStartSessionForClient accesses session state shared with Thread 1
+      // — mutex is taken inside
+      tryStartSessionForClient(client);
+    } else if (bytes_read == 0) {
+      std::cout << "[ClientManager] Client fd=" << fd << " closed connection"
+                << std::endl;
+      to_stop.push_back(client);
+      client.reset();
+      break;
+    } else {
+      if (platform::isWouldBlock() || platform::isInterrupted()) {
+        break;
+      }
+      std::cout << "[ClientManager] recv() failed on client fd=" << fd
+                << ", errno=" << errno << std::endl;
+      to_stop.push_back(client);
+      client.reset();
+      break;
+    }
+  }
+}
+
+void ClientManager::handleSocketOutput(
+    int fd, std::shared_ptr<AbstractClient>& client,
+    ebus::StaticVector<std::shared_ptr<AbstractClient>,
+                       NetworkLimits::max_clients * 3>& to_stop) {
+  (void)fd;
+  // Thread 2 only — no mutex needed
+  // flushOutgoingData acquires io_mutex_ internally (shared with Thread 1)
+  if (!client->flushOutgoingData()) {
+    to_stop.push_back(client);
+    client.reset();
   }
 }
 
 void ClientManager::clientIoLoop() {
+  fd_set readfds, writefds, exceptfds;
+
   while (client_io_running_.load()) {
-    fd_set readfds;
-    fd_set writefds;
-    fd_set exceptfds;
-    FD_ZERO(&readfds);
-    FD_ZERO(&writefds);
-    FD_ZERO(&exceptfds);
-
-    int max_fd = -1;
-
-    // Add wakeup signal FD
-    int wakeup_fd = wakeup_signal_.getReadFd();
-    if (wakeup_fd >= 0) {
-      FD_SET(wakeup_fd, &readfds);
-      max_fd = wakeup_fd;
-    }
-
-    // Add server listening sockets & client fds to select
-    {
-      platform::LockGuard<platform::Mutex> lock(mutex_);
-      auto setup_listeners =
-          [&](const std::unique_ptr<platform::Socket>& listener) {
-            if (!listener || !listener->isValid()) return;
-
-            int listen_fd = listener->getFd();
-            FD_SET(listen_fd, &readfds);
-            if (listen_fd > max_fd) max_fd = listen_fd;
-          };
-
-      setup_listeners(listen_socket_regular_);
-      setup_listeners(listen_socket_readonly_);
-      setup_listeners(listen_socket_enhanced_);
-
-      auto setup_clients = [&](const auto& client_array) {
-        for (auto& c : client_array) {
-          if (c && c->isConnected()) {
-            int fd = c->getFd();
-            FD_SET(fd, &readfds);
-            FD_SET(fd, &exceptfds);
-            if (c->hasPendingData()) FD_SET(fd, &writefds);
-            if (fd > max_fd) max_fd = fd;
-          }
-        }
-      };
-
-      setup_clients(regular_clients_);
-      setup_clients(readonly_clients_);
-      setup_clients(enhanced_clients_);
-    }
+    // Phase 1: Prepare file descriptor sets for this iteration
+    int max_fd = prepareFileDescriptors(readfds, writefds, exceptfds);
 
     if (max_fd == -1) {
-      platform::sleepMilli(100);
+      platform::sleepMilli(10);  // 10ms timeout
       continue;
     }
 
-    struct timeval tv;
-    tv.tv_sec = 0;
-    tv.tv_usec = 100000;  // 100ms
+    // Phase 2: Use a short timeout for responsiveness
+    // We check for session timeouts and bus availability in the timeout handler
+    struct timeval tv{0, 10000};  // 10ms timeout
 
+    // Phase 3: Block on socket events
     int activity = select(max_fd + 1, &readfds, &writefds, &exceptfds, &tv);
 
     if (!client_io_running_.load()) break;
+
     if (activity < 0) {
-      if (errno == EINTR) continue;
+      if (errno == EINTR || errno == EBADF) continue;
+      std::cerr << "[ClientManager] select() failed: " << strerror(errno)
+                << std::endl;
       break;
     }
-    if (activity == 0) continue;
 
-    // Drain wakeup signal
-    if (wakeup_fd >= 0 && FD_ISSET(wakeup_fd, &readfds)) {
-      wakeup_signal_.drain();
-    }
-
-    // Handle new connections
-    ebus::StaticVector<std::pair<int, ClientType>, NetworkLimits::max_clients>
-        pending_clients;
-    {
-      platform::LockGuard<platform::Mutex> lock(mutex_);
-
-      auto handle_accept = [&](std::unique_ptr<platform::Socket>& listener,
-                               ClientType type) {
-        if (!listener || !listener->isValid()) return false;
-
-        int listen_fd = listener->getFd();
-        if (!FD_ISSET(listen_fd, &readfds)) {
-          return false;
+    // Phase 3.5: On timeout, check for session timeout, disconnected clients,
+    // and bus availability for pending sessions
+    if (activity == 0) {
+      checkSessionTimeout();
+      handleActiveSenderDisconnected();
+      removeDisconnectedClients();
+      // Check if we have a session in request state waiting for bus
+      // availability This is a fallback for when no bus events are coming in
+      {
+        platform::UniqueLock<platform::Mutex> lock(mutex_);
+        if (session_state_ == SessionState::request && current_active_sender_) {
+          lock.unlock();
+          handleBusAvailableForSession();
         }
-
-        int client_fd = listener->accept();
-        if (client_fd >= 0) {
-          std::cout << "[ClientManager] Connection accepted on listener fd "
-                    << listen_fd << " -> client fd " << client_fd << " (type "
-                    << static_cast<int>(type) << ")" << std::endl;
-          pending_clients.emplace_back(client_fd, type);
-          return true;
-        } else {
-          std::cout << "[ClientManager] ERROR: accept() failed on listener fd "
-                    << listen_fd << ", errno: " << errno << std::endl;
-        }
-        return false;
-      };
-
-      handle_accept(listen_socket_regular_, ClientType::regular);
-      handle_accept(listen_socket_readonly_, ClientType::read_only);
-      handle_accept(listen_socket_enhanced_, ClientType::enhanced);
-    }
-
-    // Add pending clients outside of the lock to avoid holding mutex_ during
-    // addClient()
-    for (const auto& client_pair : pending_clients) {
-      int client_fd = client_pair.first;
-      ClientType type = client_pair.second;
-      if (!addClient(client_fd, type)) {
-        std::cout << "[ClientManager] ERROR: Failed to register client fd "
-                  << client_fd << std::endl;
-        platform::close(client_fd);
       }
+      continue;
     }
 
-    // Collect readiness events for active clients
-    {
-      platform::LockGuard<platform::Mutex> lock(mutex_);
-      auto process_clients = [&](const auto& client_array) {
-        for (auto& c : client_array) {
-          if (c && c->isConnected()) {
-            int fd = c->getFd();
-            uint16_t events = 0;
-            if (FD_ISSET(fd, &readfds)) events |= io_in;
-            if (FD_ISSET(fd, &exceptfds)) events |= io_err;
-            if (c->hasPendingData()) {
-              FD_SET(fd, &writefds);
-              events |= io_out;
-            }
-            if (events != 0 && reactor_queue_) {
-              OrchestrationEvent ev;
-              ev.type = OrchestrationEventType::client_io_ready;
-              ev.data.client_io_data.client_fd = fd;
-              ev.data.client_io_data.events = events;
-              reactor_queue_->tryPush(std::move(ev));
-            }
-          }
-        }
-      };
+    // Phase 4: Drain wakeup signal if triggered
+    drainWakeupSignal(readfds);
 
-      process_clients(regular_clients_);
-      process_clients(readonly_clients_);
-      process_clients(enhanced_clients_);
-    }
+    // Phase 5: Accept pending new connections
+    acceptNewConnections(readfds);
+
+    // Phase 6: Process client read/write activity
+    handleClientIO(readfds, writefds, exceptfds);
+
+    // Phase 7: Cleanup disconnected clients (also on activity)
+    removeDisconnectedClients();
   }
 }
 

@@ -19,11 +19,6 @@ namespace ebus::detail {
 class BusMonitor;
 class Request;
 
-using BusRequestWonCallback = Delegate<void()>;
-using BusRequestLostCallback = Delegate<void()>;
-using HandlerProtocolCallback = Delegate<void(const ProtocolInfo& info)>;
-using HandlerReactiveCallback = Delegate<void(const ReactiveInfo& info)>;
-
 /**
  * Handler class that implements the eBUS protocol logic as a finite state
  * machine. It processes incoming bytes from the bus, manages state transitions,
@@ -42,10 +37,10 @@ class Handler {
   void setSourceAddress(uint8_t source_address);
   uint8_t getSourceAddress() const;
   uint8_t getTargetAddress() const;
-  void setBusRequestWonCallback(BusRequestWonCallback callback);
-  void setBusRequestLostCallback(BusRequestLostCallback callback);
-  void setReactiveCallback(HandlerReactiveCallback callback);
-  void setProtocolCallback(HandlerProtocolCallback callback);
+  void setBusRequestWonCallback(Delegate<void()> callback);
+  void setBusRequestLostCallback(Delegate<void()> callback);
+  void setReactiveCallback(Delegate<void(const ReactiveInfo& info)> callback);
+  void setProtocolCallback(Delegate<void(const ProtocolInfo& info)> callback);
 
   // Working Methods
   bool sendActiveMessage(ByteView message);
@@ -68,10 +63,10 @@ class Handler {
   uint8_t source_address_ = 0;
   uint8_t target_address_ = 0;
 
-  BusRequestWonCallback won_callback_ = nullptr;
-  BusRequestLostCallback lost_callback_ = nullptr;
-  HandlerReactiveCallback reactive_callback_ = nullptr;
-  HandlerProtocolCallback protocol_callback_ = nullptr;
+  Delegate<void()> won_callback_ = nullptr;
+  Delegate<void()> lost_callback_ = nullptr;
+  Delegate<void(const ReactiveInfo& info)> reactive_callback_ = nullptr;
+  Delegate<void(const ProtocolInfo& info)> protocol_callback_ = nullptr;
 
   Clock::time_point last_point_;
   bool measure_sync_ = false;

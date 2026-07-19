@@ -241,6 +241,15 @@ void BusPosix::ensureOpen() const {
   if (!open_ || fd_ < 0) throw std::runtime_error("BusPosix: device not open");
 }
 
+void BusPosix::armRequestTimer(uint64_t delay) {
+  [[maybe_unused]] auto future =
+      std::async(std::launch::async, [this, delay]() {
+        std::this_thread::sleep_for(std::chrono::microseconds(delay));
+        writeByte(request_->busRequestAddress());
+        bus_request_flag_.store(true, std::memory_order_release);
+      });
+}
+
 void BusPosix::readerThread() {
   while (running_.load()) {
     uint8_t byte = 0;
@@ -250,36 +259,30 @@ void BusPosix::readerThread() {
 
     if (n == 1) {
       auto arrival_time = Clock::now();
+
       lockAndInvoke(listeners_mutex_, getReadListeners(), byte);
-
       recordUtilization(byte);
-
-      // Notify SYN generator that a symbol was recognised (end of char)
       resetSynTimer(byte);
-
-      detail::BusEvent event;
-      event.byte = byte;
-      event.bus_request =
-          bus_request_flag_.exchange(false, std::memory_order_acq_rel);
-      event.start_bit = false;
-      // In POSIX, we don't have ISR-level start bit detection like ESP32.
-      // If a framing error occurs, it's a strong indicator of a start bit
-      // issue. For now, we'll increment this counter in the BusFreeRtos only.
-      // If POSIX serial drivers provide more granular error types, we could
-      // map them here. if (monitor_) monitor_->updateBus([](auto& m){
-      // m.start_bit_errors++;
-      // });
-      event.timestamp = arrival_time;
-      lockAndInvoke(listeners_mutex_, getBusEventListeners(), event);
 
       // --- CRITICAL POINT: Spec 6.3 Immediate Bus Access ---
       // We check for arbitration intent AFTER notifying software to ensure
       // the state machine can pre-load the intent for the NEXT syn, while
       // hardware acts on the CURRENT syn.
+      bool suppress_syn_bus_event = false;
       if (byte == Symbols::syn && request_->busRequestPending()) {
-        sleepMicro(BusLimits::platform::Posix::request_delay_us);
-        writeByte(request_->busRequestAddress());
-        bus_request_flag_.store(true, std::memory_order_release);
+        armRequestTimer(BusLimits::platform::Posix::request_delay_us);
+        if (request_->busRequestIsExternal())
+          suppress_syn_bus_event = true;  // Suppress the SYN byte event
+      }
+
+      if (!suppress_syn_bus_event) {
+        BusEvent event;
+        event.byte = byte;
+        event.timestamp = arrival_time;
+        event.bus_request =
+            bus_request_flag_.exchange(false, std::memory_order_acq_rel);
+        event.start_bit = false;  // Not applicable in simulation
+        lockAndInvoke(listeners_mutex_, getBusEventListeners(), event);
       }
     } else if (n == 0) {
       // EOF - stop thread

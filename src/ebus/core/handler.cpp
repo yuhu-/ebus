@@ -113,19 +113,21 @@ uint8_t Handler::getSourceAddress() const { return source_address_; }
 
 uint8_t Handler::getTargetAddress() const { return target_address_; }
 
-void Handler::setBusRequestWonCallback(BusRequestWonCallback callback) {
+void Handler::setBusRequestWonCallback(Delegate<void()> callback) {
   won_callback_ = std::move(callback);
 }
 
-void Handler::setBusRequestLostCallback(BusRequestLostCallback callback) {
+void Handler::setBusRequestLostCallback(Delegate<void()> callback) {
   lost_callback_ = std::move(callback);
 }
 
-void Handler::setReactiveCallback(HandlerReactiveCallback callback) {
+void Handler::setReactiveCallback(
+    Delegate<void(const ReactiveInfo& info)> callback) {
   reactive_callback_ = std::move(callback);
 }
 
-void Handler::setProtocolCallback(HandlerProtocolCallback callback) {
+void Handler::setProtocolCallback(
+    Delegate<void(const ProtocolInfo& info)> callback) {
   protocol_callback_ = std::move(callback);
 }
 
@@ -139,9 +141,7 @@ bool Handler::sendActiveMessage(ByteView message) {
     // Proactively request the bus if it's currently idle. This ensures that
     // the low-level physical layer (ISR or Simulation reader) sees the
     // intent before the next SYN arrives on the wire.
-    if (request_ && request_->busAvailable()) {
-      request_->requestBus(source_address_);
-    }
+    // if (request_) request_->requestBus(source_address_);
   } else {
     if (monitor_) monitor_->updateHandler([](auto& m) { m.error_active++; });
     return false;
@@ -337,7 +337,7 @@ void Handler::passiveReceiveMaster(uint8_t byte) {
     checkActiveBuffers();
 
     // Initiate request bus
-    if (active_message_) request_->requestBus(source_address_);
+    if (active_message_ && request_) request_->requestBus(source_address_);
   }
 }
 

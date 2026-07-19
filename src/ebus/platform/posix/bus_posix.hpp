@@ -100,6 +100,8 @@ class BusPosix : public BusBase {
 
   void ensureOpen() const;
 
+  void armRequestTimer(uint64_t delay);
+
   // Thread function: read bytes and push them into the queue
   void readerThread();
 

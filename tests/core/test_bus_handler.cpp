@@ -48,13 +48,13 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
     } stats{telegram_count, error_count};
 
     handler.setProtocolCallback(
-        HandlerProtocolCallback::bind<Stats, &Stats::onEvent>(&stats));
+        Delegate<void(const ebus::ProtocolInfo& info)>::bind<Stats,
+                                                             &Stats::onEvent>(
+            &stats));
 
     // PUMP BRIDGE: Required because BusHandler is now a passive logic engine
-    bus.addBusEventListener(
-        platform::BusBase::BusEventListener::bind<BusHandler,
-                                                  &BusHandler::processEvent>(
-            &busHandler));
+    bus.addBusEventListener(Delegate<void(const BusEvent& event)>::bind<
+                            BusHandler, &BusHandler::onBusEvent>(&busHandler));
 
     bus.start();
 
@@ -128,13 +128,13 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
       }
     } stats{telegram_count};
     handler.setProtocolCallback(
-        HandlerProtocolCallback::bind<Stats, &Stats::onEvent>(&stats));
+        Delegate<void(const ebus::ProtocolInfo& info)>::bind<Stats,
+                                                             &Stats::onEvent>(
+            &stats));
 
     // PUMP BRIDGE: Required because BusHandler is now a passive logic engine
-    bus.addBusEventListener(
-        platform::BusBase::BusEventListener::bind<BusHandler,
-                                                  &BusHandler::processEvent>(
-            &busHandler));
+    bus.addBusEventListener(Delegate<void(const BusEvent& event)>::bind<
+                            BusHandler, &BusHandler::onBusEvent>(&busHandler));
 
     bus.start();
 
@@ -145,7 +145,13 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
     handler.sendActiveMessage(msg);
 
     // Pump SYNs until arbitration starts.
-    for (int i = 0; i < 3; ++i) {
+    // Needs 4:
+    // we start with 3 after
+    // first SYN:  2
+    // second SYN: 1
+    // third SYN:  0 we request bus
+    // forth SYN:  0 we fire address byte 200us delayed on the bus
+    for (int i = 0; i < 4; ++i) {
       bus.writeByte(ebus::Symbols::syn);
       platform::sleepMilli(50);
       if (handler.getState() != ebus::HandlerState::passive_receive_master)
@@ -157,7 +163,7 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
       platform::sleepMilli(10);
 
     REQUIRE(telegram_count.load() == 1);
-    REQUIRE(request.getLockCounter() == 2); 
+    REQUIRE(request.getLockCounter() == 2);
 
     // send second message and step through SYNs to force arbitration
     telegram_count.store(0);
@@ -169,7 +175,9 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
 
     bus.writeByte(ebus::Symbols::syn);
     platform::sleepMilli(20);
-    REQUIRE(request.getLockCounter() == 3);  // resetted to 3 during sending
+    REQUIRE(request.getLockCounter() == 0);  // request bus
+
+    bus.writeByte(ebus::Symbols::syn);  // fire bus 200us  delayed
 
     // wait for completion
     for (int i = 0; i < 50 && telegram_count.load() == 0; ++i)
@@ -203,13 +211,13 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
       }
     } stats{telegram_count};
     handler.setProtocolCallback(
-        HandlerProtocolCallback::bind<Stats, &Stats::onEvent>(&stats));
+        Delegate<void(const ebus::ProtocolInfo& info)>::bind<Stats,
+                                                             &Stats::onEvent>(
+            &stats));
 
     // PUMP BRIDGE: Required because BusHandler is now a passive logic engine
-    bus.addBusEventListener(
-        platform::BusBase::BusEventListener::bind<BusHandler,
-                                                  &BusHandler::processEvent>(
-            &busHandler));
+    bus.addBusEventListener(Delegate<void(const BusEvent& event)>::bind<
+                            BusHandler, &BusHandler::onBusEvent>(&busHandler));
 
     bus.start();
 
@@ -230,7 +238,7 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
     } extReq{callbackFired, clientData, bus};
 
     request.setExternalBusRequestedCallback(
-        BusRequestedCallback::bind<ExternalReq, &ExternalReq::onReq>(&extReq));
+        Delegate<void()>::bind<ExternalReq, &ExternalReq::onReq>(&extReq));
 
     // request repeatedly until served; wait for callback and telegram
     for (int i = 0;

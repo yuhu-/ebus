@@ -19,26 +19,16 @@ void BusHandler::setWatchdogTimeout(uint32_t timeout_ms) {
   watchdog_timeout_ms_ = std::chrono::milliseconds(timeout_ms);
 }
 
-uint32_t BusHandler::addByteListener(ByteListener listener) {
-  platform::LockGuard<platform::Mutex> lock(mutex_);
-  uint32_t id = next_listener_id_++;
-  listeners_.push_back({id, std::move(listener)});
-  listeners_version_++;
-  return id;
+void BusHandler::setClientManagerBusEventInfoCallback(
+    Delegate<void(const BusEventInfo& info)> callback) {
+  client_manager_callback_ = std::move(callback);
+}
+void BusHandler::setControllerBusEventInfoCallback(
+    Delegate<void(const BusEventInfo& info)> callback) {
+  controller_callback_ = std::move(callback);
 }
 
-void BusHandler::removeByteListener(uint32_t id) {
-  platform::LockGuard<platform::Mutex> lock(mutex_);
-  listeners_.erase(
-      std::remove_if(listeners_.begin(), listeners_.end(),
-                     [id](const std::pair<uint32_t, ByteListener>& p) {
-                       return p.first == id;
-                     }),
-      listeners_.end());
-  listeners_version_++;
-}
-
-void BusHandler::processEvent(const BusEvent& bus_event) {
+void BusHandler::onBusEvent(const BusEvent& bus_event) {
   BusEventInfo info{bus_event.byte,
                     HandlerState::passive_receive_master,
                     RequestState::observe,
@@ -59,23 +49,9 @@ void BusHandler::processEvent(const BusEvent& bus_event) {
     info.handler_state = handler_->getState();
   }
 
-  {
-    platform::LockGuard<platform::Mutex> lock(mutex_);
-    if (listeners_version_ != last_cache_version_) {
-      listeners_cache_.clear();
-      std::for_each(listeners_.begin(), listeners_.end(),
-                    [this](const auto& item) {
-                      listeners_cache_.push_back(item.second);
-                    });
-      last_cache_version_ = listeners_version_;
-    }
-  }
+  if (client_manager_callback_) client_manager_callback_(info);
 
-  if (!listeners_cache_.empty()) {
-    for (const auto& listener : listeners_cache_) {
-      listener(info);
-    }
-  }
+  if (controller_callback_) controller_callback_(info);
 }
 
 BusHandlerStatus BusHandler::fetchStatus() const {

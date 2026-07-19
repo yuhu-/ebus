@@ -20,10 +20,10 @@ AbstractClient::AbstractClient(std::unique_ptr<platform::Socket> socket,
                                Request* request, bool write_capable,
                                size_t max_buffer)
     : socket_(std::move(socket)),
-      buffer_storage_(new uint8_t[max_buffer]),
       request_(request),
+      write_capable_(write_capable),
       max_buffer_size_(max_buffer),
-      write_capable_(write_capable) {}
+      outbound_buffer_(new uint8_t[max_buffer]) {}
 
 AbstractClient::~AbstractClient() { stop(); }
 
@@ -33,8 +33,8 @@ void AbstractClient::stop() {
   }
 }
 
-bool AbstractClient::tryFlushOutboundBuffer() {
-  platform::LockGuard<platform::Mutex> lock(buffer_mutex_);
+bool AbstractClient::flushOutgoingData() {
+  platform::LockGuard<platform::Mutex> lock(io_mutex_);
   return flushLocked();
 }
 
@@ -49,7 +49,7 @@ bool AbstractClient::flushLocked() {
   while (count_ > 0) {
     // Send in one or two parts depending on circular wrap
     size_t part_len = std::min(count_, max_buffer_size_ - head_);
-    ssize_t n = socket_->write(&buffer_storage_[head_], part_len);
+    ssize_t n = socket_->write(&outbound_buffer_[head_], part_len);
 
     if (n > 0) {
       head_ = (head_ + n) % max_buffer_size_;
@@ -63,7 +63,8 @@ bool AbstractClient::flushLocked() {
       // n < 0: check errno
       int err = errno;
       if (err == EAGAIN || err == EWOULDBLOCK || err == EINTR) {
-        // Expected on non-blocking socket: buffer full or interrupted, try later
+        // Expected on non-blocking socket: buffer full or interrupted, try
+        // later
         break;
       }
       // Real error (ECONNRESET, EPIPE, EBADF ...): close socket
@@ -82,25 +83,31 @@ ReadOnlyClient::ReadOnlyClient(std::unique_ptr<platform::Socket> socket,
                                Request* request, size_t max_buffer)
     : AbstractClient(std::move(socket), request, false, max_buffer) {}
 
-void ReadOnlyClient::processIncomingData(const uint8_t* data, size_t len) {
+void ReadOnlyClient::handleIncomingStream(const uint8_t* data, size_t len) {
   (void)data;
   (void)len;
   // Read-only clients don't process inbound socket data for bus requests
 }
 
-bool ReadOnlyClient::hasPendingBusRequest() const {
+bool ReadOnlyClient::hasPendingIncomingData() const {
   return false;  // Read-only clients never generate bus requests
 }
 
-bool ReadOnlyClient::popPendingBusRequest(uint8_t& out) {
+bool ReadOnlyClient::popPendingIncomingData(uint8_t& out) {
   (void)out;
   return false;  // Never called for read-only clients
 }
 
-void ReadOnlyClient::sendToClient(ByteView data) {
+BridgeAction ReadOnlyClient::onBusByte(const BusEventInfo&) {
+  if (!isConnected()) return BridgeAction::stop_session;
+  // This should never happen, because ReadOnlyClient is never allowed to write
+  return BridgeAction::stop_session;
+}
+
+void ReadOnlyClient::enqueueOutgoingData(ByteView data) {
   if (!socket_ || !socket_->isValid() || data.empty()) return;
   {
-    platform::LockGuard<platform::Mutex> lock(buffer_mutex_);
+    platform::LockGuard<platform::Mutex> lock(io_mutex_);
 
     // Drop oldest data if we would exceed capacity (O(1) in circular buffer)
     if (count_ + data.size() > max_buffer_size_) {
@@ -110,21 +117,14 @@ void ReadOnlyClient::sendToClient(ByteView data) {
     }
 
     for (uint8_t b : data) {
-      buffer_storage_[(head_ + count_) % max_buffer_size_] = b;
+      outbound_buffer_[(head_ + count_) % max_buffer_size_] = b;
       count_++;
     }
-    flushLocked();
   }
 }
 
-BridgeAction ReadOnlyClient::onBusByte(const BusEventInfo&) {
-  if (!isConnected()) return BridgeAction::stop_session;
-  // This should never happen, because ReadOnlyClient is never allowed to write
-  return BridgeAction::stop_session;
-}
-
 ClientInfo ReadOnlyClient::getClientInfo() const {
-  platform::LockGuard<platform::Mutex> lock(buffer_mutex_);
+  platform::LockGuard<platform::Mutex> lock(io_mutex_);
   return ClientInfo{socket_ ? socket_->getFd() : -1, "read_only", isConnected(),
                     write_capable_, count_};
 }
@@ -133,65 +133,46 @@ RegularClient::RegularClient(std::unique_ptr<platform::Socket> socket,
                              Request* request, size_t max_buffer)
     : AbstractClient(std::move(socket), request, true, max_buffer) {}
 
-void RegularClient::processIncomingData(const uint8_t* data, size_t len) {
+void RegularClient::handleIncomingStream(const uint8_t* data, size_t len) {
   if (!isConnected() || !write_capable_ || len == 0) return;
-  platform::LockGuard<platform::Mutex> lock(buffer_mutex_);
+  platform::LockGuard<platform::Mutex> lock(io_mutex_);
   // Queue all received bytes for byte-by-byte forwarding
   for (size_t i = 0; i < len; ++i) {
-    pending_bus_requests_.push(data[i]);
+    inbound_buffer_.push(data[i]);
   }
 }
 
-bool RegularClient::hasPendingBusRequest() const {
-  platform::LockGuard<platform::Mutex> lock(buffer_mutex_);
-  return !pending_bus_requests_.empty();
+bool RegularClient::hasPendingIncomingData() const {
+  platform::LockGuard<platform::Mutex> lock(io_mutex_);
+  return !inbound_buffer_.empty();
 }
 
-bool RegularClient::popPendingBusRequest(uint8_t& out) {
-  platform::LockGuard<platform::Mutex> lock(buffer_mutex_);
-  if (pending_bus_requests_.empty()) return false;
-  pending_bus_requests_.pop(out);
+bool RegularClient::popPendingIncomingData(uint8_t& out) {
+  platform::LockGuard<platform::Mutex> lock(io_mutex_);
+  if (inbound_buffer_.empty()) return false;
+  inbound_buffer_.pop(out);
   last_sent_byte_ = out;
   return true;
-}
-
-void RegularClient::sendToClient(ByteView data) {
-  if (!socket_ || !socket_->isValid() || data.empty()) return;
-  {
-    platform::LockGuard<platform::Mutex> lock(buffer_mutex_);
-
-    if (count_ + data.size() > max_buffer_size_) {
-      size_t to_drop = (count_ + data.size()) - max_buffer_size_;
-      head_ = (head_ + to_drop) % max_buffer_size_;
-      count_ -= to_drop;
-    }
-
-    for (uint8_t b : data) {
-      buffer_storage_[(head_ + count_) % max_buffer_size_] = b;
-      count_++;
-    }
-    flushLocked();
-  }
 }
 
 BridgeAction RegularClient::onBusByte(const BusEventInfo& info) {
   if (!isConnected()) return BridgeAction::stop_session;
 
-  // ONE-SHOT SYN filter: Hide first SYN after requestBus() (spec: 5.1, 6.1)
-  if (info.byte == ebus::Symbols::syn && filter_next_syn_) {
-    filter_next_syn_ = false;  // Disarm after first SYN
-    return BridgeAction::keep_active;
-  }
+  // // ONE-SHOT SYN filter: Hide first SYN after requestBus() (spec: 5.1, 6.1)
+  // if (info.byte == ebus::Symbols::syn && filter_next_syn_) {
+  //   filter_next_syn_ = false;  // Disarm after first SYN
+  //   return BridgeAction::keep_active;
+  // }
 
   // Lock to protect last_sent_byte_ and for consistency with other methods
-  platform::UniqueLock<platform::Mutex> lock(buffer_mutex_);
+  platform::UniqueLock<platform::Mutex> lock(io_mutex_);
 
   switch (info.result) {
     case RequestResult::first_won:
     case RequestResult::second_won:
       // Arbitration won: send address echo back to client and proceed to data
-      lock.unlock();  // Release lock before calling sendToClient
-      sendToClient(ByteView(&info.byte, 1));
+      lock.unlock();  // Release lock before calling enqueueOutgoingData
+      enqueueOutgoingData(ByteView(&info.byte, 1));
       return BridgeAction::bypass_wait;
 
     case RequestResult::first_lost:
@@ -205,20 +186,38 @@ BridgeAction RegularClient::onBusByte(const BusEventInfo& info) {
     case RequestResult::observe_data:
       // Echo verification: if we are active, the next data byte must match
       if (info.byte != last_sent_byte_) return BridgeAction::stop_session;
-      lock.unlock();  // Release lock before calling sendToClient
-      sendToClient(ByteView(&info.byte, 1));
+      lock.unlock();  // Release lock before calling enqueueOutgoingData
+      enqueueOutgoingData(ByteView(&info.byte, 1));
       return BridgeAction::bypass_wait;
 
     default:
       // Sniffing heartbeats (SYN) or transparent traffic
-      lock.unlock();  // Release lock before calling sendToClient
-      sendToClient(ByteView(&info.byte, 1));
+      lock.unlock();  // Release lock before calling enqueueOutgoingData
+      enqueueOutgoingData(ByteView(&info.byte, 1));
       return BridgeAction::keep_active;
   }
 }
 
+void RegularClient::enqueueOutgoingData(ByteView data) {
+  if (!socket_ || !socket_->isValid() || data.empty()) return;
+  {
+    platform::LockGuard<platform::Mutex> lock(io_mutex_);
+
+    if (count_ + data.size() > max_buffer_size_) {
+      size_t to_drop = (count_ + data.size()) - max_buffer_size_;
+      head_ = (head_ + to_drop) % max_buffer_size_;
+      count_ -= to_drop;
+    }
+
+    for (uint8_t b : data) {
+      outbound_buffer_[(head_ + count_) % max_buffer_size_] = b;
+      count_++;
+    }
+  }
+}
+
 ClientInfo RegularClient::getClientInfo() const {
-  platform::LockGuard<platform::Mutex> lock(buffer_mutex_);
+  platform::LockGuard<platform::Mutex> lock(io_mutex_);
   return ClientInfo{socket_ ? socket_->getFd() : -1, "regular", isConnected(),
                     write_capable_, count_};
 }
@@ -229,11 +228,11 @@ EnhancedClient::EnhancedClient(std::unique_ptr<platform::Socket> socket,
 
 void EnhancedClient::onSessionStart(uint32_t session_id) {
   (void)session_id;
-  platform::LockGuard<platform::Mutex> lock(buffer_mutex_);
-  inbound_len_ = 0;
+  platform::LockGuard<platform::Mutex> lock(io_mutex_);
+  incoming_len_ = 0;
 }
 
-void EnhancedClient::processIncomingData(const uint8_t* data, size_t len) {
+void EnhancedClient::handleIncomingStream(const uint8_t* data, size_t len) {
   if (!isConnected() || len == 0) return;
 
   bool need_error_response = false;
@@ -243,42 +242,42 @@ void EnhancedClient::processIncomingData(const uint8_t* data, size_t len) {
   uint8_t response_val = 0;
 
   {
-    platform::UniqueLock<platform::Mutex> lock(buffer_mutex_);
+    platform::UniqueLock<platform::Mutex> lock(io_mutex_);
 
     for (size_t i = 0; i < len; ++i) {
       uint8_t b = data[i];
-      inbound_buf_[inbound_len_++] = b;
+      incoming_buf_[incoming_len_++] = b;
 
       // Check if we have a short-form command (single byte < 0x80)
-      if (inbound_buf_[0] < detail::EnhancedProtocolLimits::data_threshold) {
+      if (incoming_buf_[0] < detail::EnhancedProtocolLimits::data_threshold) {
         if (write_capable_) {
-          pending_bus_requests_.push(inbound_buf_[0]);
+          inbound_buffer_.push(incoming_buf_[0]);
         }
-        inbound_len_ = 0;
+        incoming_len_ = 0;
         continue;
       }
 
       // Need at least 2 bytes for enhanced sequences
-      if (inbound_len_ < detail::EnhancedProtocolLimits::max_sequence_len)
+      if (incoming_len_ < detail::EnhancedProtocolLimits::max_sequence_len)
         continue;
 
-      if (!enhanced::Protocol::isValidSequence(inbound_buf_[0],
-                                               inbound_buf_[1])) {
+      if (!enhanced::Protocol::isValidSequence(incoming_buf_[0],
+                                               incoming_buf_[1])) {
         // Disconnect client on protocol error (but send error response first)
-        inbound_len_ = 0;
+        incoming_len_ = 0;
         lock.unlock();  // Release lock before sending error and stopping
-        sendEnhancedResponse(enhanced::Response::error_host,
-                             static_cast<uint8_t>(enhanced::Error::framing));
+        createEnhancedResponse(enhanced::Response::error_host,
+                               static_cast<uint8_t>(enhanced::Error::framing));
         stop();
         return;  // Exit early since client is disconnected
       }
 
       enhanced::Command cmd;
       uint8_t data_val;
-      enhanced::Protocol::decode(inbound_buf_, cmd, data_val);
-      inbound_len_ = 0;
+      enhanced::Protocol::decode(incoming_buf_, cmd, data_val);
+      incoming_len_ = 0;
 
-      show(">", static_cast<uint8_t>(cmd), data_val, inbound_buf_);
+      show(">", static_cast<uint8_t>(cmd), data_val, incoming_buf_);
 
       switch (cmd) {
         case enhanced::Command::init:
@@ -286,16 +285,16 @@ void EnhancedClient::processIncomingData(const uint8_t* data, size_t len) {
           break;
         case enhanced::Command::send:
           if (write_capable_) {
-            pending_bus_requests_.push(data_val);
-            // last_sent_byte_ = data_val;
+            inbound_buffer_.push(data_val);
+            last_sent_byte_ = data_val;
           }
           break;
         case enhanced::Command::start:
           if (data_val == ebus::Symbols::syn && request_) {
             request_->reset();
           } else if (write_capable_) {
-            pending_bus_requests_.push(data_val);
-            // last_sent_byte_ = data_val;
+            inbound_buffer_.push(data_val);
+            last_sent_byte_ = data_val;
           }
           break;
         case enhanced::Command::info:
@@ -307,40 +306,104 @@ void EnhancedClient::processIncomingData(const uint8_t* data, size_t len) {
     }
   }
 
-  // Send responses outside the lock to avoid deadlock with sendToClient
+  // Send responses outside the lock to avoid deadlock with enqueueOutgoingData
   if (need_error_response) {
-    sendEnhancedResponse(response_type, response_val);
+    createEnhancedResponse(response_type, response_val);
   }
   if (need_reset_response) {
-    sendEnhancedResponse(enhanced::Response::resetted, 0x00);
+    createEnhancedResponse(enhanced::Response::resetted, 0x00);
   }
   if (need_info_response) {
-    sendEnhancedResponse(enhanced::Response::info, 0x08);
-    sendEnhancedResponse(enhanced::Response::info, 0x11);
-    sendEnhancedResponse(enhanced::Response::info, 0x07);
-    sendEnhancedResponse(enhanced::Response::info, 0x9a);
-    sendEnhancedResponse(enhanced::Response::info, 0xeb);
-    sendEnhancedResponse(enhanced::Response::info, 0x0b);
-    sendEnhancedResponse(enhanced::Response::info, 0x21);
-    sendEnhancedResponse(enhanced::Response::info, 0xc4);
-    sendEnhancedResponse(enhanced::Response::info, 0x31);
+    createEnhancedResponse(enhanced::Response::info, 0x08);
+    createEnhancedResponse(enhanced::Response::info, 0x11);
+    createEnhancedResponse(enhanced::Response::info, 0x07);
+    createEnhancedResponse(enhanced::Response::info, 0x9a);
+    createEnhancedResponse(enhanced::Response::info, 0xeb);
+    createEnhancedResponse(enhanced::Response::info, 0x0b);
+    createEnhancedResponse(enhanced::Response::info, 0x21);
+    createEnhancedResponse(enhanced::Response::info, 0xc4);
+    createEnhancedResponse(enhanced::Response::info, 0x31);
   }
 }
 
-bool EnhancedClient::hasPendingBusRequest() const {
-  platform::LockGuard<platform::Mutex> lock(buffer_mutex_);
-  return !pending_bus_requests_.empty();
+bool EnhancedClient::hasPendingIncomingData() const {
+  platform::LockGuard<platform::Mutex> lock(io_mutex_);
+  return !inbound_buffer_.empty();
 }
 
-bool EnhancedClient::popPendingBusRequest(uint8_t& out) {
-  platform::LockGuard<platform::Mutex> lock(buffer_mutex_);
-  if (pending_bus_requests_.empty()) return false;
-  pending_bus_requests_.pop(out);
+bool EnhancedClient::popPendingIncomingData(uint8_t& out) {
+  platform::LockGuard<platform::Mutex> lock(io_mutex_);
+  if (inbound_buffer_.empty()) return false;
+  inbound_buffer_.pop(out);
   last_sent_byte_ = out;
   return true;
 }
 
-void EnhancedClient::sendToClient(ByteView data) {
+BridgeAction EnhancedClient::onBusByte(const BusEventInfo& info) {
+  if (!isConnected()) return BridgeAction::stop_session;
+
+  // // ONE-SHOT SYN filter: Hide first SYN after requestBus() (spec: 5.1, 6.1)
+  // if (info.byte == ebus::Symbols::syn && filter_next_syn_) {
+  //   filter_next_syn_ = false;  // Disarm after first SYN
+  //   return BridgeAction::keep_active;
+  // }
+
+  // Need to lock because last_sent_byte_ is accessed from handleIncomingStream
+  // (different thread)
+  platform::UniqueLock<platform::Mutex> lock(io_mutex_);
+
+  switch (info.result) {
+    case RequestResult::first_lost:
+    case RequestResult::second_lost:
+      // Arbitration lost: return 0x0A + the master address that actually won
+      {
+        uint8_t byte = info.byte;
+        lock.unlock();  // Release lock before calling createEnhancedResponse
+        createEnhancedResponse(enhanced::Response::failed, byte);
+      }
+      return BridgeAction::stop_session;
+    case RequestResult::first_error:
+    case RequestResult::retry_error:
+    case RequestResult::second_error:
+      // Physical layer error
+      lock.unlock();  // Release lock before calling createEnhancedResponse
+      createEnhancedResponse(enhanced::Response::error_ebus,
+                             static_cast<uint8_t>(enhanced::Error::framing));
+      return BridgeAction::stop_session;
+    case RequestResult::first_won:
+    case RequestResult::second_won:
+      // Arbitration won: signal started
+      {
+        uint8_t byte = info.byte;
+        lock.unlock();  // Release lock before calling createEnhancedResponse
+        createEnhancedResponse(enhanced::Response::started, byte);
+      }
+      return BridgeAction::bypass_wait;
+    case RequestResult::observe_data:
+      // Verification vs Sniffing
+      {
+        uint8_t byte = info.byte;
+        bool match = (byte == last_sent_byte_);
+        lock.unlock();  // Release lock before calling createEnhancedResponse
+        createEnhancedResponse(enhanced::Response::received, byte);
+        if (match) {
+          return BridgeAction::bypass_wait;
+        }
+        return BridgeAction::keep_active;
+      }
+
+    default:
+      // Sniffing (SYN, retry steps, etc.)
+      {
+        uint8_t byte = info.byte;
+        lock.unlock();  // Release lock before calling createEnhancedResponse
+        createEnhancedResponse(enhanced::Response::received, byte);
+      }
+      return BridgeAction::keep_active;
+  }
+}
+
+void EnhancedClient::enqueueOutgoingData(ByteView data) {
   if (!socket_ || !socket_->isValid() || data.empty()) return;
 
   uint8_t cmd;
@@ -356,7 +419,7 @@ void EnhancedClient::sendToClient(ByteView data) {
   }
 
   {
-    platform::LockGuard<platform::Mutex> lock(buffer_mutex_);
+    platform::LockGuard<platform::Mutex> lock(io_mutex_);
 
     constexpr size_t seq_len = detail::EnhancedProtocolLimits::max_sequence_len;
     auto pushByte = [this](uint8_t b) {
@@ -364,7 +427,7 @@ void EnhancedClient::sendToClient(ByteView data) {
         head_ = (head_ + 1) % max_buffer_size_;
         count_--;
       }
-      buffer_storage_[(head_ + count_) % max_buffer_size_] = b;
+      outbound_buffer_[(head_ + count_) % max_buffer_size_] = b;
       count_++;
     };
 
@@ -384,83 +447,19 @@ void EnhancedClient::sendToClient(ByteView data) {
       pushByte(out[1]);
       show("<", cmd, val, out);
     }
-    flushLocked();
-  }
-}
-
-BridgeAction EnhancedClient::onBusByte(const BusEventInfo& info) {
-  if (!isConnected()) return BridgeAction::stop_session;
-
-  // ONE-SHOT SYN filter: Hide first SYN after requestBus() (spec: 5.1, 6.1)
-  if (info.byte == ebus::Symbols::syn && filter_next_syn_) {
-    filter_next_syn_ = false;  // Disarm after first SYN
-    return BridgeAction::keep_active;
-  }
-
-  // Need to lock because last_sent_byte_ is accessed from processIncomingData
-  // (different thread)
-  platform::UniqueLock<platform::Mutex> lock(buffer_mutex_);
-
-  switch (info.result) {
-    case RequestResult::first_lost:
-    case RequestResult::second_lost:
-      // Arbitration lost: return 0x0A + the master address that actually won
-      {
-        uint8_t byte = info.byte;
-        lock.unlock();  // Release lock before calling sendEnhancedResponse
-        sendEnhancedResponse(enhanced::Response::failed, byte);
-      }
-      return BridgeAction::stop_session;
-    case RequestResult::first_error:
-    case RequestResult::retry_error:
-    case RequestResult::second_error:
-      // Physical layer error
-      lock.unlock();  // Release lock before calling sendEnhancedResponse
-      sendEnhancedResponse(enhanced::Response::error_ebus,
-                           static_cast<uint8_t>(enhanced::Error::framing));
-      return BridgeAction::stop_session;
-    case RequestResult::first_won:
-    case RequestResult::second_won:
-      // Arbitration won: signal started
-      {
-        uint8_t byte = info.byte;
-        lock.unlock();  // Release lock before calling sendEnhancedResponse
-        sendEnhancedResponse(enhanced::Response::started, byte);
-      }
-      return BridgeAction::bypass_wait;
-    case RequestResult::observe_data:
-      // Verification vs Sniffing
-      {
-        uint8_t byte = info.byte;
-        bool match = (byte == last_sent_byte_);
-        lock.unlock();  // Release lock before calling sendEnhancedResponse
-        sendEnhancedResponse(enhanced::Response::received, byte);
-        if (match) {
-          return BridgeAction::bypass_wait;
-        }
-        return BridgeAction::keep_active;
-      }
-
-    default:
-      // Sniffing (SYN, retry steps, etc.)
-      {
-        uint8_t byte = info.byte;
-        lock.unlock();  // Release lock before calling sendEnhancedResponse
-        sendEnhancedResponse(enhanced::Response::received, byte);
-      }
-      return BridgeAction::keep_active;
   }
 }
 
 ClientInfo EnhancedClient::getClientInfo() const {
-  platform::LockGuard<platform::Mutex> lock(buffer_mutex_);
+  platform::LockGuard<platform::Mutex> lock(io_mutex_);
   return ClientInfo{socket_ ? socket_->getFd() : -1, "enhanced", isConnected(),
                     write_capable_, count_};
 }
 
-void EnhancedClient::sendEnhancedResponse(enhanced::Response res, uint8_t val) {
+void EnhancedClient::createEnhancedResponse(enhanced::Response res,
+                                            uint8_t val) {
   const uint8_t raw[2] = {static_cast<uint8_t>(res), val};
-  sendToClient(ByteView(raw, 2));
+  enqueueOutgoingData(ByteView(raw, 2));
 }
 
 std::unique_ptr<AbstractClient> createClient(

@@ -14,7 +14,6 @@
 #include <ebus/status.hpp>
 #include <optional>
 
-#include "app/bus_access_permit.hpp"
 #include "core/handler.hpp"
 #include "platform/mutex.hpp"
 
@@ -35,10 +34,9 @@ class Scheduler {
   // Public Types & Constants
   using TimePoint = Clock::time_point;
   using Duration = Clock::duration;  // Duration type for internal use
-  using EventSink = Delegate<void(OrchestrationEvent&&)>;
 
   // Lifecycle
-  explicit Scheduler(Handler* handler, BusAccessPermit* permit = nullptr);
+  explicit Scheduler(Handler* handler);
   ~Scheduler();
   void stop();
 
@@ -47,7 +45,7 @@ class Scheduler {
   Scheduler& operator=(const Scheduler&) = delete;
 
   // Configuration
-  void setEventSink(EventSink sink);
+  void setEventSink(Delegate<void(OrchestrationEvent&&)> sink);
   void setMaxSendAttempts(uint8_t send_attempts);
   void setBaseBackoff(uint32_t base_backoff_ms);
   void setFsmTimeout(uint32_t timeout_ms);
@@ -118,7 +116,6 @@ class Scheduler {
   };
 
   Handler* handler_ = nullptr;
-  BusAccessPermit* permit_ = nullptr;
 
   // Queue management
   StaticVector<Item, ebus::RuntimeConfig{}.scheduler.max_items>
@@ -135,7 +132,7 @@ class Scheduler {
   };
   std::optional<ActiveAttempt> active_item_;
 
-  EventSink event_sink_;
+  Delegate<void(OrchestrationEvent&&)> event_sink_;
 
   std::atomic<uint32_t> next_session_id_;
 
