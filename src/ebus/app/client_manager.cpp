@@ -763,7 +763,7 @@ void ClientManager::handleClientActivity(
       handleSocketInput(fd, client, to_stop);
     }
 
-    if (FD_ISSET(fd, &writefds)) {
+    if (client && FD_ISSET(fd, &writefds)) {
       handleSocketOutput(fd, client, to_stop);
     }
   }
