@@ -11,6 +11,7 @@
 #include <cstring>
 #include <ebus/detail/protocol_limits.hpp>
 #include <ebus/protocol_math.hpp>
+#include <future>
 
 #include "core/bus_monitor.hpp"
 #include "core/request.hpp"

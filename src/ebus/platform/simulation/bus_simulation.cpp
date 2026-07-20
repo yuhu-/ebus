@@ -8,6 +8,7 @@
 
 #include <ebus/protocol_math.hpp>
 #include <ebus/utils.hpp>
+#include <future>
 
 #include "core/bus_monitor.hpp"
 #include "core/request.hpp"
