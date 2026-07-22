@@ -60,12 +60,6 @@ void RuntimeConfig::toJson(detail::JsonWriter& writer) const {
     writer.writeField("base_backoff_ms", scheduler.base_backoff_ms);
     writer.writeField("fsm_timeout_ms", scheduler.fsm_timeout_ms);
     writer.writeField("total_timeout_ms", scheduler.total_timeout_ms);
-    writer.writeField("max_items", scheduler.max_items);
-  }
-
-  {
-    auto pollScope = writer.objectScope("poll");
-    writer.writeField("max_items", poll.max_items);
   }
 }
 
@@ -274,26 +268,6 @@ bool RuntimeConfig::mergeFromJson(std::string_view json) {
             inner.next();
             auto val = inner.asNumStrict<uint32_t>();
             if (val) scheduler.total_timeout_ms = *val;
-            return val.has_value();
-          }
-          if (k == "max_items") {
-            inner.next();
-            auto val = inner.asNumStrict<size_t>();
-            if (val) scheduler.max_items = *val;
-            return val.has_value();
-          }
-          return false;
-        });
-      }
-      return true;
-    }
-    if (key == "poll") {
-      if (r.next() == detail::JsonReader::Token::object_start) {
-        r.forEachField([&](std::string_view k, detail::JsonReader& inner) {
-          if (k == "max_items") {
-            inner.next();
-            auto val = inner.asNumStrict<size_t>();
-            if (val) poll.max_items = *val;
             return val.has_value();
           }
           return false;

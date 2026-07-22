@@ -92,7 +92,7 @@ class PollManager {
 
  private:
   mutable platform::Mutex mutex_;
-  StaticVector<Item, ebus::RuntimeConfig{}.poll.max_items> items_;
+  StaticVector<Item, PollLimits::max_items> items_;
   uint8_t own_address_ = 0xff;
   Delegate<bool()> is_busy_;
   size_t max_item_count_ = 0;

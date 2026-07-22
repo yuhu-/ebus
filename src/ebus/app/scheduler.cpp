@@ -374,9 +374,7 @@ size_t Scheduler::size() const {
   return scheduled_items_.size();
 }
 
-size_t Scheduler::capacity() const {
-  return ebus::RuntimeConfig{}.scheduler.max_items;
-}
+size_t Scheduler::capacity() const { return SchedulerLimits::max_items; }
 
 SchedulerStatus Scheduler::fetchStatus() const {
   return SchedulerStatus{
@@ -390,7 +388,7 @@ void Scheduler::resetPeakMetrics() {
 
 bool Scheduler::pushItem(Item&& it) {
   platform::LockGuard<platform::Mutex> lock(data_mutex_);
-  if (scheduled_items_.size() >= ebus::RuntimeConfig{}.scheduler.max_items) {
+  if (scheduled_items_.size() >= SchedulerLimits::max_items) {
     return false;  // Queue is full
   }
   scheduled_items_.push_back(std::move(it));

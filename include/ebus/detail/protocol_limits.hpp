@@ -236,10 +236,26 @@ inline constexpr uint8_t scan_priority = 5;
 }  // namespace DeviceLimits
 
 namespace SchedulerLimits {
+#ifndef EBUS_SCHEDULER_MAX_ITEMS
+inline constexpr size_t max_items = 8;
+#else
+inline constexpr size_t max_items = EBUS_SCHEDULER_MAX_ITEMS;
+#endif
+static_assert(max_items >= 1, "Scheduler max items must be at least 1");
+
 inline constexpr size_t scan_threshold = 5;
 inline constexpr uint32_t jitter_threshold_ms = 2;
 inline constexpr uint32_t controller_tick_ms = 20;
 }  // namespace SchedulerLimits
+
+namespace PollLimits {
+#ifndef EBUS_POLL_MAX_ITEMS
+inline constexpr size_t max_items = 64;
+#else
+inline constexpr size_t max_items = EBUS_POLL_MAX_ITEMS;
+#endif
+static_assert(max_items >= 1, "Poll max items must be at least 1");
+}  // namespace PollLimits
 
 // --- Formatting Limits ---
 namespace FormattingLimits {

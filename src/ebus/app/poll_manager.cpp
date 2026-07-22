@@ -46,7 +46,7 @@ uint32_t PollManager::addPollItem(uint8_t priority, ByteView message,
     return 0;
   }
 
-  if (items_.size() >= ebus::RuntimeConfig{}.poll.max_items) {
+  if (items_.size() >= PollLimits::max_items) {
     return 0;
   }
 
@@ -182,7 +182,7 @@ void PollManager::resetPeakMetrics() {
 PollManagerStatus PollManager::fetchStatus() const {
   platform::LockGuard<platform::Mutex> lock(mutex_);
   return PollManagerStatus{items_.size(), max_item_count_,
-                           ebus::RuntimeConfig{}.poll.max_items};
+                           PollLimits::max_items};
 }
 
 }  // namespace ebus::detail
