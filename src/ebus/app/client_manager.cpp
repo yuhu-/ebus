@@ -825,7 +825,7 @@ void ClientManager::clientIoLoop() {
     int max_fd = prepareFileDescriptors(readfds, writefds, exceptfds);
 
     if (max_fd == -1) {
-      platform::sleepMilli(10);  // 10ms timeout
+      platform::sleepMilli(NetworkLimits::wake_interval_ms);
       continue;
     }
 

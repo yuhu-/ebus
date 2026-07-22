@@ -61,11 +61,11 @@ struct RuntimeConfig {
     uint32_t base_backoff_ms = 100;
     uint32_t fsm_timeout_ms = 1000;
     uint32_t total_timeout_ms = 2000;
-    size_t max_items = 32;
+    size_t max_items = 8;
   } scheduler;
 
   struct Poll {
-    size_t max_items = 128;
+    size_t max_items = 64;
   } poll;
 
   void reset();

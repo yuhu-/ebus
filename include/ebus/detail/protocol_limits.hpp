@@ -208,13 +208,13 @@ inline constexpr size_t outbound_buffer_drop_factor = 8;
 // --- Application Layer ---
 namespace ControllerLimits {
 #ifndef EBUS_EVENT_QUEUE_SIZE
-inline constexpr size_t event_queue_size = 16;
+inline constexpr size_t event_queue_size = 10;
 #else
 inline constexpr size_t event_queue_size = EBUS_EVENT_QUEUE_SIZE;
 #endif
 
 #ifndef EBUS_REACTOR_QUEUE_SIZE
-inline constexpr size_t reactor_queue_size = 32;
+inline constexpr size_t reactor_queue_size = 16;
 #else
 inline constexpr size_t reactor_queue_size = EBUS_REACTOR_QUEUE_SIZE;
 #endif
@@ -227,7 +227,7 @@ static_assert(reactor_queue_size >= 1, "Reactor queue size must be at least 1");
 
 namespace DeviceLimits {
 #ifndef EBUS_MAX_DEVICES
-inline constexpr size_t max_devices = 32;
+inline constexpr size_t max_devices = 16;
 #else
 inline constexpr size_t max_devices = EBUS_MAX_DEVICES;
 #endif
