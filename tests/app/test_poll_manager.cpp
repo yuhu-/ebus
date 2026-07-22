@@ -45,7 +45,7 @@ TEST_CASE("PollManager: Timing and Recurrence", "[app][pollmanager]") {
   pm.processDueItems(
       [&](const PollManager::Item& item) {
         count++;
-        REQUIRE(item.message == ebus::Sequence({0xaa, 0xbb}));
+        REQUIRE(item.message == PollManager::PollSequence({0xaa, 0xbb}));
         REQUIRE(item.priority == 5);
       },
       &activity);

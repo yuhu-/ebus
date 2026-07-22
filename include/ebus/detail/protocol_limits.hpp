@@ -120,6 +120,11 @@ inline constexpr size_t default_capacity = 64;
  */
 inline constexpr size_t model_capacity = 24;
 /**
+ * Capacity for metadata storage in poll commands.
+ * Sized to fit typical polling commands (without CRC).
+ */
+inline constexpr size_t poll_capacity = 16;
+/**
  * Maximum number of bytes in a logical eBUS telegram (excluding SYN, ACK, and
  * byte-stuffing).
  */

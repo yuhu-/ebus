@@ -31,10 +31,12 @@ namespace ebus::detail {
 class PollManager {
  public:
   // --- Public Types & Constants ---
+  using PollSequence = SequenceImpl<detail::SequenceLimits::poll_capacity>;
+
   struct Item {
     uint32_t poll_id;
     uint8_t priority;
-    Sequence message;
+    PollSequence message;
     std::chrono::milliseconds interval;
     Clock::time_point next_due;
 
