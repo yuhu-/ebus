@@ -10,11 +10,16 @@
 
 namespace ebus::detail {
 
-void show(const char* function, uint8_t cmd, uint8_t val, uint8_t out[2]) {
-  std::cout << function << " cmd:val " << ebus::toString(cmd) << ":"
-            << ebus::toString(val) << " " << ebus::toString(out[0]) << ":"
-            << ebus::toString(out[1]) << std::endl;
-}
+// void showSingle(const char* function, uint8_t val) {
+//   std::cout << function << " val " << ebus::toString(val) << std::endl;
+// }
+
+// void showDouble(const char* function, uint8_t cmd, uint8_t val,
+//                 uint8_t out[2]) {
+//   std::cout << function << " cmd:val " << ebus::toString(cmd) << ":"
+//             << ebus::toString(val) << " " << ebus::toString(out[0]) << ":"
+//             << ebus::toString(out[1]) << std::endl;
+// }
 
 AbstractClient::AbstractClient(std::unique_ptr<platform::Socket> socket,
                                Request* request, bool write_capable,
@@ -138,6 +143,7 @@ void RegularClient::handleIncomingStream(const uint8_t* data, size_t len) {
   platform::LockGuard<platform::Mutex> lock(io_mutex_);
   // Queue all received bytes for byte-by-byte forwarding
   for (size_t i = 0; i < len; ++i) {
+    // showSingle(">", data[i]);
     inbound_buffer_.push(data[i]);
   }
 }
@@ -210,6 +216,7 @@ void RegularClient::enqueueOutgoingData(ByteView data) {
     }
 
     for (uint8_t b : data) {
+      // showSingle("<", b);
       outbound_buffer_[(head_ + count_) % max_buffer_size_] = b;
       count_++;
     }
@@ -277,7 +284,7 @@ void EnhancedClient::handleIncomingStream(const uint8_t* data, size_t len) {
       enhanced::Protocol::decode(incoming_buf_, cmd, data_val);
       incoming_len_ = 0;
 
-      show(">", static_cast<uint8_t>(cmd), data_val, incoming_buf_);
+      // showDouble(">", static_cast<uint8_t>(cmd), data_val, incoming_buf_);
 
       switch (cmd) {
         case enhanced::Command::init:
@@ -440,12 +447,13 @@ void EnhancedClient::enqueueOutgoingData(ByteView data) {
     if (cmd == static_cast<uint8_t>(enhanced::Response::received) &&
         val < detail::EnhancedProtocolLimits::data_threshold) {
       pushByte(val);
+      // showSingle("<", val);
     } else {
       uint8_t out[seq_len];
       enhanced::Protocol::encode(cmd, val, out);
       pushByte(out[0]);
       pushByte(out[1]);
-      show("<", cmd, val, out);
+      // showDouble("<", cmd, val, out);
     }
   }
 }

@@ -419,7 +419,6 @@ void ClientManager::handleBusAvailableForSession() {
         return;  // Session state changed, abort
       }
       // active_sender->armSynFilter();
-      // bus_handler_->armSynFilter();
 
       request_->requestBus(first_byte, true);
       last_sent_byte_ = first_byte;
@@ -440,7 +439,7 @@ void ClientManager::tryStartSessionForClient(
     return;
   }
 
-  // mutex_ MUST be locked by caller
+  platform::LockGuard<platform::Mutex> lock(mutex_);
   // Can only start if no active session and not busy
   if (current_active_sender_ || session_state_ != SessionState::idle) {
     return;
@@ -462,11 +461,18 @@ void ClientManager::trySendNextByte(std::shared_ptr<AbstractClient>& client) {
     platform::LockGuard<platform::Mutex> lock(mutex_);
     bus_->writeByte(send_byte);
     last_sent_byte_ = send_byte;
-    transitSessionState(SessionState::response);
+
+    if (send_byte == Symbols::syn) {
+      // Session complete after clean SYN, reset state but keep client
+      // connected.
+      transitSessionState(SessionState::idle);
+      current_active_sender_.reset();
+      std::cout << "[ClientManager] Session complete for client fd="
+                << client->getFd() << std::endl;
+    } else {
+      transitSessionState(SessionState::response);
+    }
   }
-  //   else {
-  //     stopActiveSession();
-  //   }
 }
 
 void ClientManager::stopActiveSession() {
@@ -782,9 +788,20 @@ void ClientManager::handleSocketInput(
 
     if (bytes_read > 0) {
       client->handleIncomingStream(buffer, static_cast<size_t>(bytes_read));
-      // tryStartSessionForClient accesses session state shared with Thread 1
-      // — mutex is taken inside
-      tryStartSessionForClient(client);
+
+      bool is_active_sender = false;
+      bool is_transmit_state = false;
+      {
+        platform::LockGuard<platform::Mutex> lock(mutex_);
+        is_active_sender = (current_active_sender_ == client);
+        is_transmit_state = (session_state_ == SessionState::transmit);
+      }
+
+      if (is_active_sender && is_transmit_state) {
+        trySendNextByte(client);
+      } else {
+        tryStartSessionForClient(client);
+      }
     } else if (bytes_read == 0) {
       std::cout << "[ClientManager] Client fd=" << fd << " closed connection"
                 << std::endl;
@@ -830,7 +847,8 @@ void ClientManager::clientIoLoop() {
     }
 
     // Phase 2: Use a short timeout for responsiveness
-    // We check for session timeouts and bus availability in the timeout handler
+    // We check for session timeouts and bus availability in the timeout
+    // handler
     struct timeval tv{0, 10000};  // 10ms timeout
 
     // Phase 3: Block on socket events

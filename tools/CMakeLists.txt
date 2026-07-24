@@ -7,3 +7,7 @@ target_link_libraries(ebusread PRIVATE ebus)
 
 add_executable(playground playground.cpp)
 target_link_libraries(playground PRIVATE ebus)
+
+add_executable(ebusproxy ebusproxy.cpp)
+target_link_libraries(ebusproxy PRIVATE ebus)
+
