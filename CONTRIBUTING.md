@@ -36,13 +36,17 @@ To maintain consistency across the library, members in classes that implement lo
 *   **Standard Library**: Be mindful of `std::vector` and `std::string` usage in performance-critical sections to avoid hidden allocations.
 
 ### Component Categorization
-To maintain the library's performance targets, components are divided into two categories:
+To maintain the library's performance targets, components are divided into three categories:
 
 **1. The Hot Path (High Performance / Zero Allocation)**
 These components process data byte-by-byte or perform time-critical protocol operations. Heap allocations are **forbidden** here.
-*   `Platform::Bus`, `Core::Handler`, `Core::Request`, `Core::Telegram`, `ebus::Sequence`.
+*   `Platform::Bus`, `Core::BusHandler`, `Core::Handler`, `Core::Request`, `Core::Telegram`, `ebus::Sequence`.
 
-**2. The Orchestration Path (Application Logic)**
+**2. The External Client Path (external EBus logic)**
+These components bridges external clients with the internal bus components.
+*   `ClientManager`, `AbstractClient`: Manages connecting external clients (e.g., ebusd, monitoring tools) by abstracting diverse protocol details into specific client types (`RegularClient`, `ReadOnlyClient`, `EnhancedClient`). This layer mediates all network traffic between the core eBUS bus and outside consumers.
+
+**3. The Orchestration Path (Application Logic)**
 These components manage high-level tasks like discovery, scheduling, and network bridging. Limited heap usage (e.g., `std::vector::reserve`, `std::map`) is permitted.
 *   `Controller`, `Scheduler`, `DeviceManager`, `PollManager`, `DeviceScanner`, `ClientManager`.
 *   **Note**: All orchestration components must enforce capacity limits to prevent memory exhaustion on embedded targets.
@@ -81,7 +85,7 @@ To keep the library maintainable and portable, we follow these patterns:
 
 *   **PIMPL Idiom**: Used in `ebus::Controller` to provide a stable ABI and hide internal orchestration details.
 *   **Finite State Machine (FSM)**: The `Core::Handler` uses an FSM to manage synchronization, arbitration, and data phases.
-*   **Reactor Pattern**: The `Controller` implements a unified event loop (the Reactor) that processes bus events, network bridge data, and application requests from a single thread. This ensures that the underlying FSMs are accessed in a thread-safe manner without requiring heavy locking on every byte.
+*   **Reactor Pattern**: The `Controller` implements a unified event loop (the Reactor) that processes bus events and application requests from a single thread. This ensures that the underlying FSMs are accessed in a thread-safe manner without requiring heavy locking on every byte.
 *   **Hardware Abstraction Layer (HAL)**: All hardware interaction is abstracted through the `Platform::Bus`. **Do not** use direct POSIX or FreeRTOS calls outside of the `src/ebus/platform/` directory.
 
 ## Key Components

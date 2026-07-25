@@ -59,6 +59,8 @@ The library features a priority-based `Scheduler`. Background tasks, such as the
 
 **ebusread**: A diagnostic tool that interprets incoming streams as eBUS telegrams. Supports files, devices, pipes, and TCP sockets.
 
+**ebusproxy**: The primary development tool used by external clients, supporting both hardware device interaction and virtual bus simulation modes.
+
 **playground**: A developer sandbox for testing library features and protocol edge cases.
 
 ### Quick Start
