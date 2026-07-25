@@ -250,6 +250,23 @@ class QueuePosix {
     return true;
   }
 
+  // Non-blocking discard: advances the ring-buffer head directly without
+  // constructing a local T on the caller's stack.
+  // Returns the number of items actually discarded (0 if empty/shutdown).
+  size_t discard(size_t count = 1) {
+    size_t actual = 0;
+    {
+      platform::LockGuard<platform::Mutex> lock(mutex_);
+      while (actual < count && size_ > 0 && !shutdown_) {
+        head_ = (head_ + 1) % capacity_;
+        size_--;
+        actual++;
+      }
+    }
+    if (actual > 0 && capacity_ > 0) not_full_.notify_all();
+    return actual;
+  }
+
   void shutdown() {
     {
       platform::LockGuard<platform::Mutex> lock(mutex_);

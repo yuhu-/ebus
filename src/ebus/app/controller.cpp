@@ -1118,8 +1118,7 @@ void Impl::run(Controller* owner) {
 void Impl::onSchedulerEvent(OrchestrationEvent&& oev) {
   if (!reactor_queue_.tryPush(oev)) {
     // DRAIN: Make room for terminal protocol results
-    OrchestrationEvent dummy;
-    if (reactor_queue_.tryPop(dummy)) {
+    if (reactor_queue_.discard() > 0) {
       reactor_queue_.tryPush(std::move(oev));
       bus_monitor_->updateController([](auto& m) { m.event_queue_dropped++; });
     }
@@ -1146,8 +1145,7 @@ void Impl::onBusEventInfo(const BusEventInfo& bus_ev) {
     detail::Logger::getInstance().log(
         LogLevel::error, "[Controller] Reactor queue FULL! Dropping event.");
     // DRAIN: Drop oldest byte event to ensure loop stays moving
-    OrchestrationEvent dummy;
-    if (reactor_queue_.tryPop(dummy)) {
+    if (reactor_queue_.discard() > 0) {
       reactor_queue_.tryPush(std::move(ev));
     }
     bus_monitor_->updateController([](auto& m) { m.event_queue_dropped++; });

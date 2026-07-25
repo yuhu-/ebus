@@ -117,6 +117,21 @@ class QueueEsp {
     return xQueueSendFromISR(queue_, &item, &xTaskWoken) == pdTRUE;
   }
 
+  // Non-blocking discard: receives into a member buffer so no T is
+  // constructed on the caller's stack. Safe for trivially-copyable T.
+  // Returns the number of items actually discarded.
+  size_t discard(size_t count = 1) {
+    size_t actual = 0;
+    for (size_t i = 0; i < count; ++i) {
+      if (shutdown_.load() || uxQueueMessagesWaiting(queue_) == 0) break;
+      if (xQueueReceive(queue_, discard_buf_, 0) == pdTRUE)
+        ++actual;
+      else
+        break;
+    }
+    return actual;
+  }
+
   // Blocking pop with duration (Standard C++ naming alias)
   template <typename Rep, typename Period>
   bool tryPopFor(T& out, std::chrono::duration<Rep, Period> timeout) {
@@ -187,6 +202,7 @@ class QueueEsp {
   QueueHandle_t queue_;
   size_t capacity_;
   std::atomic<bool> shutdown_;
+  alignas(T) std::byte discard_buf_[sizeof(T)];
 };
 
 }  // namespace ebus::detail::platform
