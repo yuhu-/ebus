@@ -14,7 +14,6 @@
 #include <chrono>
 #include <cstdint>
 #include <ebus/config.hpp>
-#include <ebus/detail/circular_buffer.hpp>
 #include <ebus/detail/delegate.hpp>
 #include <ebus/detail/protocol_limits.hpp>
 #include <ebus/metrics.hpp>
@@ -24,6 +23,7 @@
 
 #include "app/device_manager.hpp"
 #include "platform/mutex.hpp"
+#include "utils/circular_buffer.hpp"
 
 namespace ebus::detail {
 

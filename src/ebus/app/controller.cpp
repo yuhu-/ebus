@@ -4,12 +4,12 @@
  */
 
 #include <ebus/controller.hpp>
-#include <ebus/detail/circular_buffer.hpp>
 #include <ebus/detail/config_validator.hpp>
 #include <ebus/detail/delegate.hpp>
 #include <ebus/detail/json_writer.hpp>
 #include <ebus/detail/protocol_limits.hpp>
 #include <ebus/utils.hpp>
+
 #if EBUS_SIMULATION
 #include <ebus/virtual_bus.hpp>
 #endif
@@ -30,6 +30,7 @@
 #include "platform/mutex.hpp"
 #include "platform/queue.hpp"
 #include "platform/service_thread.hpp"
+#include "utils/circular_buffer.hpp"
 #include "utils/logger.hpp"
 
 #if defined(ESP_PLATFORM)

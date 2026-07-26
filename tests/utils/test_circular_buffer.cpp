@@ -4,8 +4,9 @@
  */
 
 #include <catch2/catch_all.hpp>
-#include <ebus/detail/circular_buffer.hpp>
 #include <vector>
+
+#include "utils/circular_buffer.hpp"
 
 using namespace ebus::detail;
 
