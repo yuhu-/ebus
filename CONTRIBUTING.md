@@ -47,8 +47,8 @@ These components bridges external clients with the internal bus components.
 *   `ClientManager`, `AbstractClient`: Manages connecting external clients (e.g., ebusd, monitoring tools) by abstracting diverse protocol details into specific client types (`RegularClient`, `ReadOnlyClient`, `EnhancedClient`). This layer mediates all network traffic between the core eBUS bus and outside consumers.
 
 **3. The Orchestration Path (Application Logic)**
-These components manage high-level tasks like discovery, scheduling, and network bridging. Limited heap usage (e.g., `std::vector::reserve`, `std::map`) is permitted.
-*   `Controller`, `Scheduler`, `DeviceManager`, `PollManager`, `DeviceScanner`, `ClientManager`.
+These components manage high-level tasks like discovery, scheduling and polling. Limited heap usage (e.g., `std::vector::reserve`, `std::map`) is permitted.
+*   `Controller`, `Scheduler`, `PollManager`, `DeviceManager` and`DeviceScanner`.
 *   **Note**: All orchestration components must enforce capacity limits to prevent memory exhaustion on embedded targets.
 
 ### Threading
