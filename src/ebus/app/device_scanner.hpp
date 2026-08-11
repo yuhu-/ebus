@@ -19,13 +19,14 @@
 #include <ebus/metrics.hpp>
 #include <ebus/sequence.hpp>
 #include <ebus/static_vector.hpp>
+#include <ebus/status.hpp>
 #include <functional>
 
-#include "app/device_manager.hpp"
 #include "platform/mutex.hpp"
-#include "utils/circular_buffer.hpp"
 
 namespace ebus::detail {
+
+class DeviceManager;
 
 /**
  * The DeviceScanner is responsible for generating eBUS scan commands to

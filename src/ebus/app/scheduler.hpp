@@ -7,17 +7,25 @@
 
 #include <atomic>
 #include <chrono>
+#include <ebus/callbacks.hpp>
 #include <ebus/config.hpp>
+#include <ebus/detail/delegate.hpp>
 #include <ebus/detail/protocol_limits.hpp>
 #include <ebus/sequence.hpp>
 #include <ebus/static_vector.hpp>
 #include <ebus/status.hpp>
 #include <optional>
 
-#include "core/handler.hpp"
 #include "platform/mutex.hpp"
 
+namespace ebus {
+struct ReactiveInfo;
+struct ProtocolInfo;
+}  // namespace ebus
+
 namespace ebus::detail {
+
+class Handler;
 
 /**
  * The Scheduler manages the timing and prioritization of active eBUS messages.
@@ -45,14 +53,13 @@ class Scheduler {
   Scheduler& operator=(const Scheduler&) = delete;
 
   // Configuration
-  void setEventSink(Delegate<void(OrchestrationEvent&&)> sink);
+  void setProtocolEventSink(Delegate<void(ProtocolEvent&&)> sink);
   void setMaxSendAttempts(uint8_t send_attempts);
   void setBaseBackoff(uint32_t base_backoff_ms);
   void setFsmTimeout(uint32_t timeout_ms);
   void setTotalTimeout(uint32_t timeout_ms);
 
   void setReactiveCallback(ReactiveCallback callback);
-  void setProtocolCallback(ProtocolCallback callback);
 
   // Working Methods
   void attachHandlerCallbacks();
@@ -120,7 +127,6 @@ class Scheduler {
   // Queue management
   StaticVector<Item, SchedulerLimits::max_items> scheduled_items_;
   mutable platform::Mutex data_mutex_;
-  mutable platform::Mutex callback_mutex_;
 
   size_t max_queue_size_ = 0;
 
@@ -131,7 +137,7 @@ class Scheduler {
   };
   std::optional<ActiveAttempt> active_item_;
 
-  Delegate<void(OrchestrationEvent&&)> event_sink_;
+  Delegate<void(ProtocolEvent&&)> event_sink_;
 
   std::atomic<uint32_t> next_session_id_;
 
@@ -150,12 +156,10 @@ class Scheduler {
       ebus::RuntimeConfig{}.scheduler.total_timeout_ms);
 
   // Forwarded callbacks
-  ReactiveCallback extern_reactive_callback_ = nullptr;
-  ProtocolCallback extern_protocol_callback_ = nullptr;
+  ReactiveCallback user_reactive_callback_ = nullptr;
 
   // Private Helper Methods
   bool pushItem(Item&& it);
-  bool handleAttemptResult(const ProtocolEvent& ev);
   Duration backoffDuration(int attempt) const;
 
   // Handler callback targets

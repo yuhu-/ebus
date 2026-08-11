@@ -14,7 +14,10 @@
 #include <ebus/utils.hpp>
 #include <iostream>
 
+#include "app/client.hpp"
+#include "core/bus_handler.hpp"
 #include "core/bus_monitor.hpp"
+#include "core/request.hpp"
 #include "platform/socket.hpp"
 #include "platform/system.hpp"
 #include "utils/logger.hpp"

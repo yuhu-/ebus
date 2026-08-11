@@ -48,7 +48,7 @@ These components bridges external clients with the internal bus components.
 
 **3. The Orchestration Path (Application Logic)**
 These components manage high-level tasks like discovery, scheduling and polling. Limited heap usage (e.g., `std::vector::reserve`, `std::map`) is permitted.
-*   `Controller`, `Scheduler`, `PollManager`, `DeviceManager` and`DeviceScanner`.
+*   `Controller`, `Reactor`, `Scheduler`, `PollManager`, `DeviceManager` and`DeviceScanner`.
 *   **Note**: All orchestration components must enforce capacity limits to prevent memory exhaustion on embedded targets.
 
 ### Threading
@@ -85,7 +85,7 @@ To keep the library maintainable and portable, we follow these patterns:
 
 *   **PIMPL Idiom**: Used in `ebus::Controller` to provide a stable ABI and hide internal orchestration details.
 *   **Finite State Machine (FSM)**: The `Core::Handler` uses an FSM to manage synchronization, arbitration, and data phases.
-*   **Reactor Pattern**: The `Controller` implements a unified event loop (the Reactor) that processes bus events and application requests from a single thread. This ensures that the underlying FSMs are accessed in a thread-safe manner without requiring heavy locking on every byte.
+*   **Reactor Pattern**: The `Reactor` implements a unified event loop on a dedicated thread. It coordinates `Scheduler`, `PollManager`, `DeviceScanner`, and `BusHandler` by draining decoupled queues (`ProtocolEvent`, `BusEventInfo`, `ReactorSignal`) without heavy locking on the hot path. All user-facing callbacks (`ProtocolCallback`, `TraceCallback`) are dispatched from this thread. The physical bus IO thread (HAL) and client bridge thread remain fully decoupled.
 *   **Hardware Abstraction Layer (HAL)**: All hardware interaction is abstracted through the `Platform::Bus`. **Do not** use direct POSIX or FreeRTOS calls outside of the `src/ebus/platform/` directory.
 
 ## Key Components
@@ -98,6 +98,7 @@ To keep the library maintainable and portable, we follow these patterns:
 *   **Handler**: The protocol engine. Drives the FSM to parse incoming streams byte-by-byte.
 *   **Request**: Implements the multi-master arbitration logic and collision detection.
 *   **BusMonitor**: Centralizes timing and performance statistics for the protocol engine.
+*   **Reactor**: Central event loop thread which coordinates `Scheduler`, `PollManager`, `DeviceScanner` and user calls.
 *   **Scheduler**: Manages master priority and enqueues messages for transmission.
 *   **PollManager**: Orchestrates recurring jobs and periodic slave polling.
 *   **DeviceManager**: Maintains the inventory of discovered devices and their properties.

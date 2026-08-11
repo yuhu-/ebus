@@ -7,6 +7,9 @@
 
 #include <algorithm>
 
+#include "core/handler.hpp"
+#include "core/request.hpp"
+
 namespace ebus::detail {
 
 BusHandler::BusHandler(Request* request, Handler* handler)
@@ -23,9 +26,9 @@ void BusHandler::setClientManagerBusEventInfoCallback(
     Delegate<void(const BusEventInfo& info)> callback) {
   client_manager_callback_ = std::move(callback);
 }
-void BusHandler::setControllerBusEventInfoCallback(
+void BusHandler::setReactorBusEventInfoCallback(
     Delegate<void(const BusEventInfo& info)> callback) {
-  controller_callback_ = std::move(callback);
+  reactor_callback_ = std::move(callback);
 }
 
 void BusHandler::onBusEvent(const BusEvent& bus_event) {
@@ -51,7 +54,7 @@ void BusHandler::onBusEvent(const BusEvent& bus_event) {
 
   if (client_manager_callback_) client_manager_callback_(info);
 
-  if (controller_callback_) controller_callback_(info);
+  if (reactor_callback_) reactor_callback_(info);
 }
 
 BusHandlerStatus BusHandler::fetchStatus() const {

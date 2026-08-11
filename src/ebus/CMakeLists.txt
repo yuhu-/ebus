@@ -10,6 +10,7 @@ set(APP_SOURCES
     app/device_manager.cpp
     app/device_scanner.cpp
     app/poll_manager.cpp
+    app/reactor.cpp
     app/scheduler.cpp
 )
 

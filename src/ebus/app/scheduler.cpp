@@ -11,6 +11,7 @@
 #include <memory>
 
 #include "core/bus_monitor.hpp"
+#include "core/handler.hpp"
 
 namespace ebus::detail {
 
@@ -27,7 +28,7 @@ void Scheduler::stop() {
   clear();
 }
 
-void Scheduler::setEventSink(Delegate<void(OrchestrationEvent&&)> sink) {
+void Scheduler::setProtocolEventSink(Delegate<void(ProtocolEvent&&)> sink) {
   event_sink_ = std::move(sink);
 }
 
@@ -54,13 +55,7 @@ void Scheduler::setTotalTimeout(uint32_t timeout_ms) {
 }
 
 void Scheduler::setReactiveCallback(ReactiveCallback callback) {
-  platform::LockGuard<platform::Mutex> lock(callback_mutex_);
-  extern_reactive_callback_ = std::move(callback);
-}
-
-void Scheduler::setProtocolCallback(ProtocolCallback callback) {
-  platform::LockGuard<platform::Mutex> lock(callback_mutex_);
-  extern_protocol_callback_ = std::move(callback);
+  user_reactive_callback_ = std::move(callback);
 }
 
 void Scheduler::attachHandlerCallbacks() {
@@ -101,10 +96,7 @@ void Scheduler::onBusRequestWon() {
   ev.request_state = RequestState::observe;
 
   if (event_sink_) {
-    OrchestrationEvent oev;
-    oev.type = OrchestrationEventType::protocol_result;
-    oev.data.protocol_data = ev;
-    event_sink_(std::move(oev));
+    event_sink_(std::move(ev));
   }
 }
 
@@ -121,21 +113,13 @@ void Scheduler::onBusRequestLost() {
   ev.request_state = RequestState::observe;
 
   if (event_sink_) {
-    OrchestrationEvent oev;
-    oev.type = OrchestrationEventType::protocol_result;
-    oev.data.protocol_data = ev;
-    event_sink_(std::move(oev));
+    event_sink_(std::move(ev));
   }
 }
 
 void Scheduler::onHandlerReactive(const ReactiveInfo& info) {
-  ReactiveCallback user_callback;
-  {
-    platform::LockGuard<platform::Mutex> lock(callback_mutex_);
-    user_callback = extern_reactive_callback_;
-  }
-  if (user_callback) {
-    user_callback(info);
+  if (user_reactive_callback_) {
+    user_reactive_callback_(info);
   }
 }
 
@@ -150,22 +134,6 @@ void Scheduler::onHandlerProtocol(const ProtocolInfo& info) {
       scheduler_retries = active_item_->item.send_attempts;
     }
   }
-
-  ProtocolCallback user_callback;
-  {
-    platform::LockGuard<platform::Mutex> lock(callback_mutex_);
-    user_callback = extern_protocol_callback_;
-  }
-
-  if (user_callback) {
-    auto pinfo = info;
-    pinfo.session_id = s_id;
-    pinfo.poll_id = p_id;
-    pinfo.retry_count = scheduler_retries;
-    user_callback(pinfo);
-  }
-
-  if (s_id == 0) return;
 
   ProtocolEvent ev;
   ev.type = info.is_error ? ProtocolEvent::Type::error
@@ -188,10 +156,7 @@ void Scheduler::onHandlerProtocol(const ProtocolInfo& info) {
   }
 
   if (event_sink_) {
-    OrchestrationEvent oev;
-    oev.type = OrchestrationEventType::protocol_result;
-    oev.data.protocol_data = ev;
-    event_sink_(std::move(oev));
+    event_sink_(std::move(ev));
   }
 }
 
@@ -202,14 +167,49 @@ bool Scheduler::injectProtocolEvent(const ProtocolEvent& event) {
       return false;
     if (event.type == ProtocolEvent::Type::won) return true;
   }
-  return handleAttemptResult(event);
+
+  // Inlined handleAttemptResult logic:
+  {
+    platform::LockGuard<platform::Mutex> lock(data_mutex_);
+    if (!active_item_) return false;
+    if (event.type == ProtocolEvent::Type::lost ||
+        event.type == ProtocolEvent::Type::error) {
+      // Structural protocol errors are not transient; do not retry.
+      const bool is_fatal =
+          (event.type == ProtocolEvent::Type::error &&
+           event.data.err.protocol_error == ProtocolError::invalid_message);
+
+      active_item_->item.send_attempts++;
+      if (!is_fatal && active_item_->item.send_attempts < max_send_attempts_) {
+        if (handler_) {
+          handler_->getMonitor()->updateHandler(
+              [](auto& m) { m.total_retries++; });
+        }
+        // Reschedule with backoff
+        active_item_->item.due =
+            Clock::now() + backoffDuration(active_item_->item.send_attempts);
+        scheduled_items_.push_back(std::move(active_item_->item));
+        std::push_heap(scheduled_items_.begin(), scheduled_items_.end(),
+                       Compare());
+        active_item_.reset();
+        current_session_id_.store(0, std::memory_order_relaxed);
+        current_poll_id_.store(0, std::memory_order_relaxed);
+        return true;
+      }
+    }
+
+    auto terminal_item = std::move(active_item_->item);
+    active_item_.reset();
+    current_session_id_.store(0, std::memory_order_relaxed);
+    current_poll_id_.store(0, std::memory_order_relaxed);
+  }
+  return true;
 }
 
 bool Scheduler::tick() {
   std::optional<Item> item_to_start;
   ProtocolEvent timeout_ev{};
   bool has_timeout = false;
-  uint32_t timeout_poll_id = 0;
 
   {
     platform::LockGuard<platform::Mutex> lock(data_mutex_);
@@ -218,6 +218,7 @@ bool Scheduler::tick() {
       if (elapsed > total_timeout_) {
         timeout_ev.type = ProtocolEvent::Type::error;
         timeout_ev.session_id = active_item_->session_id;
+        timeout_ev.poll_id = active_item_->item.poll_id;
         timeout_ev.data.err.protocol_error =
             ProtocolError::total_transfer_timeout;
         timeout_ev.data.err.result = RequestResult::first_error;
@@ -227,7 +228,6 @@ bool Scheduler::tick() {
         timeout_ev.request_state = RequestState::observe;
         timeout_ev.master.assign(active_item_->item.message.data(),
                                  active_item_->item.message.size());
-        timeout_poll_id = active_item_->item.poll_id;
         has_timeout = true;
       }
     } else if (!scheduled_items_.empty() &&
@@ -246,28 +246,9 @@ bool Scheduler::tick() {
   if (has_timeout) {
     handler_->reset();
 
-    // Notify decoupled ProtocolCallback for internal timeout
-    ProtocolCallback user_callback;
-    {
-      platform::LockGuard<platform::Mutex> lock(callback_mutex_);
-      user_callback = extern_protocol_callback_;
+    if (event_sink_) {
+      event_sink_(std::move(timeout_ev));
     }
-    if (user_callback) {
-      ProtocolInfo info;
-      info.is_error = true;
-      info.session_id = timeout_ev.session_id;
-      info.poll_id = timeout_poll_id;
-      info.level = timeout_ev.data.err.level;
-      info.protocol_error = timeout_ev.data.err.protocol_error;
-      info.result = timeout_ev.data.err.result;
-      info.sequence_state = timeout_ev.data.err.sequence_state;
-      info.handler_state = timeout_ev.handler_state;
-      info.request_state = timeout_ev.request_state;
-      info.master_view = timeout_ev.master;
-      user_callback(info);
-    }
-
-    handleAttemptResult(timeout_ev);
     return true;
   }
 
@@ -291,28 +272,9 @@ bool Scheduler::tick() {
       fail_ev.handler_state = handler_->getState();
       fail_ev.request_state = RequestState::observe;
 
-      // Notify decoupled ProtocolCallback for rejected message
-      ProtocolCallback user_callback;
-      {
-        platform::LockGuard<platform::Mutex> lock(callback_mutex_);
-        user_callback = extern_protocol_callback_;
+      if (event_sink_) {
+        event_sink_(std::move(fail_ev));
       }
-      if (user_callback) {
-        ProtocolInfo info;
-        info.is_error = true;
-        info.session_id = fail_ev.session_id;
-        info.poll_id = fail_ev.poll_id;
-        info.level = fail_ev.data.err.level;
-        info.protocol_error = fail_ev.data.err.protocol_error;
-        info.result = fail_ev.data.err.result;
-        info.sequence_state = fail_ev.data.err.sequence_state;
-        info.handler_state = fail_ev.handler_state;
-        info.request_state = fail_ev.request_state;
-        info.master_view = fail_ev.master;
-        user_callback(info);
-      }
-
-      handleAttemptResult(fail_ev);
     }
     return true;
   }
@@ -396,46 +358,6 @@ bool Scheduler::pushItem(Item&& it) {
     max_queue_size_ = scheduled_items_.size();
   std::push_heap(scheduled_items_.begin(), scheduled_items_.end(), Compare());
   return true;  // Successfully pushed
-}
-
-bool Scheduler::handleAttemptResult(const ProtocolEvent& ev) {
-  // This function is called by injectProtocolEvent (for events from Handler)
-  // and by tick (for timeout_ev).
-  {
-    platform::LockGuard<platform::Mutex> lock(data_mutex_);
-    if (!active_item_) return false;
-    if (ev.type == ProtocolEvent::Type::lost ||
-        ev.type == ProtocolEvent::Type::error) {
-      // Structural protocol errors are not transient; do not retry.
-      const bool is_fatal =
-          (ev.type == ProtocolEvent::Type::error &&
-           ev.data.err.protocol_error == ProtocolError::invalid_message);
-
-      active_item_->item.send_attempts++;
-      if (!is_fatal && active_item_->item.send_attempts < max_send_attempts_) {
-        if (handler_) {
-          handler_->getMonitor()->updateHandler(
-              [](auto& m) { m.total_retries++; });
-        }
-        // Reschedule with backoff
-        active_item_->item.due =
-            Clock::now() + backoffDuration(active_item_->item.send_attempts);
-        scheduled_items_.push_back(std::move(active_item_->item));
-        std::push_heap(scheduled_items_.begin(), scheduled_items_.end(),
-                       Compare());
-        active_item_.reset();
-        current_session_id_.store(0, std::memory_order_relaxed);
-        current_poll_id_.store(0, std::memory_order_relaxed);
-        return true;
-      }
-    }
-
-    auto terminal_item = std::move(active_item_->item);
-    active_item_.reset();
-    current_session_id_.store(0, std::memory_order_relaxed);
-    current_poll_id_.store(0, std::memory_order_relaxed);
-  }
-  return true;
 }
 
 Scheduler::Duration Scheduler::backoffDuration(int attempt) const {

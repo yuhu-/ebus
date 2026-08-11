@@ -41,6 +41,7 @@ add_catch2_test_executable(test_device_manager app/test_device_manager.cpp)
 add_catch2_test_executable(test_device_scanner app/test_device_scanner.cpp)
 add_catch2_test_executable(test_poll_manager app/test_poll_manager.cpp)
 add_catch2_test_executable(test_controller app/test_controller.cpp)
+add_catch2_test_executable(test_reactor app/test_reactor.cpp)
 add_catch2_test_executable(test_config_validator app/test_config_validator.cpp)
 add_catch2_test_executable(test_virtual_bus app/test_virtual_bus.cpp)
 

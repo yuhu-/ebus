@@ -16,14 +16,12 @@
 #include <sys/select.h>
 #endif
 
+#include <ebus/callbacks.hpp>
 #include <ebus/config.hpp>
 #include <ebus/detail/delegate.hpp>
 #include <ebus/static_vector.hpp>
 #include <ebus/status.hpp>
 
-#include "app/client.hpp"
-#include "core/bus_handler.hpp"
-#include "core/request.hpp"
 #include "platform/bus.hpp"
 #include "platform/mutex.hpp"
 #include "platform/queue.hpp"
@@ -32,7 +30,9 @@
 
 namespace ebus::detail {
 
-class BusMonitor;
+class BusHandler;
+class Request;
+class AbstractClient;
 
 /**
  * ClientManager handles all connected clients and routes data between them and

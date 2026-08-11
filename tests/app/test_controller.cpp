@@ -123,8 +123,7 @@ TEST_CASE("Controller: System Discovery automated response",
   peerBus.stop();
 }
 
-TEST_CASE("Controller Reactor: Enqueue Synchronization",
-          "[app][controller][reactor]") {
+TEST_CASE("Controller: Enqueue Synchronization", "[app][controller][reactor]") {
   ebus::EbusConfig config;
   config.runtime.address = 0x10;
   config.runtime.bus.syn_gen = true;
@@ -159,8 +158,7 @@ TEST_CASE("Controller Reactor: Enqueue Synchronization",
   controller.stop();
 }
 
-TEST_CASE("Controller Reactor: Immediate Rejection",
-          "[app][controller][reactor]") {
+TEST_CASE("Controller: Immediate Rejection", "[app][controller][reactor]") {
   ebus::EbusConfig config;
   config.runtime.address = 0x10;
   config.runtime.bus.syn_gen = true;
@@ -188,8 +186,7 @@ TEST_CASE("Controller Reactor: Immediate Rejection",
   controller.stop();
 }
 
-TEST_CASE("Controller Reactor: Drain Loop Burst",
-          "[app][controller][reactor]") {
+TEST_CASE("Controller: Drain Loop Burst", "[app][controller][reactor]") {
   ebus::EbusConfig config;
   config.runtime.address = 0x10;
   config.runtime.bus.syn_gen = true;

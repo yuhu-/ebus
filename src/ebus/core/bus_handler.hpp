@@ -6,6 +6,7 @@
 #pragma once
 
 #include <chrono>
+#include <ebus/callbacks.hpp>
 #include <ebus/config.hpp>
 #include <ebus/detail/delegate.hpp>
 #include <ebus/detail/protocol_limits.hpp>
@@ -13,11 +14,12 @@
 #include <ebus/status.hpp>
 
 #include "core/bus_events.hpp"
-#include "core/handler.hpp"
-#include "core/request.hpp"
 #include "platform/mutex.hpp"
 
 namespace ebus::detail {
+
+class Request;
+class Handler;
 
 /**
  * The BusHandler (along with Request and Handler) is a passive FSM
@@ -35,7 +37,7 @@ class BusHandler {
   void setWatchdogTimeout(uint32_t timeout_ms);
   void setClientManagerBusEventInfoCallback(
       Delegate<void(const BusEventInfo& info)> callback);
-  void setControllerBusEventInfoCallback(
+  void setReactorBusEventInfoCallback(
       Delegate<void(const BusEventInfo& info)> callback);
 
   // Working Methods
@@ -55,7 +57,7 @@ class BusHandler {
       ebus::RuntimeConfig{}.bus.watchdog_timeout_ms};
 
   Delegate<void(const BusEventInfo& info)> client_manager_callback_ = nullptr;
-  Delegate<void(const BusEventInfo& info)> controller_callback_ = nullptr;
+  Delegate<void(const BusEventInfo& info)> reactor_callback_ = nullptr;
 
   mutable platform::Mutex mutex_;
 };

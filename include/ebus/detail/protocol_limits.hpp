@@ -47,16 +47,16 @@ namespace OrchestrationLimits {
 inline constexpr size_t default_stack_size = 2048;
 inline constexpr uint8_t default_priority = 5;
 
-#ifndef EBUS_CONTROLLER_STACK_SIZE
-inline constexpr size_t controller_stack_size = 4096;
+#ifndef EBUS_REACTOR_STACK_SIZE
+inline constexpr size_t reactor_stack_size = 4096;
 #else
-inline constexpr size_t controller_stack_size = EBUS_CONTROLLER_STACK_SIZE;
+inline constexpr size_t reactor_stack_size = EBUS_REACTOR_STACK_SIZE;
 #endif
 
-#ifndef EBUS_CONTROLLER_PRIORITY
-inline constexpr uint8_t controller_priority = 5;
+#ifndef EBUS_REACTOR_PRIORITY
+inline constexpr uint8_t reactor_priority = 5;
 #else
-inline constexpr uint8_t controller_priority = EBUS_CONTROLLER_PRIORITY;
+inline constexpr uint8_t reactor_priority = EBUS_REACTOR_PRIORITY;
 #endif
 
 #ifndef EBUS_BUS_STACK_SIZE
@@ -198,32 +198,29 @@ inline constexpr size_t max_clients = 4;
 #else
 inline constexpr size_t max_clients = EBUS_MAX_CLIENTS;
 #endif
-
-/**
- * Factor used to drop data when a client buffer is full (e.g. 8 = drop 1/8th).
- */
-inline constexpr size_t outbound_buffer_drop_factor = 8;
 }  // namespace NetworkLimits
 
 // --- Application Layer ---
-namespace ControllerLimits {
+namespace ReactorLimits {
 #ifndef EBUS_EVENT_QUEUE_SIZE
-inline constexpr size_t event_queue_size = 10;
+inline constexpr size_t event_queue_size = 8;
 #else
 inline constexpr size_t event_queue_size = EBUS_EVENT_QUEUE_SIZE;
 #endif
+static_assert(event_queue_size >= 1, "Event queue size must be at least 1");
 
 #ifndef EBUS_REACTOR_QUEUE_SIZE
 inline constexpr size_t reactor_queue_size = 16;
 #else
 inline constexpr size_t reactor_queue_size = EBUS_REACTOR_QUEUE_SIZE;
 #endif
+static_assert(reactor_queue_size >= 1, "Reactor queue size must be at least 1");
+
 inline constexpr uint32_t reactor_yield_burst_limit = 10;  // every 10th events
 inline constexpr uint32_t latency_warning_threshold_us = 100000;
 inline constexpr uint32_t status_update_interval_ms_fast = 100;
 inline constexpr uint32_t status_update_interval_ms_slow = 500;
-static_assert(reactor_queue_size >= 1, "Reactor queue size must be at least 1");
-}  // namespace ControllerLimits
+}  // namespace ReactorLimits
 
 namespace DeviceLimits {
 #ifndef EBUS_MAX_DEVICES

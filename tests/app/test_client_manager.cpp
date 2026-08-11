@@ -50,10 +50,9 @@ TEST_CASE("ClientManager Orchestration (Regular + ReadOnly)") {
   bus.addBusEventListener(Delegate<void(const BusEvent& event)>::bind<
                           BusHandler, &BusHandler::onBusEvent>(&busHandler));
 
-  busHandler.setControllerBusEventInfoCallback(
-      [](const ebus::BusEventInfo& info) {
-        std::cout << ebus::toJson(info, 256) << std::endl;
-      });
+  busHandler.setReactorBusEventInfoCallback([](const ebus::BusEventInfo& info) {
+    std::cout << ebus::toJson(info, 256) << std::endl;
+  });
 
   ClientManager manager(&bus, &busHandler, &request, &monitor);
   manager.setSessionTimeout(999999);
@@ -142,10 +141,9 @@ TEST_CASE("ClientManager Enhanced Active Sending") {
   bus.addBusEventListener(Delegate<void(const BusEvent&)>::bind<
                           BusHandler, &BusHandler::onBusEvent>(&busHandler));
 
-  busHandler.setControllerBusEventInfoCallback(
-      [](const ebus::BusEventInfo& info) {
-        std::cout << ebus::toJson(info, 256) << std::endl;
-      });
+  busHandler.setReactorBusEventInfoCallback([](const ebus::BusEventInfo& info) {
+    std::cout << ebus::toJson(info, 256) << std::endl;
+  });
 
   ClientManager manager(&bus, &busHandler, &request, &monitor);
 
@@ -221,7 +219,6 @@ TEST_CASE("ClientManager Watchdog Timeout") {
   BusMonitor monitor;
   platform::Bus bus(config, runtime, &req, &monitor);
   BusHandler busHandler(&req, nullptr);
-  platform::Queue<ebus::OrchestrationEvent> reactor_queue(32);
 
   // Bridge Physical Bus Events -> BusHandler
   bus.addBusEventListener(Delegate<void(const BusEvent&)>::bind<
@@ -260,7 +257,6 @@ TEST_CASE("ClientManager Client Removal") {
   BusMonitor monitor;
   platform::Bus bus(config, runtime, &req, &monitor);
   BusHandler busHandler(&req, nullptr);
-  platform::Queue<ebus::OrchestrationEvent> reactor_queue(32);
 
   // Bridge Physical Bus Events -> BusHandler
   bus.addBusEventListener(Delegate<void(const BusEvent&)>::bind<

@@ -61,18 +61,14 @@ TEST_CASE("Scheduler: Broadcast Success (feb5050327002d)", "[app][scheduler]") {
   scheduler.setMaxSendAttempts(3);
   scheduler.setBaseBackoff(50);
 
+  ebus::ProtocolEvent received_ev{};
+  scheduler.setProtocolEventSink(
+      [&](ebus::ProtocolEvent&& ev) { received_ev = std::move(ev); });
+
   bus.start();
 
   std::atomic<uint32_t> last_success_session{0};
   std::atomic<uint32_t> last_error_session{0};
-
-  scheduler.setProtocolCallback([&](const ebus::ProtocolInfo& info) {
-    if (info.is_error) {
-      last_error_session.store(info.session_id);
-    } else if (info.message_type == ebus::MessageType::active) {
-      last_success_session.store(info.session_id);
-    }
-  });
 
   uint32_t session_id = scheduler.enqueue(1, ebus::toVector("feb5050327002d"));
   REQUIRE(session_id > 0);
@@ -82,6 +78,20 @@ TEST_CASE("Scheduler: Broadcast Success (feb5050327002d)", "[app][scheduler]") {
          last_error_session.load() != session_id &&
          (ebus::Clock::now() - test_start) < std::chrono::seconds(1)) {
     scheduler.tick();
+
+    // Process queued protocol events
+    ebus::ProtocolEvent ev;
+    if (received_ev.session_id != 0) {
+      ev = std::move(received_ev);
+      received_ev = ebus::ProtocolEvent{};
+      scheduler.injectProtocolEvent(ev);
+      if (ev.type == ebus::ProtocolEvent::Type::error) {
+        last_error_session.store(ev.session_id);
+      } else if (ev.type == ebus::ProtocolEvent::Type::telegram &&
+                 ev.data.tel.message_type == ebus::MessageType::active) {
+        last_success_session.store(ev.session_id);
+      }
+    }
 
     // Small sleep to prevent busy-waiting
     platform::sleepMilli(1);
@@ -132,18 +142,14 @@ TEST_CASE("Scheduler: MS Success (52b509030d4600)", "[app][scheduler]") {
   scheduler.setMaxSendAttempts(3);
   scheduler.setBaseBackoff(50);
 
+  ebus::ProtocolEvent received_ev{};
+  scheduler.setProtocolEventSink(
+      [&](ebus::ProtocolEvent&& ev) { received_ev = std::move(ev); });
+
   bus.start();
 
   std::atomic<uint32_t> last_success_session{0};
   std::atomic<uint32_t> last_error_session{0};
-
-  scheduler.setProtocolCallback([&](const ebus::ProtocolInfo& info) {
-    if (info.is_error) {
-      last_error_session.store(info.session_id);
-    } else if (info.message_type == ebus::MessageType::active) {
-      last_success_session.store(info.session_id);
-    }
-  });
 
   uint32_t session_id = scheduler.enqueue(1, ebus::toVector("52b509030d4600"));
   REQUIRE(session_id > 0);
@@ -153,6 +159,20 @@ TEST_CASE("Scheduler: MS Success (52b509030d4600)", "[app][scheduler]") {
          last_error_session.load() != session_id &&
          (ebus::Clock::now() - test_start) < std::chrono::seconds(1)) {
     scheduler.tick();
+
+    // Process queued protocol events
+    ebus::ProtocolEvent ev;
+    if (received_ev.session_id != 0) {
+      ev = std::move(received_ev);
+      received_ev = ebus::ProtocolEvent{};
+      scheduler.injectProtocolEvent(ev);
+      if (ev.type == ebus::ProtocolEvent::Type::error) {
+        last_error_session.store(ev.session_id);
+      } else if (ev.type == ebus::ProtocolEvent::Type::telegram &&
+                 ev.data.tel.message_type == ebus::MessageType::active) {
+        last_success_session.store(ev.session_id);
+      }
+    }
 
     // Small sleep to prevent busy-waiting
     platform::sleepMilli(1);
@@ -206,21 +226,14 @@ TEST_CASE("Scheduler: Retry Success (52b509030d4600)", "[app][scheduler]") {
   scheduler.setMaxSendAttempts(3);
   scheduler.setBaseBackoff(50);
 
+  ebus::ProtocolEvent received_ev{};
+  scheduler.setProtocolEventSink(
+      [&](ebus::ProtocolEvent&& ev) { received_ev = std::move(ev); });
+
   bus.start();
 
   std::atomic<uint32_t> last_success_session{0};
   std::atomic<uint32_t> last_error_session{0};
-
-  scheduler.setProtocolCallback([&](const ebus::ProtocolInfo& info) {
-    if (info.is_error) {
-      last_error_session.store(info.session_id);
-    } else if (info.message_type == ebus::MessageType::active) {
-      last_success_session.store(info.session_id);
-    }
-  });
-
-  bool test_passed = true;
-  bool injected = false;
 
   uint32_t session_id = scheduler.enqueue(1, ebus::toVector("52b509030d4600"));
   REQUIRE(session_id > 0);
@@ -229,6 +242,20 @@ TEST_CASE("Scheduler: Retry Success (52b509030d4600)", "[app][scheduler]") {
   while (last_success_session.load() != session_id &&
          (ebus::Clock::now() - test_start) < std::chrono::seconds(3)) {
     scheduler.tick();
+
+    // Process queued protocol events
+    ebus::ProtocolEvent ev;
+    if (received_ev.session_id != 0) {
+      ev = std::move(received_ev);
+      received_ev = ebus::ProtocolEvent{};
+      scheduler.injectProtocolEvent(ev);
+      if (ev.type == ebus::ProtocolEvent::Type::error) {
+        last_error_session.store(ev.session_id);
+      } else if (ev.type == ebus::ProtocolEvent::Type::telegram &&
+                 ev.data.tel.message_type == ebus::MessageType::active) {
+        last_success_session.store(ev.session_id);
+      }
+    }
 
     // Small sleep to prevent busy-waiting
     platform::sleepMilli(1);

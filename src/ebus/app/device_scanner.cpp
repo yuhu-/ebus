@@ -11,6 +11,8 @@
 #include <ebus/utils.hpp>
 #include <iterator>
 
+#include "app/device_manager.hpp"
+
 namespace ebus::detail {
 
 DeviceScanner::DeviceScanner(uint8_t address, DeviceManager* device_manager)
