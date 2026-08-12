@@ -260,6 +260,10 @@ class Controller {
 
   /**
    * @brief Adds a network client bridge via an existing file descriptor.
+   * @note In production, external clients (e.g. ebusd) should connect via TCP
+   * to the controller's listeners and are accepted automatically by the
+   * internal ClientManager. This method is intended for testing, simulation,
+   * or embedded use cases where a pre-accepted socket is available.
    */
   bool addClient(int fd, ClientType type);
   void removeClient(int fd);

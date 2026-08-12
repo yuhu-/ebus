@@ -65,6 +65,9 @@ int main() {
   // deviceB.addClient(ebusd_socket_fd, ebus::ClientType::Enhanced);
 
   // --- 3. Setup a Read-Only Client (Passive Logger) ---
+  // This simulates an external client (like ebusd) connecting to deviceA.
+  // In production, external clients connect via TCP to the controller's
+  // listeners and are accepted automatically by the internal ClientManager.
   int sv[2];
   if (socketpair(AF_UNIX, SOCK_STREAM, 0, sv) != 0) return 1;
   // The controller takes ownership of sv[0]. We use sv[1] to monitor.
