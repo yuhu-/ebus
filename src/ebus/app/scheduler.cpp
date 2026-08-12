@@ -84,8 +84,8 @@ void Scheduler::detachHandlerCallbacks() {
 }
 
 void Scheduler::onBusRequestWon() {
-  uint32_t s_id = current_session_id_.load(std::memory_order_relaxed);
-  uint32_t p_id = current_poll_id_.load(std::memory_order_relaxed);
+  uint32_t s_id = current_session_id_.load(std::memory_order_acquire);
+  uint32_t p_id = current_poll_id_.load(std::memory_order_acquire);
   if (s_id == 0) return;
 
   ProtocolEvent ev{};
@@ -102,8 +102,8 @@ void Scheduler::onBusRequestWon() {
 }
 
 void Scheduler::onBusRequestLost() {
-  uint32_t s_id = current_session_id_.load(std::memory_order_relaxed);
-  uint32_t p_id = current_poll_id_.load(std::memory_order_relaxed);
+  uint32_t s_id = current_session_id_.load(std::memory_order_acquire);
+  uint32_t p_id = current_poll_id_.load(std::memory_order_acquire);
   if (s_id == 0) return;
 
   ProtocolEvent ev{};
@@ -126,8 +126,8 @@ void Scheduler::onHandlerReactive(const ReactiveInfo& info) {
 }
 
 void Scheduler::onHandlerProtocol(const ProtocolInfo& info) {
-  uint32_t s_id = current_session_id_.load(std::memory_order_relaxed);
-  uint32_t p_id = current_poll_id_.load(std::memory_order_relaxed);
+  uint32_t s_id = current_session_id_.load(std::memory_order_acquire);
+  uint32_t p_id = current_poll_id_.load(std::memory_order_acquire);
   uint32_t scheduler_retries = 0;
 
   {
@@ -195,16 +195,16 @@ bool Scheduler::injectProtocolEvent(const ProtocolEvent& event) {
         std::push_heap(scheduled_items_.begin(), scheduled_items_.end(),
                        Compare());
         active_item_.reset();
-        current_session_id_.store(0, std::memory_order_relaxed);
-        current_poll_id_.store(0, std::memory_order_relaxed);
+        current_session_id_.store(0, std::memory_order_release);
+        current_poll_id_.store(0, std::memory_order_release);
         return true;
       }
     }
 
     auto terminal_item = std::move(active_item_->item);
     active_item_.reset();
-    current_session_id_.store(0, std::memory_order_relaxed);
-    current_poll_id_.store(0, std::memory_order_relaxed);
+    current_session_id_.store(0, std::memory_order_release);
+    current_poll_id_.store(0, std::memory_order_release);
   }
   return true;
 }
@@ -240,8 +240,8 @@ bool Scheduler::tick() {
       item_to_start = std::move(scheduled_items_.back());
       scheduled_items_.pop_back();
       current_session_id_.store(item_to_start->session_id,
-                                std::memory_order_relaxed);
-      current_poll_id_.store(item_to_start->poll_id, std::memory_order_relaxed);
+                                std::memory_order_release);
+      current_poll_id_.store(item_to_start->poll_id, std::memory_order_release);
     }
   }
 
