@@ -54,26 +54,36 @@ struct QueueStatus {
 };
 
 /**
- * Snapshot of the controller's current state.
+ * Snapshot of the reactor's current state.
  */
-struct ControllerStatus {
-  ControllerStatus() = default;
-  ControllerStatus(ThreadStatus t, size_t q_size, size_t q_max, size_t pq_size,
-                   size_t pq_max, uint32_t dropped, uint32_t loop_us)
+struct ReactorStatus {
+  ReactorStatus() = default;
+  ReactorStatus(ThreadStatus t, size_t sq_size, size_t sq_max,
+                uint32_t sq_dropped, size_t pq_size, size_t pq_max,
+                uint32_t bq_dropped, size_t bq_size, size_t bq_max,
+                uint32_t pq_dropped, uint32_t loop_us)
       : thread(std::move(t)),
-        reactor_queue_size(q_size),
-        max_reactor_queue_size(q_max),
+        signal_queue_size(sq_size),
+        max_signal_queue_size(sq_max),
+        signal_queue_dropped(sq_dropped),
         protocol_queue_size(pq_size),
         max_protocol_queue_size(pq_max),
-        event_queue_dropped(dropped),
+        protocol_queue_dropped(pq_dropped),
+        bus_queue_size(bq_size),
+        max_bus_queue_size(bq_max),
+        bus_queue_dropped(bq_dropped),
         max_loop_cycle_us(loop_us) {}
   ThreadStatus thread;
 
-  size_t reactor_queue_size = 0;
-  size_t max_reactor_queue_size = 0;
+  size_t signal_queue_size = 0;
+  size_t max_signal_queue_size = 0;
+  uint32_t signal_queue_dropped = 0;
   size_t protocol_queue_size = 0;
   size_t max_protocol_queue_size = 0;
-  uint32_t event_queue_dropped = 0;
+  uint32_t protocol_queue_dropped = 0;
+  size_t bus_queue_size = 0;
+  size_t max_bus_queue_size = 0;
+  uint32_t bus_queue_dropped = 0;
   uint32_t max_loop_cycle_us = 0;
 
   void toJson(detail::JsonWriter& writer) const;
@@ -218,7 +228,7 @@ struct SystemResources {
  */
 struct ServiceStatus {
   uint64_t last_update_timestamp_ms = 0;
-  ControllerStatus controller;
+  ReactorStatus reactor;
   BusStatus bus;
   BusHandlerStatus bus_handler;
   SchedulerStatus scheduler;

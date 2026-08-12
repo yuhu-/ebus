@@ -22,7 +22,7 @@ void BusMonitor::resetMetrics() {
   request_acc_.reset();
   bus_acc_.reset();
   handler_acc_.total_retries = 0;
-  controller_acc_.reset();
+  reactor_acc_.reset();
   device_acc_.reset();
 
   sync.reset();
@@ -297,7 +297,7 @@ void BusMonitor::fetchMetrics(
 
     // 5. Populate Controller Part
     // This is the "shadow state" for controller metrics
-    sm.controller = controller_acc_;
+    sm.reactor = reactor_acc_;
   }
 
   // Execute callback outside the lock to protect the Hot Path
@@ -528,16 +528,24 @@ void metrics::DeviceMetrics::toJson(detail::JsonWriter& writer) const {
   writer.writeField("identified_devices", identified_devices);
 }
 
-void metrics::ControllerMetrics::reset() {
-  event_queue_dropped = 0;
-  max_reactor_queue_size = 0;
+void metrics::ReactorMetrics::reset() {
+  max_signal_queue_size = 0;
+  signal_queue_dropped = 0;
+  max_protocol_queue_size = 0;
+  protocol_queue_dropped = 0;
+  max_bus_queue_size = 0;
+  bus_queue_dropped = 0;
   max_loop_cycle_us = 0;
 }
 
-void metrics::ControllerMetrics::toJson(detail::JsonWriter& writer) const {
+void metrics::ReactorMetrics::toJson(detail::JsonWriter& writer) const {
   auto scope = writer.objectScope();
-  writer.writeField("event_queue_dropped", event_queue_dropped);
-  writer.writeField("max_reactor_queue_size", max_reactor_queue_size);
+  writer.writeField("max_signal_queue_size", max_signal_queue_size);
+  writer.writeField("signal_queue_dropped", signal_queue_dropped);
+  writer.writeField("max_protocol_queue_size", max_protocol_queue_size);
+  writer.writeField("protocol_queue_dropped", protocol_queue_dropped);
+  writer.writeField("max_bus_queue_size", max_bus_queue_size);
+  writer.writeField("bus_queue_dropped", bus_queue_dropped);
   writer.writeField("max_loop_cycle_us", max_loop_cycle_us);
 }
 
@@ -565,7 +573,8 @@ void metrics::SystemMetrics::toJson(detail::JsonWriter& writer) const {
   // Quality Score: Protocol health * Arbitration success * Reactor integrity
   // We penalize the quality if the reactor loop has dropped events.
   float drop_penalty =
-      (controller.event_queue_dropped > 0)
+      (reactor.signal_queue_dropped > 0 || reactor.protocol_queue_dropped > 0 ||
+       reactor.bus_queue_dropped > 0)
           ? detail::SystemMetricsLimits::quality_score_drop_penalty
           : 1.0f;
   float jitter_penalty =
@@ -595,8 +604,8 @@ void metrics::SystemMetrics::toJson(detail::JsonWriter& writer) const {
   writer.writeValue(bus);
   writer.appendKey("devices");
   writer.writeValue(devices);
-  writer.appendKey("controller");
-  writer.writeValue(controller);
+  writer.appendKey("reactor");
+  writer.writeValue(reactor);
   writer.writeFieldFloat("quality", quality);
 }
 
@@ -625,14 +634,18 @@ void QueueStatus::toJson(detail::JsonWriter& writer) const {
   writer.writeField("max_size", max_size);
 }
 
-void ControllerStatus::toJson(detail::JsonWriter& writer) const {
+void ReactorStatus::toJson(detail::JsonWriter& writer) const {
   auto scope = writer.objectScope();
   writer.writeField("thread", thread);
-  writer.writeField("reactor_queue_size", reactor_queue_size);
-  writer.writeField("max_reactor_queue_size", max_reactor_queue_size);
+  writer.writeField("signal_queue_size", signal_queue_size);
+  writer.writeField("max_signal_queue_size", max_signal_queue_size);
+  writer.writeField("signal_queue_dropped", signal_queue_dropped);
   writer.writeField("protocol_queue_size", protocol_queue_size);
   writer.writeField("max_protocol_queue_size", max_protocol_queue_size);
-  writer.writeField("event_queue_dropped", event_queue_dropped);
+  writer.writeField("protocol_queue_dropped", protocol_queue_dropped);
+  writer.writeField("bus_queue_size", bus_queue_size);
+  writer.writeField("max_bus_queue_size", max_bus_queue_size);
+  writer.writeField("bus_queue_dropped", bus_queue_dropped);
   writer.writeField("max_loop_cycle_us", max_loop_cycle_us);
 }
 
@@ -724,7 +737,7 @@ void SystemResources::toJson(detail::JsonWriter& writer) const {
 void ServiceStatus::toJson(detail::JsonWriter& writer) const {
   auto scope = writer.objectScope();
   writer.writeField("last_update_timestamp_ms", last_update_timestamp_ms);
-  writer.writeField("controller", controller);
+  writer.writeField("reactor", reactor);
   writer.writeField("bus", bus);
   writer.writeField("bus_handler", bus_handler);
   writer.writeField("scheduler", scheduler);
@@ -743,7 +756,7 @@ void serializeServiceStatus(const JsonChunkVisitor& visitor,
   auto scope = writer.objectScope();
   writer.writeField("last_update_timestamp_ms",
                     status.last_update_timestamp_ms);
-  writer.writeField("controller", status.controller);
+  writer.writeField("reactor", status.reactor);
   writer.writeField("bus", status.bus);
   writer.writeField("bus_handler", status.bus_handler);
   writer.writeField("scheduler", status.scheduler);

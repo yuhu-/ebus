@@ -3,12 +3,12 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include <csignal>
 #include <getopt.h>
 #include <unistd.h>
 
 #include <atomic>
 #include <chrono>
+#include <csignal>
 #include <ebus.hpp>
 #include <iostream>
 #include <string>
@@ -28,12 +28,16 @@ void usage() {
   std::cout << "Usage: ebusproxy [options]\n\n"
             << "eBUS Enhanced test application/driver\n\n"
             << "Options:\n"
-            << "  -p, --plain-port <port>     Port for plain eBUS connections (default: 3333)\n"
-            << "  -e, --enhanced-port <port>  Port for enhanced ebusd connections (default: 3335)\n"
+            << "  -p, --plain-port <port>     Port for plain eBUS connections "
+               "(default: 3333)\n"
+            << "  -e, --enhanced-port <port>  Port for enhanced ebusd "
+               "connections (default: 3335)\n"
 #if !EBUS_SIMULATION
-            << "  -d, --device <dev>          Serial device path (default: /dev/null)\n"
+            << "  -d, --device <dev>          Serial device path (default: "
+               "/dev/null)\n"
 #endif
-            << "  -s, --syn-gen <0|1>         Enable (1) or disable (0) SYN generation (default: 1)\n"
+            << "  -s, --syn-gen <0|1>         Enable (1) or disable (0) SYN "
+               "generation (default: 1)\n"
             << "  -v, --verbose               Enable verbose logging\n"
             << "  -h, --help                  Show this help page\n"
             << std::endl;
@@ -60,7 +64,8 @@ int main(int argc, char* argv[]) {
       {nullptr, 0, nullptr, 0}};
 
   int option;
-  while ((option = getopt_long(argc, argv, "p:e:d:s:vh", options, nullptr)) != -1) {
+  while ((option = getopt_long(argc, argv, "p:e:d:s:vh", options, nullptr)) !=
+         -1) {
     switch (option) {
       case 'p':
         plain_port = static_cast<uint16_t>(std::stoi(optarg));
@@ -93,8 +98,8 @@ int main(int argc, char* argv[]) {
 
   // --- Configuration ---
   ebus::EbusConfig config;
+  config.runtime.log_level = log_level;
   config.runtime.address = 0x31;  // Standard test address
-  config.runtime.diagnostics.level = log_level;
   config.runtime.bus.syn_gen = syn_gen;
   config.runtime.bus.watchdog_timeout_ms = 250;
 
@@ -102,7 +107,7 @@ int main(int argc, char* argv[]) {
   config.runtime.network.enable_server = true;
   config.runtime.network.port_regular = plain_port;
   config.runtime.network.port_enhanced = enhanced_port;
-  config.runtime.network.port_readonly = 3334; // standard readonly port
+  config.runtime.network.port_readonly = 3334;  // standard readonly port
 
 #if !EBUS_SIMULATION
   config.bus.device = device_path;
@@ -116,7 +121,8 @@ int main(int argc, char* argv[]) {
 #else
             << "  Bus Mode            : REAL HARDWARE (" << device_path << ")\n"
 #endif
-            << "  SYN Generation      : " << (syn_gen ? "ENABLED" : "DISABLED") << "\n"
+            << "  SYN Generation      : " << (syn_gen ? "ENABLED" : "DISABLED")
+            << "\n"
             << std::endl;
 
   ebus::Controller controller(config);
@@ -124,7 +130,8 @@ int main(int argc, char* argv[]) {
   // Set up a protocol callback to see what telegrams are passing on the bus
   controller.setProtocolCallback([](const ebus::ProtocolInfo& info) {
     if (info.is_error) {
-      std::cout << "[Bus Error] " << ebus::toString(info.protocol_error) << std::endl;
+      std::cout << "[Bus Error] " << ebus::toString(info.protocol_error)
+                << std::endl;
     } else {
       std::cout << "[Bus Telegram] Type=" << ebus::toString(info.telegram_type)
                 << " Master=" << ebus::byteToHex(info.master_view)
@@ -137,7 +144,8 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
 
-  std::cout << "eBUS Controller is running. Press Ctrl+C to exit.\n" << std::endl;
+  std::cout << "eBUS Controller is running. Press Ctrl+C to exit.\n"
+            << std::endl;
 
   while (keep_running.load()) {
     std::this_thread::sleep_for(100ms);

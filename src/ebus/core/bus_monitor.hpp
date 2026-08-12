@@ -25,11 +25,11 @@ class BusMonitor {
   // --- Public Types & Constants ---
 #ifndef EBUS_MINIMAL_DIAGNOSTICS
   using HandlerHistory =
-      CircularBuffer<HandlerTransition, FsmLimits::transition_history_size>;
+      CircularBuffer<HandlerTransition, FsmLimits::handler_history_size>;
   using RequestHistory =
-      CircularBuffer<RequestTransition, FsmLimits::transition_history_size>;
+      CircularBuffer<RequestTransition, FsmLimits::request_history_size>;
   using UtilizationHistory =
-      CircularBuffer<float, DiagnosticsLimits::log_history_size>;
+      CircularBuffer<float, DiagnosticsLimits::utilization_history_size>;
 #endif
 
   // Lifecycle
@@ -66,9 +66,9 @@ class BusMonitor {
   }
 
   template <typename F>
-  void updateController(F&& updater) {
+  void updateReactor(F&& updater) {
     platform::LockGuard<platform::Mutex> lock(metrics_mutex_);
-    updater(controller_acc_);
+    updater(reactor_acc_);
   }
 
   /**
@@ -76,15 +76,31 @@ class BusMonitor {
    */
   void resetLoopCycle() {
     platform::LockGuard<platform::Mutex> lock(metrics_mutex_);
-    controller_acc_.max_loop_cycle_us = 0;
+    reactor_acc_.max_loop_cycle_us = 0;
   }
 
   /**
-   * @brief Resets the interval-based max reactor queue size.
+   * @brief Resets the interval-based max signal queue size.
    */
-  void resetMaxReactorQueueSize(size_t current) {
+  void resetMaxSignalQueueSize(size_t current) {
     platform::LockGuard<platform::Mutex> lock(metrics_mutex_);
-    controller_acc_.max_reactor_queue_size = static_cast<uint32_t>(current);
+    reactor_acc_.max_signal_queue_size = static_cast<uint32_t>(current);
+  }
+
+  /**
+   * @brief Resets the interval-based max protocol queue size.
+   */
+  void resetMaxProtocolQueueSize(size_t current) {
+    platform::LockGuard<platform::Mutex> lock(metrics_mutex_);
+    reactor_acc_.max_protocol_queue_size = static_cast<uint32_t>(current);
+  }
+
+  /**
+   * @brief Resets the interval-based max bus queue size.
+   */
+  void resetMaxBusQueueSize(size_t current) {
+    platform::LockGuard<platform::Mutex> lock(metrics_mutex_);
+    reactor_acc_.max_bus_queue_size = static_cast<uint32_t>(current);
   }
 
   void recordBusError();
@@ -140,17 +156,17 @@ class BusMonitor {
   metrics::RequestMetrics request_acc_;
   metrics::BusMetrics bus_acc_;
   metrics::DeviceMetrics device_acc_;
-  metrics::ControllerMetrics controller_acc_;
+  metrics::ReactorMetrics reactor_acc_;
 
 #ifndef EBUS_MINIMAL_DIAGNOSTICS
   uint64_t last_history_low_bits_ = 0;
   uint64_t last_history_uptime_us_ = 0;
 
-  CircularBuffer<HandlerTransition, FsmLimits::transition_history_size>
+  CircularBuffer<HandlerTransition, FsmLimits::handler_history_size>
       handler_history_;
-  CircularBuffer<RequestTransition, FsmLimits::transition_history_size>
+  CircularBuffer<RequestTransition, FsmLimits::request_history_size>
       request_history_;
-  CircularBuffer<float, DiagnosticsLimits::log_history_size>
+  CircularBuffer<float, DiagnosticsLimits::utilization_history_size>
       utilization_history_;
 #endif
 };

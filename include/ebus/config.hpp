@@ -22,6 +22,8 @@ namespace ebus {
  * hardware.
  */
 struct RuntimeConfig {
+  LogLevel log_level = LogLevel::error;
+
   uint8_t address = 0xff;
   uint8_t lock_counter = 3;  // max 25
   bool system_inquiry = false;
@@ -33,11 +35,6 @@ struct RuntimeConfig {
     uint32_t watchdog_timeout_ms = 250;
     bool syn_gen = false;
   } bus;
-
-  struct Diagnostics {
-    LogLevel level = LogLevel::error;
-    size_t log_size = 5;
-  } diagnostics;
 
   struct Network {
     uint32_t session_timeout_ms = 500;

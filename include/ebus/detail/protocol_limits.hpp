@@ -30,15 +30,24 @@ inline constexpr float start_bit_tolerance = 1.5f;  // bit times
 // --- Component Layer ---
 namespace FsmLimits {
 inline constexpr std::size_t num_handler_states = 15;
+
+#ifndef EBUS_HANDLER_HISTORY_SIZE
+inline constexpr size_t handler_history_size = 10;
+#else
+inline constexpr size_t handler_history_size = EBUS_HANDLER_HISTORY_SIZE;
+#endif
+static_assert(handler_history_size >= 1,
+              "Handler FSM transition history size must be at least 1");
+
 inline constexpr size_t num_request_states = 4;
 
-#ifndef EBUS_TRANSITION_HISTORY_SIZE
-inline constexpr size_t transition_history_size = 10;
+#ifndef EBUS_REQUEST_HISTORY_SIZE
+inline constexpr size_t request_history_size = 10;
 #else
-inline constexpr size_t transition_history_size = EBUS_TRANSITION_HISTORY_SIZE;
+inline constexpr size_t request_history_size = EBUS_REQUEST_HISTORY_SIZE;
 #endif
-static_assert(transition_history_size >= 1,
-              "FSM transition history size must be at least 1");
+static_assert(request_history_size >= 1,
+              "Request FSM transition history size must be at least 1");
 }  // namespace FsmLimits
 
 // --- Orchestration Layer (Thread Priorities & Stacks) ---
@@ -172,13 +181,22 @@ inline constexpr uint32_t virtual_read_timeout_ms = 10;
 
 // --- Diagnostics Layer ---
 namespace DiagnosticsLimits {
-#ifndef EBUS_LOG_HISTORY_SIZE
-inline constexpr size_t log_history_size = 60;
+#ifndef EBUS_UTILIZATION_HISTORY_SIZE
+inline constexpr size_t utilization_history_size = 64;
 #else
-inline constexpr size_t log_history_size = EBUS_LOG_HISTORY_SIZE;
+inline constexpr size_t utilization_history_size =
+    EBUS_UTILIZATION_HISTORY_SIZE;
 #endif
-static_assert(log_history_size >= 1,
-              "Diagnostic log history size must be at least 1");
+static_assert(utilization_history_size >= 1,
+              "Utilization history size must be at least 1");
+
+#ifndef EBUS_ERROR_HISTORY_SIZE
+inline constexpr size_t error_history_size = 60;
+#else
+inline constexpr size_t error_history_size = EBUS_ERROR_HISTORY_SIZE;
+#endif
+static_assert(error_history_size >= 1,
+              "Reactor error history size must be at least 1");
 
 #ifndef EBUS_TRACE_HISTORY_SIZE
 inline constexpr size_t trace_history_size = 100;
@@ -186,7 +204,7 @@ inline constexpr size_t trace_history_size = 100;
 inline constexpr size_t trace_history_size = EBUS_TRACE_HISTORY_SIZE;
 #endif
 static_assert(trace_history_size >= 1,
-              "Protocol trace history size must be at least 1");
+              "Bus trace history size must be at least 1");
 }  // namespace DiagnosticsLimits
 
 // --- Networking Layer ---
@@ -202,19 +220,28 @@ inline constexpr size_t max_clients = EBUS_MAX_CLIENTS;
 
 // --- Application Layer ---
 namespace ReactorLimits {
-#ifndef EBUS_EVENT_QUEUE_SIZE
-inline constexpr size_t event_queue_size = 8;
+#ifndef EBUS_SIGNAL_QUEUE_SIZE
+inline constexpr size_t signal_queue_size = 16;
 #else
-inline constexpr size_t event_queue_size = EBUS_EVENT_QUEUE_SIZE;
+inline constexpr size_t signal_queue_size = EBUS_SIGNAL_QUEUE_SIZE;
 #endif
-static_assert(event_queue_size >= 1, "Event queue size must be at least 1");
+static_assert(signal_queue_size >= 1,
+              "Reactor signal queue size must be at least 1");
 
-#ifndef EBUS_REACTOR_QUEUE_SIZE
-inline constexpr size_t reactor_queue_size = 16;
+#ifndef EBUS_PROTOCOL_QUEUE_SIZE
+inline constexpr size_t protocol_queue_size = 8;
 #else
-inline constexpr size_t reactor_queue_size = EBUS_REACTOR_QUEUE_SIZE;
+inline constexpr size_t protocol_queue_size = EBUS_PROTOCOL_QUEUE_SIZE;
 #endif
-static_assert(reactor_queue_size >= 1, "Reactor queue size must be at least 1");
+static_assert(protocol_queue_size >= 1,
+              "Protocol queue size must be at least 1");
+
+#ifndef EBUS_BUS_QUEUE_SIZE
+inline constexpr size_t bus_queue_size = 16;
+#else
+inline constexpr size_t bus_queue_size = EBUS_BUS_QUEUE_SIZE;
+#endif
+static_assert(bus_queue_size >= 1, "Bus queue size must be at least 1");
 
 inline constexpr uint32_t reactor_yield_burst_limit = 10;  // every 10th events
 inline constexpr uint32_t latency_warning_threshold_us = 100000;

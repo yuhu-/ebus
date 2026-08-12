@@ -152,9 +152,13 @@ struct DeviceMetrics {
 /**
  * Performance metrics for the orchestration/application layer.
  */
-struct ControllerMetrics {
-  uint32_t event_queue_dropped = 0;
-  uint32_t max_reactor_queue_size = 0;
+struct ReactorMetrics {
+  uint32_t max_signal_queue_size = 0;
+  uint32_t signal_queue_dropped = 0;
+  uint32_t max_protocol_queue_size = 0;
+  uint32_t protocol_queue_dropped = 0;
+  uint32_t max_bus_queue_size = 0;
+  uint32_t bus_queue_dropped = 0;
   uint32_t max_loop_cycle_us = 0;
 
   void reset();
@@ -170,7 +174,7 @@ struct SystemMetrics {
   RequestMetrics request;
   BusMetrics bus;
   DeviceMetrics devices;
-  ControllerMetrics controller;
+  ReactorMetrics reactor;
 
   void toJson(detail::JsonWriter& writer) const;
 };

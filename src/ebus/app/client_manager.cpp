@@ -112,14 +112,14 @@ void ClientManager::start(const RuntimeConfig& config) {
     }
   }
 
-  client_io_running_.store(true);
+  running_.store(true);
 
   // Start the client I/O thread
-  client_io_worker_ = std::make_unique<platform::ServiceThread>(
+  worker_ = std::make_unique<platform::ServiceThread>(
       "ebus_client_io",
       Delegate<void()>::bind<ClientManager, &ClientManager::clientIoLoop>(
           this));
-  client_io_worker_->start();
+  worker_->start();
 
   running_.store(true, std::memory_order_release);
 }
@@ -127,11 +127,11 @@ void ClientManager::start(const RuntimeConfig& config) {
 void ClientManager::stop() {
   EBUS_LOG_INFO("[ClientManager] Stopping ClientManager...");
   running_.store(false, std::memory_order_release);
-  client_io_running_.store(false);
+  running_.store(false);
   signalClientIoThread();
-  if (client_io_worker_) {
-    client_io_worker_->join();
-    client_io_worker_.reset();
+  if (worker_) {
+    worker_->join();
+    worker_.reset();
   }
 
   stopActiveSession();
@@ -273,8 +273,8 @@ bool ClientManager::addClient(std::shared_ptr<AbstractClient> client) {
 void ClientManager::removeClient(int fd) { removeClientByFd(fd); }
 
 platform::ServiceThread::Status ClientManager::getThreadStatus() const {
-  if (client_io_worker_) {
-    return client_io_worker_->status();
+  if (worker_) {
+    return worker_->status();
   }
   return platform::ServiceThread::Status{"ebus_client_manager", -1, -1};
 }
@@ -845,7 +845,7 @@ void ClientManager::handleSocketOutput(
 void ClientManager::clientIoLoop() {
   fd_set readfds, writefds, exceptfds;
 
-  while (client_io_running_.load()) {
+  while (running_.load()) {
     // Phase 1: Prepare file descriptor sets for this iteration
     int max_fd = prepareFileDescriptors(readfds, writefds, exceptfds);
 
@@ -862,7 +862,7 @@ void ClientManager::clientIoLoop() {
     // Phase 3: Block on socket events
     int activity = select(max_fd + 1, &readfds, &writefds, &exceptfds, &tv);
 
-    if (!client_io_running_.load()) break;
+    if (!running_.load()) break;
 
     if (activity < 0) {
       if (errno == EINTR) continue;

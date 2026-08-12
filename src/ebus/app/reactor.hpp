@@ -85,6 +85,8 @@ class Reactor {
   size_t maxSignalQueueSize() const { return max_signal_queue_.load(); }
   size_t protocolQueueSize() const { return protocol_events_.size(); }
   size_t maxProtocolQueueSize() const { return max_protocol_events_.load(); }
+  size_t busQueueSize() const { return bus_events_.size(); }
+  size_t maxBusQueueSize() const { return max_bus_queue_.load(); }
 
   const platform::ServiceThread* worker() const { return worker_.get(); }
 
@@ -107,14 +109,15 @@ class Reactor {
   // callbacks)
   detail::CircularBuffer<BusEventInfo, DiagnosticsLimits::trace_history_size>
       trace_buffer_;
-  detail::CircularBuffer<ErrorEntry, DiagnosticsLimits::log_history_size>
+  detail::CircularBuffer<ErrorEntry, DiagnosticsLimits::error_history_size>
       error_buffer_;
 
   std::atomic<size_t> max_protocol_events_{0};
   std::atomic<size_t> max_signal_queue_{0};
-  std::atomic<bool> running_{false};
+  std::atomic<size_t> max_bus_queue_{0};
 
   std::unique_ptr<platform::ServiceThread> worker_;
+  std::atomic<bool> running_{false};
 
   // User callbacks
   ProtocolCallback user_protocol_callback_;

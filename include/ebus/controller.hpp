@@ -118,11 +118,6 @@ class Controller {
   static void setLogSink(LogCallback sink);
 
   /**
-   * @brief Sets the maximum number of errors to keep in the diagnostic log.
-   */
-  void setErrorLogSize(size_t size);
-
-  /**
    * @brief Sets the session inactivity timeout for network clients.
    */
   void setSessionTimeout(uint32_t timeout_ms);

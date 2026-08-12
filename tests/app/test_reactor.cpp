@@ -57,7 +57,7 @@ TEST_CASE("Reactor: Signal Queue Exhaustion", "[app][reactor][queue]") {
   ReactorSignal sig;
   sig.type = ReactorSignal::Type::bus_byte;
 
-  const size_t capacity = ReactorLimits::reactor_queue_size;
+  const size_t capacity = ReactorLimits::signal_queue_size;
   for (size_t i = 0; i < capacity; ++i) {
     REQUIRE(reactor.pushSignal(ReactorSignal{sig.type}));
   }
@@ -98,7 +98,7 @@ TEST_CASE("Reactor: Protocol Event Queue Drain Produces Callback Signal",
   ev.type = ProtocolEvent::Type::won;
   ev.session_id = 1;
 
-  const size_t cap = ReactorLimits::event_queue_size;
+  const size_t cap = ReactorLimits::protocol_queue_size;
   for (size_t i = 0; i < cap; ++i) {
     REQUIRE(reactor.pushProtocolEvent(std::move(ev)));
   }
@@ -148,7 +148,8 @@ TEST_CASE("Reactor: Error Buffer Initial State and Capacity",
           "[app][reactor][diagnostics]") {
   Reactor reactor(0x10, false, nullptr, nullptr, nullptr, nullptr, nullptr);
 
-  REQUIRE(reactor.getErrorLogCapacity() == DiagnosticsLimits::log_history_size);
+  REQUIRE(reactor.getErrorLogCapacity() ==
+          DiagnosticsLimits::error_history_size);
 
   int error_count = 0;
   reactor.fetchErrors([&](const ErrorEntry& entry) { error_count++; });

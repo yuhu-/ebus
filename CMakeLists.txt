@@ -29,7 +29,8 @@ option(EBUS_MINIMAL_DIAGNOSTICS "Enable minimal diagnostics" OFF)
 # --- Memory Tuning Options ---
 # These defaults match protocol_limits.hpp but can be overridden at build time.
 # Component Layer
-set(EBUS_TRANSITION_HISTORY_SIZE 10 CACHE STRING "Depth of FSM transition history tracking")
+set(EBUS_HANDLER_HISTORY_SIZE 10 CACHE STRING "Number of Handler FSM transition history tracking")
+set(EBUS_REQUEST_HISTORY_SIZE 10 CACHE STRING "Number of Request FSM transition history tracking")
 # Orchestration Layer
 set(EBUS_REACTOR_STACK_SIZE 4096 CACHE STRING "Stack size for Reactor thread")
 set(EBUS_REACTOR_PRIORITY 5 CACHE STRING "Priority for Reactor thread")
@@ -40,13 +41,15 @@ set(EBUS_BUS_SYN_PRIORITY 3 CACHE STRING "Priority for Bus SYN thread")
 set(EBUS_CLIENT_MANAGER_STACK_SIZE 4096 CACHE STRING "Stack size for Client Manager thread")
 set(EBUS_CLIENT_MANAGER_PRIORITY 12 CACHE STRING "Priority for Client Manager thread")
 # Diagnostics Layer
-set(EBUS_LOG_HISTORY_SIZE 60 CACHE STRING "Number of error entries to keep in memory")
+set(EBUS_UTILIZATION_HISTORY_SIZE 64 CACHE STRING "Number of utilization entries to keep in memory")
+set(EBUS_ERROR_HISTORY_SIZE 60 CACHE STRING "Number of error entries to keep in memory")
 set(EBUS_TRACE_HISTORY_SIZE 100 CACHE STRING "Number of trace events to keep in memory")
 # Networking Layer
 set(EBUS_MAX_CLIENTS 4 CACHE STRING "Maximum number of network bridge clients")
 # Application Layer
-set(EBUS_EVENT_QUEUE_SIZE 10 CACHE STRING "Size of the public event queue")
-set(EBUS_REACTOR_QUEUE_SIZE 16 CACHE STRING "Size of the internal reactor queue")
+set(EBUS_SIGNAL_QUEUE_SIZE 16 CACHE STRING "Size of the reactor signal queue")
+set(EBUS_PROTOCOL_QUEUE_SIZE 8 CACHE STRING "Size of the protocol event queue")
+set(EBUS_BUS_QUEUE_SIZE 16 CACHE STRING "Size of the bus event queue")
 set(EBUS_MAX_DEVICES 16 CACHE STRING "Maximum number of devices to manage")
 set(EBUS_SCHEDULER_MAX_ITEMS 8 CACHE STRING "Size of the scheduler queue")
 set(EBUS_POLL_MAX_ITEMS 64 CACHE STRING "Size of the poll queue")
@@ -57,16 +60,19 @@ if(EBUS_SIMULATION)
 endif()
 
 if(EBUS_MINIMAL_DIAGNOSTICS)
-    set(EBUS_TRANSITION_HISTORY_SIZE 1 CACHE STRING "Size of the internal reactor queue")
-    set(EBUS_LOG_HISTORY_SIZE 1 CACHE STRING "Size of the diagnostic error log history")
-    set(EBUS_TRACE_HISTORY_SIZE 1 CACHE STRING "Size of the protocol trace history")
+    set(EBUS_HANDLER_HISTORY_SIZE 1 CACHE STRING "Number of Handler FSM transition history tracking")
+    set(EBUS_REQUEST_HISTORY_SIZE 1 CACHE STRING "Number of Request FSM transition history tracking")
+    set(EBUS_UTILIZATION_HISTORY_SIZE 1 CACHE STRING "Number of utilization entries to keep in memory")
+    set(EBUS_ERROR_HISTORY_SIZE 1 CACHE STRING "Number of error entries to keep in memory")
+    set(EBUS_TRACE_HISTORY_SIZE 1 CACHE STRING "Number of trace events to keep in memory")
 endif()
 
 # Apply definitions globally for the library, tests, and tools
 add_compile_definitions(
     EBUS_SIMULATION=${EBUS_SIMULATION_VAL}
     # Component Layer
-    EBUS_TRANSITION_HISTORY_SIZE=${EBUS_TRANSITION_HISTORY_SIZE}
+    EBUS_HANDLER_HISTORY_SIZE=${EBUS_HANDLER_HISTORY_SIZE}
+    EBUS_REQUEST_HISTORY_SIZE=${EBUS_REQUEST_HISTORY_SIZE}
     # Orchestration Layer
     EBUS_REACTOR_STACK_SIZE=${EBUS_REACTOR_STACK_SIZE}
     EBUS_REACTOR_PRIORITY=${EBUS_REACTOR_PRIORITY}
@@ -76,17 +82,16 @@ add_compile_definitions(
     EBUS_BUS_SYN_PRIORITY=${EBUS_BUS_SYN_PRIORITY}
     EBUS_CLIENT_MANAGER_STACK_SIZE=${EBUS_CLIENT_MANAGER_STACK_SIZE}
     EBUS_CLIENT_MANAGER_PRIORITY=${EBUS_CLIENT_MANAGER_PRIORITY}
-    # Bus LayerEBUS_CLIENT_MANAGER_STACK_SIZE
-    EBUS_BUS_QUEUE_SIZE=${EBUS_BUS_QUEUE_SIZE}
     # Diagnostics Layer
-    EBUS_MAX_LISTENERS=${EBUS_MAX_LISTENERS}
-    EBUS_LOG_HISTORY_SIZE=${EBUS_LOG_HISTORY_SIZE}
+    EBUS_UTILIZATION_HISTORY_SIZE=${EBUS_UTILIZATION_HISTORY_SIZE}
+    EBUS_ERROR_HISTORY_SIZE=${EBUS_ERROR_HISTORY_SIZE}
     EBUS_TRACE_HISTORY_SIZE=${EBUS_TRACE_HISTORY_SIZE}
     # Networking Layer
     EBUS_MAX_CLIENTS=${EBUS_MAX_CLIENTS}
     # Application Layer
-    EBUS_EVENT_QUEUE_SIZE=${EBUS_EVENT_QUEUE_SIZE}
-    EBUS_REACTOR_QUEUE_SIZE=${EBUS_REACTOR_QUEUE_SIZE}
+    EBUS_SIGNAL_QUEUE_SIZE=${EBUS_SIGNAL_QUEUE_SIZE}
+    EBUS_PROTOCOL_QUEUE_SIZE=${EBUS_PROTOCOL_QUEUE_SIZE}
+    EBUS_BUS_QUEUE_SIZE=${EBUS_BUS_QUEUE_SIZE}
     EBUS_MAX_DEVICES=${EBUS_MAX_DEVICES}
     EBUS_SCHEDULER_MAX_ITEMS=${EBUS_SCHEDULER_MAX_ITEMS}
     EBUS_POLL_MAX_ITEMS=${EBUS_POLL_MAX_ITEMS}

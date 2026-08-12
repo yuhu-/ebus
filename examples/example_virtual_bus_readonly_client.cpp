@@ -43,7 +43,7 @@ int main() {
   configA.runtime.system_response = true;
   configA.runtime.device.scan_on_startup = false;
 
-  // configA.runtime.diagnostics.level = ebus::LogLevel::debug;
+  // configA.runtime.log_level = ebus::LogLevel::debug;
 
   ebus::Controller deviceA(configA);
 
@@ -55,7 +55,7 @@ int main() {
   configB.runtime.system_response = false;
   configB.runtime.device.scan_on_startup = false;
 
-  // configB.runtime.diagnostics.level = ebus::LogLevel::debug;
+  // configB.runtime.log_level = ebus::LogLevel::debug;
 
   ebus::Controller deviceB(configB);
 

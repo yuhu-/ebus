@@ -32,9 +32,9 @@ Reactor::Reactor(uint8_t own_address, bool system_response,
       device_scanner_(device_scanner),
       device_manager_(device_manager),
       bus_monitor_(bus_monitor),
-      signal_queue_(ReactorLimits::reactor_queue_size),
-      protocol_events_(ReactorLimits::event_queue_size),
-      bus_events_(ReactorLimits::reactor_queue_size) {}
+      signal_queue_(ReactorLimits::signal_queue_size),
+      protocol_events_(ReactorLimits::protocol_queue_size),
+      bus_events_(ReactorLimits::bus_queue_size) {}
 
 Reactor::~Reactor() { stop(); }
 
@@ -162,7 +162,7 @@ void Reactor::run() {
           loop_duration);
     }
 
-    bus_monitor_->updateController([loop_duration](auto& m) {
+    bus_monitor_->updateReactor([loop_duration](auto& m) {
       if (loop_duration > m.max_loop_cycle_us)
         m.max_loop_cycle_us = static_cast<uint32_t>(loop_duration);
     });
@@ -179,7 +179,9 @@ void Reactor::run() {
 
       // Reset windowed metrics
       bus_monitor_->resetLoopCycle();
-      bus_monitor_->resetMaxReactorQueueSize(signal_queue_.size());
+      bus_monitor_->resetMaxSignalQueueSize(signal_queue_.size());
+      bus_monitor_->resetMaxProtocolQueueSize(protocol_events_.size());
+      bus_monitor_->resetMaxBusQueueSize(bus_events_.size());
       scheduler_->resetPeakMetrics();
       device_scanner_->resetPeakMetrics();
       poll_manager_->resetPeakMetrics();
@@ -200,7 +202,7 @@ bool Reactor::pushSignal(ReactorSignal&& signal) {
       }
     }
     if (bus_monitor_) {
-      bus_monitor_->updateController([](auto& m) { m.event_queue_dropped++; });
+      bus_monitor_->updateReactor([](auto& m) { m.signal_queue_dropped++; });
     }
     return false;
   }
@@ -223,7 +225,7 @@ bool Reactor::pushProtocolEvent(ProtocolEvent&& event) {
       }
     }
     if (bus_monitor_) {
-      bus_monitor_->updateController([](auto& m) { m.event_queue_dropped++; });
+      bus_monitor_->updateReactor([](auto& m) { m.protocol_queue_dropped++; });
     }
     return false;
   }
@@ -250,9 +252,10 @@ void Reactor::onBusEventInfo(const BusEventInfo& info) {
       bus_events_.tryPush(info);
     }
     if (bus_monitor_) {
-      bus_monitor_->updateController([](auto& m) { m.event_queue_dropped++; });
+      bus_monitor_->updateReactor([](auto& m) { m.bus_queue_dropped++; });
     }
   }
+  ebus::updateMaxAtomic(max_bus_queue_, bus_events_.size());
 
   trace_buffer_.push_back(info);
 

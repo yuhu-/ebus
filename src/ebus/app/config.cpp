@@ -16,6 +16,8 @@ void RuntimeConfig::reset() { *this = RuntimeConfig{}; }
 void RuntimeConfig::toJson(detail::JsonWriter& writer) const {
   auto scope = writer.objectScope();
 
+  writer.writeField("log_level", toString(log_level));
+
   writer.writeField("address", address);
   writer.writeField("lock_counter", lock_counter);
   writer.writeField("system_inquiry", system_inquiry);
@@ -27,12 +29,6 @@ void RuntimeConfig::toJson(detail::JsonWriter& writer) const {
     writer.writeField("offset_us", bus.offset_us);
     writer.writeField("watchdog_timeout_ms", bus.watchdog_timeout_ms);
     writer.writeField("syn_gen", bus.syn_gen);
-  }
-
-  {
-    auto diagScope = writer.objectScope("diagnostics");
-    writer.writeField("level", toString(diagnostics.level));
-    writer.writeField("log_size", diagnostics.log_size);
   }
 
   {
@@ -74,6 +70,28 @@ bool RuntimeConfig::mergeFromJson(std::string_view json) {
   if (reader.next() != detail::JsonReader::Token::object_start) return false;
 
   reader.forEachField([&](std::string_view key, detail::JsonReader& r) {
+    if (key == "log_level") {
+      auto token = r.next();
+      if (token == detail::JsonReader::Token::number) {
+        auto val = r.asNumStrict<int>();
+        if (val) log_level = static_cast<LogLevel>(*val);
+        return val.has_value();
+      } else if (token == detail::JsonReader::Token::string) {
+        std::string_view lv = r.value();
+        if (lv == "none")
+          log_level = LogLevel::none;
+        else if (lv == "error")
+          log_level = LogLevel::error;
+        else if (lv == "info")
+          log_level = LogLevel::info;
+        else if (lv == "debug")
+          log_level = LogLevel::debug;
+        else
+          return false;
+        return true;
+      }
+      return false;
+    }
     if (key == "address") {
       r.next();
       auto val = r.asNumStrict<int>();
@@ -121,42 +139,6 @@ bool RuntimeConfig::mergeFromJson(std::string_view json) {
             inner.next();
             bus.syn_gen = inner.asBool();
             return true;
-          }
-          return false;
-        });
-      }
-      return true;
-    }
-    if (key == "diagnostics") {
-      if (r.next() == detail::JsonReader::Token::object_start) {
-        r.forEachField([&](std::string_view k, detail::JsonReader& inner) {
-          if (k == "level") {
-            auto token = inner.next();
-            if (token == detail::JsonReader::Token::number) {
-              auto val = inner.asNumStrict<int>();
-              if (val) diagnostics.level = static_cast<LogLevel>(*val);
-              return val.has_value();
-            } else if (token == detail::JsonReader::Token::string) {
-              std::string_view lv = inner.value();
-              if (lv == "none")
-                diagnostics.level = LogLevel::none;
-              else if (lv == "error")
-                diagnostics.level = LogLevel::error;
-              else if (lv == "info")
-                diagnostics.level = LogLevel::info;
-              else if (lv == "debug")
-                diagnostics.level = LogLevel::debug;
-              else
-                return false;
-              return true;
-            }
-            return false;
-          }
-          if (k == "log_size") {
-            inner.next();
-            auto val = inner.asNumStrict<size_t>();
-            if (val) diagnostics.log_size = *val;
-            return val.has_value();
           }
           return false;
         });

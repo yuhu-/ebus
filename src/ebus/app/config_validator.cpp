@@ -48,8 +48,6 @@ bool ConfigValidator::validate(const EbusConfig& config) {
         r.network.port_readonly == r.network.port_enhanced)
       return false;
   }
-  if (r.diagnostics.log_size > DiagnosticsLimits::log_history_size)
-    return false;  // Sanity check
 
   // 5. Platform Specifics
 #if defined(POSIX) && !EBUS_SIMULATION
@@ -150,11 +148,6 @@ bool ConfigValidator::validateJson(std::string_view json) {
   if (reader.get("network.port_enhanced") == JsonReader::Token::number) {
     auto val = reader.asNumStrict<uint16_t>();
     if (!val || *val == 0) return false;
-  }
-
-  if (reader.get("diagnostics.log_size") == JsonReader::Token::number) {
-    auto val = reader.asNumStrict<size_t>();
-    if (!val || *val > DiagnosticsLimits::log_history_size) return false;
   }
 
   return true;

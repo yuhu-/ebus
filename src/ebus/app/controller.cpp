@@ -235,7 +235,7 @@ void Controller::setWatchdogTimeout(uint32_t timeout_ms) {
 void Controller::setLogLevel(LogLevel level) {
   detail::platform::LockGuard<detail::platform::RecursiveMutex> lock(
       impl_->config_mutex_);
-  config_.runtime.diagnostics.level = level;
+  config_.runtime.log_level = level;
   impl_->log_level_.store(level, std::memory_order_relaxed);
   auto current = detail::Logger::getInstance().getLevel();
   if (static_cast<uint8_t>(level) > static_cast<uint8_t>(current)) {
@@ -245,13 +245,6 @@ void Controller::setLogLevel(LogLevel level) {
 
 void Controller::setLogSink(LogCallback sink) {
   detail::Logger::getInstance().setSink(std::move(sink));
-}
-
-void Controller::setErrorLogSize(size_t size) {
-  detail::platform::LockGuard<detail::platform::RecursiveMutex> lock(
-      impl_->config_mutex_);
-  config_.runtime.diagnostics.log_size = size;
-  if (impl_->configured_.load()) impl_->reactor_->clearErrors();
 }
 
 void Controller::setSessionTimeout(uint32_t timeout_ms) {
@@ -570,8 +563,8 @@ void Controller::fetchStatus(
 
     res.last_update_timestamp_ms = snap.last_update_timestamp_ms;
 
-    if (!snap.controller.thread.name.empty())
-      res.threads.push_back(snap.controller.thread);
+    if (!snap.reactor.thread.name.empty())
+      res.threads.push_back(snap.reactor.thread);
     if (!snap.bus.bus_thread.name.empty())
       res.threads.push_back(snap.bus.bus_thread);
     if (!snap.bus.syn_thread.name.empty())
@@ -587,11 +580,11 @@ void Controller::fetchStatus(
   if (impl_->reactor_) {
     res.queues.emplace_back("protocol_events",
                             impl_->reactor_->protocolQueueSize(),
-                            detail::ReactorLimits::event_queue_size,
+                            detail::ReactorLimits::protocol_queue_size,
                             impl_->reactor_->maxProtocolQueueSize());
 
     res.queues.emplace_back("signal_queue", impl_->reactor_->signalQueueSize(),
-                            detail::ReactorLimits::reactor_queue_size,
+                            detail::ReactorLimits::signal_queue_size,
                             impl_->reactor_->maxSignalQueueSize());
   }
 
@@ -633,19 +626,22 @@ void Impl::fetchServiceStatus(ServiceStatus& status) const {
 
   // Reactor thread status
   if (reactor_ && reactor_->worker()) {
-    status.controller.thread = mapThreadStatus(reactor_->worker()->status());
+    status.reactor.thread = mapThreadStatus(reactor_->worker()->status());
   }
 
   if (bus_monitor_) {
-    status.controller.reactor_queue_size = reactor_->signalQueueSize();
-    status.controller.protocol_queue_size = reactor_->protocolQueueSize();
-    status.controller.max_protocol_queue_size =
-        reactor_->maxProtocolQueueSize();
+    status.reactor.signal_queue_size = reactor_->signalQueueSize();
+    status.reactor.protocol_queue_size = reactor_->protocolQueueSize();
+    status.reactor.bus_queue_size = reactor_->busQueueSize();
     bus_monitor_->fetchMetrics([&](const Metrics& m) {
-      status.controller.max_reactor_queue_size =
-          m.controller.max_reactor_queue_size;
-      status.controller.event_queue_dropped = m.controller.event_queue_dropped;
-      status.controller.max_loop_cycle_us = m.controller.max_loop_cycle_us;
+      status.reactor.max_signal_queue_size = m.reactor.max_signal_queue_size;
+      status.reactor.signal_queue_dropped = m.reactor.signal_queue_dropped;
+      status.reactor.max_protocol_queue_size =
+          m.reactor.max_protocol_queue_size;
+      status.reactor.protocol_queue_dropped = m.reactor.protocol_queue_dropped;
+      status.reactor.max_bus_queue_size = m.reactor.max_bus_queue_size;
+      status.reactor.bus_queue_dropped = m.reactor.bus_queue_dropped;
+      status.reactor.max_loop_cycle_us = m.reactor.max_loop_cycle_us;
     });
   }
 
@@ -753,7 +749,7 @@ void Impl::constructMembers(Controller* owner) {
 
   // Centralized synchronization using setters. Recursive mutex allows this
   // safely.
-  owner->setLogLevel(owner->config_.runtime.diagnostics.level);
+  owner->setLogLevel(owner->config_.runtime.log_level);
   owner->setAddress(owner->config_.runtime.address);
   owner->setLockCounter(owner->config_.runtime.lock_counter);
   owner->setWindow(owner->config_.runtime.bus.window_us);

@@ -77,7 +77,11 @@ class ClientManager {
   Request* request_;
   BusMonitor* monitor_;
 
+  // Members for the dedicated IO thread
+  std::unique_ptr<platform::ServiceThread> worker_;
   std::atomic<bool> running_{false};
+
+  platform::WakeupSignal wakeup_signal_;
 
   SessionState session_state_ = SessionState::idle;
   Clock::time_point last_state_change_;
@@ -108,11 +112,6 @@ class ClientManager {
 
   size_t outbound_buffer_size_ =
       ebus::RuntimeConfig{}.network.outbound_buffer_size;
-
-  // Members for the dedicated IO thread
-  std::unique_ptr<platform::ServiceThread> client_io_worker_;
-  std::atomic<bool> client_io_running_{false};
-  platform::WakeupSignal wakeup_signal_;
 
   // Listening sockets (must be unique pointers)
   std::unique_ptr<platform::Socket> listen_socket_regular_{nullptr};
