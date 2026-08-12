@@ -30,6 +30,16 @@ To maintain consistency across the library, members in classes that implement lo
     *   Private member variables.
     *   Private helper methods.
 
+### Constructor Parameter Ordering
+When designing constructors for orchestration and core classes, follow this parameter order:
+
+1.  **Identity and configuration**: Addresses, flags, and config structs that define *what* the object is.
+2.  **Raw-pointer dependencies**: Collaborators the object needs to function (scheduler, handler, bus, monitor, etc.).
+
+This reads naturally: *"a Reactor at address 0x10 with these collaborators"* rather than *"a Reactor wired to these things, which happens to live at 0x10."*
+
+For public entry points with many parameters (e.g., `Controller`), prefer a single config struct over a long constructor parameter list. Internal classes should use constructor injection for required dependencies and setters for optional runtime configuration.
+
 ### Memory Management
 *   **Avoid Heap Allocation**: Do not allocate memory on the heap within the protocol processing loop (the "hot path"). Use pre-allocated buffers and reuse existing capacities.
 *   **Small Buffer Optimization**: Use `ebus::Sequence` for byte arrays (64-byte stack buffer). For telemetry and status reporting, use `ebus::detail::JsonWriter`, which utilizes a 256-byte stack buffer to prevent heap spikes during serialization.
