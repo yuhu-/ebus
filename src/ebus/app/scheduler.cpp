@@ -94,6 +94,7 @@ void Scheduler::onBusRequestWon() {
   ev.poll_id = p_id;
   ev.handler_state = handler_->getState();
   ev.request_state = RequestState::observe;
+  ev.timestamp = ebus::getWallTimeMs();
 
   if (event_sink_) {
     event_sink_(std::move(ev));
@@ -111,6 +112,7 @@ void Scheduler::onBusRequestLost() {
   ev.poll_id = p_id;
   ev.handler_state = handler_->getState();
   ev.request_state = RequestState::observe;
+  ev.timestamp = ebus::getWallTimeMs();
 
   if (event_sink_) {
     event_sink_(std::move(ev));
@@ -143,16 +145,17 @@ void Scheduler::onHandlerProtocol(const ProtocolInfo& info) {
   ev.retry_count = scheduler_retries;
   ev.handler_state = info.handler_state;
   ev.request_state = info.request_state;
+  ev.timestamp = ebus::getWallTimeMs();
+  ev.level = info.level;
   ev.master.assign(info.master_view.data(), info.master_view.size());
   ev.slave.assign(info.slave_view.data(), info.slave_view.size());
   if (info.is_error) {
-    ev.data.err.level = info.level;
-    ev.data.err.protocol_error = info.protocol_error;
-    ev.data.err.result = info.result;
-    ev.data.err.sequence_state = info.sequence_state;
+    ev.protocol_error = info.protocol_error;
+    ev.result = info.result;
+    ev.sequence_state = info.sequence_state;
   } else {
-    ev.data.tel.message_type = info.message_type;
-    ev.data.tel.telegram_type = info.telegram_type;
+    ev.message_type = info.message_type;
+    ev.telegram_type = info.telegram_type;
   }
 
   if (event_sink_) {
@@ -177,7 +180,7 @@ bool Scheduler::injectProtocolEvent(const ProtocolEvent& event) {
       // Structural protocol errors are not transient; do not retry.
       const bool is_fatal =
           (event.type == ProtocolEvent::Type::error &&
-           event.data.err.protocol_error == ProtocolError::invalid_message);
+           event.protocol_error == ProtocolError::invalid_message);
 
       active_item_->item.send_attempts++;
       if (!is_fatal && active_item_->item.send_attempts < max_send_attempts_) {
@@ -219,11 +222,10 @@ bool Scheduler::tick() {
         timeout_ev.type = ProtocolEvent::Type::error;
         timeout_ev.session_id = active_item_->session_id;
         timeout_ev.poll_id = active_item_->item.poll_id;
-        timeout_ev.data.err.protocol_error =
-            ProtocolError::total_transfer_timeout;
-        timeout_ev.data.err.result = RequestResult::first_error;
-        timeout_ev.data.err.sequence_state = handler_->getActiveSequenceState();
-        timeout_ev.data.err.level = LogLevel::error;
+        timeout_ev.protocol_error = ProtocolError::total_transfer_timeout;
+        timeout_ev.result = RequestResult::first_error;
+        timeout_ev.sequence_state = handler_->getActiveSequenceState();
+        timeout_ev.level = LogLevel::error;
         timeout_ev.handler_state = handler_->getState();
         timeout_ev.request_state = RequestState::observe;
         timeout_ev.master.assign(active_item_->item.message.data(),
@@ -265,10 +267,10 @@ bool Scheduler::tick() {
       fail_ev.type = ProtocolEvent::Type::error;
       fail_ev.session_id = item_to_start->session_id;
       fail_ev.poll_id = item_to_start->poll_id;
-      fail_ev.data.err.protocol_error = ProtocolError::invalid_message;
-      fail_ev.data.err.result = RequestResult::first_error;
-      fail_ev.data.err.sequence_state = handler_->getActiveSequenceState();
-      fail_ev.data.err.level = LogLevel::error;
+      fail_ev.protocol_error = ProtocolError::invalid_message;
+      fail_ev.result = RequestResult::first_error;
+      fail_ev.sequence_state = handler_->getActiveSequenceState();
+      fail_ev.level = LogLevel::error;
       fail_ev.handler_state = handler_->getState();
       fail_ev.request_state = RequestState::observe;
 

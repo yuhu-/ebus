@@ -2,6 +2,7 @@
 
 # High-level Application Logic
 set(APP_SOURCES
+    app/callbacks.cpp
     app/client.cpp
     app/client_manager.cpp
     app/config.cpp
@@ -18,7 +19,6 @@ set(APP_SOURCES
 set(CORE_SOURCES
     core/bus_handler.cpp
     core/bus_monitor.cpp
-    core/callbacks.cpp
     core/handler.cpp
     core/request.cpp
     core/types.cpp

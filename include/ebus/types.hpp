@@ -321,47 +321,7 @@ struct StaticSequence {
 };
 
 /**
- * Internal carrier for protocol results and decoupled public callbacks.
- */
-struct ProtocolEvent {
-  enum class Type : uint8_t { won, lost, telegram, error } type;
-
-  // Shared metadata
-  uint32_t session_id;
-  uint32_t poll_id;
-  uint32_t retry_count;
-  HandlerState handler_state;
-  RequestState request_state;
-
-  union {
-    struct {
-      MessageType message_type;
-      TelegramType telegram_type;
-    } tel;
-    struct {
-      ProtocolError protocol_error;
-      RequestResult result;
-      SequenceState sequence_state;
-      LogLevel level;
-    } err;
-  } data;
-
-  // Optimization for ESP32-C3: Reduced buffer size for internal event
-  // passing. Logical eBUS telegrams are max 21 bytes (master) / 17 bytes
-  // (slave).
-  StaticSequence<detail::SequenceLimits::model_capacity> master;
-  StaticSequence<detail::SequenceLimits::model_capacity> slave;
-};
-
-static_assert(std::is_trivially_copyable_v<ProtocolEvent>,
-              "ProtocolEvent must be trivially copyable for Reactor Queue.");
-static_assert(
-    sizeof(ProtocolEvent) <= 192,
-    "ProtocolEvent exceeds the memory threshold for constrained targets. "
-    "Verify enum packing and buffer sizes.");
-
-/**
- * Records a single state transition in the protocol handler.
+ * Persistent entry for the diagnostic error log.
  */
 struct HandlerTransition {
   HandlerTransition() = default;
@@ -396,57 +356,45 @@ struct RequestTransition {
  */
 struct ErrorEntry {
   ErrorEntry() = default;
-  ErrorEntry(uint32_t s_id, uint32_t p_id, LogLevel lvl, ProtocolError pe,
-             RequestResult res, SequenceState ss, HandlerState hs,
-             RequestState rs, uint32_t retries, ByteView m_view,
-             ByteView s_view, uint64_t ts)
-      : session_id(s_id),
+  ErrorEntry(uint64_t ts, uint32_t s_id, uint32_t p_id, uint32_t retries,
+             HandlerState hs, RequestState rs, ProtocolError pe,
+             RequestResult res, SequenceState ss, ByteView m_view,
+             ByteView s_view)
+      : timestamp(ts),
+        session_id(s_id),
         poll_id(p_id),
-        level(lvl),
-        protocol_error(pe),
-        result(res),
-        sequence_state(ss),
+        retry_count(retries),
         handler_state(hs),
         request_state(rs),
-        retry_count(retries),
-        timestamp(ts) {
+        protocol_error(pe),
+        result(res),
+        sequence_state(ss) {
     master.assign(m_view.data(), m_view.size());
     slave.assign(s_view.data(), s_view.size());
   }
 
+  uint64_t timestamp = 0;  // ms since epoch
+
   uint32_t session_id = 0;
   uint32_t poll_id = 0;
-  LogLevel level = LogLevel::error;
+  uint32_t retry_count = 0;
+
+  // Telegram-specific fields
+  HandlerState handler_state = HandlerState::passive_receive_master;
+  RequestState request_state = RequestState::observe;
+
+  // Error-specific fields
   ProtocolError protocol_error = ProtocolError::none;
   RequestResult result = RequestResult::observe_data;
   SequenceState sequence_state = SequenceState::seq_empty;
-  HandlerState handler_state = HandlerState::passive_receive_master;
-  RequestState request_state = RequestState::observe;
-  uint32_t retry_count = 0;
+
   StaticSequence<detail::SequenceLimits::model_capacity> master;
   StaticSequence<detail::SequenceLimits::model_capacity> slave;
-  uint64_t timestamp = 0;  // ms since epoch
-
-  void toJson(detail::JsonWriter& writer) const;
-
-  /**
-   * @brief Appends a human-readable representation to an existing string.
-   */
-  void toString(std::string& out) const;
-
-  /**
-   * @brief Returns a human-readable string representation.
-   */
-  inline std::string toString() const {
-    std::string res;
-    res.reserve(128);
-    toString(res);
-    return res;
-  }
 
   void setMaster(const uint8_t* data, size_t len) { master.assign(data, len); }
-
   void setSlave(const uint8_t* data, size_t len) { slave.assign(data, len); }
+
+  void toJson(detail::JsonWriter& writer) const;
 };
 
 static_assert(std::is_trivially_copyable_v<ErrorEntry>,

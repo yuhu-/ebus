@@ -51,8 +51,7 @@ TEST_CASE("Reactor: Signal Queue Push, Size, and Max Tracking",
   REQUIRE(reactor.maxSignalQueueSize() == 2);
 }
 
-TEST_CASE("Reactor: Signal Queue Exhaustion",
-          "[app][reactor][queue]") {
+TEST_CASE("Reactor: Signal Queue Exhaustion", "[app][reactor][queue]") {
   Reactor reactor(0x10, false, nullptr, nullptr, nullptr, nullptr, nullptr);
 
   ReactorSignal sig;
@@ -109,14 +108,11 @@ TEST_CASE("Reactor: Protocol Event Queue Drain Produces Callback Signal",
   REQUIRE(reactor.signalQueueSize() == cap + 1);
 }
 
-TEST_CASE("Reactor: Trace Buffer from Bus Events",
-          "[app][reactor][trace]") {
+TEST_CASE("Reactor: Trace Buffer from Bus Events", "[app][reactor][trace]") {
   Reactor reactor(0x10, false, nullptr, nullptr, nullptr, nullptr, nullptr);
 
   std::atomic<int> trace_count{0};
-  reactor.setTraceCallback([&](const BusEventInfo& info) {
-    trace_count++;
-  });
+  reactor.setTraceCallback([&](const BusEventInfo& info) { trace_count++; });
 
   for (int i = 0; i < 5; ++i) {
     BusEventInfo info;
@@ -128,15 +124,12 @@ TEST_CASE("Reactor: Trace Buffer from Bus Events",
   REQUIRE(reactor.protocolQueueSize() == 0);
 
   int visited = 0;
-  reactor.fetchTraceHistory([&](const BusEventInfo& info) {
-    visited++;
-  });
+  reactor.fetchTraceHistory([&](const BusEventInfo& info) { visited++; });
   REQUIRE(visited == 5);
   REQUIRE(trace_count.load() == 0);
 }
 
-TEST_CASE("Reactor: Trace Buffer JSON Visitor",
-          "[app][reactor][trace]") {
+TEST_CASE("Reactor: Trace Buffer JSON Visitor", "[app][reactor][trace]") {
   Reactor reactor(0x10, false, nullptr, nullptr, nullptr, nullptr, nullptr);
 
   for (int i = 0; i < 3; ++i) {
@@ -155,8 +148,7 @@ TEST_CASE("Reactor: Error Buffer Initial State and Capacity",
           "[app][reactor][diagnostics]") {
   Reactor reactor(0x10, false, nullptr, nullptr, nullptr, nullptr, nullptr);
 
-  REQUIRE(reactor.getErrorLogCapacity() ==
-          DiagnosticsLimits::log_history_size);
+  REQUIRE(reactor.getErrorLogCapacity() == DiagnosticsLimits::log_history_size);
 
   int error_count = 0;
   reactor.fetchErrors([&](const ErrorEntry& entry) { error_count++; });
@@ -165,8 +157,7 @@ TEST_CASE("Reactor: Error Buffer Initial State and Capacity",
   reactor.clearErrors();
 }
 
-TEST_CASE("Reactor: Error Buffer JSON Visitor",
-          "[app][reactor][diagnostics]") {
+TEST_CASE("Reactor: Error Buffer JSON Visitor", "[app][reactor][diagnostics]") {
   Reactor reactor(0x10, false, nullptr, nullptr, nullptr, nullptr, nullptr);
 
   std::string json_output;
@@ -184,12 +175,10 @@ TEST_CASE("Reactor: Callback Registration and Worker Null Before Start",
   std::atomic<bool> proto_called{false};
   std::atomic<bool> trace_called{false};
 
-  reactor.setProtocolCallback([&](const ProtocolInfo& info) {
-    proto_called.store(true);
-  });
-  reactor.setTraceCallback([&](const BusEventInfo& info) {
-    trace_called.store(true);
-  });
+  reactor.setProtocolCallback(
+      [&](const ProtocolInfo& info) { proto_called.store(true); });
+  reactor.setTraceCallback(
+      [&](const BusEventInfo& info) { trace_called.store(true); });
   reactor.setLogLevel(LogLevel::debug);
 
   REQUIRE_FALSE(proto_called.load());
@@ -228,11 +217,12 @@ struct ReactorTestEnv {
         reactor(addr, system_response, &scheduler, &poll_manager,
                 &device_scanner, &device_manager, &monitor) {
     scheduler.attachHandlerCallbacks();
-    scheduler.setProtocolEventSink(
-        [this](ProtocolEvent&& ev) { reactor.pushProtocolEvent(std::move(ev)); });
+    scheduler.setProtocolEventSink([this](ProtocolEvent&& ev) {
+      reactor.pushProtocolEvent(std::move(ev));
+    });
     bus_handler.setReactorBusEventInfoCallback(
         Delegate<void(const BusEventInfo&)>::bind<Reactor,
-                                                   &Reactor::onBusEventInfo>(
+                                                  &Reactor::onBusEventInfo>(
             &reactor));
   }
 
@@ -244,8 +234,7 @@ struct ReactorTestEnv {
   }
 };
 
-TEST_CASE("Reactor: Full Lifecycle Start Stop",
-          "[app][reactor][integration]") {
+TEST_CASE("Reactor: Full Lifecycle Start Stop", "[app][reactor][integration]") {
   ReactorTestEnv env(0x10, false);
 
   REQUIRE(env.reactor.worker() == nullptr);
@@ -285,9 +274,8 @@ TEST_CASE("Reactor: Trace Callback Dispatch on Bus Event",
   ReactorTestEnv env(0x10, false);
 
   std::atomic<int> trace_count{0};
-  env.reactor.setTraceCallback([&](const BusEventInfo& info) {
-    trace_count++;
-  });
+  env.reactor.setTraceCallback(
+      [&](const BusEventInfo& info) { trace_count++; });
 
   env.bus.start();
   env.reactor.start();
@@ -321,8 +309,8 @@ TEST_CASE("Reactor: Protocol Callback Dispatch on Telegram Event",
   ProtocolEvent ev{};
   ev.type = ProtocolEvent::Type::telegram;
   ev.session_id = 42;
-  ev.data.tel.message_type = MessageType::active;
-  ev.data.tel.telegram_type = TelegramType::broadcast;
+  ev.message_type = MessageType::active;
+  ev.telegram_type = TelegramType::broadcast;
   ev.master.assign(toVector("feb50503").data(), 4);
 
   env.reactor.pushProtocolEvent(std::move(ev));
@@ -356,10 +344,10 @@ TEST_CASE("Reactor: Protocol Callback Dispatch on Error Event",
   ev.retry_count = 3;
   ev.handler_state = HandlerState::passive_receive_master;
   ev.request_state = RequestState::observe;
-  ev.data.err.protocol_error = ProtocolError::invalid_message;
-  ev.data.err.result = RequestResult::first_error;
-  ev.data.err.sequence_state = SequenceState::seq_empty;
-  ev.data.err.level = LogLevel::error;
+  ev.protocol_error = ProtocolError::invalid_message;
+  ev.result = RequestResult::first_error;
+  ev.sequence_state = SequenceState::seq_empty;
+  ev.level = LogLevel::error;
   ev.master.assign(toVector("feb50503").data(), 4);
 
   env.reactor.pushProtocolEvent(std::move(ev));
@@ -386,10 +374,10 @@ TEST_CASE("Reactor: Error Buffer Cleared After clearErrors",
   ProtocolEvent ev{};
   ev.type = ProtocolEvent::Type::error;
   ev.session_id = 1;
-  ev.data.err.protocol_error = ProtocolError::invalid_message;
-  ev.data.err.result = RequestResult::first_error;
-  ev.data.err.sequence_state = SequenceState::seq_empty;
-  ev.data.err.level = LogLevel::error;
+  ev.protocol_error = ProtocolError::invalid_message;
+  ev.result = RequestResult::first_error;
+  ev.sequence_state = SequenceState::seq_empty;
+  ev.level = LogLevel::error;
   ev.handler_state = HandlerState::passive_receive_master;
   ev.request_state = RequestState::observe;
 

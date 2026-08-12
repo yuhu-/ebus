@@ -16,6 +16,7 @@
 #include <ebus/status.hpp>
 #include <optional>
 
+#include "app/protocol_event.hpp"
 #include "platform/mutex.hpp"
 
 namespace ebus {

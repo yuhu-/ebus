@@ -16,6 +16,7 @@
 #include "app/device_manager.hpp"
 #include "app/device_scanner.hpp"
 #include "app/poll_manager.hpp"
+#include "app/protocol_event.hpp"
 #include "app/scheduler.hpp"
 #include "platform/mutex.hpp"
 #include "platform/queue.hpp"

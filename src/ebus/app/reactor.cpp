@@ -316,9 +316,8 @@ void Reactor::processPublicEvents() {
                                 {ev.slave.data(), ev.slave.size()});
 
       if (device_scanner_ && ev.session_id > 0) {
-        bool is_broadcast =
-            (ev.type == ProtocolEvent::Type::telegram &&
-             ev.data.tel.telegram_type == TelegramType::broadcast);
+        bool is_broadcast = (ev.type == ProtocolEvent::Type::telegram &&
+                             ev.telegram_type == TelegramType::broadcast);
         if (!is_broadcast) device_scanner_->onScanResult(ev.master[1], true);
       }
 
@@ -335,24 +334,27 @@ void Reactor::processPublicEvents() {
       }
     } else if (ev.type == ProtocolEvent::Type::error) {
       ErrorEntry entry;
+      entry.timestamp = ev.timestamp;
+
       entry.session_id = ev.session_id;
       entry.poll_id = ev.poll_id;
-      entry.level = ev.data.err.level;
-      entry.protocol_error = ev.data.err.protocol_error;
-      entry.result = ev.data.err.result;
-      entry.sequence_state = ev.data.err.sequence_state;
+      entry.retry_count = ev.retry_count;
+
+      entry.sequence_state = ev.sequence_state;
       entry.handler_state = ev.handler_state;
       entry.request_state = ev.request_state;
-      entry.retry_count = ev.retry_count;
+
+      entry.protocol_error = ev.protocol_error;
+      entry.result = ev.result;
+
       entry.setMaster(ev.master.data(), ev.master.size());
       entry.setSlave(ev.slave.data(), ev.slave.size());
-      entry.timestamp = ebus::getWallTimeMs();
+
       error_buffer_.push_back(std::move(entry));
 
       if (device_scanner_ && ev.session_id > 0) {
-        bool is_broadcast =
-            (ev.type == ProtocolEvent::Type::telegram &&
-             ev.data.tel.telegram_type == TelegramType::broadcast);
+        bool is_broadcast = (ev.type == ProtocolEvent::Type::telegram &&
+                             ev.telegram_type == TelegramType::broadcast);
         if (!is_broadcast) device_scanner_->onScanResult(ev.master[1], false);
       }
     }
@@ -373,14 +375,16 @@ void Reactor::processPublicEvents() {
         info.slave_view = {ev.slave.data(), ev.slave.size()};
 
         if (info.is_error) {
-          info.level = ev.data.err.level;
-          info.protocol_error = ev.data.err.protocol_error;
-          info.result = ev.data.err.result;
-          info.sequence_state = ev.data.err.sequence_state;
+          info.level = ev.level;
+          info.timestamp = ev.timestamp;
+          info.protocol_error = ev.protocol_error;
+          info.result = ev.result;
+          info.sequence_state = ev.sequence_state;
           if (!detail::Logger::getInstance().isEnabled(info.level)) continue;
         } else {
-          info.message_type = ev.data.tel.message_type;
-          info.telegram_type = ev.data.tel.telegram_type;
+          info.timestamp = ev.timestamp;
+          info.message_type = ev.message_type;
+          info.telegram_type = ev.telegram_type;
         }
 
         user_callback(info);

@@ -743,7 +743,7 @@ void Impl::constructMembers(Controller* owner) {
         device_manager_.get(), bus_monitor_.get());
 
     // Wire Scheduler -> Reactor
-    scheduler_->setProtocolEventSink([this](ebus::ProtocolEvent&& ev) {
+    scheduler_->setProtocolEventSink([this](detail::ProtocolEvent&& ev) {
       reactor_->pushProtocolEvent(std::move(ev));
     });
 

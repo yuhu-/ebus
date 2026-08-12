@@ -28,46 +28,6 @@ class SequenceImpl;
 using Sequence = SequenceImpl<detail::SequenceLimits::default_capacity>;
 
 /**
- * Unified carrier for protocol results (Success or Error).
- * Delivered to the user via the decoupled ProtocolCallback.
- */
-struct ProtocolInfo {
-  ProtocolInfo() = default;
-
-  bool is_error = false;
-  uint32_t session_id = 0;
-  uint32_t poll_id = 0;
-  HandlerState handler_state = HandlerState::passive_receive_master;
-  RequestState request_state = RequestState::observe;
-  uint32_t retry_count = 0;
-  ByteView master_view;
-  ByteView slave_view;
-
-  // Telegram-specific fields
-  MessageType message_type = MessageType::undefined;
-  TelegramType telegram_type = TelegramType::undefined;
-
-  // Error-specific fields
-  LogLevel level = LogLevel::none;
-  ProtocolError protocol_error = ProtocolError::none;
-  RequestResult result = RequestResult::observe_data;
-  SequenceState sequence_state = SequenceState::seq_empty;
-
-  void toJson(detail::JsonWriter& writer) const;
-};
-
-struct ReactiveInfo {
-  ReactiveInfo(uint32_t s_id, ByteView master, Sequence& slave)
-      : session_id(s_id), master_view(master), slave_response(slave) {}
-
-  uint32_t session_id = 0;
-  ByteView master_view;
-  Sequence& slave_response;
-
-  void toJson(detail::JsonWriter& writer) const;
-};
-
-/**
  * Snapshot of the eBUS FSM state at the moment a byte was processed.
  * Included in public callbacks for protocol tracing and diagnostics.
  */
@@ -93,13 +53,57 @@ struct BusEventInfo {
 };
 
 /**
+ * Unified carrier for protocol results (Success or Error).
+ * Delivered to the user via the decoupled ProtocolCallback.
+ */
+struct ProtocolInfo {
+  ProtocolInfo() = default;
+
+  bool is_error = false;
+  LogLevel level = LogLevel::none;
+  uint64_t timestamp = 0;  // ms since epoch
+
+  uint32_t session_id = 0;
+  uint32_t poll_id = 0;
+  uint32_t retry_count = 0;
+
+  HandlerState handler_state = HandlerState::passive_receive_master;
+  RequestState request_state = RequestState::observe;
+
+  // Telegram-specific fields
+  MessageType message_type = MessageType::undefined;
+  TelegramType telegram_type = TelegramType::undefined;
+
+  // Error-specific fields
+  ProtocolError protocol_error = ProtocolError::none;
+  RequestResult result = RequestResult::observe_data;
+  SequenceState sequence_state = SequenceState::seq_empty;
+
+  ByteView master_view;
+  ByteView slave_view;
+
+  void toJson(detail::JsonWriter& writer) const;
+};
+
+struct ReactiveInfo {
+  ReactiveInfo(uint32_t s_id, ByteView master, Sequence& slave)
+      : session_id(s_id), master_view(master), slave_response(slave) {}
+
+  uint32_t session_id = 0;
+  ByteView master_view;
+  Sequence& slave_response;
+
+  void toJson(detail::JsonWriter& writer) const;
+};
+
+/**
  * Callback signatures
  */
+using TraceCallback = detail::Delegate<void(const BusEventInfo& info)>;
+
 using ProtocolCallback = detail::Delegate<void(const ProtocolInfo& info)>;
 
 using ReactiveCallback = detail::Delegate<void(const ReactiveInfo& info)>;
-
-using TraceCallback = detail::Delegate<void(const BusEventInfo& info)>;
 
 using LogCallback =
     detail::Delegate<void(LogLevel level, std::string_view msg)>;

@@ -256,65 +256,25 @@ void RequestTransition::toJson(detail::JsonWriter& writer) const {
   writer.writeTimestampField("timestamp", timestamp);
 }
 
-void ErrorEntry::toString(std::string& out) const {
-  out += "[";
-
-  char buf[12];
-  if (poll_id > 0) {
-    out += "P:";
-    auto [ptr, ec] = std::to_chars(buf, buf + sizeof(buf), poll_id);
-    out.append(buf, static_cast<size_t>(ptr - buf));
-    out += "|";
-  }
-
-  out += "S:";
-  auto [ptr, ec] = std::to_chars(buf, buf + sizeof(buf), session_id);
-  out.append(buf, static_cast<size_t>(ptr - buf));
-
-  out += "][";
-  if (retry_count > 0) {
-    out += "R:";
-    auto [rptr, rec] = std::to_chars(buf, buf + sizeof(buf), retry_count);
-    out.append(buf, static_cast<size_t>(rptr - buf));
-    out += "][";
-  }
-  out += ebus::toString(handler_state);
-  out += "][";
-  out += ebus::toString(handler_state);
-  out += "][";
-  out += ebus::toString(request_state);
-  out += "] ";
-  out += ebus::toString(protocol_error);
-
-  if (sequence_state != SequenceState::seq_ok &&
-      sequence_state != SequenceState::seq_empty) {
-    out += " (";
-    out += ebus::toString(sequence_state);
-    out += ")";
-  }
-
-  out += " (Result: ";
-  out += ebus::toString(result);
-  out += ")";
-}
-
 void ErrorEntry::toJson(detail::JsonWriter& writer) const {
   auto scope = writer.objectScope();
-  writer.writeField("session_id", session_id);
-  writer.writeField("poll_id", poll_id);
-  writer.writeField("level", ebus::toString(level));
-  writer.writeField("protocol_error", ebus::toString(protocol_error));
-  writer.writeField("result", ebus::toString(result));
-  writer.writeField("sequence_state", ebus::toString(sequence_state));
-  writer.writeField("handler_state", ebus::toString(handler_state));
-  writer.writeField("request_state", ebus::toString(request_state));
-  writer.writeField("retry_count", retry_count);
-  writer.writeHexField("master", master);
-  writer.writeHexField("slave", slave);
-
   char iso_buffer[detail::FormattingLimits::iso8601_buffer_size];
   ebus::formatIso8601Fast(timestamp, iso_buffer);
   writer.writeField("timestamp", std::string_view(iso_buffer));
+
+  writer.writeField("session_id", session_id);
+  writer.writeField("poll_id", poll_id);
+  writer.writeField("retry_count", retry_count);
+
+  writer.writeField("handler_state", ebus::toString(handler_state));
+  writer.writeField("request_state", ebus::toString(request_state));
+
+  writer.writeField("protocol_error", ebus::toString(protocol_error));
+  writer.writeField("result", ebus::toString(result));
+  writer.writeField("sequence_state", ebus::toString(sequence_state));
+
+  writer.writeHexField("master", master);
+  writer.writeHexField("slave", slave);
 }
 
 }  // namespace ebus
