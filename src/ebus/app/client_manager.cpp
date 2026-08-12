@@ -38,16 +38,12 @@ ClientManager::ClientManager(platform::Bus* bus, BusHandler* bus_handler,
           ebus::RuntimeConfig{}.network.transmit_timeout_ms)),
       outbound_buffer_size_(
           ebus::RuntimeConfig{}.network.outbound_buffer_size) {
-  assert(bus_ != nullptr && "Bus pointer cannot be null");
-  assert(request_ != nullptr && "Request pointer cannot be null");
-
-  // Initialize client arrays
   regular_clients_.fill(nullptr);
   readonly_clients_.fill(nullptr);
   enhanced_clients_.fill(nullptr);
 
   if (!wakeup_signal_.init()) {
-    assert(false && "Failed to create WakeupSignal for ClientManager");
+    EBUS_LOG_ERROR("[ClientManager] WakeupSignal init failed");
   }
 
   if (bus_handler_) {
