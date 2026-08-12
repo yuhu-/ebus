@@ -187,15 +187,14 @@ void collect(uint8_t byte) {
         tel.toJson(writer);
         std::cout << std::endl;
       } else {
-        std::ostringstream ostr;
         output_buffer.clear();  // Clear for new telegram
         if (tel.isValid()) {
           if (!notime) {
-            ostr << timestamp();
-            ostr << " ";
+            output_buffer += timestamp();
+            output_buffer += " ";
           }
           if (type) {
-            if (color) ostr << ansi_cyan;
+            if (color) output_buffer += ansi_cyan;
             if (tel.getType() == ebus::TelegramType::master_slave)
               output_buffer += "MS";
             else if (tel.getType() == ebus::TelegramType::master_master)
