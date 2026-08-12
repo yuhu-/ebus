@@ -315,7 +315,7 @@ void Reactor::processPublicEvents() {
         device_manager_->update({ev.master.data(), ev.master.size()},
                                 {ev.slave.data(), ev.slave.size()});
 
-      if (device_scanner_) {
+      if (device_scanner_ && ev.session_id > 0) {
         bool is_broadcast =
             (ev.type == ProtocolEvent::Type::telegram &&
              ev.data.tel.telegram_type == TelegramType::broadcast);
@@ -349,13 +349,12 @@ void Reactor::processPublicEvents() {
       entry.timestamp = ebus::getWallTimeMs();
       error_buffer_.push_back(std::move(entry));
 
-      // if (device_scanner_) {
-      //   bool is_broadcast =
-      //       (ev.type == ProtocolEvent::Type::telegram &&
-      //        ev.data.tel.telegram_type == TelegramType::broadcast);
-      //   if (!is_broadcast) device_scanner_->onScanResult(ev.master[1],
-      //   false);
-      // }
+      if (device_scanner_ && ev.session_id > 0) {
+        bool is_broadcast =
+            (ev.type == ProtocolEvent::Type::telegram &&
+             ev.data.tel.telegram_type == TelegramType::broadcast);
+        if (!is_broadcast) device_scanner_->onScanResult(ev.master[1], false);
+      }
     }
 
     if (user_callback) {
