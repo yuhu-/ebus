@@ -577,7 +577,7 @@ int main(int argc, char* argv[]) {
   } else {
     while (std::cin.good() && !std::cin.eof()) {
       int byte = std::cin.get();
-      if (std::cin.eof()) break;
+      if (byte == EOF) break;
       collect(static_cast<uint8_t>(byte));
       // collect now prints directly
     }
