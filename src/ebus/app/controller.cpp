@@ -578,14 +578,10 @@ void Controller::fetchStatus(
 
   // Internal orchestration queues: use immediate values for high accuracy
   if (impl_->reactor_) {
-    res.queues.emplace_back("protocol_events",
-                            impl_->reactor_->protocolQueueSize(),
-                            detail::ReactorLimits::protocol_queue_size,
-                            impl_->reactor_->maxProtocolQueueSize());
-
-    res.queues.emplace_back("signal_queue", impl_->reactor_->signalQueueSize(),
-                            detail::ReactorLimits::signal_queue_size,
-                            impl_->reactor_->maxSignalQueueSize());
+    const auto reactor_status = impl_->reactor_->fetchStatus();
+    res.queues.push_back(reactor_status.signal_queue);
+    res.queues.push_back(reactor_status.protocol_queue);
+    res.queues.push_back(reactor_status.bus_queue);
   }
 
   callback(res);
@@ -619,33 +615,8 @@ VirtualBus& Controller::getVirtualBus() { return *impl_->virtual_bus_; }
 void Impl::fetchServiceStatus(ServiceStatus& status) const {
   status.last_update_timestamp_ms = ebus::getWallTimeMs();
 
-  auto mapThreadStatus =
-      [](const detail::platform::ServiceThread::Status& s) -> ThreadStatus {
-    return {s.name, s.task_stack_bytes, s.task_stack_free_bytes};
-  };
-
-  // Reactor thread status
-  if (reactor_ && reactor_->worker()) {
-    status.reactor.thread = mapThreadStatus(reactor_->worker()->status());
-  }
-
-  if (bus_monitor_) {
-    status.reactor.signal_queue_size = reactor_->signalQueueSize();
-    status.reactor.protocol_queue_size = reactor_->protocolQueueSize();
-    status.reactor.bus_queue_size = reactor_->busQueueSize();
-    bus_monitor_->fetchMetrics([&](const Metrics& m) {
-      status.reactor.max_signal_queue_size = m.reactor.max_signal_queue_size;
-      status.reactor.signal_queue_dropped = m.reactor.signal_queue_dropped;
-      status.reactor.max_protocol_queue_size =
-          m.reactor.max_protocol_queue_size;
-      status.reactor.protocol_queue_dropped = m.reactor.protocol_queue_dropped;
-      status.reactor.max_bus_queue_size = m.reactor.max_bus_queue_size;
-      status.reactor.bus_queue_dropped = m.reactor.bus_queue_dropped;
-      status.reactor.max_loop_cycle_us = m.reactor.max_loop_cycle_us;
-    });
-  }
-
   if (configured_.load()) {
+    status.reactor = reactor_->fetchStatus();
     status.bus = bus_->fetchStatus();
     status.bus_handler = bus_handler_->fetchStatus();
     status.scheduler = scheduler_->fetchStatus();

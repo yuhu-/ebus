@@ -637,14 +637,11 @@ void QueueStatus::toJson(detail::JsonWriter& writer) const {
 void ReactorStatus::toJson(detail::JsonWriter& writer) const {
   auto scope = writer.objectScope();
   writer.writeField("thread", thread);
-  writer.writeField("signal_queue_size", signal_queue_size);
-  writer.writeField("max_signal_queue_size", max_signal_queue_size);
+  writer.writeField("signal_queue", signal_queue);
+  writer.writeField("protocol_queue", protocol_queue);
+  writer.writeField("bus_queue", bus_queue);
   writer.writeField("signal_queue_dropped", signal_queue_dropped);
-  writer.writeField("protocol_queue_size", protocol_queue_size);
-  writer.writeField("max_protocol_queue_size", max_protocol_queue_size);
   writer.writeField("protocol_queue_dropped", protocol_queue_dropped);
-  writer.writeField("bus_queue_size", bus_queue_size);
-  writer.writeField("max_bus_queue_size", max_bus_queue_size);
   writer.writeField("bus_queue_dropped", bus_queue_dropped);
   writer.writeField("max_loop_cycle_us", max_loop_cycle_us);
 }

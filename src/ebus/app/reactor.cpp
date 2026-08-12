@@ -34,10 +34,19 @@ Reactor::Reactor(uint8_t own_address, bool system_response,
       device_manager_(device_manager),
       bus_monitor_(bus_monitor),
       signal_queue_(ReactorLimits::signal_queue_size),
-      protocol_events_(ReactorLimits::protocol_queue_size),
-      bus_events_(ReactorLimits::bus_queue_size) {}
+      protocol_queue_(ReactorLimits::protocol_queue_size),
+      bus_queue_(ReactorLimits::bus_queue_size) {}
 
 Reactor::~Reactor() { stop(); }
+
+void Reactor::start() {
+  worker_ = std::make_unique<platform::ServiceThread>(
+      "ebus_reactor",
+      detail::Delegate<void()>::bind<Reactor, &Reactor::run>(this),
+      detail::OrchestrationLimits::reactor_stack_size,
+      detail::OrchestrationLimits::reactor_priority);
+  worker_->start();
+}
 
 void Reactor::stop() {
   EBUS_LOG_INFO("[reactor] Stopping reactor.");
@@ -61,18 +70,153 @@ void Reactor::stop() {
   }
 }
 
-void Reactor::start() {
-  worker_ = std::make_unique<platform::ServiceThread>(
-      "ebus_reactor",
-      detail::Delegate<void()>::bind<Reactor, &Reactor::run>(this),
-      detail::OrchestrationLimits::reactor_stack_size,
-      detail::OrchestrationLimits::reactor_priority);
-  worker_->start();
+void Reactor::setProtocolCallback(ProtocolCallback callback) {
+  user_protocol_callback_ = std::move(callback);
+}
+
+void Reactor::setTraceCallback(TraceCallback callback) {
+  user_trace_callback_ = std::move(callback);
 }
 
 void Reactor::setLogLevel(LogLevel level) {
   detail::Logger::getInstance().setLevel(level);
 }
+
+bool Reactor::pushSignal(ReactorSignal&& signal) {
+  if (!signal_queue_.tryPush(std::move(signal))) {
+    if (signal_queue_.discard() > 0) {
+      if (signal_queue_.tryPush(std::move(signal))) {
+        ebus::updateMaxAtomic(max_signal_queue_, signal_queue_.size());
+        return true;
+      }
+    }
+    if (bus_monitor_) {
+      bus_monitor_->updateReactor([](auto& m) { m.signal_queue_dropped++; });
+    }
+    return false;
+  }
+  ebus::updateMaxAtomic(max_signal_queue_, signal_queue_.size());
+  return true;
+}
+
+bool Reactor::pushProtocolEvent(ProtocolEvent&& event) {
+  if (!protocol_queue_.tryPush(std::move(event))) {
+    // DRAIN: Make room for protocol events
+    if (protocol_queue_.discard() > 0) {
+      if (protocol_queue_.tryPush(std::move(event))) {
+        ebus::updateMaxAtomic(max_protocol_queue_, protocol_queue_.size());
+
+        // Signal reactor that callback is ready for dispatch
+        ReactorSignal cb_sig;
+        cb_sig.type = ReactorSignal::Type::callback_ready;
+        signal_queue_.tryPush(std::move(cb_sig));
+        return true;
+      }
+    }
+    if (bus_monitor_) {
+      bus_monitor_->updateReactor([](auto& m) { m.protocol_queue_dropped++; });
+    }
+    return false;
+  }
+  ebus::updateMaxAtomic(max_protocol_queue_, protocol_queue_.size());
+
+  // Signal reactor that callback is ready for dispatch
+  ReactorSignal cb_sig;
+  cb_sig.type = ReactorSignal::Type::callback_ready;
+  signal_queue_.tryPush(std::move(cb_sig));
+  return true;
+}
+
+void Reactor::onBusEventInfo(const BusEventInfo& info) {
+  if (!bus_queue_.tryPush(info)) {
+    if (bus_queue_.discard() > 0) {
+      bus_queue_.tryPush(info);
+    }
+    if (bus_monitor_) {
+      bus_monitor_->updateReactor([](auto& m) { m.bus_queue_dropped++; });
+    }
+  }
+  ebus::updateMaxAtomic(max_bus_queue_, bus_queue_.size());
+
+  trace_buffer_.push_back(info);
+
+  ReactorSignal sig;
+  sig.type = ReactorSignal::Type::bus_byte;
+  sig.byte_batch_count = 1;
+  signal_queue_.tryPush(std::move(sig));
+}
+
+platform::ServiceThread::Status Reactor::getThreadStatus() const {
+  if (worker_) {
+    return worker_->status();
+  }
+  return platform::ServiceThread::Status{"ebus_reactor", -1, -1};
+}
+
+ebus::ReactorStatus Reactor::fetchStatus() const {
+  auto map =
+      [](const platform::ServiceThread::Status& s) -> ebus::ThreadStatus {
+    return {s.name, s.task_stack_bytes, s.task_stack_free_bytes};
+  };
+
+  ebus::ReactorStatus status(
+      map(getThreadStatus()),
+      ebus::QueueStatus("signal_queue", signal_queue_.size(),
+                        detail::ReactorLimits::signal_queue_size,
+                        max_signal_queue_.load()),
+      ebus::QueueStatus("protocol_queue", protocol_queue_.size(),
+                        detail::ReactorLimits::protocol_queue_size,
+                        max_protocol_queue_.load()),
+      ebus::QueueStatus("bus_queue", bus_queue_.size(),
+                        detail::ReactorLimits::bus_queue_size,
+                        max_bus_queue_.load()),
+      0, 0, 0, 0);
+
+  if (bus_monitor_) {
+    bus_monitor_->fetchMetrics([&](const Metrics& m) {
+      status.signal_queue_dropped = m.reactor.signal_queue_dropped;
+      status.protocol_queue_dropped = m.reactor.protocol_queue_dropped;
+      status.bus_queue_dropped = m.reactor.bus_queue_dropped;
+      status.max_loop_cycle_us = m.reactor.max_loop_cycle_us;
+    });
+  }
+
+  return status;
+}
+
+// Diagnostics accessors
+void Reactor::fetchTraceHistory(
+    std::function<void(const BusEventInfo&)> callback) const {
+  if (callback) trace_buffer_.forEach(callback);
+}
+
+void Reactor::fetchTraceHistory(const JsonChunkVisitor& visitor,
+                                bool pretty) const {
+  if (visitor) {
+    detail::JsonWriter writer(visitor, pretty);
+    auto scope = writer.arrayScope();
+    trace_buffer_.forEach(
+        [&](const BusEventInfo& info) { writer.writeValue(info); });
+  }
+}
+
+void Reactor::fetchErrors(
+    std::function<void(const ErrorEntry&)> callback) const {
+  if (callback) error_buffer_.forEach(callback);
+}
+
+void Reactor::fetchErrors(const JsonChunkVisitor& visitor, bool pretty) const {
+  if (visitor) {
+    detail::JsonWriter writer(visitor, pretty);
+    auto scope = writer.arrayScope();
+    error_buffer_.forEach(
+        [&](const ErrorEntry& entry) { writer.writeValue(entry); });
+  }
+}
+
+void Reactor::clearErrors() { error_buffer_.clear(); }
+
+size_t Reactor::getErrorLogCapacity() const { return error_buffer_.capacity(); }
 
 void Reactor::run() {
   running_.store(true, std::memory_order_release);
@@ -181,8 +325,8 @@ void Reactor::run() {
       // Reset windowed metrics
       bus_monitor_->resetLoopCycle();
       bus_monitor_->resetMaxSignalQueueSize(signal_queue_.size());
-      bus_monitor_->resetMaxProtocolQueueSize(protocol_events_.size());
-      bus_monitor_->resetMaxBusQueueSize(bus_events_.size());
+      bus_monitor_->resetMaxProtocolQueueSize(protocol_queue_.size());
+      bus_monitor_->resetMaxBusQueueSize(bus_queue_.size());
       scheduler_->resetPeakMetrics();
       device_scanner_->resetPeakMetrics();
       poll_manager_->resetPeakMetrics();
@@ -192,78 +336,6 @@ void Reactor::run() {
   }
 
   EBUS_LOG_INFO("[reactor] Reactor thread stopped.");
-}
-
-bool Reactor::pushSignal(ReactorSignal&& signal) {
-  if (!signal_queue_.tryPush(std::move(signal))) {
-    if (signal_queue_.discard() > 0) {
-      if (signal_queue_.tryPush(std::move(signal))) {
-        ebus::updateMaxAtomic(max_signal_queue_, signal_queue_.size());
-        return true;
-      }
-    }
-    if (bus_monitor_) {
-      bus_monitor_->updateReactor([](auto& m) { m.signal_queue_dropped++; });
-    }
-    return false;
-  }
-  ebus::updateMaxAtomic(max_signal_queue_, signal_queue_.size());
-  return true;
-}
-
-bool Reactor::pushProtocolEvent(ProtocolEvent&& event) {
-  if (!protocol_events_.tryPush(std::move(event))) {
-    // DRAIN: Make room for protocol events
-    if (protocol_events_.discard() > 0) {
-      if (protocol_events_.tryPush(std::move(event))) {
-        ebus::updateMaxAtomic(max_protocol_events_, protocol_events_.size());
-
-        // Signal reactor that callback is ready for dispatch
-        ReactorSignal cb_sig;
-        cb_sig.type = ReactorSignal::Type::callback_ready;
-        signal_queue_.tryPush(std::move(cb_sig));
-        return true;
-      }
-    }
-    if (bus_monitor_) {
-      bus_monitor_->updateReactor([](auto& m) { m.protocol_queue_dropped++; });
-    }
-    return false;
-  }
-  ebus::updateMaxAtomic(max_protocol_events_, protocol_events_.size());
-
-  // Signal reactor that callback is ready for dispatch
-  ReactorSignal cb_sig;
-  cb_sig.type = ReactorSignal::Type::callback_ready;
-  signal_queue_.tryPush(std::move(cb_sig));
-  return true;
-}
-
-void Reactor::setProtocolCallback(ProtocolCallback callback) {
-  user_protocol_callback_ = std::move(callback);
-}
-
-void Reactor::setTraceCallback(TraceCallback callback) {
-  user_trace_callback_ = std::move(callback);
-}
-
-void Reactor::onBusEventInfo(const BusEventInfo& info) {
-  if (!bus_events_.tryPush(info)) {
-    if (bus_events_.discard() > 0) {
-      bus_events_.tryPush(info);
-    }
-    if (bus_monitor_) {
-      bus_monitor_->updateReactor([](auto& m) { m.bus_queue_dropped++; });
-    }
-  }
-  ebus::updateMaxAtomic(max_bus_queue_, bus_events_.size());
-
-  trace_buffer_.push_back(info);
-
-  ReactorSignal sig;
-  sig.type = ReactorSignal::Type::bus_byte;
-  sig.byte_batch_count = 1;
-  signal_queue_.tryPush(std::move(sig));
 }
 
 void Reactor::processSignal(const ReactorSignal& signal) {
@@ -297,7 +369,7 @@ void Reactor::processSignal(const ReactorSignal& signal) {
 
 void Reactor::processBusByte() {
   BusEventInfo info;
-  if (bus_events_.tryPop(info)) {
+  if (bus_queue_.tryPop(info)) {
     TraceCallback user_callback = user_trace_callback_;
     if (user_callback) user_callback(info);
   }
@@ -319,7 +391,7 @@ void Reactor::processPublicEvents() {
   ProtocolCallback user_callback = user_protocol_callback_;
 
   ProtocolEvent ev;
-  while (protocol_events_.tryPop(ev)) {
+  while (protocol_queue_.tryPop(ev)) {
     scheduler_->injectProtocolEvent(ev);
 
     if (ev.type == ProtocolEvent::Type::telegram) {
@@ -404,39 +476,5 @@ void Reactor::processPublicEvents() {
     }
   }
 }
-
-// Diagnostics accessors
-void Reactor::fetchTraceHistory(
-    std::function<void(const BusEventInfo&)> callback) const {
-  if (callback) trace_buffer_.forEach(callback);
-}
-
-void Reactor::fetchTraceHistory(const JsonChunkVisitor& visitor,
-                                bool pretty) const {
-  if (visitor) {
-    detail::JsonWriter writer(visitor, pretty);
-    auto scope = writer.arrayScope();
-    trace_buffer_.forEach(
-        [&](const BusEventInfo& info) { writer.writeValue(info); });
-  }
-}
-
-void Reactor::fetchErrors(
-    std::function<void(const ErrorEntry&)> callback) const {
-  if (callback) error_buffer_.forEach(callback);
-}
-
-void Reactor::fetchErrors(const JsonChunkVisitor& visitor, bool pretty) const {
-  if (visitor) {
-    detail::JsonWriter writer(visitor, pretty);
-    auto scope = writer.arrayScope();
-    error_buffer_.forEach(
-        [&](const ErrorEntry& entry) { writer.writeValue(entry); });
-  }
-}
-
-void Reactor::clearErrors() { error_buffer_.clear(); }
-
-size_t Reactor::getErrorLogCapacity() const { return error_buffer_.capacity(); }
 
 }  // namespace ebus::detail

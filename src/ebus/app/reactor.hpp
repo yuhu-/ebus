@@ -9,6 +9,7 @@
 #include <chrono>
 #include <cstdint>
 #include <ebus/callbacks.hpp>
+#include <ebus/status.hpp>
 #include <ebus/types.hpp>
 #include <functional>
 #include <memory>
@@ -59,22 +60,31 @@ class Reactor {
 
   void start();
   void stop();
-  void run();
 
-  bool pushSignal(ReactorSignal&& signal);
-  bool pushProtocolEvent(ProtocolEvent&& event);
+  // Special Members & Operators
+  Reactor(const Reactor&) = delete;
+  Reactor& operator=(const Reactor&) = delete;
 
-  // User callbacks (dispatched on reactor thread)
+  // Configuration
   void setProtocolCallback(ProtocolCallback callback);
   void setTraceCallback(TraceCallback callback);
   void setLogLevel(LogLevel level);
 
   void onBusEventInfo(const BusEventInfo& info);
 
+  // Working Methods
+  bool pushSignal(ReactorSignal&& signal);
+  bool pushProtocolEvent(ProtocolEvent&& event);
+
+  // Status/Telemetry
+  platform::ServiceThread::Status getThreadStatus() const;
+  ebus::ReactorStatus fetchStatus() const;
+
   // Diagnostics access
   void fetchTraceHistory(
       std::function<void(const BusEventInfo&)> callback) const;
   void fetchTraceHistory(const JsonChunkVisitor& visitor, bool pretty) const;
+
   void fetchErrors(std::function<void(const ErrorEntry&)> callback) const;
   void fetchErrors(const JsonChunkVisitor& visitor, bool pretty) const;
   void clearErrors();
@@ -83,9 +93,9 @@ class Reactor {
   // Queue diagnostics
   size_t signalQueueSize() const { return signal_queue_.size(); }
   size_t maxSignalQueueSize() const { return max_signal_queue_.load(); }
-  size_t protocolQueueSize() const { return protocol_events_.size(); }
-  size_t maxProtocolQueueSize() const { return max_protocol_events_.load(); }
-  size_t busQueueSize() const { return bus_events_.size(); }
+  size_t protocolQueueSize() const { return protocol_queue_.size(); }
+  size_t maxProtocolQueueSize() const { return max_protocol_queue_.load(); }
+  size_t busQueueSize() const { return bus_queue_.size(); }
   size_t maxBusQueueSize() const { return max_bus_queue_.load(); }
 
   const platform::ServiceThread* worker() const { return worker_.get(); }
@@ -102,8 +112,8 @@ class Reactor {
   BusMonitor* bus_monitor_ = nullptr;
 
   platform::Queue<ReactorSignal> signal_queue_;
-  platform::Queue<ProtocolEvent> protocol_events_;
-  platform::Queue<BusEventInfo> bus_events_;
+  platform::Queue<ProtocolEvent> protocol_queue_;
+  platform::Queue<BusEventInfo> bus_queue_;
 
   // Diagnostics buffers (owned by Reactor, written from bus thread via
   // callbacks)
@@ -112,7 +122,7 @@ class Reactor {
   detail::CircularBuffer<ErrorEntry, DiagnosticsLimits::error_history_size>
       error_buffer_;
 
-  std::atomic<size_t> max_protocol_events_{0};
+  std::atomic<size_t> max_protocol_queue_{0};
   std::atomic<size_t> max_signal_queue_{0};
   std::atomic<size_t> max_bus_queue_{0};
 
@@ -122,6 +132,8 @@ class Reactor {
   // User callbacks
   ProtocolCallback user_protocol_callback_;
   TraceCallback user_trace_callback_;
+
+  void run();
 
   void processSignal(const ReactorSignal& signal);
   void processPublicEvents();

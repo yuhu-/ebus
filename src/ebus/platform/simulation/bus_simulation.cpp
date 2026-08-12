@@ -36,14 +36,14 @@ void BusSimulation::start() {
 
   running_.store(true, std::memory_order_release);
   worker_ = std::make_unique<ServiceThread>(
-      "ebus_bus_sim", [this] { simulationReaderLoop(); },
+      "ebus_bus", [this] { simulationReaderLoop(); },
       OrchestrationLimits::bus_stack_size, OrchestrationLimits::bus_priority);
   worker_->start();
 
   if (runtime_.bus.syn_gen) {
     syn_running_.store(true);
     syn_worker_ = std::make_unique<ServiceThread>(
-        "ebus_bus_sim_syn", [this] { simulationSynLoop(); },
+        "ebus_bus_syn", [this] { simulationSynLoop(); },
         OrchestrationLimits::bus_syn_stack_size,
         OrchestrationLimits::bus_syn_priority);
     syn_worker_->start();
@@ -111,7 +111,7 @@ void BusSimulation::setRuntimeConfig(const RuntimeConfig& runtime) {
   if (should_start_syn) {
     syn_running_.store(true);
     syn_worker_ = std::make_unique<ServiceThread>(
-        "ebus_bus_sim_syn", [this] { simulationSynLoop(); },
+        "ebus_bus_syn", [this] { simulationSynLoop(); },
         OrchestrationLimits::bus_syn_stack_size,
         OrchestrationLimits::bus_syn_priority);
     syn_worker_->start();
@@ -164,14 +164,14 @@ ServiceThread::Status BusSimulation::getThreadStatus() const {
   if (worker_) {
     return worker_->status();
   }
-  return ServiceThread::Status{"ebus_bus_sim", -1, -1};
+  return ServiceThread::Status{"ebus_bus", -1, -1};
 }
 
 ServiceThread::Status BusSimulation::getSynThreadStatus() const {
   if (syn_worker_) {
     return syn_worker_->status();
   }
-  return ServiceThread::Status{"ebus_bus_sim_syn", -1, -1};
+  return ServiceThread::Status{"ebus_bus_syn", -1, -1};
 }
 
 ebus::BusStatus BusSimulation::fetchStatus() const {

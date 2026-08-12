@@ -58,31 +58,24 @@ struct QueueStatus {
  */
 struct ReactorStatus {
   ReactorStatus() = default;
-  ReactorStatus(ThreadStatus t, size_t sq_size, size_t sq_max,
-                uint32_t sq_dropped, size_t pq_size, size_t pq_max,
-                uint32_t bq_dropped, size_t bq_size, size_t bq_max,
-                uint32_t pq_dropped, uint32_t loop_us)
+  ReactorStatus(ThreadStatus t, QueueStatus sq, QueueStatus pq, QueueStatus bq,
+                uint32_t sq_dropped, uint32_t pq_dropped, uint32_t bq_dropped,
+                uint32_t loop_us)
       : thread(std::move(t)),
-        signal_queue_size(sq_size),
-        max_signal_queue_size(sq_max),
+        signal_queue(std::move(sq)),
+        protocol_queue(std::move(pq)),
+        bus_queue(std::move(bq)),
         signal_queue_dropped(sq_dropped),
-        protocol_queue_size(pq_size),
-        max_protocol_queue_size(pq_max),
         protocol_queue_dropped(pq_dropped),
-        bus_queue_size(bq_size),
-        max_bus_queue_size(bq_max),
         bus_queue_dropped(bq_dropped),
         max_loop_cycle_us(loop_us) {}
   ThreadStatus thread;
 
-  size_t signal_queue_size = 0;
-  size_t max_signal_queue_size = 0;
+  QueueStatus signal_queue;
+  QueueStatus protocol_queue;
+  QueueStatus bus_queue;
   uint32_t signal_queue_dropped = 0;
-  size_t protocol_queue_size = 0;
-  size_t max_protocol_queue_size = 0;
   uint32_t protocol_queue_dropped = 0;
-  size_t bus_queue_size = 0;
-  size_t max_bus_queue_size = 0;
   uint32_t bus_queue_dropped = 0;
   uint32_t max_loop_cycle_us = 0;
 
