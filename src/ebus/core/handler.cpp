@@ -445,6 +445,15 @@ void Handler::reactiveSendMasterPositiveAcknowledge(
     callPassiveReset();
     transitionTo(HandlerState::passive_receive_master);
   } else {
+    if (passive_slave_index_ >= passive_slave_.size()) {
+      callOnError(LogLevel::error, ProtocolError::illegal_fsm_transition,
+                  passive_telegram_.getMasterState(),
+                  {passive_master_.data(), passive_master_.size()},
+                  {passive_slave_.data(), passive_slave_.size()});
+      callPassiveReset();
+      transitionTo(HandlerState::passive_receive_master);
+      return;
+    }
     callWrite(passive_slave_[passive_slave_index_]);  // Send next slave byte
     transitionTo(HandlerState::reactive_send_slave);
   }
@@ -585,6 +594,15 @@ void Handler::activeSendMaster(uint8_t byte) {
   // (Echo check). The index hasn't been incremented yet, so it points to
   // the byte we sent in the previous step.
   // If the check fails, we abort immediately to prevent bus contention.
+  if (active_master_index_ >= active_master_.size()) {
+    callOnError(LogLevel::error, ProtocolError::illegal_fsm_transition,
+                active_telegram_.getMasterState(),
+                {active_master_.data(), active_master_.size()},
+                {active_slave_.data(), active_slave_.size()});
+    callActiveReset();
+    transitionTo(HandlerState::passive_receive_master);
+    return;
+  }
   if (byte != active_master_[active_master_index_]) {
     if (monitor_) monitor_->updateHandler([](auto& m) { m.error_active++; });
     callOnError(LogLevel::error, ProtocolError::error_active_master_echo,
