@@ -85,6 +85,14 @@ struct ProtocolInfo {
   void toJson(detail::JsonWriter& writer) const;
 };
 
+/**
+ * Carrier for the reactive callback, which is invoked when we our slave address
+ * is addressebd by another master. The user can inspect and fill the slave
+ * response sequence, which will be sent back to the master. This is a
+ * synchronous callback, so the user must fill the response sequence before
+ * returning from the callback in a short time window, otherwise the master will
+ * timeout and consider the slave unresponsive.
+ */
 struct ReactiveInfo {
   ReactiveInfo(uint32_t s_id, ByteView master, Sequence& slave)
       : session_id(s_id), master_view(master), slave_response(slave) {}
