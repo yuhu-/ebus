@@ -184,6 +184,8 @@ class Socket {
     assert(isValid() && "Socket is not valid");
     assert(buf != nullptr && "Buffer cannot be null");
     assert(len > 0 && "Length must be positive");
+    // Note: May return fewer bytes than requested (partial transfer).
+    // Callers must loop until all bytes are received.
 
 #if defined(ESP_PLATFORM)
     return ::read(fd_, buf, len);
@@ -196,6 +198,8 @@ class Socket {
     assert(isValid() && "Socket is not valid");
     assert(buf != nullptr && "Buffer cannot be null");
     assert(len > 0 && "Length must be positive");
+    // Note: May write fewer bytes than requested (partial transfer).
+    // Callers must loop until all bytes are sent.
 
 #if defined(ESP_PLATFORM)
     return ::write(fd_, buf, len);
