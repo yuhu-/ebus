@@ -56,7 +56,6 @@ uint32_t PollManager::addPollItem(uint8_t priority, ByteView message,
   item.priority = priority;
   item.message.assign(message);
   item.interval = std::chrono::milliseconds(interval_ms);
-  // Schedule immediately to ensure data is available as soon as possible
   item.next_due = Clock::now();
 
   items_.push_back(std::move(item));
@@ -77,13 +76,12 @@ void PollManager::removePollItem(uint32_t id) {
 void PollManager::processDueItems(Delegate<void(const Item&)> callback,
                                   bool* activity) {
   platform::LockGuard<platform::Mutex> lock(mutex_);
-  auto now = Clock::now();
 
   // Safety: If the system is busy (e.g. Scheduler full), do not process
   // items. This prevents "skipping" polls when the scheduler is momentarily
   // unable to accept new messages. The items will remain in the heap and
   // nextDueTime() will continue to indicate that work is pending.
-  while (!items_.empty() && items_.front().next_due <= now &&
+  while (!items_.empty() && items_.front().next_due <= Clock::now() &&
          (!is_busy_ || !is_busy_())) {
     std::pop_heap(items_.begin(), items_.end(), Item::Greater());
     Item item = std::move(items_.back());
@@ -92,7 +90,10 @@ void PollManager::processDueItems(Delegate<void(const Item&)> callback,
     callback(item);  // Process item
     if (activity) *activity = true;
 
-    // Reschedule
+    // Anchor the next firing to the actual execution time of this item.
+    // Because callbacks run sequentially, each item acquires a slightly
+    // different phase, naturally desynchronizing same-interval polls.
+    const auto now = Clock::now();
     item.next_due = now + item.interval;
     // Safety check for clock jitter or 0 intervals
     if (item.next_due <= now)
