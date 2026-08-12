@@ -95,17 +95,18 @@ void BusPosix::stop() {
     syn_cv_.notify_all();
   }
 
-  if (fd_ != -1) ::tcflush(fd_, TCIOFLUSH);
+  // Restore settings and close fd BEFORE joining threads.
+  // Closing the fd unblocks the reader thread blocked in read().
+  if (fd_ != -1) {
+    ::tcflush(fd_, TCIOFLUSH);
+    ::tcsetattr(fd_, TCSANOW, &old_settings_);
+    ::close(fd_);
+    fd_ = -1;
+  }
 
   if (syn_worker_) syn_worker_->join();
   if (worker_) worker_->join();
 
-  if (fd_ != -1) {
-    ::tcsetattr(fd_, TCSANOW, &old_settings_);
-    ::close(fd_);
-  }
-
-  fd_ = -1;
   open_ = false;
 }
 
