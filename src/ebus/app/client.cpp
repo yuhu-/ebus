@@ -6,7 +6,8 @@
 #include "app/client.hpp"
 
 #include <ebus/utils.hpp>
-#include <iostream>
+
+#include "utils/logger.hpp"
 
 namespace ebus::detail {
 
@@ -73,9 +74,8 @@ bool AbstractClient::flushLocked() {
         break;
       }
       // Real error (ECONNRESET, EPIPE, EBADF ...): close socket
-      std::cout << "[Client fd=" << socket_->getFd()
-                << "] write error errno=" << err << ", closing socket"
-                << std::endl;
+      EBUS_LOG_ERROR_F("[Client fd=%d] write error errno=%d, closing socket",
+                       socket_->getFd(), err);
       stop();
       return false;
     }

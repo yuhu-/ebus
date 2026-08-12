@@ -6,6 +6,7 @@
 #pragma once
 
 #include <atomic>
+#include <cstdio>
 #include <ebus/callbacks.hpp>
 #include <ebus/detail/delegate.hpp>
 #include <ebus/types.hpp>
@@ -83,23 +84,71 @@ class Logger {
  * prevent string construction overhead when the level is disabled.
  */
 #ifndef EBUS_DISABLE_LOGGING
-#define EBUS_LOG_ERROR(msg)                                       \
-  do {                                                            \
-    if (Logger::getInstance().isEnabled(::ebus::LogLevel::error)) \
-      Logger::getInstance().log(::ebus::LogLevel::error, (msg));  \
+#define EBUS_LOG_ERROR(msg)                                              \
+  do {                                                                   \
+    if (::ebus::detail::Logger::getInstance().isEnabled(                 \
+            ::ebus::LogLevel::error))                                    \
+      ::ebus::detail::Logger::getInstance().log(::ebus::LogLevel::error, \
+                                                (msg));                  \
   } while (0)
-#define EBUS_LOG_INFO(msg)                                       \
-  do {                                                           \
-    if (Logger::getInstance().isEnabled(::ebus::LogLevel::info)) \
-      Logger::getInstance().log(::ebus::LogLevel::info, (msg));  \
+#define EBUS_LOG_INFO(msg)                                              \
+  do {                                                                  \
+    if (::ebus::detail::Logger::getInstance().isEnabled(                \
+            ::ebus::LogLevel::info))                                    \
+      ::ebus::detail::Logger::getInstance().log(::ebus::LogLevel::info, \
+                                                (msg));                 \
   } while (0)
-#define EBUS_LOG_DEBUG(msg)                                       \
-  do {                                                            \
-    if (Logger::getInstance().isEnabled(::ebus::LogLevel::debug)) \
-      Logger::getInstance().log(::ebus::LogLevel::debug, (msg));  \
+#define EBUS_LOG_DEBUG(msg)                                              \
+  do {                                                                   \
+    if (::ebus::detail::Logger::getInstance().isEnabled(                 \
+            ::ebus::LogLevel::debug))                                    \
+      ::ebus::detail::Logger::getInstance().log(::ebus::LogLevel::debug, \
+                                                (msg));                  \
+  } while (0)
+#define EBUS_LOG_ERROR_F(fmt, ...)                                          \
+  do {                                                                      \
+    if (::ebus::detail::Logger::getInstance().isEnabled(                    \
+            ::ebus::LogLevel::error)) {                                     \
+      char buf[256];                                                        \
+      int __ebus_log_n = std::snprintf(buf, sizeof(buf), fmt, __VA_ARGS__); \
+      if (__ebus_log_n > 0)                                                 \
+        ::ebus::detail::Logger::getInstance().log(                          \
+            ::ebus::LogLevel::error,                                        \
+            std::string_view(                                               \
+                buf, std::min((size_t)__ebus_log_n, sizeof(buf) - 1)));     \
+    }                                                                       \
+  } while (0)
+#define EBUS_LOG_INFO_F(fmt, ...)                                           \
+  do {                                                                      \
+    if (::ebus::detail::Logger::getInstance().isEnabled(                    \
+            ::ebus::LogLevel::info)) {                                      \
+      char buf[256];                                                        \
+      int __ebus_log_n = std::snprintf(buf, sizeof(buf), fmt, __VA_ARGS__); \
+      if (__ebus_log_n > 0)                                                 \
+        ::ebus::detail::Logger::getInstance().log(                          \
+            ::ebus::LogLevel::info,                                         \
+            std::string_view(                                               \
+                buf, std::min((size_t)__ebus_log_n, sizeof(buf) - 1)));     \
+    }                                                                       \
+  } while (0)
+#define EBUS_LOG_DEBUG_F(fmt, ...)                                          \
+  do {                                                                      \
+    if (::ebus::detail::Logger::getInstance().isEnabled(                    \
+            ::ebus::LogLevel::debug)) {                                     \
+      char buf[256];                                                        \
+      int __ebus_log_n = std::snprintf(buf, sizeof(buf), fmt, __VA_ARGS__); \
+      if (__ebus_log_n > 0)                                                 \
+        ::ebus::detail::Logger::getInstance().log(                          \
+            ::ebus::LogLevel::debug,                                        \
+            std::string_view(                                               \
+                buf, std::min((size_t)__ebus_log_n, sizeof(buf) - 1)));     \
+    }                                                                       \
   } while (0)
 #else
 #define EBUS_LOG_ERROR(msg) ((void)0)
 #define EBUS_LOG_INFO(msg) ((void)0)
 #define EBUS_LOG_DEBUG(msg) ((void)0)
+#define EBUS_LOG_ERROR_F(fmt, ...) ((void)0)
+#define EBUS_LOG_INFO_F(fmt, ...) ((void)0)
+#define EBUS_LOG_DEBUG_F(fmt, ...) ((void)0)
 #endif

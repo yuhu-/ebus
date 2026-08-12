@@ -80,11 +80,6 @@ struct Impl {
   bool isSchedulerFull() const;
   bool isHandlerBusy() const;
   bool isSystemBusy() const;
-
-  void log(LogLevel level, std::string_view msg) const;
-  void logError(std::string_view msg) const { log(LogLevel::error, msg); }
-  void logInfo(std::string_view msg) const { log(LogLevel::info, msg); }
-  void logDebug(std::string_view msg) const { log(LogLevel::debug, msg); }
 };
 
 Controller::Controller() : impl_(new Impl()) {}
@@ -104,24 +99,27 @@ bool Controller::start() {
 
   detail::platform::LockGuard<detail::platform::RecursiveMutex> lock(
       impl_->config_mutex_);
+
+  assert(impl_->bus_ && impl_->client_manager_ && impl_->reactor_ &&
+         "All subsystems must be initialized before start()");
+
   impl_->bus_->start();
   impl_->client_manager_->start(config_.runtime);
 
-  // Forward user callbacks to Reactor (created in constructMembers)
   impl_->reactor_->setProtocolCallback(impl_->user_protocol_callback_);
   impl_->reactor_->setTraceCallback(impl_->user_trace_callback_);
   impl_->reactor_->setLogLevel(impl_->log_level_.load());
 
   impl_->reactor_->start();
 
-  // Trigger initial system discovery if enabled
   if (config_.runtime.system_inquiry) triggerInquiryOfExistence();
 
   return true;
 }
 
 void Controller::stop() {
-  impl_->logInfo("Stopping controller services.");
+  EBUS_LOG_INFO_F("[0x%02x] Stopping controller services.",
+                  impl_->address_.load(std::memory_order_relaxed));
   bool expected = true;
   if (!impl_->running_.compare_exchange_strong(expected, false)) return;
 
@@ -797,16 +795,4 @@ bool Impl::isSystemBusy() const {
          (client_manager_ && client_manager_->isSessionActive());
 }
 
-void Impl::log(LogLevel level, std::string_view msg) const {
-  auto& logger = detail::Logger::getInstance();
-  if (!logger.isEnabled(level)) return;
-
-  uint8_t addr = address_.load(std::memory_order_relaxed);
-  char buf[detail::LoggerLimits::log_buffer_size];
-  int n = std::snprintf(buf, sizeof(buf), "[0x%02x] %.*s", addr,
-                        (int)msg.size(), msg.data());
-  if (n > 0)
-    logger.log(level,
-               std::string_view(buf, std::min((size_t)n, sizeof(buf) - 1)));
-}
 }  // namespace ebus

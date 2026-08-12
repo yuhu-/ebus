@@ -12,7 +12,6 @@
 #include <ebus/detail/protocol_limits.hpp>
 #include <ebus/static_vector.hpp>
 #include <ebus/utils.hpp>
-#include <iostream>
 
 #include "app/client.hpp"
 #include "core/bus_handler.hpp"
@@ -65,7 +64,7 @@ ClientManager::ClientManager(platform::Bus* bus, BusHandler* bus_handler,
 }
 
 ClientManager::~ClientManager() {
-  std::cout << "[ClientManager] Destroying ClientManager..." << std::endl;
+  EBUS_LOG_INFO("[ClientManager] Destroying ClientManager...");
   stop();
   wakeup_signal_.close();
 }
@@ -79,34 +78,40 @@ void ClientManager::start(const RuntimeConfig& config) {
       listen_socket_regular_ = std::make_unique<platform::Socket>(
           platform::Socket::createListenSocket(config.network.port_regular));
       if (listen_socket_regular_->isValid()) {
-        std::cout << "[ClientManager] Listening for regular clients on port "
-                  << config.network.port_regular << std::endl;
+        EBUS_LOG_INFO_F(
+            "[ClientManager] Listening for regular clients on port %u",
+            config.network.port_regular);
       } else {
-        std::cout << "[ClientManager] ERROR: Failed to listen for regular "
-                     "clients on port "
-                  << config.network.port_regular << std::endl;
+        EBUS_LOG_ERROR_F(
+            "[ClientManager] ERROR: Failed to listen for regular clients on "
+            "port %u",
+            config.network.port_regular);
       }
 
       listen_socket_readonly_ = std::make_unique<platform::Socket>(
           platform::Socket::createListenSocket(config.network.port_readonly));
       if (listen_socket_readonly_->isValid()) {
-        std::cout << "[ClientManager] Listening for readonly clients on port "
-                  << config.network.port_readonly << std::endl;
+        EBUS_LOG_INFO_F(
+            "[ClientManager] Listening for readonly clients on port %u",
+            config.network.port_readonly);
       } else {
-        std::cout << "[ClientManager] ERROR: Failed to listen for readonly "
-                     "clients on port "
-                  << config.network.port_readonly << std::endl;
+        EBUS_LOG_ERROR_F(
+            "[ClientManager] ERROR: Failed to listen for readonly clients on "
+            "port %u",
+            config.network.port_readonly);
       }
 
       listen_socket_enhanced_ = std::make_unique<platform::Socket>(
           platform::Socket::createListenSocket(config.network.port_enhanced));
       if (listen_socket_enhanced_->isValid()) {
-        std::cout << "[ClientManager] Listening for enhanced clients on port "
-                  << config.network.port_enhanced << std::endl;
+        EBUS_LOG_INFO_F(
+            "[ClientManager] Listening for enhanced clients on port %u",
+            config.network.port_enhanced);
       } else {
-        std::cout << "[ClientManager] ERROR: Failed to listen for enhanced "
-                     "clients on port "
-                  << config.network.port_enhanced << std::endl;
+        EBUS_LOG_ERROR_F(
+            "[ClientManager] ERROR: Failed to listen for enhanced clients on "
+            "port %u",
+            config.network.port_enhanced);
       }
     }
   }
@@ -124,7 +129,7 @@ void ClientManager::start(const RuntimeConfig& config) {
 }
 
 void ClientManager::stop() {
-  std::cout << "[ClientManager] Stopping ClientManager..." << std::endl;
+  EBUS_LOG_INFO("[ClientManager] Stopping ClientManager...");
   running_.store(false, std::memory_order_release);
   client_io_running_.store(false);
   signalClientIoThread();
@@ -194,8 +199,10 @@ bool ClientManager::addClient(std::unique_ptr<platform::Socket> socket,
   // Evict any stale disconnected entries to free slots
   for (size_t i = 0; i < NetworkLimits::max_clients; ++i) {
     if (clients[i] && !clients[i]->isConnected()) {
-      std::cout << "[ClientManager] Evicting stale disconnected client fd="
-                << clients[i]->getFd() << " at slot " << i << std::endl;
+      EBUS_LOG_INFO_F(
+          "[ClientManager] Evicting stale disconnected client fd=%d at slot "
+          "%zu",
+          clients[i]->getFd(), i);
       clients[i]->stop();
       clients[i].reset();
     }
@@ -204,16 +211,17 @@ bool ClientManager::addClient(std::unique_ptr<platform::Socket> socket,
   // Find first empty slot
   for (size_t i = 0; i < NetworkLimits::max_clients; ++i) {
     if (!clients[i]) {
-      std::cout << "[ClientManager] Registered client fd=" << new_fd
-                << " type=" << static_cast<int>(type) << " at slot " << i
-                << std::endl;
+      EBUS_LOG_INFO_F(
+          "[ClientManager] Registered client fd=%d type=%d at slot %zu", new_fd,
+          static_cast<int>(type), i);
       clients[i] = std::move(client);
       return true;
     }
   }
 
-  std::cout << "[ClientManager] ERROR: No free slot for client fd=" << new_fd
-            << " type=" << static_cast<int>(type) << std::endl;
+  EBUS_LOG_ERROR_F(
+      "[ClientManager] ERROR: No free slot for client fd=%d type=%d", new_fd,
+      static_cast<int>(type));
   client->stop();
   return false;
 }
@@ -246,9 +254,8 @@ bool ClientManager::addClient(std::shared_ptr<AbstractClient> client) {
   // immediately
   for (size_t i = 0; i < NetworkLimits::max_clients; ++i) {
     if (clients[i] && !clients[i]->isConnected()) {
-      std::cout
-          << "[ClientManager]  Removing disconnected client during addClient."
-          << std::endl;
+      EBUS_LOG_INFO(
+          "[ClientManager] Removing disconnected client during addClient.");
       clients[i]->stop();
       clients[i].reset();
     }
@@ -262,9 +269,7 @@ bool ClientManager::addClient(std::shared_ptr<AbstractClient> client) {
     }
   }
 
-  // No empty slot
-  std::cout << "[ClientManager] No empty slot available for client."
-            << std::endl;
+  EBUS_LOG_ERROR("[ClientManager] No empty slot available for client.");
   client->stop();
   return false;
 }
@@ -428,8 +433,9 @@ void ClientManager::handleBusAvailableForSession() {
       transitSessionState(SessionState::response);
     } else {
       last_error_message_ = "Client sent no data for bus request.";
-      std::cout << "[ClientManager] Client fd=" << active_sender->getFd()
-                << " sent no data for bus request" << std::endl;
+      EBUS_LOG_ERROR("[ClientManager] Client fd=" +
+                     std::to_string(active_sender->getFd()) +
+                     " sent no data for bus request");
       stopActiveSession();
     }
   }
@@ -451,8 +457,8 @@ void ClientManager::tryStartSessionForClient(
   current_active_sender_ = client;
   uint32_t sid = ++session_counter_;
   transitSessionState(SessionState::request);
-  std::cout << "[ClientManager] Session started for client fd="
-            << client->getFd() << " sid=" << sid << std::endl;
+  EBUS_LOG_INFO_F("[ClientManager] Session started for client fd=%d sid=%u",
+                  client->getFd(), sid);
   client->onSessionStart(sid);
 }
 
@@ -470,8 +476,8 @@ void ClientManager::trySendNextByte(std::shared_ptr<AbstractClient>& client) {
       // connected.
       transitSessionState(SessionState::idle);
       current_active_sender_.reset();
-      std::cout << "[ClientManager] Session complete for client fd="
-                << client->getFd() << std::endl;
+      EBUS_LOG_INFO_F("[ClientManager] Session complete for client fd=%d",
+                      client->getFd());
     } else {
       transitSessionState(SessionState::response);
     }
@@ -487,8 +493,8 @@ void ClientManager::stopActiveSession() {
     current_active_sender_.reset();
     session_state_ = SessionState::idle;
     last_error_message_ = "Session stopped by ClientManager.";
-    std::cout << "[ClientManager] Stopping session for client fd="
-              << old_sender->getFd() << std::endl;
+    EBUS_LOG_INFO_F("[ClientManager] Stopping session for client fd=%d",
+                    old_sender->getFd());
   }
   if (old_sender) old_sender->stop();
   if (request_) request_->reset();
@@ -519,9 +525,9 @@ void ClientManager::checkSessionTimeout() {
       std::chrono::duration_cast<Clock::duration>(current_timeout);
 
   if (elapsed > timeout_duration) {
-    std::cout << "[ClientManager] Session timeout in state "
-              << ebus::toString(current_state)
-              << " for client fd=" << active_sender->getFd() << std::endl;
+    EBUS_LOG_ERROR_F(
+        "[ClientManager] Session timeout in state %s for client fd=%d",
+        ebus::toString(current_state), active_sender->getFd());
     last_error_message_ = "Session timed out.";
     stopActiveSession();
     if (monitor_)
@@ -539,8 +545,9 @@ void ClientManager::handleActiveSenderDisconnected() {
       current_active_sender_.reset();
       session_state_ = SessionState::idle;
       last_error_message_ = "Client disconnected.";
-      std::cout << "[ClientManager] Active sender fd=" << lost_fd
-                << " disconnected, aborting session" << std::endl;
+      EBUS_LOG_ERROR_F(
+          "[ClientManager] Active sender fd=%d disconnected, aborting session",
+          lost_fd);
       lock.unlock();
       old_sender->stop();
       request_->reset();
@@ -557,9 +564,9 @@ void ClientManager::removeDisconnectedClients() {
   auto collect = [&](ClientArray& arr, const char* type_name) {
     for (size_t i = 0; i < NetworkLimits::max_clients; ++i) {
       if (arr[i] && !arr[i]->isConnected()) {
-        std::cout << "[ClientManager] Removing disconnected " << type_name
-                  << " client fd=" << arr[i]->getFd() << " slot=" << i
-                  << std::endl;
+        EBUS_LOG_INFO_F(
+            "[ClientManager] Removing disconnected %s client fd=%d slot=%zu",
+            type_name, arr[i]->getFd(), i);
         to_stop.push_back(arr[i]);
         arr[i].reset();
       }
@@ -618,7 +625,7 @@ void ClientManager::removeClientByFd(int fd) {
   }  // Lock released before stopping client
 
   if (client) {
-    std::cout << "[ClientManager] Removing client fd=" << fd << std::endl;
+    EBUS_LOG_INFO_F("[ClientManager] Removing client fd=%d", fd);
     client->stop();
   }
 }
@@ -713,17 +720,19 @@ void ClientManager::acceptNewConnections(fd_set& readfds) {
 
     int client_fd = listener->accept();
     if (client_fd >= 0) {
-      std::cout << "[ClientManager] Connection accepted on listener fd "
-                << listen_fd << "-> client fd " << client_fd << " (type "
-                << static_cast<int>(type) << ")" << std::endl;
+      EBUS_LOG_INFO_F(
+          "[ClientManager] Connection accepted on listener fd %d-> client fd "
+          "%d (type %d)",
+          listen_fd, client_fd, static_cast<int>(type));
       if (!addClient(client_fd, type)) {
-        std::cout << "[ClientManager] Failed to register client fd "
-                  << client_fd << std::endl;
+        EBUS_LOG_ERROR_F("[ClientManager] Failed to register client fd %d",
+                         client_fd);
         platform::close(client_fd);
       }
     } else {
-      std::cout << "[ClientManager] accept() failed on listener fd "
-                << listen_fd << ", errno: " << errno << std::endl;
+      EBUS_LOG_ERROR_F(
+          "[ClientManager] accept() failed on listener fd %d, errno: %d",
+          listen_fd, errno);
     }
   };
 
@@ -762,7 +771,8 @@ void ClientManager::handleClientActivity(
     int fd = client->getFd();
 
     if (FD_ISSET(fd, &exceptfds)) {
-      std::cout << "[ClientManager] Exception on client fd=" << fd << std::endl;
+      EBUS_LOG_ERROR("[ClientManager] Exception on client fd=" +
+                     std::to_string(fd));
       to_stop.push_back(client);
       client.reset();
       continue;
@@ -806,8 +816,7 @@ void ClientManager::handleSocketInput(
         tryStartSessionForClient(client);
       }
     } else if (bytes_read == 0) {
-      std::cout << "[ClientManager] Client fd=" << fd << " closed connection"
-                << std::endl;
+      EBUS_LOG_INFO_F("[ClientManager] Client fd=%d closed connection", fd);
       to_stop.push_back(client);
       client.reset();
       break;
@@ -815,8 +824,8 @@ void ClientManager::handleSocketInput(
       if (platform::isWouldBlock() || platform::isInterrupted()) {
         break;
       }
-      std::cout << "[ClientManager] recv() failed on client fd=" << fd
-                << ", errno=" << errno << std::endl;
+      EBUS_LOG_ERROR_F(
+          "[ClientManager] recv() failed on client fd=%d, errno=%d", fd, errno);
       to_stop.push_back(client);
       client.reset();
       break;
@@ -860,9 +869,15 @@ void ClientManager::clientIoLoop() {
     if (!client_io_running_.load()) break;
 
     if (activity < 0) {
-      if (errno == EINTR || errno == EBADF) continue;
-      std::cerr << "[ClientManager] select() failed: " << strerror(errno)
-                << std::endl;
+      if (errno == EINTR) continue;
+      if (errno == EBADF) {
+        EBUS_LOG_ERROR(
+            "[ClientManager] select() EBADF: a socket fd became invalid, "
+            "cleaning up clients");
+        removeDisconnectedClients();
+        continue;
+      }
+      EBUS_LOG_ERROR_F("[ClientManager] select() failed: %s", strerror(errno));
       break;
     }
 

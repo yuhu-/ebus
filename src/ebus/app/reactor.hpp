@@ -126,11 +126,6 @@ class Reactor {
   void processProtocolReady();
   void processTimerWakeup();
   void processUserRequest();
-
-  void log(LogLevel level, std::string_view msg) const;
-  void logError(std::string_view msg) const { log(LogLevel::error, msg); }
-  void logInfo(std::string_view msg) const { log(LogLevel::info, msg); }
-  void logDebug(std::string_view msg) const { log(LogLevel::debug, msg); }
 };
 
 }  // namespace ebus::detail

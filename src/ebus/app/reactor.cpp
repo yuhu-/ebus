@@ -39,19 +39,25 @@ Reactor::Reactor(uint8_t own_address, bool system_response,
 Reactor::~Reactor() { stop(); }
 
 void Reactor::stop() {
-  logInfo("Stopping reactor.");
+  EBUS_LOG_INFO("[reactor] Stopping reactor.");
 
   ReactorSignal shutdown_sig;
   shutdown_sig.type = ReactorSignal::Type::shutdown;
-  signal_queue_.tryPush(std::move(shutdown_sig));
+
+  // Ensure shutdown signal is delivered even if queue is full
+  if (!signal_queue_.tryPush(std::move(shutdown_sig))) {
+    signal_queue_.discard(1);
+    signal_queue_.tryPush(std::move(shutdown_sig));
+  }
   signal_queue_.shutdown();
+
+  // Set running_ before join so the loop can exit even if pop() returns false
+  running_.store(false, std::memory_order_release);
 
   if (worker_) {
     worker_->join();
     worker_.reset();
   }
-
-  running_.store(false, std::memory_order_release);
 }
 
 void Reactor::start() {
@@ -69,7 +75,7 @@ void Reactor::setLogLevel(LogLevel level) {
 
 void Reactor::run() {
   running_.store(true, std::memory_order_release);
-  logInfo("Reactor thread started.");
+  EBUS_LOG_INFO("[reactor] Reactor thread started.");
 
   ReactorSignal signal;
   auto last_status_update = Clock::now();
@@ -150,8 +156,10 @@ void Reactor::run() {
                              Clock::now() - loop_start)
                              .count();
     if (loop_duration > ReactorLimits::latency_warning_threshold_us) {
-      logInfo("Loop iteration latency warning: " +
-              std::to_string(loop_duration) + " us. Possible starvation?");
+      EBUS_LOG_INFO_F(
+          "[reactor] Loop iteration latency warning: %zu us. Possible "
+          "starvation?",
+          loop_duration);
     }
 
     bus_monitor_->updateController([loop_duration](auto& m) {
@@ -180,7 +188,7 @@ void Reactor::run() {
     }
   }
 
-  logInfo("Reactor thread stopped.");
+  EBUS_LOG_INFO("[reactor] Reactor thread stopped.");
 }
 
 bool Reactor::pushSignal(ReactorSignal&& signal) {
@@ -258,7 +266,7 @@ void Reactor::processSignal(const ReactorSignal& signal) {
   switch (signal.type) {
     case ReactorSignal::Type::shutdown:
       running_.store(false, std::memory_order_release);
-      logDebug("Shutdown signal received");
+      EBUS_LOG_DEBUG("[reactor] Shutdown signal received");
       break;
 
     case ReactorSignal::Type::bus_byte:
@@ -426,17 +434,5 @@ void Reactor::fetchErrors(const JsonChunkVisitor& visitor, bool pretty) const {
 void Reactor::clearErrors() { error_buffer_.clear(); }
 
 size_t Reactor::getErrorLogCapacity() const { return error_buffer_.capacity(); }
-
-void Reactor::log(LogLevel level, std::string_view msg) const {
-  auto& logger = detail::Logger::getInstance();
-  if (!logger.isEnabled(level)) return;
-
-  char buf[detail::LoggerLimits::log_buffer_size];
-  int n = std::snprintf(buf, sizeof(buf), "[reactor] %.*s", (int)msg.size(),
-                        msg.data());
-  if (n > 0)
-    logger.log(level,
-               std::string_view(buf, std::min((size_t)n, sizeof(buf) - 1)));
-}
 
 }  // namespace ebus::detail
