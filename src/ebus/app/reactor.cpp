@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cinttypes>
 #include <cstdint>
 #include <ebus/utils.hpp>
 
@@ -156,10 +157,10 @@ void Reactor::run() {
                              Clock::now() - loop_start)
                              .count();
     if (loop_duration > ReactorLimits::latency_warning_threshold_us) {
-      EBUS_LOG_INFO_F(
-          "[reactor] Loop iteration latency warning: %zu us. Possible "
-          "starvation?",
-          loop_duration);
+      EBUS_LOG_INFO_F("[reactor] Loop iteration latency warning: %" PRId64
+                      " us. Possible "
+                      "starvation?",
+                      static_cast<int64_t>(loop_duration));
     }
 
     bus_monitor_->updateReactor([loop_duration](auto& m) {

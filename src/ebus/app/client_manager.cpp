@@ -8,6 +8,7 @@
 #include <unistd.h>
 
 #include <cassert>
+#include <cinttypes>
 #include <cstring>  // for strerror
 #include <ebus/detail/protocol_limits.hpp>
 #include <ebus/static_vector.hpp>
@@ -453,8 +454,9 @@ void ClientManager::tryStartSessionForClient(
   current_active_sender_ = client;
   uint32_t sid = ++session_counter_;
   transitSessionState(SessionState::request);
-  EBUS_LOG_INFO_F("[ClientManager] Session started for client fd=%d sid=%u",
-                  client->getFd(), sid);
+  EBUS_LOG_INFO_F(
+      "[ClientManager] Session started for client fd=%d sid=%" PRIu32,
+      client->getFd(), sid);
   client->onSessionStart(sid);
 }
 
