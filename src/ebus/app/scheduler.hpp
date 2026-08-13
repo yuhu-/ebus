@@ -66,8 +66,8 @@ class Scheduler {
   void attachHandlerCallbacks();
   void detachHandlerCallbacks();
   /**
-   * @brief Injects a protocol result from the Controller's Reactor loop.
-   * Bridges the decoupled events to the Scheduler's processing thread.
+   * @brief Injects a protocol result from the Reactor loop. Bridges the
+   * decoupled events to the Scheduler's processing thread.
    * @return true if the event resulted in a state change (e.g. terminal
    * result).
    */

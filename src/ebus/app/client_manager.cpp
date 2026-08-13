@@ -118,8 +118,9 @@ void ClientManager::start(const RuntimeConfig& config) {
   // Start the client I/O thread
   worker_ = std::make_unique<platform::ServiceThread>(
       "ebus_client",
-      Delegate<void()>::bind<ClientManager, &ClientManager::clientIoLoop>(
-          this));
+      Delegate<void()>::bind<ClientManager, &ClientManager::clientIoLoop>(this),
+      detail::OrchestrationLimits::client_manager_stack_size,
+      detail::OrchestrationLimits::client_manager_priority);
   worker_->start();
 
   running_.store(true, std::memory_order_release);
