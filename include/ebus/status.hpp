@@ -44,7 +44,6 @@ struct QueueStatus {
   QueueStatus() = default;
   QueueStatus(std::string_view n, size_t s, size_t cap, size_t max_s)
       : name(n), size(s), capacity(cap), max_size(max_s) {}
-
   FixedString<24> name;
   size_t size = 0;
   size_t capacity = 0;
@@ -70,7 +69,6 @@ struct ReactorStatus {
         bus_queue_dropped(bq_dropped),
         max_loop_cycle_us(loop_us) {}
   ThreadStatus thread;
-
   QueueStatus signal_queue;
   QueueStatus protocol_queue;
   QueueStatus bus_queue;

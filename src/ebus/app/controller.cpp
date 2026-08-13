@@ -64,10 +64,8 @@ struct Impl {
 #endif
   std::unique_ptr<detail::ClientManager> client_manager_;
 
-  mutable detail::platform::Mutex status_mutex_;
   std::atomic<LogLevel> log_level_{LogLevel::error};
   std::atomic<uint8_t> address_{0xff};
-  ServiceStatus status_cache_;
 
   mutable detail::platform::RecursiveMutex
       config_mutex_;  // Protects config_ and related members
@@ -556,27 +554,25 @@ void Controller::fetchStatus(
   res.is_configured = impl_->configured_.load();
   res.is_running = impl_->running_.load();
 
-  {
-    detail::platform::LockGuard<detail::platform::Mutex> lock(
-        impl_->status_mutex_);
-    const auto& snap = impl_->status_cache_;
+  if (impl_->configured_.load()) {
+    ServiceStatus snapshot;
+    impl_->fetchServiceStatus(snapshot);
 
-    res.last_update_timestamp_ms = snap.last_update_timestamp_ms;
+    res.last_update_timestamp_ms = snapshot.last_update_timestamp_ms;
 
-    if (!snap.reactor.thread.name.empty())
-      res.threads.push_back(snap.reactor.thread);
-    if (!snap.bus.bus_thread.name.empty())
-      res.threads.push_back(snap.bus.bus_thread);
-    if (!snap.bus.syn_thread.name.empty())
-      res.threads.push_back(snap.bus.syn_thread);
-    if (!snap.client_manager.thread.name.empty())
-      res.threads.push_back(snap.client_manager.thread);
+    if (!snapshot.reactor.thread.name.empty())
+      res.threads.push_back(snapshot.reactor.thread);
+    if (!snapshot.bus.bus_thread.name.empty())
+      res.threads.push_back(snapshot.bus.bus_thread);
+    if (!snapshot.bus.syn_thread.name.empty())
+      res.threads.push_back(snapshot.bus.syn_thread);
+    if (!snapshot.client_manager.thread.name.empty())
+      res.threads.push_back(snapshot.client_manager.thread);
 
-    if (snap.scheduler.queue.capacity > 0)
-      res.queues.push_back(snap.scheduler.queue);
+    if (snapshot.scheduler.queue.capacity > 0)
+      res.queues.push_back(snapshot.scheduler.queue);
   }
 
-  // Internal orchestration queues: use immediate values for high accuracy
   if (impl_->reactor_) {
     const auto reactor_status = impl_->reactor_->fetchStatus();
     res.queues.push_back(reactor_status.signal_queue);
@@ -589,11 +585,9 @@ void Controller::fetchStatus(
 
 void Controller::fetchStatus(const JsonChunkVisitor& visitor,
                              bool pretty) const {
-  ServiceStatus snapshot;  // This is a local copy, no mutex needed for it
-  {
-    detail::platform::LockGuard<detail::platform::Mutex> lock(
-        impl_->status_mutex_);
-    snapshot = impl_->status_cache_;
+  ServiceStatus snapshot;
+  if (impl_->configured_.load()) {
+    impl_->fetchServiceStatus(snapshot);
   }
   serializeServiceStatus(visitor, snapshot, impl_->bus_monitor_.get(), pretty);
 }
