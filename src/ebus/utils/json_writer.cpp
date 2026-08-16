@@ -84,7 +84,7 @@ void JsonWriter::writeTimestampField(std::string_view key, uint64_t ms) {
   write("\"");
   write(std::string_view(iso_buffer));
   write("\"");
-  first_ = false;
+  afterValue();
 }
 
 }  // namespace ebus::detail

@@ -395,8 +395,198 @@ TEST_CASE("ConfigValidator: validateJson hex strings", "[app][config][json]") {
     REQUIRE_FALSE(ConfigValidator::validateJson(json));
   }
   SECTION("Valid/Invalid network ports in JSON") {
-    REQUIRE(ConfigValidator::validateJson(R"({"network": {"port_regular": 3333}})"));
-    REQUIRE(ConfigValidator::validateJson(R"({"network": {"port_regular": "0x0d05"}})")); // 3333
-    REQUIRE_FALSE(ConfigValidator::validateJson(R"({"network": {"port_regular": 0}})"));
+    REQUIRE(ConfigValidator::validateJson(
+        R"({"network": {"port_regular": 3333}})"));
+    REQUIRE(ConfigValidator::validateJson(
+        R"({"network": {"port_regular": "0x0d05"}})"));  // 3333
+    REQUIRE_FALSE(
+        ConfigValidator::validateJson(R"({"network": {"port_regular": 0}})"));
+  }
+}
+
+TEST_CASE("JSON Reader: Streaming Support", "[utils][json][streaming]") {
+  SECTION("Basic streaming parse") {
+    JsonReader reader;
+    reader.feed(R"({"a": 1})");
+    reader.endOfInput();
+
+    REQUIRE(reader.next() == JsonReader::Token::object_start);
+    REQUIRE(reader.next() == JsonReader::Token::key);
+    REQUIRE(reader.value() == "a");
+    REQUIRE(reader.next() == JsonReader::Token::number);
+    REQUIRE(reader.asNum<int>() == 1);
+    REQUIRE(reader.next() == JsonReader::Token::object_end);
+    REQUIRE(reader.next() == JsonReader::Token::end);
+  }
+
+  SECTION("Streaming in multiple chunks") {
+    JsonReader reader;
+    reader.feed(R"json({"a":)json");
+    REQUIRE(reader.next() == JsonReader::Token::object_start);
+    REQUIRE(reader.next() == JsonReader::Token::key);
+    REQUIRE(reader.value() == "a");
+    REQUIRE(reader.next() == JsonReader::Token::need_more_data);
+
+    reader.feed(R"( 1})");
+    REQUIRE(reader.next() == JsonReader::Token::number);
+    REQUIRE(reader.asNum<int>() == 1);
+    REQUIRE(reader.next() == JsonReader::Token::object_end);
+    reader.endOfInput();
+    REQUIRE(reader.next() == JsonReader::Token::end);
+  }
+
+  SECTION("String split across chunks") {
+    JsonReader reader;
+    reader.feed(R"json({"key":"hel)json");
+    REQUIRE(reader.next() == JsonReader::Token::object_start);
+    REQUIRE(reader.next() == JsonReader::Token::key);
+    REQUIRE(reader.value() == "key");
+    REQUIRE(reader.next() == JsonReader::Token::need_more_data);
+
+    reader.feed(R"(lo world"})");
+    REQUIRE(reader.next() == JsonReader::Token::string);
+    REQUIRE(reader.value() == "hello world");
+    REQUIRE(reader.next() == JsonReader::Token::object_end);
+    reader.endOfInput();
+    REQUIRE(reader.next() == JsonReader::Token::end);
+  }
+
+  SECTION("Number split across chunks") {
+    JsonReader reader;
+    reader.feed(R"json({"num":123)json");
+    REQUIRE(reader.next() == JsonReader::Token::object_start);
+    REQUIRE(reader.next() == JsonReader::Token::key);
+    REQUIRE(reader.value() == "num");
+    REQUIRE(reader.next() == JsonReader::Token::need_more_data);
+
+    reader.feed(R"(.45})");
+    REQUIRE(reader.next() == JsonReader::Token::number);
+    REQUIRE(reader.asNum<double>() == 123.45);
+    REQUIRE(reader.next() == JsonReader::Token::object_end);
+    reader.endOfInput();
+    REQUIRE(reader.next() == JsonReader::Token::end);
+  }
+
+  SECTION("Keyword split across chunks") {
+    JsonReader reader;
+    reader.feed(R"json({"flag":tru)json");
+    REQUIRE(reader.next() == JsonReader::Token::object_start);
+    REQUIRE(reader.next() == JsonReader::Token::key);
+    REQUIRE(reader.value() == "flag");
+    REQUIRE(reader.next() == JsonReader::Token::need_more_data);
+
+    reader.feed(R"(e})");
+    REQUIRE(reader.next() == JsonReader::Token::boolean);
+    REQUIRE(reader.asBool() == true);
+    REQUIRE(reader.next() == JsonReader::Token::object_end);
+    reader.endOfInput();
+    REQUIRE(reader.next() == JsonReader::Token::end);
+  }
+
+  SECTION("Array streaming") {
+    JsonReader reader;
+    reader.feed(R"json([1,2,)json");
+    REQUIRE(reader.next() == JsonReader::Token::array_start);
+    REQUIRE(reader.next() == JsonReader::Token::number);
+    REQUIRE(reader.asNum<int>() == 1);
+    REQUIRE(reader.next() == JsonReader::Token::number);
+    REQUIRE(reader.asNum<int>() == 2);
+    REQUIRE(reader.next() == JsonReader::Token::need_more_data);
+
+    reader.feed(R"(3])");
+    REQUIRE(reader.next() == JsonReader::Token::number);
+    REQUIRE(reader.asNum<int>() == 3);
+    REQUIRE(reader.next() == JsonReader::Token::array_end);
+    reader.endOfInput();
+    REQUIRE(reader.next() == JsonReader::Token::end);
+  }
+
+  SECTION("needsMoreData and remaining") {
+    JsonReader reader;
+    reader.feed(R"json({"a":1)json");
+    REQUIRE(reader.needsMoreData() == false);  // Has data to parse
+
+    reader.next();  // object_start
+    reader.next();  // key
+    REQUIRE(reader.next() ==
+            JsonReader::Token::need_more_data);  // number at buffer end
+    REQUIRE(reader.needsMoreData() == true);
+    REQUIRE(reader.remaining() == "1");  // Unparsed number
+
+    reader.feed(R"(})");
+    REQUIRE(reader.needsMoreData() == false);
+    REQUIRE(reader.next() ==
+            JsonReader::Token::number);  // Now number is complete
+    REQUIRE(reader.asNum<int>() == 1);
+    REQUIRE(reader.next() == JsonReader::Token::object_end);
+    reader.endOfInput();
+    REQUIRE(reader.next() == JsonReader::Token::end);
+  }
+
+  SECTION("Escape sequence split across chunks") {
+    JsonReader reader;
+    reader.feed(R"json({"s":"hel\)json");
+    REQUIRE(reader.next() == JsonReader::Token::object_start);
+    REQUIRE(reader.next() == JsonReader::Token::key);
+    REQUIRE(reader.value() == "s");
+    REQUIRE(reader.next() == JsonReader::Token::need_more_data);
+
+    reader.feed(R"(n"})");
+    REQUIRE(reader.next() == JsonReader::Token::string);
+    REQUIRE(reader.value() == "hel\\n");  // Raw content: hel + backslash + n
+    REQUIRE(reader.next() == JsonReader::Token::object_end);
+    reader.endOfInput();
+    REQUIRE(reader.next() == JsonReader::Token::end);
+  }
+
+  SECTION("Backward compatibility - constructor with string_view") {
+    std::string_view json = R"({"test": 42})";
+    JsonReader reader(json);
+
+    REQUIRE(reader.next() == JsonReader::Token::object_start);
+    REQUIRE(reader.next() == JsonReader::Token::key);
+    REQUIRE(reader.value() == "test");
+    REQUIRE(reader.next() == JsonReader::Token::number);
+    REQUIRE(reader.asNum<int>() == 42);
+    REQUIRE(reader.next() == JsonReader::Token::object_end);
+    REQUIRE(reader.next() == JsonReader::Token::end);
+  }
+
+  SECTION("reset() clears streaming state") {
+    JsonReader reader;
+    reader.feed(R"json({"a":1)json");
+    reader.endOfInput();
+    reader.next();  // object_start
+    reader.next();  // key
+
+    reader.reset();
+
+    REQUIRE(reader.next() == JsonReader::Token::end);  // Empty after reset
+    reader.feed(R"json({"b":2)json");
+    reader.endOfInput();
+    REQUIRE(reader.next() == JsonReader::Token::object_start);
+    REQUIRE(reader.next() == JsonReader::Token::key);
+    REQUIRE(reader.value() == "b");
+  }
+
+  SECTION("Deep nesting streaming") {
+    JsonReader reader;
+    reader.feed(R"json({"l1":{"l2":{"l3":)json");
+    // Don't call endOfInput() yet - more data could come
+
+    REQUIRE(reader.next() == JsonReader::Token::object_start);
+    REQUIRE(reader.next() == JsonReader::Token::key);
+    REQUIRE(reader.value() == "l1");
+    REQUIRE(reader.next() == JsonReader::Token::object_start);
+    REQUIRE(reader.next() == JsonReader::Token::key);
+    REQUIRE(reader.value() == "l2");
+    REQUIRE(reader.next() == JsonReader::Token::object_start);
+    REQUIRE(reader.next() == JsonReader::Token::key);
+    REQUIRE(reader.value() == "l3");
+    REQUIRE(reader.next() == JsonReader::Token::need_more_data);
+
+    reader.endOfInput();
+    REQUIRE(reader.next() ==
+            JsonReader::Token::end);  // No more tokens when ended
   }
 }

@@ -29,10 +29,41 @@ class JsonReader {
     number,
     boolean,
     null,
-    error
+    error,
+    need_more_data
   };
 
-  explicit JsonReader(std::string_view json) : json_(json) { skipWhitespace(); }
+  JsonReader()
+      : json_(),
+        pos_(0),
+        buffer_(),
+        fixed_buffer_(),
+        buffer_pos_(0),
+        ended_(false),
+        streaming_mode_(true) {}
+
+  explicit JsonReader(std::string_view json)
+      : json_(json),
+        pos_(0),
+        buffer_(),
+        fixed_buffer_(),
+        buffer_pos_(0),
+        ended_(true),
+        streaming_mode_(false) {
+    skipWhitespace();
+  }
+
+  // Fixed-buffer constructor for embedded - no heap allocation
+  JsonReader(char* buffer, size_t size)
+      : json_(),
+        pos_(0),
+        buffer_(),
+        fixed_buffer_(buffer, size),
+        buffer_pos_(0),
+        ended_(false),
+        streaming_mode_(true) {
+    skipWhitespace();
+  }
 
   /**
    * @brief Resets the reader to the beginning of the JSON string.
@@ -73,7 +104,8 @@ class JsonReader {
     while (true) {
       size_t element_start = pos_;
       Token t = next();
-      if (t == Token::array_end || t == Token::end || t == Token::error) {
+      if (t == Token::array_end || t == Token::end || t == Token::error ||
+          t == Token::need_more_data) {
         return false;
       }
 
@@ -97,7 +129,8 @@ class JsonReader {
   void forEachField(Func func) {
     while (true) {
       Token t = next();
-      if (t == Token::object_end || t == Token::end || t == Token::error) {
+      if (t == Token::object_end || t == Token::end || t == Token::error ||
+          t == Token::need_more_data) {
         break;
       }
       if (t == Token::key) {
@@ -154,10 +187,45 @@ class JsonReader {
 
   bool asBool() const { return value_ == "true"; }
 
+  /**
+   * @brief Feeds more JSON data into the reader's internal buffer.
+   * @param chunk The next chunk of JSON data.
+   */
+  void feed(std::string_view chunk);
+
+  /**
+   * @brief Signals that no more input data will be provided.
+   * Allows parsing of the final token even if not followed by
+   * whitespace/delimiter.
+   */
+  void endOfInput();
+
+  /**
+   * @brief Returns true if the reader needs more data to continue parsing.
+   * This is the case when next() returned Token::need_more_data.
+   */
+  bool needsMoreData() const { return need_more_data_; }
+
+  /**
+   * @brief Returns the unconsumed portion of the input buffer.
+   * Useful for backpressure/flow control.
+   */
+  std::string_view remaining() const { return json_.substr(pos_); }
+
  private:
   std::string_view json_;
   std::string_view value_;
   size_t pos_ = 0;
+  std::string buffer_;             // Dynamic buffer (heap)
+  std::string_view fixed_buffer_;  // Fixed external buffer (no heap)
+  size_t buffer_pos_ = 0;
+  bool ended_ = false;
+  bool need_more_data_ = false;
+  bool streaming_mode_ = false;
+  size_t rawvalue_start_ = 0;
+  bool rawvalue_in_progress_ = false;
+  bool skip_to_closing_in_string_ = false;
+  int skip_to_closing_depth_ = 1;
 
   void skipWhitespace();
   void skipToClosing();
