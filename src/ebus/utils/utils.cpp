@@ -70,6 +70,18 @@ void appendHex(std::string& out, ByteView data) {
   });
 }
 
+size_t toBytes(std::string_view str, uint8_t* out, size_t out_size) {
+  if (str.empty() || out == nullptr || out_size == 0) return 0;
+  size_t n = str.size() / 2;
+  if (n > out_size) n = out_size;
+  for (size_t i = 0; i < n; i++) {
+    uint8_t value = 0;
+    std::from_chars(str.data() + i * 2, str.data() + i * 2 + 2, value, 16);
+    out[i] = value;
+  }
+  return n;
+}
+
 std::vector<uint8_t> toVector(std::string_view str) {
   if (str.empty()) return {};
   std::vector<uint8_t> result;

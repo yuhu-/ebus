@@ -223,6 +223,12 @@ inline void byteToHex(std::string& out, ByteView data) { toString(out, data); }
 inline std::string byteToHex(ByteView data) { return toString(data); }
 
 /**
+ * @brief Decodes a hex string into a pre-allocated byte buffer.
+ * @return Number of bytes written.
+ */
+size_t toBytes(std::string_view hex, uint8_t* out, size_t out_size);
+
+/**
  * @brief Parses a string (optionally hex-encoded) into a byte vector.
  */
 std::vector<uint8_t> toVector(std::string_view str);
