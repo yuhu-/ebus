@@ -244,7 +244,9 @@ std::string frameMasterHex(uint8_t source, ByteView payload) {
 }
 
 std::string frameMasterHex(uint8_t source, const std::string& payload) {
-  return frameMasterHex(source, toVector(payload));
+  uint8_t hex_buf[128];
+  size_t hex_len = toBytes(payload, hex_buf, sizeof(hex_buf));
+  return frameMasterHex(source, ByteView(hex_buf, hex_len));
 }
 
 Sequence frameSlave(ByteView payload) {
@@ -260,7 +262,9 @@ std::string frameSlaveHex(ByteView payload) {
 }
 
 std::string frameSlaveHex(const std::string& payload) {
-  return frameSlaveHex(toVector(payload));
+  uint8_t hex_buf[128];
+  size_t hex_len = toBytes(payload, hex_buf, sizeof(hex_buf));
+  return frameSlaveHex(ByteView(hex_buf, hex_len));
 }
 
 float roundDigits(float value, uint8_t digits) noexcept {

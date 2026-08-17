@@ -147,7 +147,9 @@ bool PollManager::mergeFromJson(const std::string& json) {
       });
 
       if (ok && !message_hex.empty()) {
-        addPollItem(priority, ebus::toVector(message_hex), interval);
+        uint8_t hex_buf[64];
+        size_t hex_len = ebus::toBytes(message_hex, hex_buf, sizeof(hex_buf));
+        addPollItem(priority, ebus::ByteView(hex_buf, hex_len), interval);
       }
     } else {
       reader.skipValue();
