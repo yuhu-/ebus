@@ -50,30 +50,11 @@ uint16_t PollManager::addPollItem(uint8_t priority, ByteView message,
     return 0;
   }
 
-  // Handle poll_id wraparound: if we hit max, scan for gaps and reuse,
-  // or reset counter if no gaps (extremely rare: 65535 registrations)
-  uint16_t id = next_poll_id_;
-  if (id == std::numeric_limits<uint16_t>::max()) {
-    // Find a free ID by scanning existing items
-    bool used[65536] = {false};
-    for (const auto& item : items_) {
-      if (item.poll_id > 0) {
-        used[item.poll_id] = true;
-      }
-    }
-    for (uint32_t i = 1; i < 65536; ++i) {
-      if (!used[i]) {
-        id = static_cast<uint16_t>(i);
-        break;
-      }
-    }
-    // If all IDs are somehow used, reset to 1
-    if (id == std::numeric_limits<uint16_t>::max()) {
-      id = 1;
-    }
-    next_poll_id_ = id + 1;
-  } else {
-    next_poll_id_++;
+  // Handle poll_id wraparound: simple increment with natural wrap.
+  // With max 64(128) items out of 65536, collision is impossible in practice.
+  uint16_t id = next_poll_id_++;
+  if (id == 0) {  // 0 is reserved (invalid), skip to 1
+    id = next_poll_id_++;
   }
 
   Item item;
