@@ -342,7 +342,7 @@ TEST_CASE("Reactor: Protocol Callback Dispatch on Error Event",
   ProtocolEvent ev{};
   ev.type = ProtocolEvent::Type::error;
   ev.session_id = 99;
-  ev.retry_count = 3;
+  ev.attempts = 3;
   ev.handler_state = HandlerState::passive_receive_master;
   ev.request_state = RequestState::observe;
   ev.protocol_error = ProtocolError::invalid_message;

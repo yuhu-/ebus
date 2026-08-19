@@ -52,7 +52,7 @@ void RuntimeConfig::toJson(detail::JsonWriter& writer) const {
 
   {
     auto schedScope = writer.objectScope("scheduler");
-    writer.writeField("max_send_attempts", scheduler.max_send_attempts);
+    writer.writeField("max_attempts", scheduler.max_attempts);
     writer.writeField("base_backoff_ms", scheduler.base_backoff_ms);
     writer.writeField("fsm_timeout_ms", scheduler.fsm_timeout_ms);
     writer.writeField("total_timeout_ms", scheduler.total_timeout_ms);
@@ -228,10 +228,10 @@ bool RuntimeConfig::mergeFromJson(std::string_view json) {
     if (key == "scheduler") {
       if (r.next() == detail::JsonReader::Token::object_start) {
         r.forEachField([&](std::string_view k, detail::JsonReader& inner) {
-          if (k == "max_send_attempts") {
+          if (k == "max_attempts") {
             inner.next();
             auto val = inner.asNumStrict<int>();
-            if (val) scheduler.max_send_attempts = static_cast<uint8_t>(*val);
+            if (val) scheduler.max_attempts = static_cast<uint8_t>(*val);
             return val.has_value();
           }
           if (k == "base_backoff_ms") {

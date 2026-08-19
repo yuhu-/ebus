@@ -32,10 +32,10 @@ void Scheduler::setProtocolEventSink(Delegate<void(ProtocolEvent&&)> sink) {
   event_sink_ = std::move(sink);
 }
 
-void Scheduler::setMaxSendAttempts(uint8_t max_send_attempts) {
+void Scheduler::setMaxAttempts(uint8_t max_attempts) {
   platform::LockGuard<platform::Mutex> lock(data_mutex_);
-  max_send_attempts_ = max_send_attempts;
-  if (max_send_attempts_ == 0) max_send_attempts_ = 1;
+  max_attempts_ = max_attempts;
+  if (max_attempts_ == 0) max_attempts_ = 1;
 }
 
 void Scheduler::setBaseBackoff(uint32_t base_backoff_ms) {
@@ -85,7 +85,7 @@ void Scheduler::detachHandlerCallbacks() {
 
 void Scheduler::onBusRequestWon() {
   uint32_t s_id = current_session_id_.load(std::memory_order_acquire);
-  uint32_t p_id = current_poll_id_.load(std::memory_order_acquire);
+  uint16_t p_id = current_poll_id_.load(std::memory_order_acquire);
   if (s_id == 0) return;
 
   ProtocolEvent ev{};
@@ -103,7 +103,7 @@ void Scheduler::onBusRequestWon() {
 
 void Scheduler::onBusRequestLost() {
   uint32_t s_id = current_session_id_.load(std::memory_order_acquire);
-  uint32_t p_id = current_poll_id_.load(std::memory_order_acquire);
+  uint16_t p_id = current_poll_id_.load(std::memory_order_acquire);
   if (s_id == 0) return;
 
   ProtocolEvent ev{};
@@ -127,13 +127,13 @@ void Scheduler::onHandlerReactive(const ReactiveInfo& info) {
 
 void Scheduler::onHandlerProtocol(const ProtocolInfo& info) {
   uint32_t s_id = current_session_id_.load(std::memory_order_acquire);
-  uint32_t p_id = current_poll_id_.load(std::memory_order_acquire);
-  uint32_t scheduler_retries = 0;
+  uint16_t p_id = current_poll_id_.load(std::memory_order_acquire);
+  uint32_t scheduler_attempts = 0;
 
   {
     platform::LockGuard<platform::Mutex> lock(data_mutex_);
     if (active_item_ && active_item_->session_id == s_id) {
-      scheduler_retries = active_item_->item.send_attempts;
+      scheduler_attempts = active_item_->item.attempts;
     }
   }
 
@@ -142,7 +142,7 @@ void Scheduler::onHandlerProtocol(const ProtocolInfo& info) {
                           : ProtocolEvent::Type::telegram;
   ev.session_id = s_id;
   ev.poll_id = p_id;
-  ev.retry_count = scheduler_retries;
+  ev.attempts = scheduler_attempts;
   ev.handler_state = info.handler_state;
   ev.request_state = info.request_state;
   ev.timestamp = ebus::getWallTimeMs();
@@ -182,15 +182,15 @@ bool Scheduler::injectProtocolEvent(const ProtocolEvent& event) {
           (event.type == ProtocolEvent::Type::error &&
            event.protocol_error == ProtocolError::invalid_message);
 
-      active_item_->item.send_attempts++;
-      if (!is_fatal && active_item_->item.send_attempts < max_send_attempts_) {
+      active_item_->item.attempts++;
+      if (!is_fatal && active_item_->item.attempts < max_attempts_) {
         if (handler_) {
           handler_->getMonitor()->updateHandler(
-              [](auto& m) { m.total_retries++; });
+              [](auto& m) { m.total_attempts++; });
         }
         // Reschedule with backoff
         active_item_->item.due =
-            Clock::now() + backoffDuration(active_item_->item.send_attempts);
+            Clock::now() + backoffDuration(active_item_->item.attempts);
         scheduled_items_.push_back(std::move(active_item_->item));
         std::push_heap(scheduled_items_.begin(), scheduled_items_.end(),
                        Compare());
@@ -284,7 +284,7 @@ bool Scheduler::tick() {
 }
 
 uint32_t Scheduler::enqueue(uint8_t priority, ByteView message,
-                            uint32_t poll_id) {
+                            uint16_t poll_id) {
   Item it;
   it.priority = priority;
   it.due = Clock::now();
@@ -297,7 +297,7 @@ uint32_t Scheduler::enqueue(uint8_t priority, ByteView message,
 }
 
 uint32_t Scheduler::enqueueAt(uint8_t priority, ByteView message,
-                              TimePoint when, uint32_t poll_id) {
+                              TimePoint when, uint16_t poll_id) {
   Item it;
   it.priority = priority;
   it.due = when;

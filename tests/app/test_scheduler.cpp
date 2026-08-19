@@ -58,7 +58,7 @@ TEST_CASE("Scheduler: Broadcast Success (feb5050327002d)", "[app][scheduler]") {
 
   Scheduler scheduler(&handler);
   scheduler.attachHandlerCallbacks();
-  scheduler.setMaxSendAttempts(3);
+  scheduler.setMaxAttempts(3);
   scheduler.setBaseBackoff(50);
 
   ProtocolEvent received_ev{};
@@ -139,7 +139,7 @@ TEST_CASE("Scheduler: MS Success (52b509030d4600)", "[app][scheduler]") {
 
   Scheduler scheduler(&handler);
   scheduler.attachHandlerCallbacks();
-  scheduler.setMaxSendAttempts(3);
+  scheduler.setMaxAttempts(3);
   scheduler.setBaseBackoff(50);
 
   ProtocolEvent received_ev{};
@@ -223,7 +223,7 @@ TEST_CASE("Scheduler: Retry Success (52b509030d4600)", "[app][scheduler]") {
 
   Scheduler scheduler(&handler);
   scheduler.attachHandlerCallbacks();
-  scheduler.setMaxSendAttempts(3);
+  scheduler.setMaxAttempts(3);
   scheduler.setBaseBackoff(50);
 
   ProtocolEvent received_ev{};

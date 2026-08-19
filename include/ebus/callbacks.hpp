@@ -64,8 +64,8 @@ struct ProtocolInfo {
   uint64_t timestamp = 0;  // ms since epoch
 
   uint32_t session_id = 0;
-  uint32_t poll_id = 0;
-  uint32_t retry_count = 0;
+  uint16_t poll_id = 0;
+  uint8_t attempts = 0;
 
   HandlerState handler_state = HandlerState::passive_receive_master;
   RequestState request_state = RequestState::observe;

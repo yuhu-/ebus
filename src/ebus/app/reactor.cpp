@@ -422,7 +422,7 @@ void Reactor::processPublicEvents() {
 
       entry.session_id = ev.session_id;
       entry.poll_id = ev.poll_id;
-      entry.retry_count = ev.retry_count;
+      entry.attempts = ev.attempts;
 
       entry.sequence_state = ev.sequence_state;
       entry.handler_state = ev.handler_state;
@@ -452,7 +452,7 @@ void Reactor::processPublicEvents() {
         info.is_error = (ev.type == ProtocolEvent::Type::error);
         info.session_id = ev.session_id;
         info.poll_id = ev.poll_id;
-        info.retry_count = ev.retry_count;
+        info.attempts = ev.attempts;
         info.handler_state = ev.handler_state;
         info.request_state = ev.request_state;
         info.master_view = {ev.master.data(), ev.master.size()};

@@ -156,10 +156,10 @@ class Controller {
   /**
    * @brief Sets the maximum application-level retry attempts for a message.
    */
-  void setMaxSendAttempts(uint8_t max_send_attempts);
+  void setMaxAttempts(uint8_t max_attempts);
 
   /**
-   * @brief Sets the base duration for exponential backoff during retries.
+   * @brief Sets the base duration for exponential backoff during attempts.
    */
   void setBaseBackoff(uint32_t base_backoff_ms);
 

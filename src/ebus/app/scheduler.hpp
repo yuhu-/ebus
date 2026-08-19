@@ -31,7 +31,7 @@ class Handler;
 /**
  * The Scheduler manages the timing and prioritization of active eBUS messages.
  * It allows enqueuing messages with specific priorities and scheduled times,
- * and handles retries with backoff. The Scheduler runs a worker thread that
+ * and handles attempts with backoff. The Scheduler runs a worker thread that
  * processes the queue, interacts with the Handler to send messages, and manages
  * callbacks for results, telegrams, and errors. It ensures thread safety for
  * concurrent access and provides configuration options for send attempts and
@@ -55,7 +55,7 @@ class Scheduler {
 
   // Configuration
   void setProtocolEventSink(Delegate<void(ProtocolEvent&&)> sink);
-  void setMaxSendAttempts(uint8_t send_attempts);
+  void setMaxAttempts(uint8_t max_attempts);
   void setBaseBackoff(uint32_t base_backoff_ms);
   void setFsmTimeout(uint32_t timeout_ms);
   void setTotalTimeout(uint32_t timeout_ms);
@@ -76,9 +76,9 @@ class Scheduler {
    * @brief Performs periodic maintenance. Returns true if work was done.
    */
   bool tick();
-  uint32_t enqueue(uint8_t priority, ByteView message, uint32_t poll_id = 0);
+  uint32_t enqueue(uint8_t priority, ByteView message, uint16_t poll_id = 0);
   uint32_t enqueueAt(uint8_t priority, ByteView message, TimePoint when,
-                     uint32_t poll_id = 0);
+                     uint16_t poll_id = 0);
   void clear();
 
   // Status/Telemetry
@@ -93,8 +93,8 @@ class Scheduler {
     uint8_t priority = 0;  // larger = higher priority (e.g. 255 is top)
     TimePoint due;         // set during enqueue
     uint32_t session_id = 0;
-    uint32_t poll_id = 0;
-    int send_attempts = 0;
+    uint16_t poll_id = 0;
+    uint8_t attempts = 0;
     Sequence message;
   };
 
@@ -144,11 +144,10 @@ class Scheduler {
 
   // Active transfer state
   std::atomic<uint32_t> current_session_id_{0};
-  std::atomic<uint32_t> current_poll_id_{0};
+  std::atomic<uint16_t> current_poll_id_{0};
 
   // Configuration
-  uint8_t max_send_attempts_ =
-      ebus::RuntimeConfig{}.scheduler.max_send_attempts;
+  uint8_t max_attempts_ = ebus::RuntimeConfig{}.scheduler.max_attempts;
   Duration base_backoff_ = std::chrono::milliseconds(
       ebus::RuntimeConfig{}.scheduler.base_backoff_ms);
   std::chrono::milliseconds fsm_timeout_ =

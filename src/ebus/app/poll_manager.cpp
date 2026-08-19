@@ -34,7 +34,7 @@ void PollManager::setBusyPredicate(Delegate<bool()> pred) {
   is_busy_ = std::move(pred);
 }
 
-uint32_t PollManager::addPollItem(uint8_t priority, ByteView message,
+uint16_t PollManager::addPollItem(uint8_t priority, ByteView message,
                                   uint32_t interval_ms) {
   platform::LockGuard<platform::Mutex> lock(mutex_);
 
@@ -50,7 +50,32 @@ uint32_t PollManager::addPollItem(uint8_t priority, ByteView message,
     return 0;
   }
 
-  uint32_t id = next_poll_id_++;
+  // Handle poll_id wraparound: if we hit max, scan for gaps and reuse,
+  // or reset counter if no gaps (extremely rare: 65535 registrations)
+  uint16_t id = next_poll_id_;
+  if (id == std::numeric_limits<uint16_t>::max()) {
+    // Find a free ID by scanning existing items
+    bool used[65536] = {false};
+    for (const auto& item : items_) {
+      if (item.poll_id > 0) {
+        used[item.poll_id] = true;
+      }
+    }
+    for (uint32_t i = 1; i < 65536; ++i) {
+      if (!used[i]) {
+        id = static_cast<uint16_t>(i);
+        break;
+      }
+    }
+    // If all IDs are somehow used, reset to 1
+    if (id == std::numeric_limits<uint16_t>::max()) {
+      id = 1;
+    }
+    next_poll_id_ = id + 1;
+  } else {
+    next_poll_id_++;
+  }
+
   Item item;
   item.poll_id = id;
   item.priority = priority;
@@ -66,7 +91,7 @@ uint32_t PollManager::addPollItem(uint8_t priority, ByteView message,
   return id;
 }
 
-void PollManager::removePollItem(uint32_t id) {
+void PollManager::removePollItem(uint16_t id) {
   platform::LockGuard<platform::Mutex> lock(mutex_);
   auto it = std::find_if(items_.begin(), items_.end(),
                          [id](const Item& i) { return i.poll_id == id; });

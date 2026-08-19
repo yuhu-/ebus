@@ -25,8 +25,8 @@ struct ProtocolEvent {
   uint64_t timestamp = 0;  // ms since epoch
 
   uint32_t session_id;
-  uint32_t poll_id;
-  uint32_t retry_count;
+  uint16_t poll_id;
+  uint8_t attempts;
 
   HandlerState handler_state;
   RequestState request_state;

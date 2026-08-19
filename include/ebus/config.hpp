@@ -54,7 +54,7 @@ struct RuntimeConfig {
   } device;
 
   struct Scheduler {
-    uint8_t max_send_attempts = 3;
+    uint8_t max_attempts = 3;
     uint32_t base_backoff_ms = 100;
     uint32_t fsm_timeout_ms = 1000;
     uint32_t total_timeout_ms = 2000;

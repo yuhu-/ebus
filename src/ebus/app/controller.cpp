@@ -305,12 +305,12 @@ void Controller::setStartupScanInterval(uint32_t interval_s) {
   }
 }
 
-void Controller::setMaxSendAttempts(uint8_t max_send_attempts) {
+void Controller::setMaxAttempts(uint8_t max_attempts) {
   detail::platform::LockGuard<detail::platform::RecursiveMutex> lock(
       impl_->config_mutex_);
-  config_.runtime.scheduler.max_send_attempts = max_send_attempts;
+  config_.runtime.scheduler.max_attempts = max_attempts;
   if (impl_->configured_.load()) {
-    impl_->scheduler_->setMaxSendAttempts(max_send_attempts);
+    impl_->scheduler_->setMaxAttempts(max_attempts);
   }
 }
 
@@ -729,7 +729,7 @@ void Impl::constructMembers(Controller* owner) {
   owner->setInitialScanDelay(owner->config_.runtime.device.initial_delay_s);
   owner->setStartupScanInterval(
       owner->config_.runtime.device.startup_interval_s);
-  owner->setMaxSendAttempts(owner->config_.runtime.scheduler.max_send_attempts);
+  owner->setMaxAttempts(owner->config_.runtime.scheduler.max_attempts);
   owner->setBaseBackoff(owner->config_.runtime.scheduler.base_backoff_ms);
   owner->setFsmTimeout(owner->config_.runtime.scheduler.fsm_timeout_ms);
   owner->setTotalTimeout(owner->config_.runtime.scheduler.total_timeout_ms);

@@ -356,14 +356,14 @@ struct RequestTransition {
  */
 struct ErrorEntry {
   ErrorEntry() = default;
-  ErrorEntry(uint64_t ts, uint32_t s_id, uint32_t p_id, uint32_t retries,
+  ErrorEntry(uint64_t ts, uint32_t s_id, uint16_t p_id, uint8_t tries,
              HandlerState hs, RequestState rs, ProtocolError pe,
              RequestResult res, SequenceState ss, ByteView m_view,
              ByteView s_view)
       : timestamp(ts),
         session_id(s_id),
         poll_id(p_id),
-        retry_count(retries),
+        attempts(tries),
         handler_state(hs),
         request_state(rs),
         protocol_error(pe),
@@ -376,8 +376,8 @@ struct ErrorEntry {
   uint64_t timestamp = 0;  // ms since epoch
 
   uint32_t session_id = 0;
-  uint32_t poll_id = 0;
-  uint32_t retry_count = 0;
+  uint16_t poll_id = 0;
+  uint8_t attempts = 0;
 
   // Telegram-specific fields
   HandlerState handler_state = HandlerState::passive_receive_master;

@@ -25,7 +25,7 @@ bool ConfigValidator::validate(const EbusConfig& config) {
   if (r.bus.watchdog_timeout_ms == 0) return false;
 
   // 3. Scheduler & Logic
-  if (r.scheduler.max_send_attempts < 1) return false;
+  if (r.scheduler.max_attempts < 1) return false;
   if (r.scheduler.base_backoff_ms == 0) return false;
   if (r.scheduler.fsm_timeout_ms == 0) return false;
 
@@ -98,7 +98,7 @@ bool ConfigValidator::validateJson(std::string_view json) {
   }
 
   // Check nested scheduler fields
-  if (reader.get("scheduler.max_send_attempts") == JsonReader::Token::number) {
+  if (reader.get("scheduler.max_attempts") == JsonReader::Token::number) {
     int max_attempts = reader.asNum<int>();
     if (max_attempts < 1) return false;
   }

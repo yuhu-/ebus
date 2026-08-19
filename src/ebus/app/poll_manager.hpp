@@ -34,7 +34,7 @@ class PollManager {
   using PollSequence = SequenceImpl<detail::SequenceLimits::poll_capacity>;
 
   struct Item {
-    uint32_t poll_id;
+    uint16_t poll_id;
     uint8_t priority;
     PollSequence message;
     std::chrono::milliseconds interval;
@@ -65,10 +65,10 @@ class PollManager {
 
   // Working Methods
   // Register a new recurring command. Returns a unique ID.
-  uint32_t addPollItem(uint8_t priority, ByteView message,
+  uint16_t addPollItem(uint8_t priority, ByteView message,
                        uint32_t interval_ms);
   // Remove a recurring command by ID.
-  void removePollItem(uint32_t id);
+  void removePollItem(uint16_t id);
 
   // Processes commands that are currently due and updates their internal
   // timers. Using a callback avoids heap allocations from returning a vector.
@@ -96,7 +96,7 @@ class PollManager {
   uint8_t own_address_ = 0xff;
   Delegate<bool()> is_busy_;
   size_t max_item_count_ = 0;
-  uint32_t next_poll_id_;
+  uint16_t next_poll_id_;
 };
 
 }  // namespace ebus::detail

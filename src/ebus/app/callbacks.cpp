@@ -37,7 +37,7 @@ void ProtocolInfo::toJson(detail::JsonWriter& writer) const {
 
   writer.writeField("session_id", session_id);
   writer.writeField("poll_id", poll_id);
-  writer.writeField("retry_count", retry_count);
+  writer.writeField("attempts", attempts);
 
   writer.writeField("handler_state", toString(handler_state));
   writer.writeField("request_state", toString(request_state));
