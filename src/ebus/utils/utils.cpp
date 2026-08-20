@@ -70,13 +70,13 @@ void appendHex(std::string& out, ByteView data) {
   });
 }
 
-size_t toBytes(std::string_view str, uint8_t* out, size_t out_size) {
-  if (str.empty() || out == nullptr || out_size == 0) return 0;
-  size_t n = str.size() / 2;
+size_t toBytes(std::string_view hex, uint8_t* out, size_t out_size) {
+  if (hex.empty() || out == nullptr || out_size == 0) return 0;
+  size_t n = hex.size() / 2;
   if (n > out_size) n = out_size;
   for (size_t i = 0; i < n; i++) {
     uint8_t value = 0;
-    std::from_chars(str.data() + i * 2, str.data() + i * 2 + 2, value, 16);
+    std::from_chars(hex.data() + i * 2, hex.data() + i * 2 + 2, value, 16);
     out[i] = value;
   }
   return n;

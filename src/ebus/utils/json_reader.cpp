@@ -554,8 +554,8 @@ std::string_view JsonReader::readString() {
         if (ended_) return {};
         return {};  // Incomplete escape sequence
       }
-      char next = json_[pos_ + 1];
-      if (next == 'u') {
+      char next_ch = json_[pos_ + 1];
+      if (next_ch == 'u') {
         // Unicode escape \uXXXX - need 6 chars total (including backslash)
         if (pos_ + 5 >= json_.size()) {
           if (ended_) return {};

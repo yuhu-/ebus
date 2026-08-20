@@ -246,7 +246,6 @@ void EnhancedClient::handleIncomingStream(const uint8_t* data, size_t len) {
   bool need_reset_response = false;
   bool need_info_response = false;
   enhanced::Response response_type = enhanced::Response::received;
-  uint8_t response_val = 0;
 
   {
     platform::UniqueLock<platform::Mutex> lock(io_mutex_);
@@ -315,6 +314,7 @@ void EnhancedClient::handleIncomingStream(const uint8_t* data, size_t len) {
 
   // Send responses outside the lock to avoid deadlock with enqueueOutgoingData
   if (need_error_response) {
+    uint8_t response_val = 0;
     createEnhancedResponse(response_type, response_val);
   }
   if (need_reset_response) {

@@ -332,13 +332,12 @@ void ClientManager::onBusEventInfo(const BusEventInfo& info) {
                      NetworkLimits::max_clients * 3>
       all_clients;
   std::shared_ptr<AbstractClient> active_sender;
-  bool has_active_session = false;
 
   {
     platform::LockGuard<platform::Mutex> lock(mutex_);
     if (!running_.load(std::memory_order_acquire)) return;
     active_sender = current_active_sender_;
-    has_active_session = (session_state_ != SessionState::idle);
+    bool has_active_session = (session_state_ != SessionState::idle);
 
     // Snapshot all connected clients
     for (auto& client : regular_clients_)
@@ -623,10 +622,8 @@ void ClientManager::removeClientByFd(int fd) {
     removeFromArrayLocked(client, enhanced_clients_);
   }  // Lock released before stopping client
 
-  if (client) {
-    EBUS_LOG_INFO_F("[ClientManager] Removing client fd=%d", fd);
-    client->stop();
-  }
+  EBUS_LOG_INFO_F("[ClientManager] Removing client fd=%d", fd);
+  client->stop();
 }
 
 std::shared_ptr<AbstractClient> ClientManager::removeClientByFdLocked(int fd) {

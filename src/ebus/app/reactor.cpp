@@ -57,6 +57,7 @@ void Reactor::stop() {
   // Ensure shutdown signal is delivered even if queue is full
   if (!signal_queue_.tryPush(std::move(shutdown_sig))) {
     signal_queue_.discard(1);
+    shutdown_sig = {ReactorSignal::Type::shutdown};
     signal_queue_.tryPush(std::move(shutdown_sig));
   }
   signal_queue_.shutdown();
