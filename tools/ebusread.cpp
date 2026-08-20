@@ -166,7 +166,6 @@ void printStatus() {
 
 void collect(uint8_t byte) {
   static ebus::Sequence sequence;
-  static std::string output_buffer;  // Static buffer to avoid reallocations
 
   if (raw) std::cout << ebus::toString(byte) << std::endl;
 
@@ -187,6 +186,8 @@ void collect(uint8_t byte) {
         tel.toJson(writer);
         std::cout << std::endl;
       } else {
+        static std::string
+            output_buffer;      // Static buffer to avoid reallocations
         output_buffer.clear();  // Clear for new telegram
         if (tel.isValid()) {
           if (!notime) {
@@ -294,7 +295,6 @@ int connect(const char* hostname, const char* port, int max_retries = 5,
             int delay_seconds = 10) {
   int attempt = 0;
   while (attempt < max_retries) {
-    int sfd = -1, err = 0;
     struct addrinfo hints, *addrs;
     std::memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_UNSPEC;
@@ -309,15 +309,13 @@ int connect(const char* hostname, const char* port, int max_retries = 5,
 
     for (const struct addrinfo* addr = addrs; addr != nullptr;
          addr = addr->ai_next) {
-      sfd = socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
+      int sfd = socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
       if (sfd > 0) {
         if (::connect(sfd, addr->ai_addr, addr->ai_addrlen) == 0) {
           freeaddrinfo(addrs);
           return sfd;
         }
         close(sfd);
-      } else {
-        err = errno;
       }
     }
     freeaddrinfo(addrs);
