@@ -174,9 +174,10 @@ void DeviceInfo::toJson(detail::JsonWriter& writer) const {
                     manufacturer_name ? manufacturer_name : "Unknown");
 
   auto writeAscii = [&](std::string_view key, ByteView val) {
+    size_t len = val.size();
+    while (len > 0 && val.data()[len - 1] == '\0') --len;
     writer.writeField(
-        key, std::string_view(reinterpret_cast<const char*>(val.data()),
-                              val.size()));
+        key, std::string_view(reinterpret_cast<const char*>(val.data()), len));
   };
 
   writeAscii("unit_id", unit_id);
@@ -231,7 +232,7 @@ static constexpr const char* manufacturer_table[256] = {
     nullptr,         nullptr,         nullptr,      nullptr,     nullptr,
     nullptr,         nullptr,         nullptr,      nullptr,     nullptr,
     nullptr,         nullptr,         nullptr,      nullptr,     nullptr,
-    "Vaillant",      nullptr,         "Protherm",   nullptr,     nullptr,
+    nullptr,         "Vaillant",      nullptr,      "Protherm",  nullptr,
     nullptr,         "Saunier Duval", nullptr,      nullptr,     nullptr,
     nullptr,         "Toby",          nullptr,      nullptr,     nullptr,
     nullptr,         "Weishaupt",     nullptr,      nullptr,     nullptr,
