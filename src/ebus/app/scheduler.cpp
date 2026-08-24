@@ -126,11 +126,16 @@ void Scheduler::onHandlerReactive(const ReactiveInfo& info) {
 }
 
 void Scheduler::onHandlerProtocol(const ProtocolInfo& info) {
-  uint32_t s_id = current_session_id_.load(std::memory_order_acquire);
-  uint16_t p_id = current_poll_id_.load(std::memory_order_acquire);
-  uint32_t scheduler_attempts = 0;
+  // For passive/reactive messages, use session_id=0 and poll_id=0
+  // as they are not associated with any scheduled poll item
+  bool is_active = (info.message_type == MessageType::active);
+  uint32_t s_id =
+      is_active ? current_session_id_.load(std::memory_order_acquire) : 0;
+  uint16_t p_id =
+      is_active ? current_poll_id_.load(std::memory_order_acquire) : 0;
 
-  {
+  uint32_t scheduler_attempts = 0;
+  if (is_active) {
     platform::LockGuard<platform::Mutex> lock(data_mutex_);
     if (active_item_ && active_item_->session_id == s_id) {
       scheduler_attempts = active_item_->item.attempts;

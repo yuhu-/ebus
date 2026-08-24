@@ -143,6 +143,9 @@ class Handler {
   void callPassiveReset();
   void callActiveReset();
 
+  void onBusRequested();
+  void onStartBit();
+
   void callWrite(uint8_t byte);
 
   void callOnBusRequestWon();
@@ -153,13 +156,11 @@ class Handler {
   void callOnTelegram(MessageType message_type, TelegramType telegram_type,
                       ByteView master_view, ByteView slave_view);
 
-  // Request callback targets
-  void onBusRequested();
-  void onStartBit();
-
   void callOnError(LogLevel level, ProtocolError protocol_error,
                    SequenceState sequence_state, ByteView master_view,
                    ByteView slave_view);
+
+  MessageType getMessageTypeFromState(HandlerState state) const;
 };
 
 }  // namespace ebus::detail

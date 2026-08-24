@@ -896,10 +896,10 @@ void Handler::callOnTelegram(MessageType message_type,
 
     ProtocolInfo info;
     info.is_error = false;
-    info.message_type = message_type;
-    info.telegram_type = telegram_type;
     info.handler_state = state_;
     info.request_state = request_->getState();
+    info.message_type = message_type;
+    info.telegram_type = telegram_type;
     info.master_view = master_view;
     info.slave_view = slave_view;
     protocol_callback_(info);
@@ -918,14 +918,40 @@ void Handler::callOnError(LogLevel level, ProtocolError protocol_error,
     ProtocolInfo info;
     info.is_error = true;
     info.level = level;
+    info.handler_state = state_;
+    info.request_state = request_->getState();
+    info.message_type = getMessageTypeFromState(state_);
     info.protocol_error = protocol_error;
     info.result = last_result_;
     info.sequence_state = sequence_state;
-    info.handler_state = state_;
-    info.request_state = request_->getState();
     info.master_view = master_view;
     info.slave_view = slave_view;
     protocol_callback_(info);
+  }
+}
+
+MessageType Handler::getMessageTypeFromState(HandlerState state) const {
+  switch (state) {
+    case HandlerState::passive_receive_master:
+    case HandlerState::passive_receive_master_acknowledge:
+    case HandlerState::passive_receive_slave:
+    case HandlerState::passive_receive_slave_acknowledge:
+      return MessageType::passive;
+    case HandlerState::reactive_send_master_positive_acknowledge:
+    case HandlerState::reactive_send_master_negative_acknowledge:
+    case HandlerState::reactive_send_slave:
+    case HandlerState::reactive_receive_slave_acknowledge:
+      return MessageType::reactive;
+    case HandlerState::request_bus:
+    case HandlerState::active_send_master:
+    case HandlerState::active_receive_master_acknowledge:
+    case HandlerState::active_receive_slave:
+    case HandlerState::active_send_slave_positive_acknowledge:
+    case HandlerState::active_send_slave_negative_acknowledge:
+    case HandlerState::release_bus:
+      return MessageType::active;
+    default:
+      return MessageType::undefined;
   }
 }
 
