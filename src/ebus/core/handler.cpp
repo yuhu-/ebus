@@ -600,7 +600,8 @@ void Handler::activeSendMaster(uint8_t byte) {
                 {active_master_.data(), active_master_.size()},
                 {active_slave_.data(), active_slave_.size()});
     callActiveReset();
-    transitionTo(HandlerState::passive_receive_master);
+    callWrite(Symbols::syn);
+    transitionTo(HandlerState::release_bus);
     return;
   }
   if (byte != active_master_[active_master_index_]) {
@@ -610,7 +611,8 @@ void Handler::activeSendMaster(uint8_t byte) {
                 {active_master_.data(), active_master_.size()},
                 {active_slave_.data(), active_slave_.size()});
     callActiveReset();
-    transitionTo(HandlerState::passive_receive_master);
+    callWrite(Symbols::syn);
+    transitionTo(HandlerState::release_bus);
     return;
   }
 
