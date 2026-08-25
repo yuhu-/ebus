@@ -26,7 +26,7 @@ class BusMonitor;
  */
 class Request {
  public:
-  explicit Request(BusMonitor* monitor = nullptr);
+  explicit Request(BusMonitor* bus_monitor = nullptr);
   void reset();
 
   // Configuration
@@ -57,7 +57,7 @@ class Request {
   }
 
  private:
-  BusMonitor* monitor_ = nullptr;
+  BusMonitor* bus_monitor_ = nullptr;
 
   uint8_t lock_counter_max_ = ebus::RuntimeConfig{}.lock_counter;
   uint8_t lock_counter_ = ebus::RuntimeConfig{}.lock_counter;

@@ -297,6 +297,9 @@ void BusMonitor::fetchMetrics(
     // 5. Populate Controller Part
     // This is the "shadow state" for controller metrics
     sm.reactor = reactor_acc_;
+
+    // 6. Populate Client Manager Part
+    sm.client_manager = client_manager_acc_;
   }
 
   // Execute callback outside the lock to protect the Hot Path
@@ -547,6 +550,17 @@ void metrics::ReactorMetrics::toJson(detail::JsonWriter& writer) const {
   writer.writeField("max_loop_cycle_us", max_loop_cycle_us);
 }
 
+void metrics::ClientManagerMetrics::reset() {
+  max_bus_queue_size = 0;
+  bus_queue_dropped = 0;
+}
+
+void metrics::ClientManagerMetrics::toJson(detail::JsonWriter& writer) const {
+  auto scope = writer.objectScope();
+  writer.writeField("max_bus_queue_size", max_bus_queue_size);
+  writer.writeField("bus_queue_dropped", bus_queue_dropped);
+}
+
 void metrics::SystemMetrics::toJson(detail::JsonWriter& writer) const {
   // Pre-calculate rates for the composite Quality score
   uint32_t m_total = handler.messages_passive + handler.messages_active +
@@ -663,7 +677,7 @@ void SchedulerStatus::toJson(detail::JsonWriter& writer) const {
   writer.writeField("queue", queue);
 }
 
-void ClientInfo::toJson(detail::JsonWriter& writer) const {
+void ClientStatus::toJson(detail::JsonWriter& writer) const {
   auto scope = writer.objectScope();
   writer.writeField("fd", fd);
   writer.writeField("type", type);
@@ -675,6 +689,8 @@ void ClientInfo::toJson(detail::JsonWriter& writer) const {
 void ClientManagerStatus::toJson(detail::JsonWriter& writer) const {
   auto scope = writer.objectScope();
   writer.writeField("thread", thread);
+  writer.writeField("bus_queue", bus_queue);
+  writer.writeField("bus_queue_dropped", bus_queue_dropped);
   writer.writeField("session_active", session_active);
   writer.writeField("session_state", session_state);
   writer.writeField("last_error", last_error);
@@ -744,7 +760,7 @@ void ServiceStatus::toJson(detail::JsonWriter& writer) const {
 
 void serializeServiceStatus(const JsonChunkVisitor& visitor,
                             const ServiceStatus& status,
-                            detail::BusMonitor* monitor, bool pretty) {
+                            detail::BusMonitor* bus_monitor, bool pretty) {
   if (!visitor) return;
 
   detail::JsonWriter writer(visitor, pretty);
@@ -760,9 +776,9 @@ void serializeServiceStatus(const JsonChunkVisitor& visitor,
   writer.writeField("device_scanner", status.device_scanner);
   writer.writeField("poll_manager", status.poll_manager);
 
-  if (monitor) {
+  if (bus_monitor) {
 #ifndef EBUS_MINIMAL_DIAGNOSTICS
-    monitor->fetchHistory(
+    bus_monitor->fetchHistory(
         [&](const auto& h_hist, const auto& r_hist, const auto& u_hist) {
           {
             auto hScope = writer.arrayScope("handler_history");

@@ -25,12 +25,13 @@
 namespace ebus::detail {
 
 ClientManager::ClientManager(platform::Bus* bus, BusHandler* bus_handler,
-                             Request* request, BusMonitor* monitor)
+                             Request* request, BusMonitor* bus_monitor)
     : bus_(bus),
       bus_handler_(bus_handler),
       request_(request),
-      monitor_(monitor),
+      bus_monitor_(bus_monitor),
       running_(false),
+      bus_queue_(ClientManagerLimits::bus_queue_size),
       session_state_(SessionState::idle),
       last_state_change_(Clock::now()),
       session_timeout_(::std::chrono::milliseconds(
@@ -195,7 +196,7 @@ bool ClientManager::addClient(std::unique_ptr<platform::Socket> socket,
   }();
 
   // Evict any stale disconnected entries to free slots
-  for (size_t i = 0; i < NetworkLimits::max_clients; ++i) {
+  for (size_t i = 0; i < ClientManagerLimits::max_clients; ++i) {
     if (clients[i] && !clients[i]->isConnected()) {
       EBUS_LOG_INFO_F(
           "[ClientManager] Evicting stale disconnected client fd=%d at slot "
@@ -207,7 +208,7 @@ bool ClientManager::addClient(std::unique_ptr<platform::Socket> socket,
   }
 
   // Find first empty slot
-  for (size_t i = 0; i < NetworkLimits::max_clients; ++i) {
+  for (size_t i = 0; i < ClientManagerLimits::max_clients; ++i) {
     if (!clients[i]) {
       EBUS_LOG_INFO_F(
           "[ClientManager] Registered client fd=%d type=%d at slot %zu", new_fd,
@@ -250,7 +251,7 @@ bool ClientManager::addClient(std::shared_ptr<AbstractClient> client) {
 
   // Proactively clean up any disconnected clients in this array to free slots
   // immediately
-  for (size_t i = 0; i < NetworkLimits::max_clients; ++i) {
+  for (size_t i = 0; i < ClientManagerLimits::max_clients; ++i) {
     if (clients[i] && !clients[i]->isConnected()) {
       EBUS_LOG_INFO(
           "[ClientManager] Removing disconnected client during addClient.");
@@ -260,7 +261,7 @@ bool ClientManager::addClient(std::shared_ptr<AbstractClient> client) {
   }
 
   // Find first empty slot and add the client directly
-  for (size_t i = 0; i < NetworkLimits::max_clients; ++i) {
+  for (size_t i = 0; i < ClientManagerLimits::max_clients; ++i) {
     if (!clients[i]) {
       clients[i] = std::move(client);
       return true;
@@ -287,7 +288,8 @@ ClientManagerStatus ClientManager::fetchStatus() const {
     return {s.name, s.task_stack_bytes, s.task_stack_free_bytes};
   };
 
-  ebus::StaticVector<ClientInfo, NetworkLimits::max_clients * 3> snapshot;
+  ebus::StaticVector<ClientStatus, ClientManagerLimits::max_clients * 3>
+      snapshot;
   bool active = false;
   std::string session_str;
   std::string last_err;
@@ -300,16 +302,29 @@ ClientManagerStatus ClientManager::fetchStatus() const {
 
     // Collect all clients
     for (auto& client : regular_clients_)
-      if (client) snapshot.push_back(client->getClientInfo());
+      if (client) snapshot.push_back(client->getClientStatus());
     for (auto& client : readonly_clients_)
-      if (client) snapshot.push_back(client->getClientInfo());
+      if (client) snapshot.push_back(client->getClientStatus());
     for (auto& client : enhanced_clients_)
-      if (client) snapshot.push_back(client->getClientInfo());
+      if (client) snapshot.push_back(client->getClientStatus());
   }
 
-  ClientManagerStatus s{map(getThreadStatus()), active, session_str, last_err};
+  ClientManagerStatus s{map(getThreadStatus()),
+                        ebus::QueueStatus("bus_queue", bus_queue_.size(),
+                                          ClientManagerLimits::bus_queue_size,
+                                          max_bus_queue_.load()),
+                        0,
+                        active,
+                        session_str,
+                        last_err};
   for (const auto& info : snapshot) {
     s.clients.push_back(info);
+  }
+
+  if (bus_monitor_) {
+    bus_monitor_->fetchMetrics([&](const Metrics& m) {
+      s.bus_queue_dropped = m.client_manager.bus_queue_dropped;
+    });
   }
   return s;
 }
@@ -327,9 +342,24 @@ void ClientManager::onBusRequested() {
 }
 
 void ClientManager::onBusEventInfo(const BusEventInfo& info) {
+  // Hot path: non-blocking push to queue, O(1) operation
+  if (!bus_queue_.tryPush(info)) {
+    // Queue full: discard oldest to make room (like Reactor does)
+    if (bus_queue_.discard() > 0) {
+      bus_queue_.tryPush(info);
+    }
+    if (bus_monitor_) {
+      bus_monitor_->updateClientManager([](auto& m) { m.bus_queue_dropped++; });
+    }
+  }
+  // Signal the I/O thread that a bus event is available
+  signalClientIoThread();
+}
+
+void ClientManager::processBusEventInfo(const BusEventInfo& info) {
   // Collect all connected clients
   ebus::StaticVector<std::shared_ptr<AbstractClient>,
-                     NetworkLimits::max_clients * 3>
+                     ClientManagerLimits::max_clients * 3>
       all_clients;
   std::shared_ptr<AbstractClient> active_sender;
 
@@ -360,8 +390,8 @@ void ClientManager::onBusEventInfo(const BusEventInfo& info) {
 
     if (action != BridgeAction::keep_active) {
       if (action == BridgeAction::stop_session) {
-        if (monitor_)
-          monitor_->updateRequest([](auto& m) { m.bus_request_blocked++; });
+        if (bus_monitor_)
+          bus_monitor_->updateRequest([](auto& m) { m.bus_request_blocked++; });
         stopActiveSession();
       } else if (action == BridgeAction::bypass_wait) {
         // Arbitration won - transition to transmit state and send next byte
@@ -392,9 +422,6 @@ void ClientManager::onBusEventInfo(const BusEventInfo& info) {
       client->enqueueOutgoingData(ByteView(&info.byte, 1));
     }
   }
-
-  // Signal the I/O thread that data has been written and needs flushing
-  signalClientIoThread();
 }
 
 void ClientManager::transitSessionState(const SessionState& state) {
@@ -528,8 +555,8 @@ void ClientManager::checkSessionTimeout() {
         ebus::toString(current_state), active_sender->getFd());
     last_error_message_ = "Session timed out.";
     stopActiveSession();
-    if (monitor_)
-      monitor_->updateRequest([](auto& m) { m.session_timeouts++; });
+    if (bus_monitor_)
+      bus_monitor_->updateRequest([](auto& m) { m.session_timeouts++; });
   }
 }
 
@@ -544,7 +571,8 @@ void ClientManager::handleActiveSenderDisconnected() {
       session_state_ = SessionState::idle;
       last_error_message_ = "Client disconnected.";
       EBUS_LOG_ERROR_F(
-          "[ClientManager] Active sender fd=%d disconnected, aborting session",
+          "[ClientManager] Active sender fd=%d disconnected, aborting "
+          "session",
           lost_fd);
       lock.unlock();
       old_sender->stop();
@@ -556,11 +584,11 @@ void ClientManager::handleActiveSenderDisconnected() {
 void ClientManager::removeDisconnectedClients() {
   // Thread 2 only — client arrays not shared, no mutex needed
   ebus::StaticVector<std::shared_ptr<AbstractClient>,
-                     NetworkLimits::max_clients * 3>
+                     ClientManagerLimits::max_clients * 3>
       to_stop;
 
   auto collect = [&](ClientArray& arr, const char* type_name) {
-    for (size_t i = 0; i < NetworkLimits::max_clients; ++i) {
+    for (size_t i = 0; i < ClientManagerLimits::max_clients; ++i) {
       if (arr[i] && !arr[i]->isConnected()) {
         EBUS_LOG_INFO_F(
             "[ClientManager] Removing disconnected %s client fd=%d slot=%zu",
@@ -600,7 +628,7 @@ template <typename ClientArrayType>
 bool removeFromArrayLocked(const std::shared_ptr<AbstractClient>& client,
                            ClientArrayType& client_array) {
   // mutex_ MUST be locked by caller
-  for (size_t i = 0; i < NetworkLimits::max_clients; ++i) {
+  for (size_t i = 0; i < ClientManagerLimits::max_clients; ++i) {
     if (client_array[i] == client) {
       client_array[i].reset();
       return true;
@@ -656,7 +684,7 @@ void ClientManager::addClientFdsToSet(const ClientArray& clients,
                                       fd_set& readfds, fd_set& writefds,
                                       fd_set& exceptfds, int& max_fd) {
   // Thread 2 only — no mutex needed
-  for (size_t i = 0; i < NetworkLimits::max_clients; ++i) {
+  for (size_t i = 0; i < ClientManagerLimits::max_clients; ++i) {
     const auto& client = clients[i];
     if (!client || !client->isConnected()) continue;
 
@@ -741,7 +769,7 @@ void ClientManager::handleClientIO(fd_set& readfds, fd_set& writefds,
                                    fd_set& exceptfds) {
   // Thread 2 only — client arrays not shared, no mutex needed here
   ebus::StaticVector<std::shared_ptr<AbstractClient>,
-                     NetworkLimits::max_clients * 3>
+                     ClientManagerLimits::max_clients * 3>
       to_stop;
 
   handleClientActivity(regular_clients_, readfds, writefds, exceptfds, to_stop);
@@ -758,9 +786,9 @@ void ClientManager::handleClientIO(fd_set& readfds, fd_set& writefds,
 void ClientManager::handleClientActivity(
     ClientArray& clients, fd_set& readfds, fd_set& writefds, fd_set& exceptfds,
     ebus::StaticVector<std::shared_ptr<AbstractClient>,
-                       NetworkLimits::max_clients * 3>& to_stop) {
+                       ClientManagerLimits::max_clients * 3>& to_stop) {
   // Thread 2 only — no mutex needed for client array iteration
-  for (size_t i = 0; i < NetworkLimits::max_clients; ++i) {
+  for (size_t i = 0; i < ClientManagerLimits::max_clients; ++i) {
     auto& client = clients[i];
     if (!client || !client->isConnected()) continue;
 
@@ -787,7 +815,7 @@ void ClientManager::handleClientActivity(
 void ClientManager::handleSocketInput(
     int fd, std::shared_ptr<AbstractClient>& client,
     ebus::StaticVector<std::shared_ptr<AbstractClient>,
-                       NetworkLimits::max_clients * 3>& to_stop) {
+                       ClientManagerLimits::max_clients * 3>& to_stop) {
   // Thread 2 only — no mutex needed for client array or socket ops
   uint8_t buffer[256];
 
@@ -832,7 +860,7 @@ void ClientManager::handleSocketInput(
 void ClientManager::handleSocketOutput(
     int fd, std::shared_ptr<AbstractClient>& client,
     ebus::StaticVector<std::shared_ptr<AbstractClient>,
-                       NetworkLimits::max_clients * 3>& to_stop) {
+                       ClientManagerLimits::max_clients * 3>& to_stop) {
   (void)fd;
   // Thread 2 only — no mutex needed
   // flushOutgoingData acquires io_mutex_ internally (shared with Thread 1)
@@ -850,7 +878,7 @@ void ClientManager::clientIoLoop() {
     int max_fd = prepareFileDescriptors(readfds, writefds, exceptfds);
 
     if (max_fd == -1) {
-      platform::sleepMilli(NetworkLimits::wake_interval_ms);
+      platform::sleepMilli(ClientManagerLimits::wake_interval_ms);
       continue;
     }
 
@@ -897,6 +925,21 @@ void ClientManager::clientIoLoop() {
 
     // Phase 4: Drain wakeup signal if triggered
     drainWakeupSignal(readfds);
+
+    // Phase 4.5: Process pending bus events from the queue (decoupled from
+    // hot path)
+    {
+      BusEventInfo bus_info;
+      while (bus_queue_.tryPop(bus_info)) {
+        processBusEventInfo(bus_info);
+        ebus::updateMaxAtomic(max_bus_queue_, bus_queue_.size());
+      }
+    }
+
+    // Periodically reset interval-based max queue size
+    if (bus_monitor_) {
+      bus_monitor_->resetMaxClientManagerBusQueueSize(bus_queue_.size());
+    }
 
     // Phase 5: Accept pending new connections
     acceptNewConnections(readfds);

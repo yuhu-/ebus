@@ -20,11 +20,11 @@
 namespace ebus::detail::platform {
 
 BusPosix::BusPosix(const BusConfig& config, const ebus::RuntimeConfig& runtime,
-                   Request* request, BusMonitor* monitor)
+                   Request* request, BusMonitor* bus_monitor)
     : config_(config),
       runtime_(runtime),
       request_(request),
-      monitor_(monitor),
+      bus_monitor_(bus_monitor),
       fd_(-1),
       open_(false),
       worker_(),
@@ -201,7 +201,7 @@ void BusPosix::writeByte(const uint8_t byte) {
     syn_cv_.notify_one();
   }
 
-  if (monitor_) monitor_->transmit.markBegin();
+  if (bus_monitor_) bus_monitor_->transmit.markBegin();
 
   lockAndInvoke(listeners_mutex_, getWriteListeners(), byte);
 
@@ -209,7 +209,7 @@ void BusPosix::writeByte(const uint8_t byte) {
   if (::write(fd_, &byte, 1) == -1)
     throw std::runtime_error("BusPosix: write error");
 
-  if (monitor_) monitor_->transmit.markEnd();
+  if (bus_monitor_) bus_monitor_->transmit.markEnd();
 }
 
 ServiceThread::Status BusPosix::getThreadStatus() const {
@@ -236,7 +236,7 @@ ebus::BusStatus BusPosix::fetchStatus() const {
 
 void BusPosix::recordUtilization(uint8_t byte) {
   // 1 (start bit) + zero bits in data.
-  if (monitor_) monitor_->recordLowBits(countZeroBits(byte) + 1);
+  if (bus_monitor_) bus_monitor_->recordLowBits(countZeroBits(byte) + 1);
 }
 
 void BusPosix::ensureOpen() const {
@@ -336,16 +336,16 @@ void BusPosix::synThread() {
     // serialized.
     if (now - last_activity_time_ <
         std::chrono::milliseconds(BusLimits::Syn::carrier_sense_ms)) {
-      if (monitor_)
-        monitor_->updateBus([](auto& m) { m.syn_postponed_count++; });
+      if (bus_monitor_)
+        bus_monitor_->updateBus([](auto& m) { m.syn_postponed_count++; });
       if (syn_intent_time_ == Clock::time_point{}) syn_intent_time_ = now;
       next_syn_expiry_ =
           now + std::chrono::milliseconds(BusLimits::Syn::postpone_ms);
       continue;
     }
 
-    if (syn_intent_time_ != Clock::time_point{} && monitor_) {
-      monitor_->syn_postpone.addSample(static_cast<float>(
+    if (syn_intent_time_ != Clock::time_point{} && bus_monitor_) {
+      bus_monitor_->syn_postpone.addSample(static_cast<float>(
           std::chrono::duration_cast<std::chrono::microseconds>(
               now - syn_intent_time_)
               .count()));

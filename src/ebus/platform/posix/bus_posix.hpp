@@ -41,7 +41,7 @@ class BusPosix : public BusBase {
  public:
   // Lifecycle
   BusPosix(const BusConfig& config, const ebus::RuntimeConfig& runtime,
-           detail::Request* request, detail::BusMonitor* monitor = nullptr);
+           detail::Request* request, detail::BusMonitor* bus_monitor = nullptr);
   ~BusPosix();
   void start();
   void stop();
@@ -69,7 +69,7 @@ class BusPosix : public BusBase {
   RuntimeConfig runtime_;
 
   detail::Request* request_ = nullptr;
-  detail::BusMonitor* monitor_ = nullptr;
+  detail::BusMonitor* bus_monitor_ = nullptr;
 
   int fd_;
 

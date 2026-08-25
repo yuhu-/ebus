@@ -71,6 +71,12 @@ class BusMonitor {
     updater(reactor_acc_);
   }
 
+  template <typename F>
+  void updateClientManager(F&& updater) {
+    platform::LockGuard<platform::Mutex> lock(metrics_mutex_);
+    updater(client_manager_acc_);
+  }
+
   /**
    * @brief Resets the interval-based loop timing peak.
    */
@@ -96,11 +102,19 @@ class BusMonitor {
   }
 
   /**
-   * @brief Resets the interval-based max bus queue size.
+   * @brief Resets the interval-based max bus queue size (Reactor).
    */
   void resetMaxBusQueueSize(size_t current) {
     platform::LockGuard<platform::Mutex> lock(metrics_mutex_);
     reactor_acc_.max_bus_queue_size = static_cast<uint32_t>(current);
+  }
+
+  /**
+   * @brief Resets the interval-based max bus queue size (ClientManager).
+   */
+  void resetMaxClientManagerBusQueueSize(size_t current) {
+    platform::LockGuard<platform::Mutex> lock(metrics_mutex_);
+    client_manager_acc_.max_bus_queue_size = static_cast<uint32_t>(current);
   }
 
   void recordBusError();
@@ -157,6 +171,7 @@ class BusMonitor {
   metrics::BusMetrics bus_acc_;
   metrics::DeviceMetrics device_acc_;
   metrics::ReactorMetrics reactor_acc_;
+  metrics::ClientManagerMetrics client_manager_acc_;
 
 #ifndef EBUS_MINIMAL_DIAGNOSTICS
   uint64_t last_history_low_bits_ = 0;

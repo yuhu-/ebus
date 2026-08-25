@@ -22,11 +22,11 @@
 namespace ebus::detail::platform {
 
 BusEsp::BusEsp(const BusConfig& config, const RuntimeConfig& runtime,
-               Request* request, BusMonitor* monitor)
+               Request* request, BusMonitor* bus_monitor)
     : config_(config),
       runtime_(runtime),
       request_(request),
-      monitor_(monitor),
+      bus_monitor_(bus_monitor),
       uart_port_num_(static_cast<uart_port_t>(config.uart_port)),
       rx_pin_(config.rx_pin),
       tx_pin_(config.tx_pin) {
@@ -163,7 +163,7 @@ void BusEsp::setRuntimeConfig(const RuntimeConfig& runtime) {
 void BusEsp::writeByte(const uint8_t byte) {
   lockAndInvoke(listeners_mutex_, getWriteListeners(), byte);
 
-  if (monitor_) monitor_->transmit.markBegin();
+  if (bus_monitor_) bus_monitor_->transmit.markBegin();
 
   portENTER_CRITICAL(&timer_mux_);
   last_activity_micros_ = esp_timer_get_time();
@@ -172,12 +172,12 @@ void BusEsp::writeByte(const uint8_t byte) {
   // Write the byte to the UART; this blocks until there is space in the TX FIFO
   uart_write_bytes(uart_port_num_, static_cast<const void*>(&byte), 1);
 
-  if (monitor_) monitor_->transmit.markEnd();
+  if (bus_monitor_) bus_monitor_->transmit.markEnd();
 }
 
 void BusEsp::recordUtilization(uint8_t byte) {
   // 1 (start bit) + zero bits in data.
-  if (monitor_) monitor_->recordLowBits(countZeroBits(byte) + 1);
+  if (bus_monitor_) bus_monitor_->recordLowBits(countZeroBits(byte) + 1);
 }
 
 ServiceThread::Status BusEsp::getThreadStatus() const {
@@ -398,13 +398,13 @@ void BusEsp::ebusUartEventRunner() {
               micros_last_delay_ = delay;
               micros_delay_flag_ = true;
               portEXIT_CRITICAL(&timer_mux_);
-              
+
               if (request_->busRequestIsExternal())
                 suppress_syn_bus_event = true;  // Suppress the SYN byte event
             } else {
               portENTER_CRITICAL(&timer_mux_);
               start_bit_flag_ = true;
-              if (monitor_) monitor_->recordIsrStartBitError();
+              if (bus_monitor_) bus_monitor_->recordIsrStartBitError();
               portEXIT_CRITICAL(&timer_mux_);
             }
           }
@@ -439,17 +439,17 @@ void BusEsp::ebusUartEventRunner() {
           micros_window_flag_ = false;
           portEXIT_CRITICAL(&timer_mux_);
 
-          if (monitor_) {
+          if (bus_monitor_) {
             if (has_delay)
-              monitor_->delay.addSample(static_cast<float>(last_delay));
+              bus_monitor_->delay.addSample(static_cast<float>(last_delay));
             if (has_window)
-              monitor_->window.addSample(static_cast<float>(last_window));
+              bus_monitor_->window.addSample(static_cast<float>(last_window));
             if (postpone_sample > 0) {
-              monitor_->syn_postpone.addSample(
+              bus_monitor_->syn_postpone.addSample(
                   static_cast<float>(postpone_sample));
             }
             if (postponed_count > 0) {
-              monitor_->recordIsrSynPostponed(postponed_count);
+              bus_monitor_->recordIsrSynPostponed(postponed_count);
             }
           }
 

@@ -167,6 +167,18 @@ struct ReactorMetrics {
 };
 
 /**
+ * Performance metrics for the client manager layer.
+ */
+struct ClientManagerMetrics {
+  uint32_t max_bus_queue_size = 0;
+  uint32_t bus_queue_dropped = 0;
+
+  void reset();
+
+  void toJson(detail::JsonWriter& writer) const;
+};
+
+/**
  * Aggregate system telemetry.
  */
 struct SystemMetrics {
@@ -175,6 +187,7 @@ struct SystemMetrics {
   BusMetrics bus;
   DeviceMetrics devices;
   ReactorMetrics reactor;
+  ClientManagerMetrics client_manager;
 
   void toJson(detail::JsonWriter& writer) const;
 };

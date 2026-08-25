@@ -30,7 +30,7 @@ class Request;
 class Handler {
  public:
   Handler(uint8_t source_address, platform::Bus* bus, Request* request,
-          BusMonitor* monitor);
+          BusMonitor* bus_monitor);
   void reset();
 
   // Configuration
@@ -55,7 +55,7 @@ class Handler {
  private:
   platform::Bus* bus_ = nullptr;
   Request* request_ = nullptr;
-  BusMonitor* monitor_ = nullptr;
+  BusMonitor* bus_monitor_ = nullptr;
   RequestResult last_result_ = RequestResult::observe_syn;
 
   std::optional<uint8_t> pending_write_;

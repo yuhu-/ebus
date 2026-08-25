@@ -31,7 +31,7 @@ class BusMonitor;
 class DeviceManager {
  public:
   // Lifecycle
-  explicit DeviceManager(BusMonitor* monitor = nullptr);
+  explicit DeviceManager(BusMonitor* bus_monitor = nullptr);
 
   // Configuration
   void setOwnAddress(uint8_t address);
@@ -91,7 +91,7 @@ class DeviceManager {
 
  private:
   uint8_t own_address_ = 0xff;
-  BusMonitor* monitor_ = nullptr;
+  BusMonitor* bus_monitor_ = nullptr;
   size_t max_devices_ = DeviceLimits::max_devices;
 
   mutable platform::Mutex mutex_;

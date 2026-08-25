@@ -207,16 +207,24 @@ static_assert(trace_history_size >= 1,
               "Bus trace history size must be at least 1");
 }  // namespace DiagnosticsLimits
 
-// --- Networking Layer ---
-namespace NetworkLimits {
-inline constexpr uint32_t wake_interval_ms = 20;
+// --- Client Manager Layer ---
+namespace ClientManagerLimits {
+#ifndef EBUS_CLIENT_BUS_QUEUE_SIZE
+inline constexpr size_t bus_queue_size = 16;
+#else
+inline constexpr size_t bus_queue_size = EBUS_CLIENT_BUS_QUEUE_SIZE;
+#endif
+static_assert(bus_queue_size >= 1,
+              "ClientManager bus queue size must be at least 1");
 
 #ifndef EBUS_MAX_CLIENTS
 inline constexpr size_t max_clients = 4;
 #else
 inline constexpr size_t max_clients = EBUS_MAX_CLIENTS;
 #endif
-}  // namespace NetworkLimits
+
+inline constexpr uint32_t wake_interval_ms = 20;
+}  // namespace ClientManagerLimits
 
 // --- Application Layer ---
 namespace ReactorLimits {

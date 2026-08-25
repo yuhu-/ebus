@@ -20,8 +20,11 @@ namespace ebus::detail::platform {
 BusSimulation::BusSimulation(const BusConfig& config,
                              const RuntimeConfig& runtime,
                              detail::Request* request,
-                             detail::BusMonitor* monitor)
-    : config_(config), runtime_(runtime), request_(request), monitor_(monitor) {
+                             detail::BusMonitor* bus_monitor)
+    : config_(config),
+      runtime_(runtime),
+      request_(request),
+      bus_monitor_(bus_monitor) {
   VirtualLine::get().attach(this);
 
   syn_base_ms_ = BusLimits::Syn::base_ms;
@@ -128,7 +131,7 @@ void BusSimulation::setRuntimeConfig(const RuntimeConfig& runtime) {
 void BusSimulation::writeByte(const uint8_t byte) {
   lockAndInvoke(listeners_mutex_, getWriteListeners(), byte);
 
-  if (monitor_) monitor_->transmit.markBegin();
+  if (bus_monitor_) bus_monitor_->transmit.markBegin();
 
   if (byte != Symbols::syn) {
     platform::LockGuard<platform::Mutex> lock(syn_mutex_);
@@ -152,12 +155,12 @@ void BusSimulation::writeByte(const uint8_t byte) {
   // 2. Only now does the byte actually appear on the "Wire"
   VirtualLine::get().write(byte);
 
-  if (monitor_) monitor_->transmit.markEnd();
+  if (bus_monitor_) bus_monitor_->transmit.markEnd();
 }
 
 void BusSimulation::recordUtilization(uint8_t byte) {
   // 1 (start bit) + zero bits in data.
-  if (monitor_) monitor_->recordLowBits(countZeroBits(byte) + 1);
+  if (bus_monitor_) bus_monitor_->recordLowBits(countZeroBits(byte) + 1);
 }
 
 ServiceThread::Status BusSimulation::getThreadStatus() const {
@@ -272,8 +275,8 @@ void BusSimulation::simulationSynLoop() {
     // Carrier Sense
     if (now - last_activity_time_ <
         std::chrono::milliseconds(BusLimits::Syn::carrier_sense_ms)) {
-      if (monitor_)
-        monitor_->updateBus([](auto& m) { m.syn_postponed_count++; });
+      if (bus_monitor_)
+        bus_monitor_->updateBus([](auto& m) { m.syn_postponed_count++; });
       if (syn_intent_time_sim_ == Clock::time_point{})
         syn_intent_time_sim_ = now;
       next_syn_expiry_ =
@@ -281,8 +284,8 @@ void BusSimulation::simulationSynLoop() {
       continue;
     }
 
-    if (syn_intent_time_sim_ != Clock::time_point{} && monitor_) {
-      monitor_->syn_postpone.addSample(static_cast<float>(
+    if (syn_intent_time_sim_ != Clock::time_point{} && bus_monitor_) {
+      bus_monitor_->syn_postpone.addSample(static_cast<float>(
           std::chrono::duration_cast<std::chrono::microseconds>(
               now - syn_intent_time_sim_)
               .count()));

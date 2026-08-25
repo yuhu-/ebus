@@ -41,20 +41,21 @@ TEST_CASE("ClientManager Orchestration (Regular + ReadOnly)") {
   ebus::RuntimeConfig runtime{};
   runtime.address = 0x01;
 
-  BusMonitor monitor;
-  platform::Bus bus(config, runtime, &request, &monitor);
-  Handler handler(runtime.address, &bus, &request, &monitor);
-  BusHandler busHandler(&request, &handler);
+  BusMonitor bus_monitor;
+  platform::Bus bus(config, runtime, &request, &bus_monitor);
+  Handler handler(runtime.address, &bus, &request, &bus_monitor);
+  BusHandler bus_handler(&request, &handler);
 
   // Bridge Physical Bus Events->BusHandler
   bus.addBusEventListener(Delegate<void(const BusEvent& event)>::bind<
-                          BusHandler, &BusHandler::onBusEvent>(&busHandler));
+                          BusHandler, &BusHandler::onBusEvent>(&bus_handler));
 
-  busHandler.setReactorBusEventInfoCallback([](const ebus::BusEventInfo& info) {
-    std::cout << ebus::toJson(info, 256) << std::endl;
-  });
+  bus_handler.setReactorBusEventInfoCallback(
+      [](const ebus::BusEventInfo& info) {
+        std::cout << ebus::toJson(info, 256) << std::endl;
+      });
 
-  ClientManager manager(&bus, &busHandler, &request, &monitor);
+  ClientManager manager(&bus, &bus_handler, &request, &bus_monitor);
   manager.setSessionTimeout(999999);
   manager.setTransmitTimeout(999999);
 
@@ -132,20 +133,21 @@ TEST_CASE("ClientManager Enhanced Active Sending") {
   ebus::RuntimeConfig runtime{};
   runtime.address = 0x01;
 
-  BusMonitor monitor;
-  platform::Bus bus(config, runtime, &request, &monitor);
-  Handler handler(runtime.address, &bus, &request, &monitor);
-  BusHandler busHandler(&request, &handler);
+  BusMonitor bus_monitor;
+  platform::Bus bus(config, runtime, &request, &bus_monitor);
+  Handler handler(runtime.address, &bus, &request, &bus_monitor);
+  BusHandler bus_handler(&request, &handler);
 
   // Bridge Physical Bus Events -> BusHandler
   bus.addBusEventListener(Delegate<void(const BusEvent&)>::bind<
-                          BusHandler, &BusHandler::onBusEvent>(&busHandler));
+                          BusHandler, &BusHandler::onBusEvent>(&bus_handler));
 
-  busHandler.setReactorBusEventInfoCallback([](const ebus::BusEventInfo& info) {
-    std::cout << ebus::toJson(info, 256) << std::endl;
-  });
+  bus_handler.setReactorBusEventInfoCallback(
+      [](const ebus::BusEventInfo& info) {
+        std::cout << ebus::toJson(info, 256) << std::endl;
+      });
 
-  ClientManager manager(&bus, &busHandler, &request, &monitor);
+  ClientManager manager(&bus, &bus_handler, &request, &bus_monitor);
 
   int svEnh[2];
   socketpair(AF_UNIX, SOCK_STREAM, 0, svEnh);
@@ -216,15 +218,15 @@ TEST_CASE("ClientManager Watchdog Timeout") {
   ebus::BusConfig config;
   ebus::RuntimeConfig runtime = {.address = 0xff};
 
-  BusMonitor monitor;
-  platform::Bus bus(config, runtime, &req, &monitor);
-  BusHandler busHandler(&req, nullptr);
+  BusMonitor bus_monitor;
+  platform::Bus bus(config, runtime, &req, &bus_monitor);
+  BusHandler bus_handler(&req, nullptr);
 
   // Bridge Physical Bus Events -> BusHandler
   bus.addBusEventListener(Delegate<void(const BusEvent&)>::bind<
-                          BusHandler, &BusHandler::onBusEvent>(&busHandler));
+                          BusHandler, &BusHandler::onBusEvent>(&bus_handler));
 
-  ClientManager manager(&bus, &busHandler, &req, &monitor);
+  ClientManager manager(&bus, &bus_handler, &req, &bus_monitor);
 
   int sv[2];
   socketpair(AF_UNIX, SOCK_STREAM, 0, sv);
@@ -254,15 +256,15 @@ TEST_CASE("ClientManager Client Removal") {
   ebus::BusConfig config;
   ebus::RuntimeConfig runtime = {.address = 0xff};
 
-  BusMonitor monitor;
-  platform::Bus bus(config, runtime, &req, &monitor);
-  BusHandler busHandler(&req, nullptr);
+  BusMonitor bus_monitor;
+  platform::Bus bus(config, runtime, &req, &bus_monitor);
+  BusHandler bus_handler(&req, nullptr);
 
   // Bridge Physical Bus Events -> BusHandler
   bus.addBusEventListener(Delegate<void(const BusEvent&)>::bind<
-                          BusHandler, &BusHandler::onBusEvent>(&busHandler));
+                          BusHandler, &BusHandler::onBusEvent>(&bus_handler));
 
-  ClientManager manager(&bus, &busHandler, &req, &monitor);
+  ClientManager manager(&bus, &bus_handler, &req, &bus_monitor);
 
   int sv[2];
   socketpair(AF_UNIX, SOCK_STREAM, 0, sv);

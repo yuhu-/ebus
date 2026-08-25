@@ -196,7 +196,7 @@ TEST_CASE("Reactor: Stop Without Start Does Not Crash",
 // --- Integration tests with full bus stack (worker thread) ---
 
 struct ReactorTestEnv {
-  BusMonitor monitor;
+  BusMonitor bus_monitor;
   Request request;
   platform::Bus bus;
   Handler handler;
@@ -208,15 +208,15 @@ struct ReactorTestEnv {
   Reactor reactor;
 
   ReactorTestEnv(uint8_t addr, bool system_response)
-      : request(&monitor),
-        bus(BusConfig{}, makeRuntime(addr), &request, &monitor),
-        handler(addr, &bus, &request, &monitor),
+      : request(&bus_monitor),
+        bus(BusConfig{}, makeRuntime(addr), &request, &bus_monitor),
+        handler(addr, &bus, &request, &bus_monitor),
         bus_handler(&request, &handler),
         scheduler(&handler),
-        device_manager(&monitor),
+        device_manager(&bus_monitor),
         device_scanner(addr, &device_manager),
         reactor(addr, system_response, &scheduler, &poll_manager,
-                &device_scanner, &device_manager, &monitor) {
+                &device_scanner, &device_manager, &bus_monitor) {
     scheduler.attachHandlerCallbacks();
     scheduler.setProtocolEventSink([this](ProtocolEvent&& ev) {
       reactor.pushProtocolEvent(std::move(ev));

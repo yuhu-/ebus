@@ -37,17 +37,17 @@ TEST_CASE("Scheduler: Broadcast Success (feb5050327002d)", "[app][scheduler]") {
   runtime.address = 0x01;
   runtime.bus.syn_gen = true;
 
-  BusMonitor monitor;
-  platform::Bus bus(config, runtime, &request, &monitor);
-  Handler handler(runtime.address, &bus, &request, &monitor);
-  BusHandler busHandler(&request, &handler);
+  BusMonitor bus_monitor;
+  platform::Bus bus(config, runtime, &request, &bus_monitor);
+  Handler handler(runtime.address, &bus, &request, &bus_monitor);
+  BusHandler bus_handler(&request, &handler);
 
   const uint8_t source = 0x01;
   handler.setSourceAddress(source);
 
   // Bridge Physical Bus Events -> BusHandler
   bus.addBusEventListener(Delegate<void(const BusEvent& event)>::bind<
-                          BusHandler, &BusHandler::onBusEvent>(&busHandler));
+                          BusHandler, &BusHandler::onBusEvent>(&bus_handler));
 
   BusSimulator simulator(bus);
 
@@ -110,17 +110,17 @@ TEST_CASE("Scheduler: MS Success (52b509030d4600)", "[app][scheduler]") {
   runtime.address = 0x01;
   runtime.bus.syn_gen = true;
 
-  BusMonitor monitor;
-  platform::Bus bus(config, runtime, &request, &monitor);
-  Handler handler(runtime.address, &bus, &request, &monitor);
-  BusHandler busHandler(&request, &handler);
+  BusMonitor bus_monitor;
+  platform::Bus bus(config, runtime, &request, &bus_monitor);
+  Handler handler(runtime.address, &bus, &request, &bus_monitor);
+  BusHandler bus_handler(&request, &handler);
 
   const uint8_t source = 0x01;
   handler.setSourceAddress(source);
 
   // Bridge Physical Bus Events -> BusHandler
   bus.addBusEventListener(Delegate<void(const BusEvent& event)>::bind<
-                          BusHandler, &BusHandler::onBusEvent>(&busHandler));
+                          BusHandler, &BusHandler::onBusEvent>(&bus_handler));
 
   BusSimulator simulator(bus);
 
@@ -191,17 +191,17 @@ TEST_CASE("Scheduler: Retry Success (52b509030d4600)", "[app][scheduler]") {
   runtime.address = 0x01;
   runtime.bus.syn_gen = true;
 
-  BusMonitor monitor;
-  platform::Bus bus(config, runtime, &request, &monitor);
-  Handler handler(runtime.address, &bus, &request, &monitor);
-  BusHandler busHandler(&request, &handler);
+  BusMonitor bus_monitor;
+  platform::Bus bus(config, runtime, &request, &bus_monitor);
+  Handler handler(runtime.address, &bus, &request, &bus_monitor);
+  BusHandler bus_handler(&request, &handler);
 
   const uint8_t source = 0x01;
   handler.setSourceAddress(source);
 
   // Bridge Physical Bus Events -> BusHandler
   bus.addBusEventListener(Delegate<void(const BusEvent& event)>::bind<
-                          BusHandler, &BusHandler::onBusEvent>(&busHandler));
+                          BusHandler, &BusHandler::onBusEvent>(&bus_handler));
 
   BusSimulator simulator(bus);
 

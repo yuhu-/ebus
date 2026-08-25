@@ -65,7 +65,7 @@ class AbstractClient {
 
   // Status/Telemetry
   bool isConnected() const;
-  virtual ClientInfo getClientInfo() const = 0;
+  virtual ClientStatus getClientStatus() const = 0;
 
   // ONE-SHOT SYN filter control
   // inline void armSynFilter() { filter_next_syn_ = true; }
@@ -103,7 +103,7 @@ class ReadOnlyClient : public AbstractClient {
   void enqueueOutgoingData(ByteView data) override;
 
   // Status/Telemetry
-  ClientInfo getClientInfo() const override;
+  ClientStatus getClientStatus() const override;
 };
 
 /**
@@ -125,7 +125,7 @@ class RegularClient : public AbstractClient {
   void enqueueOutgoingData(ByteView data) override;
 
   // Status/Telemetry
-  ClientInfo getClientInfo() const override;
+  ClientStatus getClientStatus() const override;
 
  private:
   platform::Queue<uint8_t> inbound_buffer_;
@@ -152,7 +152,7 @@ class EnhancedClient : public AbstractClient {
   void enqueueOutgoingData(ByteView data) override;
 
   // Status/Telemetry
-  ClientInfo getClientInfo() const override;
+  ClientStatus getClientStatus() const override;
 
  private:
   // The Enhanced protocol accumulation buffer (max 2 bytes for escaped

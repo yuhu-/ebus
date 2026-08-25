@@ -28,10 +28,10 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
     runtime.bus.syn_gen = true;
 
     Request request;
-    BusMonitor monitor;
-    platform::Bus bus(config, runtime, &request, &monitor);
-    Handler handler(runtime.address, &bus, &request, &monitor);
-    BusHandler busHandler(&request, &handler);
+    BusMonitor bus_monitor;
+    platform::Bus bus(config, runtime, &request, &bus_monitor);
+    Handler handler(runtime.address, &bus, &request, &bus_monitor);
+    BusHandler bus_handler(&request, &handler);
 
     std::atomic<int> telegram_count{0};
     std::atomic<int> error_count{0};
@@ -54,7 +54,7 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
 
     // PUMP BRIDGE: Required because BusHandler is now a passive logic engine
     bus.addBusEventListener(Delegate<void(const BusEvent& event)>::bind<
-                            BusHandler, &BusHandler::onBusEvent>(&busHandler));
+                            BusHandler, &BusHandler::onBusEvent>(&bus_handler));
 
     bus.start();
 
@@ -115,10 +115,10 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
     ebus::RuntimeConfig runtime = {.address = 0x01};
 
     Request request;
-    BusMonitor monitor;
-    platform::Bus bus(config, runtime, &request, &monitor);
-    Handler handler(runtime.address, &bus, &request, &monitor);
-    BusHandler busHandler(&request, &handler);
+    BusMonitor bus_monitor;
+    platform::Bus bus(config, runtime, &request, &bus_monitor);
+    Handler handler(runtime.address, &bus, &request, &bus_monitor);
+    BusHandler bus_handler(&request, &handler);
 
     std::atomic<int> telegram_count{0};
     struct Stats {
@@ -134,7 +134,7 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
 
     // PUMP BRIDGE: Required because BusHandler is now a passive logic engine
     bus.addBusEventListener(Delegate<void(const BusEvent& event)>::bind<
-                            BusHandler, &BusHandler::onBusEvent>(&busHandler));
+                            BusHandler, &BusHandler::onBusEvent>(&bus_handler));
 
     bus.start();
 
@@ -198,10 +198,10 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
 
     Request request;
     request.setLockCounter(0);
-    BusMonitor monitor;
-    platform::Bus bus(config, runtime, &request, &monitor);
-    Handler handler(runtime.address, &bus, &request, &monitor);
-    BusHandler busHandler(&request, &handler);
+    BusMonitor bus_monitor;
+    platform::Bus bus(config, runtime, &request, &bus_monitor);
+    Handler handler(runtime.address, &bus, &request, &bus_monitor);
+    BusHandler bus_handler(&request, &handler);
 
     std::atomic<int> telegram_count{0};
     struct Stats {
@@ -217,7 +217,7 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
 
     // PUMP BRIDGE: Required because BusHandler is now a passive logic engine
     bus.addBusEventListener(Delegate<void(const BusEvent& event)>::bind<
-                            BusHandler, &BusHandler::onBusEvent>(&busHandler));
+                            BusHandler, &BusHandler::onBusEvent>(&bus_handler));
 
     bus.start();
 

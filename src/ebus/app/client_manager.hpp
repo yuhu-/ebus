@@ -42,7 +42,7 @@ class ClientManager {
  public:
   // Lifecycle
   ClientManager(platform::Bus* bus, BusHandler* bus_handler, Request* request,
-                BusMonitor* monitor);
+                BusMonitor* bus_monitor);
   ~ClientManager();
   void start(const RuntimeConfig& config = RuntimeConfig{});
   void stop();
@@ -75,13 +75,17 @@ class ClientManager {
   platform::Bus* bus_;
   BusHandler* bus_handler_;
   Request* request_;
-  BusMonitor* monitor_;
+  BusMonitor* bus_monitor_;
 
   // Members for the dedicated IO thread
   std::unique_ptr<platform::ServiceThread> worker_;
   std::atomic<bool> running_{false};
 
   platform::WakeupSignal wakeup_signal_;
+
+  // Queue for bus events (decouples hot-path bus task from client I/O thread)
+  platform::Queue<BusEventInfo> bus_queue_;
+  std::atomic<size_t> max_bus_queue_{0};
 
   SessionState session_state_ = SessionState::idle;
   Clock::time_point last_state_change_;
@@ -91,11 +95,11 @@ class ClientManager {
   enum IoEvent : uint16_t { io_in = 0x01, io_out = 0x02, io_err = 0x04 };
 
   // Fixed-size arrays for each client type
-  std::array<std::shared_ptr<AbstractClient>, NetworkLimits::max_clients>
+  std::array<std::shared_ptr<AbstractClient>, ClientManagerLimits::max_clients>
       regular_clients_;
-  std::array<std::shared_ptr<AbstractClient>, NetworkLimits::max_clients>
+  std::array<std::shared_ptr<AbstractClient>, ClientManagerLimits::max_clients>
       readonly_clients_;
-  std::array<std::shared_ptr<AbstractClient>, NetworkLimits::max_clients>
+  std::array<std::shared_ptr<AbstractClient>, ClientManagerLimits::max_clients>
       enhanced_clients_;
 
   uint32_t session_counter_ = 0;
@@ -118,13 +122,14 @@ class ClientManager {
   std::unique_ptr<platform::Socket> listen_socket_readonly_{nullptr};
   std::unique_ptr<platform::Socket> listen_socket_enhanced_{nullptr};
 
-  using ClientArray =
-      std::array<std::shared_ptr<AbstractClient>, NetworkLimits::max_clients>;
+  using ClientArray = std::array<std::shared_ptr<AbstractClient>,
+                                 ClientManagerLimits::max_clients>;
 
   // Request callback target
   void onBusRequested();
 
   void onBusEventInfo(const BusEventInfo& info);
+  void processBusEventInfo(const BusEventInfo& info);
 
   // Session management helpers (event-driven in new 3-thread architecture)
   void transitSessionState(const SessionState& state);
@@ -166,17 +171,17 @@ class ClientManager {
       ClientArray& clients, fd_set& readfds, fd_set& writefds,
       fd_set& exceptfds,
       ebus::StaticVector<std::shared_ptr<AbstractClient>,
-                         NetworkLimits::max_clients * 3>& to_stop);
+                         ClientManagerLimits::max_clients * 3>& to_stop);
 
   void handleSocketInput(
       int fd, std::shared_ptr<AbstractClient>& client,
       ebus::StaticVector<std::shared_ptr<AbstractClient>,
-                         NetworkLimits::max_clients * 3>& to_stop);
+                         ClientManagerLimits::max_clients * 3>& to_stop);
 
   void handleSocketOutput(
       int fd, std::shared_ptr<AbstractClient>& client,
       ebus::StaticVector<std::shared_ptr<AbstractClient>,
-                         NetworkLimits::max_clients * 3>& to_stop);
+                         ClientManagerLimits::max_clients * 3>& to_stop);
 
   void clientIoLoop();
   void signalClientIoThread();

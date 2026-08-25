@@ -169,6 +169,8 @@ void Scheduler::onHandlerProtocol(const ProtocolInfo& info) {
 }
 
 bool Scheduler::injectProtocolEvent(const ProtocolEvent& event) {
+  bool need_reset = false;
+
   {
     platform::LockGuard<platform::Mutex> lock(data_mutex_);
     if (!active_item_ || event.session_id != active_item_->session_id)
@@ -193,6 +195,8 @@ bool Scheduler::injectProtocolEvent(const ProtocolEvent& event) {
           handler_->getMonitor()->updateHandler(
               [](auto& m) { m.total_attempts++; });
         }
+        // Signal that reset is needed (do it outside mutex)
+        need_reset = true;
         // Reschedule with backoff
         active_item_->item.due =
             Clock::now() + backoffDuration(active_item_->item.attempts);
@@ -210,6 +214,10 @@ bool Scheduler::injectProtocolEvent(const ProtocolEvent& event) {
     active_item_.reset();
     current_session_id_.store(0, std::memory_order_release);
     current_poll_id_.store(0, std::memory_order_release);
+  }
+
+  if (need_reset && handler_) {
+    handler_->reset();
   }
   return true;
 }

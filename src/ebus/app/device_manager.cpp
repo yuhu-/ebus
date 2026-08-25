@@ -9,7 +9,8 @@
 
 namespace ebus::detail {
 
-DeviceManager::DeviceManager(BusMonitor* monitor) : monitor_(monitor) {
+DeviceManager::DeviceManager(BusMonitor* bus_monitor)
+    : bus_monitor_(bus_monitor) {
   address_map_.fill(-1);
 }
 
@@ -20,8 +21,8 @@ void DeviceManager::update(ByteView master_view, ByteView slave_view) {
   uint8_t m_addr = master_view[0];
   uint8_t s_addr = master_view[1];
 
-  if (monitor_) {
-    monitor_->updateDevice([&](metrics::DeviceMetrics& d) {
+  if (bus_monitor_) {
+    bus_monitor_->updateDevice([&](metrics::DeviceMetrics& d) {
       auto is_new = [&](uint8_t addr) {
         uint8_t sa = ebus::isSlave(addr) ? addr : ebus::slaveOf(addr);
         return !masters_.test(masterOf(sa)) && !slaves_.test(sa);
@@ -55,11 +56,11 @@ void DeviceManager::update(ByteView master_view, ByteView slave_view) {
       address_map_[slave_addr] = idx;
       identified_devices_.set(slave_addr);
 
-      if (monitor_) {
-        monitor_->updateDevice([](auto& d) {
+      if (bus_monitor_) {
+        bus_monitor_->updateDevice([](auto& d) {
           if (d.unknown_devices > 0) d.unknown_devices--;
         });
-        monitor_->updateDevice([this](auto& d) {
+        bus_monitor_->updateDevice([this](auto& d) {
           d.identified_devices = static_cast<uint32_t>(pool_usage_);
         });
       }
@@ -161,8 +162,8 @@ DeviceManagerStatus DeviceManager::fetchStatus() const {
   DeviceManagerStatus s;
   s.identified_count = identified_devices_.count();
   s.device_capacity = max_devices_;
-  if (monitor_) {
-    monitor_->fetchMetrics(
+  if (bus_monitor_) {
+    bus_monitor_->fetchMetrics(
         [&](const Metrics& m) { s.unknown_count = m.devices.unknown_devices; });
   }
   return s;

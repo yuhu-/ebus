@@ -37,8 +37,8 @@ TEST_CASE("Bus: Basic Communication", "[platform][bus]") {
   runtime.bus.syn_gen = true;
 
   Request req;
-  BusMonitor monitor;
-  platform::Bus bus(config, runtime, &req, &monitor);
+  BusMonitor bus_monitor;
+  platform::Bus bus(config, runtime, &req, &bus_monitor);
 
   platform::Queue<BusEvent> queue;
   platform::Mutex mutex;  // Protects the queue
@@ -94,8 +94,8 @@ TEST_CASE("Bus: SYN Timing", "[platform][bus]") {
   runtime.bus.syn_gen = true;
 
   Request req;
-  BusMonitor monitor;
-  platform::Bus bus(config, runtime, &req, &monitor);
+  BusMonitor bus_monitor;
+  platform::Bus bus(config, runtime, &req, &bus_monitor);
 
   platform::Queue<BusEvent> queue;
   platform::Mutex mutex;  // Protects the queue
@@ -157,8 +157,8 @@ TEST_CASE("Bus: Raw Reception (Broadcast Simulation)", "[platform][bus]") {
   ebus::BusConfig config;
   ebus::RuntimeConfig runtime = {.address = 0x01};
   Request req;
-  BusMonitor monitor;
-  platform::Bus bus(config, runtime, &req, &monitor);
+  BusMonitor bus_monitor;
+  platform::Bus bus(config, runtime, &req, &bus_monitor);
 
   platform::Queue<BusEvent> queue;
   platform::Mutex mutex;  // Protects the queue

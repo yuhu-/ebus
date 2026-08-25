@@ -34,7 +34,8 @@ class BusSimulation : public BusBase {
  public:
   // Lifecycle
   explicit BusSimulation(const BusConfig& config, const RuntimeConfig& runtime,
-                         detail::Request* request, detail::BusMonitor* monitor);
+                         detail::Request* request,
+                         detail::BusMonitor* bus_monitor);
   ~BusSimulation();
   void start();
   void stop();
@@ -62,7 +63,7 @@ class BusSimulation : public BusBase {
   RuntimeConfig runtime_;
 
   detail::Request* request_ = nullptr;
-  detail::BusMonitor* monitor_ = nullptr;
+  detail::BusMonitor* bus_monitor_ = nullptr;
 
   std::unique_ptr<ServiceThread> worker_;
   std::unique_ptr<ServiceThread> syn_worker_;

@@ -23,9 +23,9 @@ TEST_CASE("VirtualBus: Reaction Logic", "[app][virtualbus]") {
   // Disable auto-SYN for logic tests to prevent history noise
   runtime.bus.syn_gen = false;
 
-  BusMonitor monitor;
+  BusMonitor bus_monitor;
   Request request;
-  platform::Bus bus(config, runtime, &request, &monitor);
+  platform::Bus bus(config, runtime, &request, &bus_monitor);
 
   ebus::VirtualBus vb(bus);
 

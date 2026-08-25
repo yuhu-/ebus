@@ -52,7 +52,7 @@ class BusEsp : public BusBase {
 
   // Lifecycle & Static Factories
   explicit BusEsp(const BusConfig& config, const RuntimeConfig& runtime,
-                  detail::Request* request, detail::BusMonitor* monitor);
+                  detail::Request* request, detail::BusMonitor* bus_monitor);
   ~BusEsp();
   void start();
   void stop();
@@ -80,7 +80,7 @@ class BusEsp : public BusBase {
   RuntimeConfig runtime_;
 
   detail::Request* request_ = nullptr;
-  detail::BusMonitor* monitor_ = nullptr;
+  detail::BusMonitor* bus_monitor_ = nullptr;
 
   uart_port_t uart_port_num_;
   uint8_t rx_pin_;

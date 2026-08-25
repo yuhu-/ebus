@@ -44,7 +44,8 @@ set(EBUS_CLIENT_MANAGER_PRIORITY 12 CACHE STRING "Priority for Client Manager th
 set(EBUS_UTILIZATION_HISTORY_SIZE 64 CACHE STRING "Number of utilization entries to keep in memory")
 set(EBUS_ERROR_HISTORY_SIZE 60 CACHE STRING "Number of error entries to keep in memory")
 set(EBUS_TRACE_HISTORY_SIZE 100 CACHE STRING "Number of trace events to keep in memory")
-# Networking Layer
+# ClientManager Layer
+set(EBUS_CLIENT_BUS_QUEUE_SIZE 16 CACHE STRING "Size of the client bus event queue")
 set(EBUS_MAX_CLIENTS 4 CACHE STRING "Maximum number of network bridge clients")
 # Application Layer
 set(EBUS_SIGNAL_QUEUE_SIZE 16 CACHE STRING "Size of the reactor signal queue")
@@ -87,6 +88,7 @@ add_compile_definitions(
     EBUS_ERROR_HISTORY_SIZE=${EBUS_ERROR_HISTORY_SIZE}
     EBUS_TRACE_HISTORY_SIZE=${EBUS_TRACE_HISTORY_SIZE}
     # Networking Layer
+    EBUS_CLIENT_BUS_QUEUE_SIZE=${EBUS_CLIENT_BUS_QUEUE_SIZE}
     EBUS_MAX_CLIENTS=${EBUS_MAX_CLIENTS}
     # Application Layer
     EBUS_SIGNAL_QUEUE_SIZE=${EBUS_SIGNAL_QUEUE_SIZE}

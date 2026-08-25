@@ -120,9 +120,10 @@ struct SchedulerStatus {
 /**
  * Detailed information about a connected network client.
  */
-struct ClientInfo {
-  ClientInfo() = default;
-  ClientInfo(int f, std::string_view t, bool conn, bool write, size_t buf_usage)
+struct ClientStatus {
+  ClientStatus() = default;
+  ClientStatus(int f, std::string_view t, bool conn, bool write,
+               size_t buf_usage)
       : fd(f),
         type(t),
         connected(conn),
@@ -142,17 +143,21 @@ struct ClientInfo {
  */
 struct ClientManagerStatus {
   ClientManagerStatus() = default;
-  ClientManagerStatus(ThreadStatus t, bool active, std::string_view state,
-                      std::string_view err)
+  ClientManagerStatus(ThreadStatus t, QueueStatus bq, uint32_t bq_dropped,
+                      bool active, std::string_view state, std::string_view err)
       : thread(std::move(t)),
+        bus_queue(std::move(bq)),
+        bus_queue_dropped(bq_dropped),
         session_active(active),
         session_state(state),
         last_error(err) {}
   ThreadStatus thread;
+  QueueStatus bus_queue;
+  uint32_t bus_queue_dropped = 0;
   bool session_active = false;
   FixedString<12> session_state;
   FixedString<48> last_error;
-  StaticVector<ClientInfo, detail::NetworkLimits::max_clients> clients;
+  StaticVector<ClientStatus, detail::ClientManagerLimits::max_clients> clients;
 
   void toJson(detail::JsonWriter& writer) const;
 };
@@ -246,7 +251,7 @@ struct ServiceStatus {
  */
 void serializeServiceStatus(const JsonChunkVisitor& visitor,
                             const ServiceStatus& status,
-                            detail::BusMonitor* monitor = nullptr,
+                            detail::BusMonitor* bus_monitor = nullptr,
                             bool pretty = false);
 
 }  // namespace ebus

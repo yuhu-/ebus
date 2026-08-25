@@ -80,9 +80,9 @@ SCENARIO("Handler processes eBUS messages correctly", "[core][handler]") {
         ebus::BusConfig config;
         ebus::RuntimeConfig runtime = {.address = 0x33};
         Request request;
-        BusMonitor monitor;
-        platform::Bus bus(config, runtime, &request, &monitor);
-        Handler handler(runtime.address, &bus, &request, &monitor);
+        BusMonitor bus_monitor;
+        platform::Bus bus(config, runtime, &request, &bus_monitor);
+        Handler handler(runtime.address, &bus, &request, &bus_monitor);
 
         int telegram_count = 0;
         int error_count = 0;

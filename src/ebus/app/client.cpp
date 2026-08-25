@@ -128,10 +128,10 @@ void ReadOnlyClient::enqueueOutgoingData(ByteView data) {
   }
 }
 
-ClientInfo ReadOnlyClient::getClientInfo() const {
+ClientStatus ReadOnlyClient::getClientStatus() const {
   platform::LockGuard<platform::Mutex> lock(io_mutex_);
-  return ClientInfo{socket_ ? socket_->getFd() : -1, "read_only", isConnected(),
-                    write_capable_, count_};
+  return ClientStatus{socket_ ? socket_->getFd() : -1, "read_only",
+                      isConnected(), write_capable_, count_};
 }
 
 RegularClient::RegularClient(std::unique_ptr<platform::Socket> socket,
@@ -223,10 +223,10 @@ void RegularClient::enqueueOutgoingData(ByteView data) {
   }
 }
 
-ClientInfo RegularClient::getClientInfo() const {
+ClientStatus RegularClient::getClientStatus() const {
   platform::LockGuard<platform::Mutex> lock(io_mutex_);
-  return ClientInfo{socket_ ? socket_->getFd() : -1, "regular", isConnected(),
-                    write_capable_, count_};
+  return ClientStatus{socket_ ? socket_->getFd() : -1, "regular", isConnected(),
+                      write_capable_, count_};
 }
 
 EnhancedClient::EnhancedClient(std::unique_ptr<platform::Socket> socket,
@@ -452,10 +452,10 @@ void EnhancedClient::enqueueOutgoingData(ByteView data) {
   }
 }
 
-ClientInfo EnhancedClient::getClientInfo() const {
+ClientStatus EnhancedClient::getClientStatus() const {
   platform::LockGuard<platform::Mutex> lock(io_mutex_);
-  return ClientInfo{socket_ ? socket_->getFd() : -1, "enhanced", isConnected(),
-                    write_capable_, count_};
+  return ClientStatus{socket_ ? socket_->getFd() : -1, "enhanced",
+                      isConnected(), write_capable_, count_};
 }
 
 void EnhancedClient::createEnhancedResponse(enhanced::Response res,
