@@ -618,6 +618,8 @@ void metrics::SystemMetrics::toJson(detail::JsonWriter& writer) const {
   writer.writeValue(devices);
   writer.appendKey("reactor");
   writer.writeValue(reactor);
+  writer.appendKey("client_manager");
+  writer.writeValue(client_manager);
   writer.writeFieldFloat("quality", quality);
 }
 
