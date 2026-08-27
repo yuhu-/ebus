@@ -228,6 +228,8 @@ void Reactor::run() {
   uint32_t burst_count = 0;
 
   while (running_.load()) {
+    // Measure full active cycle time (from end of previous wait to start of
+    // next wait)
     auto loop_start = Clock::now();
     bool activity = false;
 
@@ -272,32 +274,7 @@ void Reactor::run() {
       timeout_ms = static_cast<uint32_t>(duration.count());
     }
 
-    // 6. Block on signal queue
-    if (signal_queue_.pop(signal, timeout_ms)) {
-      processSignal(signal);
-      activity = true;
-
-      // Drain loop: process all pending signals before housekeeping
-      while (signal_queue_.tryPop(signal)) {
-        processSignal(signal);
-        if (!running_.load()) return;
-
-        // CPU Starvation Fix: If processing a large burst, yield
-        if (++burst_count > ReactorLimits::reactor_yield_burst_limit) {
-          burst_count = 0;
-          break;
-        }
-      }
-    } else {
-      burst_count = 0;
-    }
-
-    // 7. Ensure public events processed even if no signal arrived
-    if (activity || timeout_ms == 0) {
-      processPublicEvents();
-    }
-
-    // 8. Update loop performance metrics
+    // Record active cycle duration BEFORE waiting (excludes idle wait time)
     auto loop_duration = std::chrono::duration_cast<std::chrono::microseconds>(
                              Clock::now() - loop_start)
                              .count();
@@ -313,7 +290,37 @@ void Reactor::run() {
         m.max_loop_cycle_us = static_cast<uint32_t>(loop_duration);
     });
 
-    // 9. Throttle status updates
+    // 6. Block on signal queue
+    bool got_signal = signal_queue_.pop(signal, timeout_ms);
+    if (got_signal) {
+      activity = true;
+    } else {
+      burst_count = 0;
+    }
+
+    // Process received signal and drain queue
+    if (got_signal) {
+      processSignal(signal);
+
+      // Drain loop: process all pending signals before housekeeping
+      while (signal_queue_.tryPop(signal)) {
+        processSignal(signal);
+        if (!running_.load()) return;
+
+        // CPU Starvation Fix: If processing a large burst, yield
+        if (++burst_count > ReactorLimits::reactor_yield_burst_limit) {
+          burst_count = 0;
+          break;
+        }
+      }
+    }
+
+    // 7. Ensure public events processed even if no signal arrived
+    if (activity || timeout_ms == 0) {
+      processPublicEvents();
+    }
+
+    // 8. Throttle status updates
     auto time_since_update = Clock::now() - last_status_update;
     if ((!activity && time_since_update >
                           std::chrono::milliseconds(

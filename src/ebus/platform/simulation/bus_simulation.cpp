@@ -199,7 +199,8 @@ void BusSimulation::simulationReaderLoop() {
   while (running_.load()) {
     if (VirtualLine::get().read(
             this, byte, BusLimits::platform::Posix::virtual_read_timeout_ms)) {
-      auto arrival_time = Clock::now();
+      // Use arrival time as cycle start (excludes idle wait in read())
+      auto loop_start = Clock::now();
 
       lockAndInvoke(listeners_mutex_, getReadListeners(), byte);
       recordUtilization(byte);
@@ -219,11 +220,21 @@ void BusSimulation::simulationReaderLoop() {
       if (!suppress_syn_bus_event) {
         BusEvent event;
         event.byte = byte;
-        event.timestamp = arrival_time;
+        event.timestamp = loop_start;
         event.bus_request =
             bus_request_flag_.exchange(false, std::memory_order_acq_rel);
         event.start_bit = false;  // Not applicable in simulation
         lockAndInvoke(listeners_mutex_, getBusEventListeners(), event);
+      }
+
+      // Record active cycle duration
+      auto loop_duration =
+          std::chrono::duration_cast<std::chrono::microseconds>(Clock::now() -
+                                                                loop_start)
+              .count();
+      if (bus_monitor_) {
+        bus_monitor_->loop_cycle.addSample(
+            static_cast<uint32_t>(loop_duration));
       }
     }
   }

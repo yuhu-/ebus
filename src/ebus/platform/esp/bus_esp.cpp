@@ -332,6 +332,11 @@ void BusEsp::ebusUartEventRunner() {
       if (uart_event.type == UART_DATA) {
         const int len =
             uart_read_bytes(uart_port_num_, data, uart_event.size, 0);
+        if (len <= 0) continue;
+
+        // Use first byte's arrival time as cycle start (excludes idle wait)
+        const auto loop_start = Clock::now();
+
         for (int i = 0; i < len; ++i) {
           const auto arrival_time = Clock::now();
           const uint8_t byte = data[i];
@@ -488,6 +493,16 @@ void BusEsp::ebusUartEventRunner() {
             gptimer_set_alarm_action(syn_gp_timer_, &alarm_config);
             gptimer_start(syn_gp_timer_);
           }
+        }
+
+        // Record active cycle duration (excludes queue wait time)
+        auto loop_duration =
+            std::chrono::duration_cast<std::chrono::microseconds>(Clock::now() -
+                                                                  loop_start)
+                .count();
+        if (bus_monitor_) {
+          bus_monitor_->loop_cycle.addSample(
+              static_cast<uint32_t>(loop_duration));
         }
       }
     }

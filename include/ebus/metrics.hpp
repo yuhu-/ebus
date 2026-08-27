@@ -130,6 +130,7 @@ struct BusMetrics {
   MetricValues window;
   MetricValues transmit;
   MetricValues syn_postpone;
+  MetricValues loop_cycle;
 
   void reset();
 

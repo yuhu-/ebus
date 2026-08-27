@@ -86,6 +86,14 @@ class BusMonitor {
   }
 
   /**
+   * @brief Resets the interval-based bus loop timing stats.
+   */
+  void resetBusLoopCycle() {
+    platform::LockGuard<platform::Mutex> lock(metrics_mutex_);
+    bus_acc_.loop_cycle = MetricValues{};
+  }
+
+  /**
    * @brief Resets the interval-based max signal queue size.
    */
   void resetMaxSignalQueueSize(size_t current) {
@@ -157,6 +165,7 @@ class BusMonitor {
   TimingStats window;
   TimingStats transmit;
   TimingStats syn_postpone;
+  TimingStats loop_cycle;
 
  private:
   mutable platform::Mutex metrics_mutex_;

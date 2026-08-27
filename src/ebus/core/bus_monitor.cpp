@@ -30,11 +30,13 @@ void BusMonitor::resetMetrics() {
   passive_data.reset();
   active_first.reset();
   active_data.reset();
-  syn_postpone.reset();
 
   delay.reset();
   window.reset();
   transmit.reset();
+  syn_postpone.reset();
+  loop_cycle.reset();
+
   uptime_start_ = Clock::now();
   total_low_bits_ = 0;
 #ifndef EBUS_MINIMAL_DIAGNOSTICS
@@ -240,6 +242,7 @@ void BusMonitor::fetchMetrics(
     bm.window = window.getValues();
     bm.transmit = transmit.getValues();
     bm.syn_postpone = syn_postpone.getValues();
+    bm.loop_cycle = loop_cycle.getValues();
 
     auto now = Clock::now();
     uint64_t uptime_us = std::chrono::duration_cast<std::chrono::microseconds>(
@@ -495,6 +498,7 @@ void metrics::BusMetrics::reset() {
   window = {};
   transmit = {};
   syn_postpone = {};
+  loop_cycle = {};
 }
 
 void metrics::BusMetrics::toJson(detail::JsonWriter& writer) const {
@@ -516,6 +520,7 @@ void metrics::BusMetrics::toJson(detail::JsonWriter& writer) const {
   writer.writeField("window", window);
   writer.writeField("transmit", transmit);
   writer.writeField("syn_postpone", syn_postpone);
+  writer.writeField("loop_cycle", loop_cycle);
 }
 
 void metrics::DeviceMetrics::reset() {
