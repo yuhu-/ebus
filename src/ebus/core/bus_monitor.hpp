@@ -131,6 +131,7 @@ class BusMonitor {
   void recordHandlerSuccess(uint8_t address);
   void recordIsrStartBitError();
   void recordIsrSynPostponed(uint32_t count);
+  void recordMultiByteEvent(bool has_syn);
 
   void updateUtilizationHistory();
 

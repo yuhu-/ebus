@@ -334,6 +334,17 @@ void BusEsp::ebusUartEventRunner() {
             uart_read_bytes(uart_port_num_, data, uart_event.size, 0);
         if (len <= 0) continue;
 
+        if (len > 1 && bus_monitor_) {
+          bool has_syn = false;
+          for (int j = 0; j < len; ++j) {
+            if (data[j] == Symbols::syn) {
+              has_syn = true;
+              break;
+            }
+          }
+          bus_monitor_->recordMultiByteEvent(has_syn);
+        }
+
         // Use first byte's arrival time as cycle start (excludes idle wait)
         const auto loop_start = Clock::now();
 

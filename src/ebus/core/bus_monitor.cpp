@@ -109,6 +109,14 @@ void BusMonitor::recordIsrSynPostponed(uint32_t count) {
   bus_acc_.syn_postponed_count.fetch_add(count, std::memory_order_relaxed);
 }
 
+void BusMonitor::recordMultiByteEvent(bool has_syn) {
+  platform::LockGuard<platform::Mutex> lock(metrics_mutex_);
+  bus_acc_.multi_byte_events.fetch_add(1, std::memory_order_relaxed);
+  if (has_syn) {
+    bus_acc_.syn_in_multi_byte_events.fetch_add(1, std::memory_order_relaxed);
+  }
+}
+
 void BusMonitor::updateUtilizationHistory() {
 #ifndef EBUS_MINIMAL_DIAGNOSTICS
   platform::LockGuard<platform::Mutex> lock(metrics_mutex_);
@@ -488,6 +496,8 @@ void metrics::RequestMetrics::toJson(detail::JsonWriter& writer) const {
 void metrics::BusMetrics::reset() {
   start_bit_errors = 0;
   syn_postponed_count = 0;
+  multi_byte_events = 0;
+  syn_in_multi_byte_events = 0;
   utilization = 0.0f;
   congestion = false;
   high_jitter = false;
@@ -511,6 +521,10 @@ void metrics::BusMetrics::toJson(detail::JsonWriter& writer) const {
                     start_bit_errors.load(std::memory_order_relaxed));
   writer.writeField("syn_postponed_count",
                     syn_postponed_count.load(std::memory_order_relaxed));
+  writer.writeField("multi_byte_events",
+                    multi_byte_events.load(std::memory_order_relaxed));
+  writer.writeField("syn_in_multi_byte_events",
+                    syn_in_multi_byte_events.load(std::memory_order_relaxed));
   writer.writeField("congestion", congestion);
   writer.writeField("high_jitter", high_jitter);
   writer.writeField("last_error_us", last_error_us);
