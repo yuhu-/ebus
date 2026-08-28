@@ -603,16 +603,16 @@ void Handler::activeSendMaster(uint8_t byte) {
   // (Echo check). The index hasn't been incremented yet, so it points to
   // the byte we sent in the previous step.
   // If the check fails, we abort immediately to prevent bus contention.
-  if (active_master_index_ >= active_master_.size()) {
-    callOnError(LogLevel::error, ProtocolError::illegal_fsm_transition,
-                active_telegram_.getMasterState(),
-                {active_master_.data(), active_master_.size()},
-                {active_slave_.data(), active_slave_.size()});
-    callActiveReset();
-    callWrite(Symbols::syn);
-    transitionTo(HandlerState::release_bus);
-    return;
-  }
+  // if (active_master_index_ >= active_master_.size()) {
+  //   callOnError(LogLevel::error, ProtocolError::illegal_fsm_transition,
+  //               active_telegram_.getMasterState(),
+  //               {active_master_.data(), active_master_.size()},
+  //               {active_slave_.data(), active_slave_.size()});
+  //   callActiveReset();
+  //   callWrite(Symbols::syn);
+  //   transitionTo(HandlerState::release_bus);
+  //   return;
+  // }
   if (byte != active_master_[active_master_index_]) {
     if (bus_monitor_)
       bus_monitor_->updateHandler([](auto& m) { m.error_active++; });
@@ -621,8 +621,9 @@ void Handler::activeSendMaster(uint8_t byte) {
                 {active_master_.data(), active_master_.size()},
                 {active_slave_.data(), active_slave_.size()});
     callActiveReset();
-    callWrite(Symbols::syn);
-    transitionTo(HandlerState::release_bus);
+    // callWrite(Symbols::syn);
+    // transitionTo(HandlerState::release_bus);
+    transitionTo(HandlerState::passive_receive_master);
     return;
   }
 
