@@ -367,30 +367,34 @@ void BusEsp::ebusUartEventRunner() {
             // (0.5 * 416.67) or: now - 9.5 * 416.67
             const int64_t expected_start_bit_time = now - byte_time_center_us_;
 
-            // Retrieving the start time of the last sync byte. Due to the
-            // nature of the sync byte (0xAA), the buffer size used, and
-            // hardware delays, the relevant index is two positions before the
-            // current buffer index. This is because the sync byte is sent at
-            // the beginning of the frame, and we want to align the start bit
-            // with the sync byte. The buffer index is incremented in the
-            // onFallingEdge ISR. Therefore, we need to access the position
-            // bufferIndex + 2. This is the index of the last start bit.
             portENTER_CRITICAL(&timer_mux_);
-            micros_start_bit_ = micros_edge_buffer_[(buffer_index_ + 2) %
-                                                    falling_edge_buffer_size];
+            const int64_t now_crit = esp_timer_get_time();
+            const int64_t search_target = now_crit - byte_time_center_us_;
+            size_t best_idx = buffer_index_;
+            int64_t best_delta = INT64_MAX;
+
+            for (size_t i = 0; i < falling_edge_buffer_size; ++i) {
+              size_t idx = (buffer_index_ - i + falling_edge_buffer_size) %
+                           falling_edge_buffer_size;
+              int64_t delta =
+                  std::abs(micros_edge_buffer_[idx] - search_target);
+              if (delta < best_delta) {
+                best_delta = delta;
+                best_idx = idx;
+              }
+              if (i >= 5 && best_delta < Physical::bit_time_us) break;
+            }
+            micros_start_bit_ = micros_edge_buffer_[best_idx];
             const uint16_t window = runtime_.bus.window_us;
             const uint16_t offset = runtime_.bus.offset_us;
             portEXIT_CRITICAL(&timer_mux_);
 
-            // Calculate the difference between the expected start bit time
-            // and the actual start bit time. If the difference is within 1.5
-            // bit times, we consider it a valid start bit. This is to account
-            // for slight variations in timing due to processing delays or
-            // other factors. If the difference is larger than 1.5 bit times, we
-            // consider it an unexpected start bit, and we set the
-            // start_bit_flag_ to true.
-            const int64_t delta =
-                std::abs(expected_start_bit_time - micros_start_bit_);
+            const int64_t raw_delta =
+                expected_start_bit_time - micros_start_bit_;
+            const uint32_t delta =
+                static_cast<uint32_t>(raw_delta >= 0 ? raw_delta : -raw_delta);
+
+            if (bus_monitor_) bus_monitor_->recordStartBitDelta(delta);
 
             if (delta < static_cast<int64_t>(Physical::bit_time_us *
                                              Physical::start_bit_tolerance)) {

@@ -96,7 +96,7 @@ class BusEsp : public BusBase {
   std::atomic<bool> running_{false};
 
   // ISR/state
-  static constexpr uint8_t falling_edge_buffer_size = 5;
+  static constexpr uint8_t falling_edge_buffer_size = 12;
 
   // The byte time at 2400 baud for 10 bits with a 0.5-bit offset is
   // approximately 9.5 * bit_time_us = 9.5 * 416.67 us = 3958.33 us

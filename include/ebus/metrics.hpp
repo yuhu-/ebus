@@ -134,6 +134,8 @@ struct BusMetrics {
   MetricValues syn_postpone;
   MetricValues loop_cycle;
 
+  std::array<std::atomic<uint32_t>, 8> start_bit_delta_histogram{};
+
   void reset();
 
   void toJson(detail::JsonWriter& writer) const;

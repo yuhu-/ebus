@@ -117,6 +117,12 @@ void BusMonitor::recordMultiByteEvent(bool has_syn) {
   }
 }
 
+void BusMonitor::recordStartBitDelta(uint32_t delta_us) {
+  size_t bucket = delta_us < 600 ? delta_us / 75 : 7;
+  bus_acc_.start_bit_delta_histogram[bucket].fetch_add(
+      1, std::memory_order_relaxed);
+}
+
 void BusMonitor::updateUtilizationHistory() {
 #ifndef EBUS_MINIMAL_DIAGNOSTICS
   platform::LockGuard<platform::Mutex> lock(metrics_mutex_);
@@ -509,6 +515,9 @@ void metrics::BusMetrics::reset() {
   transmit = {};
   syn_postpone = {};
   loop_cycle = {};
+
+  for (auto& bucket : start_bit_delta_histogram)
+    bucket.store(0, std::memory_order_relaxed);
 }
 
 void metrics::BusMetrics::toJson(detail::JsonWriter& writer) const {
@@ -535,6 +544,11 @@ void metrics::BusMetrics::toJson(detail::JsonWriter& writer) const {
   writer.writeField("transmit", transmit);
   writer.writeField("syn_postpone", syn_postpone);
   writer.writeField("loop_cycle", loop_cycle);
+
+  auto hist_scope = writer.arrayScope("start_bit_delta_histogram");
+  for (const auto& bucket : start_bit_delta_histogram) {
+    writer.writeValue(bucket.load(std::memory_order_relaxed));
+  }
 }
 
 void metrics::DeviceMetrics::reset() {
