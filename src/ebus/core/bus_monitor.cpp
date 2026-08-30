@@ -258,6 +258,12 @@ void BusMonitor::fetchMetrics(
     bm.syn_postpone = syn_postpone.getValues();
     bm.loop_cycle = loop_cycle.getValues();
 
+    for (size_t i = 0; i < bm.start_bit_delta_histogram.size(); ++i) {
+      bm.start_bit_delta_histogram[i].store(
+          bus_acc_.start_bit_delta_histogram[i].load(std::memory_order_relaxed),
+          std::memory_order_relaxed);
+    }
+
     auto now = Clock::now();
     uint64_t uptime_us = std::chrono::duration_cast<std::chrono::microseconds>(
                              now - uptime_start_)
