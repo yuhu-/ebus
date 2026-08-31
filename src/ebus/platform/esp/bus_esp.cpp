@@ -367,22 +367,49 @@ void BusEsp::ebusUartEventRunner() {
             // (0.5 * 416.67) or: now - 9.5 * 416.67
             const int64_t expected_start_bit_time = now - byte_time_center_us_;
 
-            portENTER_CRITICAL(&timer_mux_);
-            const int64_t now_crit = esp_timer_get_time();
-            const int64_t search_target = now_crit - byte_time_center_us_;
             size_t best_idx = buffer_index_;
             int64_t best_delta = INT64_MAX;
 
-            for (size_t i = 0; i < falling_edge_buffer_size; ++i) {
-              size_t idx = (buffer_index_ - i + falling_edge_buffer_size) %
-                           falling_edge_buffer_size;
-              int64_t delta =
-                  std::abs(micros_edge_buffer_[idx] - search_target);
-              if (delta < best_delta) {
-                best_delta = delta;
-                best_idx = idx;
+            portENTER_CRITICAL(&timer_mux_);
+            // Check if the 4 newest falling edges match the 0xAA (SYN) bit
+            // pattern: 0xAA (10101010) produces 4 falling edges spaced exactly
+            // 2 bit times (~833.33us) apart: Edge 0 (Start bit) -> Edge 1 (Bit
+            // 2) -> Edge 2 (Bit 4) -> Edge 3 (Bit 6). If pattern matches, Edge
+            // 0 is guaranteed to be the Start Bit (immune to task latency).
+            size_t e3 = buffer_index_;
+            size_t e2 = (buffer_index_ + falling_edge_buffer_size - 1) %
+                        falling_edge_buffer_size;
+            size_t e1 = (buffer_index_ + falling_edge_buffer_size - 2) %
+                        falling_edge_buffer_size;
+            size_t e0 = (buffer_index_ + falling_edge_buffer_size - 3) %
+                        falling_edge_buffer_size;
+
+            constexpr int64_t two_bit_time_us =
+                static_cast<int64_t>(2.0f * Physical::bit_time_us);  // ~833 us
+            int64_t d23 =
+                std::abs((micros_edge_buffer_[e3] - micros_edge_buffer_[e2]) -
+                         two_bit_time_us);
+            int64_t d12 =
+                std::abs((micros_edge_buffer_[e2] - micros_edge_buffer_[e1]) -
+                         two_bit_time_us);
+            int64_t d01 =
+                std::abs((micros_edge_buffer_[e1] - micros_edge_buffer_[e0]) -
+                         two_bit_time_us);
+
+            if (d23 < 200 && d12 < 200 && d01 < 200) {
+              best_idx = e0;
+            } else {
+              for (size_t i = 0; i < falling_edge_buffer_size; ++i) {
+                size_t idx = (buffer_index_ - i + falling_edge_buffer_size) %
+                             falling_edge_buffer_size;
+                int64_t delta = std::abs(micros_edge_buffer_[idx] -
+                                         expected_start_bit_time);
+                if (delta < best_delta) {
+                  best_delta = delta;
+                  best_idx = idx;
+                }
+                if (i >= 5 && best_delta < Physical::bit_time_us) break;
               }
-              if (i >= 5 && best_delta < Physical::bit_time_us) break;
             }
             micros_start_bit_ = micros_edge_buffer_[best_idx];
             const uint16_t window = runtime_.bus.window_us;
@@ -398,15 +425,16 @@ void BusEsp::ebusUartEventRunner() {
 
             if (delta < static_cast<int64_t>(Physical::bit_time_us *
                                              Physical::start_bit_tolerance)) {
-              const int64_t micros_since_start_bit =
-                  esp_timer_get_time() - micros_start_bit_;
+              const int64_t micros_since_start_bit = now - micros_start_bit_;
               const int64_t delay =
-                  (window > micros_since_start_bit + offset)
-                      ? (window - micros_since_start_bit - offset)
+                  (static_cast<int64_t>(window) >
+                   micros_since_start_bit + static_cast<int64_t>(offset))
+                      ? (static_cast<int64_t>(window) - micros_since_start_bit -
+                         static_cast<int64_t>(offset))
                       : 0;
 
               gptimer_alarm_config_t alarm_config = {};
-              alarm_config.alarm_count = (uint64_t)delay;
+              alarm_config.alarm_count = static_cast<uint64_t>(delay);
               alarm_config.reload_count = 0;
               alarm_config.flags.auto_reload_on_alarm = false;
               gptimer_stop(gp_timer_);
