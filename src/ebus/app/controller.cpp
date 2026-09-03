@@ -121,9 +121,7 @@ void Controller::stop() {
   bool expected = true;
   if (!impl_->running_.compare_exchange_strong(expected, false)) return;
 
-  if (impl_->reactor_) {
-    impl_->reactor_->stop();
-  }
+  impl_->reactor_->stop();
 
   impl_->client_manager_->stop();
   impl_->scheduler_->stop();
