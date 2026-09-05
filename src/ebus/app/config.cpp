@@ -33,13 +33,16 @@ void RuntimeConfig::toJson(detail::JsonWriter& writer) const {
 
   {
     auto netScope = writer.objectScope("network");
-    writer.writeField("session_timeout_ms", network.session_timeout_ms);
-    writer.writeField("transmit_timeout_ms", network.transmit_timeout_ms);
-    writer.writeField("outbound_buffer_size", network.outbound_buffer_size);
     writer.writeField("enable_server", network.enable_server);
     writer.writeField("port_regular", network.port_regular);
     writer.writeField("port_readonly", network.port_readonly);
     writer.writeField("port_enhanced", network.port_enhanced);
+    writer.writeField("keepalive_idle_sec", network.keepalive_idle_sec);
+    writer.writeField("keepalive_interval_sec", network.keepalive_interval_sec);
+    writer.writeField("keepalive_count", network.keepalive_count);
+    writer.writeField("session_timeout_ms", network.session_timeout_ms);
+    writer.writeField("transmit_timeout_ms", network.transmit_timeout_ms);
+    writer.writeField("outbound_buffer_size", network.outbound_buffer_size);
   }
 
   {
@@ -148,24 +151,6 @@ bool RuntimeConfig::mergeFromJson(std::string_view json) {
     if (key == "network") {
       if (r.next() == detail::JsonReader::Token::object_start) {
         r.forEachField([&](std::string_view k, detail::JsonReader& inner) {
-          if (k == "session_timeout_ms") {
-            inner.next();
-            auto val = inner.asNumStrict<uint32_t>();
-            if (val) network.session_timeout_ms = *val;
-            return val.has_value();
-          }
-          if (k == "transmit_timeout_ms") {
-            inner.next();
-            auto val = inner.asNumStrict<uint32_t>();
-            if (val) network.transmit_timeout_ms = *val;
-            return val.has_value();
-          }
-          if (k == "outbound_buffer_size") {
-            inner.next();
-            auto val = inner.asNumStrict<size_t>();
-            if (val) network.outbound_buffer_size = *val;
-            return val.has_value();
-          }
           if (k == "enable_server") {
             inner.next();
             network.enable_server = inner.asBool();
@@ -187,6 +172,42 @@ bool RuntimeConfig::mergeFromJson(std::string_view json) {
             inner.next();
             auto val = inner.asNumStrict<uint16_t>();
             if (val) network.port_enhanced = *val;
+            return val.has_value();
+          }
+          if (k == "keepalive_idle_sec") {
+            inner.next();
+            auto val = inner.asNumStrict<uint32_t>();
+            if (val) network.keepalive_idle_sec = *val;
+            return val.has_value();
+          }
+          if (k == "keepalive_interval_sec") {
+            inner.next();
+            auto val = inner.asNumStrict<uint32_t>();
+            if (val) network.keepalive_interval_sec = *val;
+            return val.has_value();
+          }
+          if (k == "keepalive_count") {
+            inner.next();
+            auto val = inner.asNumStrict<uint32_t>();
+            if (val) network.keepalive_count = *val;
+            return val.has_value();
+          }
+          if (k == "session_timeout_ms") {
+            inner.next();
+            auto val = inner.asNumStrict<uint32_t>();
+            if (val) network.session_timeout_ms = *val;
+            return val.has_value();
+          }
+          if (k == "transmit_timeout_ms") {
+            inner.next();
+            auto val = inner.asNumStrict<uint32_t>();
+            if (val) network.transmit_timeout_ms = *val;
+            return val.has_value();
+          }
+          if (k == "outbound_buffer_size") {
+            inner.next();
+            auto val = inner.asNumStrict<size_t>();
+            if (val) network.outbound_buffer_size = *val;
             return val.has_value();
           }
           return false;

@@ -37,13 +37,16 @@ struct RuntimeConfig {
   } bus;
 
   struct Network {
-    uint32_t session_timeout_ms = 500;
-    uint32_t transmit_timeout_ms = 250;
-    size_t outbound_buffer_size = 4096;
     bool enable_server = false;
     uint16_t port_regular = 3333;
     uint16_t port_readonly = 3334;
     uint16_t port_enhanced = 3335;
+    uint32_t keepalive_idle_sec = 5;
+    uint32_t keepalive_interval_sec = 2;
+    uint32_t keepalive_count = 3;
+    uint32_t session_timeout_ms = 500;
+    uint32_t transmit_timeout_ms = 250;
+    size_t outbound_buffer_size = 4096;
   } network;
 
   struct Device {

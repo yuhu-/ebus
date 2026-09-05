@@ -36,9 +36,6 @@ bool ConfigValidator::validate(const EbusConfig& config) {
     return false;
 
   // 4. Network & Logging
-  if (r.network.outbound_buffer_size == 0) return false;
-  if (r.network.session_timeout_ms == 0) return false;
-  if (r.network.transmit_timeout_ms == 0) return false;
   if (r.network.enable_server) {
     if (r.network.port_regular == 0 || r.network.port_readonly == 0 ||
         r.network.port_enhanced == 0)
@@ -47,6 +44,12 @@ bool ConfigValidator::validate(const EbusConfig& config) {
         r.network.port_regular == r.network.port_enhanced ||
         r.network.port_readonly == r.network.port_enhanced)
       return false;
+    if (r.network.keepalive_idle_sec == 0) return false;
+    if (r.network.keepalive_interval_sec == 0) return false;
+    if (r.network.keepalive_count == 0) return false;
+    if (r.network.session_timeout_ms == 0) return false;
+    if (r.network.transmit_timeout_ms == 0) return false;
+    if (r.network.outbound_buffer_size == 0) return false;
   }
 
   // 5. Platform Specifics
@@ -123,18 +126,6 @@ bool ConfigValidator::validateJson(std::string_view json) {
   }
 
   // Check nested network fields (Parity with struct validate)
-  if (reader.get("network.outbound_buffer_size") == JsonReader::Token::number) {
-    if (reader.asNum<size_t>() == 0) return false;
-  }
-
-  if (reader.get("network.session_timeout_ms") == JsonReader::Token::number) {
-    if (reader.asNum<uint32_t>() == 0) return false;
-  }
-
-  if (reader.get("network.transmit_timeout_ms") == JsonReader::Token::number) {
-    if (reader.asNum<uint32_t>() == 0) return false;
-  }
-
   if (reader.get("network.port_regular") == JsonReader::Token::number) {
     auto val = reader.asNumStrict<uint16_t>();
     if (!val || *val == 0) return false;
@@ -148,6 +139,31 @@ bool ConfigValidator::validateJson(std::string_view json) {
   if (reader.get("network.port_enhanced") == JsonReader::Token::number) {
     auto val = reader.asNumStrict<uint16_t>();
     if (!val || *val == 0) return false;
+  }
+
+  if (reader.get("network.keepalive_idle_sec") == JsonReader::Token::number) {
+    if (reader.asNum<uint32_t>() == 0) return false;
+  }
+
+  if (reader.get("network.keepalive_interval_sec") ==
+      JsonReader::Token::number) {
+    if (reader.asNum<uint32_t>() == 0) return false;
+  }
+
+  if (reader.get("network.keepalive_count") == JsonReader::Token::number) {
+    if (reader.asNum<uint32_t>() == 0) return false;
+  }
+
+  if (reader.get("network.session_timeout_ms") == JsonReader::Token::number) {
+    if (reader.asNum<uint32_t>() == 0) return false;
+  }
+
+  if (reader.get("network.transmit_timeout_ms") == JsonReader::Token::number) {
+    if (reader.asNum<uint32_t>() == 0) return false;
+  }
+
+  if (reader.get("network.outbound_buffer_size") == JsonReader::Token::number) {
+    if (reader.asNum<size_t>() == 0) return false;
   }
 
   return true;

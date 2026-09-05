@@ -108,23 +108,28 @@ class ClientManager {
 
   std::string last_error_message_;
 
-  // Configurable timeout for active session
-  std::chrono::milliseconds session_timeout_{
-      ebus::RuntimeConfig{}.network.session_timeout_ms};
-  std::chrono::milliseconds transmit_timeout_{
-      ebus::RuntimeConfig{}.network.transmit_timeout_ms};
-
-  size_t outbound_buffer_size_ =
-      ebus::RuntimeConfig{}.network.outbound_buffer_size;
-
   // Listening sockets (must be unique pointers)
   std::unique_ptr<platform::Socket> listen_socket_regular_{nullptr};
   std::unique_ptr<platform::Socket> listen_socket_readonly_{nullptr};
   std::unique_ptr<platform::Socket> listen_socket_enhanced_{nullptr};
 
+  // Keepalive configuration (set in start())
+  uint32_t keepalive_idle_sec_ =
+      ebus::RuntimeConfig{}.network.keepalive_idle_sec;
+  uint32_t keepalive_interval_sec_ =
+      ebus::RuntimeConfig{}.network.keepalive_interval_sec;
+  uint32_t keepalive_count_ = ebus::RuntimeConfig{}.network.keepalive_count;
+
+  // Configurable timeout for active session
+  std::chrono::milliseconds session_timeout_{
+      ebus::RuntimeConfig{}.network.session_timeout_ms};
+  std::chrono::milliseconds transmit_timeout_{
+      ebus::RuntimeConfig{}.network.transmit_timeout_ms};
+  size_t outbound_buffer_size_ =
+      ebus::RuntimeConfig{}.network.outbound_buffer_size;
+
   using ClientArray = std::array<std::shared_ptr<AbstractClient>,
                                  ClientManagerLimits::max_clients>;
-
   // Request callback target
   void onBusRequested();
 

@@ -33,13 +33,7 @@ ClientManager::ClientManager(platform::Bus* bus, BusHandler* bus_handler,
       running_(false),
       bus_queue_(ClientManagerLimits::bus_queue_size),
       session_state_(SessionState::idle),
-      last_state_change_(Clock::now()),
-      session_timeout_(::std::chrono::milliseconds(
-          ebus::RuntimeConfig{}.network.session_timeout_ms)),
-      transmit_timeout_(::std::chrono::milliseconds(
-          ebus::RuntimeConfig{}.network.transmit_timeout_ms)),
-      outbound_buffer_size_(
-          ebus::RuntimeConfig{}.network.outbound_buffer_size) {
+      last_state_change_(Clock::now()) {
   regular_clients_.fill(nullptr);
   readonly_clients_.fill(nullptr);
   enhanced_clients_.fill(nullptr);
@@ -73,6 +67,17 @@ void ClientManager::start(const RuntimeConfig& config) {
   {
     platform::LockGuard<platform::Mutex> lock(mutex_);
     if (config.network.enable_server) {
+      // Update keepalive configuration from runtime config
+      keepalive_idle_sec_ = config.network.keepalive_idle_sec;
+      keepalive_interval_sec_ = config.network.keepalive_interval_sec;
+      keepalive_count_ = config.network.keepalive_count;
+
+      session_timeout_ =
+          ::std::chrono::milliseconds(config.network.session_timeout_ms);
+      transmit_timeout_ =
+          ::std::chrono::milliseconds(config.network.transmit_timeout_ms);
+      outbound_buffer_size_ = config.network.outbound_buffer_size;
+
       listen_socket_regular_ = std::make_unique<platform::Socket>(
           platform::Socket::createListenSocket(config.network.port_regular));
       if (listen_socket_regular_->isValid()) {
@@ -742,7 +747,8 @@ void ClientManager::acceptNewConnections(fd_set& readfds) {
     int listen_fd = listener->getFd();
     if (!FD_ISSET(listen_fd, &readfds)) return;
 
-    int client_fd = listener->accept();
+    int client_fd = listener->accept(keepalive_idle_sec_,
+                                     keepalive_interval_sec_, keepalive_count_);
     if (client_fd >= 0) {
       EBUS_LOG_INFO_F(
           "[ClientManager] Connection accepted on listener fd %d-> client fd "

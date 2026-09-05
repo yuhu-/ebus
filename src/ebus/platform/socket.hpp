@@ -142,12 +142,15 @@ class Socket {
 
   // Platform-agnostic API
 
-  int accept() {
+  int accept(int keepalive_idle_sec = 5, int keepalive_interval_sec = 2,
+             int keepalive_count = 3) {
     assert(isValid() && "Socket is not valid");
 #if defined(ESP_PLATFORM)
     int client_fd = ::accept(fd_, nullptr, nullptr);
     if (client_fd != -1) {
       setNonBlocking(client_fd);
+      configureKeepalive(client_fd, keepalive_idle_sec, keepalive_interval_sec,
+                         keepalive_count);
     }
     return client_fd;
 #elif defined(POSIX)
@@ -157,8 +160,33 @@ class Socket {
         ::accept(fd_, reinterpret_cast<sockaddr*>(&addr), &addr_len);
     if (client_fd != -1) {
       setNonBlocking(client_fd);
+      configureKeepalive(client_fd, keepalive_idle_sec, keepalive_interval_sec,
+                         keepalive_count);
     }
     return client_fd;
+#endif
+  }
+
+  static void configureKeepalive(int fd, int idle_sec = 5, int interval_sec = 2,
+                                 int count = 3) {
+    int enable = 1;
+    setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &enable, sizeof(enable));
+#if defined(ESP_PLATFORM)
+    setsockopt(fd, IPPROTO_TCP, TCP_KEEPIDLE, &idle_sec, sizeof(idle_sec));
+    setsockopt(fd, IPPROTO_TCP, TCP_KEEPINTVL, &interval_sec,
+               sizeof(interval_sec));
+    setsockopt(fd, IPPROTO_TCP, TCP_KEEPCNT, &count, sizeof(count));
+#elif defined(POSIX)
+#ifdef TCP_KEEPIDLE
+    setsockopt(fd, IPPROTO_TCP, TCP_KEEPIDLE, &idle_sec, sizeof(idle_sec));
+#endif
+#ifdef TCP_KEEPINTVL
+    setsockopt(fd, IPPROTO_TCP, TCP_KEEPINTVL, &interval_sec,
+               sizeof(interval_sec));
+#endif
+#ifdef TCP_KEEPCNT
+    setsockopt(fd, IPPROTO_TCP, TCP_KEEPCNT, &count, sizeof(count));
+#endif
 #endif
   }
 
@@ -217,21 +245,6 @@ class Socket {
     return true;
   }
 
-  // Socket options
-  bool setOption(int level, int option, const void* value, socklen_t len) {
-    assert(isValid() && "Socket is not valid");
-    assert(value != nullptr && "Value cannot be null");
-    assert(len > 0 && "Length must be positive");
-    return ::setsockopt(fd_, level, option, value, len) == 0;
-  }
-
-  bool getOption(int level, int option, void* value, socklen_t* len) {
-    assert(isValid() && "Socket is not valid");
-    assert(value != nullptr && "Value cannot be null");
-    assert(len != nullptr && "Length pointer cannot be null");
-    return ::getsockopt(fd_, level, option, value, len) == 0;
-  }
-
   /**
    * @brief Creates and configures a listening socket on the given port.
    * @param port The port to listen on.
@@ -244,7 +257,8 @@ class Socket {
     }
 
     int enable = 1;
-    if (!sock.setOption(SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable))) {
+    if (setsockopt(sock.fd_, SOL_SOCKET, SO_REUSEADDR, &enable,
+                   sizeof(enable)) != 0) {
       return Socket(Type::invalid);
     }
 
