@@ -368,7 +368,6 @@ void BusEsp::ebusUartEventRunner() {
             const int64_t expected_start_bit_time = now - byte_time_center_us_;
 
             size_t best_idx = buffer_index_;
-            int64_t best_delta = INT64_MAX;
 
             portENTER_CRITICAL(&timer_mux_);
             // Check if the 4 newest falling edges match the 0xAA (SYN) bit
@@ -399,8 +398,9 @@ void BusEsp::ebusUartEventRunner() {
             if (d23 < 200 && d12 < 200 && d01 < 200) {
               best_idx = e0;
             } else {
-              for (size_t i = 0; i < falling_edge_buffer_size; ++i) {
-                size_t idx = (buffer_index_ - i + falling_edge_buffer_size) %
+              int64_t best_delta = INT64_MAX;
+              for (size_t j = 0; j < falling_edge_buffer_size; ++j) {
+                size_t idx = (buffer_index_ - j + falling_edge_buffer_size) %
                              falling_edge_buffer_size;
                 int64_t delta = std::abs(micros_edge_buffer_[idx] -
                                          expected_start_bit_time);
@@ -408,7 +408,7 @@ void BusEsp::ebusUartEventRunner() {
                   best_delta = delta;
                   best_idx = idx;
                 }
-                if (i >= 5 && best_delta < Physical::bit_time_us) break;
+                if (j >= 5 && best_delta < Physical::bit_time_us) break;
               }
             }
             micros_start_bit_ = micros_edge_buffer_[best_idx];
