@@ -196,3 +196,28 @@ TEST_CASE("Bus: Raw Reception (Broadcast Simulation)", "[platform][bus]") {
   REQUIRE(received.size() == msg.size());
   REQUIRE(received == msg);
 }
+
+TEST_CASE("Bus: Repeated start/stop with traffic is race-free",
+          "[platform][bus]") {
+  // Regression test: stopping while the reader is blocked in
+  // VirtualLine::read() must join the thread before detaching (and thus
+  // destroying) its queue. Previously detach-then-join faulted on the freed
+  // queue during OTA shutdown.
+  ebus::BusConfig config;
+  ebus::RuntimeConfig runtime;
+  runtime.address = 0x01;
+  runtime.bus.syn_gen = true;
+
+  for (int cycle = 0; cycle < 5; ++cycle) {
+    Request req;
+    BusMonitor bus_monitor;
+    platform::Bus bus(config, runtime, &req, &bus_monitor);
+
+    bus.start();
+    force_request(req, 0x03);
+    platform::sleepMilli(30);
+    bus.writeByte(0xff);
+    bus.stop();
+  }
+  SUCCEED();
+}

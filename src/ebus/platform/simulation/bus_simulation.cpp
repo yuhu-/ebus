@@ -58,7 +58,6 @@ void BusSimulation::stop() {
   running_.store(false, std::memory_order_release);
   syn_running_.store(false);
 
-  VirtualLine::get().detach(this);
   {
     platform::UniqueLock<platform::Mutex> lock(syn_mutex_);
     syn_cv_.notify_all();
@@ -72,6 +71,12 @@ void BusSimulation::stop() {
     worker_->join();
     worker_.reset();
   }
+
+  // Detach only after all threads are joined: the reader may be blocked in
+  // VirtualLine::read() holding a reference to our queue, and erasing it
+  // first destroys the underlying queue while still in use (load fault).
+  // The reader observes running_==false within virtual_read_timeout_ms.
+  VirtualLine::get().detach(this);
 }
 
 void BusSimulation::setWindow(const uint16_t window_us) {
