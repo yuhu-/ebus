@@ -62,7 +62,17 @@ uint16_t PollManager::addPollItem(uint8_t priority, ByteView message,
   item.priority = priority;
   item.message.assign(message);
   item.interval = std::chrono::milliseconds(interval_ms);
-  item.next_due = Clock::now();
+  // Spread initial firings across the interval: items registered in a burst
+  // (e.g. all commands loaded at boot with the same interval) would otherwise
+  // fire within milliseconds of each other every period. On a multi-master
+  // bus that is a repeating SYN-storm, and low-priority masters lose
+  // arbitration en masse. Execution-time anchoring below only spreads phases
+  // by ~one transaction each, so the initial spread must cover the interval.
+  // Deterministic in poll_id (no RNG needed, testable, stable across runs).
+  const uint64_t spread_ms =
+      (static_cast<uint64_t>(id % 16) * static_cast<uint64_t>(interval_ms)) /
+      16;
+  item.next_due = Clock::now() + std::chrono::milliseconds(spread_ms);
 
   items_.push_back(std::move(item));
   if (items_.size() > max_item_count_) {

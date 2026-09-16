@@ -23,6 +23,12 @@ TEST_CASE("PollManager: Registration", "[app][pollmanager]") {
   bool activity = false;
   pm.processDueItems([&](const PollManager::Item&) { count++; }, &activity);
   REQUIRE(id1 != id2);
+  // Staggered first firing: nothing due immediately after registration.
+  REQUIRE(count == 0);
+
+  platform::sleepMilli(1500);
+  count = 0;
+  pm.processDueItems([&](const PollManager::Item&) { count++; }, &activity);
   REQUIRE(count == 2);
 }
 
@@ -31,16 +37,13 @@ TEST_CASE("PollManager: Timing and Recurrence", "[app][pollmanager]") {
 
   pm.addPollItem(5, ebus::ByteView({0xaa, 0xbb}), 1000);
 
+  // First firing is staggered by id phase instead of immediate.
   size_t count = 0;
   bool activity = false;
   pm.processDueItems([&](const PollManager::Item&) { count++; }, &activity);
-  REQUIRE(count == 1);
-
-  count = 0;
-  pm.processDueItems([&](const PollManager::Item&) { count++; }, &activity);
   REQUIRE(count == 0);
 
-  platform::sleepMilli(1100);
+  platform::sleepMilli(700);
   count = 0;
   pm.processDueItems(
       [&](const PollManager::Item& item) {
@@ -55,7 +58,7 @@ TEST_CASE("PollManager: Timing and Recurrence", "[app][pollmanager]") {
   pm.processDueItems([&](const PollManager::Item&) { count++; }, &activity);
   REQUIRE(count == 0);
 
-  platform::sleepMilli(1100);
+  platform::sleepMilli(1200);
 
   count = 0;
   pm.processDueItems([&](const PollManager::Item&) { count++; }, &activity);
@@ -92,6 +95,7 @@ TEST_CASE("PollManager: Address Filtering", "[app][pollmanager]") {
 
   size_t count = 0;
   bool activity = false;
+  platform::sleepMilli(200);  // allow the staggered first firing (id 1)
   pm.processDueItems([&](const PollManager::Item&) { count++; }, &activity);
 
   REQUIRE(count == 1);  // Only the external one should remain
@@ -174,4 +178,30 @@ TEST_CASE("PollManager: mergeFromJson", "[app][pollmanager]") {
     // Only the last valid item should be added
     REQUIRE(pm.fetchStatus().item_count == 1);
   }
+}
+
+TEST_CASE("PollManager: Initial Phase Spread", "[app][pollmanager]") {
+  PollManager pm;
+
+  // 16 same-interval items must not fire as one burst: ids 1..16 map to
+  // distinct phase buckets, so exactly one (id 16, offset 0) is due at once.
+  for (int i = 0; i < 16; ++i) {
+    pm.addPollItem(3, ebus::ByteView({0x01}), 60000);
+  }
+
+  size_t count = 0;
+  bool activity = false;
+  pm.processDueItems([&](const PollManager::Item&) { count++; }, &activity);
+  REQUIRE(count == 1);
+
+  // One bucket per 3750ms: each step releases exactly one more item.
+  platform::sleepMilli(4000);
+  count = 0;
+  pm.processDueItems([&](const PollManager::Item&) { count++; }, &activity);
+  REQUIRE(count == 1);
+
+  platform::sleepMilli(4000);
+  count = 0;
+  pm.processDueItems([&](const PollManager::Item&) { count++; }, &activity);
+  REQUIRE(count == 1);
 }
