@@ -247,6 +247,9 @@ void DeviceScanner::onScanResult(uint8_t address, bool success) {
     if (++scan_attempt_counters_[address] >= 10) {
       quarantined_scans_.set(address);
       scan_attempt_counters_[address] = 0;
+      // Drop its pool entry if it never identified; genuine re-observation
+      // re-adds it cheaply via the observed bitsets.
+      if (device_manager_) device_manager_->pruneUnidentified(address);
     }
   } else {
     failed_scans_.reset(address);
@@ -262,6 +265,7 @@ void DeviceScanner::onScanResult(uint8_t address, bool success) {
         // Faulty or non-compliant device: quarantine until major reset.
         quarantined_scans_.set(address);
         scan_attempt_counters_[address] = 0;
+        if (device_manager_) device_manager_->pruneUnidentified(address);
       }
     } else {
       scan_attempt_counters_[address] = 0;  // Reset counter on full success

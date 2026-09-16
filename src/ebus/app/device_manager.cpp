@@ -50,11 +50,16 @@ void DeviceManager::update(ByteView master_view, ByteView slave_view) {
 
     int16_t idx = address_map_[slave_addr];
     if (idx == -1) {
+      // Allocate pool slots only for telegrams carrying slave response data.
+      // Master-only observations (broadcasts, unanswered requests, our own
+      // transmissions) stay in the observed bitsets: per Spec §4.1.1 a master
+      // HAS a slave address, but the slave side only exists if it actually
+      // communicates. Allocating for mere traffic creates phantom devices.
+      if (s_view.empty()) return;
       if (pool_usage_ >= max_devices_) return;
 
       idx = static_cast<int16_t>(pool_usage_++);
       address_map_[slave_addr] = idx;
-      identified_devices_.set(slave_addr);
 
       if (bus_monitor_) {
         bus_monitor_->updateDevice([](auto& d) {
@@ -66,6 +71,7 @@ void DeviceManager::update(ByteView master_view, ByteView slave_view) {
       }
     }
     device_pool_[idx].update(slave_addr, m_view, s_view);
+    if (device_pool_[idx].isIdentified()) identified_devices_.set(slave_addr);
   };
 
   // 1. Track Source Activity (Master)
@@ -127,6 +133,31 @@ bool DeviceManager::isIdentified(uint8_t addr) const {
   platform::LockGuard<platform::Mutex> lock(mutex_);
   int16_t idx = address_map_[addr];
   return idx != -1 && device_pool_[idx].isIdentified();
+}
+
+void DeviceManager::pruneUnidentified(uint8_t addr) {
+  platform::LockGuard<platform::Mutex> lock(mutex_);
+  int16_t idx = address_map_[addr];
+  if (idx == -1) return;
+  if (device_pool_[static_cast<size_t>(idx)].isIdentified()) return;
+
+  // Swap-with-last compaction to keep the pool dense.
+  size_t last = --pool_usage_;
+  if (static_cast<size_t>(idx) != last) {
+    device_pool_[static_cast<size_t>(idx)] = device_pool_[last];
+    address_map_[device_pool_[static_cast<size_t>(idx)].getSlave()] =
+        static_cast<int16_t>(idx);
+  }
+  address_map_[addr] = -1;
+  identified_devices_.reset(addr);
+
+  if (bus_monitor_) {
+    // Back to observed-but-unidentified (bitsets are untouched).
+    bus_monitor_->updateDevice([](auto& d) { d.unknown_devices++; });
+    bus_monitor_->updateDevice([this](auto& d) {
+      d.identified_devices = static_cast<uint32_t>(pool_usage_);
+    });
+  }
 }
 
 bool DeviceManager::needsDeepScan(uint8_t addr) const {

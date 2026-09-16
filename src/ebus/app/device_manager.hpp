@@ -77,6 +77,13 @@ class DeviceManager {
   bool isIdentified(uint8_t addr) const;
 
   /**
+   * @brief Drops the pool entry for addr if it never identified (0704).
+   * Observed bitsets are kept, so genuine re-observation re-adds it cheaply.
+   * Called by the scanner when an address is quarantined.
+   */
+  void pruneUnidentified(uint8_t addr);
+
+  /**
    * @brief Returns true if the device at the given address is identified
    * and still needs vendor-specific data to be fully profiled.
    */
