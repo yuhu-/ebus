@@ -246,3 +246,78 @@ TEST_CASE("DeviceManager: prune drops only unidentified entries",
       [&](const ebus::DeviceInfo& info) { devices.push_back(info); });
   REQUIRE(devices.size() == 1);
 }
+
+TEST_CASE("DeviceManager: metrics align to pool/identified/observed",
+          "[app][devicemanager]") {
+  ebus::BusConfig config;
+  ebus::RuntimeConfig runtime = {.address = 0x33};
+  Request request;
+  BusMonitor bus_monitor;
+  DeviceManager device_manager(&bus_monitor);
+  platform::Bus bus(config, runtime, &request, &bus_monitor);
+  Handler handler(runtime.address, &bus, &request, &bus_monitor);
+
+  device_manager.setOwnAddress(runtime.address);
+
+  auto readMetrics = [&]() {
+    uint32_t unknown = 0;
+    uint32_t identified = 0;
+    bus_monitor.fetchMetrics([&](const ebus::Metrics& m) {
+      unknown = m.devices.unknown_devices;
+      identified = m.devices.identified_devices;
+    });
+    return std::make_pair(unknown, identified);
+  };
+
+  // Answered 0704: pool {0x15}, identified {0x15}, observed {0x15}.
+  device_manager.update(std::vector<uint8_t>{0x10, 0x15, 0x07, 0x04, 0x00},
+                        std::vector<uint8_t>{0x00});
+  REQUIRE(device_manager.isIdentified(0x15));
+  REQUIRE(readMetrics() == std::make_pair(0u, 1u));
+
+  // Unanswered request to 0x08 from master 0x30: no pool entry, but both
+  // the slave (0x08) and the master's slave (0x35) join the observed set.
+  device_manager.update(std::vector<uint8_t>{0x30, 0x08, 0x07, 0x04, 0x00},
+                        std::vector<uint8_t>{});
+  REQUIRE(readMetrics() == std::make_pair(2u, 1u));
+
+  auto status = device_manager.fetchStatus();
+  REQUIRE(status.identified_count == 1);
+  REQUIRE(status.unknown_count == 2);
+
+  std::vector<ebus::DeviceInfo> devices;
+  device_manager.fetchDevices(
+      [&](const ebus::DeviceInfo& info) { devices.push_back(info); });
+  REQUIRE(devices.size() == 1);
+}
+
+TEST_CASE("DeviceManager: writeDeviceJson renders without heap",
+          "[app][devicemanager]") {
+  ebus::BusConfig config;
+  ebus::RuntimeConfig runtime = {.address = 0x33};
+  Request request;
+  BusMonitor bus_monitor;
+  DeviceManager device_manager(&bus_monitor);
+  platform::Bus bus(config, runtime, &request, &bus_monitor);
+  Handler handler(runtime.address, &bus, &request, &bus_monitor);
+
+  device_manager.setOwnAddress(runtime.address);
+
+  device_manager.update(std::vector<uint8_t>{0x10, 0x15, 0x07, 0x04, 0x00},
+                        std::vector<uint8_t>{0x00});
+
+  char frag[1024];
+  size_t used = 0;
+  REQUIRE(device_manager.writeDeviceJson(0x15, frag, sizeof(frag), used));
+  REQUIRE(used > 0);
+  REQUIRE(used < sizeof(frag));
+  std::string json(frag, used);
+  REQUIRE(json.find("15") != std::string::npos);
+  REQUIRE(json.front() == '{');
+  REQUIRE(json.back() == '}');
+
+  // Absent address and zero capacity fail cleanly (caller skips the row).
+  REQUIRE(!device_manager.writeDeviceJson(0x23, frag, sizeof(frag), used));
+  REQUIRE(!device_manager.writeDeviceJson(0x15, frag, 0, used));
+  REQUIRE(!device_manager.writeDeviceJson(0x15, nullptr, sizeof(frag), used));
+}

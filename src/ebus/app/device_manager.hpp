@@ -94,6 +94,15 @@ class DeviceManager {
   void fetchDevices(
       const std::function<void(const DeviceInfo&)>& callback) const;
 
+  // Renders the pool entry for slave_addr as a self-contained JSON object
+  // into out (no I/O, no heap). Returns false when absent, out is null, or
+  // out is too small; callers then skip the row, keeping the surrounding
+  // array valid. Entries may move between calls (swap-with-last
+  // compaction), so one transfer can rarely repeat or miss a row. Lock is
+  // held only while rendering, never across socket I/O.
+  bool writeDeviceJson(uint8_t slave_addr, char* out, size_t capacity,
+                       size_t& used) const;
+
   DeviceManagerStatus fetchStatus() const;
 
  private:
@@ -112,6 +121,11 @@ class DeviceManager {
                                            // associated Device entry
   std::bitset<256> masters_{};
   std::bitset<256> slaves_{};
+
+  // Recomputes unknown/identified device counts from the observed sets.
+  // Drift-proof by construction (no increment/decrement bookkeeping).
+  // Callers must hold mutex_.
+  void updateDeviceMetrics();
 };
 
 }  // namespace ebus::detail

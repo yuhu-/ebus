@@ -5,6 +5,8 @@
 
 #include "app/device_manager.hpp"
 
+#include <cstring>
+
 #include "core/bus_monitor.hpp"
 
 namespace ebus::detail {
@@ -21,26 +23,9 @@ void DeviceManager::update(ByteView master_view, ByteView slave_view) {
   uint8_t m_addr = master_view[0];
   uint8_t s_addr = master_view[1];
 
-  if (bus_monitor_) {
-    bus_monitor_->updateDevice([&](metrics::DeviceMetrics& d) {
-      auto is_new = [&](uint8_t addr) {
-        uint8_t sa = ebus::isSlave(addr) ? addr : ebus::slaveOf(addr);
-        return !masters_.test(masterOf(sa)) && !slaves_.test(sa);
-      };
-
-      if (is_new(m_addr) && !identified_devices_.test(ebus::slaveOf(m_addr))) {
-        d.unknown_devices++;
-      }
-      masters_.set(m_addr);
-
-      if (ebus::isSlave(s_addr)) {
-        if (is_new(s_addr) && !identified_devices_.test(s_addr)) {
-          d.unknown_devices++;
-        }
-        slaves_.set(s_addr);
-      }
-    });
-  }
+  // Observation bitsets (kept for getObservedSlaves and the scanner).
+  masters_.set(m_addr);
+  if (ebus::isSlave(s_addr)) slaves_.set(s_addr);
 
   // Device Inventory & Frequency Tracking
   uint8_t target = master_view[1];
@@ -60,15 +45,6 @@ void DeviceManager::update(ByteView master_view, ByteView slave_view) {
 
       idx = static_cast<int16_t>(pool_usage_++);
       address_map_[slave_addr] = idx;
-
-      if (bus_monitor_) {
-        bus_monitor_->updateDevice([](auto& d) {
-          if (d.unknown_devices > 0) d.unknown_devices--;
-        });
-        bus_monitor_->updateDevice([this](auto& d) {
-          d.identified_devices = static_cast<uint32_t>(pool_usage_);
-        });
-      }
     }
     device_pool_[idx].update(slave_addr, m_view, s_view);
     if (device_pool_[idx].isIdentified()) identified_devices_.set(slave_addr);
@@ -83,6 +59,8 @@ void DeviceManager::update(ByteView master_view, ByteView slave_view) {
     updateEntry(ebus::slaveOf(target), master_view, {});
   else if (ebus::isSlave(target))
     updateEntry(target, master_view, slave_view);
+
+  updateDeviceMetrics();
 }
 
 uint16_t DeviceManager::findNextObservedSlave(uint8_t start) const {
@@ -150,14 +128,7 @@ void DeviceManager::pruneUnidentified(uint8_t addr) {
   }
   address_map_[addr] = -1;
   identified_devices_.reset(addr);
-
-  if (bus_monitor_) {
-    // Back to observed-but-unidentified (bitsets are untouched).
-    bus_monitor_->updateDevice([](auto& d) { d.unknown_devices++; });
-    bus_monitor_->updateDevice([this](auto& d) {
-      d.identified_devices = static_cast<uint32_t>(pool_usage_);
-    });
-  }
+  updateDeviceMetrics();
 }
 
 bool DeviceManager::needsDeepScan(uint8_t addr) const {
@@ -175,6 +146,36 @@ void DeviceManager::getObservedSlaves(std::bitset<256>& observed) const {
       observed.set(static_cast<uint8_t>(i));
     }
   }
+}
+
+bool DeviceManager::writeDeviceJson(uint8_t slave_addr, char* out,
+                                    size_t capacity, size_t& used) const {
+  struct Sink {
+    char* buf;
+    size_t cap;
+    size_t len = 0;
+    bool overflow = false;
+  };
+  Sink sink{out, capacity};
+  {
+    platform::LockGuard<platform::Mutex> lock(mutex_);
+    if (out == nullptr || capacity == 0) return false;
+    const int16_t idx = address_map_[slave_addr];
+    if (idx == -1) return false;
+    detail::JsonWriter writer([&sink](std::string_view s) {
+      if (sink.overflow) return;
+      if (s.size() > sink.cap - sink.len) {
+        sink.overflow = true;
+        return;
+      }
+      std::memcpy(sink.buf + sink.len, s.data(), s.size());
+      sink.len += s.size();
+    });
+    writer.writeValue(device_pool_[static_cast<size_t>(idx)].getDevice());
+  }
+  if (sink.overflow) return false;
+  used = sink.len;
+  return true;
 }
 
 void DeviceManager::fetchDevices(
@@ -198,6 +199,31 @@ DeviceManagerStatus DeviceManager::fetchStatus() const {
         [&](const Metrics& m) { s.unknown_count = m.devices.unknown_devices; });
   }
   return s;
+}
+
+void DeviceManager::updateDeviceMetrics() {
+  if (!bus_monitor_) return;
+  bus_monitor_->updateDevice([&](metrics::DeviceMetrics& d) {
+    // Count distinct observed devices (slave side), excluding ourselves:
+    // a device is observed via its slave address or via its master's.
+    uint32_t observed = 0;
+    uint32_t identified = 0;
+    const uint8_t own_slave = ebus::slaveOf(own_address_);
+    for (uint16_t s = 0; s < 256; ++s) {
+      const auto slave_addr = static_cast<uint8_t>(s);
+      if (slave_addr == own_slave) continue;
+      bool seen = slaves_.test(s);
+      if (!seen) {
+        const uint8_t master_addr = ebus::masterOf(slave_addr);
+        seen = (master_addr != slave_addr) && masters_.test(master_addr);
+      }
+      if (!seen) continue;
+      ++observed;
+      if (identified_devices_.test(s)) ++identified;
+    }
+    d.unknown_devices = observed - identified;
+    d.identified_devices = identified;
+  });
 }
 
 }  // namespace ebus::detail

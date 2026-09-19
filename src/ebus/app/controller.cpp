@@ -476,13 +476,26 @@ void Controller::fetchDevices(
   }
 }
 
-void Controller::fetchDevices(const JsonChunkVisitor& visitor,
-                              bool pretty) const {
+void Controller::fetchDevices(const JsonChunkVisitor& visitor) const {
   if (impl_->configured_.load() && visitor) {
-    detail::JsonWriter writer(visitor, pretty);
-    auto scope = writer.arrayScope();
-    impl_->device_manager_->fetchDevices(
-        [&](const DeviceInfo& d) { writer.writeValue(d); });
+    // Per-device locking with stack fragments: no heap, and the device
+    // lock is never held across socket I/O to slow readers (which stalls
+    // the bus thread into stale timer arms and stray QQs). Slave-address
+    // order, as before.
+    visitor("[");
+    char frag[1024];
+    bool first = true;
+    for (uint16_t s = 0; s < 256; ++s) {
+      size_t used = 0;
+      if (!impl_->device_manager_->writeDeviceJson(static_cast<uint8_t>(s),
+                                                   frag, sizeof(frag), used)) {
+        continue;
+      }
+      if (!first) visitor(",");
+      first = false;
+      visitor(std::string_view(frag, used));
+    }
+    visitor("]");
   }
 }
 
