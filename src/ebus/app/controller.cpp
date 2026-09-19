@@ -506,11 +506,10 @@ void Controller::fetchMetrics(
   }
 }
 
-void Controller::fetchMetrics(const JsonChunkVisitor& visitor,
-                              bool pretty) const {
+void Controller::fetchMetrics(const JsonChunkVisitor& visitor) const {
   if (impl_->configured_.load() && visitor) {
     impl_->bus_monitor_->fetchMetrics([&](const Metrics& m) {
-      detail::JsonWriter writer(visitor, pretty);
+      detail::JsonWriter writer(visitor);
       m.toJson(writer);
     });
   }
@@ -523,10 +522,10 @@ void Controller::fetchUtilizationHistory(
   }
 }
 
-void Controller::fetchUtilizationHistory(const JsonChunkVisitor& visitor,
-                                         bool pretty) const {
+void Controller::fetchUtilizationHistory(
+    const JsonChunkVisitor& visitor) const {
   if (impl_->configured_.load() && visitor) {
-    detail::JsonWriter writer(visitor, pretty);
+    detail::JsonWriter writer(visitor);
     auto scope = writer.arrayScope();
     impl_->bus_monitor_->fetchUtilizationHistory(
         [&](float val) { writer.writeValueFloat(val); });
@@ -538,9 +537,8 @@ void Controller::fetchTraceHistory(
   if (callback) impl_->reactor_->fetchTraceHistory(callback);
 }
 
-void Controller::fetchTraceHistory(const JsonChunkVisitor& visitor,
-                                   bool pretty) const {
-  if (visitor) impl_->reactor_->fetchTraceHistory(visitor, pretty);
+void Controller::fetchTraceHistory(const JsonChunkVisitor& visitor) const {
+  if (visitor) impl_->reactor_->fetchTraceHistory(visitor, false);
 }
 
 void Controller::fetchErrors(
@@ -548,9 +546,8 @@ void Controller::fetchErrors(
   if (callback) impl_->reactor_->fetchErrors(callback);
 }
 
-void Controller::fetchErrors(const JsonChunkVisitor& visitor,
-                             bool pretty) const {
-  if (visitor) impl_->reactor_->fetchErrors(visitor, pretty);
+void Controller::fetchErrors(const JsonChunkVisitor& visitor) const {
+  if (visitor) impl_->reactor_->fetchErrors(visitor, false);
 }
 
 size_t Controller::getErrorLogCapacity() const {
@@ -594,13 +591,12 @@ void Controller::fetchStatus(
   callback(res);
 }
 
-void Controller::fetchStatus(const JsonChunkVisitor& visitor,
-                             bool pretty) const {
+void Controller::fetchStatus(const JsonChunkVisitor& visitor) const {
   ServiceStatus snapshot;
   if (impl_->configured_.load()) {
     impl_->fetchServiceStatus(snapshot);
   }
-  serializeServiceStatus(visitor, snapshot, impl_->bus_monitor_.get(), pretty);
+  serializeServiceStatus(visitor, snapshot, impl_->bus_monitor_.get(), false);
 }
 
 void Controller::clearHistories() {

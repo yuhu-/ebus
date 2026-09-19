@@ -288,7 +288,7 @@ class Controller {
   /**
    * @brief Streams the system metrics JSON in chunks to the provided visitor.
    */
-  void fetchMetrics(const JsonChunkVisitor& visitor, bool pretty = false) const;
+  void fetchMetrics(const JsonChunkVisitor& visitor) const;
 
   /**
    * @brief Returns the recent history of bus utilization percentages.
@@ -299,8 +299,7 @@ class Controller {
    * @brief Streams the bus utilization history JSON in chunks to the provided
    * visitor.
    */
-  void fetchUtilizationHistory(const JsonChunkVisitor& visitor,
-                               bool pretty = false) const;
+  void fetchUtilizationHistory(const JsonChunkVisitor& visitor) const;
 
   /**
    * @brief Returns the raw event trace of the last processed bytes.
@@ -311,8 +310,7 @@ class Controller {
   /**
    * @brief Streams the trace history JSON in chunks to the provided visitor.
    */
-  void fetchTraceHistory(const JsonChunkVisitor& visitor,
-                         bool pretty = false) const;
+  void fetchTraceHistory(const JsonChunkVisitor& visitor) const;
 
   /**
    * @brief Returns a snapshot of the diagnostic error log.
@@ -323,7 +321,7 @@ class Controller {
    * @brief Streams the diagnostic error log JSON in chunks to the provided
    * visitor.
    */
-  void fetchErrors(const JsonChunkVisitor& visitor, bool pretty = false) const;
+  void fetchErrors(const JsonChunkVisitor& visitor) const;
 
   /**
    * @brief Returns the current capacity of the diagnostic error log.
@@ -338,7 +336,7 @@ class Controller {
   /**
    * @brief Streams the service status JSON in chunks to the provided visitor.
    */
-  void fetchStatus(const JsonChunkVisitor& visitor, bool pretty = false) const;
+  void fetchStatus(const JsonChunkVisitor& visitor) const;
 
   /**
    * @brief Clears all historical data from the bus monitor (transitions,

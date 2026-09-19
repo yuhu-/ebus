@@ -157,7 +157,7 @@ int main() {
 
   std::string json;
   json.reserve(8192);
-  deviceB.fetchStatus([&json](std::string_view s) { json.append(s); }, true);
+  deviceB.fetchStatus([&json](std::string_view s) { json.append(s); });
   std::cout << "[Device B] Status: " << json << std::endl;
 
   // --- 9. Stop the simulation ---
