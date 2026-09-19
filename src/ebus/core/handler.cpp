@@ -29,6 +29,11 @@ static constexpr HandlerState reset_trans =
     HandlerState::passive_receive_master;
 static constexpr HandlerState arb_trans = HandlerState::request_bus;
 
+bool isPassiveReceiveState(HandlerState state) {
+  return state >= HandlerState::passive_receive_master &&
+         state <= HandlerState::passive_receive_slave_acknowledge;
+}
+
 // FSM Transition Matrix (Spec 4 & 6)
 
 static constexpr uint16_t transition_masks[] = {
@@ -196,7 +201,13 @@ void Handler::run(const BusEventInfo& info) {
   pending_write_.reset();
 
   size_t idx = static_cast<size_t>(state_);
-  if (idx < FsmLimits::num_handler_states && state_handlers[idx]) {
+  if (passive_desync_ && isPassiveReceiveState(state_)) {
+    // Framing was lost after a persistent passive error: drop bytes until
+    // the next SYN instead of reframing mid-stream tail bytes, which can
+    // align into valid-looking phantom telegrams (e.g. QQ=07/ZZ=2b with an
+    // ACK-ambiguous 0x00 completing an unvalidated slave part).
+    handleDesyncByte(info.byte);
+  } else if (idx < FsmLimits::num_handler_states && state_handlers[idx]) {
     (this->*state_handlers[idx])(info.byte);
   }
 
@@ -332,7 +343,7 @@ void Handler::passiveReceiveMaster(uint8_t byte) {
                       passive_telegram_.getMasterState(),
                       {passive_master_.data(), passive_master_.size()},
                       {passive_slave_.data(), passive_slave_.size()});
-          callPassiveReset();
+          callPassiveResync();
         }
       }
     }
@@ -373,8 +384,7 @@ void Handler::passiveReceiveMasterAcknowledge(uint8_t byte) {
                 passive_telegram_.getMasterState(),
                 {passive_master_.data(), passive_master_.size()},
                 {passive_slave_.data(), passive_slave_.size()});
-    callPassiveReset();
-    transitionTo(HandlerState::passive_receive_master);
+    callPassiveResync();
   }
 }
 
@@ -407,13 +417,24 @@ void Handler::passiveReceiveSlave(uint8_t byte) {
                   passive_telegram_.getSlaveState(),
                   {passive_master_.data(), passive_master_.size()},
                   {passive_slave_.data(), passive_slave_.size()});
+      if (passive_slave_repeated_) {
+        // The retried slave response is corrupt as well: framing is lost,
+        // skip to the next SYN instead of lingering for an ACK that would
+        // complete an unvalidated slave part (phantom telegrams).
+        callPassiveResync();
+        return;
+      }
     }
     transitionTo(HandlerState::passive_receive_slave_acknowledge);
   }
 }
 
 void Handler::passiveReceiveSlaveAcknowledge(uint8_t byte) {
-  if (byte == Symbols::ack) {
+  // An ACK only completes the telegram if the slave part validated: a 0x00
+  // data byte is indistinguishable from ACK, so delivering an unvalidated
+  // slave would mint phantom telegrams out of misaligned tail bytes.
+  if (byte == Symbols::ack &&
+      passive_telegram_.getSlaveState() == SequenceState::seq_ok) {
     callOnTelegram(MessageType::passive, TelegramType::master_slave,
                    {passive_telegram_.getMaster().data(),
                     passive_telegram_.getMaster().size()},
@@ -435,8 +456,7 @@ void Handler::passiveReceiveSlaveAcknowledge(uint8_t byte) {
                 passive_telegram_.getSlaveState(),
                 {passive_master_.data(), passive_master_.size()},
                 {passive_slave_.data(), passive_slave_.size()});
-    callPassiveReset();
-    transitionTo(HandlerState::passive_receive_master);
+    callPassiveResync();
   }
 }
 
@@ -856,6 +876,41 @@ void Handler::callPassiveReset() {
   passive_slave_dbx_ = 0;
   passive_slave_index_ = 0;
   passive_slave_repeated_ = false;
+
+  // Any reset on a completed exchange proves alignment again.
+  passive_desync_ = false;
+  passive_desync_escape_ = false;
+}
+
+void Handler::callPassiveResync() {
+  callPassiveReset();
+  // Framing is untrustworthy until the next SYN: drop everything meanwhile.
+  passive_desync_ = true;
+  passive_desync_escape_ = false;
+  transitionTo(HandlerState::passive_receive_master);
+}
+
+void Handler::handleDesyncByte(uint8_t byte) {
+  if (passive_desync_escape_) {
+    // Swallow the byte following an escape introducer: it decodes to AA/A9
+    // but is never a literal SYN on the wire.
+    passive_desync_escape_ = false;
+    return;
+  }
+  if (byte == Symbols::ext) {
+    passive_desync_escape_ = true;
+    return;
+  }
+  if (byte != Symbols::syn) {
+    if (bus_monitor_)
+      bus_monitor_->updateHandler([](auto& m) { m.resync_drops++; });
+    return;
+  }
+  // SYN re-establishes framing: resume with normal SYN handling on empty
+  // buffers (no-op buffer check plus pending bus request, if any).
+  passive_desync_ = false;
+  transitionTo(HandlerState::passive_receive_master);
+  passiveReceiveMaster(byte);
 }
 
 void Handler::callActiveReset() {

@@ -52,6 +52,9 @@ SCENARIO("Handler processes eBUS messages correctly", "[core][handler]") {
         {ebus::MessageType::passive, 0x33, "passive 0704: Scan", "002e0704004e", "", {0, 1}},
         {ebus::MessageType::passive, 0x33, "passive BC: Normal", "10fe07000970160443183105052592", "", {1, 0}},
         {ebus::MessageType::passive, 0x33, "passive MS: Slave CRC 0x21 is missing", "1008b5130304cd017f000acd01000000000100010000", "", {0, 2}},
+        {ebus::MessageType::passive, 0x33, "passive MS: Slave error + ACK on incomplete slave is dropped, resync at SYN", "ff52b509030d0600430003b0fba902d000" "aa" "ff52b509030d0600430003b0fba901d000", "", {1, 2}},
+        {ebus::MessageType::passive, 0x33, "passive MS: Repeated slave error resyncs, SYN + valid telegram recovers", "ff52b509030d0600430003b0fba902d0ff03b0fba902d0" "aa" "ff52b509030d0600430003b0fba901d000", "", {1, 2}},
+        {ebus::MessageType::passive, 0x33, "passive MS: Master error resyncs, SYN-less trailer is dropped", "00fe0704003c" "ff52b509030d0600430003b0fba901d000", "", {0, 1}},
 
         {ebus::MessageType::reactive, 0x33, "reactive MS: Slave NAK/ACK", "0038070400ab000ab5504d5330300107430245ff0ab5504d533030010743024600", "", {1, 0}},
         {ebus::MessageType::reactive, 0x33, "reactive MS: Slave NAK/NAK", "0038070400ab000ab5504d5330300107430245ff0ab5504d5330300107430245ff", "", {0, 1}},

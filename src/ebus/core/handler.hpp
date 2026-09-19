@@ -83,6 +83,14 @@ class Handler {
   size_t passive_slave_index_ = 0;
   bool passive_slave_repeated_ = false;
 
+  // Post-error resynchronization: while set, the passive receive states drop
+  // every byte until the next SYN re-establishes framing (escape-aware, so a
+  // stuffed AA can never end the skip). Any completed telegram proves
+  // alignment again and clears it via callPassiveReset().
+  bool passive_desync_ = false;
+  bool passive_desync_escape_ = false;
+
+
   // active
   bool active_message_ = false;
   Telegram active_telegram_;
@@ -141,6 +149,8 @@ class Handler {
   void checkActiveBuffers();
 
   void callPassiveReset();
+  void callPassiveResync();
+  void handleDesyncByte(uint8_t byte);
   void callActiveReset();
 
   void onBusRequested();
