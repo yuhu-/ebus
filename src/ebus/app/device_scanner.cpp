@@ -26,6 +26,9 @@ DeviceScanner::DeviceScanner(uint8_t address, DeviceManager* device_manager)
   // Note: current_deep_scan_address_ and other members are initialized
   // via default member initializers in the header.
   scan_attempt_counters_.fill(0);
+  // Anchor the epoch-reset baseline at construction: otherwise the 30-minute
+  // epoch fires once spuriously on the first nextCommand() call.
+  last_scan_attempt_ = Clock::now();
 }
 
 void DeviceScanner::stop() {
@@ -149,6 +152,7 @@ ebus::Sequence DeviceScanner::nextCommand() {
       quarantined_scans_.reset();
       scan_attempt_counters_.fill(0);
       failure_resets_++;
+      last_scan_attempt_ = now;
     }
 
     // Priority Logic: Background discovery (Full/Startup) is postponed if busy.
