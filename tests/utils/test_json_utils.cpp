@@ -128,6 +128,30 @@ TEST_CASE("JSON Utils: Streaming Writer", "[utils][json]") {
     REQUIRE(std::count(result.begin(), result.end(), '{') == 11);
     REQUIRE(std::count(result.begin(), result.end(), '}') == 11);
   }
+
+  SECTION("Externally produced value composes correctly") {
+    result.clear();
+    {
+      ebus::detail::JsonWriter writer(visitor);
+      writer.startObject();
+      writer.writeField("a", 1);
+      // Simulate a nested fetch (e.g. fetchDevices) emitting through its
+      // own writer on the same visitor.
+      writer.appendKey("arr");
+      writer.flush();
+      {
+        ebus::detail::JsonWriter inner(visitor);
+        inner.startArray();
+        inner.writeValue(1);
+        inner.writeValue(2);
+        inner.endArray();
+      }
+      writer.externalValue();
+      writer.writeField("b", 2);
+      writer.endObject();
+    }
+    REQUIRE(result == "{\"a\":1,\"arr\":[1,2],\"b\":2}");
+  }
 }
 
 TEST_CASE("JSON Utils: Pull-Parser Extraction", "[utils][json]") {

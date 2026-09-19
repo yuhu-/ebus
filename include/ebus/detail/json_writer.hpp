@@ -117,6 +117,20 @@ class JsonWriter {
     }
   }
 
+  /**
+   * @brief Completes a value produced outside this writer.
+   *
+   * Use after appendKey() when the value bytes were emitted by another
+   * writer sharing the same chunk visitor (e.g. a nested fetchDevices
+   * call): flush() this writer first so chunk order stays valid, let the
+   * other writer complete, then call this to restore a consistent state.
+   * Emits nothing itself.
+   */
+  void externalValue() {
+    beforeValue();
+    afterValue();
+  }
+
   void startObject() {
     beforeValue();
     write("{");
