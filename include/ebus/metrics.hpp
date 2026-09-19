@@ -90,6 +90,15 @@ struct HandlerMetrics {
   MetricValues active_first;
   MetricValues active_data;
 
+  float errorRate() const {
+    const uint32_t m_total =
+        messages_passive + messages_active + messages_reactive;
+    const uint32_t e_total = error_passive + error_reactive + error_active;
+    return (m_total > 0 || e_total > 0)
+               ? (static_cast<float>(e_total) / (m_total + e_total)) * 100.0f
+               : 0.0f;
+  }
+
   void reset();
 
   void toJson(detail::JsonWriter& writer) const;
