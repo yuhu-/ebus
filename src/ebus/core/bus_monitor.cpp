@@ -383,6 +383,8 @@ void metrics::HandlerMetrics::reset() {
   total_observed_protocol_bytes = 0;
   invalid_bytes = 0;
   resync_drops = 0;
+  echo_mismatch_count = 0;
+  echo_mismatch_tap.fill(0);
   last_error_address = 0xff;
   last_success_address = 0xff;
   last_passive_reset_us = 0;
@@ -435,6 +437,9 @@ void metrics::HandlerMetrics::toJson(detail::JsonWriter& writer) const {
   writer.writeField("resets_active", resets_active);
   writer.writeField("invalid_bytes", invalid_bytes);
   writer.writeField("resync_drops", resync_drops);
+  writer.writeField("echo_mismatch_count", echo_mismatch_count);
+  writer.writeHexField("echo_mismatch_tap",
+                       ByteView(echo_mismatch_tap.data(), 16));
   writer.writeHexField("last_error_address", ByteView(&last_error_address, 1));
   if (last_success_address != 0xff) {
     writer.writeHexField("last_success_address",

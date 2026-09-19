@@ -201,6 +201,7 @@ void Handler::run(const BusEventInfo& info) {
   pending_write_.reset();
 
   size_t idx = static_cast<size_t>(state_);
+  rx_tap_[rx_tap_idx_++ % rx_tap_size] = info.byte;
   if (passive_desync_ && isPassiveReceiveState(state_)) {
     // Framing was lost after a persistent passive error: drop bytes until
     // the next SYN instead of reframing mid-stream tail bytes, which can
@@ -666,6 +667,15 @@ void Handler::activeSendMaster(uint8_t byte) {
         static_cast<unsigned>(active_master_[active_master_index_]),
         static_cast<unsigned>(byte),
         static_cast<unsigned>(active_master_.size()));
+    // Stash raw RX history into metrics (no printf on the bus thread!).
+    // Read via /metrics echo_mismatch_tap; see rx_tap_ reading guide.
+    if (bus_monitor_) {
+      bus_monitor_->updateHandler([this](auto& m) {
+        for (size_t i = 0; i < 16; ++i)
+          m.echo_mismatch_tap[i] = rx_tap_[(rx_tap_idx_ + i) % rx_tap_size];
+        m.echo_mismatch_count++;
+      });
+    }
     callOnError(LogLevel::error, ProtocolError::error_active_master_echo,
                 active_telegram_.getMasterState(),
                 {active_master_.data(), active_master_.size()},

@@ -90,6 +90,14 @@ class Handler {
   bool passive_desync_ = false;
   bool passive_desync_escape_ = false;
 
+  // Permanent RX wire-tap: last raw RX bytes (ring), snapshotted into
+  // metrics on every echo mismatch. Zero heap, negligible cost. Reading
+  // guide (last bytes, oldest to newest): ends "QQ ZZ .." with no match =
+  // state/index confusion, not a wire problem; "QQ SYN" = ZZ write missing;
+  // "QQ QQ" = double QQ write (timer); trailing SYN = stale/late byte.
+  static constexpr size_t rx_tap_size = 16;
+  uint8_t rx_tap_[rx_tap_size] = {};
+  uint8_t rx_tap_idx_ = 0;
 
   // active
   bool active_message_ = false;

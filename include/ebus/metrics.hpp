@@ -71,6 +71,9 @@ struct HandlerMetrics {
   uint64_t total_observed_protocol_bytes = 0;
   uint32_t invalid_bytes = 0;
   uint32_t resync_drops = 0;
+  // Wire-tap snapshot at last echo mismatch + count (see rx_tap_ guide).
+  uint32_t echo_mismatch_count = 0;
+  std::array<uint8_t, 16> echo_mismatch_tap{};
   uint8_t last_error_address = 0xff;
   uint8_t last_success_address = 0xff;
   uint64_t last_passive_reset_us = 0;
