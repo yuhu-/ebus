@@ -111,6 +111,15 @@ class BusEsp : public BusBase {
   bool start_bit_flag_ = false;
   bool micros_delay_flag_ = false;
   bool micros_window_flag_ = false;
+  // QQ-timer single-shot guard (timer_mux_): exactly one QQ write per
+  // arbitration. Set on SYN-arm, cleared on fire or when contender traffic
+  // makes our entry obsolete (defer to the next SYN instead of jamming).
+  bool qq_timer_armed_ = false;
+  // Timestamp (esp_timer us) of the last QQ byte written. SYNs processed
+  // within one byte time after our own QQ must not re-arm: they are our
+  // abort-SYN echo or backlog-adjacent duplicates, and firing into them
+  // doubles QQ into our own echo window (self-sustaining abort chain).
+  int64_t last_qq_write_us_ = 0;
 
   int64_t micros_last_delay_ = 0;
   int64_t micros_last_window_ = 0;

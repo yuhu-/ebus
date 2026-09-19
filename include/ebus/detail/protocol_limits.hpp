@@ -162,6 +162,15 @@ inline constexpr uint32_t address_factor_ms = 10;  // move to config
 inline constexpr uint32_t postpone_ms = 2;         // move to config
 inline constexpr uint32_t carrier_sense_ms = 5;    // move to config
 inline constexpr uint32_t serialization_delay_ms = 4;
+// QQ arbitration is only attempted while caught up: more pending UART
+// events than this means the SYN being processed went stale (~4 ms per
+// byte) and firing into it transmits mid-telegram.
+inline constexpr size_t max_stale_events = 2;
+// After our own QQ write, SYNs processed within this window must not
+// re-arm: they are our abort-SYN echo or backlog-adjacent duplicates.
+// Must exceed one byte time (4166 us at 2400 baud); legitimate next
+// arbitrations start >10 ms out.
+inline constexpr int64_t qq_blackout_us = 5000;
 }  // namespace Syn
 
 namespace platform::Esp {

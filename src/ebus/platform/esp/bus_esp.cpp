@@ -433,19 +433,42 @@ void BusEsp::ebusUartEventRunner() {
                          static_cast<int64_t>(offset))
                       : 0;
 
-              gptimer_alarm_config_t alarm_config = {};
-              alarm_config.alarm_count = static_cast<uint64_t>(delay);
-              alarm_config.reload_count = 0;
-              alarm_config.flags.auto_reload_on_alarm = false;
-              gptimer_stop(gp_timer_);
-              gptimer_set_raw_count(gp_timer_, 0);
-              gptimer_set_alarm_action(gp_timer_, &alarm_config);
-              gptimer_start(gp_timer_);
-
+              // Single-shot guard: at most one armed QQ intent at a time.
+              // A duplicate SYN processing while an alarm is already pending
+              // must not program a second alarm (double QQ on the wire).
+              // Freshness gate: only arbitrate when caught up. A backlogged
+              // UART event queue means this SYN went stale milliseconds ago;
+              // firing into it transmits mid-telegram (jam + abort + retry
+              // spiral). Defer to the next SYN instead.
+              // Blackout gate: no re-arm within one byte time after our own
+              // QQ write (abort-SYN echo or backlog-adjacent duplicate).
+              bool arm_timer = false;
               portENTER_CRITICAL(&timer_mux_);
-              micros_last_delay_ = delay;
-              micros_delay_flag_ = true;
+              if (!qq_timer_armed_ &&
+                  uxQueueMessagesWaiting(uart_event_queue_) <=
+                      BusLimits::Syn::max_stale_events &&
+                  esp_timer_get_time() - last_qq_write_us_ >=
+                      BusLimits::Syn::qq_blackout_us) {
+                qq_timer_armed_ = true;
+                arm_timer = true;
+              }
               portEXIT_CRITICAL(&timer_mux_);
+
+              if (arm_timer) {
+                gptimer_alarm_config_t alarm_config = {};
+                alarm_config.alarm_count = static_cast<uint64_t>(delay);
+                alarm_config.reload_count = 0;
+                alarm_config.flags.auto_reload_on_alarm = false;
+                gptimer_stop(gp_timer_);
+                gptimer_set_raw_count(gp_timer_, 0);
+                gptimer_set_alarm_action(gp_timer_, &alarm_config);
+                gptimer_start(gp_timer_);
+
+                portENTER_CRITICAL(&timer_mux_);
+                micros_last_delay_ = delay;
+                micros_delay_flag_ = true;
+                portEXIT_CRITICAL(&timer_mux_);
+              }
 
               if (request_->busRequestIsExternal())
                 suppress_syn_bus_event = true;  // Suppress the SYN byte event
@@ -455,6 +478,15 @@ void BusEsp::ebusUartEventRunner() {
               if (bus_monitor_) bus_monitor_->recordIsrStartBitError();
               portEXIT_CRITICAL(&timer_mux_);
             }
+          } else {
+            // No SYN entry (contender/data traffic, or our request was
+            // withdrawn meanwhile): a pending QQ entry is obsolete. Defuse
+            // it so we defer to the next SYN instead of transmitting into
+            // a running telegram.
+            portENTER_CRITICAL(&timer_mux_);
+            qq_timer_armed_ = false;
+            micros_delay_flag_ = false;
+            portEXIT_CRITICAL(&timer_mux_);
           }
 
           // capture ISR flags and timing atomically and clear globals
@@ -581,6 +613,14 @@ bool IRAM_ATTR BusEsp::s_onBusIsrTimer(gptimer_handle_t timer,
 }
 
 bool IRAM_ATTR BusEsp::onBusIsrTimer() {
+  portENTER_CRITICAL_ISR(&timer_mux_);
+  if (!qq_timer_armed_ || !request_->busRequestPending()) {
+    portEXIT_CRITICAL_ISR(&timer_mux_);
+    return false;  // Superseded or withdrawn: write nothing.
+  }
+  qq_timer_armed_ = false;
+  last_qq_write_us_ = esp_timer_get_time();
+  portEXIT_CRITICAL_ISR(&timer_mux_);
   uint8_t byte = request_->busRequestAddress();
   uart_ll_write_txfifo(UART_LL_GET_HW(uart_port_num_), &byte, 1);
   portENTER_CRITICAL_ISR(&timer_mux_);
