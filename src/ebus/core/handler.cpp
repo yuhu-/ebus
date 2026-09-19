@@ -215,7 +215,11 @@ void Handler::run(const BusEventInfo& info) {
   if (pending_write_ && bus_) {
     if (bus_monitor_) bus_monitor_->write.markBegin();
     bus_->writeByte(*pending_write_);
-    if (bus_monitor_) bus_monitor_->write.markEnd();
+    if (bus_monitor_) {
+      bus_monitor_->write.markEnd();
+      bus_monitor_->updateHandler(
+          [](auto& m) { m.total_sent_protocol_bytes++; });
+    }
   }
 }
 
@@ -544,6 +548,9 @@ void Handler::reactiveReceiveSlaveAcknowledge(uint8_t byte) {
 
 void Handler::requestBus(uint8_t byte) {
   auto won = [&]() {
+    // Discard foreign partials accumulated while our request was pending;
+    // our echo is consumed by the active states from here on.
+    callPassiveReset();
     active_master_ = active_telegram_.getMaster();
     active_master_.push_back(active_telegram_.getMasterCRC(), false);
     active_master_.extend();
@@ -564,6 +571,14 @@ void Handler::requestBus(uint8_t byte) {
 
   auto lost = [&]() {
     callOnBusRequestLost();
+    // Wire-AND of valid master addresses always yields a valid master: a
+    // non-master byte means our arbitration entry hit foreign traffic
+    // mid-byte, so it must not be framed as QQ.
+    callPassiveReset();
+    if (!ebus::isMaster(byte)) {
+      callPassiveResync();
+      return;
+    }
     passive_master_.push_back(byte);
     active_message_ = false;
     active_telegram_.clear();  // Clear active message state
@@ -576,6 +591,14 @@ void Handler::requestBus(uint8_t byte) {
     active_message_ = false;
     active_telegram_.clear();  // Clear active message state
     active_master_.clear();
+    if (last_result_ == RequestResult::observe_data ||
+        last_result_ == RequestResult::retry_error) {
+      // The bus turned out busy while we requested it: the dropped byte
+      // leaves us mid-telegram, so skip to the next SYN.
+      callPassiveResync();
+      return;
+    }
+    callPassiveReset();
     transitionTo(HandlerState::passive_receive_master);
   };
 
@@ -630,7 +653,6 @@ void Handler::activeSendMaster(uint8_t byte) {
                 {active_master_.data(), active_master_.size()},
                 {active_slave_.data(), active_slave_.size()});
     callActiveReset();
-    callWrite(Symbols::syn);
     transitionTo(HandlerState::release_bus);
     return;
   }
@@ -648,8 +670,10 @@ void Handler::activeSendMaster(uint8_t byte) {
                 active_telegram_.getMasterState(),
                 {active_master_.data(), active_master_.size()},
                 {active_slave_.data(), active_slave_.size()});
+    // Withdraw silently (no SYN): our abort SYN's echo would otherwise
+    // arrive mid-next-attempt and re-trigger this same abort (self-
+    // sustaining storm). The scheduler learns via the error event.
     callActiveReset();
-    callWrite(Symbols::syn);
     transitionTo(HandlerState::release_bus);
     return;
   }
@@ -703,7 +727,6 @@ void Handler::activeReceiveMasterAcknowledge(uint8_t byte) {
                 {active_master_.data(), active_master_.size()},
                 {active_slave_.data(), active_slave_.size()});
     callActiveReset();  // Reset active state
-    callWrite(Symbols::syn);
     transitionTo(HandlerState::release_bus);
   }
 }
@@ -782,7 +805,6 @@ void Handler::activeSendSlaveNegativeAcknowledge(
                 {active_master_.data(), active_master_.size()},
                 {active_slave_.data(), active_slave_.size()});
     callActiveReset();  // Reset active state
-    callWrite(Symbols::syn);
     transitionTo(HandlerState::release_bus);
   }
 }
@@ -966,8 +988,11 @@ void Handler::callOnTelegram(MessageType message_type,
       if (slave_view.size() >= 1) {
         data_bytes += slave_view[0];  // NN
       }
-      bus_monitor_->updateHandler(
-          [data_bytes](auto& m) { m.total_observed_data_bytes += data_bytes; });
+      bus_monitor_->updateHandler([data_bytes, message_type](auto& m) {
+        m.total_observed_data_bytes += data_bytes;
+        if (message_type == MessageType::active)
+          m.total_sent_data_bytes += data_bytes;
+      });
 
       if (telegram_type != TelegramType::broadcast && master_view.size() >= 2) {
         bus_monitor_->recordHandlerSuccess(master_view[1]);

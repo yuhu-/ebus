@@ -276,7 +276,7 @@ class Controller {
   /**
    * @brief Streams the device JSON in chunks to the provided visitor.
    */
-  void fetchDevices(const JsonChunkVisitor& visitor, bool pretty = false) const;
+  void fetchDevices(const JsonChunkVisitor& visitor) const;
 
   /**
    * @brief Invokes a visitor callback with a snapshot of system performance
