@@ -171,6 +171,8 @@ class BusMonitor {
   // Physical Layer stats (moved from BusPosix/BusFreeRtos)
   TimingStats delay;
   TimingStats window;
+  // QQ-write to won-processing age (Handler::won records every win).
+  TimingStats qq_win_age;
   TimingStats transmit;
   TimingStats syn_postpone;
   TimingStats loop_cycle;

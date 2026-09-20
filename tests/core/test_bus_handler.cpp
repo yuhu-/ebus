@@ -341,6 +341,11 @@ TEST_CASE("Handler preload: full master remainder on wire after won",
   std::vector<uint8_t> wire = d.drainWire();
   REQUIRE(wire.size() > 1);
 
+  // The win itself is recorded for the qq_win_age distribution.
+  d.bus_monitor.fetchMetrics([&](const ebus::Metrics& m) {
+    REQUIRE(m.request.qq_win_age.count >= 1);
+  });
+
   // Feed the bulk back as echoes: must complete without further writes.
   for (uint8_t b : wire) d.feed(b);
   REQUIRE(d.stats.telegrams == 1);

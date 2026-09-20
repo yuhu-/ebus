@@ -38,6 +38,7 @@ void BusMonitor::resetMetrics() {
 
   delay.reset();
   window.reset();
+  qq_win_age.reset();
   transmit.reset();
   syn_postpone.reset();
   loop_cycle.reset();
@@ -243,6 +244,7 @@ void BusMonitor::fetchMetrics(
     // 2. Populate Request Part
     metrics::RequestMetrics& rm = sm.request;
     rm = request_acc_;
+    rm.qq_win_age = qq_win_age.getValues();
 
     // 3. Populate Bus Part
     metrics::BusMetrics& bm = sm.bus;
@@ -515,6 +517,7 @@ void metrics::RequestMetrics::toJson(detail::JsonWriter& writer) const {
   writer.writeField("bus_request_blocked", bus_request_blocked);
   writer.writeField("lock_counter_reset", lock_counter_reset);
   writer.writeField("session_timeouts", session_timeouts);
+  writer.writeField("qq_win_age", qq_win_age);
 }
 
 void metrics::BusMetrics::reset() {

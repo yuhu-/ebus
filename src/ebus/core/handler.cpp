@@ -575,6 +575,11 @@ void Handler::requestBus(uint8_t byte) {
     // scheduler learns via the lost event (breaker counts it honestly).
     // Framing after the blackout is unknown, so resync to the next SYN.
     const uint32_t qq_age_us = bus_ ? bus_->qqWriteAgeUs() : 0;
+    // Record every win for the qq_win_age distribution (request section),
+    // stale or not — the distribution itself is the diagnostic. Clamp the
+    // never-wrote sentinel so it cannot poison last/max.
+    if (bus_monitor_ && qq_age_us != UINT32_MAX)
+      bus_monitor_->qq_win_age.addSample(qq_age_us);
     if (qq_age_us >= qq_stale_threshold_us_) {
       callOnBusRequestLost();
       active_message_ = false;

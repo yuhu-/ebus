@@ -120,6 +120,10 @@ struct RequestMetrics {
   uint32_t lock_counter_reset = 0;
   uint32_t session_timeouts = 0;
 
+  // QQ-write to won-processing age: the stale-win budget actually consumed.
+  // Compare against the 40ms foreign AUTO-SYN horizon (Spec 9.2).
+  MetricValues qq_win_age;
+
   void reset();
 
   void toJson(detail::JsonWriter& writer) const;
