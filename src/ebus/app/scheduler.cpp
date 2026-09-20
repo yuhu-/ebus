@@ -136,8 +136,13 @@ void Scheduler::onHandlerProtocol(const ProtocolInfo& info) {
 
   uint32_t scheduler_attempts = 0;
   if (is_active) {
-    platform::LockGuard<platform::Mutex> lock(data_mutex_);
-    if (active_item_ && active_item_->session_id == s_id) {
+    // Never block the bus thread here: on contention the attempts count
+    // is reported as unknown (reporting-only field, retry decisions use
+    // the item counter directly). A blocked bus thread backs up the UART
+    // queue, and stale bytes then drive stray arbitration writes.
+    platform::UniqueLock<platform::Mutex> lock(data_mutex_, std::try_to_lock);
+    if (lock.owns_lock() && active_item_ &&
+        active_item_->session_id == s_id) {
       scheduler_attempts = active_item_->item.attempts;
     }
   }
