@@ -39,6 +39,7 @@ Request::Request(BusMonitor* bus_monitor) : bus_monitor_(bus_monitor) {}
 void Request::reset() {
   lock_counter_ = lock_counter_max_;
   bytes_since_syn_ = 0;
+  collision_bar_ = false;
   if (bus_monitor_)
     bus_monitor_->updateRequest([](auto& m) { m.lock_counter_reset++; });
   bus_request_.store(false, std::memory_order_release);
@@ -93,6 +94,7 @@ void Request::startBit() {
   // We can no longer trust the bus state, so we abort any pending request
   // and return to the safest state: observing the bus for a clean SYN.
   bus_request_.store(false, std::memory_order_release);
+  collision_bar_ = false;
   transitionTo(RequestState::observe);
   result_ = RequestResult::observe_syn;
   if (start_bit_callback_) start_bit_callback_();
@@ -108,7 +110,7 @@ ebus::RequestResult Request::run(uint8_t byte) {
 
 bool Request::busAvailable() const {
   return result_ == RequestResult::observe_syn && lock_counter_ == 0 &&
-         !bus_request_.load(std::memory_order_acquire);
+         !bus_request_.load(std::memory_order_acquire) && !collision_bar_;
 }
 
 ebus::RequestState Request::getState() const { return state_; }
@@ -120,8 +122,14 @@ void Request::observe(uint8_t byte) {
     // Spec 6.4: Decrement unless the SYN follows an arbitration without a clear
     // winner. An arbitration collision results in exactly one byte (the
     // address) between SYNs.
+    // Spec 6.2.2.2: SYN / Address / AUTO-SYN bars all participants that made
+    // no prior attempt until the next SYN. Only same-class colliders (retry
+    // state, re-armed bus_request_) may access after AUTO-SYN.
     if (bytes_since_syn_ != RequestLimits::collision_byte_count) {
       if (lock_counter_ > 0) lock_counter_--;
+      collision_bar_ = false;
+    } else {
+      collision_bar_ = true;
     }
     result_ = RequestResult::observe_syn;
     bytes_since_syn_ = 0;
@@ -162,6 +170,9 @@ void Request::first(uint8_t byte) {
       // If we wait until we see the next SYN in 'retry()', the Bus thread
       // will have already passed the write window for that SYN.
       bus_request_.store(true, std::memory_order_release);
+      // Round 2 after AUTO-SYN belongs to same-class colliders only:
+      // bar newcomers until the next SYN (Spec 6.2.2.2).
+      collision_bar_ = true;
       result_ = RequestResult::first_retry;
       bytes_since_syn_ = RequestLimits::collision_byte_count;
     } else {

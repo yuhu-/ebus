@@ -90,6 +90,59 @@ TEST_CASE("Request: first -> firstRetry -> retry -> second -> secondWon",
   REQUIRE(r.getState() == ebus::RequestState::observe);
 }
 
+TEST_CASE("Request: AUTO-SYN bars newcomers until next SYN (Spec 6.2.2.2)",
+          "[core][request]") {
+  Request r;
+  r.setLockCounter(0);
+  r.reset();
+  REQUIRE(r.busAvailable() == true);
+
+  // Passive collision: SYN / Address / AUTO-SYN (exactly one byte between).
+  r.run(ebus::Symbols::syn);
+  r.run(0x10);
+  r.run(ebus::Symbols::syn);
+  REQUIRE(r.getResult() == ebus::RequestResult::observe_syn);
+
+  // Newcomer must be barred despite lock==0.
+  REQUIRE(r.requestBus(0x30) == false);
+  REQUIRE(r.busRequestPending() == false);
+
+  // A full telegram (multiple bytes) followed by SYN lifts the bar.
+  r.run(0x10);
+  r.run(0x08);
+  r.run(0xb5);
+  r.run(ebus::Symbols::syn);
+  REQUIRE(r.busAvailable() == true);
+  REQUIRE(r.requestBus(0x30) == true);
+}
+
+TEST_CASE("Request: same-class collider bypasses bar via retry",
+          "[core][request]") {
+  Request r;
+  r.setLockCounter(0);
+  r.reset();
+  r.requestBus(0x33);
+  r.busRequestCompleted();  // state = first
+
+  r.run(ebus::Symbols::syn);
+  auto res = r.run(0x13);  // same priority class -> collision
+  REQUIRE(res == ebus::RequestResult::first_retry);
+  REQUIRE(r.busRequestPending() == true);  // re-armed, bypasses requestBus
+
+  // AUTO-SYN moves us to second round.
+  res = r.run(ebus::Symbols::syn);
+  REQUIRE(res == ebus::RequestResult::retry_syn);
+
+  // A newcomer request must still be barred...
+  // (bus_request_ already pending, so use a fresh instance for the
+  // newcomer check is not possible on shared state; instead verify the
+  // holder keeps its pending flag while the bar is active.)
+  REQUIRE(r.busRequestPending() == true);
+
+  res = r.run(0x33);
+  REQUIRE(res == ebus::RequestResult::second_won);
+}
+
 TEST_CASE("Request: startBit resets state and clears pending request",
           "[core][request]") {
   Request r;

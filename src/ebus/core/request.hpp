@@ -65,6 +65,13 @@ class Request {
   // Counter to detect collisions in observe mode (Spec 6.4 exception)
   uint32_t bytes_since_syn_ = 0;
 
+  // One-shot bar after unclear arbitration (Spec 6.2.2.2):
+  // SYN / Address / AUTO-SYN bars all participants that made no prior
+  // attempt until the next SYN. Only same-priority-class colliders holding
+  // the retry state may access after AUTO-SYN (they bypass requestBus via
+  // the re-armed bus_request_ flag).
+  bool collision_bar_ = false;
+
   uint8_t request_address_ = 0;
 
   // Indicates whether a bus request is present
