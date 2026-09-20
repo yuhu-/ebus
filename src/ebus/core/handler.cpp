@@ -213,13 +213,28 @@ void Handler::run(const BusEventInfo& info) {
   }
 
   // Defer actual bus I/O until after the logic step
-  if (pending_write_ && bus_) {
-    if (bus_monitor_) bus_monitor_->write.markBegin();
-    bus_->writeByte(*pending_write_);
-    if (bus_monitor_) {
-      bus_monitor_->write.markEnd();
-      bus_monitor_->updateHandler(
-          [](auto& m) { m.total_sent_protocol_bytes++; });
+  if (bus_) {
+    if (pending_write_) {
+      if (bus_monitor_) bus_monitor_->write.markBegin();
+      bus_->writeByte(*pending_write_);
+      pending_write_.reset();
+      if (bus_monitor_) {
+        bus_monitor_->write.markEnd();
+        bus_monitor_->updateHandler(
+            [](auto& m) { m.total_sent_protocol_bytes++; });
+      }
+    }
+    if (!pending_write_bulk_.empty()) {
+      if (bus_monitor_) bus_monitor_->write.markBegin();
+      bus_->writeBytes(pending_write_bulk_);
+      const size_t bulk_len = pending_write_bulk_.size();
+      pending_write_bulk_.clear();
+      if (bus_monitor_) {
+        bus_monitor_->write.markEnd();
+        bus_monitor_->updateHandler([bulk_len](auto& m) {
+          m.total_sent_protocol_bytes += static_cast<uint32_t>(bulk_len);
+        });
+      }
     }
   }
 }
@@ -552,13 +567,34 @@ void Handler::requestBus(uint8_t byte) {
     // Discard foreign partials accumulated while our request was pending;
     // our echo is consumed by the active states from here on.
     callPassiveReset();
+    // Stale-win guard: the QQ fired via ISR on time, but if this echo
+    // arrives past the foreign AUTO-SYN horizon the bus already moved on
+    // (idle 40ms+ => real SYN on the wire, Spec 9.2). Preloading now would
+    // jam live traffic with our strays and die at idx1 on the stale SYN.
+    // Release silently as lost instead: no bulk, no error counters, the
+    // scheduler learns via the lost event (breaker counts it honestly).
+    // Framing after the blackout is unknown, so resync to the next SYN.
+    const uint32_t qq_age_us = bus_ ? bus_->qqWriteAgeUs() : 0;
+    if (qq_age_us >= qq_stale_threshold_us_) {
+      callOnBusRequestLost();
+      active_message_ = false;
+      active_telegram_.clear();
+      active_master_.clear();
+      callPassiveResync();
+      return;
+    }
     active_master_ = active_telegram_.getMaster();
     active_master_.push_back(active_telegram_.getMasterCRC(), false);
     active_master_.extend();
     if (active_master_.size() > 1) {
       callOnBusRequestWon();
       active_master_index_ = 1;
-      callWrite(active_master_[active_master_index_]);
+      // Preload the whole remaining master part into the TX FIFO in one
+      // step: a single wakeup instead of one per byte. Echoes are still
+      // verified per byte in activeSendMaster; our back-to-back edges keep
+      // restarting the foreign AUTO-SYN timer, so each echo keeps a fresh
+      // 40ms budget (Spec 9.2) with no further thread wakeups required.
+      stageMasterBulk();
       transitionTo(HandlerState::active_send_master);
     } else {
       callOnBusRequestLost();
@@ -584,6 +620,7 @@ void Handler::requestBus(uint8_t byte) {
     active_message_ = false;
     active_telegram_.clear();  // Clear active message state
     active_master_.clear();
+    active_master_preloaded_ = false;
     transitionTo(HandlerState::passive_receive_master);
   };
 
@@ -592,6 +629,7 @@ void Handler::requestBus(uint8_t byte) {
     active_message_ = false;
     active_telegram_.clear();  // Clear active message state
     active_master_.clear();
+    active_master_preloaded_ = false;
     if (last_result_ == RequestResult::observe_data ||
         last_result_ == RequestResult::retry_error) {
       // The bus turned out busy while we requested it: the dropped byte
@@ -683,6 +721,12 @@ void Handler::activeSendMaster(uint8_t byte) {
     // Withdraw silently (no SYN): our abort SYN's echo would otherwise
     // arrive mid-next-attempt and re-trigger this same abort (self-
     // sustaining storm). The scheduler learns via the error event.
+    // Note: with a preloaded master part, already-queued remainder bytes
+    // may still escape onto the wire here. Accepted by design: post-won
+    // contention is near-impossible (wire-AND losers withdraw on the same
+    // byte, our back-to-back edges suppress AUTO-SYN), and the alternative
+    // — a per-byte wakeup lottery against the 40ms SYN-repeat — is what
+    // kills every attempt under load. See stageMasterBulk().
     callActiveReset();
     transitionTo(HandlerState::release_bus);
     return;
@@ -703,7 +747,10 @@ void Handler::activeSendMaster(uint8_t byte) {
     } else {
       transitionTo(HandlerState::active_receive_master_acknowledge);
     }
-  } else {
+  } else if (!active_master_preloaded_) {
+    // Fallback: normally the whole remainder sits in the TX FIFO from
+    // stageMasterBulk(), so matching echoes advance silently. Only write
+    // here if preloading was somehow bypassed.
     callWrite(active_master_[active_master_index_]);
   }
 }
@@ -728,6 +775,9 @@ void Handler::activeReceiveMasterAcknowledge(uint8_t byte) {
     active_master_repeated_ = true;
     active_master_index_ = 0;
     callWrite(active_master_[active_master_index_]);
+    // Re-preload the remainder behind byte 0: order on the wire is
+    // unchanged, per-byte echo verification resumes as usual.
+    stageMasterBulk();
     transitionTo(HandlerState::active_send_master);
   } else {
     if (bus_monitor_)
@@ -952,13 +1002,26 @@ void Handler::callActiveReset() {
   active_master_.clear();
   active_master_index_ = 0;
   active_master_repeated_ = false;
+  active_master_preloaded_ = false;
 
   active_slave_.clear();
   active_slave_dbx_ = 0;
   active_slave_repeated_ = false;
+
+  // Drop staged-but-unflushed bytes: without a bus they would go stale,
+  // and after a reset they belong to a dead telegram.
+  pending_write_.reset();
+  pending_write_bulk_.clear();
 }
 
 void Handler::callWrite(uint8_t byte) { pending_write_ = byte; }
+
+void Handler::stageMasterBulk() {
+  // Copies (no heap: Sequence is stack-backed) so a later active_master_
+  // clear cannot dangle the staged block before the end-of-step flush.
+  pending_write_bulk_.assignSlice(active_master_, 1);
+  active_master_preloaded_ = true;
+}
 
 void Handler::onBusRequested() {
   if (active_message_ && state_ != HandlerState::request_bus)

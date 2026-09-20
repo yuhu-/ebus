@@ -350,6 +350,13 @@ class Controller {
   void resetMetrics();
 
   /**
+   * @brief Manually closes the global TX circuit-breaker and clears its
+   * counters (ops/diagnostics). The next scheduled poll becomes an
+   * immediate single probe.
+   */
+  void resetBreaker();
+
+  /**
    * @brief Clears the diagnostic error log.
    */
   void clearErrors();

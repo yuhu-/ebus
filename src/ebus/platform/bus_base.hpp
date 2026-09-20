@@ -24,6 +24,15 @@ class BusBase {
   // Lifecycle
   virtual ~BusBase() = default;
 
+  /**
+   * Age of our last arbitration (QQ) write in microseconds, or 0 when the
+   * platform does not track it (never stale: simulation has no preemption).
+   * Handler::won() releases silently instead of preloading when the win
+   * arrives past the foreign AUTO-SYN horizon (Spec 9.2: 40ms of silence),
+   * i.e. the bus already moved on and our bulk would jam live traffic.
+   */
+  virtual uint32_t qqWriteAgeUs() const { return 0; }
+
   // Working Methods
   void addReadListener(Delegate<void(const uint8_t& byte)> listener) {
     LockGuard<Mutex> lock(listeners_mutex_);

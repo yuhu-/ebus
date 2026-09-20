@@ -12,6 +12,7 @@
 #include <ebus/config.hpp>
 #include <ebus/detail/protocol_limits.hpp>
 #include <ebus/status.hpp>
+#include <ebus/types.hpp>
 #include <memory>
 
 #include "core/bus_events.hpp"
@@ -51,6 +52,7 @@ class BusSimulation : public BusBase {
 
   // Working Methods
   void writeByte(const uint8_t byte);
+  void writeBytes(ByteView bytes);
   void recordUtilization(uint8_t byte);
 
   // Status/Telemetry

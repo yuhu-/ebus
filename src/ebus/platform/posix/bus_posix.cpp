@@ -212,6 +212,31 @@ void BusPosix::writeByte(const uint8_t byte) {
   if (bus_monitor_) bus_monitor_->transmit.markEnd();
 }
 
+void BusPosix::writeBytes(ByteView bytes) {
+  if (bytes.empty()) return;
+  {
+    platform::LockGuard<platform::Mutex> lock(syn_mutex_);
+    auto now = Clock::now();
+    last_activity_time_ = now;
+    syn_active_ = false;
+    next_syn_expiry_ =
+        now + current_t_unique_ +
+        std::chrono::milliseconds(BusLimits::Syn::serialization_delay_ms);
+    syn_cv_.notify_one();
+  }
+
+  if (bus_monitor_) bus_monitor_->transmit.markBegin();
+
+  for (size_t i = 0; i < bytes.size(); ++i)
+    lockAndInvoke(listeners_mutex_, getWriteListeners(), bytes[i]);
+
+  ensureOpen();
+  if (::write(fd_, bytes.data(), bytes.size()) == -1)
+    throw std::runtime_error("BusPosix: write error");
+
+  if (bus_monitor_) bus_monitor_->transmit.markEnd();
+}
+
 ServiceThread::Status BusPosix::getThreadStatus() const {
   if (worker_) {
     return worker_->status();
@@ -234,6 +259,18 @@ ebus::BusStatus BusPosix::fetchStatus() const {
   return {map(getThreadStatus()), map(getSynThreadStatus())};
 }
 
+uint32_t BusPosix::qqWriteAgeUs() const {
+  const int64_t written = last_qq_write_us_.load(std::memory_order_acquire);
+  if (written == 0) return UINT32_MAX;
+  const int64_t now = std::chrono::duration_cast<std::chrono::microseconds>(
+                          Clock::now().time_since_epoch())
+                          .count();
+  const int64_t age = now - written;
+  if (age < 0) return 0;
+  return age > static_cast<int64_t>(UINT32_MAX) ? UINT32_MAX
+                                                : static_cast<uint32_t>(age);
+}
+
 void BusPosix::recordUtilization(uint8_t byte) {
   // 1 (start bit) + zero bits in data.
   if (bus_monitor_) bus_monitor_->recordLowBits(countZeroBits(byte) + 1);
@@ -248,6 +285,11 @@ void BusPosix::armRequestTimer(uint64_t delay) {
       std::async(std::launch::async, [this, delay]() {
         std::this_thread::sleep_for(std::chrono::microseconds(delay));
         writeByte(request_->busRequestAddress());
+        last_qq_write_us_.store(
+            std::chrono::duration_cast<std::chrono::microseconds>(
+                Clock::now().time_since_epoch())
+                .count(),
+            std::memory_order_release);
         bus_request_flag_.store(true, std::memory_order_release);
       });
 }

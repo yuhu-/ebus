@@ -16,6 +16,7 @@
 #include "core/handler.hpp"
 #include "core/request.hpp"
 #include "platform/bus.hpp"
+#include "platform/simulation/virtual_line.hpp"
 #include "platform/system.hpp"
 
 using namespace ebus::detail;
@@ -256,3 +257,139 @@ TEST_CASE("BusHandler integration and behaviors", "[core][bushandler]") {
     bus.stop();
   }
 }
+
+#if EBUS_SIMULATION
+// Direct-drive (no threads/timing): feeds BusEvents straight into
+// BusHandler to prove the post-won preload semantics deterministically.
+struct PreloadDriver {
+  Request request;
+  BusMonitor bus_monitor;
+  platform::Bus bus;
+  Handler handler;
+  BusHandler bus_handler;
+  int probe_key = 0;
+
+  struct Stats {
+    int telegrams = 0;
+    int errors = 0;
+    ebus::ProtocolError last_error = ebus::ProtocolError::none;
+    void onEvent(const ebus::ProtocolInfo& i) {
+      if (i.is_error) {
+        errors++;
+        last_error = i.protocol_error;
+      } else {
+        telegrams++;
+      }
+    }
+  } stats;
+
+  PreloadDriver()
+      : bus(ebus::BusConfig{}, ebus::RuntimeConfig{}, &request, &bus_monitor),
+        handler(0x33, &bus, &request, &bus_monitor),
+        bus_handler(&request, &handler) {
+    request.setLockCounter(0);
+    request.reset();
+    handler.reset();
+    handler.setSourceAddress(0x33);
+    handler.setProtocolCallback(
+        Delegate<void(const ebus::ProtocolInfo& info)>::bind<Stats,
+                                                             &Stats::onEvent>(
+            &stats));
+    platform::VirtualLine::get().attach(&probe_key);
+    platform::VirtualLine::get().clear();
+  }
+
+  ~PreloadDriver() { platform::VirtualLine::get().detach(&probe_key); }
+
+  void feed(uint8_t byte, bool bus_request = false) {
+    BusEvent ev{byte, bus_request, false, ebus::Clock::now()};
+    bus_handler.onBusEvent(ev);
+  }
+
+  // Drives arbitration to won() for source 0x33. Returns after the win.
+  // With expect_active=false (stale win) the release lands back passive.
+  void driveToWon(bool expect_active = true) {
+    REQUIRE(handler.sendActiveMessage(ebus::toVector("feb5050427002d00")) ==
+            true);
+    feed(ebus::Symbols::syn);        // request armed
+    feed(ebus::Symbols::syn, true);  // -> first
+    feed(0x33);                      // first_won -> won()
+    REQUIRE(handler.getState() ==
+            (expect_active ? ebus::HandlerState::active_send_master
+                           : ebus::HandlerState::passive_receive_master));
+  }
+
+  std::vector<uint8_t> drainWire() {
+    std::vector<uint8_t> out;
+    uint8_t b = 0;
+    while (platform::VirtualLine::get().read(&probe_key, b, 0)) {
+      // Skip our own arbitration echo reads?? No: probe sees every write,
+      // including the QQ echo path... every bus_->write lands here.
+      out.push_back(b);
+    }
+    return out;
+  }
+};
+
+TEST_CASE("Handler preload: full master remainder on wire after won",
+          "[core][bushandler][preload]") {
+  PreloadDriver d;
+  d.driveToWon();
+
+  // Zero further run() calls: the whole remainder must already sit on the
+  // wire (single wakeup). Old code would have placed exactly one byte.
+  std::vector<uint8_t> wire = d.drainWire();
+  REQUIRE(wire.size() > 1);
+
+  // Feed the bulk back as echoes: must complete without further writes.
+  for (uint8_t b : wire) d.feed(b);
+  REQUIRE(d.stats.telegrams == 1);
+  REQUIRE(d.stats.errors == 0);
+}
+
+TEST_CASE("Handler preload: idx1 mismatch aborts and re-arms cleanly",
+          "[core][bushandler][preload]") {
+  PreloadDriver d;
+  d.driveToWon();
+  std::vector<uint8_t> wire = d.drainWire();
+  REQUIRE(wire.size() > 1);
+
+  // Corrupt the second byte echo (clean SYN, the field signature).
+  d.feed(wire[0]);
+  d.feed(ebus::Symbols::syn);
+  REQUIRE(d.stats.errors == 1);
+  REQUIRE(d.stats.last_error == ebus::ProtocolError::error_active_master_echo);
+  REQUIRE(d.stats.telegrams == 0);
+
+  // Preload flag must not leak: a fresh transfer wins and completes.
+  d.request.reset();
+  d.handler.reset();
+  d.driveToWon();
+  wire = d.drainWire();
+  for (uint8_t b : wire) d.feed(b);
+  REQUIRE(d.stats.telegrams == 1);
+}
+
+TEST_CASE("Handler preload: stale won releases silently without bulk",
+          "[core][bushandler][preload]") {
+  PreloadDriver d;
+  // Threshold 0: every win is stale (BusSimulation age is 0, never stale
+  // by itself, so this forces the branch deterministically).
+  d.handler.setQqStaleThresholdUs(0);
+
+  struct Lost {
+    int count = 0;
+    void onLost() { count++; }
+  } lost;
+  d.handler.setBusRequestLostCallback(
+      Delegate<void()>::bind<Lost, &Lost::onLost>(&lost));
+
+  d.driveToWon(false);
+  // ...no bulk (or anything) staged: the wire stays empty...
+  REQUIRE(d.drainWire().empty());
+  // ...scheduler learns via lost, not via error:
+  REQUIRE(lost.count == 1);
+  REQUIRE(d.stats.errors == 0);
+  REQUIRE(d.stats.telegrams == 0);
+}
+#endif  // EBUS_SIMULATION

@@ -175,6 +175,38 @@ void BusEsp::writeByte(const uint8_t byte) {
   if (bus_monitor_) bus_monitor_->transmit.markEnd();
 }
 
+void BusEsp::writeBytes(ByteView bytes) {
+  if (bytes.empty()) return;
+  for (size_t i = 0; i < bytes.size(); ++i)
+    lockAndInvoke(listeners_mutex_, getWriteListeners(), bytes[i]);
+
+  if (bus_monitor_) bus_monitor_->transmit.markBegin();
+
+  portENTER_CRITICAL(&timer_mux_);
+  last_activity_micros_ = esp_timer_get_time();
+  portEXIT_CRITICAL(&timer_mux_);
+
+  // Single driver call: all bytes land in the 128-deep TX FIFO at once,
+  // so no thread wakeup is needed per byte. The UART shifts them out
+  // back-to-back (~4.17ms each); our edges keep restarting the foreign
+  // AUTO-SYN timer, giving each echo a fresh 40ms budget (Spec 9.2).
+  uart_write_bytes(uart_port_num_, bytes.data(), bytes.size());
+
+  if (bus_monitor_) bus_monitor_->transmit.markEnd();
+}
+
+uint32_t BusEsp::qqWriteAgeUs() const {
+  int64_t written = 0;
+  portENTER_CRITICAL(const_cast<portMUX_TYPE*>(&timer_mux_));
+  written = last_qq_write_us_;
+  portEXIT_CRITICAL(const_cast<portMUX_TYPE*>(&timer_mux_));
+  if (written == 0) return UINT32_MAX;
+  const int64_t age = esp_timer_get_time() - written;
+  if (age < 0) return 0;
+  return age > static_cast<int64_t>(UINT32_MAX) ? UINT32_MAX
+                                                : static_cast<uint32_t>(age);
+}
+
 void BusEsp::recordUtilization(uint8_t byte) {
   // 1 (start bit) + zero bits in data.
   if (bus_monitor_) bus_monitor_->recordLowBits(countZeroBits(byte) + 1);

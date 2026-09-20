@@ -58,6 +58,9 @@ class BusPosix : public BusBase {
 
   // Working Methods
   void writeByte(const uint8_t byte);
+  void writeBytes(ByteView bytes);
+  // QQ-write age from the request-timer thread (0 never wrote -> stale).
+  uint32_t qqWriteAgeUs() const override;
 
   // Status/Telemetry
   platform::ServiceThread::Status getThreadStatus() const;
@@ -95,6 +98,9 @@ class BusPosix : public BusBase {
   bool syn_active_{false};
 
   std::atomic<bool> bus_request_flag_{false};
+
+  // esp_timer-less QQ-write stamp (µs in Clock domain, 0 = never).
+  std::atomic<int64_t> last_qq_write_us_{0};
 
   void recordUtilization(uint8_t byte);
 

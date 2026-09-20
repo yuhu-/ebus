@@ -607,6 +607,10 @@ void Controller::resetMetrics() {
   if (impl_->configured_.load()) impl_->bus_monitor_->resetMetrics();
 }
 
+void Controller::resetBreaker() {
+  if (impl_->configured_.load()) impl_->scheduler_->resetBreaker();
+}
+
 void Controller::clearErrors() { impl_->reactor_->clearErrors(); }
 
 #if EBUS_SIMULATION

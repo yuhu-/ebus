@@ -52,6 +52,12 @@ class Handler {
   bool isActiveMessagePending() const;
   BusMonitor* getMonitor() const;
 
+  // Stale-win horizon (µs, default 30000, see qq_stale_threshold_us_).
+  // 0 disables TX entirely (every win reads as stale) — diagnostics only.
+  void setQqStaleThresholdUs(uint32_t threshold_us) {
+    qq_stale_threshold_us_ = threshold_us;
+  }
+
  private:
   platform::Bus* bus_ = nullptr;
   Request* request_ = nullptr;
@@ -59,6 +65,9 @@ class Handler {
   RequestResult last_result_ = RequestResult::observe_syn;
 
   std::optional<uint8_t> pending_write_;
+  // Staged bulk block (master remainder after won / NAK retry), flushed as
+  // one TX-FIFO push at end of step. Cleared on any active reset.
+  Sequence pending_write_bulk_;
 
   uint8_t source_address_ = 0;
   uint8_t target_address_ = 0;
@@ -106,6 +115,14 @@ class Handler {
   Sequence active_master_;
   size_t active_master_index_ = 0;
   bool active_master_repeated_ = false;
+  // True once the master remainder sits in the TX FIFO (stageMasterBulk):
+  // matching echoes advance the index without further writes.
+  bool active_master_preloaded_ = false;
+  // Stale-win horizon (µs): a QQ echo processed later than this after the
+  // QQ write means the bus already moved on (foreign AUTO-SYN per Spec
+  // 9.2); won() then releases silently instead of preloading strays into
+  // live traffic. 0 disables TX entirely (every win is stale).
+  uint32_t qq_stale_threshold_us_ = 30000;
 
   Sequence active_slave_;
   size_t active_slave_dbx_ = 0;
@@ -165,6 +182,7 @@ class Handler {
   void onStartBit();
 
   void callWrite(uint8_t byte);
+  void stageMasterBulk();
 
   void callOnBusRequestWon();
   void callOnBusRequestLost();

@@ -13,6 +13,7 @@
 #include <ebus/config.hpp>
 #include <ebus/detail/protocol_limits.hpp>
 #include <ebus/status.hpp>
+#include <ebus/types.hpp>
 #include <functional>
 #include <memory>
 
@@ -68,6 +69,13 @@ class BusEsp : public BusBase {
 
   // Working Methods
   void writeByte(const uint8_t byte);
+  // Pushes a whole block (e.g. a preloaded master part) into the TX FIFO
+  // in one step: a single wakeup instead of one per byte. Echoes are still
+  // verified per byte on the RX side; see Handler::stageMasterBulk.
+  void writeBytes(ByteView bytes);
+  // ISR QQ-write timestamp vs now (0 never wrote -> infinitely stale, so a
+  // win without a QQ write can never preload).
+  uint32_t qqWriteAgeUs() const override;
   void recordUtilization(uint8_t byte);
 
   // Status/Telemetry

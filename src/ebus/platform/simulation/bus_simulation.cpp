@@ -163,6 +163,12 @@ void BusSimulation::writeByte(const uint8_t byte) {
   if (bus_monitor_) bus_monitor_->transmit.markEnd();
 }
 
+void BusSimulation::writeBytes(ByteView bytes) {
+  // Same observable behavior as N single writes (per-byte shift delay and
+  // wire order preserved); the timing gain only exists on real UART FIFOs.
+  for (size_t i = 0; i < bytes.size(); ++i) writeByte(bytes[i]);
+}
+
 void BusSimulation::recordUtilization(uint8_t byte) {
   // 1 (start bit) + zero bits in data.
   if (bus_monitor_) bus_monitor_->recordLowBits(countZeroBits(byte) + 1);
