@@ -287,6 +287,13 @@ static_assert(max_items >= 1, "Scheduler max items must be at least 1");
 inline constexpr size_t scan_threshold = 5;
 inline constexpr uint32_t jitter_threshold_ms = 2;
 inline constexpr uint32_t controller_tick_ms = 20;
+
+// Global TX circuit-breaker: trips after this many consecutive active
+// failures (bus-level, any ZZ), quarantines all active traffic with
+// doubling cooldown. A single probe re-opens; success resets.
+inline constexpr uint32_t breaker_threshold = 5;
+inline constexpr uint32_t breaker_cooldown_base_ms = 60000;
+inline constexpr uint32_t breaker_cooldown_max_ms = 480000;
 }  // namespace SchedulerLimits
 
 namespace PollLimits {

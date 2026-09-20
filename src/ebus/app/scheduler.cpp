@@ -54,6 +54,41 @@ void Scheduler::setTotalTimeout(uint32_t timeout_ms) {
   total_timeout_ = std::chrono::milliseconds(timeout_ms);
 }
 
+void Scheduler::setBreakerThreshold(uint32_t consecutive_failures) {
+  platform::LockGuard<platform::Mutex> lock(data_mutex_);
+  breaker_threshold_ = consecutive_failures == 0 ? 1 : consecutive_failures;
+}
+
+void Scheduler::setBreakerCooldownMs(uint32_t base_ms, uint32_t max_ms) {
+  platform::LockGuard<platform::Mutex> lock(data_mutex_);
+  breaker_cooldown_base_ =
+      std::chrono::milliseconds(base_ms == 0 ? 1 : base_ms);
+  breaker_cooldown_max_ = std::chrono::milliseconds(max_ms == 0 ? 1 : max_ms);
+}
+
+bool Scheduler::breakerOpen() const {
+  platform::LockGuard<platform::Mutex> lock(data_mutex_);
+  return breakerOpenLocked();
+}
+
+uint32_t Scheduler::breakerConsecutiveFailures() const {
+  platform::LockGuard<platform::Mutex> lock(data_mutex_);
+  return breaker_consecutive_;
+}
+
+uint32_t Scheduler::breakerTrips() const {
+  platform::LockGuard<platform::Mutex> lock(data_mutex_);
+  return breaker_trips_;
+}
+
+void Scheduler::resetBreaker() {
+  platform::LockGuard<platform::Mutex> lock(data_mutex_);
+  breaker_consecutive_ = 0;
+  breaker_trips_ = 0;
+  breaker_open_until_ = TimePoint{};
+  publishBreakerLocked();
+}
+
 void Scheduler::setReactiveCallback(ReactiveCallback callback) {
   user_reactive_callback_ = std::move(callback);
 }
@@ -141,8 +176,7 @@ void Scheduler::onHandlerProtocol(const ProtocolInfo& info) {
     // the item counter directly). A blocked bus thread backs up the UART
     // queue, and stale bytes then drive stray arbitration writes.
     platform::UniqueLock<platform::Mutex> lock(data_mutex_, std::try_to_lock);
-    if (lock.owns_lock() && active_item_ &&
-        active_item_->session_id == s_id) {
+    if (lock.owns_lock() && active_item_ && active_item_->session_id == s_id) {
       scheduler_attempts = active_item_->item.attempts;
     }
   }
@@ -189,10 +223,23 @@ bool Scheduler::injectProtocolEvent(const ProtocolEvent& event) {
     if (!active_item_) return false;
     if (event.type == ProtocolEvent::Type::lost ||
         event.type == ProtocolEvent::Type::error) {
-      // Structural protocol errors are not transient; do not retry.
+      // Structural protocol errors are not transient; do not retry and do
+      // not blame the bus (a bad message is our fault, not the wire's).
       const bool is_fatal =
           (event.type == ProtocolEvent::Type::error &&
            event.protocol_error == ProtocolError::invalid_message);
+
+      // Global TX circuit-breaker: every bus-level active failure counts,
+      // whatever the ZZ target. Trips quarantine ALL active traffic.
+      if (!is_fatal) {
+        breaker_consecutive_++;
+        if (breaker_consecutive_ >= breaker_threshold_ &&
+            !breakerOpenLocked()) {
+          breaker_trips_++;
+          breaker_open_until_ = Clock::now() + breakerCooldownLocked();
+        }
+        publishBreakerLocked();
+      }
 
       active_item_->item.attempts++;
       if (!is_fatal && active_item_->item.attempts < max_attempts_) {
@@ -219,6 +266,14 @@ bool Scheduler::injectProtocolEvent(const ProtocolEvent& event) {
     active_item_.reset();
     current_session_id_.store(0, std::memory_order_release);
     current_poll_id_.store(0, std::memory_order_release);
+    if (event.type == ProtocolEvent::Type::telegram &&
+        (breaker_consecutive_ > 0 || breakerOpenLocked())) {
+      // Any completed active telegram proves the wire is healthy again:
+      // close a probe quarantine and restart the failure count.
+      breaker_consecutive_ = 0;
+      breaker_open_until_ = TimePoint{};
+      publishBreakerLocked();
+    }
   }
 
   if (need_reset && handler_) {
@@ -252,6 +307,10 @@ bool Scheduler::tick() {
       }
     } else if (!scheduled_items_.empty() &&
                scheduled_items_.front().due <= Clock::now()) {
+      // Breaker quarantine: no new active item starts while open. Expiry
+      // needs no explicit close: the next started item is the single probe,
+      // its telegram closes the breaker, its failure re-trips it.
+      if (breakerOpenLocked()) return false;
       if (handler_->isActiveMessagePending()) return false;
       std::pop_heap(scheduled_items_.begin(), scheduled_items_.end(),
                     Compare());
@@ -340,6 +399,9 @@ Clock::time_point Scheduler::nextDueTime() const {
     return active_item_->start_time + total_timeout_;
   }
 
+  // Quarantined: sleep until the probe time instead of busy-spinning.
+  if (breakerOpenLocked()) return breaker_open_until_;
+
   // Starvation/Busy-wait Fix: If the handler is currently busy (e.g., with an
   // external bridge or reactive response), we cannot start a new transfer.
   // Any pending items should not cause a spin loop in the controller.
@@ -380,8 +442,9 @@ bool Scheduler::pushItem(Item&& it) {
   return true;  // Successfully pushed
 }
 
-Scheduler::Duration Scheduler::backoffDuration(int attempt) const {
-  // Pre-calculated multipliers for 2^(attempt-1) to avoid runtime bit-shifts.
+Scheduler::Duration Scheduler::backoffDuration(
+    int attempt) const {  // Pre-calculated multipliers for 2^(attempt-1) to
+                          // avoid runtime bit-shifts.
   using Rep = typename Duration::rep;
   static constexpr Rep multipliers[] = {1, 2, 4, 8, 16, 32, 64, 128, 256, 512};
   constexpr int max_attempt = sizeof(multipliers) / sizeof(multipliers[0]);
@@ -391,6 +454,30 @@ Scheduler::Duration Scheduler::backoffDuration(int attempt) const {
 
   Rep factor = multipliers[attempt - 1];
   return Duration(static_cast<Rep>(base_backoff_.count() * factor));
+}
+
+std::chrono::milliseconds Scheduler::breakerCooldownLocked() const {
+  // Doubling per trip, capped: base, 2*base, 4*base, ... max.
+  const uint64_t shift =
+      breaker_trips_ == 0 ? 0 : std::min<uint32_t>(breaker_trips_ - 1, 10);
+  const uint64_t cooldown_ms =
+      static_cast<uint64_t>(breaker_cooldown_base_.count()) << shift;
+  const auto max_ms = static_cast<uint64_t>(breaker_cooldown_max_.count());
+  return std::chrono::milliseconds(std::min(cooldown_ms, max_ms));
+}
+
+void Scheduler::publishBreakerLocked() {
+  if (!handler_) return;
+  BusMonitor* monitor = handler_->getMonitor();
+  if (!monitor) return;
+  const bool open = breakerOpenLocked();
+  const uint32_t consecutive = breaker_consecutive_;
+  const uint32_t trips = breaker_trips_;
+  monitor->updateScheduler([=](auto& m) {
+    m.consecutive_failures = consecutive;
+    m.breaker_trips = trips;
+    m.breaker_open = open;
+  });
 }
 
 }  // namespace ebus::detail

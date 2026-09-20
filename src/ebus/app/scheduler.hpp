@@ -59,6 +59,8 @@ class Scheduler {
   void setBaseBackoff(uint32_t base_backoff_ms);
   void setFsmTimeout(uint32_t timeout_ms);
   void setTotalTimeout(uint32_t timeout_ms);
+  void setBreakerThreshold(uint32_t consecutive_failures);
+  void setBreakerCooldownMs(uint32_t base_ms, uint32_t max_ms);
 
   void setReactiveCallback(ReactiveCallback callback);
 
@@ -87,6 +89,14 @@ class Scheduler {
   size_t capacity() const;
   SchedulerStatus fetchStatus() const;
   void resetPeakMetrics();
+  // Global TX circuit-breaker (bus-level, not per command): open while the
+  // quarantine is in force, i.e. no new active item will be started.
+  bool breakerOpen() const;
+  uint32_t breakerConsecutiveFailures() const;
+  uint32_t breakerTrips() const;
+  // Manual close + counters reset (ops/tests). Metrics reset does NOT call
+  // this: clearing telemetry must never re-arm a sick bus.
+  void resetBreaker();
 
  private:
   struct Item {
@@ -158,9 +168,30 @@ class Scheduler {
   // Forwarded callbacks
   ReactiveCallback user_reactive_callback_ = nullptr;
 
+  // Global TX circuit-breaker: consecutive bus-level active failures trip a
+  // quarantine for ALL active traffic (single probe re-opens). Guarded by
+  // data_mutex_ like the queue.
+  uint32_t breaker_threshold_ = SchedulerLimits::breaker_threshold;
+  std::chrono::milliseconds breaker_cooldown_base_ =
+      std::chrono::milliseconds(SchedulerLimits::breaker_cooldown_base_ms);
+  std::chrono::milliseconds breaker_cooldown_max_ =
+      std::chrono::milliseconds(SchedulerLimits::breaker_cooldown_max_ms);
+  uint32_t breaker_consecutive_ = 0;
+  uint32_t breaker_trips_ = 0;
+  TimePoint breaker_open_until_ = TimePoint{};
+
+  bool breakerOpenLocked() const {
+    return breaker_open_until_ != TimePoint{} &&
+           Clock::now() < breaker_open_until_;
+  }
+
   // Private Helper Methods
   bool pushItem(Item&& it);
   Duration backoffDuration(int attempt) const;
+  std::chrono::milliseconds breakerCooldownLocked() const;
+  // Mirrors breaker state into BusMonitor (scheduler/section of /metrics).
+  // Call with data_mutex_ held; never the reverse order.
+  void publishBreakerLocked();
 
   // Handler callback targets
   void onBusRequestWon();

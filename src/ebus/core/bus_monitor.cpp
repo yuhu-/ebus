@@ -23,6 +23,11 @@ void BusMonitor::resetMetrics() {
   bus_acc_.reset();
   reactor_acc_.reset();
   device_acc_.reset();
+  // Breaker mirror resets, but an open quarantine is scheduler-owned and
+  // stays in force (safety: metrics reset must not re-arm a sick bus).
+  // The mirror re-converges on the next breaker transition.
+  scheduler_acc_.consecutive_failures = 0;
+  scheduler_acc_.breaker_trips = 0;
 
   sync.reset();
   write.reset();
@@ -323,6 +328,9 @@ void BusMonitor::fetchMetrics(
 
     // 6. Populate Client Manager Part
     sm.client_manager = client_manager_acc_;
+
+    // 7. Populate Scheduler (breaker mirror) Part
+    sm.scheduler = scheduler_acc_;
   }
 
   // Execute callback outside the lock to protect the Hot Path
@@ -598,6 +606,19 @@ void metrics::ClientManagerMetrics::reset() {
   bus_queue_dropped = 0;
 }
 
+void metrics::SchedulerMetrics::reset() {
+  consecutive_failures = 0;
+  breaker_trips = 0;
+  breaker_open = false;
+}
+
+void metrics::SchedulerMetrics::toJson(detail::JsonWriter& writer) const {
+  auto scope = writer.objectScope();
+  writer.writeField("consecutive_failures", consecutive_failures);
+  writer.writeField("breaker_trips", breaker_trips);
+  writer.writeField("breaker_open", breaker_open);
+}
+
 void metrics::ClientManagerMetrics::toJson(detail::JsonWriter& writer) const {
   auto scope = writer.objectScope();
   writer.writeField("max_bus_queue_size", max_bus_queue_size);
@@ -663,6 +684,8 @@ void metrics::SystemMetrics::toJson(detail::JsonWriter& writer) const {
   writer.writeValue(reactor);
   writer.appendKey("client_manager");
   writer.writeValue(client_manager);
+  writer.appendKey("scheduler");
+  writer.writeValue(scheduler);
   writer.writeFieldFloat("quality", quality);
 }
 

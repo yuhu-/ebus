@@ -77,6 +77,12 @@ class BusMonitor {
     updater(client_manager_acc_);
   }
 
+  template <typename F>
+  void updateScheduler(F&& updater) {
+    platform::LockGuard<platform::Mutex> lock(metrics_mutex_);
+    updater(scheduler_acc_);
+  }
+
   /**
    * @brief Resets the interval-based loop timing peak.
    */
@@ -183,6 +189,7 @@ class BusMonitor {
   metrics::DeviceMetrics device_acc_;
   metrics::ReactorMetrics reactor_acc_;
   metrics::ClientManagerMetrics client_manager_acc_;
+  metrics::SchedulerMetrics scheduler_acc_;
 
 #ifndef EBUS_MINIMAL_DIAGNOSTICS
   uint64_t last_history_low_bits_ = 0;

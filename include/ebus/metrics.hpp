@@ -197,6 +197,21 @@ struct ClientManagerMetrics {
 };
 
 /**
+ * Global active-TX circuit-breaker state (scheduler-owned, mirrored here).
+ * Trips on consecutive bus-level active failures, quarantines all active
+ * traffic while open. Per-command breakers would herd; this is global.
+ */
+struct SchedulerMetrics {
+  uint32_t consecutive_failures = 0;
+  uint32_t breaker_trips = 0;
+  bool breaker_open = false;
+
+  void reset();
+
+  void toJson(detail::JsonWriter& writer) const;
+};
+
+/**
  * Aggregate system telemetry.
  */
 struct SystemMetrics {
@@ -206,6 +221,7 @@ struct SystemMetrics {
   DeviceMetrics devices;
   ReactorMetrics reactor;
   ClientManagerMetrics client_manager;
+  SchedulerMetrics scheduler;
 
   void toJson(detail::JsonWriter& writer) const;
 };
