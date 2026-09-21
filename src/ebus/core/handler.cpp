@@ -149,8 +149,9 @@ bool Handler::sendActiveMessage(ByteView message) {
     // intent before the next SYN arrives on the wire.
     // if (request_) request_->requestBus(source_address_);
   } else {
-    if (bus_monitor_)
-      bus_monitor_->updateHandler([](auto& m) { m.error_active++; });
+    // Message failed to build locally (not a bus error): report without
+    // touching bus error counters; the scheduler maps this to
+    // invalid_message (fatal, never retried, never breaker-counted).
     return false;
   }
 
@@ -494,6 +495,8 @@ void Handler::reactiveSendMasterPositiveAcknowledge(
     transitionTo(HandlerState::passive_receive_master);
   } else {
     if (passive_slave_index_ >= passive_slave_.size()) {
+      if (bus_monitor_)
+        bus_monitor_->updateHandler([](auto& m) { m.error_reactive++; });
       callOnError(LogLevel::error, ProtocolError::illegal_fsm_transition,
                   passive_telegram_.getMasterState(),
                   {passive_master_.data(), passive_master_.size()},
@@ -692,6 +695,10 @@ void Handler::activeSendMaster(uint8_t byte) {
   // the byte we sent in the previous step.
   // If the check fails, we abort immediately to prevent bus contention.
   if (active_master_index_ >= active_master_.size()) {
+    // Stale/duplicate echo after teardown: count it (pairs with the top
+    // entry recorded below) instead of hiding it from error_rate.
+    if (bus_monitor_)
+      bus_monitor_->updateHandler([](auto& m) { m.error_active++; });
     callOnError(LogLevel::error, ProtocolError::illegal_fsm_transition,
                 active_telegram_.getMasterState(),
                 {active_master_.data(), active_master_.size()},
@@ -802,6 +809,10 @@ void Handler::activeReceiveSlave(uint8_t byte) {
     if (byte > SequenceLimits::max_data_bytes) {
       if (bus_monitor_)
         bus_monitor_->updateHandler([](auto& m) { m.invalid_bytes++; });
+      // Pairs with the top entry below: rejected slave garbage is an
+      // active error (we NAK and consume the retry, or fail after it).
+      if (bus_monitor_)
+        bus_monitor_->updateHandler([](auto& m) { m.error_active++; });
       callOnError(LogLevel::error, ProtocolError::error_active_slave,
                   SequenceState::err_data_byte,
                   {active_master_.data(), active_master_.size()}, {});
@@ -889,6 +900,23 @@ void Handler::transitionTo(HandlerState next) {
   const uint16_t valid_mask = transition_masks[static_cast<size_t>(state_)];
 
   if (!(next_bit & valid_mask)) {
+    // Attribute to the phase we come from so top_errors and error_total
+    // stay paired (the 840-vs-0 ghost came from here).
+    if (bus_monitor_) {
+      bus_monitor_->updateHandler([this, old_state](auto& m) {
+        switch (getMessageTypeFromState(old_state)) {
+          case MessageType::active:
+            m.error_active++;
+            break;
+          case MessageType::reactive:
+            m.error_reactive++;
+            break;
+          default:
+            m.error_passive++;
+            break;
+        }
+      });
+    }
     callOnError(LogLevel::error, ProtocolError::illegal_fsm_transition,
                 SequenceState::seq_ok, {}, {});
     // Emergency recovery: Force reset to ground state
@@ -1093,7 +1121,11 @@ void Handler::callOnError(LogLevel level, ProtocolError protocol_error,
                           SequenceState sequence_state, ByteView master_view,
                           ByteView slave_view) {
   if (protocol_callback_) {
-    if (bus_monitor_) {
+    // Telemetry (bus last-error stamp, top addresses) tracks ERROR-level
+    // events only: INFO-level diagnostics (buffer checks) must neither
+    // move last_error_us nor pollute top_errors. The callback still
+    // forwards everything with its level intact for loggers.
+    if (level == LogLevel::error && bus_monitor_) {
       bus_monitor_->recordBusError();
       bus_monitor_->recordHandlerError(master_view.empty() ? 0xff
                                                            : master_view[0]);

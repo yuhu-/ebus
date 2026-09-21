@@ -301,8 +301,8 @@ struct PreloadDriver {
 
   ~PreloadDriver() { platform::VirtualLine::get().detach(&probe_key); }
 
-  void feed(uint8_t byte, bool bus_request = false) {
-    BusEvent ev{byte, bus_request, false, ebus::Clock::now()};
+  void feed(uint8_t byte, bool bus_request = false, bool start_bit = false) {
+    BusEvent ev{byte, bus_request, start_bit, ebus::Clock::now()};
     bus_handler.onBusEvent(ev);
   }
 
@@ -396,5 +396,33 @@ TEST_CASE("Handler preload: stale won releases silently without bulk",
   REQUIRE(lost.count == 1);
   REQUIRE(d.stats.errors == 0);
   REQUIRE(d.stats.telegrams == 0);
+}
+
+TEST_CASE("Handler errors: every error event pairs with a counter",
+          "[core][bushandler][pairing]") {
+  PreloadDriver d;
+  d.driveToWon();
+  // Framing noise mid-transfer: start bit clears the buffers but keeps
+  // the state, so the next echo hits active_send_master with an empty
+  // master (the overnight 840 ghost with error_total 0).
+  std::vector<uint8_t> wire = d.drainWire();
+  d.feed(wire[0]);
+  REQUIRE(d.stats.errors == 0);
+  // Start-bit framing noise clears the buffers but keeps the state, so
+  // this same byte hits active_send_master with an empty master (the
+  // overnight 840 ghost with error_total 0).
+  d.feed(wire[1], false, true);  // start-bit error event
+  REQUIRE(d.stats.errors == 1);
+  REQUIRE(d.stats.last_error == ebus::ProtocolError::illegal_fsm_transition);
+  // Pairing rule: top_errors and error_total move together — fetch both
+  // from the same snapshot and compare.
+  d.bus_monitor.fetchMetrics([&](const ebus::Metrics& m) {
+    const uint32_t e_total = m.handler.error_passive +
+                             m.handler.error_reactive + m.handler.error_active;
+    uint32_t top_total = 0;
+    for (const auto& e : m.handler.top_errors) top_total += e.count;
+    REQUIRE(e_total == top_total);
+    REQUIRE(e_total == 1);
+  });
 }
 #endif  // EBUS_SIMULATION
