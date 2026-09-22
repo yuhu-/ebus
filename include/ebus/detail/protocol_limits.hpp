@@ -291,8 +291,11 @@ inline constexpr uint32_t controller_tick_ms = 20;
 // Global TX circuit-breaker: trips after this many consecutive active
 // failures (bus-level, any ZZ), quarantines all active traffic with
 // doubling cooldown. A single probe re-opens; success resets.
+// Base is short on purpose: a stale probe costs one silent QQ + resync
+// (nothing), so waiting a minute between them is pure downtime. The cap
+// still bounds real storms.
 inline constexpr uint32_t breaker_threshold = 5;
-inline constexpr uint32_t breaker_cooldown_base_ms = 60000;
+inline constexpr uint32_t breaker_cooldown_base_ms = 20000;
 inline constexpr uint32_t breaker_cooldown_max_ms = 480000;
 }  // namespace SchedulerLimits
 

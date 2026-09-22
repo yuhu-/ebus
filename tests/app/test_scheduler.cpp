@@ -420,5 +420,29 @@ TEST_CASE("Scheduler breaker: probe re-trips with doubling cooldown",
   REQUIRE(h.scheduler.breakerOpen() == false);
   REQUIRE(h.scheduler.breakerConsecutiveFailures() == 0);
   sid = h.startItem();
+  REQUIRE(h.scheduler.injectProtocolEvent(h.telegramFor(sid)) == true);
+}
+
+TEST_CASE("Scheduler breaker: success restarts cooldown growth",
+          "[app][scheduler][breaker]") {
+  BreakerHarness h;
+  h.scheduler.setBreakerThreshold(1);
+  h.scheduler.setBreakerCooldownMs(50, 10000);
+
+  // Trip, recover via success, trip again: second episode reopens at
+  // base instead of inheriting the earlier peak (headless operation
+  // has no user pressing re-arm).
+  uint32_t sid = h.startItem();
+  REQUIRE(h.settle(h.errorFor(sid)) == true);
+  REQUIRE(h.scheduler.breakerTrips() == 1);
+  // Quarantine first: the success below must arrive as a probe.
+  std::this_thread::sleep_for(std::chrono::milliseconds(70));
+  sid = h.startItem();
   REQUIRE(h.settle(h.telegramFor(sid)) == true);
+  REQUIRE(h.scheduler.breakerTrips() == 0);
+  REQUIRE(h.scheduler.breakerConsecutiveFailures() == 0);
+  sid = h.startItem();
+  REQUIRE(h.settle(h.errorFor(sid)) == true);
+  REQUIRE(h.scheduler.breakerTrips() == 1);
+  REQUIRE(h.scheduler.breakerOpen() == true);
 }

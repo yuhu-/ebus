@@ -269,8 +269,12 @@ bool Scheduler::injectProtocolEvent(const ProtocolEvent& event) {
     if (event.type == ProtocolEvent::Type::telegram &&
         (breaker_consecutive_ > 0 || breakerOpenLocked())) {
       // Any completed active telegram proves the wire is healthy again:
-      // close a probe quarantine and restart the failure count.
+      // close a probe quarantine and restart the failure count AND the
+      // cooldown growth, so the next episode (if any) reopens at base
+      // instead of inheriting a peak reached days ago. Headless operation
+      // depends on this: no user presses re-arm in real life.
       breaker_consecutive_ = 0;
+      breaker_trips_ = 0;
       breaker_open_until_ = TimePoint{};
       publishBreakerLocked();
     }
