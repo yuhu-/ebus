@@ -296,7 +296,7 @@ inline constexpr uint32_t controller_tick_ms = 20;
 // still bounds real storms.
 inline constexpr uint32_t breaker_threshold = 5;
 inline constexpr uint32_t breaker_cooldown_base_ms = 20000;
-inline constexpr uint32_t breaker_cooldown_max_ms = 480000;
+inline constexpr uint32_t breaker_cooldown_max_ms = 120000;
 }  // namespace SchedulerLimits
 
 namespace PollLimits {
