@@ -33,6 +33,23 @@ class BusBase {
    */
   virtual uint32_t qqWriteAgeUs() const { return 0; }
 
+  /**
+   * Age of the last bus activity (RX edge or our TX) in microseconds, or 0
+   * when the platform does not track it (never idle: keep current behavior).
+   * Lets external arbitration skip the SYN wait on a verifiably idle bus:
+   * no contender can be mid-arbitration without activity inside one byte
+   * time, so transmitting now cannot jam anyone. Wire-AND echo validation
+   * still applies exactly as on the timer path.
+   */
+  virtual uint64_t lastActivityAgeUs() const { return 0; }
+
+  /**
+   * Records an immediate (non-timer) QQ write for the stale-win guard
+   * (Handler compares QQ-echo processing time against it). Default no-op;
+   * platforms with QQ-write tracking override.
+   */
+  virtual void noteQqWrite() {}
+
   // Working Methods
   void addReadListener(Delegate<void(const uint8_t& byte)> listener) {
     LockGuard<Mutex> lock(listeners_mutex_);

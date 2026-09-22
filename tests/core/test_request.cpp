@@ -200,3 +200,21 @@ TEST_CASE("Request: Legacy Edge Cases", "[core][request][legacy]") {
     REQUIRE(r.busRequestPending() == true);
   }
 }
+
+TEST_CASE("Request: withdrawBusRequest releases stuck intent",
+          "[core][request]") {
+  Request r;
+  r.setLockCounter(0);
+  r.reset();
+  REQUIRE(r.requestBus(0x33) == true);
+  REQUIRE(r.busRequestPending() == true);
+  REQUIRE(r.busAvailable() == false);
+  // Defused (contender traffic): intent must go, FSM untouched.
+  r.withdrawBusRequest();
+  REQUIRE(r.busRequestPending() == false);
+  REQUIRE(r.getState() == ebus::RequestState::observe);
+  REQUIRE(r.busAvailable() == true);
+  // Withdrawing twice is a safe no-op.
+  r.withdrawBusRequest();
+  REQUIRE(r.busAvailable() == true);
+}

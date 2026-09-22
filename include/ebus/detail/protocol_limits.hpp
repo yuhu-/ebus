@@ -237,6 +237,13 @@ inline constexpr size_t max_clients = EBUS_MAX_CLIENTS;
 #endif
 
 inline constexpr uint32_t wake_interval_ms = 20;
+
+// Idle fast-path: an external QQ older than its SYN-wait may skip it when
+// the bus shows no activity for this long (one byte time + slave-ACK
+// margin, far below the 35ms AUTO-SYN). No contender can be
+// mid-arbitration without a post-SYN start, so firing now cannot jam
+// anyone; wire-AND echo validation still applies exactly as usual.
+inline constexpr uint64_t external_idle_fire_us = 8000;
 }  // namespace ClientManagerLimits
 
 // --- Application Layer ---

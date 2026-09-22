@@ -207,9 +207,22 @@ uint32_t BusEsp::qqWriteAgeUs() const {
                                                 : static_cast<uint32_t>(age);
 }
 
-void BusEsp::recordUtilization(uint8_t byte) {
-  // 1 (start bit) + zero bits in data.
-  if (bus_monitor_) bus_monitor_->recordLowBits(countZeroBits(byte) + 1);
+uint64_t BusEsp::lastActivityAgeUs() const {
+  int64_t last = 0;
+  portENTER_CRITICAL(const_cast<portMUX_TYPE*>(&timer_mux_));
+  last = last_activity_micros_;
+  portEXIT_CRITICAL(const_cast<portMUX_TYPE*>(&timer_mux_));
+  if (last == 0) return 0;  // never observed: not idle, keep old behavior
+  const int64_t age = esp_timer_get_time() - last;
+  if (age < 0) return 0;
+  return static_cast<uint64_t>(age);
+}
+
+void BusEsp::noteQqWrite() {
+  portENTER_CRITICAL(&timer_mux_);
+  last_qq_write_us_ = esp_timer_get_time();
+  last_activity_micros_ = last_qq_write_us_;
+  portEXIT_CRITICAL(&timer_mux_);
 }
 
 ServiceThread::Status BusEsp::getThreadStatus() const {
@@ -232,6 +245,11 @@ ebus::BusStatus BusEsp::fetchStatus() const {
     return {s.name, s.task_stack_bytes, s.task_stack_free_bytes};
   };
   return {map(getThreadStatus()), map(getSynThreadStatus())};
+}
+
+void BusEsp::recordUtilization(uint8_t byte) {
+  // 1 (start bit) + zero bits in data.
+  if (bus_monitor_) bus_monitor_->recordLowBits(countZeroBits(byte) + 1);
 }
 
 void BusEsp::configureUart() {

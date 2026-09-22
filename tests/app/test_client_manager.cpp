@@ -20,6 +20,7 @@
 #include "core/request.hpp"
 #include "platform/bus.hpp"
 #include "platform/simulation/bus_simulator.hpp"
+#include "platform/simulation/virtual_line.hpp"
 #include "platform/socket.hpp"
 #include "platform/system.hpp"
 #include "test_helpers.hpp"
@@ -305,4 +306,64 @@ TEST_CASE("ClientManager drops bus events with no consumers", "[app][client]") {
   }
   ebus::ClientManagerStatus st = manager.fetchStatus();
   REQUIRE(st.bus_queue.max_size == 0);
+}
+
+TEST_CASE("ClientManager external QQ fires on idle bus without SYN",
+          "[app][client]") {
+  Request request;
+  request.setLockCounter(0);
+  request.reset();
+  ebus::BusConfig config;
+  ebus::RuntimeConfig runtime{};
+  runtime.address = 0x01;
+  BusMonitor bus_monitor;
+  platform::Bus bus(config, runtime, &request, &bus_monitor);
+  Handler handler(runtime.address, &bus, &request, &bus_monitor);
+  BusHandler bus_handler(&request, &handler);
+  ClientManager manager(&bus, &bus_handler, &request, &bus_monitor);
+
+  int sv[2];
+  socketpair(AF_UNIX, SOCK_STREAM, 0, sv);
+  manager.addClient(std::make_unique<platform::Socket>(sv[0]),
+                    ebus::ClientType::regular);
+
+  int probe_key = 0;
+  platform::VirtualLine::get().attach(&probe_key);
+  platform::VirtualLine::get().clear();
+  manager.start();
+
+  // One stale SYN for the activity stamp, then silence beyond the idle
+  // horizon (8ms). No further SYN is ever pumped: the QQ must still
+  // reach the wire via the idle fast-path.
+  bus.writeByte(ebus::Symbols::syn);
+  uint8_t drain = 0;
+  REQUIRE(waitCondition(
+      [&]() { return platform::VirtualLine::get().read(&probe_key, drain, 0); },
+      1000));
+  REQUIRE(drain == ebus::Symbols::syn);
+  platform::sleepMilli(15);
+
+  // ebusd-side: QQ arrives over TCP with no SYN anywhere near.
+  const uint8_t qq = 0x31;
+  REQUIRE(::write(sv[1], &qq, 1) == 1);
+
+  uint8_t seen = 0;
+  const bool found = waitCondition(
+      [&]() {
+        uint8_t b = 0;
+        while (platform::VirtualLine::get().read(&probe_key, b, 0)) {
+          if (b == qq) {
+            seen = b;
+            return true;
+          }
+        }
+        return false;
+      },
+      2000);
+  REQUIRE(found == true);
+  REQUIRE(seen == qq);
+
+  manager.stop();
+  platform::VirtualLine::get().detach(&probe_key);
+  close(sv[1]);
 }

@@ -61,6 +61,9 @@ class BusPosix : public BusBase {
   void writeBytes(ByteView bytes);
   // QQ-write age from the request-timer thread (0 never wrote -> stale).
   uint32_t qqWriteAgeUs() const override;
+  // RX/TX activity age; 0 (never) reads as busy.
+  uint64_t lastActivityAgeUs() const override;
+  void noteQqWrite() override;
 
   // Status/Telemetry
   platform::ServiceThread::Status getThreadStatus() const;

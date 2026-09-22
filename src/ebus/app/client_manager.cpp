@@ -454,6 +454,51 @@ void ClientManager::handleBusAvailableForSession() {
   if (!is_request_state || !active_sender || !active_sender->isConnected())
     return;
 
+  // Idle fast-path first: when the bus shows no activity for longer than
+  // a contender could stay silent after SYN, the last SYN (if any) is
+  // ancient history — waiting for the next one only burns ebusd's
+  // arbitration budget (~132ms) for nothing. Note busAvailable() alone
+  // cannot tell: its result latches from the last SYN and stays true
+  // across indefinite silence. Emit the QQ now and evaluate its echo
+  // through the normal Request FSM (first_won/lost/error all behave
+  // exactly as on the timer path, including the stale-win guard via
+  // noteQqWrite). Only compliant contender timing is assumed (all start
+  // within ~100us of each other per Spec 6.3); a wildly late foreign
+  // start collides and loses via normal wire-AND validation.
+  // Never fires into our own in-flight attempt: Request must sit in
+  // observe with no armed intent and no fresh SYN, otherwise our QQ
+  // would jam it.
+  if (bus_ && request_->getState() == RequestState::observe &&
+      !request_->busRequestPending() &&
+      bus_->lastActivityAgeUs() >
+          ClientManagerLimits::external_idle_fire_us) {
+    uint8_t first_byte = 0;
+    if (!active_sender->popPendingIncomingData(first_byte)) {
+      last_error_message_ = "Client sent no data for bus request.";
+      EBUS_LOG_ERROR("[ClientManager] Client fd=" +
+                     std::to_string(active_sender->getFd()) +
+                     " sent no data for bus request");
+      stopActiveSession();
+      return;
+    }
+    {
+      platform::LockGuard<platform::Mutex> lock(mutex_);
+      if (session_state_ != SessionState::request ||
+          current_active_sender_ != active_sender) {
+        return;  // Session state changed, abort
+      }
+    }
+    // Order mirrors the timer path semantically: complete the request
+    // (observe->first, session callbacks) first, then emit. Any byte
+    // arriving between the two lands in first-state evaluation, which is
+    // exactly correct for it (it postdates our decision point).
+    bus_->writeByte(first_byte);
+    bus_->noteQqWrite();
+    last_sent_byte_ = first_byte;
+    request_->busRequestCompleted();
+    return;
+  }
+
   if (request_->busAvailable()) {
     uint8_t first_byte = 0;
     if (active_sender->popPendingIncomingData(first_byte)) {
@@ -475,6 +520,7 @@ void ClientManager::handleBusAvailableForSession() {
                      " sent no data for bus request");
       stopActiveSession();
     }
+    return;
   }
 }
 

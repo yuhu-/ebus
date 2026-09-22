@@ -142,6 +142,12 @@ void BusSimulation::writeByte(const uint8_t byte) {
     platform::LockGuard<platform::Mutex> lock(syn_mutex_);
     syn_active_ = false;
   }
+  {
+    // Our transmissions are bus activity too (carrier sense, AUTO-SYN
+    // horizon, idle detection) — mirrors esp/posix writeByte.
+    platform::LockGuard<platform::Mutex> lock(syn_mutex_);
+    last_activity_time_ = Clock::now();
+  }
   // 1. Simulate the time it takes for the UART to shift the bits out
   // 10 bits (Start + 8 Data + Stop) at 2400 baud
   uint32_t total_delay_us =
@@ -169,9 +175,18 @@ void BusSimulation::writeBytes(ByteView bytes) {
   for (size_t i = 0; i < bytes.size(); ++i) writeByte(bytes[i]);
 }
 
-void BusSimulation::recordUtilization(uint8_t byte) {
-  // 1 (start bit) + zero bits in data.
-  if (bus_monitor_) bus_monitor_->recordLowBits(countZeroBits(byte) + 1);
+uint64_t BusSimulation::lastActivityAgeUs() const {
+  // Same racy-but-harmless read as posix: worst case one misjudged idle
+  // decision, still wire-AND validated downstream.
+  const auto last = std::chrono::duration_cast<std::chrono::microseconds>(
+                        last_activity_time_.time_since_epoch())
+                        .count();
+  if (last == 0) return 0;
+  const int64_t now = std::chrono::duration_cast<std::chrono::microseconds>(
+                          Clock::now().time_since_epoch())
+                          .count();
+  const int64_t age = now - last;
+  return age < 0 ? 0 : static_cast<uint64_t>(age);
 }
 
 ServiceThread::Status BusSimulation::getThreadStatus() const {
@@ -194,6 +209,11 @@ ebus::BusStatus BusSimulation::fetchStatus() const {
     return {s.name, s.task_stack_bytes, s.task_stack_free_bytes};
   };
   return {map(getThreadStatus()), map(getSynThreadStatus())};
+}
+
+void BusSimulation::recordUtilization(uint8_t byte) {
+  // 1 (start bit) + zero bits in data.
+  if (bus_monitor_) bus_monitor_->recordLowBits(countZeroBits(byte) + 1);
 }
 
 void BusSimulation::armRequestTimer(uint64_t delay) {

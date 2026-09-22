@@ -53,7 +53,8 @@ class BusSimulation : public BusBase {
   // Working Methods
   void writeByte(const uint8_t byte);
   void writeBytes(ByteView bytes);
-  void recordUtilization(uint8_t byte);
+  // RX/TX activity age; epoch (never) reads as busy.
+  uint64_t lastActivityAgeUs() const override;
 
   // Status/Telemetry
   platform::ServiceThread::Status getThreadStatus() const;
@@ -87,6 +88,8 @@ class BusSimulation : public BusBase {
       false};  // Flag to indicate a bus request is pending
   bool syn_active_{
       false};  // True if this instance is currently generating SYNs
+
+  void recordUtilization(uint8_t byte);
 
   void armRequestTimer(uint64_t delay);
 

@@ -76,7 +76,10 @@ class BusEsp : public BusBase {
   // ISR QQ-write timestamp vs now (0 never wrote -> infinitely stale, so a
   // win without a QQ write can never preload).
   uint32_t qqWriteAgeUs() const override;
-  void recordUtilization(uint8_t byte);
+  // RX-edge/TX activity age (falling edges + our writes both reset it).
+  uint64_t lastActivityAgeUs() const override;
+  // Stamps an immediate (non-timer) QQ write for the stale-win guard.
+  void noteQqWrite() override;
 
   // Status/Telemetry
   platform::ServiceThread::Status getThreadStatus() const;
@@ -146,6 +149,8 @@ class BusEsp : public BusBase {
   QueueHandle_t uart_event_queue_ = nullptr;
   portMUX_TYPE timer_mux_ = portMUX_INITIALIZER_UNLOCKED;
   portMUX_TYPE listener_mux_ = portMUX_INITIALIZER_UNLOCKED;
+
+  void recordUtilization(uint8_t byte);
 
   // setup helpers
   void configureUart();
