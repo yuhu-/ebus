@@ -99,7 +99,7 @@ int main(int argc, char* argv[]) {
   // --- Configuration ---
   ebus::EbusConfig config;
   config.runtime.log_level = log_level;
-  config.runtime.address = 0x31;  // Standard test address
+  config.runtime.address = 0x03;  // Standard test address
   config.runtime.bus.syn_gen = syn_gen;
   config.runtime.bus.watchdog_timeout_ms = 250;
 
@@ -114,6 +114,7 @@ int main(int argc, char* argv[]) {
 #endif
 
   std::cout << "Starting eBUS Controller with configuration:\n"
+            << "  Controller address  : 0x03\n"
             << "  Plain client port   : " << plain_port << "\n"
             << "  Enhanced client port: " << enhanced_port << "\n"
 #if EBUS_SIMULATION
@@ -136,6 +137,31 @@ int main(int argc, char* argv[]) {
       std::cout << "[Bus Telegram] Type=" << ebus::toString(info.telegram_type)
                 << " Master=" << ebus::byteToHex(info.master_view)
                 << " Slave=" << ebus::byteToHex(info.slave_view) << std::endl;
+    }
+  });
+
+   // Set up reactive callback to handle scan commands to our slave address
+  controller.setReactiveCallback([](const ebus::ReactiveInfo& info) {
+    // Check if this is a scan command (0x07 0x04) to our slave address
+    if (info.master_view.size() >= 4 && info.master_view[2] == 0x07 &&
+        info.master_view[3] == 0x04) {
+      // This is a scan command (0x07 0x04) - respond with device info
+      // For device 0x36 (slave of 0x37), respond with device info
+      // Device info for EHP00 SW 04.16 HW 72.01
+      std::vector<uint8_t> response = {0x0a, 0xb5, 0x45, 0x48, 0x50, 0x30,
+                                       0x30, 0x04, 0x16, 0x72, 0x01};
+      info.slave_response.assign(response);
+      std::cout << "[Reactive] Responded to scan command with device info"
+                << std::endl;
+    } else if (info.master_view.size() >= 4 && info.master_view[1] == 0x08 &&
+               info.master_view[2] == 0xB5) {
+      // Generic B5 09 read to our slave (0x08 = slave of proxy QQ 0x03):
+      // NN=01 + zero byte. Framing-clean placeholder (CRC auto-appended);
+      // promote frequent polls to slave reactions from this log.
+      std::vector<uint8_t> response = {0x01, 0x00};
+      info.slave_response.assign(response);
+      std::cout << "[Reactive] Generic B509 answer to "
+                << ebus::byteToHex(info.master_view) << std::endl;
     }
   });
 
