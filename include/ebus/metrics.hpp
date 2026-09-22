@@ -194,6 +194,10 @@ struct ReactorMetrics {
 struct ClientManagerMetrics {
   uint32_t max_bus_queue_size = 0;
   uint32_t bus_queue_dropped = 0;
+  // IO-loop iterations since boot (rate across double dumps = loop
+  // cadence: ~100/s means select-timeout driven, ~1000/s means spinning
+  // on wakeups). Never reset: deltas are the signal.
+  uint32_t loop_iterations = 0;
 
   void reset();
 

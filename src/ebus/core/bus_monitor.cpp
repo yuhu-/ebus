@@ -607,6 +607,7 @@ void metrics::ReactorMetrics::toJson(detail::JsonWriter& writer) const {
 void metrics::ClientManagerMetrics::reset() {
   max_bus_queue_size = 0;
   bus_queue_dropped = 0;
+  // loop_iterations intentionally survives reset: rate needs a stable base.
 }
 
 void metrics::SchedulerMetrics::reset() {
@@ -626,6 +627,7 @@ void metrics::ClientManagerMetrics::toJson(detail::JsonWriter& writer) const {
   auto scope = writer.objectScope();
   writer.writeField("max_bus_queue_size", max_bus_queue_size);
   writer.writeField("bus_queue_dropped", bus_queue_dropped);
+  writer.writeField("loop_iterations", loop_iterations);
 }
 
 void metrics::SystemMetrics::toJson(detail::JsonWriter& writer) const {

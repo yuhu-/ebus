@@ -899,6 +899,12 @@ void ClientManager::clientIoLoop() {
   fd_set readfds, writefds, exceptfds;
 
   while (running_.load()) {
+    // Loop cadence diagnostic (rate across double dumps distinguishes
+    // timeout-driven idling from wakeup spinning). Same per-iteration
+    // monitor cost as the max-queue reset below.
+    if (bus_monitor_) {
+      bus_monitor_->updateClientManager([](auto& m) { m.loop_iterations++; });
+    }
     // Phase 1: Prepare file descriptor sets for this iteration
     int max_fd = prepareFileDescriptors(readfds, writefds, exceptfds);
 
