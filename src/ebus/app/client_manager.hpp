@@ -145,6 +145,11 @@ class ClientManager {
   void checkSessionTimeout();
   void handleActiveSenderDisconnected();
 
+  // True with a connected client of any type or an active sender
+  // session. Caller must hold mutex_. One short scan shared by the hot
+  // path gate and the loop timeout choice (no per-caller state to audit).
+  bool hasConsumersLocked() const;
+
   // Helper to find client by fd across all client arrays mutex_ MUST be locked
   std::shared_ptr<AbstractClient> findClientByFdLocked(int fd);
 

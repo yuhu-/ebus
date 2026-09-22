@@ -353,27 +353,7 @@ void ClientManager::onBusEventInfo(const BusEventInfo& info) {
   // behavior with any consumer attached is unchanged.
   {
     platform::LockGuard<platform::Mutex> lock(mutex_);
-    if (!current_active_sender_) {
-      bool any_connected = false;
-      for (const auto& c : regular_clients_)
-        if (c && c->isConnected()) {
-          any_connected = true;
-          break;
-        }
-      if (!any_connected)
-        for (const auto& c : readonly_clients_)
-          if (c && c->isConnected()) {
-            any_connected = true;
-            break;
-          }
-      if (!any_connected)
-        for (const auto& c : enhanced_clients_)
-          if (c && c->isConnected()) {
-            any_connected = true;
-            break;
-          }
-      if (!any_connected) return;
-    }
+    if (!hasConsumersLocked()) return;
   }
   // Hot path: non-blocking push to queue, O(1) operation
   if (!bus_queue_.tryPush(info)) {
@@ -614,31 +594,15 @@ void ClientManager::handleActiveSenderDisconnected() {
   }
 }
 
-void ClientManager::removeDisconnectedClients() {
-  // Thread 2 only — client arrays not shared, no mutex needed
-  ebus::StaticVector<std::shared_ptr<AbstractClient>,
-                     ClientManagerLimits::max_clients * 3>
-      to_stop;
-
-  auto collect = [&](ClientArray& arr, const char* type_name) {
-    for (size_t i = 0; i < ClientManagerLimits::max_clients; ++i) {
-      if (arr[i] && !arr[i]->isConnected()) {
-        EBUS_LOG_INFO_F(
-            "[ClientManager] Removing disconnected %s client fd=%d slot=%zu",
-            type_name, arr[i]->getFd(), i);
-        to_stop.push_back(arr[i]);
-        arr[i].reset();
-      }
-    }
+bool ClientManager::hasConsumersLocked() const {
+  if (current_active_sender_) return true;
+  auto any_connected = [](const ClientArray& arr) {
+    for (const auto& c : arr)
+      if (c && c->isConnected()) return true;
+    return false;
   };
-
-  collect(regular_clients_, "regular");
-  collect(readonly_clients_, "readonly");
-  collect(enhanced_clients_, "enhanced");
-
-  for (auto& client : to_stop) {
-    client->stop();
-  }
+  return any_connected(regular_clients_) || any_connected(readonly_clients_) ||
+         any_connected(enhanced_clients_);
 }
 
 std::shared_ptr<AbstractClient> ClientManager::findClientByFdLocked(int fd) {
@@ -697,6 +661,33 @@ std::shared_ptr<AbstractClient> ClientManager::removeClientByFdLocked(int fd) {
   removeFromArrayLocked(client, enhanced_clients_);
 
   return client;
+}
+
+void ClientManager::removeDisconnectedClients() {
+  // Thread 2 only — client arrays not shared, no mutex needed
+  ebus::StaticVector<std::shared_ptr<AbstractClient>,
+                     ClientManagerLimits::max_clients * 3>
+      to_stop;
+
+  auto collect = [&](ClientArray& arr, const char* type_name) {
+    for (size_t i = 0; i < ClientManagerLimits::max_clients; ++i) {
+      if (arr[i] && !arr[i]->isConnected()) {
+        EBUS_LOG_INFO_F(
+            "[ClientManager] Removing disconnected %s client fd=%d slot=%zu",
+            type_name, arr[i]->getFd(), i);
+        to_stop.push_back(arr[i]);
+        arr[i].reset();
+      }
+    }
+  };
+
+  collect(regular_clients_, "regular");
+  collect(readonly_clients_, "readonly");
+  collect(enhanced_clients_, "enhanced");
+
+  for (auto& client : to_stop) {
+    client->stop();
+  }
 }
 
 void ClientManager::addListenerFds(fd_set& readfds, int& max_fd) {
@@ -916,10 +907,14 @@ void ClientManager::clientIoLoop() {
       continue;
     }
 
-    // Phase 2: Use a short timeout for responsiveness
-    // We check for session timeouts and bus availability in the timeout
-    // handler
-    struct timeval tv{0, 10000};  // 10ms timeout
+    // Phase 2: short timeout while serving (session timing needs it),
+    // relaxed when idle (session timeouts can only exist with consumers).
+    bool consumers = false;
+    {
+      platform::LockGuard<platform::Mutex> lock(mutex_);
+      consumers = hasConsumersLocked();
+    }
+    struct timeval tv = consumers ? timeval{0, 10000} : timeval{0, 100000};
 
     // Phase 3: Block on socket events
     int activity = select(max_fd + 1, &readfds, &writefds, &exceptfds, &tv);
