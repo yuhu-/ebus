@@ -347,6 +347,34 @@ void ClientManager::onBusRequested() {
 }
 
 void ClientManager::onBusEventInfo(const BusEventInfo& info) {
+  // Hot path: with no consumers (no connected clients, no active sender
+  // session) there is nothing to forward to — drop silently instead of
+  // waking the I/O thread ~500x/s for empty loop scans. One short lock;
+  // behavior with any consumer attached is unchanged.
+  {
+    platform::LockGuard<platform::Mutex> lock(mutex_);
+    if (!current_active_sender_) {
+      bool any_connected = false;
+      for (const auto& c : regular_clients_)
+        if (c && c->isConnected()) {
+          any_connected = true;
+          break;
+        }
+      if (!any_connected)
+        for (const auto& c : readonly_clients_)
+          if (c && c->isConnected()) {
+            any_connected = true;
+            break;
+          }
+      if (!any_connected)
+        for (const auto& c : enhanced_clients_)
+          if (c && c->isConnected()) {
+            any_connected = true;
+            break;
+          }
+      if (!any_connected) return;
+    }
+  }
   // Hot path: non-blocking push to queue, O(1) operation
   if (!bus_queue_.tryPush(info)) {
     // Queue full: discard oldest to make room (like Reactor does)

@@ -283,3 +283,26 @@ TEST_CASE("ClientManager Client Removal") {
   manager.stop();
   close(sv[1]);
 }
+
+TEST_CASE("ClientManager drops bus events with no consumers", "[app][client]") {
+  Request req;
+  req.setLockCounter(0);
+  req.reset();
+  ebus::BusConfig config;
+  ebus::RuntimeConfig runtime{};
+  runtime.address = 0x01;
+  BusMonitor bus_monitor;
+  platform::Bus bus(config, runtime, &req, &bus_monitor);
+  Handler handler(runtime.address, &bus, &req, &bus_monitor);
+  BusHandler bus_handler(&req, &handler);
+
+  ClientManager manager(&bus, &bus_handler, &req, &bus_monitor);
+  // NOTE: not started, no clients attached: the I/O thread would only
+  // spin empty loop scans per event. Events must not even queue.
+  for (int i = 0; i < 10; ++i) {
+    BusEvent ev{static_cast<uint8_t>(0xaa), false, false, ebus::Clock::now()};
+    bus_handler.onBusEvent(ev);
+  }
+  ebus::ClientManagerStatus st = manager.fetchStatus();
+  REQUIRE(st.bus_queue.max_size == 0);
+}

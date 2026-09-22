@@ -175,6 +175,10 @@ inline constexpr int64_t qq_blackout_us = 5000;
 
 namespace platform::Esp {
 inline constexpr size_t buffer_size = 256;
+// UART event queue depth: back-to-back bytes must not drop events (a
+// dropped event parks bytes in the driver FIFO until the next one —
+// pure post-SYN latency). Also gives max_stale_events something to count.
+inline constexpr size_t uart_event_queue_size = 8;
 inline constexpr uint32_t event_timeout_ms = 10;
 inline constexpr int uart_install_retries = 3;
 inline constexpr uint32_t uart_install_retry_delay_ms = 100;
