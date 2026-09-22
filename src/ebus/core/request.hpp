@@ -39,6 +39,12 @@ class Request {
   // Working Methods
   bool requestBus(uint8_t address, bool external = false);
   void busRequestCompleted();
+  // Withdraws an armed but unfired intent (defused: contender traffic or
+  // withdrawn request). Clears flags only — FSM state, lock counter and
+  // telemetry are untouched; the next byte is evaluated normally.
+  // Without this, a defused intent lingers: busAvailable() stays false
+  // and (for external intents) every future SYN stays suppressed.
+  void withdrawBusRequest();
   void startBit();
   RequestResult run(uint8_t byte);
 

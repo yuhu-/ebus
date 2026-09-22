@@ -533,11 +533,15 @@ void BusEsp::ebusUartEventRunner() {
             // No SYN entry (contender/data traffic, or our request was
             // withdrawn meanwhile): a pending QQ entry is obsolete. Defuse
             // it so we defer to the next SYN instead of transmitting into
-            // a running telegram.
+            // a running telegram. The intent itself must go too: a
+            // lingering bus_request_ would hold busAvailable() false (and,
+            // for external intents, suppress every future SYN) until noise
+            // or reset breaks the spell — total active silence.
             portENTER_CRITICAL(&timer_mux_);
             qq_timer_armed_ = false;
             micros_delay_flag_ = false;
             portEXIT_CRITICAL(&timer_mux_);
+            if (request_) request_->withdrawBusRequest();
           }
 
           // capture ISR flags and timing atomically and clear globals

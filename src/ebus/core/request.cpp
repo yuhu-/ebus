@@ -88,6 +88,11 @@ void Request::busRequestCompleted() {
   }
 }
 
+void Request::withdrawBusRequest() {
+  bus_request_.store(false, std::memory_order_release);
+  external_bus_request_.store(false, std::memory_order_release);
+}
+
 void Request::startBit() {
   // This is typically called on a bus error, like a framing error, which
   // could be caused by a spurious start bit from an interference impulse.
