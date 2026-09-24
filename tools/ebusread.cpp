@@ -363,31 +363,31 @@ void usage() {
             << std::endl;
   std::cout << "  <date> <master> [/ <slave>] (CRC/ACK stripped, NN kept)"
             << std::endl;
-  std::cout << "  -f, --full       complete message in wire order (CRC/ACK "
+  std::cout << "  -f, --full        complete message in wire order (CRC/ACK "
                "included, data bytes bold with -b)"
             << std::endl;
-  std::cout << "  -b, --bold       bold data bytes (full mode, terminal only)"
+  std::cout << "  -b, --bold        bold data bytes (full mode, terminal only)"
             << std::endl;
-  std::cout << "  -r, --raw        byte watch: one timestamped line per wire "
+  std::cout << "  -r, --raw         byte watch: one timestamped line per wire "
                "byte (SYN annotated)"
             << std::endl;
-  std::cout << "  -u, --unix       epoch-millisecond timestamps " << std::endl;
+  std::cout << "  -u, --unix        epoch-millisecond timestamps " << std::endl;
   std::cout << "  -x, --no-enhanced disable enhanced auto-detect (raw ports)"
             << std::endl;
-  std::cout << "  -d, --dump       dump binary values to stdout" << std::endl;
-  std::cout << "  -e, --noerror    suppress errors" << std::endl;
-  std::cout << "  -n, --notime     suppress timestamp" << std::endl;
-  std::cout << "  -j, --json       output telegrams as JSON" << std::endl;
-  std::cout << "  -p, --pretty     pretty print JSON output" << std::endl;
-  std::cout << "  -h, --help       show this page" << std::endl;
+  std::cout << "  -d, --dump        dump binary values to stdout" << std::endl;
+  std::cout << "  -e, --no-error    suppress errors" << std::endl;
+  std::cout << "  -n, --no-time     suppress timestamp" << std::endl;
+  std::cout << "  -j, --json        output telegrams as JSON" << std::endl;
+  std::cout << "  -p, --pretty      pretty print JSON output" << std::endl;
+  std::cout << "  -h, --help        show this page" << std::endl;
 }
 
 int main(int argc, char* argv[]) {
   static struct option options[] = {{"bold", no_argument, nullptr, 'b'},
                                     {"dump", no_argument, nullptr, 'd'},
                                     {"full", no_argument, nullptr, 'f'},
-                                    {"noerror", no_argument, nullptr, 'e'},
-                                    {"notime", no_argument, nullptr, 'n'},
+                                    {"no-error", no_argument, nullptr, 'e'},
+                                    {"no-time", no_argument, nullptr, 'n'},
                                     {"raw", no_argument, nullptr, 'r'},
                                     {"unix", no_argument, nullptr, 'u'},
                                     {"no-enhanced", no_argument, nullptr, 'x'},
