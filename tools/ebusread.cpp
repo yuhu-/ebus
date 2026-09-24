@@ -3,13 +3,10 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-// The reader interprets all incoming values ​​as eBUS data. As a
-// console-based program, it accepts input from standard input via pipe as well
-// as reading from files or a TCP socket. The data is checked for correctness
-// and output to standard output in the same canonical line format the
-// adapter logs (date + raw telegram, CRC/ACK stripped by default).
-// Dumping of binary values ​​is also supported.
-// It automatically detects and supports the ebusd Enhanced Protocol.
+// Reads eBUS data from standard input, files, or TCP sockets, validates it,
+// and writes canonical adapter-log lines to standard output. Each line
+// contains a date and the raw telegram; CRC and ACK fields are stripped by
+// default. Binary dumps and enhanced protocol output are supported.
 
 #include <arpa/inet.h>
 #include <fcntl.h>
@@ -52,6 +49,8 @@ bool dump = false;
 bool full = false;
 bool noerror = false;
 bool notime = false;
+bool raw = false;
+bool unix_time = false;
 bool json_output = false;
 bool pretty = false;
 
@@ -70,9 +69,15 @@ const char* timestamp() {
     std::exit(EXIT_FAILURE);
   }
 
-  std::snprintf(time, sizeof(time), "%04d-%02d-%02d %02d:%02d:%02d.%03ld",
-                tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour,
-                tm.tm_min, tm.tm_sec, tv.tv_usec / 1000);
+  if (unix_time) {
+    std::snprintf(
+        time, sizeof(time), "%lld",
+        static_cast<long long>(tv.tv_sec) * 1000LL + tv.tv_usec / 1000);
+  } else {
+    std::snprintf(time, sizeof(time), "%04d-%02d-%02d %02d:%02d:%02d.%03ld",
+                  tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour,
+                  tm.tm_min, tm.tm_sec, tv.tv_usec / 1000);
+  }
 
   return time;
 }
@@ -142,6 +147,22 @@ void printError(const Telegram& tel, const ebus::Sequence& sequence) {
 
 void collect(uint8_t byte) {
   static ebus::Sequence sequence;
+
+  if (raw) {
+    // Byte watch: every wire byte as its own line. SYN is the only annotated
+    // byte (data 0xAA is always escaped, so a raw 0xAA is framing;
+    // 0x00/0xFF occur as QQ/data too and are left unlabeled).
+    // Composable: assembly below still runs, so -r combines with the
+    // telegram modes.
+    std::string line;
+    if (!notime) {
+      line += timestamp();
+      line += " ";
+    }
+    line += ebus::toString(byte);
+    if (byte == ebus::Symbols::syn) line += " SYN";
+    std::cout << line << std::endl;
+  }
 
   if (byte == ebus::Symbols::syn) {
     static bool running = false;
@@ -341,6 +362,10 @@ void usage() {
             << std::endl;
   std::cout << "  -b, --bold       bold data bytes (full mode, terminal only)"
             << std::endl;
+  std::cout << "  -r, --raw        byte watch: one timestamped line per wire "
+               "byte (SYN annotated)"
+            << std::endl;
+  std::cout << "  -u, --unix       epoch-millisecond timestamps " << std::endl;
   std::cout << "  -d, --dump       dump binary values to stdout" << std::endl;
   std::cout << "  -e, --noerror    suppress errors" << std::endl;
   std::cout << "  -n, --notime     suppress timestamp" << std::endl;
@@ -355,13 +380,15 @@ int main(int argc, char* argv[]) {
                                     {"full", no_argument, nullptr, 'f'},
                                     {"noerror", no_argument, nullptr, 'e'},
                                     {"notime", no_argument, nullptr, 'n'},
+                                    {"raw", no_argument, nullptr, 'r'},
+                                    {"unix", no_argument, nullptr, 'u'},
                                     {"json", no_argument, nullptr, 'j'},
                                     {"pretty", no_argument, nullptr, 'p'},
                                     {"help", no_argument, nullptr, 'h'},
                                     {nullptr, 0, nullptr, 0}};
 
   int option;
-  while ((option = getopt_long(argc, argv, "bdfenjph", options, nullptr)) !=
+  while ((option = getopt_long(argc, argv, "bdfenrjuph", options, nullptr)) !=
          -1) {
     switch (option) {
       case 'b':
@@ -378,6 +405,12 @@ int main(int argc, char* argv[]) {
         break;
       case 'n':
         notime = true;
+        break;
+      case 'r':
+        raw = true;
+        break;
+      case 'u':
+        unix_time = true;
         break;
       case 'j':
         json_output = true;
