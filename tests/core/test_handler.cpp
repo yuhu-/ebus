@@ -165,6 +165,9 @@ SCENARIO("Handler processes eBUS messages correctly", "[core][handler]") {
           if (seq[i] == ebus::Symbols::syn && request.busRequestPending()) {
             INFO("ISR - write address");
             bus.writeByte(request.busRequestAddress());
+            // The real ISR QQ path stamps the write (stale-win guard +
+            // qq_win_age); the emulation owes the same stamp.
+            bus.noteQqWrite();
             busRequestFlag = true;
           }
         }

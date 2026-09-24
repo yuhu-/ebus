@@ -105,6 +105,26 @@ struct HandlerMetrics {
 };
 
 /**
+ * Outcome of the most recent arbitration contest (wire-AND round).
+ * Answers "against whom": ours is the emitted QQ byte, theirs the byte
+ * read back that decided the round. Sticky until the next contest.
+ */
+struct LastContest {
+  bool won = false;
+  uint8_t ours = 0xff;
+  uint8_t theirs = 0xff;
+  // 0 = first round (post-SYN), 1 = second round (post-AUTO-SYN).
+  uint8_t round = 0;
+  // True once any contest was recorded (distinguishes "no contest yet"
+  // from a real 0xff/0xff outcome).
+  bool valid = false;
+
+  void reset();
+
+  void toJson(detail::JsonWriter& writer) const;
+};
+
+/**
  * Performance and health metrics for bus requests.
  */
 struct RequestMetrics {
@@ -123,6 +143,9 @@ struct RequestMetrics {
   // QQ-write to won-processing age: the stale-win budget actually consumed.
   // Compare against the 40ms foreign AUTO-SYN horizon (Spec 9.2).
   MetricValues qq_win_age;
+
+  // Most recent arbitration contest (sticky diagnostic).
+  LastContest last_contest;
 
   void reset();
 

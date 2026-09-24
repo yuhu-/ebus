@@ -10,6 +10,7 @@
 #include <cassert>
 #include <cinttypes>
 #include <cstring>  // for strerror
+#include <algorithm>
 #include <ebus/detail/protocol_limits.hpp>
 #include <ebus/static_vector.hpp>
 #include <ebus/utils.hpp>
@@ -492,6 +493,10 @@ void ClientManager::handleBusAvailableForSession() {
     // (observe->first, session callbacks) first, then emit. Any byte
     // arriving between the two lands in first-state evaluation, which is
     // exactly correct for it (it postdates our decision point).
+    EBUS_LOG_INFO_F(
+        "[ClientManager] Session fd=%d: QQ fired master=%02x idle=%" PRIu64 "us",
+        active_sender->getFd(), first_byte,
+        bus_->lastActivityAgeUs());
     bus_->writeByte(first_byte);
     bus_->noteQqWrite();
     last_sent_byte_ = first_byte;
@@ -643,9 +648,9 @@ void ClientManager::handleActiveSenderDisconnected() {
 bool ClientManager::hasConsumersLocked() const {
   if (current_active_sender_) return true;
   auto any_connected = [](const ClientArray& arr) {
-    for (const auto& c : arr)
-      if (c && c->isConnected()) return true;
-    return false;
+    return std::any_of(arr.begin(), arr.end(), [](const auto& c) {
+      return c && c->isConnected();
+    });
   };
   return any_connected(regular_clients_) || any_connected(readonly_clients_) ||
          any_connected(enhanced_clients_);

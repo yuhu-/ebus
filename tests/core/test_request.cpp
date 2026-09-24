@@ -7,6 +7,7 @@
 #include <ebus/utils.hpp>
 
 #include "core/request.hpp"
+#include "core/bus_monitor.hpp"
 
 using namespace ebus::detail;
 
@@ -217,4 +218,40 @@ TEST_CASE("Request: withdrawBusRequest releases stuck intent",
   // Withdrawing twice is a safe no-op.
   r.withdrawBusRequest();
   REQUIRE(r.busAvailable() == true);
+}
+
+TEST_CASE("Request: lost/won contests record ours vs theirs",
+          "[core][request]") {
+  BusMonitor m;
+  Request r(&m);
+  r.setLockCounter(0);
+  r.reset();
+  REQUIRE(r.requestBus(0x31) == true);
+  r.busRequestCompleted();
+  // Foreign master, different prio class -> real first-round loss.
+  REQUIRE(r.run(0x10) == ebus::RequestResult::first_lost);
+  m.fetchMetrics([&](const auto& sm) {
+    REQUIRE(sm.request.lost_total == 1);
+    REQUIRE(sm.request.last_contest.valid == true);
+    REQUIRE(sm.request.last_contest.won == false);
+    REQUIRE(sm.request.last_contest.ours == 0x31);
+    REQUIRE(sm.request.last_contest.theirs == 0x10);
+    REQUIRE(sm.request.last_contest.round == 0);
+  });
+
+  // Same setup, echo of our own byte -> first-round win overwrites record.
+  BusMonitor m2;
+  Request r2(&m2);
+  r2.setLockCounter(0);
+  r2.reset();
+  REQUIRE(r2.requestBus(0x31) == true);
+  r2.busRequestCompleted();
+  REQUIRE(r2.run(0x31) == ebus::RequestResult::first_won);
+  m2.fetchMetrics([&](const auto& sm) {
+    REQUIRE(sm.request.won_total == 1);
+    REQUIRE(sm.request.last_contest.valid == true);
+    REQUIRE(sm.request.last_contest.won == true);
+    REQUIRE(sm.request.last_contest.ours == 0x31);
+    REQUIRE(sm.request.last_contest.theirs == 0x31);
+  });
 }

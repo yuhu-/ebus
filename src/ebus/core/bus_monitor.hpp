@@ -139,6 +139,10 @@ class BusMonitor {
   void recordIsrSynPostponed(uint32_t count);
   void recordMultiByteEvent(bool has_syn);
   void recordStartBitDelta(uint32_t delta_us);
+  // Records an arbitration contest outcome (wire-AND round decided).
+  // Called from the Request FSM won/lost branches; mutex-protected like
+  // the counters updated at the same sites.
+  void recordContest(bool won, uint8_t ours, uint8_t theirs, uint8_t round);
 
   void updateUtilizationHistory();
 

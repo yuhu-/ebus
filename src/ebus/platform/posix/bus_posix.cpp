@@ -237,6 +237,40 @@ void BusPosix::writeBytes(ByteView bytes) {
   if (bus_monitor_) bus_monitor_->transmit.markEnd();
 }
 
+uint32_t BusPosix::qqWriteAgeUs() const {
+  const int64_t written = last_qq_write_us_.load(std::memory_order_acquire);
+  if (written == 0) return UINT32_MAX;
+  const int64_t now = std::chrono::duration_cast<std::chrono::microseconds>(
+                          Clock::now().time_since_epoch())
+                          .count();
+  const int64_t age = now - written;
+  if (age < 0) return 0;
+  return age > static_cast<int64_t>(UINT32_MAX) ? UINT32_MAX
+                                                : static_cast<uint32_t>(age);
+}
+
+uint64_t BusPosix::lastActivityAgeUs() const {
+  // last_activity_time_ is written under syn_mutex_; atomicity across the
+  // short read is acceptable for an idle heuristic (worst case: one stale
+  // decision, still wire-AND validated).
+  const auto last = std::chrono::duration_cast<std::chrono::microseconds>(
+                        last_activity_time_.time_since_epoch())
+                        .count();
+  if (last == 0) return 0;
+  const int64_t now = std::chrono::duration_cast<std::chrono::microseconds>(
+                          Clock::now().time_since_epoch())
+                          .count();
+  const int64_t age = now - last;
+  return age < 0 ? 0 : static_cast<uint64_t>(age);
+}
+
+void BusPosix::noteQqWrite() {
+  last_qq_write_us_.store(std::chrono::duration_cast<std::chrono::microseconds>(
+                              Clock::now().time_since_epoch())
+                              .count(),
+                          std::memory_order_release);
+}
+
 ServiceThread::Status BusPosix::getThreadStatus() const {
   if (worker_) {
     return worker_->status();
@@ -258,44 +292,7 @@ ebus::BusStatus BusPosix::fetchStatus() const {
   };
   return {map(getThreadStatus()), map(getSynThreadStatus())};
 }
-uint32_t BusPosix::qqWriteAgeUs() const {
-  const int64_t written =
-      last_qq_write_us_.load(std::memory_order_acquire);
-  if (written == 0) return UINT32_MAX;
-  const int64_t now =
-      std::chrono::duration_cast<std::chrono::microseconds>(
-          Clock::now().time_since_epoch())
-          .count();
-  const int64_t age = now - written;
-  if (age < 0) return 0;
-  return age > static_cast<int64_t>(UINT32_MAX) ? UINT32_MAX
-                                               : static_cast<uint32_t>(age);
-}
 
-uint64_t BusPosix::lastActivityAgeUs() const {
-  // last_activity_time_ is written under syn_mutex_; atomicity across the
-  // short read is acceptable for an idle heuristic (worst case: one stale
-  // decision, still wire-AND validated).
-  const auto last =
-      std::chrono::duration_cast<std::chrono::microseconds>(
-          last_activity_time_.time_since_epoch())
-          .count();
-  if (last == 0) return 0;
-  const int64_t now =
-      std::chrono::duration_cast<std::chrono::microseconds>(
-          Clock::now().time_since_epoch())
-          .count();
-  const int64_t age = now - last;
-  return age < 0 ? 0 : static_cast<uint64_t>(age);
-}
-
-void BusPosix::noteQqWrite() {
-  last_qq_write_us_.store(
-      std::chrono::duration_cast<std::chrono::microseconds>(
-          Clock::now().time_since_epoch())
-          .count(),
-      std::memory_order_release);
-}
 void BusPosix::recordUtilization(uint8_t byte) {
   // 1 (start bit) + zero bits in data.
   if (bus_monitor_) bus_monitor_->recordLowBits(countZeroBits(byte) + 1);

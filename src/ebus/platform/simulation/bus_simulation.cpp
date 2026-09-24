@@ -175,6 +175,18 @@ void BusSimulation::writeBytes(ByteView bytes) {
   for (size_t i = 0; i < bytes.size(); ++i) writeByte(bytes[i]);
 }
 
+uint32_t BusSimulation::qqWriteAgeUs() const {
+  const int64_t written = last_qq_write_us_.load(std::memory_order_acquire);
+  if (written == 0) return UINT32_MAX;
+  const int64_t now = std::chrono::duration_cast<std::chrono::microseconds>(
+                          Clock::now().time_since_epoch())
+                          .count();
+  const int64_t age = now - written;
+  if (age < 0) return 0;
+  return age > static_cast<int64_t>(UINT32_MAX) ? UINT32_MAX
+                                                : static_cast<uint32_t>(age);
+}
+
 uint64_t BusSimulation::lastActivityAgeUs() const {
   // Same racy-but-harmless read as posix: worst case one misjudged idle
   // decision, still wire-AND validated downstream.
@@ -187,6 +199,13 @@ uint64_t BusSimulation::lastActivityAgeUs() const {
                           .count();
   const int64_t age = now - last;
   return age < 0 ? 0 : static_cast<uint64_t>(age);
+}
+
+void BusSimulation::noteQqWrite() {
+  last_qq_write_us_.store(std::chrono::duration_cast<std::chrono::microseconds>(
+                              Clock::now().time_since_epoch())
+                              .count(),
+                          std::memory_order_release);
 }
 
 ServiceThread::Status BusSimulation::getThreadStatus() const {
@@ -221,6 +240,7 @@ void BusSimulation::armRequestTimer(uint64_t delay) {
       std::async(std::launch::async, [this, delay]() {
         std::this_thread::sleep_for(std::chrono::microseconds(delay));
         writeByte(request_->busRequestAddress());
+        noteQqWrite();
         bus_request_flag_.store(true, std::memory_order_release);
       });
 }

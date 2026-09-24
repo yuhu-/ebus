@@ -53,8 +53,11 @@ class BusSimulation : public BusBase {
   // Working Methods
   void writeByte(const uint8_t byte);
   void writeBytes(ByteView bytes);
+  // QQ-write age from the request-timer path (0 never wrote -> stale).
+  uint32_t qqWriteAgeUs() const override;
   // RX/TX activity age; epoch (never) reads as busy.
   uint64_t lastActivityAgeUs() const override;
+  void noteQqWrite() override;
 
   // Status/Telemetry
   platform::ServiceThread::Status getThreadStatus() const;
@@ -88,6 +91,9 @@ class BusSimulation : public BusBase {
       false};  // Flag to indicate a bus request is pending
   bool syn_active_{
       false};  // True if this instance is currently generating SYNs
+
+  // esp_timer-less QQ-write stamp (µs in Clock domain, 0 = never).
+  std::atomic<int64_t> last_qq_write_us_{0};
 
   void recordUtilization(uint8_t byte);
 

@@ -9,6 +9,7 @@
 #include <ebus/utils.hpp>
 
 #include "core/bus_monitor.hpp"
+#include "utils/logger.hpp"
 
 namespace ebus::detail {
 
@@ -152,8 +153,12 @@ void Request::first(uint8_t byte) {
     result_ = RequestResult::first_syn;
     bytes_since_syn_ = 0;
   } else if (byte == request_address_) {
-    if (bus_monitor_)
+    if (bus_monitor_) {
       bus_monitor_->updateRequest([](auto& m) { m.won_total++; });
+      bus_monitor_->recordContest(true, request_address_, byte, 0);
+    }
+    EBUS_LOG_DEBUG_F("[Request] arbitration won: ours=%02x round=first",
+                     request_address_);
     lock_counter_ = lock_counter_max_;
     transitionTo(RequestState::observe);
     result_ = RequestResult::first_won;
@@ -181,8 +186,13 @@ void Request::first(uint8_t byte) {
       result_ = RequestResult::first_retry;
       bytes_since_syn_ = RequestLimits::collision_byte_count;
     } else {
-      if (bus_monitor_)
+      if (bus_monitor_) {
         bus_monitor_->updateRequest([](auto& m) { m.lost_total++; });
+        bus_monitor_->recordContest(false, request_address_, byte, 0);
+      }
+      EBUS_LOG_DEBUG_F(
+          "[Request] arbitration lost: ours=%02x theirs=%02x round=first",
+          request_address_, byte);
       transitionTo(RequestState::observe);
       result_ = RequestResult::first_lost;
       bytes_since_syn_ = RequestLimits::collision_byte_count;
@@ -212,15 +222,24 @@ void Request::retry(uint8_t byte) {
 
 void Request::second(uint8_t byte) {
   if (byte == request_address_) {
-    if (bus_monitor_)
+    if (bus_monitor_) {
       bus_monitor_->updateRequest([](auto& m) { m.won_total++; });
+      bus_monitor_->recordContest(true, request_address_, byte, 1);
+    }
+    EBUS_LOG_DEBUG_F("[Request] arbitration won: ours=%02x round=second",
+                     request_address_);
     lock_counter_ = lock_counter_max_;
     transitionTo(RequestState::observe);
     result_ = RequestResult::second_won;
     bytes_since_syn_ = 0;
   } else if (isMaster(byte)) {
-    if (bus_monitor_)
+    if (bus_monitor_) {
       bus_monitor_->updateRequest([](auto& m) { m.lost_total++; });
+      bus_monitor_->recordContest(false, request_address_, byte, 1);
+    }
+    EBUS_LOG_DEBUG_F(
+        "[Request] arbitration lost: ours=%02x theirs=%02x round=second",
+        request_address_, byte);
     transitionTo(RequestState::observe);
     result_ = RequestResult::second_lost;
     bytes_since_syn_ = RequestLimits::collision_byte_count;

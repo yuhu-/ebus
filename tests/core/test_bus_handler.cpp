@@ -311,7 +311,11 @@ struct PreloadDriver {
   void driveToWon(bool expect_active = true) {
     REQUIRE(handler.sendActiveMessage(ebus::toVector("feb5050427002d00")) ==
             true);
-    feed(ebus::Symbols::syn);        // request armed
+    feed(ebus::Symbols::syn);  // request armed
+    // Every real emission path (ESP ISR, posix/sim timer, client-manager
+    // immediate fire) stamps the QQ write before completion is signaled;
+    // without it the win reads as never-wrote (infinitely stale).
+    bus.noteQqWrite();
     feed(ebus::Symbols::syn, true);  // -> first
     feed(0x33);                      // first_won -> won()
     REQUIRE(handler.getState() ==
@@ -378,8 +382,8 @@ TEST_CASE("Handler preload: idx1 mismatch aborts and re-arms cleanly",
 TEST_CASE("Handler preload: stale won releases silently without bulk",
           "[core][bushandler][preload]") {
   PreloadDriver d;
-  // Threshold 0: every win is stale (BusSimulation age is 0, never stale
-  // by itself, so this forces the branch deterministically).
+  // Threshold 0: every win is stale (unstamped sim age reads never-wrote,
+  // and any stamped age is >= 0, so this forces the branch deterministically).
   d.handler.setQqStaleThresholdUs(0);
 
   struct Lost {

@@ -129,6 +129,16 @@ void BusMonitor::recordStartBitDelta(uint32_t delta_us) {
       1, std::memory_order_relaxed);
 }
 
+void BusMonitor::recordContest(bool won, uint8_t ours, uint8_t theirs,
+                               uint8_t round) {
+  platform::LockGuard<platform::Mutex> lock(metrics_mutex_);
+  request_acc_.last_contest.won = won;
+  request_acc_.last_contest.ours = ours;
+  request_acc_.last_contest.theirs = theirs;
+  request_acc_.last_contest.round = round;
+  request_acc_.last_contest.valid = true;
+}
+
 void BusMonitor::updateUtilizationHistory() {
 #ifndef EBUS_MINIMAL_DIAGNOSTICS
   platform::LockGuard<platform::Mutex> lock(metrics_mutex_);
@@ -494,6 +504,24 @@ void metrics::RequestMetrics::reset() {
   bus_request_blocked = 0;
   lock_counter_reset = 0;
   session_timeouts = 0;
+  last_contest.reset();
+}
+
+void metrics::LastContest::reset() {
+  won = false;
+  ours = 0xff;
+  theirs = 0xff;
+  round = 0;
+  valid = false;
+}
+
+void metrics::LastContest::toJson(detail::JsonWriter& writer) const {
+  auto scope = writer.objectScope();
+  writer.writeField("won", won);
+  writer.writeHexField("ours", ByteView(&ours, 1));
+  writer.writeHexField("theirs", ByteView(&theirs, 1));
+  writer.writeField("round", round == 0 ? "first" : "second");
+  writer.writeField("valid", valid);
 }
 
 void metrics::RequestMetrics::toJson(detail::JsonWriter& writer) const {
@@ -518,6 +546,7 @@ void metrics::RequestMetrics::toJson(detail::JsonWriter& writer) const {
   writer.writeField("lock_counter_reset", lock_counter_reset);
   writer.writeField("session_timeouts", session_timeouts);
   writer.writeField("qq_win_age", qq_win_age);
+  writer.writeField("last_contest", last_contest);
 }
 
 void metrics::BusMetrics::reset() {
