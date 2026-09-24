@@ -111,7 +111,8 @@ void printTelegram(const Telegram& tel) {
       }
     }
   } else {
-    // Canonical adapter-log format: raw data, CRC/ACK bytes stripped.
+    // Canonical adapter-log format: raw data, CRC/ACK bytes stripped,
+    // NN length bytes kept (lines stay re-splittable).
     out += ebus::toString(tel.getSourceAddress());
     out += ebus::toString(tel.getTargetAddress());
     out += ebus::toString(tel.getPrimaryCommand());
@@ -119,7 +120,8 @@ void printTelegram(const Telegram& tel) {
     out += ebus::toString(tel.getMasterNumberBytes());
     ebus::toString(out, tel.getMasterDataBytes());
     if (tel.getType() == ebus::TelegramType::master_slave) {
-      out += " ";
+      out += " / ";
+      out += ebus::toString(tel.getSlaveNumberBytes());
       ebus::toString(out, tel.getSlaveDataBytes());
     }
   }
@@ -327,14 +329,12 @@ void run(const char* hostname, const char* port, int max_retries = 5) {
 void usage() {
   std::cout << "Usage: ebusread [options] <stdin|device|file|host:port>";
   std::cout << std::endl;
-  std::cout << "eBUS binary data reader" << std::endl;
-  std::cout << "Supports automatic detection of the Enhanced Protocol when "
-               "connecting to ebusd"
+  std::cout << "eBUS binary data reader supporting ebusd enhanced protocol."
             << std::endl;
   std::cout << "Default output is one canonical line per valid telegram, "
                "matching the adapter log:"
             << std::endl;
-  std::cout << "  <date> <master without CRC> [<slave data without CRC>]"
+  std::cout << "  <date> <master> [/ <slave>] (CRC/ACK stripped, NN kept)"
             << std::endl;
   std::cout << "  -f, --full       complete message in wire order (CRC/ACK "
                "included, data bytes bold with -b)"
