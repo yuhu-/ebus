@@ -47,6 +47,7 @@ constexpr int enhanced_threshold = 2;
 bool bold = false;
 bool dump = false;
 bool full = false;
+bool no_enhanced = false;
 bool noerror = false;
 bool notime = false;
 bool raw = false;
@@ -262,7 +263,10 @@ void run(const char* hostname, const char* port, int max_retries = 5) {
         std::cerr << "Timeout: no data received for 10 seconds." << std::endl;
         connection_ok = false;
       } else if (FD_ISSET(sfd, &readfds)) {
-        if (!mode_enhanced) {
+        // --no-enhanced pins raw mode (raw bus ports): the C6/AA
+        // auto-detect would otherwise false-trigger on a data-C6
+        // followed by SYN and garble all decoding afterwards.
+        if (no_enhanced || !mode_enhanced) {
           ssize_t datalen = recv(sfd, data, 1, 0);
           if (datalen == -1) {
             std::cerr << "An error occurred while receiving: "
@@ -273,25 +277,27 @@ void run(const char* hostname, const char* port, int max_retries = 5) {
             connection_ok = false;
           } else {
             uint8_t byte = static_cast<uint8_t>(data[0]);
-            if (waiting_for_c6) {
-              if (byte == enhanced_symbol) {
-                waiting_for_c6 = false;  // now expect 0xaa
-              } else {
-                enhanced_seq_count = 0;
-                waiting_for_c6 = true;
-              }
-            } else {  // waiting for 0xAA
-              if (byte == ebus::Symbols::syn) {
-                enhanced_seq_count++;
-                if (enhanced_seq_count >= enhanced_threshold) {
-                  mode_enhanced = true;
-                  std::cerr << "*** Switching to ENHANCED mode! ***"
-                            << std::endl;
+            if (!no_enhanced) {
+              if (waiting_for_c6) {
+                if (byte == enhanced_symbol) {
+                  waiting_for_c6 = false;  // now expect 0xaa
+                } else {
+                  enhanced_seq_count = 0;
+                  waiting_for_c6 = true;
                 }
-                waiting_for_c6 = true;  // next, expect 0xC6 again
-              } else {
-                enhanced_seq_count = 0;
-                waiting_for_c6 = true;
+              } else {  // waiting for 0xAA
+                if (byte == ebus::Symbols::syn) {
+                  enhanced_seq_count++;
+                  if (enhanced_seq_count >= enhanced_threshold) {
+                    mode_enhanced = true;
+                    std::cerr << "*** Switching to ENHANCED mode! ***"
+                              << std::endl;
+                  }
+                  waiting_for_c6 = true;  // next, expect 0xC6 again
+                } else {
+                  enhanced_seq_count = 0;
+                  waiting_for_c6 = true;
+                }
               }
             }
             if (dump) {
@@ -366,6 +372,8 @@ void usage() {
                "byte (SYN annotated)"
             << std::endl;
   std::cout << "  -u, --unix       epoch-millisecond timestamps " << std::endl;
+  std::cout << "  -x, --no-enhanced disable enhanced auto-detect (raw ports)"
+            << std::endl;
   std::cout << "  -d, --dump       dump binary values to stdout" << std::endl;
   std::cout << "  -e, --noerror    suppress errors" << std::endl;
   std::cout << "  -n, --notime     suppress timestamp" << std::endl;
@@ -382,13 +390,14 @@ int main(int argc, char* argv[]) {
                                     {"notime", no_argument, nullptr, 'n'},
                                     {"raw", no_argument, nullptr, 'r'},
                                     {"unix", no_argument, nullptr, 'u'},
+                                    {"no-enhanced", no_argument, nullptr, 'x'},
                                     {"json", no_argument, nullptr, 'j'},
                                     {"pretty", no_argument, nullptr, 'p'},
                                     {"help", no_argument, nullptr, 'h'},
                                     {nullptr, 0, nullptr, 0}};
 
   int option;
-  while ((option = getopt_long(argc, argv, "bdfenrjuph", options, nullptr)) !=
+  while ((option = getopt_long(argc, argv, "bdfenrjuphx", options, nullptr)) !=
          -1) {
     switch (option) {
       case 'b':
@@ -411,6 +420,9 @@ int main(int argc, char* argv[]) {
         break;
       case 'u':
         unix_time = true;
+        break;
+      case 'x':
+        no_enhanced = true;
         break;
       case 'j':
         json_output = true;
