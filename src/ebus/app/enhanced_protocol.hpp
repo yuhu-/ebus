@@ -10,7 +10,7 @@
 namespace ebus::detail::enhanced {
 
 /**
- * ebusd Enhanced Protocol (binary) constants and logic.
+ * ebusd enhanced protocol (binary) constants and logic.
  */
 
 enum class Command : uint8_t {
