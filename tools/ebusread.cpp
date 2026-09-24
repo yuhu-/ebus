@@ -6,10 +6,10 @@
 // The reader interprets all incoming values ​​as eBUS data. As a
 // console-based program, it accepts input from standard input via pipe as well
 // as reading from files or a TCP socket. The data is checked for correctness
-// and output to standard output. Various formatting options are available for
-// attractive output. Dumping of binary values ​​is also supported.
+// and output to standard output in the same canonical line format the
+// adapter logs (date + raw telegram, CRC/ACK stripped by default).
+// Dumping of binary values ​​is also supported.
 // It automatically detects and supports the ebusd Enhanced Protocol.
-// attractive output. Dumping of binary values ​​is also supported.
 
 #include <arpa/inet.h>
 #include <fcntl.h>
@@ -44,34 +44,16 @@ using namespace ebus::detail;
 constexpr const char* ansi_reset = "\033[0m";
 constexpr const char* ansi_bold = "\033[1m";
 
-constexpr const char* ansi_red = "\033[31m";
-constexpr const char* ansi_green = "\033[32m";
-constexpr const char* ansi_yellow = "\033[33m";
-constexpr const char* ansi_blue = "\033[34m";
-constexpr const char* ansi_magenta = "\033[35m";
-constexpr const char* ansi_cyan = "\033[36m";
-
 constexpr uint8_t enhanced_symbol = 0xc6;
 constexpr int enhanced_threshold = 2;
 
 bool bold = false;
-bool color = false;
 bool dump = false;
+bool full = false;
 bool noerror = false;
 bool notime = false;
-bool parse = false;
-bool raw = false;
-bool split = false;
-bool type = false;
 bool json_output = false;
 bool pretty = false;
-bool status_report = false;
-
-struct {
-  uint32_t total = 0;
-  uint32_t valid = 0;
-  uint32_t errors = 0;
-} stats;
 
 const char* timestamp() {
   static char time[24];
@@ -95,193 +77,83 @@ const char* timestamp() {
   return time;
 }
 
-void services(std::string& out, ebus::ByteView master, ebus::ByteView slave) {
-  if (master[2] == 0x07 && master[3] == 0x00) {
-    out += "0700: 20";
-    out += ebus::toString(master[13]);
-    out += "-";
-    out += ebus::toString(master[11]);
-    out += "-";
-    out += ebus::toString(master[10]);
+void printTelegram(const Telegram& tel) {
+  std::string out;
+  if (!notime) {
+    out += timestamp();
     out += " ";
-    out += ebus::toString(master[9]);
-    out += ":";
-    out += ebus::toString(master[8]);
-    out += ":";
-    out += ebus::toString(master[7]);
-    out += " - ";
-    ebus::toString(
-        out, *ebus::decode(ebus::DataType::data2b, ebus::range(master, 5, 2)),
-        " °C");
-    out += " °C";
-  } else if (master[2] == 0x07 && master[3] == 0x04) {
-    out += "0704: ";
-    out += ebus::toString(master[1]);
-    out += " MF=";
-    ebus::byteToChar(out, ebus::range(slave, 1, 1));
-    out += " ID=";
-    ebus::byteToChar(out, ebus::range(slave, 2, 5));
-    out += " SW=";
-    ebus::toString(out, ebus::range(slave, 7, 2));
-    out += " HW=";
-    ebus::toString(out, ebus::range(slave, 9, 2));
-  } else if (master[2] == 0xb5 && master[3] == 0x16 && master[4] == 0x08) {
-    out += "b51608: 20";
-    out += ebus::toString(master[12]);
-    out += "-";
-    out += ebus::toString(master[10]);
-    out += "-";
-    out += ebus::toString(master[9]);
-    out += " ";
-    out += ebus::toString(master[8]);
-    out += ":";
-    out += ebus::toString(master[7]);
-    out += ":";
-    out += ebus::toString(master[6]);
-  } else if (master[2] == 0xb5 && master[3] == 0x16 && master[4] == 0x03 &&
-             master[5] == 0x01) {
-    out += "b5160301: ";
-    ebus::toString(
-        out, *ebus::decode(ebus::DataType::data2b, ebus::range(master, 6, 2)),
-        " °C");
   }
+  if (full) {
+    // Complete message in wire order, CRC/ACK bytes included. Data bytes
+    // are emphasized when bold is enabled (and stdout is a terminal).
+    out += ebus::toString(tel.getSourceAddress());
+    out += ebus::toString(tel.getTargetAddress());
+    out += ebus::toString(tel.getPrimaryCommand());
+    out += ebus::toString(tel.getSecondaryCommand());
+    out += ebus::toString(tel.getMasterNumberBytes());
+    if (tel.getMasterNumberBytes() > 0) {
+      if (bold) out += ansi_bold;
+      ebus::toString(out, tel.getMasterDataBytes());
+      if (bold) out += ansi_reset;
+    }
+    out += ebus::toString(tel.getMasterCRC());
+    if (tel.getType() != ebus::TelegramType::broadcast) {
+      out += ebus::toString(tel.getSlaveACK());
+      if (tel.getType() == ebus::TelegramType::master_slave) {
+        out += ebus::toString(tel.getSlaveNumberBytes());
+        if (tel.getSlaveNumberBytes() > 0) {
+          if (bold) out += ansi_bold;
+          ebus::toString(out, tel.getSlaveDataBytes());
+          if (bold) out += ansi_reset;
+        }
+        out += ebus::toString(tel.getSlaveCRC());
+        out += ebus::toString(tel.getMasterACK());
+      }
+    }
+  } else {
+    // Canonical adapter-log format: raw data, CRC/ACK bytes stripped.
+    out += ebus::toString(tel.getSourceAddress());
+    out += ebus::toString(tel.getTargetAddress());
+    out += ebus::toString(tel.getPrimaryCommand());
+    out += ebus::toString(tel.getSecondaryCommand());
+    out += ebus::toString(tel.getMasterNumberBytes());
+    ebus::toString(out, tel.getMasterDataBytes());
+    if (tel.getType() == ebus::TelegramType::master_slave) {
+      out += " ";
+      ebus::toString(out, tel.getSlaveDataBytes());
+    }
+  }
+  std::cout << out << std::endl;
 }
 
-void printStatus() {
-  if (!status_report) return;
-  std::cerr << std::endl << "--- Reader Status ---" << std::endl;
-  JsonWriter writer([](std::string_view s) { std::cerr << s; }, pretty);
-  writer.startObject();
-  writer.writeField("tool", "ebusread");
-  writer.writeField("total_telegrams", stats.total);
-  writer.writeField("valid_telegrams", stats.valid);
-  writer.writeField("errors", stats.errors);
-  if (stats.total > 0) {
-    writer.writeFieldFloat("error_rate",
-                           (float)stats.errors / stats.total * 100.0f);
+void printError(const Telegram& tel, const ebus::Sequence& sequence) {
+  std::string out;
+  if (!notime) {
+    out += timestamp();
+    out += " ";
   }
-  writer.endObject();
-  std::cerr << std::endl;
+  ebus::toString(out, sequence);
+  out += "\nERROR ";
+  tel.toString(out);
+  std::cout << out << std::endl;
 }
 
 void collect(uint8_t byte) {
   static ebus::Sequence sequence;
 
-  if (raw) std::cout << ebus::toString(byte) << std::endl;
-
   if (byte == ebus::Symbols::syn) {
     static bool running = false;
     if (sequence.size() > 0 && running) {
-      stats.total++;
       Telegram tel(sequence);
-      if (tel.isValid())
-        stats.valid++;
-      else
-        stats.errors++;
-
-      if (json_output) {  // JsonWriter already streams to visitor
-        // The JsonWriter is designed to stream directly to a visitor.
-        // We can make it write directly to std::cout.
+      if (json_output) {
+        // The JsonWriter streams directly to the visitor.
         JsonWriter writer([&](std::string_view s) { std::cout << s; }, pretty);
         tel.toJson(writer);
         std::cout << std::endl;
-      } else {
-        static std::string
-            output_buffer;      // Static buffer to avoid reallocations
-        output_buffer.clear();  // Clear for new telegram
-        if (tel.isValid()) {
-          if (!notime) {
-            output_buffer += timestamp();
-            output_buffer += " ";
-          }
-          if (type) {
-            if (color) output_buffer += ansi_cyan;
-            if (tel.getType() == ebus::TelegramType::master_slave)
-              output_buffer += "MS";
-            else if (tel.getType() == ebus::TelegramType::master_master)
-              output_buffer += "MM";
-            else
-              output_buffer += "BC";
-            if (color) output_buffer += ansi_reset;
-            output_buffer += " ";
-          }
-          if (color) output_buffer += ansi_green;
-          output_buffer += ebus::toString(tel.getSourceAddress());
-          output_buffer += ebus::toString(tel.getTargetAddress());
-          if (color) output_buffer += ansi_reset;
-          if (split) output_buffer += " ";
-          if (color) output_buffer += ansi_blue;
-          output_buffer += ebus::toString(tel.getPrimaryCommand());
-          output_buffer += ebus::toString(tel.getSecondaryCommand());
-          if (color) output_buffer += ansi_reset;
-          if (split) output_buffer += " ";
-          if (color) output_buffer += ansi_yellow;
-          output_buffer += ebus::toString(tel.getMasterNumberBytes());
-          if (color) output_buffer += ansi_reset;
-          if (tel.getMasterNumberBytes() > 0) {
-            if (split) output_buffer += " ";
-
-            if (bold) output_buffer += ansi_bold;
-            ebus::toString(output_buffer, tel.getMasterDataBytes());
-            if (bold) output_buffer += ansi_reset;
-          }
-          if (split) output_buffer += " ";
-          if (color) output_buffer += ansi_magenta;
-          output_buffer += ebus::toString(tel.getMasterCRC());
-          if (color) output_buffer += ansi_reset;
-          if (tel.getType() != ebus::TelegramType::broadcast) {
-            if (split) output_buffer += " ";
-            output_buffer += ebus::toString(tel.getSlaveACK());
-            if (tel.getType() == ebus::TelegramType::master_slave) {
-              if (split) output_buffer += " ";
-              if (color) output_buffer += ansi_yellow;
-              output_buffer += ebus::toString(tel.getSlaveNumberBytes());
-              if (color) output_buffer += ansi_reset;
-              if (tel.getSlaveNumberBytes() > 0) {
-                if (split) output_buffer += " ";
-                if (bold) output_buffer += ansi_bold;
-                ebus::toString(output_buffer, tel.getSlaveDataBytes());
-                if (bold) output_buffer += ansi_reset;
-              }
-              if (split) output_buffer += " ";
-              if (color) output_buffer += ansi_magenta;
-              output_buffer += ebus::toString(tel.getSlaveCRC());
-              if (color) output_buffer += ansi_reset;
-              if (split) output_buffer += " ";
-              output_buffer += ebus::toString(tel.getMasterACK());
-            }
-          }
-          if (parse) {
-            std::string service_str;
-            services(service_str, tel.getMaster(), tel.getSlave());
-            if (!service_str.empty()) {
-              output_buffer += "\n";
-              if (color) output_buffer += ansi_cyan;
-              if (!notime) {
-                output_buffer += "---SERVICE-DETECTED---> ";
-                if (type) output_buffer += "   ";
-              }
-              output_buffer += service_str;
-              if (color) output_buffer += ansi_reset;
-            }
-          }
-        } else if (!noerror) {
-          if (!notime) {
-            output_buffer += timestamp();
-            output_buffer += " ";
-          }
-          if (type) output_buffer += "   ";
-          ebus::toString(output_buffer, sequence);
-          output_buffer += "\n";
-          if (color) output_buffer += ansi_red;
-          if (!notime) {
-            output_buffer += "----ERROR-DETECTED----> ";
-            if (type) output_buffer += "   ";
-          }
-          tel.toString(output_buffer);
-          if (color) output_buffer += ansi_reset;
-        }
-        std::cout << output_buffer << std::endl;  // Print the collected string
+      } else if (tel.isValid()) {
+        printTelegram(tel);
+      } else if (!noerror) {
+        printError(tel, sequence);
       }
       sequence.clear();
     }
@@ -459,49 +331,47 @@ void usage() {
   std::cout << "Supports automatic detection of the Enhanced Protocol when "
                "connecting to ebusd"
             << std::endl;
-  std::cout << "  -b, --bold       bold data bytes" << std::endl;
-  std::cout << "  -c, --color      colorized output" << std::endl;
+  std::cout << "Default output is one canonical line per valid telegram, "
+               "matching the adapter log:"
+            << std::endl;
+  std::cout << "  <date> <master without CRC> [<slave data without CRC>]"
+            << std::endl;
+  std::cout << "  -f, --full       complete message in wire order (CRC/ACK "
+               "included, data bytes bold with -b)"
+            << std::endl;
+  std::cout << "  -b, --bold       bold data bytes (full mode, terminal only)"
+            << std::endl;
   std::cout << "  -d, --dump       dump binary values to stdout" << std::endl;
   std::cout << "  -e, --noerror    suppress errors" << std::endl;
   std::cout << "  -n, --notime     suppress timestamp" << std::endl;
-  std::cout << "  -p, --parse      parse known services" << std::endl;
-  std::cout << "  -r, --raw        print raw values" << std::endl;
-  std::cout << "  -s, --split      split telegram parts" << std::endl;
-  std::cout << "  -t, --type       print telegram type" << std::endl;
   std::cout << "  -j, --json       output telegrams as JSON" << std::endl;
-  std::cout << "  -P, --pretty     pretty print JSON output" << std::endl;
-  std::cout << "  -S, --status     print session summary on exit" << std::endl;
+  std::cout << "  -p, --pretty     pretty print JSON output" << std::endl;
   std::cout << "  -h, --help       show this page" << std::endl;
 }
 
 int main(int argc, char* argv[]) {
   static struct option options[] = {{"bold", no_argument, nullptr, 'b'},
-                                    {"color", no_argument, nullptr, 'c'},
                                     {"dump", no_argument, nullptr, 'd'},
+                                    {"full", no_argument, nullptr, 'f'},
                                     {"noerror", no_argument, nullptr, 'e'},
                                     {"notime", no_argument, nullptr, 'n'},
-                                    {"parse", no_argument, nullptr, 'p'},
-                                    {"raw", no_argument, nullptr, 'r'},
-                                    {"split", no_argument, nullptr, 's'},
-                                    {"type", no_argument, nullptr, 't'},
                                     {"json", no_argument, nullptr, 'j'},
-                                    {"pretty", no_argument, nullptr, 'P'},
-                                    {"status", no_argument, nullptr, 'S'},
+                                    {"pretty", no_argument, nullptr, 'p'},
                                     {"help", no_argument, nullptr, 'h'},
                                     {nullptr, 0, nullptr, 0}};
 
   int option;
-  while ((option = getopt_long(argc, argv, "bcdefnprstjPSh", options,
-                               nullptr)) != -1) {
+  while ((option = getopt_long(argc, argv, "bdfenjph", options, nullptr)) !=
+         -1) {
     switch (option) {
       case 'b':
         bold = true;
         break;
-      case 'c':
-        color = true;
-        break;
       case 'd':
         dump = true;
+        break;
+      case 'f':
+        full = true;
         break;
       case 'e':
         noerror = true;
@@ -509,26 +379,11 @@ int main(int argc, char* argv[]) {
       case 'n':
         notime = true;
         break;
-      case 'p':
-        parse = true;
-        break;
-      case 'r':
-        raw = true;
-        break;
-      case 's':
-        split = true;
-        break;
-      case 't':
-        type = true;
-        break;
       case 'j':
         json_output = true;
         break;
-      case 'P':
+      case 'p':
         pretty = true;
-        break;
-      case 'S':
-        status_report = true;
         break;
       case 'h':
       case '?':
@@ -540,6 +395,10 @@ int main(int argc, char* argv[]) {
         break;
     }
   }
+
+  // Bold escapes only make sense on a terminal; piped output stays clean
+  // for diff/grep against the adapter log.
+  if (bold && isatty(STDOUT_FILENO) == 0) bold = false;
 
   if (argv[optind] != nullptr) {
     std::string tmp = argv[optind];
@@ -553,7 +412,6 @@ int main(int argc, char* argv[]) {
           // collect now prints directly
         }
         stream.close();
-        printStatus();
       } else {
         std::cerr << "file '" << argv[optind] << "' not found" << std::endl;
         std::exit(EXIT_FAILURE);
@@ -577,9 +435,7 @@ int main(int argc, char* argv[]) {
       int byte = std::cin.get();
       if (byte == EOF) break;
       collect(static_cast<uint8_t>(byte));
-      // collect now prints directly
     }
   }
-  printStatus();
   return EXIT_SUCCESS;
 }
