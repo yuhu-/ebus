@@ -244,6 +244,22 @@ inline constexpr uint32_t wake_interval_ms = 20;
 // mid-arbitration without a post-SYN start, so firing now cannot jam
 // anyone; wire-AND echo validation still applies exactly as usual.
 inline constexpr uint64_t external_idle_fire_us = 8000;
+
+// Stuck-intent rescue: an armed intent normally fires within one SYN
+// period (~44ms). Past this age without firing the SYN-timer path is
+// starving (e.g. freshness gate deferring on a backlogged UART queue)
+// while the armed flag locks out the idle fast-path — total active
+// silence until the session cap. Withdraw + re-arm instead; the timer
+// ISR re-checks pending, so a late fire is impossible by construction.
+inline constexpr uint64_t stuck_intent_withdraw_ms = 500;
+
+// Absolute session lifetime: a session that never completes (peer aborted
+// without clean SYN, TCP still open) is kept alive indefinitely by idle
+// timeouts — every bus event and every pumped byte refreshes them, and a
+// retrying peer supplies both forever (seen live: 60s spiral of raw-pumped
+// QQs without arbitration). The cap bounds any spiral to this duration;
+// expiry closes the session (TCP close forces a clean peer restart).
+inline constexpr uint64_t max_session_age_ms = 5000;
 }  // namespace ClientManagerLimits
 
 // --- Application Layer ---

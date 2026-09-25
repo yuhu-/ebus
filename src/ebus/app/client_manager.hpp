@@ -54,6 +54,8 @@ class ClientManager {
   // Configuration
   void setSessionTimeout(uint32_t timeout_ms);
   void setTransmitTimeout(uint32_t timeout_ms);
+  void setMaxSessionAge(uint32_t age_ms);
+  void setStuckWithdrawMs(uint32_t withdraw_ms);
   void setOutgoingBufferSize(size_t size);
 
   // Working Methods
@@ -89,6 +91,9 @@ class ClientManager {
 
   SessionState session_state_ = SessionState::idle;
   Clock::time_point last_state_change_;
+  // Session birth (absolute lifetime cap anchor; idle timeouts refresh on
+  // traffic and cannot bound a retry-fed zombie session).
+  Clock::time_point session_start_{};
   mutable platform::Mutex mutex_;
 
   // Internal IO events to replace poll.h macros
@@ -125,6 +130,19 @@ class ClientManager {
       ebus::RuntimeConfig{}.network.session_timeout_ms};
   std::chrono::milliseconds transmit_timeout_{
       ebus::RuntimeConfig{}.network.transmit_timeout_ms};
+  // Absolute session lifetime cap (zombie-session bound; see
+  // ClientManagerLimits::max_session_age_ms).
+  std::chrono::milliseconds max_session_age_{
+      ClientManagerLimits::max_session_age_ms};
+  // Armed-but-unfired rescue age (SYN-timer path starving while the armed
+  // flag locks out the idle fast-path; see stuck_intent_withdraw_ms).
+  std::chrono::milliseconds stuck_withdraw_ms_{
+      ClientManagerLimits::stuck_intent_withdraw_ms};
+  // Intent arm timestamp (set on every successful requestBus).
+  Clock::time_point intent_armed_at_{};
+  // Session generation at arm time: completion events that arrive after a
+  // stop/start (stale fire) must not consume the new session's byte.
+  uint32_t armed_generation_ = 0;
   size_t outbound_buffer_size_ =
       ebus::RuntimeConfig{}.network.outbound_buffer_size;
 
@@ -141,7 +159,10 @@ class ClientManager {
   void handleBusAvailableForSession();
   void tryStartSessionForClient(std::shared_ptr<AbstractClient>& client);
   void trySendNextByte(std::shared_ptr<AbstractClient>& client);
-  void stopActiveSession();
+  // Ends the active session. close_socket=false keeps TCP open for the
+  // next request (lost arbitration, cap expiry: peer alive, failed
+  // response already sent); true drops dead/silent peers and on shutdown.
+  void stopActiveSession(bool close_socket);
   void checkSessionTimeout();
   void handleActiveSenderDisconnected();
 

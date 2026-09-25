@@ -7,10 +7,10 @@
 
 #include <unistd.h>
 
+#include <algorithm>
 #include <cassert>
 #include <cinttypes>
 #include <cstring>  // for strerror
-#include <algorithm>
 #include <ebus/detail/protocol_limits.hpp>
 #include <ebus/static_vector.hpp>
 #include <ebus/utils.hpp>
@@ -143,7 +143,7 @@ void ClientManager::stop() {
     worker_.reset();
   }
 
-  stopActiveSession();
+  stopActiveSession(true);
 
   {
     platform::LockGuard<platform::Mutex> lock(mutex_);
@@ -161,6 +161,16 @@ void ClientManager::setSessionTimeout(uint32_t timeout_ms) {
 void ClientManager::setTransmitTimeout(uint32_t timeout_ms) {
   platform::LockGuard<platform::Mutex> lock(mutex_);
   transmit_timeout_ = std::chrono::milliseconds(timeout_ms);
+}
+
+void ClientManager::setMaxSessionAge(uint32_t age_ms) {
+  platform::LockGuard<platform::Mutex> lock(mutex_);
+  max_session_age_ = std::chrono::milliseconds(age_ms);
+}
+
+void ClientManager::setStuckWithdrawMs(uint32_t withdraw_ms) {
+  platform::LockGuard<platform::Mutex> lock(mutex_);
+  stuck_withdraw_ms_ = std::chrono::milliseconds(withdraw_ms);
 }
 
 void ClientManager::setOutgoingBufferSize(size_t size) {
@@ -342,9 +352,32 @@ bool ClientManager::isSessionActive() const {
 
 void ClientManager::onBusRequested() {
   platform::LockGuard<platform::Mutex> lock(mutex_);
-  if (session_state_ == SessionState::request && current_active_sender_) {
-    transitSessionState(SessionState::response);  // Waiting for echo evaluation
+  if (session_state_ != SessionState::request || !current_active_sender_) {
+    return;
   }
+  // Emission happened (timer fire or immediate write): consume the armed
+  // QQ now — never before, so a withdraw/defuse pre-fire leaves byte and
+  // session retryable. Stale completions (stop/start raced the fire) must
+  // not eat the new session's byte: the generation guard skips them (the
+  // emitted byte value itself is usually identical anyway — same retried
+  // QQ — so skipping is purely bookkeeping hygiene).
+  if (session_counter_ != armed_generation_) return;
+  uint8_t qq = 0;
+  if (!current_active_sender_->popPendingIncomingData(qq)) return;
+  last_sent_byte_ = qq;
+  // Drop pre-grant duplicates of the fired QQ: ebusd re-sends QQ while
+  // the echo is slow, and any twin queued before the grant is stale the
+  // moment the grant goes out — pumping it raw ahead of the continuation
+  // bytes kills the telegram (live: 31 31 burst -> "wrong symbol").
+  // Continuation bytes differ by construction (target address), so only
+  // exact twins are dropped.
+  uint8_t head = 0;
+  while (current_active_sender_->peekPendingIncomingData(head) && head == qq) {
+    current_active_sender_->popPendingIncomingData(head);
+    if (bus_monitor_)
+      bus_monitor_->updateRequest([](auto& m) { m.stale_qq_dropped++; });
+  }
+  transitSessionState(SessionState::response);  // Waiting for echo evaluation
 }
 
 void ClientManager::onBusEventInfo(const BusEventInfo& info) {
@@ -406,7 +439,7 @@ void ClientManager::processBusEventInfo(const BusEventInfo& info) {
       if (action == BridgeAction::stop_session) {
         if (bus_monitor_)
           bus_monitor_->updateRequest([](auto& m) { m.bus_request_blocked++; });
-        stopActiveSession();
+        stopActiveSession(false);
       } else if (action == BridgeAction::bypass_wait) {
         // Arbitration won - transition to transmit state and send next byte
         {
@@ -454,7 +487,6 @@ void ClientManager::handleBusAvailableForSession() {
 
   if (!is_request_state || !active_sender || !active_sender->isConnected())
     return;
-
   // Idle fast-path first: when the bus shows no activity for longer than
   // a contender could stay silent after SYN, the last SYN (if any) is
   // ancient history — waiting for the next one only burns ebusd's
@@ -471,59 +503,77 @@ void ClientManager::handleBusAvailableForSession() {
   // would jam it.
   if (bus_ && request_->getState() == RequestState::observe &&
       !request_->busRequestPending() &&
-      bus_->lastActivityAgeUs() >
-          ClientManagerLimits::external_idle_fire_us) {
+      bus_->lastActivityAgeUs() > ClientManagerLimits::external_idle_fire_us) {
+    // Peek first: the intent must be armed for this exact byte before it
+    // is consumed. Arming after pop (or never, as before) evaluates the
+    // echo against a stale/zero address — seen live as a phantom
+    // first_lost with ours=00 for a correctly emitted QQ.
+    // Peek first: the intent must be armed for this exact byte, but the
+    // byte is consumed only at actual emission (onBusRequested): a
+    // withdraw/defuse before the fire leaves byte queued and session in
+    // request, so the next SYN retries cleanly instead of stranding a
+    // consumed QQ in a response-state session (live sid-5 shape).
     uint8_t first_byte = 0;
-    if (!active_sender->popPendingIncomingData(first_byte)) {
+    if (!active_sender->peekPendingIncomingData(first_byte)) {
       last_error_message_ = "Client sent no data for bus request.";
       EBUS_LOG_ERROR("[ClientManager] Client fd=" +
                      std::to_string(active_sender->getFd()) +
                      " sent no data for bus request");
-      stopActiveSession();
+      stopActiveSession(true);
       return;
     }
     {
       platform::LockGuard<platform::Mutex> lock(mutex_);
       if (session_state_ != SessionState::request ||
           current_active_sender_ != active_sender) {
-        return;  // Session state changed, abort
+        return;  // Session state changed, abort (byte stays queued)
       }
+      if (!request_->requestBus(first_byte, true)) {
+        // Lock/bar raced in after the observe check: the byte stays
+        // queued via the peek stash and is retried on the next bus
+        // availability signal. Transient — never kills the session.
+        return;
+      }
+      // Armed, not yet emitted: session stays request, byte stays queued.
+      // onBusRequested() consumes + transits at actual emission.
+      intent_armed_at_ = Clock::now();
+      armed_generation_ = session_counter_;
     }
-    // Order mirrors the timer path semantically: complete the request
-    // (observe->first, session callbacks) first, then emit. Any byte
-    // arriving between the two lands in first-state evaluation, which is
-    // exactly correct for it (it postdates our decision point).
     EBUS_LOG_INFO_F(
-        "[ClientManager] Session fd=%d: QQ fired master=%02x idle=%" PRIu64 "us",
-        active_sender->getFd(), first_byte,
-        bus_->lastActivityAgeUs());
+        "[ClientManager] Session fd=%d: QQ fired master=%02x idle=%" PRIu64
+        "us",
+        active_sender->getFd(), first_byte, bus_->lastActivityAgeUs());
     bus_->writeByte(first_byte);
     bus_->noteQqWrite();
-    last_sent_byte_ = first_byte;
     request_->busRequestCompleted();
     return;
   }
 
   if (request_->busAvailable()) {
     uint8_t first_byte = 0;
-    if (active_sender->popPendingIncomingData(first_byte)) {
-      platform::LockGuard<platform::Mutex> lock(mutex_);
-      // Verify session is still in request state
-      if (session_state_ != SessionState::request ||
-          current_active_sender_ != active_sender) {
-        return;  // Session state changed, abort
-      }
-      // active_sender->armSynFilter();
-
-      request_->requestBus(first_byte, true);
-      last_sent_byte_ = first_byte;
-      transitSessionState(SessionState::response);
-    } else {
+    if (!active_sender->peekPendingIncomingData(first_byte)) {
       last_error_message_ = "Client sent no data for bus request.";
       EBUS_LOG_ERROR("[ClientManager] Client fd=" +
                      std::to_string(active_sender->getFd()) +
                      " sent no data for bus request");
-      stopActiveSession();
+      stopActiveSession(true);
+      return;
+    }
+    {
+      platform::LockGuard<platform::Mutex> lock(mutex_);
+      // Verify session is still in request state
+      if (session_state_ != SessionState::request ||
+          current_active_sender_ != active_sender) {
+        return;  // Session state changed, abort (byte stays queued)
+      }
+      // active_sender->armSynFilter();
+
+      // Arm may still refuse on a lost race; the peek stash keeps the
+      // byte queued for retry instead of dropping it. No pop, no
+      // transit here: onBusRequested() consumes at actual emission.
+      if (!request_->requestBus(first_byte, true)) return;
+      intent_armed_at_ = Clock::now();
+      armed_generation_ = session_counter_;
     }
     return;
   }
@@ -545,6 +595,10 @@ void ClientManager::tryStartSessionForClient(
   current_active_sender_ = client;
   uint32_t sid = ++session_counter_;
   transitSessionState(SessionState::request);
+  session_start_ = Clock::now();
+  // Fresh session: no stale peek from a previous life on this client
+  // object (a dead request's QQ must never leak in).
+  client->discardPeekedByte();
   EBUS_LOG_INFO_F(
       "[ClientManager] Session started for client fd=%d sid=%" PRIu32,
       client->getFd(), sid);
@@ -573,7 +627,7 @@ void ClientManager::trySendNextByte(std::shared_ptr<AbstractClient>& client) {
   }
 }
 
-void ClientManager::stopActiveSession() {
+void ClientManager::stopActiveSession(bool close_socket) {
   std::shared_ptr<AbstractClient> old_sender;
   {
     platform::LockGuard<platform::Mutex> lock(mutex_);
@@ -581,11 +635,16 @@ void ClientManager::stopActiveSession() {
     old_sender = current_active_sender_;
     current_active_sender_.reset();
     session_state_ = SessionState::idle;
+    old_sender->discardPeekedByte();
     last_error_message_ = "Session stopped by ClientManager.";
-    EBUS_LOG_INFO_F("[ClientManager] Stopping session for client fd=%d",
-                    old_sender->getFd());
+    EBUS_LOG_INFO_F("[ClientManager] Stopping session for client fd=%d%s",
+                    old_sender->getFd(), close_socket ? ", closing" : "");
   }
-  if (old_sender) old_sender->stop();
+  // Session end is not connection end: lost arbitration or cap expiry
+  // leave a live peer whose failed response is already queued — closing
+  // would force a reconnect per failed attempt. Close only dead/silent
+  // peers and on shutdown.
+  if (close_socket && old_sender) old_sender->stop();
   if (request_) request_->reset();
 }
 
@@ -593,17 +652,44 @@ void ClientManager::checkSessionTimeout() {
   std::shared_ptr<AbstractClient> active_sender;
   SessionState current_state;
   Clock::time_point last_change;
+  Clock::time_point started;
+  std::chrono::milliseconds max_age;
+  Clock::time_point armed_at;
+  std::chrono::milliseconds stuck_ms;
 
   {
     platform::LockGuard<platform::Mutex> lock(mutex_);
     active_sender = current_active_sender_;
     current_state = session_state_;
     last_change = last_state_change_;
+    started = session_start_;
+    max_age = max_session_age_;
+    armed_at = intent_armed_at_;
+    stuck_ms = stuck_withdraw_ms_;
   }
 
   if (!active_sender) return;
 
   auto now = Clock::now();
+
+  // Absolute lifetime first: idle timeouts refresh on every bus event and
+  // every pumped byte, so a retrying peer keeps a dead session alive
+  // forever (observed: raw-pumped QQs without arbitration until the peer
+  // gives up). The cap bounds that spiral; expiry closes TCP for a clean
+  // peer restart.
+  if (now - started > max_age) {
+    EBUS_LOG_ERROR_F(
+        "[ClientManager] Session age exceeded %llums in state %s for "
+        "client fd=%d, stopping",
+        static_cast<long long>(max_age.count()), ebus::toString(current_state),
+        active_sender->getFd());
+    last_error_message_ = "Session exceeded maximum lifetime.";
+    stopActiveSession(false);
+    if (bus_monitor_)
+      bus_monitor_->updateRequest([](auto& m) { m.session_timeouts++; });
+    return;
+  }
+
   auto elapsed = now - last_change;
   auto current_timeout = (current_state == SessionState::transmit)
                              ? transmit_timeout_
@@ -613,12 +699,45 @@ void ClientManager::checkSessionTimeout() {
   auto timeout_duration =
       std::chrono::duration_cast<Clock::duration>(current_timeout);
 
+  // Stuck-intent rescue (before the idle check): an armed intent that
+  // never fires — SYN-timer path starving on a backlogged UART queue
+  // while the armed flag locks out the idle fast-path. Withdraw + back
+  // to request so the next availability signal re-arms cleanly (the
+  // timer ISR re-checks pending, so a late fire is impossible by
+  // construction). Transmit is never touched: a live transmission owns
+  // its bytes by definition.
+  if (request_ && current_state != SessionState::idle &&
+      current_state != SessionState::transmit &&
+      request_->busRequestPending() &&
+      now - armed_at > std::chrono::duration_cast<Clock::duration>(stuck_ms)) {
+    const auto stuck_us =
+        std::chrono::duration_cast<std::chrono::microseconds>(now - armed_at)
+            .count();
+    // DEBUG, not INFO: re-arm follows in the same loop pass, so a
+    // starving timer rescues every threshold period — INFO would flood
+    // serial at that rate. The stuck_withdraws counter tracks rescues.
+    EBUS_LOG_DEBUG_F(
+        "[ClientManager] Withdrawing stuck intent (unfired %llius), "
+        "re-arming for client fd=%d",
+        static_cast<long long>(stuck_us), active_sender->getFd());
+    request_->withdrawBusRequest();
+    {
+      platform::LockGuard<platform::Mutex> lock(mutex_);
+      if (current_active_sender_ == active_sender) {
+        transitSessionState(SessionState::request);
+      }
+    }
+    if (bus_monitor_)
+      bus_monitor_->updateRequest([](auto& m) { m.stuck_withdraws++; });
+    return;
+  }
+
   if (elapsed > timeout_duration) {
     EBUS_LOG_ERROR_F(
         "[ClientManager] Session timeout in state %s for client fd=%d",
         ebus::toString(current_state), active_sender->getFd());
     last_error_message_ = "Session timed out.";
-    stopActiveSession();
+    stopActiveSession(true);
     if (bus_monitor_)
       bus_monitor_->updateRequest([](auto& m) { m.session_timeouts++; });
   }
@@ -633,6 +752,7 @@ void ClientManager::handleActiveSenderDisconnected() {
       old_sender = current_active_sender_;
       current_active_sender_.reset();
       session_state_ = SessionState::idle;
+      old_sender->discardPeekedByte();
       last_error_message_ = "Client disconnected.";
       EBUS_LOG_ERROR_F(
           "[ClientManager] Active sender fd=%d disconnected, aborting "
@@ -648,9 +768,8 @@ void ClientManager::handleActiveSenderDisconnected() {
 bool ClientManager::hasConsumersLocked() const {
   if (current_active_sender_) return true;
   auto any_connected = [](const ClientArray& arr) {
-    return std::any_of(arr.begin(), arr.end(), [](const auto& c) {
-      return c && c->isConnected();
-    });
+    return std::any_of(arr.begin(), arr.end(),
+                       [](const auto& c) { return c && c->isConnected(); });
   };
   return any_connected(regular_clients_) || any_connected(readonly_clients_) ||
          any_connected(enhanced_clients_);

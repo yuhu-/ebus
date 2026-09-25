@@ -150,15 +150,39 @@ void RegularClient::handleIncomingStream(const uint8_t* data, size_t len) {
 
 bool RegularClient::hasPendingIncomingData() const {
   platform::LockGuard<platform::Mutex> lock(io_mutex_);
-  return !inbound_buffer_.empty();
+  return peeked_valid_ || !inbound_buffer_.empty();
 }
 
 bool RegularClient::popPendingIncomingData(uint8_t& out) {
   platform::LockGuard<platform::Mutex> lock(io_mutex_);
+  if (peeked_valid_) {
+    peeked_valid_ = false;
+    out = peeked_byte_;
+    last_sent_byte_ = out;
+    return true;
+  }
   if (inbound_buffer_.empty()) return false;
   inbound_buffer_.pop(out);
   last_sent_byte_ = out;
   return true;
+}
+
+bool RegularClient::peekPendingIncomingData(uint8_t& out) {
+  platform::LockGuard<platform::Mutex> lock(io_mutex_);
+  if (peeked_valid_) {
+    out = peeked_byte_;
+    return true;
+  }
+  if (inbound_buffer_.empty()) return false;
+  inbound_buffer_.pop(out);
+  peeked_byte_ = out;
+  peeked_valid_ = true;
+  return true;
+}
+
+void RegularClient::discardPeekedByte() {
+  platform::LockGuard<platform::Mutex> lock(io_mutex_);
+  peeked_valid_ = false;
 }
 
 BridgeAction RegularClient::onBusByte(const BusEventInfo& info) {
@@ -297,8 +321,20 @@ void EnhancedClient::handleIncomingStream(const uint8_t* data, size_t len) {
           if (data_val == ebus::Symbols::syn && request_) {
             request_->reset();
           } else if (write_capable_) {
+            // A START opens a new arbitration: any queued bytes are stale
+            // ghosts of superseded attempts (defuse-withdrawn or garbled
+            // intents never consumed them). Drain them, or the transmit
+            // pump serves ghosts ahead of the fresh QQ (seen live: 31 31
+            // 31 wire burst -> ebusd "wrong symbol"). ebusd sends lockstep
+            // (nothing pipelined pre-grant), so draining loses nothing.
+            // Also withdraw a still-pending old intent: its timer would
+            // otherwise fire the stale address and early-consume the fresh
+            // QQ at completion.
+            inbound_buffer_.clear();
+            peeked_valid_ = false;
             inbound_buffer_.push(data_val);
             last_sent_byte_ = data_val;
+            if (request_) request_->withdrawBusRequest();
           }
           break;
         case enhanced::Command::info:
@@ -329,15 +365,39 @@ void EnhancedClient::handleIncomingStream(const uint8_t* data, size_t len) {
 
 bool EnhancedClient::hasPendingIncomingData() const {
   platform::LockGuard<platform::Mutex> lock(io_mutex_);
-  return !inbound_buffer_.empty();
+  return peeked_valid_ || !inbound_buffer_.empty();
 }
 
 bool EnhancedClient::popPendingIncomingData(uint8_t& out) {
   platform::LockGuard<platform::Mutex> lock(io_mutex_);
+  if (peeked_valid_) {
+    peeked_valid_ = false;
+    out = peeked_byte_;
+    last_sent_byte_ = out;
+    return true;
+  }
   if (inbound_buffer_.empty()) return false;
   inbound_buffer_.pop(out);
   last_sent_byte_ = out;
   return true;
+}
+
+bool EnhancedClient::peekPendingIncomingData(uint8_t& out) {
+  platform::LockGuard<platform::Mutex> lock(io_mutex_);
+  if (peeked_valid_) {
+    out = peeked_byte_;
+    return true;
+  }
+  if (inbound_buffer_.empty()) return false;
+  inbound_buffer_.pop(out);
+  peeked_byte_ = out;
+  peeked_valid_ = true;
+  return true;
+}
+
+void EnhancedClient::discardPeekedByte() {
+  platform::LockGuard<platform::Mutex> lock(io_mutex_);
+  peeked_valid_ = false;
 }
 
 BridgeAction EnhancedClient::onBusByte(const BusEventInfo& info) {

@@ -56,6 +56,15 @@ class AbstractClient {
   virtual void handleIncomingStream(const uint8_t* data, size_t len) = 0;
   virtual bool hasPendingIncomingData() const = 0;
   virtual bool popPendingIncomingData(uint8_t& out) = 0;
+  // Non-destructive read of the oldest queued byte (pop+stash internally):
+  // lets the manager arm the arbitration intent for a byte before
+  // consuming it, so a refused arm never loses data. The next pop
+  // returns the peeked byte first, preserving order.
+  virtual bool peekPendingIncomingData(uint8_t& out) = 0;
+  // Drops a peeked-but-unconsumed byte (session died before firing it;
+  // a stale stash would otherwise corrupt the next session on this
+  // client with a dead request's QQ).
+  virtual void discardPeekedByte() = 0;
 
   // Logic to determine if the client wants to continue sending after a byte
   virtual BridgeAction onBusByte(const BusEventInfo& info) = 0;
@@ -98,6 +107,11 @@ class ReadOnlyClient : public AbstractClient {
   void handleIncomingStream(const uint8_t* data, size_t len) override;
   bool hasPendingIncomingData() const override;
   bool popPendingIncomingData(uint8_t& out) override;
+  bool peekPendingIncomingData(uint8_t& out) override {
+    (void)out;
+    return false;  // Never called for read-only clients
+  }
+  void discardPeekedByte() override {}
 
   BridgeAction onBusByte(const BusEventInfo& info) override;
   void enqueueOutgoingData(ByteView data) override;
@@ -120,6 +134,8 @@ class RegularClient : public AbstractClient {
   void handleIncomingStream(const uint8_t* data, size_t len) override;
   bool hasPendingIncomingData() const override;
   bool popPendingIncomingData(uint8_t& out) override;
+  bool peekPendingIncomingData(uint8_t& out) override;
+  void discardPeekedByte() override;
 
   BridgeAction onBusByte(const BusEventInfo& info) override;
   void enqueueOutgoingData(ByteView data) override;
@@ -130,6 +146,10 @@ class RegularClient : public AbstractClient {
  private:
   platform::Queue<uint8_t> inbound_buffer_;
   uint8_t last_sent_byte_ = 0;  // last sent inbound byte on the bus
+  // Peek stash: pop+hold for non-destructive reads, guarded by io_mutex_
+  // like the queue itself.
+  bool peeked_valid_ = false;
+  uint8_t peeked_byte_ = 0;
 };
 
 /**
@@ -147,6 +167,8 @@ class EnhancedClient : public AbstractClient {
   void handleIncomingStream(const uint8_t* data, size_t len) override;
   bool hasPendingIncomingData() const override;
   bool popPendingIncomingData(uint8_t& out) override;
+  bool peekPendingIncomingData(uint8_t& out) override;
+  void discardPeekedByte() override;
 
   BridgeAction onBusByte(const BusEventInfo& info) override;
   void enqueueOutgoingData(ByteView data) override;
@@ -162,6 +184,10 @@ class EnhancedClient : public AbstractClient {
 
   platform::Queue<uint8_t> inbound_buffer_;
   uint8_t last_sent_byte_ = 0;  // last sent inbound byte on the bus
+  // Peek stash: pop+hold for non-destructive reads, guarded by io_mutex_
+  // like the queue itself.
+  bool peeked_valid_ = false;
+  uint8_t peeked_byte_ = 0;
 
   void createEnhancedResponse(enhanced::Response res, uint8_t val);
 };

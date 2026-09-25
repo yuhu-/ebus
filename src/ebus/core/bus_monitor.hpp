@@ -133,6 +133,9 @@ class BusMonitor {
 
   void recordBusError();
   void recordLowBits(uint32_t bits);
+  // SYN QQ-arm tuning signals (reader-task context, same locking as peers).
+  void recordUartBacklog(uint32_t depth);
+  void recordTimerArmDenied();
   void recordHandlerError(uint8_t address);
   void recordHandlerSuccess(uint8_t address);
   void recordIsrStartBitError();

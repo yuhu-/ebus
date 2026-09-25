@@ -115,6 +115,19 @@ void BusMonitor::recordIsrSynPostponed(uint32_t count) {
   bus_acc_.syn_postponed_count.fetch_add(count, std::memory_order_relaxed);
 }
 
+void BusMonitor::recordUartBacklog(uint32_t depth) {
+  platform::LockGuard<platform::Mutex> lock(metrics_mutex_);
+  const uint32_t cur =
+      bus_acc_.uart_backlog_max.load(std::memory_order_relaxed);
+  if (depth > cur)
+    bus_acc_.uart_backlog_max.store(depth, std::memory_order_relaxed);
+}
+
+void BusMonitor::recordTimerArmDenied() {
+  platform::LockGuard<platform::Mutex> lock(metrics_mutex_);
+  bus_acc_.timer_arm_denied.fetch_add(1, std::memory_order_relaxed);
+}
+
 void BusMonitor::recordMultiByteEvent(bool has_syn) {
   platform::LockGuard<platform::Mutex> lock(metrics_mutex_);
   bus_acc_.multi_byte_events.fetch_add(1, std::memory_order_relaxed);
@@ -263,6 +276,12 @@ void BusMonitor::fetchMetrics(
         std::memory_order_relaxed);
     bm.syn_postponed_count.store(
         bus_acc_.syn_postponed_count.load(std::memory_order_relaxed),
+        std::memory_order_relaxed);
+    bm.uart_backlog_max.store(
+        bus_acc_.uart_backlog_max.load(std::memory_order_relaxed),
+        std::memory_order_relaxed);
+    bm.timer_arm_denied.store(
+        bus_acc_.timer_arm_denied.load(std::memory_order_relaxed),
         std::memory_order_relaxed);
     bm.congestion = bus_acc_.congestion;
     bm.high_jitter = bus_acc_.high_jitter;
@@ -505,6 +524,8 @@ void metrics::RequestMetrics::reset() {
   lock_counter_reset = 0;
   session_timeouts = 0;
   last_contest.reset();
+  stuck_withdraws = 0;
+  stale_qq_dropped = 0;
 }
 
 void metrics::LastContest::reset() {
@@ -545,6 +566,8 @@ void metrics::RequestMetrics::toJson(detail::JsonWriter& writer) const {
   writer.writeField("bus_request_blocked", bus_request_blocked);
   writer.writeField("lock_counter_reset", lock_counter_reset);
   writer.writeField("session_timeouts", session_timeouts);
+  writer.writeField("stuck_withdraws", stuck_withdraws);
+  writer.writeField("stale_qq_dropped", stale_qq_dropped);
   writer.writeField("qq_win_age", qq_win_age);
   writer.writeField("last_contest", last_contest);
 }
@@ -552,6 +575,8 @@ void metrics::RequestMetrics::toJson(detail::JsonWriter& writer) const {
 void metrics::BusMetrics::reset() {
   start_bit_errors = 0;
   syn_postponed_count = 0;
+  uart_backlog_max = 0;
+  timer_arm_denied = 0;
   multi_byte_events = 0;
   syn_in_multi_byte_events = 0;
   utilization = 0.0f;
@@ -580,6 +605,10 @@ void metrics::BusMetrics::toJson(detail::JsonWriter& writer) const {
                     start_bit_errors.load(std::memory_order_relaxed));
   writer.writeField("syn_postponed_count",
                     syn_postponed_count.load(std::memory_order_relaxed));
+  writer.writeField("uart_backlog_max",
+                    uart_backlog_max.load(std::memory_order_relaxed));
+  writer.writeField("timer_arm_denied",
+                    timer_arm_denied.load(std::memory_order_relaxed));
   writer.writeField("multi_byte_events",
                     multi_byte_events.load(std::memory_order_relaxed));
   writer.writeField("syn_in_multi_byte_events",

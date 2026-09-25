@@ -211,3 +211,40 @@ TEST_CASE("EnhancedClient: Invalid protocol handling",
   close(sv[0]);
   close(sv[1]);
 }
+
+TEST_CASE("EnhancedClient: START drains stale queue",
+          "[app][client][enhanced]") {
+  int sv[2];
+  REQUIRE(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
+  Request req;
+  req.setLockCounter(0);
+  req.reset();
+  EnhancedClient client(std::make_unique<platform::Socket>(sv[0]), &req,
+                        ebus::RuntimeConfig{}.network.outbound_buffer_size);
+
+  uint8_t start_qq[2];
+  ebus::detail::enhanced::Protocol::encode(
+      static_cast<uint8_t>(ebus::detail::enhanced::Command::start), 0x31,
+      start_qq);
+
+  // Three superseded attempts (armed, defused/withdrawn, never consumed):
+  // without draining, the transmit pump would serve these ghosts ahead
+  // of the fresh QQ (live: 31 31 31 burst -> ebusd "wrong symbol").
+  for (int i = 0; i < 3; ++i) client.handleIncomingStream(start_qq, 2);
+  REQUIRE(client.hasPendingIncomingData());
+
+  // A pending old intent is withdrawn by the fresh START ...
+  REQUIRE(req.requestBus(0x31) == true);
+  REQUIRE(req.busRequestPending() == true);
+  client.handleIncomingStream(start_qq, 2);
+  REQUIRE(req.busRequestPending() == false);
+
+  // ... and only the fresh QQ remains: exactly one pop, then empty.
+  uint8_t b = 0;
+  REQUIRE(client.popPendingIncomingData(b));
+  REQUIRE(b == 0x31);
+  REQUIRE(!client.hasPendingIncomingData());
+
+  close(sv[0]);
+  close(sv[1]);
+}

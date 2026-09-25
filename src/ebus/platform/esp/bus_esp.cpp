@@ -494,16 +494,25 @@ void BusEsp::ebusUartEventRunner() {
               // Blackout gate: no re-arm within one byte time after our own
               // QQ write (abort-SYN echo or backlog-adjacent duplicate).
               bool arm_timer = false;
+              uint32_t backlog = 0;
               portENTER_CRITICAL(&timer_mux_);
+              backlog = uxQueueMessagesWaiting(uart_event_queue_);
               if (!qq_timer_armed_ &&
-                  uxQueueMessagesWaiting(uart_event_queue_) <=
-                      BusLimits::Syn::max_stale_events &&
+                  backlog <= BusLimits::Syn::max_stale_events &&
                   esp_timer_get_time() - last_qq_write_us_ >=
                       BusLimits::Syn::qq_blackout_us) {
                 qq_timer_armed_ = true;
                 arm_timer = true;
               }
               portEXIT_CRITICAL(&timer_mux_);
+              // Tuning signal for the freshness gate: how deep the UART
+              // backlog runs when a SYN wants to arm, and how often the
+              // arm is refused (a starving SYN path strands armed intents
+              // past the stuck threshold — see the manager rescue).
+              if (bus_monitor_) {
+                bus_monitor_->recordUartBacklog(backlog);
+                if (!arm_timer) bus_monitor_->recordTimerArmDenied();
+              }
 
               if (arm_timer) {
                 gptimer_alarm_config_t alarm_config = {};
