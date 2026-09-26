@@ -246,8 +246,16 @@ std::optional<DataValue> decode(DataType dt, ByteView data, Endian e) {
 
   const bool flip = m->reversed ? (e == Endian::little) : (e == Endian::big);
 
-  if (!m->is_numeric)
-    return std::string(reinterpret_cast<const char*>(data.data()), m->size);
+  if (!m->is_numeric) {
+    // Fixed-width string padding (NUL) is not data: "MOCK\0" decodes to
+    // "MOCK". Only NULs are stripped — spaces are significant ("MC2  ").
+    // HEX rendering never consumes this string (app renders raw bytes),
+    // so trimming cannot corrupt hex output.
+    size_t len = m->size;
+    const char* raw = reinterpret_cast<const char*>(data.data());
+    while (len > 0 && raw[len - 1] == '\0') --len;
+    return std::string(raw, len);
+  }
 
   // Check for Replacement Values (Sentinels)
   uint32_t bit_pattern = 0;
