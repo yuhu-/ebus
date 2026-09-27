@@ -79,7 +79,7 @@ const char* timestamp() {
     // unbounded tm fields); millis appended from a provably bounded range.
     const size_t n =
         std::strftime(time, sizeof(time), "%Y-%m-%d %H:%M:%S", &tm);
-    if (n > 0 && n + 5 < sizeof(time)) {
+    if (n > 0 && n + 5 <= sizeof(time)) {
       std::snprintf(time + n, sizeof(time) - n, ".%03d",
                     static_cast<int>(tv.tv_usec / 1000));
     }
