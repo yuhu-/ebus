@@ -3,6 +3,7 @@ name: ebus library CI
 on:
   push:
   pull_request:
+  workflow_dispatch:
 
 jobs:
   host-tests:
