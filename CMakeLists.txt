@@ -1,6 +1,6 @@
 # CMakeLists.txt
 
-cmake_minimum_required(VERSION 3.10.0)
+cmake_minimum_required(VERSION 3.16.0)
 project(ebus VERSION 1.0.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -104,7 +104,14 @@ if(EBUS_MINIMAL_DIAGNOSTICS)
 endif()
 
 add_subdirectory(src/ebus)
-add_subdirectory(tools)
+
+# Host utilities (ebusread, playground, ebusproxy). Standalone builds want
+# them; embedding consumers (e.g. firmware test builds) set
+# EBUS_BUILD_TOOLS=OFF.
+option(EBUS_BUILD_TOOLS "Build host utilities" ON)
+if(EBUS_BUILD_TOOLS)
+    add_subdirectory(tools)
+endif()
 
 if(EBUS_SIMULATION)
     # Prefer a system Catch2 (fast, offline); fall back to FetchContent
