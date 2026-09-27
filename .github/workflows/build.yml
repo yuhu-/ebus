@@ -19,4 +19,4 @@ jobs:
       - name: Build
         run: cmake --build build
       - name: Test
-        run: ctest --test-dir build -j$(nproc) --timeout=10
+        run: ctest --test-dir build -j$(nproc) --timeout 10
