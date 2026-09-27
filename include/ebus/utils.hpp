@@ -148,8 +148,17 @@ inline std::optional<T> toNumStrict(std::string_view s) {
     if (ec != std::errc{} || ptr != sv.data() + sv.size()) return std::nullopt;
     return val;
   }
-  // For floats, fall back to lenient toNum or implement similar check if needed
-  return toNum<T>(s);
+  // Floats: strtod with full-consumption check (from_chars lacks FP on
+  // ESP32, hence no from_chars path). Rejects trailing garbage, inf/nan,
+  // and inputs too long to validate exactly.
+  char buf[64];
+  if (s.size() >= sizeof(buf)) return std::nullopt;
+  std::memcpy(buf, s.data(), s.size());
+  buf[s.size()] = '\0';
+  char* end = nullptr;
+  const double d = std::strtod(buf, &end);
+  if (end != buf + s.size() || !std::isfinite(d)) return std::nullopt;
+  return static_cast<T>(d);
 }
 
 /**

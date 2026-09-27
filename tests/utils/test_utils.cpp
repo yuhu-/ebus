@@ -53,6 +53,19 @@ TEST_CASE("Utils: Conversions", "[utils][utils]") {
   REQUIRE(res == vec);
 }
 
+TEST_CASE("Utils: toNumStrict rejects partial input", "[utils][utils]") {
+  // Integers were already strict; floats fell back to lenient parsing.
+  REQUIRE(ebus::toNumStrict<int>("123").value_or(-1) == 123);
+  REQUIRE(!ebus::toNumStrict<int>("12a").has_value());
+  REQUIRE(ebus::toNumStrict<double>("21.5").value_or(-99.0) == 21.5);
+  REQUIRE(ebus::toNumStrict<double>("-3").value_or(0.0) == -3.0);
+  REQUIRE(!ebus::toNumStrict<double>("abc").has_value());
+  REQUIRE(!ebus::toNumStrict<double>("21.5abc").has_value());
+  REQUIRE(!ebus::toNumStrict<double>("").has_value());
+  REQUIRE(!ebus::toNumStrict<double>("nan").has_value());
+  REQUIRE(!ebus::toNumStrict<double>("inf").has_value());
+}
+
 TEST_CASE("Utils: Vector utilities", "[utils][utils]") {
   std::vector<uint8_t> vec = {0x10, 0x20, 0x30, 0x40, 0x50};
 
