@@ -75,9 +75,14 @@ const char* timestamp() {
         time, sizeof(time), "%lld",
         static_cast<long long>(tv.tv_sec) * 1000LL + tv.tv_usec / 1000);
   } else {
-    std::snprintf(time, sizeof(time), "%04d-%02d-%02d %02d:%02d:%02d.%03ld",
-                  tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour,
-                  tm.tm_min, tm.tm_sec, tv.tv_usec / 1000);
+    // strftime for the calendar part (immune to -Wformat-truncation on
+    // unbounded tm fields); millis appended from a provably bounded range.
+    const size_t n =
+        std::strftime(time, sizeof(time), "%Y-%m-%d %H:%M:%S", &tm);
+    if (n > 0 && n + 5 < sizeof(time)) {
+      std::snprintf(time + n, sizeof(time) - n, ".%03d",
+                    static_cast<int>(tv.tv_usec / 1000));
+    }
   }
 
   return time;
