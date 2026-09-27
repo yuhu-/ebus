@@ -67,8 +67,10 @@ else()
     target_compile_definitions(ebus PUBLIC EBUS_SIMULATION=0)
 endif()
 
-target_include_directories(ebus 
-    PUBLIC ${CMAKE_SOURCE_DIR}/include
+target_include_directories(ebus
+    # Repository-relative (not CMAKE_SOURCE_DIR): stays correct when
+    # consumed via add_subdirectory/FetchContent.
+    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../include
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/detail
 )
