@@ -107,16 +107,22 @@ add_subdirectory(src/ebus)
 add_subdirectory(tools)
 
 if(EBUS_SIMULATION)
-    include(FetchContent)
-    FetchContent_Declare(
-        Catch2
-        GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-        GIT_TAG        v3.4.0
-    )
-    FetchContent_MakeAvailable(Catch2)
+    # Prefer a system Catch2 (fast, offline); fall back to FetchContent
+    # (CI runners have none installed). Either way the Catch2::Catch2WithMain
+    # target exists before tests/ is added.
+    find_package(Catch2 3 QUIET)
+    if(NOT Catch2_FOUND)
+        include(FetchContent)
+        FetchContent_Declare(
+            Catch2
+            GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+            GIT_TAG        v3.4.0
+        )
+        FetchContent_MakeAvailable(Catch2)
+    endif()
 
     enable_testing()
-    
+
     add_subdirectory(tests)
     add_subdirectory(examples)
 endif()

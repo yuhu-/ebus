@@ -1,5 +1,8 @@
 name: ebus library CI
 
+permissions:
+  contents: read
+
 on:
   push:
   pull_request:

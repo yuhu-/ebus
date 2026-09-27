@@ -3,11 +3,19 @@
 # Minimum CMake version required by Catch2
 cmake_minimum_required(VERSION 3.10)
 
-# Find the Catch2 package. Version 3 is specified as per your Catch2 setup.
-find_package(Catch2 3 REQUIRED)
+# Catch2 targets come from a system package (top-level find_package) or
+# from FetchContent sources. Only search the system when the targets
+# do not exist yet.
+if(NOT TARGET Catch2::Catch2WithMain)
+    find_package(Catch2 3 REQUIRED)
+endif()
 
 # Enable CTest for test execution and include Catch.cmake for test discovery.
-# Catch.cmake provides the `catch_discover_tests` function.
+# Catch.cmake ships with Catch2: system path via the package, or the
+# FetchContent source tree.
+if(DEFINED catch2_SOURCE_DIR)
+    list(APPEND CMAKE_MODULE_PATH "${catch2_SOURCE_DIR}/extras")
+endif()
 include(CTest)
 include(Catch)
 
