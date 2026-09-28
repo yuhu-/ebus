@@ -282,7 +282,7 @@ ServiceThread::Status BusPosix::getSynThreadStatus() const {
   if (syn_worker_) {
     return syn_worker_->status();
   }
-  return ServiceThread::Status{"ebus_bus_syn", -1, -1};
+  return ServiceThread::Status{};
 }
 
 ebus::BusStatus BusPosix::fetchStatus() const {
