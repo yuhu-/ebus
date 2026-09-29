@@ -9,10 +9,11 @@ Thank you for your interest in contributing to the eBUS library! To maintain hig
 
 ### Naming Conventions
 *   **Classes and Structs**: `PascalCase` (e.g., `PollManager`, `BusConfig`).
-*   **Methods and Functions**: `camelCase` (e.g., `getMetrics`, `sendActiveMessage`). Exception: Container-like interface methods (e.g., `size()`, `empty()`, `push_back()`) use `snake_case` for STL compatibility.
+*   **Methods and Functions**: `camelCase` (e.g., `getMetrics`, `sendActiveMessage`). Exceptions: Container-like interface methods (e.g., `size()`, `empty()`, `push_back()`) and std-style traits (e.g., `is_byte_range`, `has_to_json`) use `snake_case` for STL compatibility.
 *   **Variables and Parameters**: `snake_case` (e.g., `retry_count`, `src_address`).
 *   **Constants and `constexpr`**: `snake_case` (e.g., `baud_rate`, `max_data_bytes`). Prefer grouping related constants into classes as `static constexpr` members or specific namespaces.
-*   **Private Members**: `snake_case_` with a trailing underscore (e.g., `bus_handle_`, `state_`).
+*   **Enumerators**: `lowercase` (e.g., `observe`, `ready`) — enumerators are constants.
+*   **Private Members**: `snake_case_` with a trailing underscore (e.g., `bus_handle_`, `state_`). Plain data fields of structs (public or nested-private) take no underscore — only class state does.
 *   **Macros and Feature Flags**: `SCREAMING_SNAKE_CASE` (e.g., `EBUS_SIMULATION`, `EBUS_LOG_DEBUG`). This style is strictly reserved for preprocessor defines.
 *   **Files and Directories**: `snake_case` (e.g., `serial_bus.cpp`, `data_types.hpp`).
 
