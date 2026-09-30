@@ -9,7 +9,7 @@ Thank you for your interest in contributing to the eBUS library! To maintain hig
 
 ### Naming Conventions
 *   **Classes and Structs**: `PascalCase` (e.g., `PollManager`, `BusConfig`).
-*   **Methods and Functions**: `camelCase` (e.g., `getMetrics`, `sendActiveMessage`). Exceptions: Container-like interface methods (e.g., `size()`, `empty()`, `push_back()`) and std-style traits (e.g., `is_byte_range`, `has_to_json`) use `snake_case` for STL compatibility.
+*   **Methods and Functions**: `camelCase` (e.g., `getMetrics`, `sendActiveMessage`, `isValid`, `hasToJson`). Exception: Container-like interface methods (e.g., `size()`, `empty()`, `push_back()`) and std-style traits (e.g., `is_byte_range`, `has_to_json`) use `snake_case` for STL compatibility. Preserve the spelling required by external APIs when overriding or implementing them.
 *   **Variables and Parameters**: `snake_case` (e.g., `retry_count`, `src_address`).
 *   **Constants and `constexpr`**: `snake_case` (e.g., `baud_rate`, `max_data_bytes`). Prefer grouping related constants into classes as `static constexpr` members or specific namespaces.
 *   **Enumerators**: `lowercase` (e.g., `observe`, `ready`) — enumerators are constants.
@@ -88,7 +88,7 @@ These components manage high-level tasks like discovery, scheduling and polling.
 ### Protocol Compliance & Retries
 *   **NAK Repetition**: The eBUS spec (Section 7.4) allows only one immediate repeat if a NAK is received. This is handled internally by the `Handler` FSM.
 *   **Application Retries**: The `Scheduler` provides a configurable `max_send_attempts` (default 3) which implements a high-level retry loop with exponential backoff. This is not part of the eBUS spec but improves reliability in noisy environments.
-*   **Scan Filtering**: When implementing background tasks, only re-enqueue failed tasks if the failure was transient (e.g., arbitration loss). Whitelist whitelisted `RequestResult` values (won/lost) rather than whitelisting `!success`.
+*   **Scan Filtering**: When implementing background tasks, only re-enqueue failed tasks if the failure was transient (e.g., arbitration loss). Whitelist `RequestResult` values (won/lost) rather than whitelisting `!success`.
 
 ## Architectural Patterns
 
@@ -136,13 +136,13 @@ To keep the library maintainable and portable, we follow these patterns:
 
 Every contribution should be accompanied by appropriate tests.
 
-*   **Catch2**: ist our preferred framework for unit testing. New tests should be added to the `tests/` directory.
+*   **Catch2**: is our preferred framework for unit testing. New tests should be added to the `tests/` directory.
 
 ### Running Tests
 
 ```bash
 mkdir build && cd build
-cmake ..
+cmake -DEBUS_SIMULATION=ON ..
 make
 ctest
 ```

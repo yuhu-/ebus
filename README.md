@@ -41,6 +41,11 @@ cmake -DEBUS_SIMULATION=ON ..
 
 *   **EBUS_MINIMAL_DIAGNOSTICS** (Default: OFF): Disables the storage of historical FSM transitions and bus utilization data. This significantly reduces RAM usage, especially beneficial for resource-constrained targets like the ESP32-C3, by removing `CircularBuffer` instances from `BusMonitor`.
 
+*   **EBUS_BUILD_TOOLS** (Default: ON): Builds host utilities (`ebusread`,
+`playground`, `ebusproxy`). Embedding consumers set `OFF`.
+
+*   **CMake ≥3.16** required.
+
 To enable minimal diagnostics:
 ```bash
 cmake -DEBUS_MINIMAL_DIAGNOSTICS=ON ..
@@ -69,7 +74,7 @@ To build the library and run the modern unit tests (Catch2):
 
 ```bash
 mkdir build && cd build
-cmake ..
+cmake -DEBUS_SIMULATION=ON ..
 make
 ctest
 ```

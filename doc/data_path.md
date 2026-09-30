@@ -51,9 +51,9 @@ ensuring that user commands are prioritized over routine discovery tasks.
           +-------------------------------+--------------------------------+
                                           |
                                           v
-                                [ Bus Abstraction ]
-                               /                 \
-                    [ BusPosix (Linux) ]    [ BusFreeRtos (ESP32) ]
-                           |                         |
-                    (/dev/ttyUSBx)            (UART Hardware)
+                                 [ Bus Abstraction ]
+                                /                 \
+                     [ BusPosix (Linux) ]    [ BusEsp (ESP32) ]
+                            |                         |
+                     (/dev/ttyUSBx)            (UART Hardware)
 ```
