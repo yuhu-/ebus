@@ -192,3 +192,23 @@ SCENARIO("Handler processes eBUS messages correctly", "[core][handler]") {
     }
   }
 }
+
+TEST_CASE("isDeliberateSilence classifies deliberately silent request",
+          "[core][handler]") {
+  using ebus::detail::isDeliberateSilence;
+  const uint8_t scan[] = {0x00, 0x38, 0x07, 0x04, 0x00, 0x00};
+  const ebus::ByteView master(scan, sizeof(scan));
+  // Addressed to us (source or slave), no answer staged: silent.
+  REQUIRE(isDeliberateSilence(master, 0, 0x33, 0x38));
+  // Answer bytes present: real fault, not silence.
+  REQUIRE_FALSE(isDeliberateSilence(master, 3, 0x33, 0x38));
+  // Not addressed to us: someone else's business.
+  REQUIRE_FALSE(isDeliberateSilence(master, 0, 0x33, 0x39));
+  // Any shape addressed to us with nothing staged: deliberate silence,
+  // scan or not.
+  const uint8_t other[] = {0x00, 0x38, 0x09, 0x03, 0x00, 0x00};
+  REQUIRE(
+      isDeliberateSilence(ebus::ByteView(other, sizeof(other)), 0, 0x33, 0x38));
+  // Truncated master: cannot judge.
+  REQUIRE_FALSE(isDeliberateSilence(ebus::ByteView(scan, 4), 0, 0x33, 0x38));
+}

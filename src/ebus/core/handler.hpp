@@ -170,7 +170,18 @@ class Handler {
 
   void transitionTo(HandlerState next);
 
+  // This method is triggered when inconsistencies or issues are detected    in
+  // the passive master or slave communication sequences.It logs the error
+  // details using the onErrorCallback if available,   updates the appropriate
+  // counters, and resets the passive state.
   void checkPassiveBuffers();
+
+  // This method is invoked when an error is detected in the active
+  // communication process. It checks for inconsistencies or issues in the
+  // active master and slave data structures, logs the error details using the
+  // onErrorCallback if it is set, and increments the active reset counter.
+  // Finally, it resets the active communication state to ensure the system can
+  // recover and continue operating.
   void checkActiveBuffers();
 
   void callPassiveReset();
@@ -198,5 +209,11 @@ class Handler {
 
   MessageType getMessageTypeFromState(HandlerState state) const;
 };
+
+// Deliberate-silence signature for expected-noise classification: request
+// addressed to us with zero slave bytes staged. Pure predicate over
+// buffers (unit-testable); the handler calls it at reactive error sites.
+bool isDeliberateSilence(ByteView master_view, size_t slave_size,
+                         uint8_t source_address, uint8_t target_address);
 
 }  // namespace ebus::detail

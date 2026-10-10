@@ -327,8 +327,16 @@ void Handler::passiveReceiveMaster(uint8_t byte) {
             transitionTo(
                 HandlerState::reactive_send_master_positive_acknowledge);
           } else {
-            if (bus_monitor_)
+            if (bus_monitor_) {
               bus_monitor_->updateHandler([](auto& m) { m.error_reactive++; });
+              if (isDeliberateSilence(
+                      {passive_master_.data(), passive_master_.size()},
+                      passive_slave_.size(), source_address_,
+                      target_address_)) {
+                bus_monitor_->updateHandler(
+                    [](auto& m) { m.error_expected_silent++; });
+              }
+            }
             callOnError(LogLevel::error, ProtocolError::error_reactive_slave,
                         passive_telegram_.getSlaveState(),
                         {passive_master_.data(), passive_master_.size()},
@@ -343,8 +351,15 @@ void Handler::passiveReceiveMaster(uint8_t byte) {
       } else {
         if (passive_master_[1] == source_address_ ||
             passive_master_[1] == target_address_) {
-          if (bus_monitor_)
+          if (bus_monitor_) {
             bus_monitor_->updateHandler([](auto& m) { m.error_reactive++; });
+            if (isDeliberateSilence(
+                    {passive_master_.data(), passive_master_.size()},
+                    passive_slave_.size(), source_address_, target_address_)) {
+              bus_monitor_->updateHandler(
+                  [](auto& m) { m.error_expected_silent++; });
+            }
+          }
           callOnError(LogLevel::error, ProtocolError::error_reactive_master,
                       passive_telegram_.getMasterState(),
                       {passive_master_.data(), passive_master_.size()},
@@ -503,8 +518,15 @@ void Handler::reactiveSendMasterPositiveAcknowledge(
     transitionTo(HandlerState::passive_receive_master);
   } else {
     if (passive_slave_index_ >= passive_slave_.size()) {
-      if (bus_monitor_)
+      if (bus_monitor_) {
         bus_monitor_->updateHandler([](auto& m) { m.error_reactive++; });
+        if (isDeliberateSilence(
+                {passive_master_.data(), passive_master_.size()},
+                passive_slave_.size(), source_address_, target_address_)) {
+          bus_monitor_->updateHandler(
+              [](auto& m) { m.error_expected_silent++; });
+        }
+      }
       callOnError(LogLevel::error, ProtocolError::illegal_fsm_transition,
                   passive_telegram_.getMasterState(),
                   {passive_master_.data(), passive_master_.size()},
@@ -524,8 +546,14 @@ void Handler::reactiveSendMasterNegativeAcknowledge(
   if (!passive_master_repeated_) {
     passive_master_repeated_ = true;  // Allow one retry
   } else {
-    if (bus_monitor_)
+    if (bus_monitor_) {
       bus_monitor_->updateHandler([](auto& m) { m.error_reactive++; });
+      if (isDeliberateSilence({passive_master_.data(), passive_master_.size()},
+                              passive_slave_.size(), source_address_,
+                              target_address_)) {
+        bus_monitor_->updateHandler([](auto& m) { m.error_expected_silent++; });
+      }
+    }
     callOnError(LogLevel::error, ProtocolError::error_reactive_master_ack,
                 passive_telegram_.getMasterState(),
                 {passive_master_.data(), passive_master_.size()},
@@ -562,8 +590,14 @@ void Handler::reactiveReceiveSlaveAcknowledge(uint8_t byte) {
     callWrite(passive_slave_[passive_slave_index_]);
     transitionTo(HandlerState::reactive_send_slave);
   } else {
-    if (bus_monitor_)
+    if (bus_monitor_) {
       bus_monitor_->updateHandler([](auto& m) { m.error_reactive++; });
+      if (isDeliberateSilence({passive_master_.data(), passive_master_.size()},
+                              passive_slave_.size(), source_address_,
+                              target_address_)) {
+        bus_monitor_->updateHandler([](auto& m) { m.error_expected_silent++; });
+      }
+    }
     callOnError(LogLevel::error, ProtocolError::error_reactive_slave_ack,
                 passive_telegram_.getSlaveState(),
                 {passive_master_.data(), passive_master_.size()},
@@ -937,14 +971,6 @@ void Handler::transitionTo(HandlerState next) {
   }
 }
 
-/**
- * Handles errors that occur during passive operations.
- *
- * This method is triggered when inconsistencies or issues are detected
- * in the passive master or slave communication sequences.
- * It logs the error details using the onErrorCallback if available,
- * updates the appropriate counters, and resets the passive state.
- */
 void Handler::checkPassiveBuffers() {
   if (passive_master_.size() > 0 || passive_slave_.size() > 0) {
     auto sequence_state = passive_telegram_.getMasterState();
@@ -969,16 +995,6 @@ void Handler::checkPassiveBuffers() {
   }
 }
 
-/**
- * Handles errors that occur during active communication.
- *
- * This method is invoked when an error is detected in the active
- * communication process. It checks for inconsistencies or issues in the
- * active master and slave data structures, logs the error details using the
- * onErrorCallback if it is set, and increments the active reset counter.
- * Finally, it resets the active communication state to ensure the system
- * can recover and continue operating.
- */
 void Handler::checkActiveBuffers() {
   if (active_master_.size() > 0 || active_slave_.size() > 0) {
     auto sequence_state = active_telegram_.getMasterState();
@@ -1184,6 +1200,17 @@ MessageType Handler::getMessageTypeFromState(HandlerState state) const {
     default:
       return MessageType::undefined;
   }
+}
+
+bool isDeliberateSilence(ByteView master_view, size_t slave_size,
+                         uint8_t source_address, uint8_t target_address) {
+  // Any request addressed to us that we leave unanswered: with nothing
+  // staged, silence is policy (or missing data), never a wire fault.
+  // A real fault either carries answer bytes or is not addressed to us.
+  if (slave_size != 0) return false;
+  if (master_view.size() < 5) return false;
+  const uint8_t zz = master_view[1];
+  return zz == source_address || zz == target_address;
 }
 
 }  // namespace ebus::detail

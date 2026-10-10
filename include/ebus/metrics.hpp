@@ -67,6 +67,9 @@ struct HandlerMetrics {
   // absent slaves) and lone QQ=00 probes (single 0x00 closed by SYN).
   uint32_t error_expected_scan = 0;
   uint32_t error_expected_stray00 = 0;
+  // Deliberate non-answers to requests addressed at us (system response
+  // disabled): counted here, still in the gross above.
+  uint32_t error_expected_silent = 0;
   uint32_t resets_passive = 0;
   uint32_t resets_active = 0;
   uint64_t total_sent_data_bytes = 0;
