@@ -31,7 +31,8 @@ struct TestCase {
   struct ExpectedResult {
     int telegram;
     int errors;
-    int expected = 0;
+    int expected_scan = 0;
+    int expected_stray00 = 0;
   } expected;
 };
 
@@ -49,9 +50,9 @@ SCENARIO("Handler processes eBUS messages correctly", "[core][handler]") {
         {ebus::MessageType::passive, 0x33, "passive MS: Master NAK/Retry OK - Slave NAK/Retry NAK", "ff52b509030d060043ffff52b509030d0600430003b0fba901d0ff03b0fba901d0ff", "", {0, 1}},
         {ebus::MessageType::passive, 0x33, "passive MM: Normal", "1000b5050427002400d900", "", {1, 0}},
         {ebus::MessageType::passive, 0x33, "passive BC: Malformed sequence", "00fe0704003c", "", {0, 1}},
-        {ebus::MessageType::passive, 0x33, "passive 00: Reset", "00", "", {0, 1, 1}},
-        {ebus::MessageType::passive, 0x33, "passive 0704: Scan", "002e0704004e", "", {0, 1, 1}},
-        {ebus::MessageType::passive, 0x33, "passive 070400: Unanswered scan is expected noise", "3108070400d1", "", {0, 1, 1}},
+        {ebus::MessageType::passive, 0x33, "passive 00: Reset", "00", "", {0, 1, 0, 1}},
+        {ebus::MessageType::passive, 0x33, "passive 0704: Scan", "002e0704004e", "", {0, 1, 1, 0}},
+        {ebus::MessageType::passive, 0x33, "passive 070400: Unanswered scan is expected noise", "3108070400d1", "", {0, 1, 1, 0}},
         {ebus::MessageType::passive, 0x33, "passive BC: Normal", "10fe07000970160443183105052592", "", {1, 0}},
         {ebus::MessageType::passive, 0x33, "passive MS: Slave CRC 0x21 is missing", "1008b5130304cd017f000acd01000000000100010000", "", {0, 2}},
         {ebus::MessageType::passive, 0x33, "passive MS: Slave error + ACK on incomplete slave is dropped, resync at SYN", "ff52b509030d0600430003b0fba902d000" "aa" "ff52b509030d0600430003b0fba901d000", "", {1, 2}},
@@ -177,11 +178,15 @@ SCENARIO("Handler processes eBUS messages correctly", "[core][handler]") {
         THEN("The expected number of telegrams and errors are reported") {
           REQUIRE(telegram_count == tc.expected.telegram);
           REQUIRE(error_count == tc.expected.errors);
-          int expected_count = 0;
+          int expected_scan = 0;
+          int expected_stray00 = 0;
           bus_monitor.fetchMetrics([&](const ebus::Metrics& m) {
-            expected_count = static_cast<int>(m.handler.error_expected);
+            expected_scan = static_cast<int>(m.handler.error_expected_scan);
+            expected_stray00 =
+                static_cast<int>(m.handler.error_expected_stray00);
           });
-          REQUIRE(expected_count == tc.expected.expected);
+          REQUIRE(expected_scan == tc.expected.expected_scan);
+          REQUIRE(expected_stray00 == tc.expected.expected_stray00);
         }
       }
     }

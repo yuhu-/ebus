@@ -406,7 +406,7 @@ void Handler::passiveReceiveMasterAcknowledge(uint8_t byte) {
       // scans of absent slaves, not wire faults.
       if (passive_slave_.empty() && passive_master_.size() >= 5 &&
           passive_master_[2] == 0x07 && passive_master_[3] == 0x04) {
-        bus_monitor_->updateHandler([](auto& m) { m.error_expected++; });
+        bus_monitor_->updateHandler([](auto& m) { m.error_expected_scan++; });
       }
     }
     callOnError(LogLevel::error, ProtocolError::error_passive_master_ack,
@@ -956,7 +956,7 @@ void Handler::checkPassiveBuffers() {
     // (no ZZ could follow a SYN). Still INFO + reset like all leftovers.
     if (bus_monitor_ && passive_slave_.empty() && passive_master_.size() == 1 &&
         passive_master_[0] == 0x00)
-      bus_monitor_->updateHandler([](auto& m) { m.error_expected++; });
+      bus_monitor_->updateHandler([](auto& m) { m.error_expected_stray00++; });
 
     callOnError(LogLevel::info, ProtocolError::check_passive_buffers,
                 sequence_state,
