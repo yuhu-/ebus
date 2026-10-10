@@ -417,7 +417,6 @@ void metrics::HandlerMetrics::reset() {
   error_expected_stray00 = 0;
   resets_passive = 0;
   resets_active = 0;
-  total_attempts = 0;
   total_sent_data_bytes = 0;
   total_sent_protocol_bytes = 0;
   total_observed_data_bytes = 0;
@@ -472,7 +471,6 @@ void metrics::HandlerMetrics::toJson(detail::JsonWriter& writer) const {
   writer.writeField("error_active", error_active);
   writer.writeField("error_expected_scan", error_expected_scan);
   writer.writeField("error_expected_stray00", error_expected_stray00);
-  writer.writeField("total_attempts", total_attempts);
   writer.writeField("resets_passive", resets_passive);
   writer.writeField("resets_active", resets_active);
   writer.writeField("invalid_bytes", invalid_bytes);
@@ -676,6 +674,7 @@ void metrics::SchedulerMetrics::reset() {
   consecutive_failures = 0;
   breaker_trips = 0;
   breaker_open = false;
+  retries = 0;
 }
 
 void metrics::SchedulerMetrics::toJson(detail::JsonWriter& writer) const {
@@ -683,6 +682,7 @@ void metrics::SchedulerMetrics::toJson(detail::JsonWriter& writer) const {
   writer.writeField("consecutive_failures", consecutive_failures);
   writer.writeField("breaker_trips", breaker_trips);
   writer.writeField("breaker_open", breaker_open);
+  writer.writeField("retries", retries);
 }
 
 void metrics::ClientManagerMetrics::toJson(detail::JsonWriter& writer) const {

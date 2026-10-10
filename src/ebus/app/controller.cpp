@@ -74,6 +74,11 @@ struct Impl {
 
   void constructMembers(Controller* owner);
 
+  // Pushes owner->config_ into live members. Must run with configured_
+  // already true: the public setters no-op member updates otherwise,
+  // which silently dropped the first configure() (e.g. max_attempts).
+  void applyRuntimeConfig(Controller* owner);
+
   // Predicates for resource fairness
   bool isSchedulerFull() const;
   bool isHandlerBusy() const;
@@ -145,6 +150,10 @@ bool Controller::configure(const EbusConfig& config) {
   config_ = config;
   impl_->constructMembers(this);
   impl_->configured_.store(true);
+  // Push the config into live members now that they exist and the
+  // configured gate is open (constructMembers alone must not do this:
+  // it also runs from the ctor with defaults).
+  impl_->applyRuntimeConfig(this);
   return true;
 }
 
@@ -724,6 +733,18 @@ void Impl::constructMembers(Controller* owner) {
   }
 
   // Centralized synchronization using setters. Recursive mutex allows this
+  // safely. Runs only with configured_ true (see applyRuntimeConfig):
+  // members are guaranteed to exist here, having just been created above.
+  applyRuntimeConfig(owner);
+
+  if (device_scanner_) {
+    device_scanner_->setBusyPredicate(
+        detail::Delegate<bool()>::bind<Impl, &Impl::isSystemBusy>(this));
+  }
+}
+
+void Impl::applyRuntimeConfig(Controller* owner) {
+  // Centralized synchronization using setters. Recursive mutex allows this
   // safely.
   owner->setLogLevel(owner->config_.runtime.log_level);
   owner->setAddress(owner->config_.runtime.address);
@@ -746,11 +767,6 @@ void Impl::constructMembers(Controller* owner) {
   owner->setTotalTimeout(owner->config_.runtime.scheduler.total_timeout_ms);
   if (user_reactive_callback_) {
     owner->setReactiveCallback(user_reactive_callback_);
-  }
-
-  if (device_scanner_) {
-    device_scanner_->setBusyPredicate(
-        detail::Delegate<bool()>::bind<Impl, &Impl::isSystemBusy>(this));
   }
 }
 

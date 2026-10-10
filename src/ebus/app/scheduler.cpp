@@ -244,8 +244,7 @@ bool Scheduler::injectProtocolEvent(const ProtocolEvent& event) {
       active_item_->item.attempts++;
       if (!is_fatal && active_item_->item.attempts < max_attempts_) {
         if (handler_) {
-          handler_->getMonitor()->updateHandler(
-              [](auto& m) { m.total_attempts++; });
+          handler_->getMonitor()->updateScheduler([](auto& m) { m.retries++; });
         }
         // Signal that reset is needed (do it outside mutex)
         need_reset = true;

@@ -69,7 +69,6 @@ struct HandlerMetrics {
   uint32_t error_expected_stray00 = 0;
   uint32_t resets_passive = 0;
   uint32_t resets_active = 0;
-  uint32_t total_attempts = 0;
   uint64_t total_sent_data_bytes = 0;
   uint64_t total_sent_protocol_bytes = 0;
   uint64_t total_observed_data_bytes = 0;
@@ -256,6 +255,9 @@ struct SchedulerMetrics {
   uint32_t consecutive_failures = 0;
   uint32_t breaker_trips = 0;
   bool breaker_open = false;
+  // Reschedules after non-fatal failure (backoff path). First attempts
+  // are not counted.
+  uint32_t retries = 0;
 
   void reset();
 
