@@ -399,8 +399,16 @@ void Handler::passiveReceiveMasterAcknowledge(uint8_t byte) {
     passive_master_dbx_ = 0;
     transitionTo(HandlerState::passive_receive_master);
   } else {
-    if (bus_monitor_)
+    if (bus_monitor_) {
       bus_monitor_->updateHandler([](auto& m) { m.error_passive++; });
+      // Expected noise, still counted above: observed scan request
+      // (PB 07 / SB 04) with zero slave bytes and no ACK — full-bus
+      // scans of absent slaves, not wire faults.
+      if (passive_slave_.empty() && passive_master_.size() >= 5 &&
+          passive_master_[2] == 0x07 && passive_master_[3] == 0x04) {
+        bus_monitor_->updateHandler([](auto& m) { m.error_expected++; });
+      }
+    }
     callOnError(LogLevel::error, ProtocolError::error_passive_master_ack,
                 passive_telegram_.getMasterState(),
                 {passive_master_.data(), passive_master_.size()},
