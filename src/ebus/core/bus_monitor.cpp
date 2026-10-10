@@ -415,6 +415,7 @@ void metrics::HandlerMetrics::reset() {
   error_active = 0;
   error_expected_scan = 0;
   error_expected_stray00 = 0;
+  error_expected_silent = 0;
   resets_passive = 0;
   resets_active = 0;
   total_sent_data_bytes = 0;
@@ -471,6 +472,7 @@ void metrics::HandlerMetrics::toJson(detail::JsonWriter& writer) const {
   writer.writeField("error_active", error_active);
   writer.writeField("error_expected_scan", error_expected_scan);
   writer.writeField("error_expected_stray00", error_expected_stray00);
+  writer.writeField("error_expected_silent", error_expected_silent);
   writer.writeField("resets_passive", resets_passive);
   writer.writeField("resets_active", resets_active);
   writer.writeField("invalid_bytes", invalid_bytes);
