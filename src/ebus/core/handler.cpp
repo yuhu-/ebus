@@ -951,6 +951,13 @@ void Handler::checkPassiveBuffers() {
     if (sequence_state != SequenceState::seq_ok) {
       sequence_state = passive_telegram_.getSlaveState();
     }
+    // Expected noise, counted but not alarmed: lone QQ=00 followed by
+    // SYN — periodic stray arbitration probe, never a valid frame start
+    // (no ZZ could follow a SYN). Still INFO + reset like all leftovers.
+    if (bus_monitor_ && passive_slave_.empty() && passive_master_.size() == 1 &&
+        passive_master_[0] == 0x00)
+      bus_monitor_->updateHandler([](auto& m) { m.error_expected++; });
+
     callOnError(LogLevel::info, ProtocolError::check_passive_buffers,
                 sequence_state,
                 {passive_master_.data(), passive_master_.size()},

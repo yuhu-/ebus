@@ -49,7 +49,7 @@ SCENARIO("Handler processes eBUS messages correctly", "[core][handler]") {
         {ebus::MessageType::passive, 0x33, "passive MS: Master NAK/Retry OK - Slave NAK/Retry NAK", "ff52b509030d060043ffff52b509030d0600430003b0fba901d0ff03b0fba901d0ff", "", {0, 1}},
         {ebus::MessageType::passive, 0x33, "passive MM: Normal", "1000b5050427002400d900", "", {1, 0}},
         {ebus::MessageType::passive, 0x33, "passive BC: Malformed sequence", "00fe0704003c", "", {0, 1}},
-        {ebus::MessageType::passive, 0x33, "passive 00: Reset", "00", "", {0, 1}},
+        {ebus::MessageType::passive, 0x33, "passive 00: Reset", "00", "", {0, 1, 1}},
         {ebus::MessageType::passive, 0x33, "passive 0704: Scan", "002e0704004e", "", {0, 1, 1}},
         {ebus::MessageType::passive, 0x33, "passive 070400: Unanswered scan is expected noise", "3108070400d1", "", {0, 1, 1}},
         {ebus::MessageType::passive, 0x33, "passive BC: Normal", "10fe07000970160443183105052592", "", {1, 0}},

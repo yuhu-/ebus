@@ -711,7 +711,10 @@ void metrics::SystemMetrics::toJson(detail::JsonWriter& writer) const {
                 100.0f
           : 0.0f;
 
-  // Quality Score: Protocol health * Arbitration success * Reactor integrity
+  // Quality Score: (100 - error%) * (1 - contention) * penalties
+  // (reactor drops, jitter, SYN postpone, start-bit errors). 100 = clean
+  // bus and idle reactor; falls multiplicatively with each problem class.
+  // Protocol health * Arbitration success * Reactor integrity
   // We penalize the quality if the reactor loop has dropped events.
   float drop_penalty =
       (reactor.signal_queue_dropped > 0 || reactor.protocol_queue_dropped > 0 ||

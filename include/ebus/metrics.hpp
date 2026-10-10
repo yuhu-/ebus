@@ -64,7 +64,8 @@ struct HandlerMetrics {
   uint32_t error_active = 0;
   // Expected-noise subset (also counted above, never excluded from
   // errorRate): observed scan requests with zero slave bytes
-  // (full-bus scans of absent slaves), stray-QQ00 pending fingerprint.
+  // (full-bus scans of absent slaves) and lone QQ=00 probes
+  // (single 0x00 byte closed by SYN — periodic stray arbitration).
   uint32_t error_expected = 0;
   uint32_t resets_passive = 0;
   uint32_t resets_active = 0;
@@ -74,6 +75,10 @@ struct HandlerMetrics {
   uint64_t total_observed_data_bytes = 0;
   uint64_t total_observed_protocol_bytes = 0;
   uint32_t invalid_bytes = 0;
+  // Bytes dropped while draining to the next SYN after lost framing —
+  // mostly arbitration-race resyncs (lost/stale QQ intents, counter-less),
+  // not just error events. Dropped traffic is re-observed on the next
+  // cycle; not part of errorRate().
   uint32_t resync_drops = 0;
   // Wire-tap snapshot at last echo mismatch + count (see rx_tap_ guide).
   uint32_t echo_mismatch_count = 0;
