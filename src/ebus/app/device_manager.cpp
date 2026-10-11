@@ -18,6 +18,14 @@ DeviceManager::DeviceManager(BusMonitor* bus_monitor)
 
 void DeviceManager::setOwnAddress(uint8_t address) { own_address_ = address; }
 
+void DeviceManager::setUnknownEntryTtlMs(uint32_t ttl_ms) {
+  unknown_entry_ttl_ = std::chrono::milliseconds(ttl_ms);
+}
+
+void DeviceManager::setSweepIntervalMs(uint32_t interval_ms) {
+  sweep_interval_ms_ = std::chrono::milliseconds(interval_ms);
+}
+
 void DeviceManager::update(ByteView master_view, ByteView slave_view) {
   platform::LockGuard<platform::Mutex> lock(mutex_);
   uint8_t m_addr = master_view[0];
@@ -119,16 +127,37 @@ void DeviceManager::pruneUnidentified(uint8_t addr) {
   if (idx == -1) return;
   if (device_pool_[static_cast<size_t>(idx)].isIdentified()) return;
 
-  // Swap-with-last compaction to keep the pool dense.
-  size_t last = --pool_usage_;
-  if (static_cast<size_t>(idx) != last) {
-    device_pool_[static_cast<size_t>(idx)] = device_pool_[last];
-    address_map_[device_pool_[static_cast<size_t>(idx)].getSlave()] =
-        static_cast<int16_t>(idx);
-  }
-  address_map_[addr] = -1;
+  removeAtLocked(static_cast<size_t>(idx));
   identified_devices_.reset(addr);
   updateDeviceMetrics();
+}
+
+size_t DeviceManager::sweepStaleUnknown() {
+  platform::LockGuard<platform::Mutex> lock(mutex_);
+  const auto now = Clock::now();
+  // min() init means "never swept": subtraction would overflow, so the
+  // first sweep always runs.
+  if (last_sweep_ != Clock::time_point::min() &&
+      now - last_sweep_ < sweep_interval_ms_)
+    return 0;
+  last_sweep_ = now;
+
+  size_t evicted = 0;
+  // Index loop with swap-remove: do not advance past a swapped-in entry.
+  size_t i = 0;
+  while (i < pool_usage_) {
+    const Device& dev = device_pool_[i];
+    if (!dev.isIdentified() && now - dev.lastSeen() > unknown_entry_ttl_) {
+      identified_devices_.reset(dev.getSlave());
+      removeAtLocked(i);
+      ++evicted;
+      // Swapped-in entry at i is examined next iteration.
+    } else {
+      ++i;
+    }
+  }
+  if (evicted > 0) updateDeviceMetrics();
+  return evicted;
 }
 
 bool DeviceManager::needsDeepScan(uint8_t addr) const {
@@ -199,6 +228,18 @@ DeviceManagerStatus DeviceManager::fetchStatus() const {
         [&](const Metrics& m) { s.unknown_count = m.devices.unknown_devices; });
   }
   return s;
+}
+
+void DeviceManager::removeAtLocked(size_t idx) {
+  // Capture first: after the swap the stale last slot still reads the
+  // moved slave address, so it cannot be used to clear the map.
+  const uint8_t removed = device_pool_[idx].getSlave();
+  size_t last = --pool_usage_;
+  if (idx != last) {
+    device_pool_[idx] = device_pool_[last];
+    address_map_[device_pool_[idx].getSlave()] = static_cast<int16_t>(idx);
+  }
+  address_map_[removed] = -1;
 }
 
 void DeviceManager::updateDeviceMetrics() {

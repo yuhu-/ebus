@@ -3,9 +3,11 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+#include <algorithm>
 #include <catch2/catch_all.hpp>
 #include <ebus/utils.hpp>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include "app/device_manager.hpp"
@@ -320,4 +322,59 @@ TEST_CASE("DeviceManager: writeDeviceJson renders without heap",
   REQUIRE(!device_manager.writeDeviceJson(0x23, frag, sizeof(frag), used));
   REQUIRE(!device_manager.writeDeviceJson(0x15, frag, 0, used));
   REQUIRE(!device_manager.writeDeviceJson(0x15, nullptr, sizeof(frag), used));
+}
+
+TEST_CASE("DeviceManager: sweep evicts stale phantoms only",
+          "[app][devicemanager]") {
+  ebus::BusConfig config;
+  ebus::RuntimeConfig runtime = {.address = 0xff};
+  Request request;
+  BusMonitor bus_monitor;
+  DeviceManager device_manager(&bus_monitor);
+  platform::Bus bus(config, runtime, &request, &bus_monitor);
+  Handler handler(runtime.address, &bus, &request, &bus_monitor);
+
+  device_manager.setOwnAddress(runtime.address);
+  device_manager.setUnknownEntryTtlMs(20);
+  device_manager.setSweepIntervalMs(0);  // no throttle in test
+
+  auto addrs = [&](const DeviceManager& dm) {
+    std::vector<uint8_t> out;
+    dm.fetchDevices([&](const ebus::DeviceInfo& info) {
+      out.push_back(info.slave_address);
+    });
+    return out;
+  };
+
+  // Phantom 0x09: three stray observations (non-ID traffic), ID never
+  // answers. A 0704 master with an answer would identify — strays are
+  // other telegrams the scanner attributed to this slave.
+  std::vector<uint8_t> probe = {0x10, 0x09, 0xb5, 0x04, 0x01, 0x00};
+  std::vector<uint8_t> stray = {0x00};
+  for (int i = 0; i < 3; ++i) device_manager.update(probe, stray);
+
+  // Chatty unknown 0x0a: talks but never identifies.
+  std::vector<uint8_t> chatty_m = {0x10, 0x0a, 0xb5, 0x04, 0x01, 0x00};
+  device_manager.update(chatty_m, stray);
+
+  // Identified 0x08: full 0704 answer.
+  std::vector<uint8_t> id_m = {0x10, 0x08, 0x07, 0x04, 0x00};
+  std::vector<uint8_t> id_s = {0x0a, 0xb5, 0x50, 0x4d, 0x53, 0x30,
+                               0x30, 0x01, 0x07, 0x43, 0x02};
+  device_manager.update(id_m, id_s);
+  REQUIRE(device_manager.isIdentified(0x08));
+
+  // Let the phantom go stale, then refresh the chatty one.
+  std::this_thread::sleep_for(std::chrono::milliseconds(40));
+  device_manager.update(chatty_m, stray);
+
+  REQUIRE(device_manager.sweepStaleUnknown() == 1);
+  auto remaining = addrs(device_manager);
+  REQUIRE(remaining.size() == 2);
+  REQUIRE(std::find(remaining.begin(), remaining.end(), 0x09) ==
+          remaining.end());
+  REQUIRE(device_manager.isIdentified(0x08));
+
+  // Second sweep: nothing stale, nothing evicted.
+  REQUIRE(device_manager.sweepStaleUnknown() == 0);
 }

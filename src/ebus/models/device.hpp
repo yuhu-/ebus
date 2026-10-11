@@ -9,6 +9,7 @@
 #include <ebus/detail/delegate.hpp>
 #include <ebus/device.hpp>
 #include <ebus/sequence.hpp>
+#include <ebus/types.hpp>
 #include <functional>
 #include <string>
 #include <vector>
@@ -28,6 +29,10 @@ class Device {
 
   // Working Methods
   void update(uint8_t slave_addr, ByteView master_view, ByteView slave_view);
+  // Activity stamp for stale-entry eviction (DeviceManager-owned policy;
+  // stamped here so every observation path counts without manager help).
+  void touch() { last_seen_ = Clock::now(); }
+  Clock::time_point lastSeen() const { return last_seen_; }
   bool getNextPendingVendorCommand(uint16_t& cursor, Sequence& out_cmd) const;
   bool getFirstPendingVendorCommand(Sequence& out_cmd) const;
 
@@ -45,6 +50,7 @@ class Device {
   uint8_t slave_ = 0;
   bool identified_ = false;  // True if 07 04 has been successfully received
   uint32_t message_count_ = 0;
+  Clock::time_point last_seen_ = Clock::time_point::min();
 
   ModelSequence vec_070400_;
 

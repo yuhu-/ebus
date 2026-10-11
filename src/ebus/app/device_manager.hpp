@@ -7,6 +7,7 @@
 
 #include <array>
 #include <bitset>
+#include <chrono>
 #include <cstdint>
 #include <ebus/device.hpp>
 #include <ebus/metrics.hpp>
@@ -35,6 +36,8 @@ class DeviceManager {
 
   // Configuration
   void setOwnAddress(uint8_t address);
+  void setUnknownEntryTtlMs(uint32_t ttl_ms);
+  void setSweepIntervalMs(uint32_t interval_ms);
 
   // Working Methods
   void update(ByteView master_view, ByteView slave_view);
@@ -84,6 +87,14 @@ class DeviceManager {
   void pruneUnidentified(uint8_t addr);
 
   /**
+   * @brief Evicts never-identified entries unseen for longer than the TTL.
+   * Throttled to one sweep per sweep interval; returns evicted count.
+   * Identified entries never expire; chatty unknowns keep refreshing
+   * last_seen and are never eligible. Called from the reactor loop.
+   */
+  size_t sweepStaleUnknown();
+
+  /**
    * @brief Returns true if the device at the given address is identified
    * and still needs vendor-specific data to be fully profiled.
    */
@@ -121,6 +132,15 @@ class DeviceManager {
                                            // associated Device entry
   std::bitset<256> masters_{};
   std::bitset<256> slaves_{};
+
+  std::chrono::milliseconds unknown_entry_ttl_{
+      DeviceLimits::unknown_entry_ttl_ms};
+  std::chrono::milliseconds sweep_interval_ms_{DeviceLimits::sweep_interval_ms};
+  Clock::time_point last_sweep_ = Clock::time_point::min();
+
+  // Swap-with-last compaction; caller must hold mutex_ and call
+  // updateDeviceMetrics() afterwards if anything was removed.
+  void removeAtLocked(size_t idx);
 
   // Recomputes unknown/identified device counts from the observed sets.
   // Drift-proof by construction (no increment/decrement bookkeeping).

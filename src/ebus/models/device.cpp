@@ -39,6 +39,7 @@ void Device::update(uint8_t slave_addr, ByteView master_view,
                     ByteView slave_view) {
   slave_ = slave_addr;
   message_count_++;
+  touch();
 
   if (slave_view.empty()) {
     // If no slave view, we can't identify the device further.

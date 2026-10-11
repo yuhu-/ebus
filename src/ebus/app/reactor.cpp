@@ -256,6 +256,10 @@ void Reactor::run() {
       }
     }
 
+    // 4b. Evict stale never-identified device entries (scan phantoms).
+    // Self-throttled inside; O(pool) worst case, no bus interaction.
+    if (device_manager_->sweepStaleUnknown() > 0) activity = true;
+
     // 5. Calculate next wakeup time
     const auto next_sched = scheduler_->nextDueTime();
     const auto next_poll = poll_manager_->nextDueTime();

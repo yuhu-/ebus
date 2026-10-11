@@ -301,6 +301,15 @@ inline constexpr size_t max_devices = EBUS_MAX_DEVICES;
 #endif
 
 inline constexpr uint8_t scan_priority = 5;
+
+// Stale phantoms: never-identified entries (scan cross-talk like the 0x09
+// case: observed a few times, ID never answers) expire after this long
+// without any observation. Identified entries never expire. Re-observation
+// re-adds cheaply via the observed bitsets, so eviction loses nothing.
+inline constexpr uint32_t unknown_entry_ttl_ms = 30 * 60 * 1000;
+// Sweep throttle: the pool is tiny (<= max_devices), but the reactor loop
+// runs hot — at most one sweep per interval.
+inline constexpr uint32_t sweep_interval_ms = 60 * 1000;
 }  // namespace DeviceLimits
 
 namespace SchedulerLimits {
