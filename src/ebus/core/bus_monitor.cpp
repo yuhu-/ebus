@@ -677,6 +677,10 @@ void metrics::SchedulerMetrics::reset() {
   breaker_trips = 0;
   breaker_open = false;
   retries = 0;
+  fail_bus = 0;
+  fail_silent = 0;
+  fail_lost = 0;
+  fail_fatal = 0;
 }
 
 void metrics::SchedulerMetrics::toJson(detail::JsonWriter& writer) const {
@@ -685,6 +689,10 @@ void metrics::SchedulerMetrics::toJson(detail::JsonWriter& writer) const {
   writer.writeField("breaker_trips", breaker_trips);
   writer.writeField("breaker_open", breaker_open);
   writer.writeField("retries", retries);
+  writer.writeField("fail_bus", fail_bus);
+  writer.writeField("fail_silent", fail_silent);
+  writer.writeField("fail_lost", fail_lost);
+  writer.writeField("fail_fatal", fail_fatal);
 }
 
 void metrics::ClientManagerMetrics::toJson(detail::JsonWriter& writer) const {

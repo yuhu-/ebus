@@ -425,6 +425,62 @@ TEST_CASE("Scheduler breaker: peer silence does not trip the bus",
   REQUIRE(h.scheduler.breakerOpen() == true);
 }
 
+TEST_CASE("Scheduler breaker: lost arbitration never counts",
+          "[app][scheduler][breaker]") {
+  // Someone else transmitting proves the wire works: losing arbitration
+  // must not feed the quarantine, however often it happens in a row
+  // (busy-bus scan probes hit exactly this).
+  BreakerHarness h;
+  for (int i = 0; i < 5; ++i) {
+    uint32_t sid = h.startItem();
+    ProtocolEvent ev{};
+    ev.type = ProtocolEvent::Type::lost;
+    ev.session_id = sid;
+    ev.level = ebus::LogLevel::info;
+    REQUIRE(h.settle(ev) == true);
+  }
+  REQUIRE(h.scheduler.breakerConsecutiveFailures() == 0);
+  REQUIRE(h.scheduler.breakerOpen() == false);
+
+  h.bus_monitor.fetchMetrics([&](const ebus::Metrics& m) {
+    REQUIRE(m.scheduler.fail_lost == 5);
+    REQUIRE(m.scheduler.fail_bus == 0);
+  });
+}
+
+TEST_CASE("Scheduler breaker: cause breakdown classifies outcomes",
+          "[app][scheduler][breaker]") {
+  BreakerHarness h;
+  // 1 bus fault (echo), 1 silence (master_ack), 1 fatal (invalid_message).
+  uint32_t sid = h.startItem();
+  REQUIRE(h.settle(h.errorFor(sid)) == true);
+
+  sid = h.startItem();
+  ProtocolEvent silent{};
+  silent.type = ProtocolEvent::Type::error;
+  silent.session_id = sid;
+  silent.protocol_error = ebus::ProtocolError::error_active_master_ack;
+  silent.level = ebus::LogLevel::error;
+  REQUIRE(h.settle(silent) == true);
+
+  sid = h.startItem();
+  ProtocolEvent fatal{};
+  fatal.type = ProtocolEvent::Type::error;
+  fatal.session_id = sid;
+  fatal.protocol_error = ebus::ProtocolError::invalid_message;
+  fatal.level = ebus::LogLevel::error;
+  REQUIRE(h.settle(fatal) == true);
+
+  h.bus_monitor.fetchMetrics([&](const ebus::Metrics& m) {
+    REQUIRE(m.scheduler.fail_bus == 1);
+    REQUIRE(m.scheduler.fail_silent == 1);
+    REQUIRE(m.scheduler.fail_fatal == 1);
+    REQUIRE(m.scheduler.fail_lost == 0);
+  });
+  // Single bus fault below threshold: still closed.
+  REQUIRE(h.scheduler.breakerOpen() == false);
+}
+
 TEST_CASE("Scheduler breaker: probe re-trips with doubling cooldown",
           "[app][scheduler][breaker]") {
   BreakerHarness h;

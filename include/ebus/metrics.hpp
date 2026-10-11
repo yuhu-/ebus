@@ -261,6 +261,13 @@ struct SchedulerMetrics {
   // Reschedules after non-fatal failure (backoff path). First attempts
   // are not counted.
   uint32_t retries = 0;
+  // Active-outcome cause breakdown (support forensics: which class feeds
+  // the breaker). fail_bus feeds consecutive_failures; the other three
+  // are classified but excluded (wire proven healthy).
+  uint32_t fail_bus = 0;     // echo/corruption/slave-garbage faults
+  uint32_t fail_silent = 0;  // verified TX, peer never answered
+  uint32_t fail_lost = 0;    // arbitration lost to another master
+  uint32_t fail_fatal = 0;   // structural (our message malformed)
 
   void reset();
 

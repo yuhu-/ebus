@@ -231,19 +231,38 @@ bool Scheduler::injectProtocolEvent(const ProtocolEvent& event) {
 
       // Global TX circuit-breaker: bus-level active failures count,
       // whatever the ZZ target. Trips quarantine ALL active traffic.
-      // Peer silence does NOT count: error_active_master_ack means our
-      // master block went out clean (echo-verified) but no slave ACK
-      // arrived, and total_transfer_timeout is the scheduler-side catch-
-      // all for an unanswered transfer. After a verified TX the wire is
-      // proven healthy — the peer is quiet, the bus is not broken.
-      // Scan probes and dead-register polls (expected-silence traffic)
-      // therefore never trip the quarantine; echo/arbitration/corruption
-      // faults still do. Retries and error reporting are unchanged.
+      // Two exclusions, same wire-works proof:
+      // - Peer silence: error_active_master_ack means our master block
+      //   went out clean (echo-verified) but no slave ACK arrived, and
+      //   total_transfer_timeout is the scheduler-side catch-all for an
+      //   unanswered transfer. The peer is quiet, the bus is not broken.
+      // - Lost arbitration: someone else is transmitting, which proves
+      //   the wire works as strongly as echo does. Quarantining our
+      //   traffic because others talk is self-harm with no protective
+      //   value (against a monopolizing jabberer our silence changes
+      //   nothing). Scan probes and dead-register polls therefore never
+      //   trip the quarantine; echo/corruption faults still do. Retries
+      //   and error reporting are unchanged.
       const bool is_peer_silence =
           (event.type == ProtocolEvent::Type::error &&
            (event.protocol_error == ProtocolError::error_active_master_ack ||
             event.protocol_error == ProtocolError::total_transfer_timeout));
-      if (!is_fatal && !is_peer_silence) {
+      const bool is_lost = (event.type == ProtocolEvent::Type::lost);
+      // Cause breakdown for support forensics (which class feeds the
+      // breaker). Counted alongside, never reset by outcomes.
+      if (handler_) {
+        handler_->getMonitor()->updateScheduler([=](auto& m) {
+          if (is_fatal)
+            m.fail_fatal++;
+          else if (is_lost)
+            m.fail_lost++;
+          else if (is_peer_silence)
+            m.fail_silent++;
+          else
+            m.fail_bus++;
+        });
+      }
+      if (!is_fatal && !is_peer_silence && !is_lost) {
         breaker_consecutive_++;
         if (breaker_consecutive_ >= breaker_threshold_ &&
             !breakerOpenLocked()) {
