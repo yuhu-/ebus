@@ -229,9 +229,21 @@ bool Scheduler::injectProtocolEvent(const ProtocolEvent& event) {
           (event.type == ProtocolEvent::Type::error &&
            event.protocol_error == ProtocolError::invalid_message);
 
-      // Global TX circuit-breaker: every bus-level active failure counts,
+      // Global TX circuit-breaker: bus-level active failures count,
       // whatever the ZZ target. Trips quarantine ALL active traffic.
-      if (!is_fatal) {
+      // Peer silence does NOT count: error_active_master_ack means our
+      // master block went out clean (echo-verified) but no slave ACK
+      // arrived, and total_transfer_timeout is the scheduler-side catch-
+      // all for an unanswered transfer. After a verified TX the wire is
+      // proven healthy — the peer is quiet, the bus is not broken.
+      // Scan probes and dead-register polls (expected-silence traffic)
+      // therefore never trip the quarantine; echo/arbitration/corruption
+      // faults still do. Retries and error reporting are unchanged.
+      const bool is_peer_silence =
+          (event.type == ProtocolEvent::Type::error &&
+           (event.protocol_error == ProtocolError::error_active_master_ack ||
+            event.protocol_error == ProtocolError::total_transfer_timeout));
+      if (!is_fatal && !is_peer_silence) {
         breaker_consecutive_++;
         if (breaker_consecutive_ >= breaker_threshold_ &&
             !breakerOpenLocked()) {

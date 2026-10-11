@@ -394,6 +394,37 @@ TEST_CASE("Scheduler breaker: fatal errors do not blame the bus",
   REQUIRE(h.scheduler.breakerOpen() == false);
 }
 
+TEST_CASE("Scheduler breaker: peer silence does not trip the bus",
+          "[app][scheduler][breaker]") {
+  // Scan probes and dead-register polls: master TX echo-verified, peer
+  // never answers. Must never quarantine healthy bus traffic.
+  BreakerHarness h;
+  for (int i = 0; i < 5; ++i) {
+    uint32_t sid = h.startItem();
+    ProtocolEvent ev = h.errorFor(sid);
+    ev.protocol_error = ebus::ProtocolError::error_active_master_ack;
+    REQUIRE(h.settle(ev) == true);
+  }
+  for (int i = 0; i < 5; ++i) {
+    uint32_t sid = h.startItem();
+    ProtocolEvent ev = h.errorFor(sid);
+    ev.protocol_error = ebus::ProtocolError::total_transfer_timeout;
+    REQUIRE(h.settle(ev) == true);
+  }
+  REQUIRE(h.scheduler.breakerConsecutiveFailures() == 0);
+  REQUIRE(h.scheduler.breakerTrips() == 0);
+  REQUIRE(h.scheduler.breakerOpen() == false);
+
+  // Bus-level faults still count: three echo mismatches trip.
+  for (int i = 0; i < 3; ++i) {
+    uint32_t sid = h.startItem();
+    REQUIRE(h.settle(h.errorFor(sid)) == true);
+  }
+  REQUIRE(h.scheduler.breakerConsecutiveFailures() == 3);
+  REQUIRE(h.scheduler.breakerTrips() == 1);
+  REQUIRE(h.scheduler.breakerOpen() == true);
+}
+
 TEST_CASE("Scheduler breaker: probe re-trips with doubling cooldown",
           "[app][scheduler][breaker]") {
   BreakerHarness h;
