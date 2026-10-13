@@ -240,7 +240,8 @@ bool validateRange(int64_t val, uint8_t size, bool is_signed) {
 
 /* --- Core Operations --- */
 
-std::optional<DataValue> decode(DataType dt, ByteView data, Endian e) {
+std::optional<DataValue> decode(DataType dt, ByteView data, Endian e,
+                                bool use_sentinel) {
   const Meta* m = metaFor(dt);
   if (!m || data.size() < m->size) return std::nullopt;
 
@@ -273,7 +274,7 @@ std::optional<DataValue> decode(DataType dt, ByteView data, Endian e) {
       break;
   }
 
-  if (!m->is_float && m->has_replacement &&
+  if (!m->is_float && m->has_replacement && use_sentinel &&
       bit_pattern == m->replacement_value) {
     return nullValue();
   }

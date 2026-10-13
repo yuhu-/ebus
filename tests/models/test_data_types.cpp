@@ -514,6 +514,26 @@ TEST_CASE("Datatypes: sentinels", "[models][datatypes]") {
   REQUIRE(ebus::isNull(*v4));
 }
 
+TEST_CASE("Datatypes: raw decode skips sentinels", "[models][datatypes]") {
+  // Same sentinel bytes, use_sentinel=false: raw numerics, never null.
+  auto r1 = ebus::decode(DataType::data1b, ebus::ByteView({0x80}),
+                         ebus::Endian::little, false);
+  REQUIRE(r1);
+  REQUIRE(!ebus::isNull(*r1));
+  REQUIRE(ebus::asInt64(*r1) == -128);
+
+  auto r2 = ebus::decode(DataType::uint16, ebus::ByteView({0xff, 0xff}),
+                         ebus::Endian::little, false);
+  REQUIRE(r2);
+  REQUIRE(!ebus::isNull(*r2));
+  REQUIRE(ebus::asInt64(*r2) == 65535);
+
+  // Default (omitted flag) still nulls: presentation opt-in only.
+  auto d1 = ebus::decode(DataType::data1b, ebus::ByteView({0x80}));
+  REQUIRE(d1);
+  REQUIRE(ebus::isNull(*d1));
+}
+
 TEST_CASE("Datatypes: isNumeric(DataType)", "[models][datatypes]") {
   REQUIRE(ebus::isNumeric(DataType::uint8) == true);
   REQUIRE(ebus::isNumeric(DataType::int8) == true);

@@ -112,11 +112,15 @@ using DataValue =
  * @param dt The expected eBUS data type.
  * @param bytes The raw bytes from the bus.
  * @param e The endianness of the source data (usually Endian::little).
+ * @param use_sentinel Map replacement values (sentinels) to null. False
+ * returns the raw numeric value instead (presentation choice; wire
+ * decoding is identical).
  * @return A DataValue containing the decoded value, or nullopt if size/format
  * is invalid.
  */
 std::optional<DataValue> decode(DataType dt, ByteView data,
-                                Endian e = Endian::little);
+                                Endian e = Endian::little,
+                                bool use_sentinel = true);
 
 /**
  * Performs a shallow validity check on a byte sequence for a specific type.
