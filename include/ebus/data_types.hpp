@@ -106,6 +106,14 @@ using DataValue =
 /* --- Core Operations --- */
 
 /**
+ * Renders raw bytes as an eBUS character string (ebusd STR parity):
+ * terminates at the first 0x00, maps bytes below 0x20 to space,
+ * non-printable bytes (>= 0x7F) to '?', everything else literal.
+ * Used for CHAR payloads and device identification strings alike.
+ */
+std::string renderEbusString(ByteView data);
+
+/**
  * Decodes raw eBUS bytes into a high-level DataValue variant.
  * Handles endianness, bit-reversal, sentinels, and fixed-point scaling.
  *

@@ -240,6 +240,21 @@ bool validateRange(int64_t val, uint8_t size, bool is_signed) {
 
 /* --- Core Operations --- */
 
+std::string renderEbusString(ByteView data) {
+  std::string out;
+  for (size_t i = 0; i < data.size(); ++i) {
+    const uint8_t b = data[i];
+    if (b == 0x00) break;  // NUL terminates, rest is padding
+    if (b < 0x20)
+      out.push_back(' ');
+    else if (b >= 0x7f)
+      out.push_back('?');
+    else
+      out.push_back(static_cast<char>(b));
+  }
+  return out;
+}
+
 std::optional<DataValue> decode(DataType dt, ByteView data, Endian e,
                                 bool use_sentinel) {
   const Meta* m = metaFor(dt);
@@ -248,14 +263,7 @@ std::optional<DataValue> decode(DataType dt, ByteView data, Endian e,
   const bool flip = m->reversed ? (e == Endian::little) : (e == Endian::big);
 
   if (!m->is_numeric) {
-    // Fixed-width string padding (NUL) is not data: "AB\0\0\0" decodes
-    // to "AB". Only NULs are stripped — spaces are significant ("AB  ").
-    // HEX rendering never consumes this string (app renders raw bytes),
-    // so trimming cannot corrupt hex output.
-    size_t len = m->size;
-    const char* raw = reinterpret_cast<const char*>(data.data());
-    while (len > 0 && raw[len - 1] == '\0') --len;
-    return std::string(raw, len);
+    return renderEbusString(ByteView(data.data(), m->size));
   }
 
   // Check for Replacement Values (Sentinels)

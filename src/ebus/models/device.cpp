@@ -175,10 +175,7 @@ void DeviceInfo::toJson(detail::JsonWriter& writer) const {
                     manufacturer_name ? manufacturer_name : "Unknown");
 
   auto writeAscii = [&](std::string_view key, ByteView val) {
-    size_t len = val.size();
-    while (len > 0 && val.data()[len - 1] == '\0') --len;
-    writer.writeField(
-        key, std::string_view(reinterpret_cast<const char*>(val.data()), len));
+    writer.writeField(key, ebus::renderEbusString(val));
   };
 
   writeAscii("unit_id", unit_id);

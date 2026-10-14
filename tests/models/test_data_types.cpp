@@ -307,6 +307,36 @@ TEST_CASE("Datatypes: char and hex", "[models][datatypes]") {
   }
 }
 
+TEST_CASE("Datatypes: ebusd STR rendering parity", "[models][datatypes]") {
+  // All-0xFF (unprogrammed EEPROM) renders '?' per byte, never soup.
+  auto ff = ebus::decode(DataType::char8,
+                         ebus::ByteView(reinterpret_cast<const uint8_t*>(
+                                            "\xff\xff\xff\xff\xff\xff\xff\xff"),
+                                        8));
+  REQUIRE(ff);
+  REQUIRE(std::get<std::string>(*ff) == "????????");
+
+  // First NUL terminates; trailing content ignored.
+  const uint8_t ab_nul_cd[8] = {'A', 'B', 0x00, 'C', 'D', 0x00, 0x00, 0x00};
+  auto nul = ebus::decode(DataType::char8, ebus::ByteView(ab_nul_cd, 8));
+  REQUIRE(nul);
+  REQUIRE(std::get<std::string>(*nul) == "AB");
+
+  // Control bytes become space, '<' stays literal (printable).
+  const uint8_t ctrl[8] = {'3', '0', 0x01, '<', '<', 0x00, 0x00, 0x00};
+  auto mixed = ebus::decode(DataType::char8, ebus::ByteView(ctrl, 8));
+  REQUIRE(mixed);
+  REQUIRE(std::get<std::string>(*mixed) == "30 <<");
+
+  // CHAR1 0xFF is data ('?'), not null: strings have no sentinel mapping.
+  auto c1 =
+      ebus::decode(DataType::char1,
+                   ebus::ByteView(reinterpret_cast<const uint8_t*>("\xff"), 1));
+  REQUIRE(c1);
+  REQUIRE(!ebus::isNull(*c1));
+  REQUIRE(std::get<std::string>(*c1) == "?");
+}
+
 TEST_CASE("Datatypes: metadata", "[models][datatypes]") {
   auto types = ebus::getSupportedDataTypes();
   REQUIRE_FALSE(types.empty());
