@@ -116,103 +116,50 @@ std::string renderEbusString(ByteView data);
 /**
  * Decodes raw eBUS bytes into a high-level DataValue variant.
  * Handles endianness, bit-reversal, sentinels, and fixed-point scaling.
- *
- * @param dt The expected eBUS data type.
- * @param bytes The raw bytes from the bus.
- * @param e The endianness of the source data (usually Endian::little).
- * @param use_sentinel Map replacement values (sentinels) to null. False
- * returns the raw numeric value instead (presentation choice; wire
- * decoding is identical).
- * @return A DataValue containing the decoded value, or nullopt if size/format
- * is invalid.
+ * use_sentinel=false returns the raw numeric value instead (presentation
+ * choice; wire decoding is identical).
  */
 std::optional<DataValue> decode(DataType dt, ByteView data,
                                 Endian e = Endian::little,
                                 bool use_sentinel = true);
 
-/**
- * Performs a shallow validity check on a byte sequence for a specific type.
- * Verifies minimum size and data-specific constraints (e.g., BCD nibble
- * ranges).
- *
- * @param dt The eBUS data type to check against.
- * @param bytes The bytes to validate.
- * @return True if the bytes are plausible for the given type.
- */
+/** Shallow plausibility check: minimum size plus BCD nibble ranges. */
 bool isValid(DataType dt, ByteView data) noexcept;
 
 /**
- * Encodes a high-level DataValue into a sequence of eBUS-compatible bytes.
- * Handles scaling, range checking, sentinels for nulls, and endianness.
- *
- * @param dt The target eBUS data type.
- * @param value The value to encode.
- * @param e The target endianness (usually Endian::little).
- * @return A Sequence containing the encoded bytes, or an empty sequence if out
- * of range.
+ * Encodes a DataValue into eBUS bytes. Handles scaling, range checking,
+ * null-to-sentinel mapping, and endianness. Empty sequence = out of range
+ * (or null with no replacement defined).
  */
 Sequence encode(DataType dt, const DataValue& value, Endian e = Endian::little);
 
 /* --- DataValue Utilities --- */
 
-/**
- * Returns a DataValue representing a null state (std::monostate).
- */
+/** Null state (std::monostate). */
 DataValue nullValue() noexcept;
 
-/**
- * Returns true if the DataValue is currently in a null state (monostate).
- *
- * @param value The value to check.
- * @return True if null.
- */
+/** True if the variant holds monostate. */
 bool isNull(const DataValue& value) noexcept;
 
-/**
- * Returns true if the DataValue contains a numeric type (integral or float).
- *
- * @param value The value to check.
- * @return True if the variant holds a numeric type.
- */
+/** True for integral/float alternatives. */
 bool isNumeric(const DataValue& value) noexcept;
 
 /* --- DataValue Conversion --- */
 
-/**
- * Extracts a numeric value as a float, regardless of underlying variant type.
- * Returns 0.0 for non-numeric types or if the DataValue is null.
- *
- * @param value The DataValue to convert.
- * @return The value as a float.
- */
+/** Numeric value as float (fixed-point aware); 0.0 for strings/null. */
 float asFloat(const DataValue& value) noexcept;
 
-/**
- * Extracts a numeric value as a 64-bit integer, rounding if necessary.
- * Also attempts to parse numeric strings. Returns 0 for non-numeric types.
- *
- * @param value The DataValue to convert.
- * @return The value as an int64_t.
- */
+/** Numeric value as int64 (fixed-point aware, rounded). Parses strings. */
 int64_t asInt64(const DataValue& value) noexcept;
 
-/**
- * Returns a reference to the internal string if the variant holds one.
- */
+/** Reference to the held string; empty static on mismatch (no throw). */
 std::string const& asString(const DataValue& value) noexcept;
 
-/**
- * Formats a DataValue into a human-readable string.
- *
- * @param value The DataValue to format.
- * @param unit An optional unit string to append to numeric values.
- */
+/** Human-readable rendering with optional appended unit. */
 void toString(std::string& out, const DataValue& value,
               std::string_view unit = "");
 
-/**
- * Formats a DataValue into a human-readable string.
- */
+/** Owning variant of the above. */
 inline std::string toString(const DataValue& value,
                             std::string_view unit = "") {
   std::string res;
@@ -220,26 +167,18 @@ inline std::string toString(const DataValue& value,
   return res;
 }
 
-/**
- * Formats a DataValue as a hex string (e.g., "DE AD BE EF").
- */
+/** Hex rendering ("DE AD BE EF"), custom separator. */
 void toHexString(std::string& out, const DataValue& value,
                  char separator = ' ');
 
-/**
- * Formats a DataValue as a hex string.
- */
+/** Owning variant of the above. */
 inline std::string toHexString(const DataValue& value, char separator = ' ') {
   std::string res;
   toHexString(res, value, separator);
   return res;
 }
 
-/**
- * Safely casts a DataValue to a numeric type with range checking.
- * Returns std::nullopt if the value is not numeric or falls outside the
- * range of T.
- */
+/** Range-checked numeric cast; nullopt for non-numeric or out of range. */
 template <typename T>
 std::optional<T> getAs(const DataValue& value) noexcept {
   static_assert(std::is_arithmetic_v<T>, "getAs requires a numeric type");
@@ -272,85 +211,44 @@ std::optional<T> getAs(const DataValue& value) noexcept {
 
 /* --- Metadata & Type Discovery --- */
 
-/**
- * Returns metadata for a specific data type.
- *
- * @param dt The DataType to get metadata for.
- * @return An optional DataTypeInfo struct containing the metadata.
- */
+/** Metadata for dt; nullopt if unknown. */
 std::optional<DataTypeInfo> getMeta(DataType dt);
 
-/**
- * Returns true if the eBUS DataType represents a numeric value (int, float,
- * fixed-point).
- *
- * @param dt The DataType to check.
- * @return True if the DataType is numeric, false otherwise.
- */
+/** True for int/float/fixed-point types. */
 bool isNumeric(DataType dt) noexcept;
 
-/**
- * Infers the most suitable eBUS DataType for a given variant value.
- *
- * @param value The DataValue to infer the type from.
- * @return The inferred DataType, or DataType::error if no suitable type is
- * found.
- */
+/** Best-fit DataType for a variant value; error if none fits. */
 DataType getDataType(const DataValue& value) noexcept;
 
 /**
- * Returns a list of all eBUS data types supported by the internal engine.
- *
- * @return A vector of supported DataType metadata structures.
- * @note Prefer fetchSupportedDataTypes() to avoid heap allocations.
+ * All supported types. Heap-allocating; prefer the callback/visitor
+ * variants on constrained targets.
  */
 std::vector<DataTypeInfo> getSupportedDataTypes();
 
-/**
- * @brief Invokes a callback for each supported eBUS data type.
- * Prevents heap allocation of a result vector.
- */
+/** Allocation-free iteration over supported types. */
 void fetchSupportedDataTypes(std::function<void(const DataTypeInfo&)> callback);
 
-/**
- * @brief Streams a JSON array of all supported eBUS data types to the visitor.
- */
+/** Streams the supported types as a JSON array. */
 void fetchSupportedDataTypes(const JsonChunkVisitor& visitor,
                              bool pretty = false);
 
 /**
- * Returns the protocol-level byte size of an eBUS DataType.
- *
- * @param data_type The DataType to get metadata for.
- * @return The size in bytes.
+ * Protocol byte size. Encoded in the enum itself (high byte), so this is
+ * O(1) with no table lookup; error maps to 0.
  */
 constexpr size_t sizeOfDataType(DataType data_type) noexcept {
   if (data_type == DataType::error) return 0;
   return static_cast<size_t>(data_type) >> 8;
 }
 
-/**
- * Converts a DataType enum to its string representation (e.g., "UINT16").
- *
- * @param data_type The enum to convert.
- * @return The C-string name.
- */
+/** Enum to name ("UINT16"); "UNKNOWN" for unrecognized values. */
 const char* dataTypeToString(DataType data_type) noexcept;
 
-/**
- * Parses a string representation back into a DataType enum.
- *
- * @param str The string name of the type.
- * @return The DataType enum, or DataType::error if not recognized.
- */
+/** Name to enum (exact uppercase match); error if unrecognized. */
 DataType stringToDataType(const char* str);
 
-/**
- * @brief Decodes raw eBUS bytes and streams it as a JSON object to the visitor.
- * @param dt The expected eBUS data type.
- * @param data The raw bytes from the bus.
- * @param pretty Whether to pretty-print the JSON output.
- */
+/** Decodes dt and streams it as a JSON object. Respects use_sentinel=true. */
 void decodeToJson(const JsonChunkVisitor& visitor, DataType dt, ByteView data,
                   bool pretty = false);
 

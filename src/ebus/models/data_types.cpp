@@ -71,17 +71,12 @@ constexpr Meta meta_table[] = {
 };
 // clang-format on
 
-/**
- * Maps a DataType enum value to the meta table index.
- */
 constexpr int getDataTypeIndex(DataType dt) {
   const uint32_t val = static_cast<uint32_t>(dt);
   return static_cast<int>(((val >> 8) << 4) | (val & 0xff));
 }
 
-/**
- * Internal helper to generate the lookup table at compile time.
- */
+// Lookup table generated at compile time (no startup cost, no heap).
 constexpr std::array<const Meta*, 144> generateMetaLookup() {
   std::array<const Meta*, 144> arr{};
   for (const auto& m : meta_table) {
@@ -100,11 +95,8 @@ const Meta* metaFor(DataType dt) {
   return meta_lookup[idx];
 }
 
-/**
- * Visitor for DataValue variant to collapse integral logic into two
- * non-templated overloads (int64/uint64), minimizing monomorphization bloat in
- * Flash.
- */
+// Collapses integral logic into two non-templated overloads (int64/uint64)
+// to minimize monomorphization bloat in Flash.
 struct JsonValueVisitor {
   detail::JsonWriter& writer;
 
@@ -183,9 +175,7 @@ void writeInt(ebus::Sequence& s, IntType val, bool flip) {
     s.push_back(static_cast<uint8_t>((to_write >> (8 * i)) & 0xff), false);
 }
 
-/**
- * Scaled value using integer math to preserve precision and minimize FPU usage.
- */
+// Integer math to preserve precision and minimize FPU usage.
 template <typename T>
 constexpr int64_t integerScale(T val, int32_t num, int32_t den) {
   if (den == 0) return 0;
