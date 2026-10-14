@@ -31,8 +31,26 @@ To maintain consistency across the library, members in classes that implement lo
     *   Private member variables.
     *   Private helper methods.
 
-### Constructor Parameter Ordering
-When designing constructors for orchestration and core classes, follow this parameter order:
+### Comments
+Comments follow the reader, and the rule is deletion-tested: if removing a
+comment loses information the code does not contain, it stays; if it
+restates the signature, it goes. No blanket coverage, no `@param` filler
+for self-evident arguments, no getters/loops narrated.
+
+1.  **Public headers (`include/ebus/*`) get contract comments.** Readers
+    cannot see the implementation, so state what the code cannot show:
+    units, ownership, defaults, failure modes. `/** */` brief-first.
+2.  **Internals (`src/ebus/*`) get why-comments only.** The implementation
+    is right there — comment only what it cannot show: spec anchors
+    (`§5.4`), physics (wire-AND withdrawal), timing math (why 500 ms,
+    why 44 ms), accepted-by-design trade-offs, and what a counter
+    actually proves. `//`, at the site, not the header.
+3.  **Normalize touched files, never reformat the world.** New code
+    follows this rule; old styles converge file by file as code is
+    touched. Grand uniformity passes lose to accretion — the rule has
+    to be cheap to follow at write time.
+
+### Constructor Parameter OrderingWhen designing constructors for orchestration and core classes, follow this parameter order:
 
 1.  **Identity and configuration**: Addresses, flags, and config structs that define *what* the object is.
 2.  **Raw-pointer dependencies**: Collaborators the object needs to function (scheduler, handler, bus, monitor, etc.).
