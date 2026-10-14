@@ -21,9 +21,7 @@ class JsonWriter;  // Forward declaration
 
 namespace ebus {
 
-/**
- * Results of a rolling metric calculation.
- */
+/** Rolling stat shape: last/max/sum+count (mean = sum/count). All µs. */
 struct MetricValues {
   MetricValues() = default;
   MetricValues(uint32_t last, uint32_t max, uint64_t sum, uint64_t cnt)
@@ -36,9 +34,7 @@ struct MetricValues {
   void toJson(detail::JsonWriter& writer) const;
 };
 
-/**
- * Frequency tracking for error-producing addresses.
- */
+/** Per-address error frequency (top_errors table entry). */
 struct ErrorAddressStats {
   ErrorAddressStats() = default;
   ErrorAddressStats(uint8_t addr, uint32_t c, uint64_t last_us)
@@ -51,9 +47,6 @@ struct ErrorAddressStats {
 
 namespace metrics {
 
-/**
- * Performance and health metrics for the protocol engine.
- */
 struct HandlerMetrics {
   // Aggregated Counters
   uint32_t messages_passive = 0;
@@ -135,9 +128,7 @@ struct LastContest {
   void toJson(detail::JsonWriter& writer) const;
 };
 
-/**
- * Performance and health metrics for bus requests.
- */
+/** Arbitration/request outcomes. See inline notes for counter semantics. */
 struct RequestMetrics {
   // Aggregated Counters
   uint32_t won_total = 0;
@@ -170,9 +161,7 @@ struct RequestMetrics {
   void toJson(detail::JsonWriter& writer) const;
 };
 
-/**
- * Performance and health metrics for the bus layer.
- */
+/** Bus-layer health. See inline notes for counter semantics. */
 struct BusMetrics {
   // Detailed Counters
   std::atomic<uint32_t> start_bit_errors = 0;
@@ -203,9 +192,7 @@ struct BusMetrics {
   void toJson(detail::JsonWriter& writer) const;
 };
 
-/**
- * Frequency metrics for observed bus participants.
- */
+/** Observed participant counts (unknown = seen, never identified). */
 struct DeviceMetrics {
   // Detailed Counters
   uint32_t unknown_devices = 0;
@@ -216,9 +203,7 @@ struct DeviceMetrics {
   void toJson(detail::JsonWriter& writer) const;
 };
 
-/**
- * Performance metrics for the orchestration/application layer.
- */
+/** Reactor queue health (max/size/dropped per queue). */
 struct ReactorMetrics {
   uint32_t max_signal_queue_size = 0;
   uint32_t signal_queue_dropped = 0;
@@ -233,9 +218,7 @@ struct ReactorMetrics {
   void toJson(detail::JsonWriter& writer) const;
 };
 
-/**
- * Performance metrics for the client manager layer.
- */
+/** Client-manager queue health (see loop_iterations note on cadence). */
 struct ClientManagerMetrics {
   uint32_t max_bus_queue_size = 0;
   uint32_t bus_queue_dropped = 0;
@@ -274,9 +257,7 @@ struct SchedulerMetrics {
   void toJson(detail::JsonWriter& writer) const;
 };
 
-/**
- * Aggregate system telemetry.
- */
+/** Whole-system snapshot (one member per layer). */
 struct SystemMetrics {
   HandlerMetrics handler;
   RequestMetrics request;
@@ -291,9 +272,6 @@ struct SystemMetrics {
 
 }  // namespace metrics
 
-/**
- * Top-level alias for the aggregate metrics.
- */
 using Metrics = metrics::SystemMetrics;
 
 }  // namespace ebus
