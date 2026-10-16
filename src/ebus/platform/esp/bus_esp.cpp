@@ -335,7 +335,6 @@ void BusEsp::configureTimer() {
   gpt_config_arb.intr_priority = BusLimits::platform::Esp::timer_intr_priority;
   gpt_config_arb.flags.intr_shared = false;
   gpt_config_arb.flags.allow_pd = false;
-  gpt_config_arb.flags.backup_before_sleep = false;
 
   ESP_ERROR_CHECK(gptimer_new_timer(&gpt_config_arb, &gp_timer_));
 
@@ -346,7 +345,6 @@ void BusEsp::configureTimer() {
   gpt_config_syn.intr_priority = BusLimits::platform::Esp::timer_intr_priority;
   gpt_config_syn.flags.intr_shared = false;
   gpt_config_syn.flags.allow_pd = false;
-  gpt_config_syn.flags.backup_before_sleep = false;
 
   ESP_ERROR_CHECK(gptimer_new_timer(&gpt_config_syn, &syn_gp_timer_));
 
