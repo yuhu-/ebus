@@ -307,6 +307,76 @@ TEST_CASE("Datatypes: char and hex", "[models][datatypes]") {
   }
 }
 
+TEST_CASE("Datatypes: wide hex and char (9..16)", "[models][datatypes]") {
+  // Name lookup must stay alphabetical in meta_table (strcmp binary
+  // search): HEX10..HEX16 / CHAR10..CHAR16 sort between *1 and *2,
+  // HEX9 / CHAR9 after *8.
+  REQUIRE(ebus::stringToDataType("HEX9") == DataType::hex9);
+  REQUIRE(ebus::stringToDataType("HEX10") == DataType::hex10);
+  REQUIRE(ebus::stringToDataType("HEX16") == DataType::hex16);
+  REQUIRE(ebus::stringToDataType("HEX2") == DataType::hex2);
+  REQUIRE(ebus::stringToDataType("HEX8") == DataType::hex8);
+  REQUIRE(ebus::stringToDataType("HEX17") == DataType::error);
+  REQUIRE(ebus::stringToDataType("CHAR9") == DataType::char9);
+  REQUIRE(ebus::stringToDataType("CHAR10") == DataType::char10);
+  REQUIRE(ebus::stringToDataType("CHAR16") == DataType::char16);
+  REQUIRE(ebus::stringToDataType("CHAR2") == DataType::char2);
+  REQUIRE(ebus::stringToDataType("CHAR8") == DataType::char8);
+  REQUIRE(ebus::stringToDataType("CHAR17") == DataType::error);
+
+  REQUIRE(std::string(ebus::dataTypeToString(DataType::hex9)) == "HEX9");
+  REQUIRE(std::string(ebus::dataTypeToString(DataType::hex16)) == "HEX16");
+  REQUIRE(std::string(ebus::dataTypeToString(DataType::char9)) == "CHAR9");
+  REQUIRE(std::string(ebus::dataTypeToString(DataType::char16)) == "CHAR16");
+
+  REQUIRE(ebus::sizeOfDataType(DataType::hex9) == 9);
+  REQUIRE(ebus::sizeOfDataType(DataType::hex16) == 16);
+  REQUIRE(ebus::sizeOfDataType(DataType::char9) == 9);
+  REQUIRE(ebus::sizeOfDataType(DataType::char16) == 16);
+  REQUIRE(ebus::isNumeric(DataType::hex9) == false);
+  REQUIRE(ebus::isNumeric(DataType::hex16) == false);
+  REQUIRE(ebus::isNumeric(DataType::char9) == false);
+  REQUIRE(ebus::isNumeric(DataType::char16) == false);
+
+  // Encode/decode roundtrip mirrors the hex8/char8 cases: the value is
+  // the literal byte string, padded with NULs up to the type size.
+  std::vector<std::string> wide = {"0123456789abcdef", "slot0timer1!!",
+                                   "deadbeefdeadbeef"};
+  for (const std::string& str : wide) {
+    Sequence bytes9 = ebus::encode(DataType::hex9, str);
+    REQUIRE(bytes9.size() == 9);
+    auto decoded9 = ebus::decode(DataType::hex9, bytes9);
+    REQUIRE(decoded9.has_value());
+    REQUIRE(std::get<std::string>(*decoded9).find(str.substr(0, 9)) == 0);
+
+    Sequence bytes16 = ebus::encode(DataType::hex16, str);
+    REQUIRE(bytes16.size() == 16);
+    auto decoded16 = ebus::decode(DataType::hex16, bytes16);
+    REQUIRE(decoded16.has_value());
+    REQUIRE(std::get<std::string>(*decoded16).find(str.substr(0, 16)) == 0);
+
+    Sequence cbytes9 = ebus::encode(DataType::char9, str);
+    REQUIRE(cbytes9.size() == 9);
+    auto cdecoded9 = ebus::decode(DataType::char9, cbytes9);
+    REQUIRE(cdecoded9.has_value());
+    REQUIRE(std::get<std::string>(*cdecoded9).find(str.substr(0, 9)) == 0);
+
+    Sequence cbytes16 = ebus::encode(DataType::char16, str);
+    REQUIRE(cbytes16.size() == 16);
+    auto cdecoded16 = ebus::decode(DataType::char16, cbytes16);
+    REQUIRE(cdecoded16.has_value());
+    REQUIRE(std::get<std::string>(*cdecoded16).find(str.substr(0, 16)) == 0);
+  }
+
+  // Shorter strings zero-pad to the exact type size.
+  Sequence padded = ebus::encode(DataType::hex9, std::string("ab"));
+  REQUIRE(padded.size() == 9);
+  REQUIRE(padded[2] == 0);
+  Sequence cpadded = ebus::encode(DataType::char16, std::string("ab"));
+  REQUIRE(cpadded.size() == 16);
+  REQUIRE(cpadded[2] == 0);
+}
+
 TEST_CASE("Datatypes: ebusd STR rendering parity", "[models][datatypes]") {
   // All-0xFF (unprogrammed EEPROM) renders '?' per byte, never soup.
   auto ff = ebus::decode(DataType::char8,

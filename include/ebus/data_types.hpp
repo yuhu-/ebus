@@ -70,7 +70,31 @@ enum class DataType : int32_t {
   hex7 = 0x0702,
   // Size 8: 0x08xx
   char8 = 0x0801,
-  hex8 = 0x0802
+  hex8 = 0x0802,
+  // Size 9: 0x09xx
+  char9 = 0x0901,
+  hex9 = 0x0902,
+  // Size 10: 0x0axx
+  char10 = 0x0a01,
+  hex10 = 0x0a02,
+  // Size 11: 0x0bxx
+  char11 = 0x0b01,
+  hex11 = 0x0b02,
+  // Size 12: 0x0cxx
+  char12 = 0x0c01,
+  hex12 = 0x0c02,
+  // Size 13: 0x0dxx
+  char13 = 0x0d01,
+  hex13 = 0x0d02,
+  // Size 14: 0x0exx
+  char14 = 0x0e01,
+  hex14 = 0x0e02,
+  // Size 15: 0x0fxx
+  char15 = 0x0f01,
+  hex15 = 0x0f02,
+  // Size 16: 0x10xx
+  char16 = 0x1001,
+  hex16 = 0x1002
 };
 
 /**

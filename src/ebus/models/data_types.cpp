@@ -35,6 +35,13 @@ struct Meta : DataTypeInfoBase {
 constexpr Meta meta_table[] = {
   {{DataType::bcd, "BCD", 1, true, false, false, true, detail::DataTypeLimits::null_sentinel}, false, {1, 1}},
   {{DataType::char1, "CHAR1", 1, false, false, false, true, detail::DataTypeLimits::sentinel_8}, false, {1, 1}},
+  {{DataType::char10, "CHAR10", 10, false, false, false, false, 0}, false, {1, 1}},
+  {{DataType::char11, "CHAR11", 11, false, false, false, false, 0}, false, {1, 1}},
+  {{DataType::char12, "CHAR12", 12, false, false, false, false, 0}, false, {1, 1}},
+  {{DataType::char13, "CHAR13", 13, false, false, false, false, 0}, false, {1, 1}},
+  {{DataType::char14, "CHAR14", 14, false, false, false, false, 0}, false, {1, 1}},
+  {{DataType::char15, "CHAR15", 15, false, false, false, false, 0}, false, {1, 1}},
+  {{DataType::char16, "CHAR16", 16, false, false, false, false, 0}, false, {1, 1}},
   {{DataType::char2, "CHAR2", 2, false, false, false, true, detail::DataTypeLimits::sentinel_16}, false, {1, 1}},
   {{DataType::char3, "CHAR3", 3, false, false, false, false, 0}, false, {1, 1}},
   {{DataType::char4, "CHAR4", 4, false, false, false, false, 0}, false, {1, 1}},
@@ -42,6 +49,7 @@ constexpr Meta meta_table[] = {
   {{DataType::char6, "CHAR6", 6, false, false, false, false, 0}, false, {1, 1}},
   {{DataType::char7, "CHAR7", 7, false, false, false, false, 0}, false, {1, 1}},
   {{DataType::char8, "CHAR8", 8, false, false, false, false, 0}, false, {1, 1}},
+  {{DataType::char9, "CHAR9", 9, false, false, false, false, 0}, false, {1, 1}},
   {{DataType::data1b, "DATA1B", 1, true, true, false, true, detail::DataTypeLimits::sentinel_s8}, false, {1, 1}},
   {{DataType::data1c, "DATA1C", 1, true, false, false, true, detail::DataTypeLimits::sentinel_8}, false, {1, 2}},
   {{DataType::data2b, "DATA2B", 2, true, true, false, true, detail::DataTypeLimits::sentinel_s16}, false, {1, 256}},
@@ -51,6 +59,13 @@ constexpr Meta meta_table[] = {
   {{DataType::float4, "FLOAT4", 4, true, false, true, false, 0}, false, {1, 1}},
   {{DataType::float4r, "FLOAT4R", 4, true, false, true, false, 0}, true, {1, 1}},
   {{DataType::hex1, "HEX1", 1, false, false, false, true, detail::DataTypeLimits::sentinel_8}, false, {1, 1}},
+  {{DataType::hex10, "HEX10", 10, false, false, false, false, 0}, false, {1, 1}},
+  {{DataType::hex11, "HEX11", 11, false, false, false, false, 0}, false, {1, 1}},
+  {{DataType::hex12, "HEX12", 12, false, false, false, false, 0}, false, {1, 1}},
+  {{DataType::hex13, "HEX13", 13, false, false, false, false, 0}, false, {1, 1}},
+  {{DataType::hex14, "HEX14", 14, false, false, false, false, 0}, false, {1, 1}},
+  {{DataType::hex15, "HEX15", 15, false, false, false, false, 0}, false, {1, 1}},
+  {{DataType::hex16, "HEX16", 16, false, false, false, false, 0}, false, {1, 1}},
   {{DataType::hex2, "HEX2", 2, false, false, false, true, detail::DataTypeLimits::sentinel_16}, false, {1, 1}},
   {{DataType::hex3, "HEX3", 3, false, false, false, false, 0}, false, {1, 1}},
   {{DataType::hex4, "HEX4", 4, false, false, false, false, 0}, false, {1, 1}},
@@ -58,6 +73,7 @@ constexpr Meta meta_table[] = {
   {{DataType::hex6, "HEX6", 6, false, false, false, false, 0}, false, {1, 1}},
   {{DataType::hex7, "HEX7", 7, false, false, false, false, 0}, false, {1, 1}},
   {{DataType::hex8, "HEX8", 8, false, false, false, false, 0}, false, {1, 1}},
+  {{DataType::hex9, "HEX9", 9, false, false, false, false, 0}, false, {1, 1}},
   {{DataType::int16, "INT16", 2, true, true, false, true, detail::DataTypeLimits::sentinel_s16}, false, {1, 1}},
   {{DataType::int16r, "INT16R", 2, true, true, false, true, detail::DataTypeLimits::sentinel_s16}, true, {1, 1}},
   {{DataType::int32, "INT32", 4, true, true, false, true, detail::DataTypeLimits::sentinel_s32}, false, {1, 1}},
@@ -77,8 +93,8 @@ constexpr int getDataTypeIndex(DataType dt) {
 }
 
 // Lookup table generated at compile time (no startup cost, no heap).
-constexpr std::array<const Meta*, 144> generateMetaLookup() {
-  std::array<const Meta*, 144> arr{};
+constexpr std::array<const Meta*, 272> generateMetaLookup() {
+  std::array<const Meta*, 272> arr{};
   for (const auto& m : meta_table) {
     arr[getDataTypeIndex(m.dt)] = &m;
   }
