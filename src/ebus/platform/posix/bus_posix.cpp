@@ -11,7 +11,7 @@
 #include <cstring>
 #include <ebus/detail/protocol_limits.hpp>
 #include <ebus/protocol_math.hpp>
-#include <future>
+#include <thread>
 
 #include "core/bus_monitor.hpp"
 #include "core/request.hpp"
@@ -294,17 +294,16 @@ void BusPosix::ensureOpen() const {
 }
 
 void BusPosix::armRequestTimer(uint64_t delay) {
-  [[maybe_unused]] auto future =
-      std::async(std::launch::async, [this, delay]() {
-        std::this_thread::sleep_for(std::chrono::microseconds(delay));
-        writeByte(request_->busRequestAddress());
-        last_qq_write_us_.store(
-            std::chrono::duration_cast<std::chrono::microseconds>(
-                Clock::now().time_since_epoch())
-                .count(),
-            std::memory_order_release);
-        bus_request_flag_.store(true, std::memory_order_release);
-      });
+  // Run inline: the previous std::async future blocked in its destructor
+  // until the lambda finished anyway, so behavior is unchanged - but no
+  // throwaway pthread (3 kB stack) is created per bus request.
+  std::this_thread::sleep_for(std::chrono::microseconds(delay));
+  writeByte(request_->busRequestAddress());
+  last_qq_write_us_.store(std::chrono::duration_cast<std::chrono::microseconds>(
+                              Clock::now().time_since_epoch())
+                              .count(),
+                          std::memory_order_release);
+  bus_request_flag_.store(true, std::memory_order_release);
 }
 
 void BusPosix::readerThread() {

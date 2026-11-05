@@ -8,7 +8,7 @@
 
 #include <ebus/protocol_math.hpp>
 #include <ebus/utils.hpp>
-#include <future>
+#include <thread>
 
 #include "core/bus_monitor.hpp"
 #include "core/request.hpp"
@@ -231,13 +231,13 @@ void BusSimulation::recordUtilization(uint8_t byte) {
 }
 
 void BusSimulation::armRequestTimer(uint64_t delay) {
-  [[maybe_unused]] auto future =
-      std::async(std::launch::async, [this, delay]() {
-        std::this_thread::sleep_for(std::chrono::microseconds(delay));
-        writeByte(request_->busRequestAddress());
-        noteQqWrite();
-        bus_request_flag_.store(true, std::memory_order_release);
-      });
+  // Run inline: the previous std::async future blocked in its destructor
+  // until the lambda finished anyway, so behavior is unchanged - but no
+  // throwaway pthread (3 kB stack) is created per bus request.
+  std::this_thread::sleep_for(std::chrono::microseconds(delay));
+  writeByte(request_->busRequestAddress());
+  noteQqWrite();
+  bus_request_flag_.store(true, std::memory_order_release);
 }
 
 void BusSimulation::simulationReaderLoop() {
