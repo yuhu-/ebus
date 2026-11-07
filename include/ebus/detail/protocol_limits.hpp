@@ -413,6 +413,8 @@ inline constexpr uint8_t sentinel_8 = 0xff;
 inline constexpr uint8_t sentinel_s8 = 0x80;  // -128
 inline constexpr uint16_t sentinel_16 = 0xffff;
 inline constexpr uint16_t sentinel_s16 = 0x8000;  // -32768
+inline constexpr uint32_t sentinel_24 = 0xffffff;
+inline constexpr uint32_t sentinel_s24 = 0x800000;  // -8388608
 inline constexpr uint32_t sentinel_32 = 0xffffffff;
 inline constexpr uint32_t sentinel_s32 = 0x80000000;  // -2147483648
 }  // namespace DataTypeLimits

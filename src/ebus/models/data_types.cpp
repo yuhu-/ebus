@@ -76,11 +76,15 @@ constexpr Meta meta_table[] = {
   {{DataType::hex9, "HEX9", 9, false, false, false, false, 0}, false, {1, 1}},
   {{DataType::int16, "INT16", 2, true, true, false, true, detail::DataTypeLimits::sentinel_s16}, false, {1, 1}},
   {{DataType::int16r, "INT16R", 2, true, true, false, true, detail::DataTypeLimits::sentinel_s16}, true, {1, 1}},
+  {{DataType::int24, "INT24", 3, true, true, false, true, detail::DataTypeLimits::sentinel_s24}, false, {1, 1}},
+  {{DataType::int24r, "INT24R", 3, true, true, false, true, detail::DataTypeLimits::sentinel_s24}, true, {1, 1}},
   {{DataType::int32, "INT32", 4, true, true, false, true, detail::DataTypeLimits::sentinel_s32}, false, {1, 1}},
   {{DataType::int32r, "INT32R", 4, true, true, false, true, detail::DataTypeLimits::sentinel_s32}, true, {1, 1}},
   {{DataType::int8, "INT8", 1, true, true, false, true, detail::DataTypeLimits::sentinel_s8}, false, {1, 1}},
   {{DataType::uint16, "UINT16", 2, true, false, false, true, detail::DataTypeLimits::sentinel_16}, false, {1, 1}},
   {{DataType::uint16r, "UINT16R", 2, true, false, false, true, detail::DataTypeLimits::sentinel_16}, true, {1, 1}},
+  {{DataType::uint24, "UINT24", 3, true, false, false, true, detail::DataTypeLimits::sentinel_24}, false, {1, 1}},
+  {{DataType::uint24r, "UINT24R", 3, true, false, false, true, detail::DataTypeLimits::sentinel_24}, true, {1, 1}},
   {{DataType::uint32, "UINT32", 4, true, false, false, true, detail::DataTypeLimits::sentinel_32}, false, {1, 1}},
   {{DataType::uint32r, "UINT32R", 4, true, false, false, true, detail::DataTypeLimits::sentinel_32}, true, {1, 1}},
   {{DataType::uint8, "UINT8", 1, true, false, false, true, detail::DataTypeLimits::sentinel_8}, false, {1, 1}},
@@ -191,6 +195,25 @@ void writeInt(ebus::Sequence& s, IntType val, bool flip) {
     s.push_back(static_cast<uint8_t>((to_write >> (8 * i)) & 0xff), false);
 }
 
+// No native 3-byte integer type, so the24-bit accessors assemble the
+// value byte-wise (low byte first, spec 2.4.3); flip reverses the three
+// bytes for the R variants.
+constexpr uint32_t readInt24(ByteView data, bool flip) {
+  uint32_t val = static_cast<uint32_t>(data[0]) |
+                 (static_cast<uint32_t>(data[1]) << 8) |
+                 (static_cast<uint32_t>(data[2]) << 16);
+  if (flip) val = ((val & 0xff) << 16) | (val & 0xff00) | ((val >> 16) & 0xff);
+  return val;
+}
+
+void writeInt24(Sequence& s, uint32_t val, bool flip) {
+  val &= 0xffffff;
+  if (flip) val = ((val & 0xff) << 16) | (val & 0xff00) | ((val >> 16) & 0xff);
+  s.push_back(static_cast<uint8_t>(val & 0xff), false);
+  s.push_back(static_cast<uint8_t>((val >> 8) & 0xff), false);
+  s.push_back(static_cast<uint8_t>((val >> 16) & 0xff), false);
+}
+
 // Integer math to preserve precision and minimize FPU usage.
 template <typename T>
 constexpr int64_t integerScale(T val, int32_t num, int32_t den) {
@@ -235,6 +258,9 @@ bool validateRange(int64_t val, uint8_t size, bool is_signed) {
       return inRange<int8_t>(val, is_signed);
     case 2:
       return inRange<int16_t>(val, is_signed);
+    case 3:
+      if (is_signed) return val >= -8388608 && val <= 8388607;
+      return val >= 0 && val <= 0xffffff;
     case 4:
       return inRange<int32_t>(val, is_signed);
     default:
@@ -281,6 +307,9 @@ std::optional<DataValue> decode(DataType dt, ByteView data, Endian e,
     case 2:
       bit_pattern = readInt<uint16_t>(data, flip);
       break;
+    case 3:
+      bit_pattern = readInt24(data, flip);
+      break;
     case 4:
       bit_pattern = readInt<uint32_t>(data, flip);
       break;
@@ -307,7 +336,15 @@ std::optional<DataValue> decode(DataType dt, ByteView data, Endian e,
     raw_val = m->is_signed
                   ? static_cast<int16_t>(readInt<uint16_t>(data, flip))
                   : static_cast<int64_t>(readInt<uint16_t>(data, flip));
-  else if (m->size == 4)
+  else if (m->size == 3) {
+    const uint32_t u24 = readInt24(data, flip);
+    if (m->is_signed)
+      raw_val = static_cast<int64_t>(
+          (u24 & 0x800000u) ? static_cast<int32_t>(u24 | 0xff000000u)
+                            : static_cast<int32_t>(u24));
+    else
+      raw_val = static_cast<int64_t>(u24);
+  } else if (m->size == 4)
     raw_val = m->is_signed
                   ? static_cast<int32_t>(readInt<uint32_t>(data, flip))
                   : static_cast<int64_t>(readInt<uint32_t>(data, flip));
@@ -370,6 +407,8 @@ Sequence encode(DataType dt, const DataValue& value, Endian e) {
       s.push_back(static_cast<uint8_t>(m->replacement_value), false);
     } else if (m->size == 2) {
       writeInt<uint16_t>(s, static_cast<uint16_t>(m->replacement_value), flip);
+    } else if (m->size == 3) {
+      writeInt24(s, static_cast<uint32_t>(m->replacement_value), flip);
     } else if (m->size == 4) {
       writeInt<uint32_t>(s, static_cast<uint32_t>(m->replacement_value), flip);
     } else {
@@ -436,6 +475,8 @@ Sequence encode(DataType dt, const DataValue& value, Endian e) {
     s.push_back(static_cast<uint8_t>(raw_int), false);
   else if (m->size == 2)
     writeInt<uint16_t>(s, static_cast<uint16_t>(raw_int), flip);
+  else if (m->size == 3)
+    writeInt24(s, static_cast<uint32_t>(raw_int), flip);
   else if (m->size == 4)
     writeInt<uint32_t>(s, static_cast<uint32_t>(raw_int), flip);
 

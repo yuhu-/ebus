@@ -190,6 +190,105 @@ TEST_CASE("Datatypes: 16-bit and data2", "[models][datatypes]") {
   }
 }
 
+TEST_CASE("Datatypes: 24-bit ints", "[models][datatypes]") {
+  // ehp comp_starts wire evidence: 9e 01 00 decodes as 414 LE (not BCD)
+  {
+    std::vector<uint8_t> raw = {0x9e, 0x01, 0x00};
+    auto decoded = ebus::decode(DataType::uint24, raw);
+    REQUIRE(decoded.has_value());
+    REQUIRE(ebus::asInt64(*decoded) == 414);
+  }
+
+  // uint24 little-endian roundtrip + byte order
+  for (uint32_t v = 0; v < 0xffffff; v += 0x40000) {
+    Sequence bytes = ebus::encode(DataType::uint24, static_cast<uint32_t>(v),
+                                  Endian::little);
+    REQUIRE(bytes.size() == 3);
+    REQUIRE(bytes[0] == static_cast<uint8_t>(v & 0xff));
+    REQUIRE(bytes[1] == static_cast<uint8_t>((v >> 8) & 0xff));
+    REQUIRE(bytes[2] == static_cast<uint8_t>((v >> 16) & 0xff));
+    auto decoded = ebus::decode(DataType::uint24, bytes, Endian::little);
+    REQUIRE(decoded.has_value());
+    REQUIRE(ebus::asInt64(*decoded) == static_cast<int64_t>(v));
+  }
+
+  // uint24 null sentinel (0xffffff)
+  {
+    std::vector<uint8_t> raw = {0xff, 0xff, 0xff};
+    auto decoded = ebus::decode(DataType::uint24, raw);
+    REQUIRE(decoded.has_value());
+    REQUIRE(ebus::isNull(*decoded));
+    Sequence encoded = ebus::encode(DataType::uint24, ebus::nullValue());
+    REQUIRE(encoded.size() == 3);
+    REQUIRE(encoded[0] == 0xff);
+    REQUIRE(encoded[1] == 0xff);
+    REQUIRE(encoded[2] == 0xff);
+    // raw decode bypasses the sentinel
+    auto raw_decoded = ebus::decode(DataType::uint24, raw, Endian::little,
+                                    /*use_sentinel=*/false);
+    REQUIRE(raw_decoded.has_value());
+    REQUIRE(ebus::asInt64(*raw_decoded) == 0xffffff);
+  }
+
+  // uint24 out-of-range encode yields an empty sequence
+  REQUIRE(
+      ebus::encode(DataType::uint24, static_cast<uint32_t>(0x1000000)).empty());
+
+  // uint24r: big-endian byte order on the wire
+  {
+    Sequence bytes = ebus::encode(DataType::uint24r, static_cast<uint32_t>(414),
+                                  Endian::little);
+    REQUIRE(bytes.size() == 3);
+    REQUIRE(bytes[0] == 0x00);
+    REQUIRE(bytes[1] == 0x01);
+    REQUIRE(bytes[2] == 0x9e);
+    auto decoded = ebus::decode(DataType::uint24r, bytes, Endian::little);
+    REQUIRE(decoded.has_value());
+    REQUIRE(ebus::asInt64(*decoded) == 414);
+  }
+
+  // int24 signed roundtrip including negatives
+  for (int32_t v = -8388607; v <= 8388607; v += 0x40000) {
+    Sequence bytes =
+        ebus::encode(DataType::int24, static_cast<int32_t>(v), Endian::little);
+    REQUIRE(bytes.size() == 3);
+    auto decoded = ebus::decode(DataType::int24, bytes, Endian::little);
+    REQUIRE(decoded.has_value());
+    REQUIRE(ebus::asInt64(*decoded) == v);
+  }
+
+  // int24 null sentinel (-8388608 = 0x800000)
+  {
+    std::vector<uint8_t> raw = {0x00, 0x00, 0x80};
+    auto decoded = ebus::decode(DataType::int24, raw);
+    REQUIRE(decoded.has_value());
+    REQUIRE(ebus::isNull(*decoded));
+    Sequence encoded = ebus::encode(DataType::int24, ebus::nullValue());
+    REQUIRE(encoded.size() == 3);
+    REQUIRE(encoded[0] == 0x00);
+    REQUIRE(encoded[1] == 0x00);
+    REQUIRE(encoded[2] == 0x80);
+  }
+
+  // int24 range: 8388608 / -8388609 are out of range
+  REQUIRE(ebus::encode(DataType::int24, static_cast<int32_t>(8388608)).empty());
+  REQUIRE(
+      ebus::encode(DataType::int24, static_cast<int32_t>(-8388609)).empty());
+
+  // int24r: big-endian byte order on the wire
+  {
+    Sequence bytes = ebus::encode(DataType::int24r, static_cast<int32_t>(-2),
+                                  Endian::little);
+    REQUIRE(bytes.size() == 3);
+    REQUIRE(bytes[0] == 0xff);
+    REQUIRE(bytes[1] == 0xff);
+    REQUIRE(bytes[2] == 0xfe);
+    auto decoded = ebus::decode(DataType::int24r, bytes, Endian::little);
+    REQUIRE(decoded.has_value());
+    REQUIRE(ebus::asInt64(*decoded) == -2);
+  }
+}
+
 TEST_CASE("Datatypes: 32-bit ints and floats", "[models][datatypes]") {
   std::vector<uint32_t> u32_vals = {0, 1, 0xffffffff, 0x12345678, 0x80000000};
   for (uint32_t value : u32_vals) {

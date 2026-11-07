@@ -50,6 +50,10 @@ enum class DataType : int32_t {
   // Size 3: 0x03xx
   char3 = 0x0301,
   hex3 = 0x0302,
+  uint24 = 0x0303,
+  uint24r = 0x0304,
+  int24 = 0x0305,
+  int24r = 0x0306,
   // Size 4: 0x04xx
   uint32 = 0x0401,
   uint32r = 0x0402,
