@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <charconv>
 #include <cmath>
+#include <cstdio>
 #include <cstring>
 #include <ebus/data_types.hpp>
 #include <ebus/detail/json_writer.hpp>
@@ -24,16 +25,45 @@ struct Scale {
   int32_t den;
 };
 
+// Semantic string formats for date/time/PIN types: wire layout and output
+// format differ per type, so meta entries carry the format instead of
+// decoding through the generic numeric path.
+enum class Fmt : uint8_t {
+  none = 0,
+  date_bcd4,
+  date_bcd3,
+  date_bcd4z,
+  date_bin3,
+  date_bin4,
+  date_day2,
+  datetime_min4,
+  time_bcd3r,
+  time_bcd2r,
+  time_bin3r,
+  time_bin3,
+  time_bin2r,
+  time_bin2,
+  time_min2,
+  time_trunc10,
+  time_trunc30,
+  time_trunc15,
+  pin2,
+};
+
 struct Meta : DataTypeInfoBase {
   bool reversed = false;
   Scale scale = {1, 1};
+  Fmt fmt = Fmt::none;
 };
 
 // Table MUST be sorted alphabetically by 'name' for binary search in
 // stringToDataType
 // clang-format off
 constexpr Meta meta_table[] = {
-  {{DataType::bcd, "BCD", 1, true, false, false, true, detail::DataTypeLimits::null_sentinel}, false, {1, 1}},
+  {{DataType::bcd16, "BCD16", 2, true, false, false, true, detail::DataTypeLimits::sentinel_16}, false, {1, 1}},
+  {{DataType::bcd24, "BCD24", 3, true, false, false, true, detail::DataTypeLimits::sentinel_24}, false, {1, 1}},
+  {{DataType::bcd32, "BCD32", 4, true, false, false, true, detail::DataTypeLimits::sentinel_32}, false, {1, 1}},
+  {{DataType::bcd8, "BCD8", 1, true, false, false, true, detail::DataTypeLimits::null_sentinel}, false, {1, 1}},
   {{DataType::char1, "CHAR1", 1, false, false, false, true, detail::DataTypeLimits::sentinel_8}, false, {1, 1}},
   {{DataType::char10, "CHAR10", 10, false, false, false, false, 0}, false, {1, 1}},
   {{DataType::char11, "CHAR11", 11, false, false, false, false, 0}, false, {1, 1}},
@@ -56,8 +86,15 @@ constexpr Meta meta_table[] = {
   {{DataType::data2br, "DATA2BR", 2, true, true, false, true, detail::DataTypeLimits::sentinel_s16}, true, {1, 256}},
   {{DataType::data2c, "DATA2C", 2, true, true, false, true, detail::DataTypeLimits::sentinel_s16}, false, {1, 16}},
   {{DataType::data2cr, "DATA2CR", 2, true, true, false, true, detail::DataTypeLimits::sentinel_s16}, true, {1, 16}},
-  {{DataType::float4, "FLOAT4", 4, true, false, true, false, 0}, false, {1, 1}},
-  {{DataType::float4r, "FLOAT4R", 4, true, false, true, false, 0}, true, {1, 1}},
+  {{DataType::datetime_min4, "DATETIME_MIN4", 4, false, false, false, false, 0}, false, {1, 1}, Fmt::datetime_min4},
+  {{DataType::date_bcd3, "DATE_BCD3", 3, false, false, false, true, detail::DataTypeLimits::sentinel_24}, false, {1, 1}, Fmt::date_bcd3},
+  {{DataType::date_bcd4, "DATE_BCD4", 4, false, false, false, true, detail::DataTypeLimits::sentinel_32}, false, {1, 1}, Fmt::date_bcd4},
+  {{DataType::date_bcd4z, "DATE_BCD4Z", 4, false, false, false, true, detail::DataTypeLimits::sentinel_32}, false, {1, 1}, Fmt::date_bcd4z},
+  {{DataType::date_bin3, "DATE_BIN3", 3, false, false, false, true, detail::DataTypeLimits::sentinel_24}, false, {1, 1}, Fmt::date_bin3},
+  {{DataType::date_bin4, "DATE_BIN4", 4, false, false, false, true, detail::DataTypeLimits::sentinel_32}, false, {1, 1}, Fmt::date_bin4},
+  {{DataType::date_day2, "DATE_DAY2", 2, false, false, false, true, detail::DataTypeLimits::sentinel_16}, false, {1, 1}, Fmt::date_day2},
+  {{DataType::float32, "FLOAT32", 4, true, false, true, false, 0}, false, {1, 1}},
+  {{DataType::float32r, "FLOAT32R", 4, true, false, true, false, 0}, true, {1, 1}},
   {{DataType::hex1, "HEX1", 1, false, false, false, true, detail::DataTypeLimits::sentinel_8}, false, {1, 1}},
   {{DataType::hex10, "HEX10", 10, false, false, false, false, 0}, false, {1, 1}},
   {{DataType::hex11, "HEX11", 11, false, false, false, false, 0}, false, {1, 1}},
@@ -81,6 +118,17 @@ constexpr Meta meta_table[] = {
   {{DataType::int32, "INT32", 4, true, true, false, true, detail::DataTypeLimits::sentinel_s32}, false, {1, 1}},
   {{DataType::int32r, "INT32R", 4, true, true, false, true, detail::DataTypeLimits::sentinel_s32}, true, {1, 1}},
   {{DataType::int8, "INT8", 1, true, true, false, true, detail::DataTypeLimits::sentinel_s8}, false, {1, 1}},
+  {{DataType::pin2, "PIN2", 2, false, false, false, true, detail::DataTypeLimits::sentinel_16}, false, {1, 1}, Fmt::pin2},
+  {{DataType::time_bcd2r, "TIME_BCD2R", 2, false, false, false, true, detail::DataTypeLimits::sentinel_16}, false, {1, 1}, Fmt::time_bcd2r},
+  {{DataType::time_bcd3r, "TIME_BCD3R", 3, false, false, false, true, detail::DataTypeLimits::sentinel_24}, false, {1, 1}, Fmt::time_bcd3r},
+  {{DataType::time_bin2, "TIME_BIN2", 2, false, false, false, true, detail::DataTypeLimits::sentinel_16}, false, {1, 1}, Fmt::time_bin2},
+  {{DataType::time_bin2r, "TIME_BIN2R", 2, false, false, false, true, detail::DataTypeLimits::sentinel_16}, false, {1, 1}, Fmt::time_bin2r},
+  {{DataType::time_bin3, "TIME_BIN3", 3, false, false, false, true, detail::DataTypeLimits::sentinel_24}, false, {1, 1}, Fmt::time_bin3},
+  {{DataType::time_bin3r, "TIME_BIN3R", 3, false, false, false, true, 0x636363}, false, {1, 1}, Fmt::time_bin3r},
+  {{DataType::time_min2, "TIME_MIN2", 2, false, false, false, true, detail::DataTypeLimits::sentinel_16}, false, {1, 1}, Fmt::time_min2},
+  {{DataType::time_trunc10, "TIME_TRUNC10", 1, false, false, false, true, 0x90}, false, {1, 1}, Fmt::time_trunc10},
+  {{DataType::time_trunc15, "TIME_TRUNC15", 1, false, false, false, true, 0}, false, {1, 1}, Fmt::time_trunc15},
+  {{DataType::time_trunc30, "TIME_TRUNC30", 1, false, false, false, true, 0}, false, {1, 1}, Fmt::time_trunc30},
   {{DataType::uint16, "UINT16", 2, true, false, false, true, detail::DataTypeLimits::sentinel_16}, false, {1, 1}},
   {{DataType::uint16r, "UINT16R", 2, true, false, false, true, detail::DataTypeLimits::sentinel_16}, true, {1, 1}},
   {{DataType::uint24, "UINT24", 3, true, false, false, true, detail::DataTypeLimits::sentinel_24}, false, {1, 1}},
@@ -93,12 +141,14 @@ constexpr Meta meta_table[] = {
 
 constexpr int getDataTypeIndex(DataType dt) {
   const uint32_t val = static_cast<uint32_t>(dt);
-  return static_cast<int>(((val >> 8) << 4) | (val & 0xff));
+  // Slot within a size class must stay < 32 (encoded in the low 5 bits);
+  // larger slots would alias into the next size class.
+  return static_cast<int>(((val >> 8) << 5) | (val & 0x1f));
 }
 
 // Lookup table generated at compile time (no startup cost, no heap).
-constexpr std::array<const Meta*, 272> generateMetaLookup() {
-  std::array<const Meta*, 272> arr{};
+constexpr std::array<const Meta*, 544> generateMetaLookup() {
+  std::array<const Meta*, 544> arr{};
   for (const auto& m : meta_table) {
     arr[getDataTypeIndex(m.dt)] = &m;
   }
@@ -268,6 +318,539 @@ bool validateRange(int64_t val, uint8_t size, bool is_signed) {
   }
 }
 
+// --- Date/time/PIN string types ---
+// Date wire layout: DD MM [WW] YY — the weekday byte exists only in the
+// 4-byte variants and is skipped on read, computed on write. Component-time
+// layouts are byte-reversed (hour in the last byte; the forward HTI/HTM
+// variants are not yet implemented). Output: dd.MM.yyyy, HH:mm:ss / HH:mm,
+// PIN as zero-padded 4-digit string. Replacement is per byte (default 0xff,
+// VTI 0x63, TTM 0x90); a replacement byte or a zero day/month renders the
+// whole field null — documented divergence from partial-null strings.
+
+bool bcdByte(uint8_t raw, uint8_t* out) {
+  if ((raw >> 4) > 9 || (raw & 0x0f) > 9) return false;
+  *out = static_cast<uint8_t>((raw >> 4) * 10 + (raw & 0x0f));
+  return true;
+}
+
+uint8_t bcdPack(uint8_t value) {
+  return static_cast<uint8_t>(((value / 10) << 4) | (value % 10));
+}
+
+struct DateTimeParts {
+  int year = 0;
+  int month = 0;
+  int day = 0;
+  int hour = 0;
+  int minute = 0;
+  int second = 0;
+  int value = 0;  // PIN
+};
+
+enum class ParseState : uint8_t { invalid, is_null, ok };
+
+// datetime_min4 counts minutes from 01.01.2009 (MJD 54832) and accepts at
+// most 31.12.2099 23:59 (0x02DA4E1F); beyond that the wire value is
+// invalid.
+constexpr int kDatetimeEpochMjd = 54832;
+constexpr uint32_t kDatetimeMaxMinutes = 0x02DA4E1Fu;
+
+// Gregorian date from an MJD day number. The year step uses floor() so
+// MJDs before 1900-03-01 (01.01.1900 = 15020) decode to the correct day;
+// truncation toward zero would shift those by two days and break the
+// day2 roundtrip.
+bool mjdToDate(int mjd, DateTimeParts* out) {
+  int y = static_cast<int>(std::floor((mjd - 15078.2) / 365.25));
+  int m = static_cast<int>((mjd - 14956.1 - static_cast<int>(y * 365.25)) /
+                           30.6001);
+  int day = mjd - 14956 - static_cast<int>(y * 365.25) -
+            static_cast<int>(m * 30.6001);
+  m--;
+  if (m >= 13) {
+    y++;
+    m -= 12;
+  }
+  if (day < 1 || day > 31 || m < 1 || m > 12) return false;
+  out->day = day;
+  out->month = m;
+  out->year = y + 1900;
+  return true;
+}
+
+// Inverse of mjdToDate for a full year (valid1900..2099).
+int dateToMjd(int day, int month, int year) {
+  const int y = year - 1900;
+  const int l = month <= 2 ? 1 : 0;
+  return 14956 + day + static_cast<int>((y - l) * 365.25) +
+         static_cast<int>((month + 1 + l * 12) * 30.6001);
+}
+
+ParseState parseWire(const Meta& meta, ByteView d, bool use_sentinel,
+                     DateTimeParts* out) {
+  const uint8_t repl = static_cast<uint8_t>(meta.replacement_value & 0xff);
+  if (use_sentinel && meta.has_replacement) {
+    for (size_t i = 0; i < d.size(); ++i) {
+      if (d[i] == repl) return ParseState::is_null;
+    }
+  }
+
+  switch (meta.fmt) {
+    case Fmt::date_bcd4:
+    case Fmt::date_bcd3:
+    case Fmt::date_bcd4z:
+    case Fmt::date_bin3:
+    case Fmt::date_bin4: {
+      const bool bcd = meta.fmt == Fmt::date_bcd4 ||
+                       meta.fmt == Fmt::date_bcd3 ||
+                       meta.fmt == Fmt::date_bcd4z;
+      uint8_t day, month, year;
+      if (bcd) {
+        // The weekday byte (index 2) is deliberately not decoded or
+        // validated: the reference reader skips it as well. 3-byte types
+        // carry no weekday; the year always lands on the last index.
+        if (!bcdByte(d[0], &day) || !bcdByte(d[1], &month) ||
+            !bcdByte(d[d.size() - 1], &year)) {
+          return ParseState::invalid;
+        }
+      } else {
+        day = d[0];
+        month = d[1];
+        year = d[d.size() - 1];
+      }
+      // A zero day/month is the wire null marker (!REZ), not an error.
+      if (day == 0 || month == 0) return ParseState::is_null;
+      if (day > 31 || month > 12 || year > 99) return ParseState::invalid;
+      out->day = day;
+      out->month = month;
+      out->year = 2000 + year;
+      return ParseState::ok;
+    }
+    case Fmt::date_day2: {
+      // Days since 01.01.1900 (REZ: zero is a real date, no null marker).
+      const unsigned days =
+          static_cast<unsigned>(d[0]) | (static_cast<unsigned>(d[1]) << 8);
+      if (!mjdToDate(static_cast<int>(days) + 15020, out)) {
+        return ParseState::invalid;
+      }
+      return ParseState::ok;
+    }
+    case Fmt::datetime_min4: {
+      // Minutes since 01.01.2009 (LE); no wire replacement (REQ).
+      const uint32_t minutes = static_cast<uint32_t>(d[0]) |
+                               (static_cast<uint32_t>(d[1]) << 8) |
+                               (static_cast<uint32_t>(d[2]) << 16) |
+                               (static_cast<uint32_t>(d[3]) << 24);
+      if (minutes > kDatetimeMaxMinutes) return ParseState::invalid;
+      const int mjd = static_cast<int>(minutes / (24 * 60)) + kDatetimeEpochMjd;
+      if (!mjdToDate(mjd, out)) return ParseState::invalid;
+      const unsigned rem = minutes % (24 * 60);
+      out->hour = static_cast<int>(rem / 60);
+      out->minute = static_cast<int>(rem % 60);
+      return ParseState::ok;
+    }
+    case Fmt::time_min2: {
+      const unsigned minutes =
+          static_cast<unsigned>(d[0]) | (static_cast<unsigned>(d[1]) << 8);
+      if (minutes > 24 * 60) return ParseState::invalid;
+      out->hour = static_cast<int>(minutes / 60);
+      out->minute = static_cast<int>(minutes % 60);
+      return ParseState::ok;
+    }
+    case Fmt::time_trunc10:
+    case Fmt::time_trunc30:
+    case Fmt::time_trunc15: {
+      // 1-byte step encoding: minutes div step + hour * (60/step); the
+      // narrower formats keep fewer bits (10min/8bit, 30min/6bit,
+      // 15min/7bit).
+      int step = 10;
+      int bits = 8;
+      if (meta.fmt == Fmt::time_trunc30) {
+        step = 30;
+        bits = 6;
+      } else if (meta.fmt == Fmt::time_trunc15) {
+        step = 15;
+        bits = 7;
+      }
+      const int value = d[0] & ((1 << bits) - 1);
+      const int hours = value / (60 / step);
+      const int minutes = (value % (60 / step)) * step;
+      if (hours > 24 || (hours == 24 && minutes > 0)) {
+        return ParseState::invalid;
+      }
+      out->hour = hours;
+      out->minute = minutes;
+      return ParseState::ok;
+    }
+    case Fmt::time_bcd3r:
+    case Fmt::time_bcd2r:
+    case Fmt::time_bin3r:
+    case Fmt::time_bin2r: {
+      const bool bcd =
+          meta.fmt == Fmt::time_bcd3r || meta.fmt == Fmt::time_bcd2r;
+      const size_t len = d.size();
+      const size_t hi = len - 1;  // hour in the last byte (REV layout)
+      const size_t mi = len - 2;
+      uint8_t hour, minute, second = 0;
+      if (bcd) {
+        if (!bcdByte(d[hi], &hour) || !bcdByte(d[mi], &minute)) {
+          return ParseState::invalid;
+        }
+        if (len == 3 && !bcdByte(d[0], &second)) return ParseState::invalid;
+      } else {
+        hour = d[hi];
+        minute = d[mi];
+        if (len == 3) second = d[0];
+      }
+      if (hour > 24 || minute > 59 || (len == 3 && second > 59)) {
+        return ParseState::invalid;
+      }
+      if (hour == 24 && (minute > 0 || (len == 3 && second > 0))) {
+        return ParseState::invalid;
+      }
+      out->hour = hour;
+      out->minute = minute;
+      out->second = second;
+      return ParseState::ok;
+    }
+    case Fmt::time_bin3:
+    case Fmt::time_bin2: {
+      // Forward layout: hour first; the 3-byte type carries seconds.
+      const size_t len = d.size();
+      uint8_t hour = d[0], minute = d[1], second = 0;
+      if (len == 3) second = d[2];
+      if (hour > 24 || minute > 59 || (len == 3 && second > 59)) {
+        return ParseState::invalid;
+      }
+      if (hour == 24 && (minute > 0 || (len == 3 && second > 0))) {
+        return ParseState::invalid;
+      }
+      out->hour = hour;
+      out->minute = minute;
+      out->second = second;
+      return ParseState::ok;
+    }
+    case Fmt::pin2: {
+      uint8_t high, low;
+      if (!bcdByte(d[0], &high) || !bcdByte(d[1], &low)) {
+        return ParseState::invalid;
+      }
+      out->value = high * 100 + low;
+      return ParseState::ok;
+    }
+    case Fmt::none:
+    default:
+      return ParseState::invalid;
+  }
+}
+
+std::optional<DataValue> decodeString(const Meta& meta, ByteView d,
+                                      bool use_sentinel) {
+  DateTimeParts p;
+  switch (parseWire(meta, d, use_sentinel, &p)) {
+    case ParseState::invalid:
+      return std::nullopt;
+    case ParseState::is_null:
+      return nullValue();
+    case ParseState::ok:
+      break;
+  }
+  char buf[24];
+  switch (meta.fmt) {
+    case Fmt::date_bcd4:
+    case Fmt::date_bcd3:
+    case Fmt::date_bcd4z:
+    case Fmt::date_bin3:
+    case Fmt::date_bin4:
+    case Fmt::date_day2:
+      std::snprintf(buf, sizeof(buf), "%02d.%02d.%04d", p.day, p.month, p.year);
+      break;
+    case Fmt::datetime_min4:
+      std::snprintf(buf, sizeof(buf), "%02d.%02d.%04d %02d:%02d", p.day,
+                    p.month, p.year, p.hour, p.minute);
+      break;
+    case Fmt::time_bcd3r:
+    case Fmt::time_bin3r:
+    case Fmt::time_bin3:
+      std::snprintf(buf, sizeof(buf), "%02d:%02d:%02d", p.hour, p.minute,
+                    p.second);
+      break;
+    case Fmt::pin2:
+      std::snprintf(buf, sizeof(buf), "%04d", p.value);
+      break;
+    default:
+      std::snprintf(buf, sizeof(buf), "%02d:%02d", p.hour, p.minute);
+      break;
+  }
+  return std::string(buf);
+}
+
+bool parseIntToken(const std::string& s, size_t begin, size_t end, int* out) {
+  if (begin >= end) return false;
+  int value = 0;
+  auto [ptr, ec] = std::from_chars(s.data() + begin, s.data() + end, value);
+  if (ec != std::errc{} || ptr != s.data() + end) return false;
+  *out = value;
+  return true;
+}
+
+// Strict "dd.MM.yyyy" parse; unpadded components accepted. Year accepts
+// 0..99 and 2000..2099 always, plus full years
+// >= min_full_year below 2000 when the caller opts in (day counts);
+// *out is the full year.
+bool parseDateString(const std::string& s, int* day, int* month, int* year,
+                     int min_full_year = 2000) {
+  const size_t p1 = s.find('.');
+  if (p1 == std::string::npos) return false;
+  const size_t p2 = s.find('.', p1 + 1);
+  if (p2 == std::string::npos) return false;
+  if (s.find('.', p2 + 1) != std::string::npos) return false;
+  int d, mo, ye;
+  if (!parseIntToken(s, 0, p1, &d) || !parseIntToken(s, p1 + 1, p2, &mo) ||
+      !parseIntToken(s, p2 + 1, s.size(), &ye)) {
+    return false;
+  }
+  if (ye >= 2000 && ye <= 2099) {
+    // full year, keep as-is
+  } else if (ye >= 0 && ye <= 99) {
+    ye += 2000;
+  } else if (ye >= min_full_year && ye < 2000) {
+    // full year inside the caller's allowed window (e.g. 1900..1999)
+  } else {
+    return false;
+  }
+  if (d < 1 || d > 31 || mo < 1 || mo > 12) return false;
+  *day = d;
+  *month = mo;
+  *year = ye;
+  return true;
+}
+
+// "HH:mm" or "HH:mm:ss"; the component count must match with_seconds.
+bool parseTimeString(const std::string& s, bool with_seconds, int* hour,
+                     int* minute, int* second = nullptr) {
+  const size_t p1 = s.find(':');
+  if (p1 == std::string::npos) return false;
+  const size_t p2 = with_seconds ? s.find(':', p1 + 1) : std::string::npos;
+  int h, mi, se = 0;
+  if (with_seconds) {
+    if (p2 == std::string::npos) return false;
+    if (s.find(':', p2 + 1) != std::string::npos) return false;
+    if (!parseIntToken(s, 0, p1, &h) || !parseIntToken(s, p1 + 1, p2, &mi) ||
+        !parseIntToken(s, p2 + 1, s.size(), &se)) {
+      return false;
+    }
+    if (se < 0 || se > 59) return false;
+  } else {
+    if (s.find(':', p1 + 1) != std::string::npos) return false;
+    if (!parseIntToken(s, 0, p1, &h) ||
+        !parseIntToken(s, p1 + 1, s.size(), &mi)) {
+      return false;
+    }
+  }
+  if (h < 0 || h > 24 || mi < 0 || mi > 59) return false;
+  if (h == 24 && (mi > 0 || se > 0)) return false;
+  *hour = h;
+  *minute = mi;
+  if (second) *second = se;
+  return true;
+}
+
+bool parsePinString(const std::string& s, int* out) {
+  if (s.empty() || s.size() > 4) return false;
+  int value = 0;
+  auto [ptr, ec] = std::from_chars(s.data(), s.data() + s.size(), value);
+  if (ec != std::errc{} || ptr != s.data() + s.size()) return false;
+  if (value < 0 || value > 9999) return false;
+  *out = value;
+  return true;
+}
+
+void pushReplacement(Sequence& s, const Meta& meta) {
+  for (uint8_t i = 0; i < meta.size; ++i) {
+    s.push_back(
+        static_cast<uint8_t>((meta.replacement_value >> (8 * i)) & 0xff),
+        false);
+  }
+}
+
+Sequence encodeString(const Meta& meta, const DataValue& value) {
+  Sequence s;
+  s.reserve(meta.size);
+
+  // Null encodes to the wire replacement; types without one (REQ) have no
+  // representable null and reject the write.
+  if (isNull(value)) {
+    if (!meta.has_replacement) return Sequence{};
+    pushReplacement(s, meta);
+    return s;
+  }
+  const std::string* str = std::get_if<std::string>(&value);
+  if (!str) return s;
+  // The "null" token maps to the wire replacement on write.
+  if (*str == "null") {
+    if (!meta.has_replacement) return Sequence{};
+    pushReplacement(s, meta);
+    return s;
+  }
+
+  switch (meta.fmt) {
+    case Fmt::date_bcd4:
+    case Fmt::date_bcd3:
+    case Fmt::date_bcd4z:
+    case Fmt::date_bin3:
+    case Fmt::date_bin4: {
+      int day, month, year;
+      if (!parseDateString(*str, &day, &month, &year)) return Sequence{};
+      const bool bcd = meta.fmt == Fmt::date_bcd4 ||
+                       meta.fmt == Fmt::date_bcd3 ||
+                       meta.fmt == Fmt::date_bcd4z;
+      const bool has_weekday = meta.size == 4;
+      uint8_t weekday = 0;
+      if (has_weekday) {
+        // Weekday byte computed from the date (MJD math).
+        const int mjd = dateToMjd(day, month, year);
+        const int days_since_sunday = (mjd + 3) % 7;  // Sun=0
+        if (meta.fmt == Fmt::date_bcd4z) {
+          // SPE variant: Mon=0x00 .. Sun=0x06.
+          weekday = static_cast<uint8_t>((6 + days_since_sunday) % 7);
+        } else {
+          weekday = static_cast<uint8_t>(
+              days_since_sunday == 0 ? 7 : days_since_sunday);  // Mon=1..Sun=7
+        }
+      }
+      if (bcd) {
+        s.push_back(bcdPack(static_cast<uint8_t>(day)), false);
+        s.push_back(bcdPack(static_cast<uint8_t>(month)), false);
+        if (has_weekday) s.push_back(bcdPack(weekday), false);
+        s.push_back(bcdPack(static_cast<uint8_t>(year % 100)), false);
+        return s;
+      }
+      s.push_back(static_cast<uint8_t>(day), false);
+      s.push_back(static_cast<uint8_t>(month), false);
+      if (has_weekday) s.push_back(weekday, false);
+      s.push_back(static_cast<uint8_t>(year % 100), false);
+      return s;
+    }
+    case Fmt::date_day2: {
+      int day, month, year;
+      if (!parseDateString(*str, &day, &month, &year, 1900)) {
+        return Sequence{};
+      }
+      const int days = dateToMjd(day, month, year) - 15020;
+      if (days < 0 || days > 0xffff) return Sequence{};
+      s.push_back(static_cast<uint8_t>(days & 0xff), false);
+      s.push_back(static_cast<uint8_t>((days >> 8) & 0xff), false);
+      return s;
+    }
+    case Fmt::datetime_min4: {
+      const size_t sp = str->find(' ');
+      if (sp == std::string::npos) return Sequence{};
+      int day, month, year, hour, minute;
+      if (!parseDateString(str->substr(0, sp), &day, &month, &year) ||
+          !parseTimeString(str->substr(sp + 1), false, &hour, &minute)) {
+        return Sequence{};
+      }
+      const int mjd = dateToMjd(day, month, year);
+      if (mjd < kDatetimeEpochMjd) return Sequence{};
+      const uint32_t minutes =
+          static_cast<uint32_t>(mjd - kDatetimeEpochMjd) * 24u * 60u +
+          static_cast<uint32_t>(hour) * 60u + static_cast<uint32_t>(minute);
+      if (minutes > kDatetimeMaxMinutes) return Sequence{};
+      s.push_back(static_cast<uint8_t>(minutes & 0xff), false);
+      s.push_back(static_cast<uint8_t>((minutes >> 8) & 0xff), false);
+      s.push_back(static_cast<uint8_t>((minutes >> 16) & 0xff), false);
+      s.push_back(static_cast<uint8_t>((minutes >> 24) & 0xff), false);
+      return s;
+    }
+    case Fmt::time_bcd3r:
+    case Fmt::time_bin3r: {
+      int hour, minute, second;
+      if (!parseTimeString(*str, true, &hour, &minute, &second)) {
+        return Sequence{};
+      }
+      // REV layout: the least significant component goes into byte 0.
+      if (meta.fmt == Fmt::time_bcd3r) {
+        s.push_back(bcdPack(static_cast<uint8_t>(second)), false);
+        s.push_back(bcdPack(static_cast<uint8_t>(minute)), false);
+        s.push_back(bcdPack(static_cast<uint8_t>(hour)), false);
+      } else {
+        s.push_back(static_cast<uint8_t>(second), false);
+        s.push_back(static_cast<uint8_t>(minute), false);
+        s.push_back(static_cast<uint8_t>(hour), false);
+      }
+      return s;
+    }
+    case Fmt::time_bcd2r: {
+      int hour, minute;
+      if (!parseTimeString(*str, false, &hour, &minute)) return Sequence{};
+      // REV layout: minute first, both bytes BCD.
+      s.push_back(bcdPack(static_cast<uint8_t>(minute)), false);
+      s.push_back(bcdPack(static_cast<uint8_t>(hour)), false);
+      return s;
+    }
+    case Fmt::time_bin3: {
+      int hour, minute, second;
+      if (!parseTimeString(*str, true, &hour, &minute, &second)) {
+        return Sequence{};
+      }
+      s.push_back(static_cast<uint8_t>(hour), false);
+      s.push_back(static_cast<uint8_t>(minute), false);
+      s.push_back(static_cast<uint8_t>(second), false);
+      return s;
+    }
+    case Fmt::time_bin2: {
+      int hour, minute;
+      if (!parseTimeString(*str, false, &hour, &minute)) return Sequence{};
+      s.push_back(static_cast<uint8_t>(hour), false);
+      s.push_back(static_cast<uint8_t>(minute), false);
+      return s;
+    }
+    case Fmt::time_bin2r: {
+      int hour, minute;
+      if (!parseTimeString(*str, false, &hour, &minute)) return Sequence{};
+      s.push_back(static_cast<uint8_t>(minute), false);
+      s.push_back(static_cast<uint8_t>(hour), false);
+      return s;
+    }
+    case Fmt::time_min2: {
+      int hour, minute;
+      if (!parseTimeString(*str, false, &hour, &minute)) return Sequence{};
+      const unsigned total = static_cast<unsigned>(hour) * 60 + minute;
+      s.push_back(static_cast<uint8_t>(total & 0xff), false);
+      s.push_back(static_cast<uint8_t>(total >> 8), false);
+      return s;
+    }
+    case Fmt::time_trunc10:
+    case Fmt::time_trunc30:
+    case Fmt::time_trunc15: {
+      int step = 10;
+      if (meta.fmt == Fmt::time_trunc30) {
+        step = 30;
+      } else if (meta.fmt == Fmt::time_trunc15) {
+        step = 15;
+      }
+      int hour, minute;
+      if (!parseTimeString(*str, false, &hour, &minute)) return Sequence{};
+      // Round to the nearest step (nearest 10/30/15-minute mark).
+      const int steps = (hour * 60 + minute + step / 2) / step;
+      if (steps > 24 * 60 / step) return Sequence{};
+      s.push_back(static_cast<uint8_t>(steps), false);
+      return s;
+    }
+    case Fmt::pin2: {
+      int pin_value;
+      if (!parsePinString(*str, &pin_value)) return Sequence{};
+      s.push_back(bcdPack(static_cast<uint8_t>(pin_value / 100)), false);
+      s.push_back(bcdPack(static_cast<uint8_t>(pin_value % 100)), false);
+      return s;
+    }
+    case Fmt::none:
+    default:
+      break;
+  }
+  return s;
+}
+
 }  // namespace
 
 /* --- Core Operations --- */
@@ -291,6 +874,12 @@ std::optional<DataValue> decode(DataType dt, ByteView data, Endian e,
                                 bool use_sentinel) {
   const Meta* m = metaFor(dt);
   if (!m || data.size() < m->size) return std::nullopt;
+
+  if (m->fmt != Fmt::none) {
+    // Byte order is baked into each format (REV layouts included); the
+    // Endian parameter does not apply to string-semantic types.
+    return decodeString(*m, ByteView(data.data(), m->size), use_sentinel);
+  }
 
   const bool flip = m->reversed ? (e == Endian::little) : (e == Endian::big);
 
@@ -322,10 +911,33 @@ std::optional<DataValue> decode(DataType dt, ByteView data, Endian e,
     return nullValue();
   }
 
-  if (dt == DataType::bcd) {
+  if (dt == DataType::bcd8) {
     uint8_t val = data[0];
     if ((val & 0x0f) > 9 || ((val >> 4) & 0x0f) > 9) return std::nullopt;
     return static_cast<uint8_t>((val >> 4) * 10 + (val & 0x0f));
+  }
+
+  // Multi-byte BCD digit pairs, little-endian pairs (first byte = least
+  // significant pair): any 0xff byte is the replacement/null marker;
+  // nibbles above 9 are a protocol error.
+  if (dt == DataType::bcd16 || dt == DataType::bcd24 || dt == DataType::bcd32) {
+    const size_t len = m->size;
+    if (use_sentinel) {
+      for (size_t i = 0; i < len; ++i) {
+        if (data[i] == detail::DataTypeLimits::null_sentinel)
+          return nullValue();
+      }
+    }
+    uint32_t value = 0;
+    uint32_t exp = 1;
+    for (size_t i = 0; i < len; ++i) {
+      const uint8_t val = data[i];
+      if ((val & 0x0f) > 9 || ((val >> 4) & 0x0f) > 9) return std::nullopt;
+      value += static_cast<uint32_t>(((val >> 4) * 10 + (val & 0x0f))) * exp;
+      exp *= 100;
+    }
+    if (len == 2) return static_cast<uint16_t>(value);
+    return value;
   }
 
   // Read the raw integer value from bytes
@@ -379,11 +991,27 @@ bool isValid(DataType dt, ByteView data) noexcept {
   const Meta* m = metaFor(dt);
   if (!m || data.size() < m->size) return false;
 
-  if (dt == DataType::bcd) {
+  if (m->fmt != Fmt::none) {
+    // Replacement bytes are valid protocol data (a null result), like the
+    // BCD 0xff rule below.
+    DateTimeParts p;
+    return parseWire(*m, ByteView(data.data(), m->size), true, &p) !=
+           ParseState::invalid;
+  }
+
+  if (dt == DataType::bcd8) {
     uint8_t val = data[0];
     // Sentinel 0xFF is valid as a "null" result, not a protocol error.
     if (val == detail::DataTypeLimits::null_sentinel) return true;
     return (val & 0x0f) <= 9 && ((val >> 4) & 0x0f) <= 9;
+  }
+  if (dt == DataType::bcd16 || dt == DataType::bcd24 || dt == DataType::bcd32) {
+    for (size_t i = 0; i < m->size; ++i) {
+      const uint8_t val = data[i];
+      if (val == detail::DataTypeLimits::null_sentinel) continue;
+      if ((val & 0x0f) > 9 || ((val >> 4) & 0x0f) > 9) return false;
+    }
+    return true;
   }
   return true;
 }
@@ -397,6 +1025,8 @@ Sequence encode(DataType dt, const DataValue& value, Endian e) {
   Sequence s;
   if (!m) return s;
   s.reserve(m->size);
+
+  if (m->fmt != Fmt::none) return encodeString(*m, value);
 
   const bool flip = m->reversed ? (e == Endian::little) : (e == Endian::big);
 
@@ -432,14 +1062,24 @@ Sequence encode(DataType dt, const DataValue& value, Endian e) {
     return s;
   }
 
-  // Handle BCD
-  if (dt == DataType::bcd) {
+  // Handle BCD: value -> digit pairs, least significant pair first
+  if (dt == DataType::bcd8 || dt == DataType::bcd16 || dt == DataType::bcd24 ||
+      dt == DataType::bcd32) {
+    static constexpr int64_t kMax[] = {99, 9999, 999999, 99999999};
+    const size_t slot = dt == DataType::bcd8    ? 0
+                        : dt == DataType::bcd16 ? 1
+                        : dt == DataType::bcd24 ? 2
+                                                : 3;
     int64_t v = asInt64(value);
-    if (v < 0 || v > 99) return s;  // Returns empty sequence to indicate error
-
-    s.push_back(
-        ((static_cast<uint8_t>(v) / 10) << 4) | (static_cast<uint8_t>(v) % 10),
-        false);
+    if (v < 0 || v > kMax[slot]) return s;  // empty sequence = error
+    uint32_t u = static_cast<uint32_t>(v);
+    uint32_t exp = 1;
+    for (size_t i = 0; i < m->size; ++i) {
+      const uint8_t pair = static_cast<uint8_t>((u / exp) % 100);
+      s.push_back(static_cast<uint8_t>(((pair / 10) << 4) | (pair % 10)),
+                  false);
+      exp *= 100;
+    }
     return s;
   }
 
@@ -648,7 +1288,7 @@ DataType getDataType(const DataValue& value) noexcept {
         if constexpr (std::is_same_v<T, int64_t>)
           return DataType::error;  // Cannot infer specific scaled type from
                                    // generic int64_t
-        if constexpr (std::is_floating_point_v<T>) return DataType::float4;
+        if constexpr (std::is_floating_point_v<T>) return DataType::float32;
         if constexpr (std::is_same_v<T, std::string>) return DataType::char8;
         return DataType::error;
       },

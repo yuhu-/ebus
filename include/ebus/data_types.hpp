@@ -29,13 +29,16 @@ enum class DataType : int32_t {
   auto_detect = 0,
   error = -1,
   // Size 1: 0x01xx
-  bcd = 0x0101,
+  bcd8 = 0x0101,
   uint8 = 0x0102,
   int8 = 0x0103,
   data1b = 0x0104,
   data1c = 0x0105,
   char1 = 0x0106,
   hex1 = 0x0107,
+  time_trunc10 = 0x0108,
+  time_trunc30 = 0x0109,
+  time_trunc15 = 0x010a,
   // Size 2: 0x02xx
   uint16 = 0x0201,
   uint16r = 0x0202,
@@ -47,6 +50,13 @@ enum class DataType : int32_t {
   data2cr = 0x0208,
   char2 = 0x0209,
   hex2 = 0x020a,
+  pin2 = 0x020b,
+  time_bin2r = 0x020c,
+  time_min2 = 0x020d,
+  time_bcd2r = 0x020e,
+  time_bin2 = 0x020f,
+  date_day2 = 0x0210,
+  bcd16 = 0x0211,
   // Size 3: 0x03xx
   char3 = 0x0301,
   hex3 = 0x0302,
@@ -54,15 +64,26 @@ enum class DataType : int32_t {
   uint24r = 0x0304,
   int24 = 0x0305,
   int24r = 0x0306,
+  date_bin3 = 0x0307,
+  time_bcd3r = 0x0308,
+  time_bin3r = 0x0309,
+  time_bin3 = 0x030a,
+  date_bcd3 = 0x030b,
+  bcd24 = 0x030c,
   // Size 4: 0x04xx
   uint32 = 0x0401,
   uint32r = 0x0402,
   int32 = 0x0403,
   int32r = 0x0404,
-  float4 = 0x0405,
-  float4r = 0x0406,
+  float32 = 0x0405,
+  float32r = 0x0406,
   char4 = 0x0407,
   hex4 = 0x0408,
+  date_bcd4 = 0x0409,
+  date_bin4 = 0x040a,
+  date_bcd4z = 0x040b,
+  datetime_min4 = 0x040c,
+  bcd32 = 0x040d,
   // Size 5: 0x05xx
   char5 = 0x0501,
   hex5 = 0x0502,
@@ -134,7 +155,7 @@ using DataValue =
 /* --- Core Operations --- */
 
 /**
- * Renders raw bytes as an eBUS character string (ebusd STR parity):
+ * Renders raw bytes as an eBUS character string:
  * terminates at the first 0x00, maps bytes below 0x20 to space,
  * non-printable bytes (>= 0x7F) to '?', everything else literal.
  * Used for CHAR payloads and device identification strings alike.
