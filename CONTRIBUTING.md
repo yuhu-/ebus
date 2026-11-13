@@ -62,7 +62,7 @@ These components process data byte-by-byte or perform time-critical protocol ope
 
 **2. The External Client Path (external EBus logic)**
 These components bridges external clients with the internal bus components.
-*   `ClientManager`, `AbstractClient`: Manages connecting external clients (e.g., ebusd, monitoring tools) by abstracting diverse protocol details into specific client types (`RegularClient`, `ReadOnlyClient`, `EnhancedClient`). This layer mediates all network traffic between the core eBUS bus and outside consumers.
+*   `ClientManager`, `AbstractClient`: Manages connecting external clients (e.g., monitoring tools) by abstracting diverse protocol details into specific client types (`RegularClient`, `ReadOnlyClient`, `EnhancedClient`). This layer mediates all network traffic between the core eBUS bus and outside consumers.
 
 **3. The Orchestration Path (Application Logic)**
 These components manage high-level tasks like discovery, scheduling and polling. Limited heap usage (e.g., `std::vector::reserve`, `std::map`) is permitted.
@@ -124,9 +124,9 @@ To keep the library maintainable and portable, we follow these patterns:
 *   **DeviceScanner**: Implements the logic for identifying devices on the bus.
 *   **JsonWriter**: High-performance, streaming JSON generator for telemetry and status.
 *   **JsonReader**: Minimalist, zero-allocation JSON pull-parser with path-based navigation.
-*   **EnhancedProtocol**: Implements specialized ebusd-compatible communication modes.
+*   **EnhancedProtocol**: Implements specialized enhanced-protocol communication modes.
 *   **BusSimulator**: Internal utility for the virtual bus that manages mock reactions and simulated bus behavior.
-*   **ClientManager**: Manages bridge connections for external clients (e.g., ebusd).
+*   **ClientManager**: Manages bridge connections for external clients.
 *   **Metrics**: Unified telemetry models for bus utilization, jitter, and error tracking.
 *   **Queue**: Thread-safe byte buffering for incoming bus data.
 *   **ServiceThread**: The background worker thread that processes the Queue and drives the FSM.

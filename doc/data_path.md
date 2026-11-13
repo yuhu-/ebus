@@ -9,7 +9,7 @@ feeds them into the Handler and Request state machines. When a full telegram is 
 the Handler fires a callback that reaches the Controller and DeviceManager. 
 
 ### Bridge Path: ###
-The ClientManager monitors network sockets. When a remote tool (like ebusd) sends a byte,
+The ClientManager monitors network sockets. When a remote tool sends a byte,
 it bypasses the Scheduler and attempts to request the bus via the Request tracker
 immediately, mimicking a local master.
 
