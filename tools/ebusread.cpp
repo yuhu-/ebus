@@ -361,7 +361,8 @@ void run(const char* hostname, const char* port, int max_retries = 5) {
 void usage() {
   std::cout << "Usage: ebusread [options] <stdin|device|file|host:port>";
   std::cout << std::endl;
-  std::cout << "eBUS binary data reader supporting ebusd enhanced protocol."
+  std::cout << "eBUS binary data reader supporting the Enhanced binary "
+               "protocol."
             << std::endl;
   std::cout << "Default output is one canonical line per valid telegram, "
                "matching the adapter log:"

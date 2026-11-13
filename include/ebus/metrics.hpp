@@ -174,9 +174,9 @@ struct RequestMetrics {
   // Armed intents withdrawn unfired past the stuck threshold (SYN-timer
   // path starving while the armed flag locks out the idle fast-path).
   uint32_t stuck_withdraws = 0;
-  // Stale QQ duplicates dropped at completion (ebusd symbol-retries that
-  // arrived pre-grant; pumping them raw ahead of the continuation bytes
-  // kills the telegram with "wrong symbol").
+  // Stale QQ duplicates dropped at completion (enhanced-protocol QQ
+  // retries that arrived pre-grant; pumping them raw ahead of the
+  // continuation bytes kills the telegram with "wrong symbol").
   uint32_t stale_qq_dropped = 0;
 
   // QQ-write to won-processing age: the stale-win budget actually consumed.

@@ -30,7 +30,7 @@ void usage() {
             << "Options:\n"
             << "  -p, --plain-port <port>     Port for plain eBUS connections "
                "(default: 3333)\n"
-            << "  -e, --enhanced-port <port>  Port for enhanced ebusd "
+            << "  -e, --enhanced-port <port>  Port for enhanced-protocol "
                "connections (default: 3335)\n"
 #if !EBUS_SIMULATION
             << "  -d, --device <dev>          Serial device path (default: "
@@ -140,7 +140,7 @@ int main(int argc, char* argv[]) {
     }
   });
 
-   // Set up reactive callback to handle scan commands to our slave address
+  // Set up reactive callback to handle scan commands to our slave address
   controller.setReactiveCallback([](const ebus::ReactiveInfo& info) {
     // Check if this is a scan command (0x07 0x04) to our slave address
     if (info.master_view.size() >= 4 && info.master_view[2] == 0x07 &&

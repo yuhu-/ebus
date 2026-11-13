@@ -33,7 +33,7 @@ enum class BridgeAction {
 };
 
 /**
- * Abstract base for WiFi/Network clients (e.g. ebusd bridges).
+ * Abstract base for WiFi/Network clients (e.g. enhanced-protocol bridges).
  */
 class AbstractClient {
  public:

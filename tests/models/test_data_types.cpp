@@ -80,7 +80,7 @@ TEST_CASE("Datatypes: BCD16/BCD24/BCD32", "[models][datatypes]") {
   }
 
   // Any 0xff byte is the replacement marker -> whole-field null
-  // (ebusd NumberDataType BCD parity), regardless of position.
+  // (BCD wire format), regardless of position.
   REQUIRE(ebus::isNull(*ebus::decode(DataType::bcd16, ByteView({0xff, 0x12}))));
   REQUIRE(ebus::isNull(*ebus::decode(DataType::bcd16, ByteView({0x12, 0xff}))));
   REQUIRE(ebus::isNull(

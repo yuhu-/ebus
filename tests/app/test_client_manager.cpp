@@ -503,7 +503,7 @@ TEST_CASE("ClientManager external QQ fires on idle bus without SYN",
   REQUIRE(drain == ebus::Symbols::syn);
   platform::sleepMilli(15);
 
-  // ebusd-side: QQ arrives over TCP with no SYN anywhere near.
+  // client-side: QQ arrives over TCP with no SYN anywhere near.
   const uint8_t qq = 0x31;
   REQUIRE(::write(sv[1], &qq, 1) == 1);
 

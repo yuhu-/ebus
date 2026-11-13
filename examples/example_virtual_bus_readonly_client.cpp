@@ -59,13 +59,13 @@ int main() {
 
   ebus::Controller deviceB(configB);
 
-  // Mocking an external client connection (ebusd).
+  // Mocking an external client connection.
   // In a real app, you would accept a TCP connection and pass the file
-  // descriptor. Here we just show the call. int ebusd_socket_fd = ...;
-  // deviceB.addClient(ebusd_socket_fd, ebus::ClientType::Enhanced);
+  // descriptor. Here we just show the call. int client_socket_fd = ...;
+  // deviceB.addClient(client_socket_fd, ebus::ClientType::Enhanced);
 
   // --- 3. Setup a Read-Only Client (Passive Logger) ---
-  // This simulates an external client (like ebusd) connecting to deviceA.
+  // This simulates an external client connecting to deviceA.
   // In production, external clients connect via TCP to the controller's
   // listeners and are accepted automatically by the internal ClientManager.
   int sv[2];

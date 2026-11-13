@@ -58,7 +58,7 @@ inline void close(int fd) {
 inline ssize_t send(int fd, const void* buf, size_t len, Flags flags) {
   int f = 0;
   if (flags == Flags::dont_wait) f = MSG_DONTWAIT;
-  // Exception has occurred. Broken pipe. ebusd on port 3334
+  // Exception has occurred. Broken pipe. Client on port 3334
 #if defined(MSG_NOSIGNAL)
   f |= MSG_NOSIGNAL;
 #endif

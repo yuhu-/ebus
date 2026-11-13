@@ -365,12 +365,12 @@ void ClientManager::onBusRequested() {
   uint8_t qq = 0;
   if (!current_active_sender_->popPendingIncomingData(qq)) return;
   last_sent_byte_ = qq;
-  // Drop pre-grant duplicates of the fired QQ: ebusd re-sends QQ while
-  // the echo is slow, and any twin queued before the grant is stale the
-  // moment the grant goes out — pumping it raw ahead of the continuation
-  // bytes kills the telegram (live: 31 31 burst -> "wrong symbol").
-  // Continuation bytes differ by construction (target address), so only
-  // exact twins are dropped.
+  // Drop pre-grant duplicates of the fired QQ: the enhanced client
+  // re-sends QQ while the echo is slow, and any twin queued before the
+  // grant is stale the moment the grant goes out — pumping it raw ahead
+  // of the continuation bytes kills the telegram (live: 31 31 burst ->
+  // "wrong symbol"). Continuation bytes differ by construction (target
+  // address), so only exact twins are dropped.
   uint8_t head = 0;
   while (current_active_sender_->peekPendingIncomingData(head) && head == qq) {
     current_active_sender_->popPendingIncomingData(head);
@@ -489,7 +489,7 @@ void ClientManager::handleBusAvailableForSession() {
     return;
   // Idle fast-path first: when the bus shows no activity for longer than
   // a contender could stay silent after SYN, the last SYN (if any) is
-  // ancient history — waiting for the next one only burns ebusd's
+  // ancient history — waiting for the next one only burns the client's
   // arbitration budget (~132ms) for nothing. Note busAvailable() alone
   // cannot tell: its result latches from the last SYN and stays true
   // across indefinite silence. Emit the QQ now and evaluate its echo
