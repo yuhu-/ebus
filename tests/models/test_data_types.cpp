@@ -1306,6 +1306,69 @@ TEST_CASE("Datatypes: pin2", "[models][datatypes]") {
   REQUIRE(enc_token[0] == 0xff);
 }
 
+TEST_CASE("Datatypes: tem_p", "[models][datatypes]") {
+  // Slave-side parameter id "GG-NNN": the little-endian word is packed
+  // xxxx GGGG GNNN NNNN (grp in bits 7..11, num in bits 0..6), sentinel
+  // 0xffff -> null. The read-side masks keep grp <= 31 and num <= 127.
+  const uint8_t p_05023[2] = {0x97, 0x02};  // (5 << 7) | 23 = 0x0297
+  auto d1 = ebus::decode(DataType::tem_p, ByteView(p_05023, 2));
+  REQUIRE(d1);
+  REQUIRE(std::get<std::string>(*d1) == "05-023");
+
+  const uint8_t p_00001[2] = {0x01, 0x00};
+  auto d2 = ebus::decode(DataType::tem_p, ByteView(p_00001, 2));
+  REQUIRE(d2);
+  REQUIRE(std::get<std::string>(*d2) == "00-001");
+
+  // Field-width maximum (grp 31, num 127 = 0x0fff): a lone 0xff byte
+  // is valid data (only the full word is the sentinel).
+  const uint8_t p_31127[2] = {0xff, 0x0f};
+  auto d3 = ebus::decode(DataType::tem_p, ByteView(p_31127, 2));
+  REQUIRE(d3);
+  REQUIRE(std::get<std::string>(*d3) == "31-127");
+  REQUIRE(ebus::isValid(DataType::tem_p, ByteView(p_31127, 2)));
+
+  // Sentinel 0xffff -> null; with use_sentinel=false it decodes raw.
+  const uint8_t p_null[2] = {0xff, 0xff};
+  auto d4 = ebus::decode(DataType::tem_p, ByteView(p_null, 2));
+  REQUIRE(d4);
+  REQUIRE(ebus::isNull(*d4));
+  auto d5 = ebus::decode(DataType::tem_p, ByteView(p_null, 2),
+                         ebus::Endian::little, false);
+  REQUIRE(d5);
+  REQUIRE(std::get<std::string>(*d5) == "31-127");
+
+  // Roundtrip plus write range checks: grp <= 31, num <= 127 (values
+  // beyond the 5-bit / 7-bit wire fields are rejected on write).
+  Sequence enc1 = ebus::encode(DataType::tem_p, std::string("05-023"));
+  REQUIRE(enc1.size() == 2);
+  REQUIRE(enc1[0] == 0x97);
+  REQUIRE(enc1[1] == 0x02);
+  Sequence enc2 = ebus::encode(DataType::tem_p, std::string("31-127"));
+  REQUIRE(enc2.size() == 2);
+  REQUIRE(enc2[0] == 0xff);
+  REQUIRE(enc2[1] == 0x0f);
+  REQUIRE(ebus::encode(DataType::tem_p, std::string("32-000")).empty());
+  REQUIRE(ebus::encode(DataType::tem_p, std::string("00-128")).empty());
+  REQUIRE(ebus::encode(DataType::tem_p, std::string("abcd")).empty());
+  REQUIRE(ebus::encode(DataType::tem_p, std::string("5")).empty());
+
+  // Null (variant, "null" token, or "-" token) -> 0xffff.
+  Sequence enc_null = ebus::encode(DataType::tem_p, ebus::nullValue());
+  REQUIRE(enc_null.size() == 2);
+  REQUIRE(enc_null[0] == 0xff);
+  REQUIRE(enc_null[1] == 0xff);
+  Sequence enc_token = ebus::encode(DataType::tem_p, std::string("null"));
+  REQUIRE(enc_token.size() == 2);
+  REQUIRE(enc_token[0] == 0xff);
+  Sequence enc_dash = ebus::encode(DataType::tem_p, std::string("-"));
+  REQUIRE(enc_dash.size() == 2);
+  REQUIRE(enc_dash[0] == 0xff);
+  REQUIRE(enc_dash[1] == 0xff);
+
+  REQUIRE(ebus::stringToDataType("TEM_P") == DataType::tem_p);
+}
+
 TEST_CASE("Datatypes: date_bcd3", "[models][datatypes]") {
   // DD MM YY BCD, no weekday byte, replacement 0xff.
   const uint8_t bda3[3] = {0x04, 0x09, 0x26};  // 04.09.2026

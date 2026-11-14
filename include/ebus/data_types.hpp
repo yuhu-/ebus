@@ -57,6 +57,7 @@ enum class DataType : int32_t {
   time_bin2 = 0x020f,
   date_day2 = 0x0210,
   bcd16 = 0x0211,
+  tem_p = 0x0212,
   // Size 3: 0x03xx
   char3 = 0x0301,
   hex3 = 0x0302,

@@ -48,6 +48,7 @@ enum class Fmt : uint8_t {
   time_trunc30,
   time_trunc15,
   pin2,
+  tem_p,
 };
 
 struct Meta : DataTypeInfoBase {
@@ -119,6 +120,7 @@ constexpr Meta meta_table[] = {
   {{DataType::int32r, "INT32R", 4, true, true, false, true, detail::DataTypeLimits::sentinel_s32}, true, {1, 1}},
   {{DataType::int8, "INT8", 1, true, true, false, true, detail::DataTypeLimits::sentinel_s8}, false, {1, 1}},
   {{DataType::pin2, "PIN2", 2, false, false, false, true, detail::DataTypeLimits::sentinel_16}, false, {1, 1}, Fmt::pin2},
+  {{DataType::tem_p, "TEM_P", 2, false, false, false, true, detail::DataTypeLimits::sentinel_16}, false, {1, 1}, Fmt::tem_p},
   {{DataType::time_bcd2r, "TIME_BCD2R", 2, false, false, false, true, detail::DataTypeLimits::sentinel_16}, false, {1, 1}, Fmt::time_bcd2r},
   {{DataType::time_bcd3r, "TIME_BCD3R", 3, false, false, false, true, detail::DataTypeLimits::sentinel_24}, false, {1, 1}, Fmt::time_bcd3r},
   {{DataType::time_bin2, "TIME_BIN2", 2, false, false, false, true, detail::DataTypeLimits::sentinel_16}, false, {1, 1}, Fmt::time_bin2},
@@ -344,7 +346,7 @@ struct DateTimeParts {
   int hour = 0;
   int minute = 0;
   int second = 0;
-  int value = 0;  // PIN
+  int value = 0;  // PIN, TEM_P (grp * 1000 + num)
 };
 
 enum class ParseState : uint8_t { invalid, is_null, ok };
@@ -388,7 +390,9 @@ int dateToMjd(int day, int month, int year) {
 ParseState parseWire(const Meta& meta, ByteView d, bool use_sentinel,
                      DateTimeParts* out) {
   const uint8_t repl = static_cast<uint8_t>(meta.replacement_value & 0xff);
-  if (use_sentinel && meta.has_replacement) {
+  // TEM_P nulls on the full 16-bit sentinel only: a lone 0xff byte is
+  // legal data (e.g. wire 0x0fff = "31-127").
+  if (use_sentinel && meta.has_replacement && meta.fmt != Fmt::tem_p) {
     for (size_t i = 0; i < d.size(); ++i) {
       if (d[i] == repl) return ParseState::is_null;
     }
@@ -537,6 +541,20 @@ ParseState parseWire(const Meta& meta, ByteView d, bool use_sentinel,
       out->value = high * 100 + low;
       return ParseState::ok;
     }
+    case Fmt::tem_p: {
+      // Slave-side parameter id: xxxx GGGG GNNN NNNN (LE word); the read
+      // masks keep grp <= 31 and num <= 127, so only the sentinel
+      // 0xffff can be null.
+      const unsigned v =
+          static_cast<unsigned>(d[0]) | (static_cast<unsigned>(d[1]) << 8);
+      if (use_sentinel && meta.has_replacement && v == meta.replacement_value) {
+        return ParseState::is_null;
+      }
+      const unsigned grp = (v >> 7) & 0x1f;
+      const unsigned num = v & 0x7f;
+      out->value = static_cast<int>(grp * 1000 + num);
+      return ParseState::ok;
+    }
     case Fmt::none:
     default:
       return ParseState::invalid;
@@ -576,6 +594,10 @@ std::optional<DataValue> decodeString(const Meta& meta, ByteView d,
       break;
     case Fmt::pin2:
       std::snprintf(buf, sizeof(buf), "%04d", p.value);
+      break;
+    case Fmt::tem_p:
+      std::snprintf(buf, sizeof(buf), "%02d-%03d", p.value / 1000,
+                    p.value % 1000);
       break;
     default:
       std::snprintf(buf, sizeof(buf), "%02d:%02d", p.hour, p.minute);
@@ -842,6 +864,26 @@ Sequence encodeString(const Meta& meta, const DataValue& value) {
       if (!parsePinString(*str, &pin_value)) return Sequence{};
       s.push_back(bcdPack(static_cast<uint8_t>(pin_value / 100)), false);
       s.push_back(bcdPack(static_cast<uint8_t>(pin_value % 100)), false);
+      return s;
+    }
+    case Fmt::tem_p: {
+      // "-" null display token, then "GG-NNN" → slave-packed word.
+      if (*str == "-") {
+        pushReplacement(s, meta);
+        return s;
+      }
+      const size_t dash = str->find('-');
+      if (dash == std::string::npos) return Sequence{};
+      int grp, num;
+      if (!parseIntToken(*str, 0, dash, &grp) ||
+          !parseIntToken(*str, dash + 1, str->size(), &num)) {
+        return Sequence{};
+      }
+      if (grp < 0 || grp > 0x1f || num < 0 || num > 0x7f) return Sequence{};
+      const unsigned value =
+          (static_cast<unsigned>(grp) << 7) | static_cast<unsigned>(num);
+      s.push_back(static_cast<uint8_t>(value & 0xff), false);
+      s.push_back(static_cast<uint8_t>((value >> 8) & 0xff), false);
       return s;
     }
     case Fmt::none:
