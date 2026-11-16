@@ -249,6 +249,112 @@ TEST_CASE("DeviceManager: prune drops only unidentified entries",
   REQUIRE(devices.size() == 1);
 }
 
+TEST_CASE("DeviceManager: reused pool slots do not retain device data",
+          "[app][devicemanager]") {
+  DeviceManager device_manager;
+  device_manager.setOwnAddress(0xff);
+  device_manager.setUnknownEntryTtlMs(0);
+  device_manager.setSweepIntervalMs(0);
+
+  const std::vector<uint8_t> unknown = {0x10, 0x09, 0x05, 0x03, 0x00};
+  const std::vector<uint8_t> response = {0x01, 0x02};
+  const std::vector<uint8_t> id = {0x10, 0x08, 0x07, 0x04, 0x00};
+  const std::vector<uint8_t> vaillant = {0x0a, 0xb5, 'E',  '7',  'f', '_',
+                                         '2',  0x00, 0x01, 0x80, 0x02};
+  device_manager.update(unknown, response);
+  device_manager.update(id, vaillant);
+  for (uint8_t sub = 0x24; sub <= 0x27; ++sub) {
+    device_manager.update(std::vector<uint8_t>{0x10, 0x08, 0xb5, 0x09, 0x01,
+                                                sub},
+                          std::vector<uint8_t>{0x09, 0x00, '1', '2', '3',
+                                               '4',  '5',  '6', '7', '8'});
+  }
+  REQUIRE(device_manager.isIdentified(0x08));
+  REQUIRE(!device_manager.needsDeepScan(0x08));
+  bool original_seen = false;
+  device_manager.fetchDevices([&](const ebus::DeviceInfo& info) {
+    if (info.slave_address == 0x08) {
+      original_seen = true;
+      REQUIRE(info.frequency == 5);
+      REQUIRE(info.vaillant.serial_number.size() == 28);
+    }
+  });
+  REQUIRE(original_seen);
+
+  SECTION("pruned entry") { device_manager.pruneUnidentified(0x09); }
+  SECTION("swept entry") {
+    std::this_thread::sleep_for(std::chrono::milliseconds(2));
+    REQUIRE(device_manager.sweepStaleUnknown() == 1);
+  }
+
+  REQUIRE(device_manager.isIdentified(0x08));
+  REQUIRE(!device_manager.needsDeepScan(0x08));
+  device_manager.update(std::vector<uint8_t>{0x10, 0x26, 0x05, 0x03, 0x00},
+                        response);
+  REQUIRE(!device_manager.isIdentified(0x26));
+  REQUIRE(device_manager.fetchStatus().identified_count == 1);
+  bool new_device_seen = false;
+  device_manager.fetchDevices([&](const ebus::DeviceInfo& info) {
+    if (info.slave_address == 0x26) {
+      new_device_seen = true;
+      REQUIRE(info.frequency == 1);
+      REQUIRE(info.manufacturer == 0);
+      REQUIRE(info.unit_id.empty());
+      REQUIRE(info.vaillant.serial_number.empty());
+    }
+  });
+  REQUIRE(new_device_seen);
+
+  device_manager.update(std::vector<uint8_t>{0x10, 0x26, 0x07, 0x04, 0x00},
+                        vaillant);
+  REQUIRE(device_manager.isIdentified(0x26));
+  REQUIRE(device_manager.fetchStatus().identified_count == 2);
+  REQUIRE(device_manager.needsDeepScan(0x26));
+  uint16_t cursor = 0;
+  ebus::Sequence command;
+  for (uint8_t sub = 0x24; sub <= 0x27; ++sub) {
+    REQUIRE(device_manager.getNextPendingVendorCommandForDevice(
+        0x26, cursor, command));
+    REQUIRE(command[0] == 0x26);
+    REQUIRE(command[4] == sub);
+  }
+  REQUIRE(!device_manager.getNextPendingVendorCommandForDevice(
+      0x26, cursor, command));
+  device_manager.fetchDevices([&](const ebus::DeviceInfo& info) {
+    if (info.slave_address == 0x08) {
+      REQUIRE(info.frequency == 5);
+      REQUIRE(info.vaillant.serial_number.size() == 28);
+    }
+    if (info.slave_address == 0x26) {
+      REQUIRE(info.frequency == 2);
+      REQUIRE(info.manufacturer == 0xb5);
+      REQUIRE(info.vaillant.serial_number.empty());
+    }
+  });
+}
+
+TEST_CASE("DeviceManager: removing the last slot clears partial vendor data",
+          "[app][devicemanager]") {
+  DeviceManager device_manager;
+  device_manager.setOwnAddress(0xff);
+  device_manager.update(
+      std::vector<uint8_t>{0x10, 0x09, 0xb5, 0x09, 0x01, 0x24},
+      std::vector<uint8_t>{0x09, 0x00, '1', '2', '3', '4', '5', '6', '7', '8'});
+  device_manager.pruneUnidentified(0x09);
+
+  device_manager.update(
+      std::vector<uint8_t>{0x10, 0x26, 0x07, 0x04, 0x00},
+      std::vector<uint8_t>{0x0a, 0xb5, 'E',  '7',  'f', '_',
+                           '2',  0x00, 0x01, 0x80, 0x02});
+  REQUIRE(device_manager.isIdentified(0x26));
+  uint16_t cursor = 0;
+  ebus::Sequence command;
+  REQUIRE(device_manager.getNextPendingVendorCommandForDevice(0x26, cursor,
+                                                              command));
+  REQUIRE(command[0] == 0x26);
+  REQUIRE(command[4] == 0x24);
+}
+
 TEST_CASE("DeviceManager: metrics align to pool/identified/observed",
           "[app][devicemanager]") {
   ebus::BusConfig config;
