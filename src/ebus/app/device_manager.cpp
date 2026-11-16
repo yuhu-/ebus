@@ -231,14 +231,13 @@ DeviceManagerStatus DeviceManager::fetchStatus() const {
 }
 
 void DeviceManager::removeAtLocked(size_t idx) {
-  // Capture first: after the swap the stale last slot still reads the
-  // moved slave address, so it cannot be used to clear the map.
   const uint8_t removed = device_pool_[idx].getSlave();
   size_t last = --pool_usage_;
   if (idx != last) {
     device_pool_[idx] = device_pool_[last];
     address_map_[device_pool_[idx].getSlave()] = static_cast<int16_t>(idx);
   }
+  device_pool_[last] = Device{};
   address_map_[removed] = -1;
 }
 
