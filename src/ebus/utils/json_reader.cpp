@@ -213,11 +213,11 @@ bool JsonReader::validate(std::string_view json) {
   int depth = -1;
 
   enum State {
-    ExpectValue,
-    ExpectKeyOrEnd,
-    ExpectColon,
-    ExpectCommaOrEnd
-  } state = ExpectValue;
+    expect_value,
+    expect_key_or_end,
+    expect_colon,
+    expect_comma_or_end
+  } state = expect_value;
 
   size_t p = 0;
   auto skipWs = [&]() {
@@ -231,7 +231,7 @@ bool JsonReader::validate(std::string_view json) {
   while (p < json.size()) {
     char c = json[p];
     switch (state) {
-      case ExpectValue:
+      case expect_value:
         if (c == '{') {
           if (++depth >= static_cast<int>(JsonLimits::max_recursion_depth))
             return false;
@@ -239,9 +239,9 @@ bool JsonReader::validate(std::string_view json) {
           p++;
           skipWs();
           if (p < json.size() && json[p] == '}') {
-            state = ExpectCommaOrEnd;
+            state = expect_comma_or_end;
           } else
-            state = ExpectKeyOrEnd;
+            state = expect_key_or_end;
         } else if (c == '[') {
           if (++depth >= static_cast<int>(JsonLimits::max_recursion_depth))
             return false;
@@ -249,9 +249,9 @@ bool JsonReader::validate(std::string_view json) {
           p++;
           skipWs();
           if (p < json.size() && json[p] == ']') {
-            state = ExpectCommaOrEnd;
+            state = expect_comma_or_end;
           } else
-            state = ExpectValue;
+            state = expect_value;
         } else if (c == '"') {
           p++;
           while (p < json.size() && json[p] != '"') {
@@ -262,7 +262,7 @@ bool JsonReader::validate(std::string_view json) {
           }
           if (p >= json.size()) return false;
           p++;
-          state = ExpectCommaOrEnd;
+          state = expect_comma_or_end;
         } else if (std::isdigit(static_cast<unsigned char>(c)) || c == '-' ||
                    c == 't' || c == 'f' || c == 'n') {
           if (c == 't' || c == 'n') {
@@ -278,16 +278,16 @@ bool JsonReader::validate(std::string_view json) {
                     std::strchr(".eE+-", json[p])))
               p++;
           }
-          state = ExpectCommaOrEnd;
+          state = expect_comma_or_end;
         } else
           return false;
         break;
-      case ExpectKeyOrEnd:
+      case expect_key_or_end:
         if (c == '}') {
           if (depth < 0 || stack[depth] != '{') return false;
           depth--;
           p++;
-          state = ExpectCommaOrEnd;
+          state = expect_comma_or_end;
         } else if (c == '"') {
           p++;
           while (p < json.size() && json[p] != '"') {
@@ -298,16 +298,16 @@ bool JsonReader::validate(std::string_view json) {
           }
           if (p >= json.size()) return false;
           p++;
-          state = ExpectColon;
+          state = expect_colon;
         } else
           return false;
         break;
-      case ExpectColon:
+      case expect_colon:
         if (c != ':') return false;
         p++;
-        state = ExpectValue;
+        state = expect_value;
         break;
-      case ExpectCommaOrEnd:
+      case expect_comma_or_end:
         if (c == ',') {
           p++;
           skipWs();
@@ -316,27 +316,27 @@ bool JsonReader::validate(std::string_view json) {
           // delimiter
           if (json[p] == '}' || json[p] == ']') return false;
           if (depth >= 0 && stack[depth] == '{')
-            state = ExpectKeyOrEnd;
+            state = expect_key_or_end;
           else
-            state = ExpectValue;
+            state = expect_value;
           continue;
         } else if (c == '}') {
           if (depth < 0 || stack[depth] != '{') return false;
           depth--;
           p++;
-          state = ExpectCommaOrEnd;
+          state = expect_comma_or_end;
         } else if (c == ']') {
           if (depth < 0 || stack[depth] != '[') return false;
           depth--;
           p++;
-          state = ExpectCommaOrEnd;
+          state = expect_comma_or_end;
         } else
           return false;
         break;
     }
     skipWs();
   }
-  return depth == -1 && state == ExpectCommaOrEnd;
+  return depth == -1 && state == expect_comma_or_end;
 }
 
 JsonReader::Token JsonReader::get(std::string_view path) {
