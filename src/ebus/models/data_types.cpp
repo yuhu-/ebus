@@ -354,8 +354,8 @@ enum class ParseState : uint8_t { invalid, is_null, ok };
 // datetime_min4 counts minutes from 01.01.2009 (MJD 54832) and accepts at
 // most 31.12.2099 23:59 (0x02DA4E1F); beyond that the wire value is
 // invalid.
-constexpr int kDatetimeEpochMjd = 54832;
-constexpr uint32_t kDatetimeMaxMinutes = 0x02DA4E1Fu;
+constexpr int date_time_epoch_mjd = 54832;
+constexpr uint32_t date_time_max_minutes = 0x02DA4E1Fu;
 
 // Gregorian date from an MJD day number. The year step uses floor() so
 // MJDs before 1900-03-01 (01.01.1900 = 15020) decode to the correct day;
@@ -444,8 +444,9 @@ ParseState parseWire(const Meta& meta, ByteView d, bool use_sentinel,
                                (static_cast<uint32_t>(d[1]) << 8) |
                                (static_cast<uint32_t>(d[2]) << 16) |
                                (static_cast<uint32_t>(d[3]) << 24);
-      if (minutes > kDatetimeMaxMinutes) return ParseState::invalid;
-      const int mjd = static_cast<int>(minutes / (24 * 60)) + kDatetimeEpochMjd;
+      if (minutes > date_time_max_minutes) return ParseState::invalid;
+      const int mjd =
+          static_cast<int>(minutes / (24 * 60)) + date_time_epoch_mjd;
       if (!mjdToDate(mjd, out)) return ParseState::invalid;
       const unsigned rem = minutes % (24 * 60);
       out->hour = static_cast<int>(rem / 60);
@@ -773,11 +774,11 @@ Sequence encodeString(const Meta& meta, const DataValue& value) {
         return Sequence{};
       }
       const int mjd = dateToMjd(day, month, year);
-      if (mjd < kDatetimeEpochMjd) return Sequence{};
+      if (mjd < date_time_epoch_mjd) return Sequence{};
       const uint32_t minutes =
-          static_cast<uint32_t>(mjd - kDatetimeEpochMjd) * 24u * 60u +
+          static_cast<uint32_t>(mjd - date_time_epoch_mjd) * 24u * 60u +
           static_cast<uint32_t>(hour) * 60u + static_cast<uint32_t>(minute);
-      if (minutes > kDatetimeMaxMinutes) return Sequence{};
+      if (minutes > date_time_max_minutes) return Sequence{};
       s.push_back(static_cast<uint8_t>(minutes & 0xff), false);
       s.push_back(static_cast<uint8_t>((minutes >> 8) & 0xff), false);
       s.push_back(static_cast<uint8_t>((minutes >> 16) & 0xff), false);
