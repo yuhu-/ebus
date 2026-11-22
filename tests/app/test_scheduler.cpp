@@ -281,7 +281,7 @@ struct BreakerHarness {
         handler(runtimeConfig().address, &bus, &request, &bus_monitor),
         scheduler(&handler) {
     handler.setSourceAddress(runtimeConfig().address);
-    scheduler.setMaxAttempts(1);  // production: single shot, next on schedule
+    scheduler.setMaxAttempts(1);  // Exercise terminal outcomes without retries.
     scheduler.setBreakerThreshold(3);
     scheduler.setBreakerCooldownMs(60000, 60000);
   }
@@ -532,4 +532,231 @@ TEST_CASE("Scheduler breaker: success restarts cooldown growth",
   REQUIRE(h.settle(h.errorFor(sid)) == true);
   REQUIRE(h.scheduler.breakerTrips() == 1);
   REQUIRE(h.scheduler.breakerOpen() == true);
+}
+
+TEST_CASE("Scheduler reports one terminal arbitration error after three losses",
+          "[app][scheduler][retries]") {
+  BreakerHarness h;
+  h.scheduler.setMaxAttempts(3);
+  h.scheduler.setBaseBackoff(1);
+  std::vector<ProtocolEvent> results;
+  h.scheduler.setProtocolEventSink([&](ProtocolEvent&& event) {
+    results.push_back(std::move(event));
+  });
+  const auto sid = h.startItem();
+  ProtocolEvent lost{};
+  lost.type = ProtocolEvent::Type::lost;
+  lost.session_id = sid;
+  for (unsigned attempt = 1; attempt <= 3; ++attempt) {
+    REQUIRE(h.settle(lost));
+    if (attempt < 3) {
+      REQUIRE(results.empty());
+      std::this_thread::sleep_until(h.scheduler.nextDueTime());
+      REQUIRE(h.scheduler.tick());
+    }
+  }
+  REQUIRE(results.size() == 1);
+  const auto terminal = results.front();
+  REQUIRE(terminal.type == ProtocolEvent::Type::error);
+  REQUIRE(terminal.protocol_error == ebus::ProtocolError::arbitration_lost);
+  REQUIRE(terminal.session_id == sid);
+  REQUIRE(terminal.attempts == 3);
+  REQUIRE(terminal.master[0] == 0x01);
+  REQUIRE(terminal.master[1] == 0xfe);
+  REQUIRE_FALSE(h.scheduler.injectProtocolEvent(terminal));
+  REQUIRE(results.size() == 1);
+  REQUIRE_FALSE(h.scheduler.breakerOpen());
+  REQUIRE(h.scheduler.size() == 0);
+}
+
+TEST_CASE("Scheduler succeeds after a lost arbitration without a terminal error",
+          "[app][scheduler][retries]") {
+  BreakerHarness h;
+  h.scheduler.setMaxAttempts(3);
+  h.scheduler.setBaseBackoff(1);
+  std::vector<ProtocolEvent> results;
+  h.scheduler.setProtocolEventSink([&](ProtocolEvent&& event) {
+    results.push_back(std::move(event));
+  });
+  const auto sid = h.startItem();
+  ProtocolEvent lost{};
+  lost.type = ProtocolEvent::Type::lost;
+  lost.session_id = sid;
+  REQUIRE(h.settle(lost));
+  std::this_thread::sleep_until(h.scheduler.nextDueTime());
+  REQUIRE(h.scheduler.tick());
+  REQUIRE(h.settle(h.telegramFor(sid)));
+  REQUIRE(results.empty());
+  REQUIRE(h.scheduler.size() == 0);
+}
+
+TEST_CASE("Scheduler reserves capacity for retrying its active telegram",
+          "[app][scheduler][retries]") {
+  BreakerHarness h;
+  h.scheduler.setMaxAttempts(3);
+  h.scheduler.setBaseBackoff(1);
+  const auto sid = h.startItem();
+  REQUIRE(h.scheduler.size() == 1);
+  const auto message = ebus::toVector("feb5050327002d");
+  for (size_t i = 1; i < h.scheduler.capacity(); ++i) {
+    REQUIRE(h.scheduler.enqueue(1, message) != 0);
+  }
+  REQUIRE(h.scheduler.enqueue(1, message) == 0);
+  ProtocolEvent lost{};
+  lost.type = ProtocolEvent::Type::lost;
+  lost.session_id = sid;
+  REQUIRE(h.settle(lost));
+  REQUIRE(h.scheduler.size() == h.scheduler.capacity());
+}
+
+TEST_CASE("Scheduler cancellation removes only the requested queued session",
+          "[app][scheduler][cancel]") {
+  BreakerHarness h;
+  const auto message = ebus::toVector("feb5050327002d");
+  const auto first = h.scheduler.enqueue(1, message);
+  const auto removed = h.scheduler.enqueue(2, message);
+  const auto last = h.scheduler.enqueue(3, message);
+  REQUIRE(h.scheduler.cancel(removed));
+  REQUIRE(h.scheduler.size() == 2);
+  REQUIRE_FALSE(h.scheduler.cancel(removed));
+  REQUIRE_FALSE(h.scheduler.cancel(0));
+  REQUIRE(h.scheduler.cancel(first));
+  REQUIRE(h.scheduler.cancel(last));
+  REQUIRE(h.scheduler.size() == 0);
+  REQUIRE_FALSE(h.scheduler.tick());
+}
+
+TEST_CASE("Scheduler cancellation removes a retry waiting for backoff",
+          "[app][scheduler][cancel]") {
+  BreakerHarness h;
+  h.scheduler.setMaxAttempts(3);
+  const auto sid = h.startItem();
+  ProtocolEvent lost{};
+  lost.type = ProtocolEvent::Type::lost;
+  lost.session_id = sid;
+  REQUIRE(h.settle(lost));
+  REQUIRE(h.scheduler.size() == 1);
+  REQUIRE(h.scheduler.cancel(sid));
+  REQUIRE(h.scheduler.size() == 0);
+  REQUIRE_FALSE(h.scheduler.tick());
+}
+
+TEST_CASE("Scheduler active cancellation waits for its outcome and disables retries",
+          "[app][scheduler][cancel]") {
+  BreakerHarness h;
+  h.scheduler.setMaxAttempts(3);
+  std::vector<ProtocolEvent> results;
+  h.scheduler.setProtocolEventSink([&](ProtocolEvent&& event) {
+    results.push_back(std::move(event));
+  });
+  const auto sid = h.startItem();
+  REQUIRE(h.scheduler.cancel(sid));
+  REQUIRE(h.scheduler.size() == 1);  // No mid-telegram reset or slot release.
+  SECTION("Loss is not retried or reported as exhausted arbitration") {
+    ProtocolEvent lost{};
+    lost.type = ProtocolEvent::Type::lost;
+    lost.session_id = sid;
+    REQUIRE(h.settle(lost));
+  }
+  SECTION("An already-transmitting telegram can still succeed") {
+    REQUIRE(h.settle(h.telegramFor(sid)));
+  }
+  REQUIRE(h.scheduler.size() == 0);
+  REQUIRE(results.empty());
+  REQUIRE_FALSE(h.scheduler.cancel(sid));
+}
+
+TEST_CASE("Scheduler replaces a queued session without needing another free slot",
+          "[app][scheduler][replace]") {
+  BreakerHarness h;
+  const auto message = ebus::toVector("feb5050327002d");
+  std::vector<uint32_t> sessions;
+  for (size_t i = 0; i < h.scheduler.capacity(); ++i) {
+    const auto sid = h.scheduler.enqueue(1, message);
+    REQUIRE(sid != 0);
+    sessions.push_back(sid);
+  }
+  const auto old = sessions[sessions.size() / 2];
+  SECTION("Full queue permits replacement of an existing queued item") {
+    const auto replacement = h.scheduler.enqueueReplacing(1, message, old);
+    REQUIRE(replacement != 0);
+    REQUIRE(replacement != old);
+    REQUIRE(h.scheduler.size() == h.scheduler.capacity());
+    REQUIRE_FALSE(h.scheduler.cancel(old));
+    REQUIRE(h.scheduler.cancel(replacement));
+    for (auto sid : sessions) {
+      if (sid != old) REQUIRE(h.scheduler.cancel(sid));
+    }
+  }
+  SECTION("Unknown replacement ID leaves every queued session intact") {
+    REQUIRE(h.scheduler.enqueueReplacing(1, message, 0xffffffffu) == 0);
+    REQUIRE(h.scheduler.size() == h.scheduler.capacity());
+    for (auto sid : sessions) REQUIRE(h.scheduler.cancel(sid));
+  }
+  REQUIRE(h.scheduler.size() == 0);
+}
+
+TEST_CASE("Scheduler replaces a queued retry with a new session",
+          "[app][scheduler][replace]") {
+  BreakerHarness h;
+  h.scheduler.setMaxAttempts(3);
+  const auto old = h.startItem();
+  ProtocolEvent lost{};
+  lost.type = ProtocolEvent::Type::lost;
+  lost.session_id = old;
+  REQUIRE(h.settle(lost));
+  const auto replacement = h.scheduler.enqueueReplacing(
+      1, ebus::toVector("feb5050327002e"), old);
+  REQUIRE(replacement != 0);
+  REQUIRE(h.scheduler.size() == 1);
+  REQUIRE_FALSE(h.scheduler.cancel(old));
+  REQUIRE(h.scheduler.tick());
+  REQUIRE(h.settle(h.telegramFor(replacement)));
+  REQUIRE(h.scheduler.size() == 0);
+}
+
+TEST_CASE("Scheduler accepted active replacement prevents the old retry",
+          "[app][scheduler][replace]") {
+  BreakerHarness h;
+  h.scheduler.setMaxAttempts(3);
+  const auto old = h.startItem();
+  const auto replacement = h.scheduler.enqueueReplacing(
+      1, ebus::toVector("feb5050327002e"), old);
+  REQUIRE(replacement != 0);
+  REQUIRE(h.scheduler.size() == 2);
+  ProtocolEvent lost{};
+  lost.type = ProtocolEvent::Type::lost;
+  lost.session_id = old;
+  REQUIRE(h.settle(lost));
+  REQUIRE(h.scheduler.size() == 1);
+  REQUIRE(h.scheduler.tick());
+  REQUIRE(h.settle(h.telegramFor(replacement)));
+  REQUIRE(h.scheduler.size() == 0);
+}
+
+TEST_CASE("Scheduler rejected active replacement preserves the old retry budget",
+          "[app][scheduler][replace]") {
+  BreakerHarness h;
+  h.scheduler.setMaxAttempts(3);
+  h.scheduler.setBaseBackoff(1);
+  const auto old = h.startItem();
+  const auto message = ebus::toVector("feb5050327002d");
+  std::vector<uint32_t> other_sessions;
+  for (size_t i = 1; i < h.scheduler.capacity(); ++i) {
+    const auto sid = h.scheduler.enqueue(1, message);
+    REQUIRE(sid != 0);
+    other_sessions.push_back(sid);
+  }
+  REQUIRE(h.scheduler.enqueueReplacing(1, message, old) == 0);
+  ProtocolEvent lost{};
+  lost.type = ProtocolEvent::Type::lost;
+  lost.session_id = old;
+  REQUIRE(h.settle(lost));
+  REQUIRE(h.scheduler.size() == h.scheduler.capacity());
+  for (auto sid : other_sessions) REQUIRE(h.scheduler.cancel(sid));
+  REQUIRE(h.scheduler.size() == 1);
+  std::this_thread::sleep_until(h.scheduler.nextDueTime());
+  REQUIRE(h.scheduler.tick());
+  REQUIRE(h.settle(h.telegramFor(old)));
+  REQUIRE(h.scheduler.size() == 0);
 }

@@ -79,6 +79,9 @@ class Scheduler {
    */
   bool tick();
   uint32_t enqueue(uint8_t priority, ByteView message, uint16_t poll_id = 0);
+  uint32_t enqueueReplacing(uint8_t priority, ByteView message,
+                            uint32_t replace_session_id);
+  bool cancel(uint32_t session_id);
   uint32_t enqueueAt(uint8_t priority, ByteView message, TimePoint when,
                      uint16_t poll_id = 0);
   void clear();
@@ -105,6 +108,7 @@ class Scheduler {
     uint32_t session_id = 0;
     uint16_t poll_id = 0;
     uint8_t attempts = 0;
+    bool cancelled = false;
     Sequence message;
   };
 
@@ -186,7 +190,7 @@ class Scheduler {
   }
 
   // Private Helper Methods
-  bool pushItem(Item&& it);
+  bool pushItem(Item&& it, uint32_t replace_session_id = 0);
   Duration backoffDuration(int attempt) const;
   std::chrono::milliseconds breakerCooldownLocked() const;
   // Mirrors breaker state into BusMonitor (scheduler/section of /metrics).

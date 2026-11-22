@@ -196,6 +196,22 @@ class Controller {
   uint32_t enqueue(uint8_t priority, ByteView message);
 
   /**
+   * @brief Atomically replaces a queued session with a new message.
+   * An active session may finish but will not retry after replacement.
+   * Rejection leaves the old session unchanged. Returns the new session ID,
+   * or 0 when the new message cannot be queued.
+   */
+  uint32_t enqueueReplacing(uint8_t priority, ByteView message,
+                            uint32_t replace_session_id);
+
+  /**
+   * @brief Removes a queued session or disables retries of its active attempt.
+   * Does not interrupt a telegram already being transmitted. Returns true
+   * when the session was found. Cancellation does not generate a callback.
+   */
+  bool cancel(uint32_t session_id);
+
+  /**
    * @brief Enqueues a message to be sent at a specific time.
    */
   uint32_t enqueueAt(uint8_t priority, ByteView message,
