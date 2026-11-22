@@ -264,10 +264,10 @@ TEST_CASE("DeviceManager: reused pool slots do not retain device data",
   device_manager.update(unknown, response);
   device_manager.update(id, vaillant);
   for (uint8_t sub = 0x24; sub <= 0x27; ++sub) {
-    device_manager.update(std::vector<uint8_t>{0x10, 0x08, 0xb5, 0x09, 0x01,
-                                                sub},
-                          std::vector<uint8_t>{0x09, 0x00, '1', '2', '3',
-                                               '4',  '5',  '6', '7', '8'});
+    device_manager.update(
+        std::vector<uint8_t>{0x10, 0x08, 0xb5, 0x09, 0x01, sub},
+        std::vector<uint8_t>{0x09, 0x00, '1', '2', '3', '4', '5', '6', '7',
+                             '8'});
   }
   REQUIRE(device_manager.isIdentified(0x08));
   REQUIRE(!device_manager.needsDeepScan(0x08));
@@ -313,13 +313,13 @@ TEST_CASE("DeviceManager: reused pool slots do not retain device data",
   uint16_t cursor = 0;
   ebus::Sequence command;
   for (uint8_t sub = 0x24; sub <= 0x27; ++sub) {
-    REQUIRE(device_manager.getNextPendingVendorCommandForDevice(
-        0x26, cursor, command));
+    REQUIRE(device_manager.getNextPendingVendorCommandForDevice(0x26, cursor,
+                                                                command));
     REQUIRE(command[0] == 0x26);
     REQUIRE(command[4] == sub);
   }
-  REQUIRE(!device_manager.getNextPendingVendorCommandForDevice(
-      0x26, cursor, command));
+  REQUIRE(!device_manager.getNextPendingVendorCommandForDevice(0x26, cursor,
+                                                               command));
   device_manager.fetchDevices([&](const ebus::DeviceInfo& info) {
     if (info.slave_address == 0x08) {
       REQUIRE(info.frequency == 5);
@@ -342,10 +342,9 @@ TEST_CASE("DeviceManager: removing the last slot clears partial vendor data",
       std::vector<uint8_t>{0x09, 0x00, '1', '2', '3', '4', '5', '6', '7', '8'});
   device_manager.pruneUnidentified(0x09);
 
-  device_manager.update(
-      std::vector<uint8_t>{0x10, 0x26, 0x07, 0x04, 0x00},
-      std::vector<uint8_t>{0x0a, 0xb5, 'E',  '7',  'f', '_',
-                           '2',  0x00, 0x01, 0x80, 0x02});
+  device_manager.update(std::vector<uint8_t>{0x10, 0x26, 0x07, 0x04, 0x00},
+                        std::vector<uint8_t>{0x0a, 0xb5, 'E', '7', 'f', '_',
+                                             '2', 0x00, 0x01, 0x80, 0x02});
   REQUIRE(device_manager.isIdentified(0x26));
   uint16_t cursor = 0;
   ebus::Sequence command;
