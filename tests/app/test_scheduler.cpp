@@ -540,9 +540,8 @@ TEST_CASE("Scheduler reports one terminal arbitration error after three losses",
   h.scheduler.setMaxAttempts(3);
   h.scheduler.setBaseBackoff(1);
   std::vector<ProtocolEvent> results;
-  h.scheduler.setProtocolEventSink([&](ProtocolEvent&& event) {
-    results.push_back(std::move(event));
-  });
+  h.scheduler.setProtocolEventSink(
+      [&](ProtocolEvent&& event) { results.push_back(std::move(event)); });
   const auto sid = h.startItem();
   ProtocolEvent lost{};
   lost.type = ProtocolEvent::Type::lost;
@@ -569,15 +568,15 @@ TEST_CASE("Scheduler reports one terminal arbitration error after three losses",
   REQUIRE(h.scheduler.size() == 0);
 }
 
-TEST_CASE("Scheduler succeeds after a lost arbitration without a terminal error",
-          "[app][scheduler][retries]") {
+TEST_CASE(
+    "Scheduler succeeds after a lost arbitration without a terminal error",
+    "[app][scheduler][retries]") {
   BreakerHarness h;
   h.scheduler.setMaxAttempts(3);
   h.scheduler.setBaseBackoff(1);
   std::vector<ProtocolEvent> results;
-  h.scheduler.setProtocolEventSink([&](ProtocolEvent&& event) {
-    results.push_back(std::move(event));
-  });
+  h.scheduler.setProtocolEventSink(
+      [&](ProtocolEvent&& event) { results.push_back(std::move(event)); });
   const auto sid = h.startItem();
   ProtocolEvent lost{};
   lost.type = ProtocolEvent::Type::lost;
@@ -641,14 +640,14 @@ TEST_CASE("Scheduler cancellation removes a retry waiting for backoff",
   REQUIRE_FALSE(h.scheduler.tick());
 }
 
-TEST_CASE("Scheduler active cancellation waits for its outcome and disables retries",
-          "[app][scheduler][cancel]") {
+TEST_CASE(
+    "Scheduler active cancellation waits for its outcome and disables retries",
+    "[app][scheduler][cancel]") {
   BreakerHarness h;
   h.scheduler.setMaxAttempts(3);
   std::vector<ProtocolEvent> results;
-  h.scheduler.setProtocolEventSink([&](ProtocolEvent&& event) {
-    results.push_back(std::move(event));
-  });
+  h.scheduler.setProtocolEventSink(
+      [&](ProtocolEvent&& event) { results.push_back(std::move(event)); });
   const auto sid = h.startItem();
   REQUIRE(h.scheduler.cancel(sid));
   REQUIRE(h.scheduler.size() == 1);  // No mid-telegram reset or slot release.
@@ -666,8 +665,9 @@ TEST_CASE("Scheduler active cancellation waits for its outcome and disables retr
   REQUIRE_FALSE(h.scheduler.cancel(sid));
 }
 
-TEST_CASE("Scheduler replaces a queued session without needing another free slot",
-          "[app][scheduler][replace]") {
+TEST_CASE(
+    "Scheduler replaces a queued session without needing another free slot",
+    "[app][scheduler][replace]") {
   BreakerHarness h;
   const auto message = ebus::toVector("feb5050327002d");
   std::vector<uint32_t> sessions;
@@ -705,8 +705,8 @@ TEST_CASE("Scheduler replaces a queued retry with a new session",
   lost.type = ProtocolEvent::Type::lost;
   lost.session_id = old;
   REQUIRE(h.settle(lost));
-  const auto replacement = h.scheduler.enqueueReplacing(
-      1, ebus::toVector("feb5050327002e"), old);
+  const auto replacement =
+      h.scheduler.enqueueReplacing(1, ebus::toVector("feb5050327002e"), old);
   REQUIRE(replacement != 0);
   REQUIRE(h.scheduler.size() == 1);
   REQUIRE_FALSE(h.scheduler.cancel(old));
@@ -720,8 +720,8 @@ TEST_CASE("Scheduler accepted active replacement prevents the old retry",
   BreakerHarness h;
   h.scheduler.setMaxAttempts(3);
   const auto old = h.startItem();
-  const auto replacement = h.scheduler.enqueueReplacing(
-      1, ebus::toVector("feb5050327002e"), old);
+  const auto replacement =
+      h.scheduler.enqueueReplacing(1, ebus::toVector("feb5050327002e"), old);
   REQUIRE(replacement != 0);
   REQUIRE(h.scheduler.size() == 2);
   ProtocolEvent lost{};
@@ -734,8 +734,9 @@ TEST_CASE("Scheduler accepted active replacement prevents the old retry",
   REQUIRE(h.scheduler.size() == 0);
 }
 
-TEST_CASE("Scheduler rejected active replacement preserves the old retry budget",
-          "[app][scheduler][replace]") {
+TEST_CASE(
+    "Scheduler rejected active replacement preserves the old retry budget",
+    "[app][scheduler][replace]") {
   BreakerHarness h;
   h.scheduler.setMaxAttempts(3);
   h.scheduler.setBaseBackoff(1);
@@ -758,5 +759,18 @@ TEST_CASE("Scheduler rejected active replacement preserves the old retry budget"
   std::this_thread::sleep_until(h.scheduler.nextDueTime());
   REQUIRE(h.scheduler.tick());
   REQUIRE(h.settle(h.telegramFor(old)));
+  REQUIRE(h.scheduler.size() == 0);
+}
+
+TEST_CASE(
+    "Scheduler enqueueReplacing acts as upsert when replacement ID is unknown",
+    "[app][scheduler][replace]") {
+  BreakerHarness h;
+  const auto message = ebus::toVector("feb5050327002d");
+  // Non-full queue: unknown replacement ID enqueues a new item (upsert)
+  const auto sid = h.scheduler.enqueueReplacing(1, message, 0x12345678u);
+  REQUIRE(sid != 0);
+  REQUIRE(h.scheduler.size() == 1);
+  REQUIRE(h.scheduler.cancel(sid));
   REQUIRE(h.scheduler.size() == 0);
 }

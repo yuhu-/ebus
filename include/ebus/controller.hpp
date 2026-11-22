@@ -196,10 +196,13 @@ class Controller {
   uint32_t enqueue(uint8_t priority, ByteView message);
 
   /**
-   * @brief Atomically replaces a queued session with a new message.
-   * An active session may finish but will not retry after replacement.
-   * Rejection leaves the old session unchanged. Returns the new session ID,
-   * or 0 when the new message cannot be queued.
+   * @brief Atomically replaces a queued session with a new message (upsert).
+   * If replace_session_id is found in the queue, it is replaced in-place.
+   * If an active session matches replace_session_id, its current attempt may
+   * finish but it will not retry. If replace_session_id is not found or 0,
+   * enqueues as a new message if capacity permits.
+   * Rejection leaves any existing sessions unchanged. Returns the new session
+   * ID, or 0 when the new message cannot be queued.
    */
   uint32_t enqueueReplacing(uint8_t priority, ByteView message,
                             uint32_t replace_session_id);

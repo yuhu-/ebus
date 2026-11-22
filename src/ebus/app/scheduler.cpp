@@ -306,7 +306,8 @@ bool Scheduler::injectProtocolEvent(const ProtocolEvent& event) {
       arbitration_failure->result = RequestResult::first_lost;
       uint8_t master[SequenceLimits::model_capacity]{};
       master[0] = handler_->getSourceAddress();
-      const auto length = std::min(terminal_item.message.size(), sizeof(master) - 1);
+      const auto length =
+          std::min(terminal_item.message.size(), sizeof(master) - 1);
       std::copy_n(terminal_item.message.begin(), length, master + 1);
       arbitration_failure->master.assign(master, length + 1);
     }
@@ -443,7 +444,8 @@ bool Scheduler::cancel(uint32_t session_id) {
   for (auto it = scheduled_items_.begin(); it != scheduled_items_.end(); ++it) {
     if (it->session_id == session_id) {
       scheduled_items_.erase(it);
-      std::make_heap(scheduled_items_.begin(), scheduled_items_.end(), Compare());
+      std::make_heap(scheduled_items_.begin(), scheduled_items_.end(),
+                     Compare());
       return true;
     }
   }
