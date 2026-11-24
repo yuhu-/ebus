@@ -215,12 +215,6 @@ class Controller {
   bool cancel(uint32_t session_id);
 
   /**
-   * @brief Enqueues a message to be sent at a specific time.
-   */
-  uint32_t enqueueAt(uint8_t priority, ByteView message,
-                     Clock::time_point when);
-
-  /**
    * @brief Adds a recurring polling job.
    * @param priority Priority level.
    * @param message Message to send.

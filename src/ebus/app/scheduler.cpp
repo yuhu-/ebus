@@ -456,19 +456,6 @@ bool Scheduler::cancel(uint32_t session_id) {
   return false;
 }
 
-uint32_t Scheduler::enqueueAt(uint8_t priority, ByteView message,
-                              TimePoint when, uint16_t poll_id) {
-  Item it;
-  it.priority = priority;
-  it.due = when;
-  it.message.assign(message);
-  const uint32_t session_id = next_session_id_++;
-  it.session_id = session_id;
-  it.poll_id = poll_id;
-  if (pushItem(std::move(it))) return session_id;
-  return 0;
-}
-
 void Scheduler::clear() {
   platform::LockGuard<platform::Mutex> lock(data_mutex_);
   scheduled_items_.clear();

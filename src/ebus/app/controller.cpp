@@ -393,18 +393,6 @@ bool Controller::cancel(uint32_t session_id) {
   return impl_->scheduler_->cancel(session_id);
 }
 
-uint32_t Controller::enqueueAt(uint8_t priority, ByteView message,
-                               Clock::time_point when) {
-  if (!impl_->configured_.load()) return 0;
-  uint32_t s_id = impl_->scheduler_->enqueueAt(priority, message, when);
-  if (s_id > 0 && impl_->reactor_) {
-    detail::ReactorSignal ev;
-    ev.type = detail::ReactorSignal::Type::user_request;
-    impl_->reactor_->pushSignal(std::move(ev));
-  }
-  return s_id;
-}
-
 uint32_t Controller::addPollItem(uint8_t priority, ByteView message,
                                  uint32_t interval_ms) {
   uint32_t id = impl_->configured_.load() ? impl_->poll_manager_->addPollItem(

@@ -82,8 +82,6 @@ class Scheduler {
   uint32_t enqueueReplacing(uint8_t priority, ByteView message,
                             uint32_t replace_session_id);
   bool cancel(uint32_t session_id);
-  uint32_t enqueueAt(uint8_t priority, ByteView message, TimePoint when,
-                     uint16_t poll_id = 0);
   void clear();
 
   // Status/Telemetry

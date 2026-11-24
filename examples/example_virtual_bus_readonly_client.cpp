@@ -84,14 +84,6 @@ int main() {
                                        0x01, 0x40, 0x09};
   uint32_t pollItem = deviceB.addPollItem(10, broadcastMsg, 5000);
 
-  // Try to enqueue a faulty broadcast message after 3 seconds.
-  // This library offers several helper functions, such as...ebus::to_vector("")
-  deviceB.enqueueAt(10, ebus::toVector("feb5160301"), ebus::Clock::now() + 3s);
-
-  // Send inquiry of existence after 8 seconds.
-  deviceB.enqueueAt(20, ebus::Sequence::inquiryOfExistence(),
-                    ebus::Clock::now() + 8s);
-
   // --- 5. Logic for Device A: Decoding of a received message ---
   // We set a callback to decode the received message from DeviceB.
   deviceA.setProtocolCallback([](const ebus::ProtocolInfo& info) {
@@ -136,6 +128,15 @@ int main() {
   // Run for a while to observe traffic
   for (int i = 0; i < 30; ++i) {
     std::this_thread::sleep_for(1s);
+
+    // Send a faulty broadcast after 3 seconds to demonstrate the error callback
+    if (i == 3) {
+      deviceB.enqueue(10, ebus::toVector("feb5160301"));
+    }
+    // Send inquiry of existence after 8 seconds
+    if (i == 8) {
+      deviceB.enqueue(20, ebus::Sequence::inquiryOfExistence());
+    }
 
     // Poll the Read-Only client's socket (on deviceA).
     // We must drain the socket buffer entirely to prevent backpressure.
