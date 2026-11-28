@@ -212,3 +212,23 @@ TEST_CASE("Controller: Drain Loop Burst", "[app][controller][reactor]") {
 
   controller.stop();
 }
+
+TEST_CASE("Controller: Enqueue Replacement", "[app][controller]") {
+  ebus::EbusConfig config;
+  config.runtime.address = 0x01;
+  config.runtime.bus.syn_gen = false;
+  ebus::Controller controller(config);
+
+  std::vector<uint8_t> msg1 = {0xfe, 0xb5, 0x05, 0x04, 0x27, 0x00, 0x2d, 0x00};
+  std::vector<uint8_t> msg2 = {0xfe, 0xb5, 0x05, 0x04, 0x27, 0x00, 0x2e, 0x00};
+
+  uint32_t sid1 = controller.enqueue(1, msg1);
+  REQUIRE(sid1 > 0);
+
+  uint32_t sid2 = controller.enqueue(1, msg2, sid1);
+  REQUIRE(sid2 > 0);
+  REQUIRE(sid2 != sid1);
+
+  REQUIRE_FALSE(controller.cancel(sid1));
+  REQUIRE(controller.cancel(sid2));
+}

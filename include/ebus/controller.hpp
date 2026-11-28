@@ -189,23 +189,19 @@ class Controller {
 
   /**
    * @brief Enqueues a message for transmission with a given priority.
+   * If replace_session_id is non-zero and found in the queue, it is replaced
+   * in-place. If an active session matches replace_session_id, its current
+   * attempt may finish but it will not retry. If replace_session_id is 0 or
+   * not found, enqueues as a new message if capacity permits.
+   * Rejection leaves any existing sessions unchanged.
    * @param priority Priority level (0-255, higher is more urgent).
    * @param message The raw message bytes.
+   * @param replace_session_id Optional session ID to replace/supersede (0 =
+   * none).
    * @return The session ID if accepted, 0 otherwise.
    */
-  uint32_t enqueue(uint8_t priority, ByteView message);
-
-  /**
-   * @brief Atomically replaces a queued session with a new message (upsert).
-   * If replace_session_id is found in the queue, it is replaced in-place.
-   * If an active session matches replace_session_id, its current attempt may
-   * finish but it will not retry. If replace_session_id is not found or 0,
-   * enqueues as a new message if capacity permits.
-   * Rejection leaves any existing sessions unchanged. Returns the new session
-   * ID, or 0 when the new message cannot be queued.
-   */
-  uint32_t enqueueReplacing(uint8_t priority, ByteView message,
-                            uint32_t replace_session_id);
+  uint32_t enqueue(uint8_t priority, ByteView message,
+                   uint32_t replace_session_id = 0);
 
   /**
    * @brief Removes a queued session or disables retries of its active attempt.

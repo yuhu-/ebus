@@ -364,28 +364,17 @@ void Controller::setTraceCallback(TraceCallback callback) {
   }
 }
 
-uint32_t Controller::enqueue(uint8_t priority, ByteView message) {
+uint32_t Controller::enqueue(uint8_t priority, ByteView message,
+                             uint32_t replace_session_id) {
   if (!impl_->configured_.load()) return 0;
-  uint32_t s_id = impl_->scheduler_->enqueue(priority, message);
+  uint32_t s_id =
+      impl_->scheduler_->enqueue(priority, message, replace_session_id);
   if (s_id > 0 && impl_->reactor_) {
     detail::ReactorSignal ev;
     ev.type = detail::ReactorSignal::Type::user_request;
     impl_->reactor_->pushSignal(std::move(ev));
   }
   return s_id;
-}
-
-uint32_t Controller::enqueueReplacing(uint8_t priority, ByteView message,
-                                      uint32_t replace_session_id) {
-  if (!impl_->configured_.load()) return 0;
-  const auto session_id = impl_->scheduler_->enqueueReplacing(
-      priority, message, replace_session_id);
-  if (session_id != 0 && impl_->reactor_) {
-    detail::ReactorSignal ev;
-    ev.type = detail::ReactorSignal::Type::user_request;
-    impl_->reactor_->pushSignal(std::move(ev));
-  }
-  return session_id;
 }
 
 bool Controller::cancel(uint32_t session_id) {

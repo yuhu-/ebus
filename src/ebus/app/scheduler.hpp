@@ -78,9 +78,9 @@ class Scheduler {
    * @brief Performs periodic maintenance. Returns true if work was done.
    */
   bool tick();
-  uint32_t enqueue(uint8_t priority, ByteView message, uint16_t poll_id = 0);
-  uint32_t enqueueReplacing(uint8_t priority, ByteView message,
-                            uint32_t replace_session_id);
+  uint32_t enqueue(uint8_t priority, ByteView message,
+                   uint32_t replace_session_id = 0);
+  uint32_t enqueuePoll(uint8_t priority, ByteView message, uint16_t poll_id);
   bool cancel(uint32_t session_id);
   void clear();
 

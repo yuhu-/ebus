@@ -242,7 +242,8 @@ void Reactor::run() {
     // 3. Process due poll items
     poll_manager_->processDueItems(
         [this, &activity](const PollManager::Item& item) {
-          if (scheduler_->enqueue(item.priority, item.message, item.poll_id))
+          if (scheduler_->enqueuePoll(item.priority, item.message,
+                                      item.poll_id))
             activity = true;
         },
         &activity);

@@ -678,7 +678,7 @@ TEST_CASE(
   }
   const auto old = sessions[sessions.size() / 2];
   SECTION("Full queue permits replacement of an existing queued item") {
-    const auto replacement = h.scheduler.enqueueReplacing(1, message, old);
+    const auto replacement = h.scheduler.enqueue(1, message, old);
     REQUIRE(replacement != 0);
     REQUIRE(replacement != old);
     REQUIRE(h.scheduler.size() == h.scheduler.capacity());
@@ -689,7 +689,7 @@ TEST_CASE(
     }
   }
   SECTION("Unknown replacement ID leaves every queued session intact") {
-    REQUIRE(h.scheduler.enqueueReplacing(1, message, 0xffffffffu) == 0);
+    REQUIRE(h.scheduler.enqueue(1, message, 0xffffffffu) == 0);
     REQUIRE(h.scheduler.size() == h.scheduler.capacity());
     for (auto sid : sessions) REQUIRE(h.scheduler.cancel(sid));
   }
@@ -706,7 +706,7 @@ TEST_CASE("Scheduler replaces a queued retry with a new session",
   lost.session_id = old;
   REQUIRE(h.settle(lost));
   const auto replacement =
-      h.scheduler.enqueueReplacing(1, ebus::toVector("feb5050327002e"), old);
+      h.scheduler.enqueue(1, ebus::toVector("feb5050327002e"), old);
   REQUIRE(replacement != 0);
   REQUIRE(h.scheduler.size() == 1);
   REQUIRE_FALSE(h.scheduler.cancel(old));
@@ -721,7 +721,7 @@ TEST_CASE("Scheduler accepted active replacement prevents the old retry",
   h.scheduler.setMaxAttempts(3);
   const auto old = h.startItem();
   const auto replacement =
-      h.scheduler.enqueueReplacing(1, ebus::toVector("feb5050327002e"), old);
+      h.scheduler.enqueue(1, ebus::toVector("feb5050327002e"), old);
   REQUIRE(replacement != 0);
   REQUIRE(h.scheduler.size() == 2);
   ProtocolEvent lost{};
@@ -748,7 +748,7 @@ TEST_CASE(
     REQUIRE(sid != 0);
     other_sessions.push_back(sid);
   }
-  REQUIRE(h.scheduler.enqueueReplacing(1, message, old) == 0);
+  REQUIRE(h.scheduler.enqueue(1, message, old) == 0);
   ProtocolEvent lost{};
   lost.type = ProtocolEvent::Type::lost;
   lost.session_id = old;
@@ -762,13 +762,12 @@ TEST_CASE(
   REQUIRE(h.scheduler.size() == 0);
 }
 
-TEST_CASE(
-    "Scheduler enqueueReplacing acts as upsert when replacement ID is unknown",
-    "[app][scheduler][replace]") {
+TEST_CASE("Scheduler enqueue acts as upsert when replacement ID is unknown",
+          "[app][scheduler][replace]") {
   BreakerHarness h;
   const auto message = ebus::toVector("feb5050327002d");
   // Non-full queue: unknown replacement ID enqueues a new item (upsert)
-  const auto sid = h.scheduler.enqueueReplacing(1, message, 0x12345678u);
+  const auto sid = h.scheduler.enqueue(1, message, 0x12345678u);
   REQUIRE(sid != 0);
   REQUIRE(h.scheduler.size() == 1);
   REQUIRE(h.scheduler.cancel(sid));

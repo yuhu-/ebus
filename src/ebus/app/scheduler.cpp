@@ -414,7 +414,20 @@ bool Scheduler::tick() {
 }
 
 uint32_t Scheduler::enqueue(uint8_t priority, ByteView message,
-                            uint16_t poll_id) {
+                            uint32_t replace_session_id) {
+  Item it;
+  it.priority = priority;
+  it.due = Clock::now();
+  it.message.assign(message);
+  const uint32_t session_id = next_session_id_++;
+  it.session_id = session_id;
+  it.poll_id = 0;
+  if (pushItem(std::move(it), replace_session_id)) return session_id;
+  return 0;
+}
+
+uint32_t Scheduler::enqueuePoll(uint8_t priority, ByteView message,
+                                uint16_t poll_id) {
   Item it;
   it.priority = priority;
   it.due = Clock::now();
@@ -423,18 +436,6 @@ uint32_t Scheduler::enqueue(uint8_t priority, ByteView message,
   it.session_id = session_id;
   it.poll_id = poll_id;
   if (pushItem(std::move(it))) return session_id;
-  return 0;
-}
-
-uint32_t Scheduler::enqueueReplacing(uint8_t priority, ByteView message,
-                                     uint32_t replace_session_id) {
-  Item item;
-  item.priority = priority;
-  item.due = Clock::now();
-  item.message.assign(message);
-  const auto session_id = next_session_id_++;
-  item.session_id = session_id;
-  if (pushItem(std::move(item), replace_session_id)) return session_id;
   return 0;
 }
 
